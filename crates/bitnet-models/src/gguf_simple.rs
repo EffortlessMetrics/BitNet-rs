@@ -2103,4 +2103,37 @@ mod tests {
         assert_eq!(config.model.num_key_value_heads, 1);
         assert_eq!(config.model.intermediate_size, 16);
     }
+
+    #[test]
+    fn normalize_embed_preserves_ggml_hidden_vocab_token_rows() -> super::Result<()> {
+        let device = super::CDevice::Cpu;
+        let mut config = bitnet_common::BitNetConfig::default();
+        config.model.vocab_size = 3;
+        config.model.hidden_size = 4;
+        let embed = super::CandleTensor::from_vec(
+            vec![
+                1.0f32, 2.0, 3.0, 4.0, // token 0
+                10.0, 20.0, 30.0, 40.0, // token 1
+                100.0, 200.0, 300.0, 400.0, // token 2
+            ],
+            (4usize, 3usize),
+            &device,
+        )?;
+        let mut tensor_map =
+            HashMap::from([("model.embed_tokens.weight".to_string(), embed)]);
+        super::normalize_embed_and_lm_head(&mut tensor_map, &config, &device)?;
+        let normalized = tensor_map.get("token_embd.weight").ok_or_else(|| {
+            bitnet_common::BitNetError::Validation("missing normalized embedding".to_string())
+        })?;
+        assert_eq!(normalized.shape().dims(), &[3, 4]);
+        assert_eq!(
+            normalized.to_vec2::<f32>()?,
+            vec![
+                vec![1.0, 2.0, 3.0, 4.0],
+                vec![10.0, 20.0, 30.0, 40.0],
+                vec![100.0, 200.0, 300.0, 400.0],
+            ]
+        );
+        Ok(())
+    }
 }
