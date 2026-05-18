@@ -203,6 +203,10 @@ Small golden-token canaries stay separate from the full corpus. They record
 prompt text, template identity, input token IDs, generated token IDs and text,
 stop reason, sampler config, backend, fallback state, and artifact/tokenizer
 identity so drift can be localized before running hundreds of cases.
+`M4-CANARY-001` adds the `apple_m4_golden_token_canaries` receipt kind for a
+compact dense SLM plus BitNet fixture. It is drift-localization evidence only,
+not a fresh live runtime proof, broad quality claim, broad performance claim,
+BitNet chat/serve enablement, or full Metal inference claim.
 
 ## Reproducible Run Identity
 

@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T08:32:19Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CANARY-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-CANARY-001-golden-token-traces"
+pr = 5584
+head_sha = "c686c58f8b2d03b07ea6e5fdf4ed5e03793befc2"
+
+notes = [
+  "Opened PR #5584 to add the `apple_m4_golden_token_canaries` receipt kind and a compact dense SLM plus BitNet token-trace fixture.",
+  "The canary records prompt text, template identity, input and generated token IDs, generated text, stop reason, greedy sampler configuration, backend/fallback state, and model/tokenizer identity for drift localization.",
+  "No fresh live runtime proof, model support change, BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claim.",
+]
