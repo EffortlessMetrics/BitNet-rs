@@ -1571,6 +1571,7 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             attention_selected_f64_query_score_input_bucket_source(
                 &f64_qk_score_input_bucket_residual,
                 &f64_downstream,
+                &cpu_comparison,
             );
         let selected_query_score_input_f16_frontier =
             attention_selected_query_score_input_f16_frontier(
@@ -31791,24 +31792,64 @@ fn selected_query_boundary_summary(
     })
 }
 
+fn selected_query_score_source_row_has_context(row: &Value) -> bool {
+    value_u64(row, "/head").is_some()
+        && value_u64(row, "/query_token").is_some()
+        && (value_u64(row, "/product_delta/top_contributors/0/dim").is_some()
+            || value_u64(row, "/product_delta/top_abs_product_delta_contributors/0/dim").is_some()
+            || value_u64(row, "/top_abs_product_delta_contributors/0/dim").is_some())
+}
+
 fn attention_selected_f64_query_score_input_bucket_source(
     f64_qk_score_input_bucket_residual: &Value,
     f64_downstream: &Value,
+    base_comparison: &Value,
 ) -> Value {
     let probability_effect =
         f64_downstream.pointer("/f64/probability_history_effect").unwrap_or(&Value::Null);
     let query_boundary = probability_effect.pointer("/query_boundary").unwrap_or(&Value::Null);
+    let mixed_qk = probability_effect
+        .pointer("/attention_selected_score_mixed_qk_contribution")
+        .or_else(|| base_comparison.pointer("/attention_selected_score_mixed_qk_contribution"))
+        .unwrap_or(&Value::Null);
+    let mixed_qk_classification = mixed_qk.pointer("/classification").and_then(Value::as_str);
+    let mixed_score_position_row = mixed_qk.pointer("/first_product_row").unwrap_or(&Value::Null);
     let residual_classification =
         f64_qk_score_input_bucket_residual.pointer("/classification").and_then(Value::as_str);
-    let selected_row = f64_qk_score_input_bucket_residual
+    let selected_query_bucket_row = f64_qk_score_input_bucket_residual
         .pointer("/first_selected_query_bucket_row")
-        .filter(|row| !row.is_null())
-        .or_else(|| f64_qk_score_input_bucket_residual.pointer("/first_selected_qk_bucket_row"))
+        .filter(|row| selected_query_score_source_row_has_context(row));
+    let selected_qk_bucket_row = f64_qk_score_input_bucket_residual
+        .pointer("/first_selected_qk_bucket_row")
+        .filter(|row| selected_query_score_source_row_has_context(row));
+    let mixed_context_available =
+        matches!(
+            mixed_qk_classification,
+            Some("selected_score_drift_query_dominant")
+                | Some("selected_score_drift_query_dominant_with_query_rope_boundary")
+                | Some("selected_score_drift_has_mixed_qk_contribution")
+                | Some("selected_score_drift_split_query_key_contribution")
+        ) && selected_query_score_source_row_has_context(mixed_score_position_row);
+    let selected_row = selected_query_bucket_row
+        .or(selected_qk_bucket_row)
+        .or_else(|| mixed_context_available.then_some(mixed_score_position_row))
         .unwrap_or(&Value::Null);
+    let selected_row_source = if selected_query_bucket_row.is_some() {
+        "f64_qk_residual_query_bucket_row"
+    } else if selected_qk_bucket_row.is_some() {
+        "f64_qk_residual_qk_bucket_row"
+    } else if mixed_context_available {
+        "mixed_score_position_row"
+    } else {
+        "missing_selected_row"
+    };
     let head = selected_row.pointer("/head").and_then(Value::as_u64);
     let selected_token = selected_row.pointer("/query_token").and_then(Value::as_u64);
-    let selected_dim =
-        selected_row.pointer("/product_delta/top_contributors/0/dim").and_then(Value::as_u64);
+    let selected_dim = selected_row
+        .pointer("/product_delta/top_contributors/0/dim")
+        .or_else(|| selected_row.pointer("/product_delta/top_abs_product_delta_contributors/0/dim"))
+        .or_else(|| selected_row.pointer("/top_abs_product_delta_contributors/0/dim"))
+        .and_then(Value::as_u64);
     let query_boundary_row = head
         .and_then(|head| query_boundary_row_for_head(query_boundary, head))
         .unwrap_or(&Value::Null);
@@ -31857,10 +31898,10 @@ fn attention_selected_f64_query_score_input_bucket_source(
         .and_then(Value::as_str)
         .is_some_and(|boundary| boundary != "none" && boundary != "missing_input");
 
-    let classification = if residual_classification
-        != Some("f64_qk_score_input_bucket_residual_selected_query_history")
-        || boundary_missing
-    {
+    let source_context_available = residual_classification
+        == Some("f64_qk_score_input_bucket_residual_selected_query_history")
+        || mixed_context_available;
+    let classification = if !source_context_available || boundary_missing {
         "selected_query_score_input_bucket_source_missing_context"
     } else if exact_reference_to_rope {
         "selected_query_score_input_bucket_source_reference_to_rope"
@@ -31894,6 +31935,9 @@ fn attention_selected_f64_query_score_input_bucket_source(
         "query_boundary_present": !query_boundary_row.is_null(),
         "query_boundary_first_material_boundary": query_boundary_row.pointer("/first_material_boundary").cloned().unwrap_or(Value::Null),
         "selected_qk_bucket_row": selected_row.clone(),
+        "selected_row_source": selected_row_source,
+        "mixed_score_position_classification": mixed_qk_classification,
+        "mixed_score_position_row": compact_selected_score_product_row(mixed_score_position_row),
         "reference_to_rust_rope": reference_to_rope,
         "rust_rope_to_f16": rope_to_f16,
         "rust_f16_to_score_input": f16_to_score,
@@ -50543,8 +50587,11 @@ mod tests {
             }
         });
 
-        let report =
-            attention_selected_f64_query_score_input_bucket_source(&qk_residual, &f64_downstream);
+        let report = attention_selected_f64_query_score_input_bucket_source(
+            &qk_residual,
+            &f64_downstream,
+            &json!({}),
+        );
 
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
@@ -50627,8 +50674,11 @@ mod tests {
             }
         });
 
-        let report =
-            attention_selected_f64_query_score_input_bucket_source(&qk_residual, &f64_downstream);
+        let report = attention_selected_f64_query_score_input_bucket_source(
+            &qk_residual,
+            &f64_downstream,
+            &json!({}),
+        );
 
         assert_eq!(
             report.pointer("/classification"),
@@ -50705,8 +50755,11 @@ mod tests {
             }
         });
 
-        let report =
-            attention_selected_f64_query_score_input_bucket_source(&qk_residual, &f64_downstream);
+        let report = attention_selected_f64_query_score_input_bucket_source(
+            &qk_residual,
+            &f64_downstream,
+            &json!({}),
+        );
 
         assert_eq!(
             report.pointer("/classification"),
@@ -50715,6 +50768,118 @@ mod tests {
         assert_eq!(report.pointer("/head"), Some(&json!(5)));
         assert_eq!(report.pointer("/selected_dim"), Some(&json!(69)));
         assert_eq!(report.pointer("/selected_token"), Some(&json!(17)));
+        assert_eq!(
+            report.pointer("/selected_row_source"),
+            Some(&json!("f64_qk_residual_query_bucket_row"))
+        );
+    }
+
+    #[test]
+    fn selected_f64_query_score_input_bucket_source_uses_mixed_score_position_context() {
+        let qk_residual = json!({
+            "classification": "f64_qk_score_input_bucket_residual_missing_context",
+            "first_selected_qk_bucket_row": null,
+            "first_selected_query_bucket_row": {
+                "head": null,
+                "query_token": null,
+                "product_delta": null
+            }
+        });
+        let f64_downstream = json!({
+            "f64": {
+                "probability_history_effect": {
+                    "query_boundary": {
+                        "rows": [
+                            {
+                                "head": 0,
+                                "first_material_boundary": "reference_to_rust_query_rope",
+                                "reference_to_rust_rope_delta": {
+                                    "status": "compared",
+                                    "material_mismatch": true,
+                                    "delta": {
+                                        "first_f16_bucket_mismatch_layout": {
+                                            "dim": 112,
+                                            "token": 0
+                                        },
+                                        "token_mismatch_counts": [
+                                            {
+                                                "token": 0,
+                                                "f16_bucket_mismatch_count": 1
+                                            }
+                                        ],
+                                        "dim_mismatch_counts": [
+                                            {
+                                                "dim": 112,
+                                                "f16_bucket_mismatch_count": 1
+                                            }
+                                        ]
+                                    }
+                                },
+                                "rust_rope_to_f16_delta": {
+                                    "status": "compared",
+                                    "material_mismatch": false,
+                                    "delta": {}
+                                },
+                                "rust_f16_to_score_input_delta": {
+                                    "status": "compared",
+                                    "material_mismatch": false,
+                                    "delta": {}
+                                },
+                                "reference_to_score_input_delta": {
+                                    "status": "compared",
+                                    "material_mismatch": true,
+                                    "delta": {
+                                        "first_f16_bucket_mismatch_layout": {
+                                            "dim": 112,
+                                            "token": 0
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        });
+        let base_comparison = json!({
+            "attention_selected_score_mixed_qk_contribution": {
+                "classification": "selected_score_drift_query_dominant",
+                "first_product_row": {
+                    "head": 0,
+                    "key_slot": 0,
+                    "query_token": 0,
+                    "product_delta": {
+                        "top_abs_product_delta_contributors": [
+                            {
+                                "dim": 112,
+                                "query_delta": 0.00048828125_f64,
+                                "key_delta": 0.0
+                            }
+                        ]
+                    }
+                }
+            }
+        });
+
+        let report = attention_selected_f64_query_score_input_bucket_source(
+            &qk_residual,
+            &f64_downstream,
+            &base_comparison,
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_bucket_source_reference_to_rope"))
+        );
+        assert_eq!(
+            report.pointer("/selected_row_source"),
+            Some(&json!("mixed_score_position_row"))
+        );
+        assert_eq!(report.pointer("/selected_dim"), Some(&json!(112)));
+        assert_eq!(
+            report.pointer("/mixed_score_position_classification"),
+            Some(&json!("selected_score_drift_query_dominant"))
+        );
     }
 
     #[test]
@@ -50733,8 +50898,11 @@ mod tests {
             }
         });
 
-        let report =
-            attention_selected_f64_query_score_input_bucket_source(&qk_residual, &f64_downstream);
+        let report = attention_selected_f64_query_score_input_bucket_source(
+            &qk_residual,
+            &f64_downstream,
+            &json!({}),
+        );
 
         assert_eq!(
             report.pointer("/classification"),
