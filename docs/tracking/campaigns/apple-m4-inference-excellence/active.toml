@@ -1471,10 +1471,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OPS-UX-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-003-doctor-bitnet"
 pr = 5491
-head_sha = "b7cef2755c8d21bf72371eda7fbcd1563c140fd6"
+head_sha = "d1d8f9b9239a882ff0c83f35da0622bdb5a75a41"
+merge_sha = "6cbc0a8ce08cdbc181e3d10be65ed166cf7e8917"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

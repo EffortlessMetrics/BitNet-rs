@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T02:16:24Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OPS-UX-003"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5491
+head_sha = "d1d8f9b9239a882ff0c83f35da0622bdb5a75a41"
+merge_sha = "6cbc0a8ce08cdbc181e3d10be65ed166cf7e8917"
+branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-003-doctor-bitnet"
+
+notes = [
+  "Merged PR #5491 for separate dense SLM and BitNet readiness in Mac status and doctor receipts.",
+  "The readiness shape records cache repair guidance, disk pressure, latest matching receipt pointers, disabled BitNet chat/serve state, and claim boundaries.",
+  "Scope remains operator UX only: no new live inference proof, model download, BitNet chat or serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim.",
+]
