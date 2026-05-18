@@ -1,5 +1,26 @@
 # Specs Index
 
+## Apple Silicon docs and rails
+
+Use these docs before implementing or claiming Apple Silicon product support:
+
+1. [Apple Silicon source-of-truth map](../apple-silicon/README.md)
+   - Points each Apple proof family at its authority and records hard claim
+     rails for M4 Mac Mini, MacBook, dense SLM, BitNet CPU/NEON, MPSGraph,
+     Neural Engine, and Metal phase work.
+2. [Apple Silicon docs implementation plan](../../plans/apple-silicon/implementation-plan.md)
+   - Defines the PR-by-PR rollout for the Apple productization proposal and
+     route, dense SLM, BitNet CPU/NEON, Metal, quality, benchmark,
+     reproducibility, MacBook, and service-surface specs.
+3. Planned route contract: `BITNET-SPEC-APPLE-SILICON-ROUTE-CONTRACT.md`
+   - Will define route IDs, backend labels, required receipt fields, fallback
+     boundaries, and proof-family separation.
+
+Do not treat this map as runtime proof or a support-tier promotion. Dense SLM
+evidence remains separate from BitNet evidence; BitNet CPU/NEON evidence remains
+separate from Metal evidence; MacBook evidence remains separate from M4 Mac Mini
+runtime proof.
+
 ## A770 BitNet Productization
 
 Use these specs before implementing or claiming A770 BitNet product support:
