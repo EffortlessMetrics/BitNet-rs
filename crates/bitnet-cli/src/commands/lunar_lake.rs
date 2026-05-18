@@ -157,6 +157,11 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = DURABILITY_BUNDLE)]
         durability_bundle: Option<PathBuf>,
 
+        /// Optional BitNet semantic-intake receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = BITNET_SEMANTIC_INTAKE)]
+        bitnet_semantic_intake: Option<PathBuf>,
+
         /// Output JSON regression bundle to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -779,6 +784,8 @@ pub struct LunarLakeRegressionBundle {
     pub cold_warm_benchmark: Option<ColdWarmRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub durability_bundle: Option<DurabilityRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bitnet_semantic_intake: Option<BitnetSemanticIntakeRegressionSummary>,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
     pub regression_passed: bool,
@@ -796,6 +803,8 @@ pub struct RegressionSurfaceSummary {
     pub cold_warm_benchmark_indexed: bool,
     #[serde(default)]
     pub durability_bundle_indexed: bool,
+    #[serde(default)]
+    pub bitnet_semantic_intake_indexed: bool,
     pub required_answer_profiles: Vec<String>,
     pub required_answer_categories: Vec<String>,
     pub required_route_profiles: Vec<String>,
@@ -824,6 +833,7 @@ impl Default for RegressionSurfaceSummary {
             route_profile_comparison_indexed: false,
             cold_warm_benchmark_indexed: false,
             durability_bundle_indexed: false,
+            bitnet_semantic_intake_indexed: false,
             required_answer_profiles: REQUIRED_CORPUS_V2_PROFILES
                 .iter()
                 .map(|profile| (*profile).to_string())
@@ -850,6 +860,7 @@ impl Default for RegressionSurfaceSummary {
                 "route profile comparison is not indexed".to_string(),
                 "cold/warm benchmark qualification is not indexed".to_string(),
                 "durability bundle is not indexed".to_string(),
+                "BitNet semantic intake is not indexed".to_string(),
             ],
         }
     }
@@ -945,6 +956,22 @@ pub struct DurabilityRegressionSummary {
     pub answer_drift_detected: bool,
     pub route_drift_detected: bool,
     pub repeated_run_stability_claim: bool,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BitnetSemanticIntakeRegressionSummary {
+    pub path: String,
+    pub intake_ready: bool,
+    pub rerun_required: bool,
+    pub pending_shared_change_count: usize,
+    pub merged_to_main_count: usize,
+    pub stale_after_merged_count: usize,
+    pub source_lanes: Vec<String>,
+    pub pending_changes: Vec<String>,
+    pub required_reruns: Vec<String>,
+    pub claim_boundary_preserved: bool,
     pub regression_ready: bool,
     pub gaps: Vec<String>,
 }
@@ -2059,6 +2086,7 @@ impl LunarLakeCommand {
                 route_profile_comparison,
                 cold_warm_benchmark,
                 durability_bundle,
+                bitnet_semantic_intake,
                 json_out,
                 created_utc,
                 strict,
@@ -2074,6 +2102,7 @@ impl LunarLakeCommand {
                     route_profile_comparison.as_deref(),
                     cold_warm_benchmark.as_deref(),
                     durability_bundle.as_deref(),
+                    bitnet_semantic_intake.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_regression_bundle(&receipt, json_out.as_deref())?;
@@ -2675,6 +2704,7 @@ pub fn build_regression_bundle_with_created_utc(
         None,
         None,
         None,
+        None,
         created_utc,
     )
 }
@@ -2686,6 +2716,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     route_profile_comparison: Option<&Path>,
     cold_warm_benchmark: Option<&Path>,
     durability_bundle: Option<&Path>,
+    bitnet_semantic_intake: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRegressionBundle> {
     let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
@@ -2840,6 +2871,19 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     } else {
         None
     };
+    let bitnet_semantic_intake = if let Some(path) = bitnet_semantic_intake {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_bitnet_semantic_intake_regression(&path)?;
+        checks.push(regression_check_owned(
+            "bitnet_semantic_intake_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            bitnet_semantic_intake_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
     let gaps = checks
         .iter()
         .filter(|check| check.status != "passed")
@@ -2850,6 +2894,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         route_profile_comparison.as_ref(),
         cold_warm_benchmark.as_ref(),
         durability_bundle.as_ref(),
+        bitnet_semantic_intake.as_ref(),
     );
 
     Ok(LunarLakeRegressionBundle {
@@ -2864,6 +2909,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         route_profile_comparison,
         cold_warm_benchmark,
         durability_bundle,
+        bitnet_semantic_intake,
         regression_surface,
         regression_passed: gaps.is_empty(),
         checks,
@@ -2877,12 +2923,14 @@ fn build_regression_surface_summary(
     route_profile_comparison: Option<&RouteProfileRegressionSummary>,
     cold_warm_benchmark: Option<&ColdWarmRegressionSummary>,
     durability_bundle: Option<&DurabilityRegressionSummary>,
+    bitnet_semantic_intake: Option<&BitnetSemanticIntakeRegressionSummary>,
 ) -> RegressionSurfaceSummary {
     let mut summary = RegressionSurfaceSummary {
         answer_corpus_v2_indexed: answer_corpus_v2.is_some(),
         route_profile_comparison_indexed: route_profile_comparison.is_some(),
         cold_warm_benchmark_indexed: cold_warm_benchmark.is_some(),
         durability_bundle_indexed: durability_bundle.is_some(),
+        bitnet_semantic_intake_indexed: bitnet_semantic_intake.is_some(),
         candidate_routes_remain_unpromoted: route_profile_comparison
             .map(|summary| summary.candidate_routes_remain_unpromoted)
             .unwrap_or(false),
@@ -3029,6 +3077,26 @@ fn build_regression_surface_summary(
         }
     } else {
         summary.gaps.push("durability bundle is not indexed".to_string());
+    }
+
+    if let Some(intake) = bitnet_semantic_intake {
+        if !intake.regression_ready {
+            summary.gaps.push(format!(
+                "BitNet semantic intake is not regression-ready: {}",
+                intake.gaps.join("; ")
+            ));
+        }
+        if intake.rerun_required {
+            summary.gaps.push(format!(
+                "BitNet semantic intake requires Lunar Lake reruns: {}",
+                intake.required_reruns.join("; ")
+            ));
+        }
+        if !intake.claim_boundary_preserved {
+            summary.gaps.push("BitNet semantic intake claim boundary is not preserved".to_string());
+        }
+    } else {
+        summary.gaps.push("BitNet semantic intake is not indexed".to_string());
     }
 
     summary.gaps.sort();
@@ -3530,6 +3598,63 @@ fn inspect_durability_regression(path: &Path) -> Result<DurabilityRegressionSumm
     })
 }
 
+fn inspect_bitnet_semantic_intake_regression(
+    path: &Path,
+) -> Result<BitnetSemanticIntakeRegressionSummary> {
+    let intake: LunarLakeBitnetSemanticIntake = read_json_receipt(path)?;
+    let mut gaps = Vec::new();
+    if intake.artifact_kind != "lunar_lake_bitnet_semantic_intake" {
+        gaps.push(format!("unexpected artifact_kind={}", intake.artifact_kind));
+    }
+    if !intake.intake_ready {
+        gaps.push(format!("BitNet semantic intake is not ready: {}", intake.gaps.join("; ")));
+    }
+    if intake.rerun_required {
+        gaps.push(format!(
+            "shared BitNet semantic fixes require Lunar Lake reruns: {}",
+            intake.required_reruns.join("; ")
+        ));
+    }
+    if intake.source_change_summary.stale_after_merged_count > 0 {
+        gaps.push(format!(
+            "{} merged shared BitNet semantic changes are newer than Lunar Lake evidence",
+            intake.source_change_summary.stale_after_merged_count
+        ));
+    }
+
+    let claim = &intake.claim_boundary;
+    let claim_boundary_preserved = !claim.new_inference_executed
+        && !claim.route_promotion_changed
+        && !claim.answer_quality_claim
+        && !claim.speedup_claim
+        && !claim.acceleration_claim
+        && !claim.arc_or_npu_bitnet_claim
+        && !claim.qk256_behavior_changed
+        && !claim.dense_slm_as_bitnet_proof
+        && !claim.hidden_fallback_allowed;
+    if !claim_boundary_preserved {
+        gaps.push(
+            "BitNet semantic intake must preserve no-inference/no-promotion/no-speedup/no-acceleration/no-QK256-change claim boundary"
+                .to_string(),
+        );
+    }
+
+    Ok(BitnetSemanticIntakeRegressionSummary {
+        path: path_string(path),
+        intake_ready: intake.intake_ready,
+        rerun_required: intake.rerun_required,
+        pending_shared_change_count: intake.source_change_summary.pending_shared_change_count,
+        merged_to_main_count: intake.source_change_summary.merged_to_main_count,
+        stale_after_merged_count: intake.source_change_summary.stale_after_merged_count,
+        source_lanes: intake.source_change_summary.source_lanes,
+        pending_changes: intake.source_change_summary.pending_changes,
+        required_reruns: intake.required_reruns,
+        claim_boundary_preserved,
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
 fn corpus_v2_notes(summary: &AnswerCorpusV2Summary) -> Vec<String> {
     let mut notes = vec![
         format!("case_count={}", summary.case_count),
@@ -3638,6 +3763,22 @@ fn durability_regression_notes(summary: &DurabilityRegressionSummary) -> Vec<Str
         format!("answer_drift_detected={}", summary.answer_drift_detected),
         format!("route_drift_detected={}", summary.route_drift_detected),
         format!("repeated_run_stability_claim={}", summary.repeated_run_stability_claim),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
+fn bitnet_semantic_intake_regression_notes(
+    summary: &BitnetSemanticIntakeRegressionSummary,
+) -> Vec<String> {
+    let mut notes = vec![
+        format!("intake_ready={}", summary.intake_ready),
+        format!("rerun_required={}", summary.rerun_required),
+        format!("pending_shared_change_count={}", summary.pending_shared_change_count),
+        format!("merged_to_main_count={}", summary.merged_to_main_count),
+        format!("stale_after_merged_count={}", summary.stale_after_merged_count),
+        format!("source_lanes={}", summary.source_lanes.join(",")),
+        format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
     ];
     notes.extend(summary.gaps.iter().cloned());
     notes
@@ -11854,6 +11995,45 @@ mod tests {
     }
 
     #[test]
+    fn regression_bundle_v2_fails_when_bitnet_semantic_intake_requires_rerun() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-19T05:30:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        write_stale_bitnet_semantic_intake(temp.path(), BITNET_SEMANTIC_INTAKE)?;
+
+        let bundle = build_regression_bundle_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            None,
+            None,
+            None,
+            None,
+            Some(Path::new(BITNET_SEMANTIC_INTAKE)),
+            "2026-05-19T06:05:00Z".to_string(),
+        )?;
+
+        assert!(!bundle.regression_passed);
+        assert!(!bundle.regression_surface.strict_ready);
+        assert!(
+            strict_regression_v2_gaps(&bundle)
+                .iter()
+                .any(|gap| gap.contains("BitNet semantic intake requires Lunar Lake reruns")),
+            "{:?}",
+            strict_regression_v2_gaps(&bundle)
+        );
+        let Some(intake) = bundle.bitnet_semantic_intake.as_ref() else {
+            bail!("missing bitnet_semantic_intake summary");
+        };
+        assert!(intake.rerun_required);
+        assert_eq!(intake.stale_after_merged_count, 1);
+        Ok(())
+    }
+
+    #[test]
     fn operator_readiness_passes_with_required_receipts() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
@@ -14271,6 +14451,7 @@ mod tests {
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new("cold-warm.json")),
             None,
+            None,
             "2026-05-16T19:05:00Z".to_string(),
         )?;
         // Seed the durability builder with the pre-REG-005 strict surface it
@@ -14485,6 +14666,7 @@ mod tests {
                 }
             }),
         )?;
+        write_ready_bitnet_semantic_intake(temp.path(), BITNET_SEMANTIC_INTAKE)?;
 
         let bundle = build_regression_bundle_with_created_utc_and_inputs(
             temp.path(),
@@ -14493,6 +14675,7 @@ mod tests {
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new("cold-warm.json")),
             Some(Path::new("durability.json")),
+            Some(Path::new(BITNET_SEMANTIC_INTAKE)),
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -14542,6 +14725,7 @@ mod tests {
         assert!(bundle.regression_surface.cold_warm_benchmark_ready);
         assert!(bundle.regression_surface.durability_bundle_indexed);
         assert!(bundle.regression_surface.durability_stability_proven);
+        assert!(bundle.regression_surface.bitnet_semantic_intake_indexed);
         let Some(cold_warm) = bundle.cold_warm_benchmark.as_ref() else {
             bail!("missing cold_warm_benchmark summary");
         };
@@ -14555,6 +14739,12 @@ mod tests {
         assert!(durability.regression_ready, "{:?}", durability.gaps);
         assert!(durability.stability_proven);
         assert_eq!(durability.stable_profile_count, 3);
+        let Some(intake) = bundle.bitnet_semantic_intake.as_ref() else {
+            bail!("missing bitnet_semantic_intake summary");
+        };
+        assert!(intake.regression_ready, "{:?}", intake.gaps);
+        assert!(!intake.rerun_required);
+        assert_eq!(intake.pending_shared_change_count, 1);
         assert!(strict_regression_v2_gaps(&bundle).is_empty());
         Ok(())
     }
@@ -14642,6 +14832,7 @@ mod tests {
             "2026-05-14T17:45:00Z".to_string(),
         )?;
         fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
+        write_ready_bitnet_semantic_intake(temp.path(), BITNET_SEMANTIC_INTAKE)?;
 
         let bundle = build_regression_bundle_with_created_utc_and_inputs(
             temp.path(),
@@ -14650,6 +14841,7 @@ mod tests {
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new("cold-warm.json")),
             None,
+            Some(Path::new(BITNET_SEMANTIC_INTAKE)),
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -15444,6 +15636,143 @@ mod tests {
             }),
         )?;
         Ok(())
+    }
+
+    fn write_ready_bitnet_semantic_intake(root: &Path, file: &str) -> Result<()> {
+        write_json(
+            root,
+            file,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_bitnet_semantic_intake",
+                "proof_stage": "shared_bitnet_semantic_intake_no_new_inference",
+                "created_utc": "2026-05-19T05:45:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(root),
+                "source_changes_receipt": path_string(&root.join(BITNET_SEMANTIC_SOURCE_CHANGES)),
+                "cpu_reference_bundle": path_string(&root.join(BITNET_CPU_BUNDLE)),
+                "operator_comparison": path_string(&root.join(OPERATOR_COMPARISON)),
+                "source_change_summary": {
+                    "total_change_count": 1,
+                    "pending_shared_change_count": 1,
+                    "merged_to_main_count": 0,
+                    "stale_after_merged_count": 0,
+                    "source_lanes": ["a770"],
+                    "pending_changes": ["a770#5020 fix(bitnet): preserve K precision for attention scores"],
+                    "merged_changes": [],
+                    "notes": ["pending shared changes are indexed but do not invalidate Lunar Lake receipts until they merge to main"]
+                },
+                "lunar_lake_evidence": {
+                    "cpu_reference_bundle_created_utc": "2026-05-12T18:43:14Z",
+                    "operator_comparison_created_utc": "2026-05-19T05:30:00Z",
+                    "evidence_cutoff_utc": "2026-05-12T18:43:14Z",
+                    "cpu_reference_bundle_path": path_string(&root.join(BITNET_CPU_BUNDLE)),
+                    "operator_comparison_path": path_string(&root.join(OPERATOR_COMPARISON)),
+                    "evidence_paths": [BITNET_CPU_BUNDLE, OPERATOR_COMPARISON]
+                },
+                "changes": [
+                    {
+                        "source_lane": "a770",
+                        "source_pr": 5020,
+                        "title": "fix(bitnet): preserve K precision for attention scores",
+                        "status": "stack_open",
+                        "semantic_scope": ["attention_score_k_precision"],
+                        "requires_lunar_lake_rerun_when_merged_to_main": true,
+                        "merged_at_utc": null,
+                        "stale_after_cpu_reference": false,
+                        "stale_after_operator_comparison": false,
+                        "lunar_lake_rerun_required": false,
+                        "notes": ["pending shared semantic change will require Lunar Lake reruns after main merge"]
+                    }
+                ],
+                "rerun_required": false,
+                "required_reruns": [],
+                "intake_ready": true,
+                "gaps": [],
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "route_promotion_changed": false,
+                    "answer_quality_claim": false,
+                    "speedup_claim": false,
+                    "acceleration_claim": false,
+                    "arc_or_npu_bitnet_claim": false,
+                    "qk256_behavior_changed": false,
+                    "dense_slm_as_bitnet_proof": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )
+    }
+
+    fn write_stale_bitnet_semantic_intake(root: &Path, file: &str) -> Result<()> {
+        write_json(
+            root,
+            file,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_bitnet_semantic_intake",
+                "proof_stage": "shared_bitnet_semantic_intake_no_new_inference",
+                "created_utc": "2026-05-19T06:05:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(root),
+                "source_changes_receipt": path_string(&root.join(BITNET_SEMANTIC_SOURCE_CHANGES)),
+                "cpu_reference_bundle": path_string(&root.join(BITNET_CPU_BUNDLE)),
+                "operator_comparison": path_string(&root.join(OPERATOR_COMPARISON)),
+                "source_change_summary": {
+                    "total_change_count": 1,
+                    "pending_shared_change_count": 0,
+                    "merged_to_main_count": 1,
+                    "stale_after_merged_count": 1,
+                    "source_lanes": ["a770"],
+                    "pending_changes": [],
+                    "merged_changes": ["a770#5020 fix(bitnet): preserve K precision for attention scores"],
+                    "notes": ["merged shared semantic change is newer than Lunar Lake evidence"]
+                },
+                "lunar_lake_evidence": {
+                    "cpu_reference_bundle_created_utc": "2026-05-12T18:43:14Z",
+                    "operator_comparison_created_utc": "2026-05-19T05:30:00Z",
+                    "evidence_cutoff_utc": "2026-05-12T18:43:14Z",
+                    "cpu_reference_bundle_path": path_string(&root.join(BITNET_CPU_BUNDLE)),
+                    "operator_comparison_path": path_string(&root.join(OPERATOR_COMPARISON)),
+                    "evidence_paths": [BITNET_CPU_BUNDLE, OPERATOR_COMPARISON]
+                },
+                "changes": [
+                    {
+                        "source_lane": "a770",
+                        "source_pr": 5020,
+                        "title": "fix(bitnet): preserve K precision for attention scores",
+                        "status": "merged_to_main",
+                        "semantic_scope": ["attention_score_k_precision"],
+                        "requires_lunar_lake_rerun_when_merged_to_main": true,
+                        "merged_at_utc": "2026-05-19T06:00:00Z",
+                        "stale_after_cpu_reference": true,
+                        "stale_after_operator_comparison": true,
+                        "lunar_lake_rerun_required": true,
+                        "notes": ["merged shared semantic change is newer than Lunar Lake BitNet evidence"]
+                    }
+                ],
+                "rerun_required": true,
+                "required_reruns": [
+                    "rerun Lunar Lake BitNet CPU answer corpus",
+                    "rerun scalar-vs-AVX2 BitNet answer parity"
+                ],
+                "intake_ready": false,
+                "gaps": [
+                    "merged shared BitNet semantic changes require refreshed Lunar Lake BitNet evidence"
+                ],
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "route_promotion_changed": false,
+                    "answer_quality_claim": false,
+                    "speedup_claim": false,
+                    "acceleration_claim": false,
+                    "arc_or_npu_bitnet_claim": false,
+                    "qk256_behavior_changed": false,
+                    "dense_slm_as_bitnet_proof": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )
     }
 
     fn write_json(root: &Path, file: &str, value: Value) -> Result<()> {

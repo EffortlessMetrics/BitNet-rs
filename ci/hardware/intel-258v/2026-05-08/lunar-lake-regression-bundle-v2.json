@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T05:30:00Z",
+  "created_utc": "2026-05-19T06:15:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -450,6 +450,24 @@
     "regression_ready": true,
     "gaps": []
   },
+  "bitnet_semantic_intake": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+    "intake_ready": true,
+    "rerun_required": false,
+    "pending_shared_change_count": 1,
+    "merged_to_main_count": 0,
+    "stale_after_merged_count": 0,
+    "source_lanes": [
+      "a770"
+    ],
+    "pending_changes": [
+      "a770#5020 fix(bitnet): preserve K precision for attention scores"
+    ],
+    "required_reruns": [],
+    "claim_boundary_preserved": true,
+    "regression_ready": true,
+    "gaps": []
+  },
   "regression_surface": {
     "surface_id": "lunar_lake_regression_v2",
     "strict_default": true,
@@ -457,6 +475,7 @@
     "route_profile_comparison_indexed": true,
     "cold_warm_benchmark_indexed": true,
     "durability_bundle_indexed": true,
+    "bitnet_semantic_intake_indexed": true,
     "required_answer_profiles": [
       "regression_tiny",
       "ask_short",
@@ -685,6 +704,22 @@
         "answer_drift_detected=false",
         "route_drift_detected=false",
         "repeated_run_stability_claim=true"
+      ]
+    },
+    {
+      "check_id": "bitnet_semantic_intake_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json"
+      ],
+      "notes": [
+        "intake_ready=true",
+        "rerun_required=false",
+        "pending_shared_change_count=1",
+        "merged_to_main_count=0",
+        "stale_after_merged_count=0",
+        "source_lanes=a770",
+        "claim_boundary_preserved=true"
       ]
     }
   ],

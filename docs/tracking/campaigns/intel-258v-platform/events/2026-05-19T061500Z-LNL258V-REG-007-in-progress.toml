@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T06:15:00Z"
+event = "in_progress"
+item = "LNL258V-REG-007"
+branch = "codex/lunar-lake/LNL258V-REG-007-bitnet-intake-regression"
+actor = "codex"
+summary = "Started LNL258V-REG-007 to wire BitNet semantic-intake evidence into strict Lunar Lake regression v2."
+
+notes = [
+  "Strict regression should index lunar-lake-bitnet-semantic-intake.json and fail closed when merged shared BitNet semantic fixes require 258V reruns.",
+  "The work does not run inference, promote routes, claim speedup or power advantage, claim Arc/NPU acceleration, treat dense SLM receipts as BitNet proof, or change BitNet QK256/I2_S behavior.",
+]
