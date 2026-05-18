@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-19T05:00:00Z",
+  "created_utc": "2026-05-19T05:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -79,6 +79,21 @@
       "unblocked_proxy_or_missing_routes": []
     },
     "durability_stability_proven": true,
+    "route_promotion_scope": {
+      "openvino_gpu_promoted_profiles": [
+        "ask_normal",
+        "ask_short"
+      ],
+      "openvino_npu_promoted_profiles": [],
+      "profile_scoped_promotion_only": true,
+      "openvino_npu_remains_candidate": true,
+      "unexpected_openvino_profile_promotions": [],
+      "notes": [
+        "OpenVINO GPU is profile-promoted only for ask_normal,ask_short",
+        "OpenVINO NPU remains candidate-only",
+        "Profile promotion is not a broad acceleration, power-advantage, or all-profile claim"
+      ]
+    },
     "strict_ready": true,
     "gaps": []
   },
@@ -498,7 +513,7 @@
         "slm-openvino-cpu-gpu-npu-phase-runner.json"
       ],
       "notes": [
-        "OpenVINO GPU and NPU remain candidate routes without speedup claims"
+        "OpenVINO GPU/NPU operator routes start as candidates; any GPU promotion must remain profile-scoped and benchmark-qualified, while NPU remains candidate-only"
       ]
     },
     {
@@ -551,7 +566,10 @@
         "fallback_observed=false",
         "profile_specific_timing=14/20",
         "proxy_or_missing_timing_routes_blocked=true",
-        "promotion_blocker_summary_count=15"
+        "promotion_blocker_summary_count=15",
+        "openvino_gpu_promoted_profiles=ask_normal,ask_short",
+        "openvino_npu_promoted_profiles=",
+        "profile_scoped_promotion_only=true"
       ]
     },
     {
@@ -569,7 +587,10 @@
         "fallback_observed=false",
         "telemetry_gap_count=60",
         "profile_specific_timing=14/20",
-        "proxy_or_missing_timing_routes_blocked=true"
+        "proxy_or_missing_timing_routes_blocked=true",
+        "openvino_gpu_promoted_profiles=ask_normal,ask_short",
+        "openvino_npu_promoted_profiles=",
+        "profile_scoped_promotion_only=true"
       ]
     },
     {
