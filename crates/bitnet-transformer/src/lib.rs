@@ -115,7 +115,12 @@ fn attention_f16_dot_input(tensor: &Tensor) -> Result<Tensor> {
 }
 
 fn attention_score_key_input(tensor: &Tensor) -> Result<Tensor> {
-    Ok(tensor.to_dtype(DType::F32)?)
+    attention_f16_dot_input(tensor)
+}
+
+#[cfg(any(feature = "trace", test))]
+fn attention_score_key_f16_probe_input(tensor: &Tensor) -> Result<Tensor> {
+    attention_f16_dot_input(tensor)
 }
 
 fn qk256_scale_for(
@@ -811,6 +816,7 @@ impl MultiHeadAttention {
         let k_for_scores = attention_score_key_input(&k_expanded)?;
         #[cfg(feature = "trace")]
         if self.layer_idx == 0 {
+            let k_for_scores_f16_probe = attention_score_key_f16_probe_input(&k_expanded)?;
             trace_layer0_tensor(
                 self.layer_idx,
                 _trace_base_seq,
@@ -830,6 +836,18 @@ impl MultiHeadAttention {
                 );
                 let stage = format!("attention_k_score_input_head{head_idx}_live_ref_layout");
                 trace_tensor_record(&trace_name, &key_head, trace_seq, Some(0), &stage)?;
+
+                let key_head_f16_probe = k_for_scores_f16_probe
+                    .narrow(1, head_idx, 1)?
+                    .reshape(&[t_k, self.head_dim])?
+                    .transpose(0, 1)?
+                    .to_dtype(DType::F32)?;
+                let trace_name = format!(
+                    "t{trace_seq}/blk0/attention_k_score_input_f16_roundtrip_head{head_idx}_live_ref_layout"
+                );
+                let stage =
+                    format!("attention_k_score_input_f16_roundtrip_head{head_idx}_live_ref_layout");
+                trace_tensor_record(&trace_name, &key_head_f16_probe, trace_seq, Some(0), &stage)?;
             }
         }
         let scores = q_for_scores.matmul(&k_for_scores.transpose(2, 3)?)?;
@@ -2365,7 +2383,7 @@ mod tests {
     }
 
     #[test]
-    fn attention_score_key_input_preserves_f32_values() -> Result<()> {
+    fn attention_score_key_input_uses_f16_roundtrip_values() -> Result<()> {
         let device = Device::Cpu;
         let input =
             Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
@@ -2373,7 +2391,43 @@ mod tests {
         let output = attention_score_key_input(&input)?;
         let values = output.flatten_all()?.to_vec1::<f32>()?;
 
-        assert_eq!(values, vec![1.0003, -2.0007, 3.1259, -4.2509]);
+        assert_eq!(values, vec![1.0, -2.0, 3.125, -4.25]);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_score_key_f16_probe_input_uses_f16_roundtrip_values() -> Result<()> {
+        let device = Device::Cpu;
+        let input =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+
+        let output = attention_score_key_f16_probe_input(&input)?;
+        let values = output.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(values, vec![1.0, -2.0, 3.125, -4.25]);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_score_key_runtime_matches_f16_probe_contract() -> Result<()> {
+        let device = Device::Cpu;
+        let query =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+        let key = Tensor::from_slice(&[5.0003f32, 6.0007, -7.1259, 8.2509], (1, 1, 1, 4), &device)?;
+
+        let q_values = attention_f16_dot_input(&query)?.flatten_all()?.to_vec1::<f32>()?;
+        let runtime_k_values = attention_score_key_input(&key)?.flatten_all()?.to_vec1::<f32>()?;
+        let probe_k_values =
+            attention_score_key_f16_probe_input(&key)?.flatten_all()?.to_vec1::<f32>()?;
+        let runtime_score =
+            q_values.iter().zip(runtime_k_values.iter()).fold(0.0f32, |sum, (q, k)| sum + q * k);
+        let probe_score =
+            q_values.iter().zip(probe_k_values.iter()).fold(0.0f32, |sum, (q, k)| sum + q * k);
+
+        assert_eq!(runtime_k_values, vec![5.0, 6.0, -7.125, 8.25]);
+        assert_eq!(probe_k_values, vec![5.0, 6.0, -7.125, 8.25]);
+        assert_eq!(runtime_score, -64.328125);
+        assert_eq!(probe_score, -64.328125);
         Ok(())
     }
 
@@ -2389,8 +2443,8 @@ mod tests {
         let score = q_values.iter().zip(k_values.iter()).fold(0.0f32, |sum, (q, k)| sum + q * k);
 
         assert_eq!(q_values, vec![1.0, -2.0, 3.125, -4.25]);
-        assert_eq!(k_values, vec![5.0003, 6.0007, -7.1259, 8.2509]);
-        assert_eq!(score, -64.33586);
+        assert_eq!(k_values, vec![5.0, 6.0, -7.125, 8.25]);
+        assert_eq!(score, -64.328125);
         Ok(())
     }
 

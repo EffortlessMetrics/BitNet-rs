@@ -5855,6 +5855,14 @@ fn attention_score_input_attribution(
         })
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
+    let rust_score_key_f16_probe_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_k_score_input_f16_roundtrip_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
     let rust_fallback_key_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
@@ -5931,6 +5939,7 @@ fn attention_score_input_attribution(
             ScoreKeyLayout::TokenMajor
         };
         let actual_rust_key = rust_score_key_heads.get(&head).copied();
+        let rust_key_f16_probe = rust_score_key_f16_probe_heads.get(&head).copied();
         let fallback_rust_key =
             kv_head.and_then(|kv_head| rust_fallback_key_heads.get(&kv_head).copied());
         let rust_key = actual_rust_key.or(fallback_rust_key);
@@ -5959,7 +5968,7 @@ fn attention_score_input_attribution(
                 .min(rust_key_token_count(rust_key).unwrap_or(rust_score.first_values.len()))
                 .min(reference_score.first_values.len())
                 .min(rust_score.first_values.len());
-            let candidates = [
+            let mut candidates = vec![
                 ScoreInputAttributionCandidate {
                     id: "reference_q_reference_k_q_f16_k_f32",
                     base_candidate: "reference_q_reference_k",
@@ -6057,6 +6066,32 @@ fn attention_score_input_attribution(
                     key_values: &rust_key.first_values,
                 },
             ];
+            if let Some(rust_key_f16_probe) = rust_key_f16_probe {
+                candidates.push(ScoreInputAttributionCandidate {
+                    id: "reference_q_rust_k_f16_probe_q_f16_k_trace_f16",
+                    base_candidate: "reference_q_rust_k_f16_probe",
+                    score_input_variant: "q_f16_k_trace_f16",
+                    query_source: "reference_Qcur",
+                    key_source: "rust_attention_k_score_input_f16_roundtrip_head",
+                    key_layout: ScoreKeyLayout::DimMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: false,
+                    query_values: &reference_query.first_values,
+                    key_values: &rust_key_f16_probe.first_values,
+                });
+                candidates.push(ScoreInputAttributionCandidate {
+                    id: "rust_q_rust_k_f16_probe_q_f16_k_trace_f16",
+                    base_candidate: "rust_q_rust_k_f16_probe",
+                    score_input_variant: "q_f16_k_trace_f16",
+                    query_source: "rust_attention_q_rope",
+                    key_source: "rust_attention_k_score_input_f16_roundtrip_head",
+                    key_layout: ScoreKeyLayout::DimMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: false,
+                    query_values: &rust_query.first_values,
+                    key_values: &rust_key_f16_probe.first_values,
+                });
+            }
 
             let mut candidate_rows = Vec::new();
             let mut reference_deltas = BTreeMap::<&str, Value>::new();
@@ -6163,6 +6198,7 @@ fn attention_score_input_attribution(
                 "reference_key_source_kind": reference_key_source_kind,
                 "rust_key_source": rust_key_source,
                 "rust_key_source_kind": rust_key_source_kind,
+                "rust_key_f16_probe_present": rust_key_f16_probe.is_some(),
                 "reference_best_candidate": reference_best_info.map(|candidate| candidate.base_candidate),
                 "reference_best_candidate_id": reference_best,
                 "reference_best_score_input_variant": reference_best_info.map(|candidate| candidate.score_input_variant),
@@ -6185,6 +6221,7 @@ fn attention_score_input_attribution(
                 "reference_kcur_history_key_present": reference_kcur_history_key.is_some(),
                 "reference_legacy_key_present": reference_legacy_key.is_some(),
                 "rust_key_present": rust_key.is_some(),
+                "rust_score_key_f16_probe_present": rust_score_key_f16_probe_heads.contains_key(&head),
                 "rust_score_key_present": actual_rust_key.is_some(),
                 "rust_fallback_key_present": fallback_rust_key.is_some(),
                 "reference_score_present": true,
@@ -6218,6 +6255,7 @@ fn attention_score_input_attribution(
             rust_score_key_heads.len()
         },
         "rust_score_key_head_count": rust_score_key_heads.len(),
+        "rust_score_key_f16_probe_head_count": rust_score_key_f16_probe_heads.len(),
         "rust_fallback_key_head_count": rust_fallback_key_heads.len(),
         "rust_key_stage_source": if rust_score_key_heads.is_empty() {
             "attention_k_cache_f16_roundtrip_kv_head_fallback"
@@ -11474,6 +11512,18 @@ mod tests {
             },
         );
         rust_records.insert(
+            "attention_k_score_input_f16_roundtrip_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![30.0, 50.0, 40.0, 60.0],
+                ..test_rust_trace_record(
+                    "attention_k_score_input_f16_roundtrip_head0_live_ref_layout",
+                    vec![30.0, 50.0, 40.0, 60.0],
+                )
+            },
+        );
+        rust_records.insert(
             "attention_scores_raw_head0".to_string(),
             RustTraceRecord {
                 shape: vec![2],
@@ -11492,6 +11542,7 @@ mod tests {
             Some(&json!("attention_k_score_input_head"))
         );
         assert_eq!(report.pointer("/rust_score_key_head_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/rust_score_key_f16_probe_head_count"), Some(&json!(1)));
         assert_eq!(report.pointer("/rust_fallback_key_head_count"), Some(&json!(1)));
         assert_eq!(
             report.pointer("/rows/0/rust_key_source"),
@@ -11502,6 +11553,7 @@ mod tests {
             Some(&json!("actual_score_input"))
         );
         assert_eq!(report.pointer("/rows/0/rust_best_candidate"), Some(&json!("rust_q_rust_k")));
+        assert_eq!(report.pointer("/rows/0/rust_key_f16_probe_present"), Some(&json!(true)));
         assert_eq!(
             report.pointer("/rows/0/candidates/3/key_source"),
             Some(&json!("reference_k_kv_head"))
@@ -11516,6 +11568,17 @@ mod tests {
                 },
             );
         assert!(has_actual_k_f16_candidate);
+        let has_probe_candidate =
+            report.pointer("/rows/0/candidates").and_then(Value::as_array).unwrap().iter().any(
+                |candidate| {
+                    candidate.pointer("/base_candidate") == Some(&json!("rust_q_rust_k_f16_probe"))
+                        && candidate.pointer("/score_input_variant")
+                            == Some(&json!("q_f16_k_trace_f16"))
+                        && candidate.pointer("/key_source")
+                            == Some(&json!("rust_attention_k_score_input_f16_roundtrip_head"))
+                },
+            );
+        assert!(has_probe_candidate);
     }
 
     #[test]
