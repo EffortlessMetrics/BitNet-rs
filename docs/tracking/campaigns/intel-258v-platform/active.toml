@@ -6083,7 +6083,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-012"
-status = "in_progress"
+status = "merged"
+pr = 5703
+head_sha = "2a47c7093d4e80192c4e98e6d54e1669986a3e4e"
+merge_sha = "1fde4024df7d93ae03bf8382b735a93abca5ee2a"
 branch = "codex/lunar-lake/LNL258V-ROUTE-012-advantage-context"
 stackable = false
 review_mode = "codex_premerge"
