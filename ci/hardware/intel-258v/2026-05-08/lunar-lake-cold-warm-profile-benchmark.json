@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-19T04:30:00Z",
+  "created_utc": "2026-05-19T05:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -20,6 +20,7 @@
         {
           "route_id": "dense_slm_default_cpu",
           "route_status": "promoted",
+          "ledger_route_status": "promoted",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
           "fallback_used": false,
@@ -86,7 +87,8 @@
         },
         {
           "route_id": "dense_slm_openvino_gpu_candidate",
-          "route_status": "promoted",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -147,7 +149,8 @@
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile regression_tiny",
-              "lower observed total response still requires route-promotion evidence before use"
+              "lower observed total response still requires route-promotion evidence before use",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "telemetry": {
@@ -171,6 +174,7 @@
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
+          "ledger_route_status": "candidate",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -277,6 +281,7 @@
         {
           "route_id": "dense_slm_openvino_gpu_candidate",
           "route_status": "promoted",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -326,7 +331,7 @@
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "promoted",
+            "baseline_route_status": "candidate",
             "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 3940.211999993073,
             "route_to_baseline_total_response_ratio": 0.1407895417147891,
@@ -359,7 +364,8 @@
         },
         {
           "route_id": "dense_slm_default_cpu",
-          "route_status": "promoted",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
           "fallback_used": false,
@@ -420,7 +426,8 @@
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_openvino_gpu_candidate remains the comparison reference for profile ask_short"
+              "baseline route dense_slm_openvino_gpu_candidate remains the comparison reference for profile ask_short",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "telemetry": {
@@ -445,6 +452,7 @@
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
+          "ledger_route_status": "candidate",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -494,7 +502,7 @@
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "promoted",
+            "baseline_route_status": "candidate",
             "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 32002.09160000412,
             "route_to_baseline_total_response_ratio": 1.1434815716228477,
@@ -551,6 +559,7 @@
         {
           "route_id": "dense_slm_openvino_gpu_candidate",
           "route_status": "promoted",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -600,7 +609,7 @@
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "promoted",
+            "baseline_route_status": "candidate",
             "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 4264.595299994573,
             "route_to_baseline_total_response_ratio": 0.15238023179624222,
@@ -633,7 +642,8 @@
         },
         {
           "route_id": "dense_slm_default_cpu",
-          "route_status": "promoted",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
           "fallback_used": false,
@@ -694,7 +704,8 @@
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_openvino_gpu_candidate remains the comparison reference for profile ask_normal"
+              "baseline route dense_slm_openvino_gpu_candidate remains the comparison reference for profile ask_normal",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "telemetry": {
@@ -719,6 +730,7 @@
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
+          "ledger_route_status": "candidate",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -768,7 +780,7 @@
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "promoted",
+            "baseline_route_status": "candidate",
             "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 32747.796600012574,
             "route_to_baseline_total_response_ratio": 1.1701267026984856,
@@ -825,7 +837,8 @@
       "routes": [
         {
           "route_id": "dense_slm_default_cpu",
-          "route_status": "promoted",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
           "fallback_used": false,
@@ -894,7 +907,8 @@
         },
         {
           "route_id": "dense_slm_openvino_gpu_candidate",
-          "route_status": "promoted",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -944,7 +958,7 @@
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "promoted",
+            "baseline_route_status": "candidate",
             "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 4612.401500001317,
             "route_to_baseline_total_response_ratio": 0.16480785637700027,
@@ -960,7 +974,8 @@
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy",
-              "lower observed total response still requires route-promotion evidence before use"
+              "lower observed total response still requires route-promotion evidence before use",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "telemetry": {
@@ -986,6 +1001,7 @@
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
+          "ledger_route_status": "candidate",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -1035,7 +1051,7 @@
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "promoted",
+            "baseline_route_status": "candidate",
             "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 32788.050300002564,
             "route_to_baseline_total_response_ratio": 1.171565026315064,
@@ -1098,7 +1114,8 @@
       "routes": [
         {
           "route_id": "dense_slm_default_cpu",
-          "route_status": "promoted",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
           "fallback_used": false,
@@ -1167,7 +1184,8 @@
         },
         {
           "route_id": "dense_slm_openvino_gpu_candidate",
-          "route_status": "promoted",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -1217,7 +1235,7 @@
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "promoted",
+            "baseline_route_status": "candidate",
             "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 4200.657800020883,
             "route_to_baseline_total_response_ratio": 0.15009565134227146,
@@ -1233,7 +1251,8 @@
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy",
-              "lower observed total response still requires route-promotion evidence before use"
+              "lower observed total response still requires route-promotion evidence before use",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "telemetry": {
@@ -1259,6 +1278,7 @@
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
+          "ledger_route_status": "candidate",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -1308,7 +1328,7 @@
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "promoted",
+            "baseline_route_status": "candidate",
             "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 32690.998900009785,
             "route_to_baseline_total_response_ratio": 1.1680972377473966,
@@ -1369,7 +1389,8 @@
       "routes": [
         {
           "route_id": "dense_slm_default_cpu",
-          "route_status": "promoted",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
           "fallback_used": false,
@@ -1452,7 +1473,8 @@
       "routes": [
         {
           "route_id": "dense_slm_default_cpu",
-          "route_status": "promoted",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
           "fallback_used": false,
@@ -1523,6 +1545,7 @@
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
+          "ledger_route_status": "candidate",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -1573,7 +1596,7 @@
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "promoted",
+            "baseline_route_status": "candidate",
             "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 32329.237800001632,
             "route_to_baseline_total_response_ratio": 1.155170984164981,
@@ -1625,7 +1648,8 @@
         },
         {
           "route_id": "dense_slm_openvino_gpu_candidate",
-          "route_status": "promoted",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -1676,7 +1700,7 @@
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "promoted",
+            "baseline_route_status": "candidate",
             "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 4470.872499986319,
             "route_to_baseline_total_response_ratio": 0.15975081806243777,
@@ -1693,7 +1717,8 @@
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile low_power",
-              "lower observed total response still requires route-promotion evidence before use"
+              "lower observed total response still requires route-promotion evidence before use",
+              "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "telemetry": {
@@ -1735,6 +1760,7 @@
         {
           "route_id": "bitnet_reference_cpu",
           "route_status": "promoted",
+          "ledger_route_status": "promoted",
           "selected_backend": "intel-258v-cpu-avx2",
           "runtime_api": "cpu",
           "fallback_used": false,

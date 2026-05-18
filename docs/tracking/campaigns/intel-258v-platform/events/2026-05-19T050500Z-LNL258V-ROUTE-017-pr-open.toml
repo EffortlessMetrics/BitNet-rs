@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T05:05:00Z"
+event = "pr_open"
+item = "LNL258V-ROUTE-017"
+branch = "codex/lunar-lake/LNL258V-ROUTE-017-profile-scoped-status"
+pr = 5777
+head_sha = "65d6b0c50ab799c515216e9151e5f82b0f687b47"
+actor = "codex"
+summary = "Opened LNL258V-ROUTE-017 to make route-profile route_status profile-scoped while preserving ledger_route_status."
+
+notes = [
+  "The PR keeps dense Qwen OpenVINO GPU promoted only for ask_short and ask_normal.",
+  "Regression_tiny, prefill_heavy, decode_heavy, structured, and low_power rows now report non-promoted routes as candidate while preserving the global ledger state separately.",
+  "The PR does not run new inference, promote NPU, claim power advantage, claim native OpenCL/NPU execution, or change BitNet QK256/I2_S behavior.",
+]

@@ -1058,6 +1058,8 @@ pub struct WorkloadProfileEvaluation {
 pub struct ProfileRouteEvidence {
     pub route_id: String,
     pub route_status: String,
+    #[serde(default)]
+    pub ledger_route_status: String,
     pub selected_backend: String,
     pub runtime_api: String,
     pub fallback_used: Option<bool>,
@@ -1273,6 +1275,8 @@ pub struct ColdWarmProfileBenchmark {
 pub struct ColdWarmRouteBenchmark {
     pub route_id: String,
     pub route_status: String,
+    #[serde(default)]
+    pub ledger_route_status: String,
     pub selected_backend: String,
     pub runtime_api: String,
     pub fallback_used: Option<bool>,
@@ -6184,6 +6188,7 @@ fn cold_warm_route_benchmark(
     ColdWarmRouteBenchmark {
         route_id: route.route_id.clone(),
         route_status: route.route_status.clone(),
+        ledger_route_status: route.ledger_route_status.clone(),
         selected_backend: route.selected_backend.clone(),
         runtime_api: route.runtime_api.clone(),
         fallback_used: route.fallback_used,
@@ -9657,6 +9662,7 @@ fn evaluate_profile_route(
         && route.promoted_for.contains(&profile.profile_id)
         && route.fallback_used == Some(false)
         && blockers.is_empty();
+    let route_status = profile_scoped_route_status(profile, route, promotion_eligible_for_profile);
 
     let mut evidence = route.present_evidence.clone();
     if let Some(quality) = &profile_quality
@@ -9679,7 +9685,8 @@ fn evaluate_profile_route(
 
     Ok(ProfileRouteEvidence {
         route_id: route.route_id.clone(),
-        route_status: route.status.clone(),
+        route_status,
+        ledger_route_status: route.status.clone(),
         selected_backend: route.selected_backend.clone(),
         runtime_api: route.runtime_api.clone(),
         fallback_used: route.fallback_used,
@@ -9695,6 +9702,22 @@ fn evaluate_profile_route(
         evidence,
         blockers,
     })
+}
+
+fn profile_scoped_route_status(
+    profile: &WorkloadProfile,
+    route: &RoutePromotion,
+    promotion_eligible_for_profile: bool,
+) -> String {
+    if promotion_eligible_for_profile {
+        "promoted".to_string()
+    } else if profile.promoted_route.as_deref() == Some(route.route_id.as_str())
+        || (route.status == "promoted" && route.promoted_for.contains(&profile.profile_id))
+    {
+        "blocked".to_string()
+    } else {
+        "candidate".to_string()
+    }
 }
 
 fn profile_regression_bundle_evidence_satisfied(
@@ -10961,6 +10984,51 @@ mod tests {
         });
 
         assert_eq!(answer_gate_passed(&receipt), Some(true));
+    }
+
+    #[test]
+    fn profile_scoped_route_status_keeps_global_promotion_separate() {
+        let route = RoutePromotion {
+            route_id: "dense_slm_openvino_gpu_candidate".to_string(),
+            status: "promoted".to_string(),
+            promoted_for: vec!["ask_short".to_string()],
+            blocked_for: vec!["regression_tiny_cpu_baseline".to_string()],
+            required_evidence: vec![],
+            present_evidence: vec![],
+            missing_evidence: vec![],
+            selected_backend: "openvino-gpu".to_string(),
+            runtime_api: "openvino_genai".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            answer_gate_evidence: None,
+            phase_evidence: None,
+            fallback_used: Some(false),
+            answer_gate_passed: Some(true),
+            phase_timing_present: Some(true),
+            speedup_claim: false,
+            acceleration_claim: false,
+            last_evidence_utc: "2026-05-19T04:30:00Z".to_string(),
+            reason: "test route".to_string(),
+        };
+        let ask_short = WorkloadProfile {
+            profile_id: "ask_short".to_string(),
+            prompt_tokens: "<=64".to_string(),
+            output_tokens: "<=32".to_string(),
+            purpose: "short ask".to_string(),
+            promoted_route: Some(route.route_id.clone()),
+            candidate_routes: vec![DEFAULT_ASK_ROUTE.to_string()],
+        };
+        let regression_tiny = WorkloadProfile {
+            profile_id: "regression_tiny".to_string(),
+            prompt_tokens: "<=64".to_string(),
+            output_tokens: "<=32".to_string(),
+            purpose: "strict smoke".to_string(),
+            promoted_route: Some(DEFAULT_ASK_ROUTE.to_string()),
+            candidate_routes: vec![route.route_id.clone()],
+        };
+
+        assert_eq!(profile_scoped_route_status(&ask_short, &route, true), "promoted");
+        assert_eq!(profile_scoped_route_status(&ask_short, &route, false), "blocked");
+        assert_eq!(profile_scoped_route_status(&regression_tiny, &route, false), "candidate");
     }
 
     #[test]
