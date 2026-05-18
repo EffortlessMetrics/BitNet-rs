@@ -225,8 +225,45 @@ closed-form YAML expected-answer authority, switches fixed-table prose answers
 to a mechanical `contains_expected` scorer, tightens numeric final-answer
 extraction so prompt-echo numbers are not treated as answers, broadens
 rewrite normalization to punctuation/space-only cleanup, and records that the
-250-case reference-vs-Rust sidecar is still not supplied. The next runtime
-proof remains `M4-BITNET-EX-014`.
+250-case reference-vs-Rust sidecar is still not supplied.
+
+`M4-BITNET-EX-014` reruns that repaired corpus on the accepted Microsoft I2_S
+GGUF, accepted external tokenizer, and `apple-m4-cpu-neon` backend:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/receipts-check.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/regression-vs-2026-05-17T1903Z.json
+```
+
+The repaired run completed 250/250 cases with zero timeouts, zero `not_run`
+cases, `fallback_used=false`, 250 child receipts, and a validated aggregate.
+It records 205/250 quality passes and 210/250 mechanical scoring passes. The
+family result is intentionally narrow:
+
+| Family | Passed / Total |
+| --- | ---: |
+| arithmetic_exact | 14 / 15 |
+| numeric_tolerance | 24 / 35 |
+| fixed_table_qa | 30 / 35 |
+| format_constrained_json | 20 / 20 |
+| closed_label_classification | 18 / 20 |
+| synthetic_extraction | 19 / 25 |
+| ordering_sorting | 17 / 20 |
+| rewrite_normalized | 15 / 20 |
+| constrained_summary | 26 / 30 |
+| required_forbidden_tokens | 22 / 30 |
+
+The prior `2026-05-17T1903Z` 250-case receipt is not a compatible regression
+baseline because its corpus contract is `2.0.0` and its scoring kinds do not
+include `contains_expected`. The repaired run is therefore the first repaired
+250-case baseline. Context-only deltas versus the old run are +9 quality
+passes, -9 quality failures, +7 fixed-table passes, +2 constrained-summary
+passes, unchanged numeric-tolerance quality passes, and +4 rewrite scoring
+passes; these are not a strict regression result. The reference-vs-Rust sidecar
+is still not supplied, so 250/250 reference comparisons remain
+`reference_not_supplied`.
 
 ## M4 Benchmark Report Slice
 

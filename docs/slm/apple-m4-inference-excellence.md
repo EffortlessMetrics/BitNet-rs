@@ -663,11 +663,46 @@ before approving a 500-case runtime campaign.
 
 The tracker keeps that repair-first decision explicit: `M4-BITNET-EX-013`
 repairs the 250-case scorer, template, normalization, and reference-comparison
-path without a runtime claim. `M4-BITNET-EX-014` reruns the repaired 250-case
-corpus on the accepted artifact, tokenizer, and backend identity as a bounded
-repaired baseline. `M4-BITNET-EX-015` repeats that repaired run for matching
-history and records whether the next honest step is 500-case expansion,
-continued repair, or freezing the current BitNet quality envelope.
+path without a runtime claim. `M4-BITNET-EX-014` now records the repaired
+250-case runtime refresh:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/receipts-check.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/regression-vs-2026-05-17T1903Z.json
+```
+
+The repaired run completed all 250 cases with `fallback_used=false`, zero
+timeouts, zero `not_run` cases, 2,086 generated tokens, and receipt validation
+over 251 receipts: 250 child receipts plus the aggregate. It passed 205/250
+quality gates and 210/250 mechanical scoring gates. The remaining quality
+failures are still bounded evidence, not a broad BitNet quality claim:
+
+| Family | Passed / Total | Notes |
+| --- | ---: | --- |
+| arithmetic_exact | 14 / 15 | `answer_content=1` |
+| numeric_tolerance | 24 / 35 | `answer_content=10`, `format_only=4` |
+| fixed_table_qa | 30 / 35 | `factual_table=5` |
+| format_constrained_json | 20 / 20 | all schema checks passed |
+| closed_label_classification | 18 / 20 | `answer_content=2` |
+| synthetic_extraction | 19 / 25 | `extraction=6` |
+| ordering_sorting | 17 / 20 | `answer_content=3` |
+| rewrite_normalized | 15 / 20 | quality gate 15/20; scoring gate 19/20 |
+| constrained_summary | 26 / 30 | `answer_content=4` |
+| required_forbidden_tokens | 22 / 30 | `answer_content=8` |
+
+The strict regression command against
+`2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json` correctly reports a
+context mismatch because corpus version `2.1.0` adds `contains_expected` and
+revised normalization while the prior receipt used corpus version `2.0.0`. The
+context-only operator deltas are +9 quality passes, -9 quality failures, zero
+timeout delta, +7 fixed-table passes, +2 constrained-summary passes, unchanged
+numeric-tolerance quality passes, and +4 rewrite scoring passes. Treat this as
+the first repaired 250-case baseline until a second repaired receipt exists.
+`M4-BITNET-EX-015` repeats that repaired run for matching history and records
+whether the next honest step is 500-case expansion, continued repair, or
+freezing the current BitNet quality envelope.
 
 `M4-BITNET-EX-013` now stages the repair as a dry-run-only corpus/scorer
 contract update. The repaired 250-case corpus is version `2.1.0` and keeps the
@@ -677,7 +712,7 @@ answers as authority, uses `contains_expected` for fixed-table prose answers,
 uses final-answer numeric extraction for numeric tolerance, keeps rewrite
 normalization limited to casing, punctuation, and whitespace, and records the
 reference-vs-Rust 250-case sidecar as not yet supplied. This does not refresh
-runtime pass rates or approve the 500-case expansion.
+approve the 500-case expansion.
 
 `M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
 the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`

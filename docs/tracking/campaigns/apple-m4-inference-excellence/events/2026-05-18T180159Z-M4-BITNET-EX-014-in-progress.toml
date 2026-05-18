@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T18:01:59Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-014"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-014-bitnet-250-repaired-run"
+
+notes = [
+  "Started the repaired BitNet 250-case runtime refresh after M4-BITNET-EX-013 merged the corpus/scorer repair contract.",
+  "Scope is limited to accepted Microsoft I2_S GGUF plus accepted external tokenizer on apple-m4-cpu-neon, aggregate and child receipts, timing, task-family pass rates, deterministic failure taxonomy, and explicit baseline/context statements; this does not enable BitNet chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad quality/performance claims.",
+]

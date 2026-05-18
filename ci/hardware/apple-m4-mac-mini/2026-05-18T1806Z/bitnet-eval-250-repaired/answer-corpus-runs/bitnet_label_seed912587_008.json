@@ -1,0 +1,601 @@
+{
+  "apple": {
+    "machine_id": "apple-m4-mac-mini",
+    "macos": {
+      "build": "25E253",
+      "native_or_virtualized": "native-macos",
+      "version": "26.4.1"
+    },
+    "metal_visible": true,
+    "resolved_device": {
+      "chip": "Apple M4",
+      "cpu_cores": 10,
+      "gpu_cores": 10,
+      "unified_memory": true,
+      "unified_memory_bytes": 17179869184
+    }
+  },
+  "artifact_kind": "strict_bitnet_cpu_reference",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus-runs/bitnet_label_seed912587_008.json",
+  "bitnet": {
+    "activation_quantization": "A8",
+    "execution_phase": "decode",
+    "fallback_layout": null,
+    "kernel_family": "i2_s",
+    "kernel_format": "i2_s",
+    "layout_source": "gguf_packed_i2_s_reference",
+    "per_token_weight_upload": false,
+    "quantization": "W1.58A8",
+    "weight_quantization": "W1.58",
+    "weights_uploaded_once": false
+  },
+  "counts": {
+    "n_kv": 24,
+    "n_tensors": 332,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "aarch64",
+    "features": [
+      "neon"
+    ],
+    "model": "unknown-cpu",
+    "threads": 1
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 2,
+    "phase": "decode",
+    "prompt_tokens": 28,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "bitnet_linear_layers_on_cuda": 0,
+    "bitnet_linear_layers_total": 6090,
+    "execution_claim": "cpu_reference",
+    "input_rows_materialized_count": 6090,
+    "output_rows_allocated_count": 6090,
+    "qk256_execution_path": "scaled_i2s_i8s",
+    "qk256_f32_avx2_gemv_invocations": 0,
+    "qk256_f32_scalar_gemv_invocations": 0,
+    "qk256_flat_bytes_extracted_count": 6090,
+    "qk256_i8s_scaled_avx2_invocations": 0,
+    "qk256_i8s_scaled_scalar_invocations": 6090,
+    "requested_kernel": null,
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": true,
+    "explicit_bos_requested": false,
+    "greedy": true,
+    "max_new_tokens": 8,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
+    "seed": 0,
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": false,
+    "family": "i2_s",
+    "hot_path_kernel_id": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "implementation": "scalar",
+    "kernel_id": "i2_s-scalar-reference",
+    "layout": "gguf_packed_i2_s"
+  },
+  "latency": {
+    "cmd_to_first_ms": 12302,
+    "decode_first_ms": 12302,
+    "total_ms": 12782
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "explicit"
+  },
+  "logits_dump": null,
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 128256,
+    "expected_logits_vector_length_source": "tokenizer_vocab_size",
+    "first_step_logits_vector_length": null,
+    "observed_logits_vector_length": null,
+    "observed_logits_vector_length_source": "not_available"
+  },
+  "machine_id": "apple-m4-mac-mini",
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "tied_token_embeddings",
+    "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tie_word_embeddings": true,
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "not_claims": [
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion"
+  ],
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 2,
+        "max_ms": 0.008,
+        "mean_ms": 0.006,
+        "min_ms": 0.004,
+        "p50_ms": 0.004,
+        "p95_ms": 0.008,
+        "total_ms": 0.012
+      },
+      "first_token_decode_ms": 497.725,
+      "forward_ms": {
+        "count": 2,
+        "max_ms": 437.918,
+        "mean_ms": 437.364,
+        "min_ms": 436.811,
+        "p50_ms": 436.811,
+        "p95_ms": 437.918,
+        "total_ms": 874.729
+      },
+      "generated_tokens": 2,
+      "logits_ms": {
+        "count": 2,
+        "max_ms": 60.201,
+        "mean_ms": 50.885,
+        "min_ms": 41.569,
+        "p50_ms": 41.569,
+        "p95_ms": 60.201,
+        "total_ms": 101.77
+      },
+      "per_token_ms": {
+        "count": 2,
+        "max_ms": 497.725,
+        "mean_ms": 488.861,
+        "min_ms": 479.997,
+        "p50_ms": 479.997,
+        "p95_ms": 497.725,
+        "total_ms": 977.721
+      },
+      "sample_ms": {
+        "count": 2,
+        "max_ms": 0.427,
+        "mean_ms": 0.42,
+        "min_ms": 0.413,
+        "p50_ms": 0.413,
+        "p95_ms": 0.427,
+        "total_ms": 0.84
+      },
+      "steady_per_token_ms": {
+        "count": 1,
+        "max_ms": 479.997,
+        "mean_ms": 479.997,
+        "min_ms": 479.997,
+        "p50_ms": 479.997,
+        "p95_ms": 479.997,
+        "total_ms": 479.997
+      },
+      "steady_state_tok_s": 2.083,
+      "steady_state_tokens": 1,
+      "token_decode_ms": {
+        "count": 2,
+        "max_ms": 0.013,
+        "mean_ms": 0.008,
+        "min_ms": 0.003,
+        "p50_ms": 0.003,
+        "p95_ms": 0.013,
+        "total_ms": 0.016
+      },
+      "warmup_tokens": 1
+    },
+    "id": "default",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 4443.879,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 11804.78,
+      "per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "tokens": 27
+    },
+    "prompt_tokenize_ms": 0.287,
+    "requested": false,
+    "tokenizer_load_ms": 180.891
+  },
+  "prompt": "Classify route as local or remote: The request goes to a cloud API. Answer with one label.",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 8,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "3e323f0d547b84415ad67df1f3c39717f1ed531fa05107348e67411eb45c2eaf",
+    "identity_sha256": "eafbef9f981f744bdc8867df7ef35d577419fafabe11b5f0038320252b1849e0",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        128009,
+        128001
+      ]
+    },
+    "stop_criteria_sha256": "e1342df3623e7e44cd79854888c249063c066138b7fa463d8b371e8bb3b4ef7e",
+    "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+    "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+    "template": {
+      "family": "bitnetcpp-answer",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "bitnetcpp-answer",
+    "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+    "tokenizer_authority": {
+      "authority": "llama-bpe",
+      "sha256": null,
+      "source": "explicit",
+      "strict": true
+    }
+  },
+  "prompt_identity": {
+    "bos_policy": false,
+    "parse_special": true,
+    "prompt_token_count": 28,
+    "prompt_token_ids_sha256": "7614c1aa692b8d7c12ab0e619bb8cabe56efd7a4112c57ba5930759e1df4a32a",
+    "rendered_prompt_sha256": "9c638342286b6efd5305a82484c136febd36fa686bcf49cc828ace932883e866",
+    "template": "bitnetcpp-answer"
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "rendered_sha256": "9c638342286b6efd5305a82484c136febd36fa686bcf49cc828ace932883e866",
+    "rendered_text": "User: Classify route as local or remote: The request goes to a cloud API. Answer with one label.<|eot_id|>Assistant: ",
+    "stop_sequences": [
+      "<|eot_id|>",
+      "<|end_of_text|>"
+    ],
+    "stop_token_ids": [
+      128009,
+      128001
+    ],
+    "template_family": "bitnetcpp-answer"
+  },
+  "proof_summary": {
+    "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
+    "claim_level": "diagnostic_cli_run",
+    "execution_backend": "apple-m4-cpu-neon",
+    "execution_backend_matched": true,
+    "fallback_used": false,
+    "kernel_route": {
+      "claimable": false,
+      "diagnostic_only": true,
+      "route_declared": false,
+      "route_id": null
+    },
+    "loader_fallback_used": false,
+    "model_contract": null,
+    "model_contract_declared": false,
+    "not_claims": [
+      "selected_attention_residency",
+      "resident_kv_decode",
+      "attention_scores_residency",
+      "softmax_residency",
+      "attention_value_mix_residency",
+      "full_support_op_residency",
+      "full_device_residency",
+      "completion"
+    ],
+    "requested_backend": "apple-m4-cpu-neon",
+    "requested_device": "apple-m4-cpu-neon",
+    "route_declared": false,
+    "selected_backend": "apple-m4-cpu-neon",
+    "strict_backend": true,
+    "tokenizer_fallback_used": false
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "gpu_cores": 10,
+    "unified_memory": true,
+    "unified_memory_bytes": 17179869184
+  },
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "strict_provenance": {
+    "cpu_features": [
+      "neon"
+    ],
+    "cpu_model": "unknown-cpu",
+    "decode_tokens": 2,
+    "decode_tps": 0.15647003598810827,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "bitnet",
+    "phase": "decode",
+    "prompt_tokens": 28,
+    "quant_format": "I2_S",
+    "requested_backend": "apple-m4-cpu-neon",
+    "requested_kernel": "i2_s-scalar-reference",
+    "selected_backend": "apple-m4-cpu-neon",
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "thread_count": 1,
+    "tokenizer_source": "explicit",
+    "tokenizer_strict": true
+  },
+  "text": "Remote",
+  "throughput": {
+    "decoded_tokens": 2,
+    "tokens_per_second": 0.15647003598810827
+  },
+  "timestamp": "2026-05-18T19:09:34.816691+00:00",
+  "timing": {
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 2.083,
+    "decode_total_ms": 977.721,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 497.725,
+    "first_token_ms": 12302,
+    "host_to_device_bytes": null,
+    "model_load_ms": 4443.879,
+    "prefill_ms": 11804.78,
+    "sampling_ms_per_token": 0.42,
+    "tokenize_ms": 0.287,
+    "tokenizer_load_ms": 180.891
+  },
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "model_family": "llama3",
+    "origin": "external",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "tokens": {
+    "generated": 2,
+    "generated_ids": [
+      25732,
+      128009
+    ],
+    "ids": [
+      25732,
+      128009
+    ],
+    "prompt": 28,
+    "prompt_ids": [
+      128000,
+      1502,
+      25,
+      3308,
+      1463,
+      6149,
+      439,
+      2254,
+      477,
+      8870,
+      25,
+      578,
+      1715,
+      5900,
+      311,
+      264,
+      9624,
+      5446,
+      13,
+      22559,
+      449,
+      832,
+      2440,
+      13,
+      128009,
+      72803,
+      25,
+      220
+    ],
+    "total": 30
+  }
+}
