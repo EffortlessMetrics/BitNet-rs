@@ -13,7 +13,7 @@
 #![cfg(feature = "cpu")]
 
 use bitnet_common::config::{BitNetConfig, ModelConfig};
-use bitnet_transformer::{KVCache, TransformerModel};
+use bitnet_transformer::{KVCache, TransformerForwardWorkspace, TransformerModel};
 use candle_core::{DType, Device, Tensor};
 use candle_nn::VarBuilder;
 
@@ -186,6 +186,45 @@ fn test_incremental_forward_shape_and_finite() -> anyhow::Result<()> {
         let vals: Vec<f32> = out.flatten_all()?.to_vec1()?;
         assert!(vals.iter().all(|v| v.is_finite()), "incremental forward must be finite");
     }
+    Ok(())
+}
+
+#[test]
+fn test_incremental_forward_workspace_matches_existing_path() -> anyhow::Result<()> {
+    let hidden = 64;
+    let model = make_model(hidden, 128, 4)?;
+    let device = Device::Cpu;
+    let token = 7u32;
+    let h = model.embed(std::slice::from_ref(&token))?;
+
+    let mut existing_kv = KVCache::new(&model.config, 1, &device)?;
+    let mut workspace_kv = KVCache::new(&model.config, 1, &device)?;
+    let mut workspace = TransformerForwardWorkspace::new();
+
+    let existing: Vec<f32> =
+        model.forward(h.clone(), Some(&mut existing_kv))?.flatten_all()?.to_vec1()?;
+    let with_workspace =
+        model.forward_with_workspace(h, Some(&mut workspace_kv), &mut workspace)?;
+    let with_workspace_values: Vec<f32> = with_workspace.flatten_all()?.to_vec1()?;
+
+    assert_eq!(existing, with_workspace_values, "workspace API must preserve forward output");
+    assert_eq!(workspace.model_forward_calls(), 1);
+    assert_eq!(workspace.block_forward_calls(), model.config.model.num_layers);
+    assert_eq!(workspace.feed_forward_calls(), model.config.model.num_layers);
+    assert_eq!(workspace.last_output_shape(), with_workspace.dims());
+    assert_eq!(workspace.last_output_shape(), &[1, 1, hidden]);
+    assert_eq!(workspace.reuse_status(), "feed_forward_output_workspace_owned_reuse_not_enabled");
+    assert_eq!(workspace.workspace_owned_output_count(), model.config.model.num_layers);
+    let surface =
+        workspace.first_output_surface().expect("workspace should classify one output surface");
+    assert_eq!(surface.name, "feed_forward.output");
+    assert_eq!(surface.storage_owner, "TransformerForwardWorkspace");
+    assert_eq!(surface.status, "workspace_owns_returned_tensor_reuse_not_enabled");
+    assert_eq!(surface.last_shape, vec![1, 1, hidden]);
+    assert!(
+        !workspace.tensor_reuse_enabled(),
+        "SLM-CPU-039 routes one output through the workspace before enabling reusable storage"
+    );
     Ok(())
 }
 

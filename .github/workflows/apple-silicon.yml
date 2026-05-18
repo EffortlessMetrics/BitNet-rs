@@ -11,7 +11,10 @@ on:
 
 concurrency:
   group: apple-silicon-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Apple Silicon jobs are capped by timeout-minutes below. Do not cancel an
+  # in-flight run on a new push: once macOS/arm64 work has started, discarding
+  # the result wastes scarce platform minutes and can hide useful failure data.
+  cancel-in-progress: false
 
 env:
   BITNET_SKIP_SLOW_TESTS: "1"

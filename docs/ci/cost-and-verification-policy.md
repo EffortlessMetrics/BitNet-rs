@@ -209,6 +209,16 @@ the fuzz workflow itself. Docs / tracking-only PRs use the docs and campaign
 tracker lanes instead of spending CI minutes compiling fuzz targets that
 cannot be affected by the diff.
 
+Performance Baseline Tracking follows the same rule. Pull requests run only a
+cheap Linux route job unless `performance`, `perf`, or `full-ci` is present.
+The former default PR `cargo check --workspace --features cpu` smoke now runs
+only when performance tracking is selected, while the comprehensive benchmark
+matrix remains on schedule and manual dispatch.
+
+Test Telemetry is advisory observability, not a merge gate. Ordinary PRs run
+only its cheap route job; nextest/JUnit and slow-test summaries run on `main`,
+manual dispatch, or labels `test-telemetry`, `slow-tests`, and `full-ci`.
+
 The goal is not to spend less by testing less. **The goal is to spend less on
 unrelated work so we can afford more verification where the change actually
 creates risk.**

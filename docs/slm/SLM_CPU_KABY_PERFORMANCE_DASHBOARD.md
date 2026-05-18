@@ -349,33 +349,48 @@ accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
 
 SLM-CPU-036 classifies the first reusable allocation surface under
 `prompt_prefill.forward` before changing dense math. The warm-session receipt
-now records the boundary as transformer forward workspace and owned tensor
-outputs that are not yet caller-reusable from the CLI warm-session loop:
+first recorded the boundary as transformer forward workspace and owned tensor
+outputs that were not caller-reusable from the CLI warm-session loop:
 
 ```text
 next_optimization_target = prefill_forward_buffer_boundary
-first_reusable_allocation_surface = transformer_forward_workspace_and_owned_tensor_outputs
+first_reusable_allocation_surface = transformer_forward_workspace_api_and_owned_tensor_outputs
 claim_scope = allocation-boundary classification only
 ```
 
 SLM-CPU-037 keeps that boundary explicit instead of adding a broad caller-side
-buffer reuse patch. The current transformer API returns owned Candle tensors
-from `TransformerModel::forward`, `TransformerBlock::forward`, and
-`FeedForward::forward`, so a warm-session caller cannot safely recycle those
-outputs without changing the typed transformer API. The receipt therefore
-records:
+buffer reuse patch. SLM-CPU-038 introduces the first typed transformer forward
+workspace API boundary through `TransformerModel::forward_with_workspace`,
+`TransformerBlock::forward_with_workspace`, and
+`FeedForward::forward_with_workspace`. This first API slice still delegates
+tensor math to the existing owned-output path, so reusable tensor storage is not
+enabled yet. The receipt therefore records:
 
 ```text
-reuse_status = not_reusable_without_transformer_api_change
 required_api_boundary = typed_transformer_forward_workspace
-next_optimization_target = typed_transformer_forward_workspace_api
-status = blocked_by_owned_tensor_outputs
 optimization_deferred = true
 ```
 
-The next safe implementation target is a transformer-owned workspace API whose
-tests preserve generated IDs, decoded text, strict GGUF tokenizer authority,
-selected CPU backend/kernel, model SHA, and `fallback=false`. This remains an
+SLM-CPU-039 narrows that boundary to the first workspace-owned transformer
+output surface. `FeedForward::forward_with_workspace` now routes the owned
+feed-forward output tensor through `TransformerForwardWorkspace` before
+returning it to the existing block math. Candle still constructs the tensor
+through the existing owned-output path, so this is ownership plumbing and
+allocation attribution, not reusable storage or a speedup claim:
+
+```text
+first_reusable_allocation_surface = feed_forward.output
+workspace_storage_owner = TransformerForwardWorkspace
+reuse_status = feed_forward_output_workspace_owned_reuse_not_enabled
+next_optimization_target = feed_forward_output_workspace_owned_boundary
+status = workspace_owned_output_reuse_deferred
+optimization_deferred = true
+```
+
+The next safe implementation target is replacing `FeedForward::down_proj`
+output construction with reusable workspace-backed storage behind tests that
+preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected
+CPU backend/kernel, model SHA, and `fallback=false`. This remains an
 allocation-boundary proof only; it makes no speedup, sustained-throughput,
 broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256
 claim.

@@ -4,9 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    paths-ignore:
-      - 'docs/tracking/**'
-      - '.codex/campaigns/**'
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   schedule:
     # Run performance tracking daily at 4 AM UTC
     - cron: '0 4 * * *'
@@ -38,9 +36,54 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  # Lightweight smoke test — runs on every push and PR so the workflow never has 0 jobs.
+  route-performance:
+    name: Route Performance Tracking
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      selected: ${{ steps.route.outputs.selected }}
+      reason: ${{ steps.route.outputs.reason }}
+    steps:
+      - name: Decide whether performance tracking is selected
+        id: route
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+
+          selected=false
+          reason="ordinary PR without performance/perf/full-ci label"
+
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            selected=true
+            reason="$EVENT_NAME"
+          elif python - "$LABELS_JSON" <<'PY'
+          import json
+          import sys
+
+          labels = set(json.loads(sys.argv[1] or "[]"))
+          selected = bool(labels & {"performance", "perf", "full-ci"})
+          sys.exit(0 if selected else 1)
+          PY
+          then
+            selected=true
+            reason="explicit performance/perf/full-ci label"
+          fi
+
+          echo "selected=$selected" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Performance route"
+            echo "- selected: $selected"
+            echo "- reason: $reason"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Lightweight smoke test selected for main, schedules, manual dispatch, or explicit labels.
   cargo-tests:
     name: Cargo Tests (smoke)
+    needs: route-performance
+    if: needs.route-performance.outputs.selected == 'true'
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
@@ -71,6 +114,7 @@ jobs:
 
   performance-benchmark:
     name: Performance Benchmark (${{ matrix.platform }})
+    needs: route-performance
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -92,7 +136,7 @@ jobs:
             target: aarch64-apple-darwin
 
     # Only run on schedule or manual dispatch
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: needs.route-performance.outputs.selected == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
 
     steps:
     - name: Checkout repository

@@ -130,12 +130,33 @@ review_after = "2026-06-07"
 expires = "2026-11-07"
 
 [[lane]]
+id = "test-telemetry-route"
+workflow = ".github/workflows/test-telemetry.yml"
+job = "Route Test Telemetry"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "testing/telemetry"
+intent = "Select test telemetry only for non-PR events or explicit telemetry labels."
+failure_mode = "Ordinary PRs spend advisory nextest/JUnit minutes even when no telemetry signal was requested."
+proof_obligation = "Evaluate event and labels and emit selected=true/false with a route reason."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
+labels = ["test-telemetry", "slow-tests", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
 id = "test-telemetry"
 workflow = ".github/workflows/test-telemetry.yml"
 job = "Test Telemetry (JUnit + slow tests)"
 kind = "observability"
 tier = "frontdoor-advisory"
-default_pr = true
+default_pr = false
 blocking = false
 runner = "ubuntu_22_04"
 base_lem = 18
@@ -144,10 +165,11 @@ intent = "Emit nextest JUnit and slow-test summaries for PR test-observability w
 failure_mode = "Per-test timing, slow-test, and future flake/actuals signals remain invisible."
 proof_obligation = "Run cargo-nextest on the CI Core Rust test surface and upload target/nextest/ci/junit.xml."
 evidence = ["target/nextest/ci/junit.xml", "GitHub step summary"]
-allowed_triggers = ["pull_request:path-gated", "push", "workflow_dispatch"]
+allowed_triggers = ["push", "workflow_dispatch", "pull_request:labeled"]
+labels = ["test-telemetry", "slow-tests", "full-ci"]
 duplicate_of = ["ci-core-build-test for pass/fail semantics"]
-review_after = "2026-06-07"
-expires = "2026-11-07"
+review_after = "2026-06-18"
+expires = "2026-11-18"
 
 [[lane]]
 id = "ci-actuals"
@@ -345,6 +367,88 @@ proof_obligation = "Pass on unselected PRs; on selected runs, fail unless all se
 evidence = ["GitHub step summary", "job logs"]
 allowed_triggers = ["pull_request", "push", "workflow_dispatch", "merge_group"]
 labels = ["macos", "apple-silicon", "metal", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "performance-tracking-route"
+workflow = ".github/workflows/performance-tracking.yml"
+job = "Route Performance Tracking"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "release/ci"
+intent = "Select performance tracking only for non-PR events or explicit performance labels."
+failure_mode = "Ordinary PRs spend duplicated workspace-check minutes in Performance Baseline Tracking."
+proof_obligation = "Evaluate event and labels and emit selected=true/false with a route reason."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "schedule", "workflow_dispatch"]
+labels = ["performance", "perf", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "performance-tracking-smoke"
+workflow = ".github/workflows/performance-tracking.yml"
+job = "Cargo Tests (smoke)"
+kind = "performance"
+tier = "selected-support"
+default_pr = false
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 20
+owner = "performance"
+intent = "Run the historical workspace performance-smoke check only when performance tracking is selected."
+failure_mode = "Selected performance tracking loses the quick workspace compile smoke."
+proof_obligation = "Run cargo check --locked --workspace --no-default-features --features cpu."
+evidence = ["job logs"]
+allowed_triggers = ["push", "schedule", "workflow_dispatch", "pull_request:labeled"]
+labels = ["performance", "perf", "full-ci"]
+duplicate_of = ["ci-core-build-test", "feature-matrix-pr"]
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "performance-tracking-benchmark"
+workflow = ".github/workflows/performance-tracking.yml"
+job = "Performance Benchmark (${{ matrix.platform }})"
+kind = "performance"
+tier = "deep"
+default_pr = false
+blocking = false
+runner = "macos_latest"
+base_lem = 1320
+owner = "performance"
+intent = "Run the full scheduled/manual performance benchmark matrix outside ordinary PR defaults."
+failure_mode = "Release and scheduled performance regressions are not tracked across the benchmark matrix."
+proof_obligation = "Build optimized CPU artifacts, generate fixtures, run benchmark scripts, detect regressions, and upload benchmark artifacts."
+evidence = ["benchmark-results-* artifacts", "job logs", "GitHub step summary"]
+allowed_triggers = ["schedule", "workflow_dispatch"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "performance-tracking-summary"
+workflow = ".github/workflows/performance-tracking.yml"
+job = "Performance Summary"
+kind = "performance"
+tier = "deep-summary"
+default_pr = false
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 15
+owner = "performance"
+intent = "Aggregate scheduled/manual performance benchmark artifacts into a durable summary."
+failure_mode = "Benchmark artifacts exist without a cross-platform summary or scheduled tracking issue."
+proof_obligation = "Download benchmark artifacts, generate performance-summary.md, optionally create the scheduled tracking issue, and upload the summary artifact."
+evidence = ["performance-summary artifact", "job logs"]
+allowed_triggers = ["schedule", "workflow_dispatch"]
 duplicate_of = []
 review_after = "2026-06-18"
 expires = "2026-11-18"

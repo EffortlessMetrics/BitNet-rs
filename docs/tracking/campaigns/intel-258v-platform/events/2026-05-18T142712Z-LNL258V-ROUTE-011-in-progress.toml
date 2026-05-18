@@ -1,0 +1,10 @@
+timestamp = "2026-05-18T14:27:12Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-011"
+event = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-011-profile-corpus-timing"
+summary = "Started LNL258V-ROUTE-011 to make Lunar Lake route-profile comparison use OpenVINO corpus-v2 profile-matched timing context while keeping borrowed or token-bound-mismatched candidate timing blocked from promotion."
+notes = [
+  "No new inference, route promotion, speedup, power advantage, acceleration, native OpenCL/NPU, or BitNet QK256/I2_S claim.",
+]

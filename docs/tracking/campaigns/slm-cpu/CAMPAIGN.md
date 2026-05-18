@@ -88,7 +88,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-035 | merged | Regenerate the real i5-8250U Qwen3 Q8_0 warm-session artifact so the receipt records `prompt_prefill_breakdown.embed` and `prompt_prefill_breakdown.forward`. |
 | SLM-CPU-036 | merged | #5625 classifies `prompt_prefill.forward` as transformer forward workspace and owned tensor outputs before changing dense math. |
 | SLM-CPU-037 | merged | #5643 explicitly rules out caller-side transformer-forward buffer reuse at the current owned tensor-output boundary and points the next safe hook at a typed transformer forward workspace API. |
-| SLM-CPU-038 | ready | Use the SLM-CPU-037 no-reuse classification to introduce or further narrow the typed transformer forward workspace API boundary. |
+| SLM-CPU-038 | merged | #5679 introduced the first typed transformer forward workspace API boundary while preserving the existing owned tensor-output behavior oracle. |
+| SLM-CPU-039 | ready | Use the typed workspace API boundary to replace or further narrow one owned transformer tensor output with workspace-owned storage. |
 
 ## Review Policy
 
