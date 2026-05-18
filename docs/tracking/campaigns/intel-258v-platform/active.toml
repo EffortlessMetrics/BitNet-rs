@@ -6697,9 +6697,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-STATUS-001"
-status = "pr_open"
+status = "merged"
 pr = 5620
-head_sha = "8155e8b2960c984ed9bb5ca23e81adfbe105f4f0"
+head_sha = "b26a98939658553efb366f4af5be8eccdee17b09"
+merge_sha = "0327286671e16d25a6626a047fda0391e366e5f9"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-STATUS-001-capability-matrix"
 stackable = false
 review_mode = "codex_premerge"
