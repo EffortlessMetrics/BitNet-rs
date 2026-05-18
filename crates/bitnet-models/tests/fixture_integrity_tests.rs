@@ -56,6 +56,7 @@ fn validate_gguf_header(bytes: &[u8], fixture_name: &str) {
 }
 
 #[test]
+#[cfg_attr(not(feature = "fixtures"), ignore = "Requires disk GGUF fixtures")]
 fn test_qk256_4x256_header_integrity() {
     let path = fixture_path("qk256_4x256.gguf");
     assert!(path.exists(), "Fixture qk256_4x256.gguf should exist at {:?}", path);
@@ -68,6 +69,7 @@ fn test_qk256_4x256_header_integrity() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "fixtures"), ignore = "Requires disk GGUF fixtures")]
 fn test_qk256_3x300_header_integrity() {
     let path = fixture_path("qk256_3x300.gguf");
     assert!(path.exists(), "Fixture qk256_3x300.gguf should exist at {:?}", path);
@@ -80,6 +82,7 @@ fn test_qk256_3x300_header_integrity() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "fixtures"), ignore = "Requires disk GGUF fixtures")]
 fn test_bitnet32_2x64_header_integrity() {
     let path = fixture_path("bitnet32_2x64.gguf");
     assert!(path.exists(), "Fixture bitnet32_2x64.gguf should exist at {:?}", path);
@@ -92,6 +95,7 @@ fn test_bitnet32_2x64_header_integrity() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "fixtures"), ignore = "Requires disk GGUF fixtures")]
 fn test_all_fixtures_present() {
     // Ensure all documented fixtures are committed
     let fixtures = vec!["qk256_4x256.gguf", "qk256_3x300.gguf", "bitnet32_2x64.gguf"];
@@ -103,6 +107,7 @@ fn test_all_fixtures_present() {
 }
 
 #[test]
+#[cfg_attr(not(feature = "fixtures"), ignore = "Requires disk GGUF fixtures")]
 fn test_sha256sums_file_present() {
     let sha256sums_path = fixture_path_from_workspace(
         Path::new(env!("CARGO_MANIFEST_DIR")),

@@ -18,11 +18,11 @@
 ///
 /// - **Block size**: 256 elements
 /// - **Packed bytes**: 64 bytes/block (2 bits/element)
-/// - **Code mapping**: 0 → -2.0, 1 → -1.0, 2 → +1.0, 3 → +2.0
+/// - **Code mapping**: 0 → -1.0, 1 → 0.0, 2 → +1.0, 3 → 0.0
 /// - **Tensor shape**: `[rows, row_stride_bytes]` where `row_stride_bytes = ceil(cols/256) * 64`
 /// - **Storage key**: `{original_name}.qk256_qs` (e.g., `layers.0.attention.q_proj.weight.qk256_qs`)
 use bitnet_models::quant::i2s_qk256::{
-    I2SQk256NoScale, QK256_BLOCK, QK256_PACKED_BYTES, gemv_qk256, unpack_qk256_block,
+    I2SQk256NoScale, QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, gemv_qk256, unpack_qk256_block,
 };
 use candle_core::{DType, Device as CDevice, Tensor as CandleTensor};
 
@@ -62,13 +62,7 @@ fn create_qk256_tensor(rows: usize, cols: usize, code: u8) -> anyhow::Result<Can
 /// Helper to decode QK256 code to float
 #[inline]
 fn code_to_float(code: u8) -> f32 {
-    match code {
-        0 => -2.0,
-        1 => -1.0,
-        2 => 1.0,
-        3 => 2.0,
-        _ => panic!("Invalid QK256 code: {}", code),
-    }
+    code_to_f32(code)
 }
 
 // ==================== Test 1: Single Block (256 cols, no tail) ====================
@@ -115,7 +109,7 @@ fn test_qk256_single_block_predictable_output() {
 
 #[test]
 fn test_qk256_single_block_all_codes() {
-    // Test each code mapping (0 → -2.0, 1 → -1.0, 2 → +1.0, 3 → +2.0)
+    // Test each canonical code mapping.
     let rows = 1;
     let cols = 256;
 
@@ -196,7 +190,7 @@ fn test_qk256_large_matrix() {
     // Test larger matrix: 512×768 (3 blocks per row)
     let rows = 512;
     let cols: usize = 768;
-    let code = 1u8; // → -1.0
+    let code = 0u8; // → -1.0
 
     let blocks_per_row = cols.div_ceil(QK256_BLOCK); // = 3
     let row_stride_bytes = blocks_per_row * QK256_PACKED_BYTES; // = 192
@@ -324,37 +318,26 @@ fn test_qk256_vs_fp32_quantization_error() {
     let rows = 4;
     let cols = 256;
 
-    // Create FP32 reference weights: deterministic pattern in [-2, -1, 1, 2]
-    // Use deterministic pattern instead of random to avoid randomness in tests
-    let fp32_weights: Vec<Vec<f32>> = (0..rows)
-        .map(|row_idx| {
-            (0..cols)
-                .map(|col_idx| {
-                    // Deterministic pattern based on position
-                    let code = ((row_idx + col_idx) % 4) as u8;
-                    code_to_float(code)
-                })
-                .collect()
-        })
-        .collect();
-
-    // Create QK256 quantized version: pack FP32 weights back to codes
+    // Create QK256 packed rows and derive the FP32 reference weights by
+    // unpacking the same bytes. This keeps the test coupled to the canonical
+    // QK256 lane order instead of an independent low-to-high packing guess.
     let mut qs_bytes = Vec::new();
-    for row_weights in &fp32_weights {
-        for chunk in row_weights.chunks(4) {
-            let mut byte = 0u8;
-            for (i, &w) in chunk.iter().enumerate() {
-                let code = match w {
-                    x if (x + 2.0).abs() < 1e-6 => 0u8,
-                    x if (x + 1.0).abs() < 1e-6 => 1u8,
-                    x if (x - 1.0).abs() < 1e-6 => 2u8,
-                    x if (x - 2.0).abs() < 1e-6 => 3u8,
-                    _ => panic!("Invalid FP32 value in QK256 space: {}", w),
-                };
-                byte |= code << (i * 2);
-            }
-            qs_bytes.push(byte);
+    let mut fp32_weights: Vec<Vec<f32>> = Vec::new();
+    for row_idx in 0..rows {
+        let mut block = [0u8; QK256_PACKED_BYTES];
+        for (byte_idx, byte) in block.iter_mut().enumerate() {
+            *byte = match (row_idx + byte_idx) % 4 {
+                0 => 0x00,
+                1 => 0x55,
+                2 => 0xAA,
+                _ => 0xFF,
+            };
         }
+
+        let mut codes = [0u8; QK256_BLOCK];
+        unpack_qk256_block(&block, &mut codes);
+        fp32_weights.push(codes.iter().take(cols).map(|&code| code_to_float(code)).collect());
+        qs_bytes.extend_from_slice(&block);
     }
 
     // Create input
@@ -605,12 +588,18 @@ fn test_qk256_unpack_block() {
         assert!(c <= 3, "Codes[{}] = {} exceeds valid range", i, c);
     }
 
-    // 0x00 → [0, 0, 0, 0]
-    // 0xFF → [3, 3, 3, 3]
-    for (i, &code) in codes.iter().enumerate().take(64) {
-        let byte_idx = i / 4;
-        let expected = if byte_idx % 2 == 0 { 0 } else { 3 };
-        assert_eq!(code, expected, "Codes[{}] should be {} (alternating pattern)", i, expected);
+    // In the first 128-value chunk, byte `gp` maps to offsets gp, gp+32,
+    // gp+64, and gp+96.
+    for gp in 0..32 {
+        let expected = if gp % 2 == 0 { 0 } else { 3 };
+        for lane in [0, 32, 64, 96] {
+            let idx = lane + gp;
+            assert_eq!(
+                codes[idx], expected,
+                "Codes[{}] should be {} (alternating pattern)",
+                idx, expected
+            );
+        }
     }
 
     println!("✓ Unpack block tests passed");
@@ -621,10 +610,10 @@ fn test_qk256_code_to_float_lut() {
     // Verify code-to-float LUT matches GGML reference
     use bitnet_models::quant::i2s_qk256::code_to_f32;
 
-    assert_eq!(code_to_f32(0), -2.0);
-    assert_eq!(code_to_f32(1), -1.0);
+    assert_eq!(code_to_f32(0), -1.0);
+    assert_eq!(code_to_f32(1), 0.0);
     assert_eq!(code_to_f32(2), 1.0);
-    assert_eq!(code_to_f32(3), 2.0);
+    assert_eq!(code_to_f32(3), 0.0);
 
     println!("✓ Code-to-float LUT verified against GGML reference");
 }

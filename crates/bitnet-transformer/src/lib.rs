@@ -1796,6 +1796,8 @@ mod tests {
         assert_eq!(q_values, vec![1.0, -2.0, 3.125, -4.25]);
         assert_eq!(k_values, vec![5.0, 6.0, -7.125, 8.25]);
         assert!(score.is_finite(), "attention score should be finite, got {score}");
+
+        Ok(())
     }
 
     #[test]
@@ -1941,7 +1943,7 @@ mod tests {
         tensors.insert("weight".to_string(), Tensor::ones(hidden_size, DType::F32, &device)?);
 
         let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
-        let norm = layer_norm_with_optional_bias(hidden_size, eps, NormType::RmsNorm, vb)?;
+        let norm = norm_with_optional_bias(NormType::RmsNorm, hidden_size, eps, vb)?;
 
         let input = Tensor::from_slice(&[1.0f32, 2.0, 3.0], (1, hidden_size), &device)?;
         let output = norm.forward(&input)?;
@@ -1997,12 +1999,7 @@ mod tests {
         );
 
         let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
-        let model = TransformerModel::new_with_tensors_and_qk256_backend(
-            config,
-            vb,
-            HashMap::new(),
-            Qk256DispatchBackend::Cpu,
-        )?;
+        let model = TransformerModel::new_with_tensors(config, vb, HashMap::new())?;
 
         assert!(
             model.lm_head_transposed,
@@ -2061,12 +2058,7 @@ mod tests {
         );
 
         let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
-        let model = TransformerModel::new_with_tensors_and_qk256_backend(
-            config,
-            vb,
-            HashMap::new(),
-            Qk256DispatchBackend::Cpu,
-        )?;
+        let model = TransformerModel::new_with_tensors(config, vb, HashMap::new())?;
 
         assert!(
             model.lm_head.is_none() && model.lm_head_weight.is_none(),

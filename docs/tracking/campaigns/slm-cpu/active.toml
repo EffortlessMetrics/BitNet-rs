@@ -2585,7 +2585,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-043"
-status = "ready"
+status = "pr_open"
+pr = 5794
+head_sha = "2661f94be70693fc3ffad5d8fb9b2bad947775ad"
 branch = "codex/slm-cpu-043-q8-packed-linear-prototype"
 stackable = false
 review_mode = "codex_premerge"

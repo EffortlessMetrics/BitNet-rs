@@ -458,6 +458,26 @@ CPU backend/kernel, model SHA, and `fallback=false` in before/after receipts.
 It does not reopen the Candle output-storage blocker, claim a speedup, or
 broaden support to Q4/Q5, accelerators, Qwen3.5, or BitNet QK256.
 
+SLM-CPU-043 starts that later slice with a fixture-level Q8_0 sidecar
+prototype. The prototype keeps packed Q8_0 block scales and signed codes,
+computes a narrow CPU matvec by dequantizing inside the dot product, and
+compares the result against the existing eager F32 fixture output:
+
+```text
+artifact_kind = dense_gguf_q8_linear_sidecar_prototype
+dequantizes_inside_matvec = true
+materializes_full_f32_weights = false
+compares_against_eager_f32_reference = true
+dense_runtime_replaced = false
+speedup_claim = false
+```
+
+This is not yet a production transformer path. It proves the first local
+packed-Q8 sidecar compute boundary can match the eager F32 fixture for a single
+dense linear role. A runtime replacement still requires before/after warm-session
+receipts proving unchanged generated IDs, decoded text, strict tokenizer
+authority, selected CPU backend/kernel, model SHA, and `fallback=false`.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:
