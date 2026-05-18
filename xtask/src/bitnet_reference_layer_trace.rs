@@ -44737,6 +44737,7 @@ mod tests {
                     "key_slot": 13,
                     "query_token": 3,
                     "selected_dim_values": {
+                        "reference_projection": null,
                         "reference_post_rope": 1.4809578657150269_f64,
                         "rust_post_rope": 1.4809563159942627_f64,
                     }
