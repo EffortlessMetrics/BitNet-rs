@@ -16,17 +16,62 @@ hard_constraints = [
   "OpenCL-first for native A770 proof.",
   "OpenVINO GPU is reference only.",
   "CPU fallback cannot count as A770 execution.",
+  "Diagnostic A770 route rows and model-contract targets do not promote to trusted partial until claim-grade receipts are committed.",
 ]
 
 [[work_item]]
-id = "A770-003"
+id = "A770-000"
 status = "ready"
-branch = "codex/intel-a770/A770-003-backend-identity"
+branch = "codex/intel-a770/A770-000-truth-reconciliation"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+acceptance = "Reconcile the A770 campaign, model contract, route matrix, kernel matrix, claims ledger, and committed receipts so they all preserve diagnostic current state and no full-inference claim appears without claim-grade evidence."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- hardware a770 kernel-capability-check --format json",
+  "cargo run --locked -p xtask --no-default-features -- hardware route resolve --format json",
+  "cargo run --locked -p xtask --no-default-features -- claims verify --format json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+]
+allowed_paths = [
+  "ci/claims/claim-ledger.json",
+  "ci/hardware/amd-5700x-intel-a770/**",
+  "ci/hardware/device-kernel-routing.toml",
+  "docs/claims.md",
+  "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml",
+  "docs/reports/**",
+  "docs/specs/a770-bitnet-claim-boundary.md",
+  "docs/specs/intel-arc-a770-gpu-roadmap.md",
+  "docs/tracking/campaigns/intel-a770/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/src/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The committed A770 source-of-truth files agree that current A770 OpenCL BitNet routes are diagnostic or unsupported until claim-grade receipts land.",
+]
+must_not_claim = [
+  "A770 OpenCL execution works.",
+  "OpenVINO GPU proves native OpenCL kernels.",
+  "BitNet inference works on A770.",
+  "A770 full inference, full residency, or performance is proven.",
+]
+
+[[work_item]]
+id = "A770-003"
+status = "proposed"
+branch = "codex/intel-a770/A770-003-backend-identity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-000"]
 acceptance = "Preserve Intel Arc A770 requested and selected backend identity without adding kernels or inference claims."
 commands = [
   "cargo fmt --all -- --check",

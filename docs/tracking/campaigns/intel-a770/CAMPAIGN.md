@@ -27,7 +27,8 @@ Make the Intel Arc A770 a receipt-backed OpenCL-first BitNet acceleration lane. 
 
 | Work item | Status | Notes |
 |---|---|---|
-| A770-003 | ready | Preserve selected-device identity. |
+| A770-000 | ready | Reconcile tracker, route, capability, claim, model-contract, and receipt truth before runtime work. |
+| A770-003 | proposed | Preserve selected-device identity after reconciliation. |
 | A770-004 | proposed | Add runtime probe. |
 | A770-005 | proposed | Run OpenCL smoke. |
 | A770-006 | proposed | Add CPU/OpenCL parity. |
@@ -35,4 +36,4 @@ Make the Intel Arc A770 a receipt-backed OpenCL-first BitNet acceleration lane. 
 
 ## Review Policy
 
-A770 runtime PRs are non-stackable. Do not combine A770 with Intel NPU, Arc 140V, or CPU proof changes unless the campaign manifest explicitly allows it.
+A770 runtime PRs are non-stackable. Do not combine A770 with Intel NPU, Arc 140V, or CPU proof changes unless the campaign manifest explicitly allows it. The current committed A770 BitNet route state is diagnostic/unsupported until claim-grade receipts are committed; transcript-only or local target evidence must not promote the route, model contract, or campaign status.

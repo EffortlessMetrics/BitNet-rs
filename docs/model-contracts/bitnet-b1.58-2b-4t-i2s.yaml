@@ -33,8 +33,12 @@ cpu:
   quality_gate: required
 
 a770:
-  support: trusted_partial
+  support: diagnostic
+  target_support: trusted_partial
   selected_backend: intel-arc-a770-opencl
+  evidence_state: no_claim_grade_receipts_committed
+  proof_receipts: []
+  promotion_blocker: claim-grade A770 OpenCL BitNet receipts are not committed yet
   required_claimed_ops:
     - qk256_linears
     - embedding
