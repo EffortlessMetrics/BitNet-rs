@@ -54,7 +54,7 @@
         "requested_backend": "openvino-cpu",
         "selected_backend": "openvino-cpu",
         "backend_lane": "dense_slm_openvino_cpu",
-        "runtime_api": "openvino-genai-llmpipeline-cpu",
+        "runtime_api": "openvino_genai",
         "selected_kernel_or_runtime": "openvino-genai-llmpipeline",
         "pipeline_construct_wall_ms": 1011.5103000425734,
         "pipeline_config": {},
@@ -2974,7 +2974,7 @@
             "requested_backend": "openvino-cpu",
             "selected_backend": "openvino-cpu",
             "backend_lane": "dense_slm_openvino_cpu",
-            "runtime_api": "openvino-genai-llmpipeline-cpu",
+            "runtime_api": "openvino_genai",
             "runtime_device": "CPU"
           },
           {
@@ -3674,7 +3674,7 @@
             "requested_backend": "openvino-cpu",
             "selected_backend": "openvino-cpu",
             "backend_lane": "dense_slm_openvino_cpu",
-            "runtime_api": "openvino-genai-llmpipeline-cpu",
+            "runtime_api": "openvino_genai",
             "runtime_device": "CPU"
           }
         ],
@@ -3715,7 +3715,7 @@
         "requested_backend": "openvino-gpu",
         "selected_backend": "openvino-gpu",
         "backend_lane": "dense_slm_openvino_gpu_arc140v",
-        "runtime_api": "openvino-genai-llmpipeline-gpu0",
+        "runtime_api": "openvino_genai",
         "selected_kernel_or_runtime": "openvino-genai-llmpipeline",
         "pipeline_construct_wall_ms": 4673.274799948558,
         "pipeline_config": {},
@@ -6635,7 +6635,7 @@
             "requested_backend": "openvino-gpu",
             "selected_backend": "openvino-gpu",
             "backend_lane": "dense_slm_openvino_gpu_arc140v",
-            "runtime_api": "openvino-genai-llmpipeline-gpu0",
+            "runtime_api": "openvino_genai",
             "runtime_device": "GPU.0"
           },
           {
@@ -7335,7 +7335,7 @@
             "requested_backend": "openvino-gpu",
             "selected_backend": "openvino-gpu",
             "backend_lane": "dense_slm_openvino_gpu_arc140v",
-            "runtime_api": "openvino-genai-llmpipeline-gpu0",
+            "runtime_api": "openvino_genai",
             "runtime_device": "GPU.0"
           }
         ],
@@ -7376,7 +7376,7 @@
         "requested_backend": "openvino-npu",
         "selected_backend": "openvino-npu",
         "backend_lane": "dense_slm_openvino_npu",
-        "runtime_api": "openvino-genai-llmpipeline-npu",
+        "runtime_api": "openvino_genai",
         "selected_kernel_or_runtime": "openvino-genai-llmpipeline",
         "pipeline_construct_wall_ms": 69465.15669999644,
         "pipeline_config": {
@@ -10298,7 +10298,7 @@
             "requested_backend": "openvino-npu",
             "selected_backend": "openvino-npu",
             "backend_lane": "dense_slm_openvino_npu",
-            "runtime_api": "openvino-genai-llmpipeline-npu",
+            "runtime_api": "openvino_genai",
             "runtime_device": "NPU"
           },
           {
@@ -10998,7 +10998,7 @@
             "requested_backend": "openvino-npu",
             "selected_backend": "openvino-npu",
             "backend_lane": "dense_slm_openvino_npu",
-            "runtime_api": "openvino-genai-llmpipeline-npu",
+            "runtime_api": "openvino_genai",
             "runtime_device": "NPU"
           }
         ],

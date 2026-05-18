@@ -8280,6 +8280,66 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-PROFILE-RUN-002"
+status = "pr_open"
+pr = 5803
+head_sha = "f4e2aaa0d913db8634ad8e35d06e34d428c6ae24"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-002-validator"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-PROFILE-RUN-001"]
+acceptance = "Teach the Lunar Lake OpenVINO receipt validator to accept the explicit profile-run artifact from LNL258V-PROFILE-RUN-001, normalize that artifact to use runtime_api=openvino_genai with LLMPipeline identity recorded separately, add validator coverage for GPU/NPU profile-run cases with direct generated token IDs, validate the committed profile-run receipt, and preserve no route-promotion, no speedup, no power-advantage, no native accelerator, and no BitNet QK256/I2_S behavior-change claims."
+commands = [
+  "cargo fmt --check -p bitnet-receipts-core",
+  "cargo test --locked -p bitnet-receipts-core lunar_lake_openvino_validator_accepts_profile_run_receipt -- --nocapture",
+  ".venv/Scripts/python.exe -m py_compile scripts/openvino_genai_profile_run.py",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe validate open-vino-lunar-lake --receipt ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-profile-run.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-receipts-core/src/lib.rs",
+  "scripts/openvino_genai_profile_run.py",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-profile-run.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The Lunar Lake OpenVINO validator accepts the explicit dense Qwen OpenVINO profile-run receipt shape.",
+  "The committed profile-run receipt validates under the shared Lunar Lake OpenVINO route-boundary validator.",
+  "The profile-run receipt records runtime_api=openvino_genai while LLMPipeline identity remains selected_kernel_or_runtime evidence.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is broadly proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM profile-run receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-PROFILE-RUN-001"
 status = "merged"
 pr = 5801

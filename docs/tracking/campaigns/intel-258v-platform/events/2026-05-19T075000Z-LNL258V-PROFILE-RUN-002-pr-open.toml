@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T07:50:00Z"
+event = "pr_open"
+item = "LNL258V-PROFILE-RUN-002"
+pr = 5803
+head_sha = "ee10c82dcafb65bb9c19552a424d326c23da3d50"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-002-validator"
+actor = "codex"
+summary = "Opened PR #5803 for Lunar Lake OpenVINO profile-run receipt validation."
+
+notes = [
+  "The PR adds the profile-run artifact kind to the Lunar Lake OpenVINO validator, normalizes runtime_api to openvino_genai, and keeps LLMPipeline identity as selected_kernel_or_runtime evidence.",
+  "The PR validates the committed profile-run receipt and preserves no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]
