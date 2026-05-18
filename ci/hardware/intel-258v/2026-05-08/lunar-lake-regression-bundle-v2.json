@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-18T23:10:00Z",
+  "created_utc": "2026-05-19T07:15:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -58,21 +58,17 @@
     ],
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 17,
-      "proxy_or_missing_route_count": 6,
+      "profile_specific_route_count": 21,
+      "proxy_or_missing_route_count": 2,
       "promotion_eligible_route_count": 4,
       "promotion_eligible_profile_specific_route_count": 4,
       "candidate_route_count": 14,
-      "candidate_proxy_or_missing_route_count": 4,
+      "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
       "proxy_or_missing_routes": [
         "decode_heavy:dense_slm_default_cpu",
-        "decode_heavy:dense_slm_openvino_gpu_candidate",
-        "decode_heavy:dense_slm_openvino_npu_candidate",
-        "prefill_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_openvino_gpu_candidate",
-        "prefill_heavy:dense_slm_openvino_npu_candidate"
+        "prefill_heavy:dense_slm_default_cpu"
       ],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
@@ -94,9 +90,7 @@
       "route not promoted for profile prefill_heavy",
       "route not promoted for profile regression_tiny",
       "route not promoted for profile warm_resident",
-      "timing coverage has missing profile fields",
-      "timing evidence is not profile-specific for profile decode_heavy",
-      "timing evidence is not profile-specific for profile prefill_heavy"
+      "timing coverage has missing profile fields"
     ],
     "gpu_npu_promotion_blocker_summary": [
       {
@@ -288,32 +282,6 @@
           "warm_resident"
         ],
         "next_action": "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
-      },
-      {
-        "blocker": "timing evidence is not profile-specific for profile decode_heavy",
-        "occurrence_count": 3,
-        "route_ids": [
-          "dense_slm_default_cpu",
-          "dense_slm_openvino_gpu_candidate",
-          "dense_slm_openvino_npu_candidate"
-        ],
-        "profile_ids": [
-          "decode_heavy"
-        ],
-        "next_action": "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
-      },
-      {
-        "blocker": "timing evidence is not profile-specific for profile prefill_heavy",
-        "occurrence_count": 3,
-        "route_ids": [
-          "dense_slm_default_cpu",
-          "dense_slm_openvino_gpu_candidate",
-          "dense_slm_openvino_npu_candidate"
-        ],
-        "profile_ids": [
-          "prefill_heavy"
-        ],
-        "next_action": "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
       }
     ],
     "route_promotion_scope": {
@@ -350,21 +318,17 @@
     ],
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 17,
-      "proxy_or_missing_route_count": 6,
+      "profile_specific_route_count": 21,
+      "proxy_or_missing_route_count": 2,
       "promotion_eligible_route_count": 4,
       "promotion_eligible_profile_specific_route_count": 4,
       "candidate_route_count": 14,
-      "candidate_proxy_or_missing_route_count": 4,
+      "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
       "proxy_or_missing_routes": [
         "decode_heavy:dense_slm_default_cpu",
-        "decode_heavy:dense_slm_openvino_gpu_candidate",
-        "decode_heavy:dense_slm_openvino_npu_candidate",
-        "prefill_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_openvino_gpu_candidate",
-        "prefill_heavy:dense_slm_openvino_npu_candidate"
+        "prefill_heavy:dense_slm_default_cpu"
       ],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
@@ -549,21 +513,17 @@
     "cold_warm_benchmark_ready": true,
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 17,
-      "proxy_or_missing_route_count": 6,
+      "profile_specific_route_count": 21,
+      "proxy_or_missing_route_count": 2,
       "promotion_eligible_route_count": 4,
       "promotion_eligible_profile_specific_route_count": 4,
       "candidate_route_count": 14,
-      "candidate_proxy_or_missing_route_count": 4,
+      "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
       "proxy_or_missing_routes": [
         "decode_heavy:dense_slm_default_cpu",
-        "decode_heavy:dense_slm_openvino_gpu_candidate",
-        "decode_heavy:dense_slm_openvino_npu_candidate",
-        "prefill_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_openvino_gpu_candidate",
-        "prefill_heavy:dense_slm_openvino_npu_candidate"
+        "prefill_heavy:dense_slm_default_cpu"
       ],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
@@ -690,9 +650,9 @@
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
-        "profile_specific_timing=17/23",
+        "profile_specific_timing=21/23",
         "proxy_or_missing_timing_routes_blocked=true",
-        "promotion_blocker_summary_count=16",
+        "promotion_blocker_summary_count=14",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short",
         "openvino_npu_promoted_profiles=",
         "profile_scoped_promotion_only=true"
@@ -712,7 +672,7 @@
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
         "telemetry_gap_count=69",
-        "profile_specific_timing=17/23",
+        "profile_specific_timing=21/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short",
         "openvino_npu_promoted_profiles=",

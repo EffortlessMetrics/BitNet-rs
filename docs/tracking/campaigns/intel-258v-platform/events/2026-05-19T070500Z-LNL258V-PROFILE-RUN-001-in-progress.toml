@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T07:05:00Z"
+event = "in_progress"
+item = "LNL258V-PROFILE-RUN-001"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-001-openvino-heavy-profiles"
+actor = "codex"
+summary = "Started explicit OpenVINO heavy-profile timing work for Lunar Lake route-profile comparison."
+
+notes = [
+  "The branch adds a profile-run receipt for prefill_heavy and decode_heavy OpenVINO candidate timing so route comparison no longer borrows tiny corpus-v2 cases for those GPU/NPU profiles.",
+  "The work preserves no route promotion, no speedup or power-advantage claim, no native accelerator claim, no BitNet QK256/I2_S behavior change, and no dense-SLM-as-BitNet-proof claim.",
+]

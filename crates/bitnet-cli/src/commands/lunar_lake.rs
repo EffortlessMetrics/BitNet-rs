@@ -64,6 +64,7 @@ const OPENVINO_NPU_RESIDENT_SESSION: &str = "lunar-lake-openvino-npu-resident-se
 const OPENVINO_NPU_CACHE_EXPERIMENT: &str = "lunar-lake-openvino-npu-cache-experiment.json";
 const OPENVINO_GENERATION_BUDGET_SENSITIVITY: &str =
     "lunar-lake-openvino-generation-budget-sensitivity.json";
+const OPENVINO_PROFILE_RUN: &str = "lunar-lake-openvino-profile-run.json";
 const OPENVINO_GPU_PROFILE_PROMOTION_TARGETS: &[&str] = &["ask_short", "ask_normal"];
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
@@ -11159,15 +11160,17 @@ fn openvino_profile_timing(
         ],
     )
     .map(|value| value as u64);
+    let profile_run_context = openvino_profile_run_timing_context(root, route_id, profile_id)?;
     let corpus_context =
         openvino_corpus_operator_timing_context(route_id, profile_id, quality_index)?;
+    let timing_context = profile_run_context.as_ref().or(corpus_context.as_ref());
     let prompt_tokens =
-        corpus_context.as_ref().and_then(|context| context.prompt_tokens).or(direct_prompt_tokens);
-    let output_tokens = corpus_context
+        timing_context.as_ref().and_then(|context| context.prompt_tokens).or(direct_prompt_tokens);
+    let output_tokens = timing_context
         .as_ref()
         .and_then(|context| context.output_tokens)
         .or(operator_output_tokens);
-    let generation_total_ms = corpus_context
+    let generation_total_ms = timing_context
         .as_ref()
         .and_then(|context| context.generation_total_ms)
         .or(operator_generation_total_ms);
@@ -11195,13 +11198,30 @@ fn openvino_profile_timing(
                 .to_string(),
         );
     }
-    if let Some(context) = corpus_context.as_ref() {
+    if let Some(context) = profile_run_context.as_ref() {
         if !source_receipts.contains(&context.source_receipt) {
             source_receipts.push(context.source_receipt.clone());
         }
         phase_coverage
-            .push(format!("profile_timing_supplemented_from_corpus_v2_case_{}", context.case_id));
+            .push(format!("profile_timing_from_openvino_profile_run_case_{}", context.case_id));
         if context.profile_id != profile_id {
+            known_gaps.push(format!(
+                "profile timing borrowed from OpenVINO profile-run profile {} for profile {}",
+                context.profile_id, profile_id
+            ));
+        }
+    }
+    if let Some(context) = corpus_context.as_ref() {
+        if !source_receipts.contains(&context.source_receipt) {
+            source_receipts.push(context.source_receipt.clone());
+        }
+        if profile_run_context.is_none() {
+            phase_coverage.push(format!(
+                "profile_timing_supplemented_from_corpus_v2_case_{}",
+                context.case_id
+            ));
+        }
+        if profile_run_context.is_none() && context.profile_id != profile_id {
             known_gaps.push(format!(
                 "profile timing borrowed from corpus_v2 profile {} for profile {}",
                 context.profile_id, profile_id
@@ -11220,16 +11240,22 @@ fn openvino_profile_timing(
         timing_scope: timing_scope.to_string(),
         source_receipts,
         prompt_tokens,
-        cold_load_ms: number_at_any(
-            &ask,
-            &["timing.openvino_perf_metrics.load_time_ms", "timing.pipeline_construct_wall_ms"],
-        )
-        .or_else(|| corpus_context.as_ref().and_then(|context| context.load_time_ms)),
-        tokenize_ms: corpus_context.as_ref().and_then(|context| context.tokenize_ms).or_else(
+        cold_load_ms: timing_context.as_ref().and_then(|context| context.load_time_ms).or_else(
+            || {
+                number_at_any(
+                    &ask,
+                    &[
+                        "timing.openvino_perf_metrics.load_time_ms",
+                        "timing.pipeline_construct_wall_ms",
+                    ],
+                )
+            },
+        ),
+        tokenize_ms: timing_context.as_ref().and_then(|context| context.tokenize_ms).or_else(
             || number_at_any(&ask, &["timing.openvino_perf_metrics.tokenization.mean_ms"]),
         ),
         prefill_ms: None,
-        first_token_ms: corpus_context.as_ref().and_then(|context| context.first_token_ms).or_else(
+        first_token_ms: timing_context.as_ref().and_then(|context| context.first_token_ms).or_else(
             || {
                 number_at_any(
                     &ask,
@@ -11242,7 +11268,7 @@ fn openvino_profile_timing(
         ),
         decode_total_ms: generation_total_ms,
         generation_total_ms,
-        total_response_ms: corpus_context
+        total_response_ms: timing_context
             .as_ref()
             .and_then(|context| context.total_response_ms)
             .or_else(|| {
@@ -11252,7 +11278,7 @@ fn openvino_profile_timing(
                 )
             }),
         output_tokens,
-        throughput_tokens_per_s: corpus_context
+        throughput_tokens_per_s: timing_context
             .as_ref()
             .and_then(|context| context.throughput_tokens_per_s)
             .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms)),
@@ -11275,6 +11301,86 @@ struct OpenVinoCorpusOperatorTimingContext {
     total_response_ms: Option<f64>,
     throughput_tokens_per_s: Option<f64>,
     direct_generated_token_ids_available: bool,
+}
+
+fn openvino_profile_run_timing_context(
+    root: &Path,
+    route_id: &str,
+    profile_id: &str,
+) -> Result<Option<OpenVinoCorpusOperatorTimingContext>> {
+    let path = root.join(OPENVINO_PROFILE_RUN);
+    if !path.exists() {
+        return Ok(None);
+    }
+    let json: Value = read_json_receipt(&path)?;
+    if string_at(&json, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_profile_run")
+    {
+        return Ok(None);
+    }
+    let Some(devices) = value_at(&json, "generation.devices").and_then(Value::as_array) else {
+        return Ok(None);
+    };
+    let Some(device) =
+        devices.iter().find(|device| openvino_device_route_id(device) == Some(route_id))
+    else {
+        return Ok(None);
+    };
+    let Some(cases) = device.get("cases").and_then(Value::as_array) else {
+        return Ok(None);
+    };
+    let Some(case) =
+        cases.iter().find(|case| string_at(case, "profile").as_deref() == Some(profile_id))
+    else {
+        return Ok(None);
+    };
+    let prompt_tokens = u64_at(case, "prompt_token_count")
+        .or_else(|| u64_at(case, "prompt.prompt_token_count"))
+        .or_else(|| u64_at(case, "tokens.prompt"));
+    let output_tokens = u64_at(case, "generated_token_count")
+        .or_else(|| u64_at(case, "tokens.generated"))
+        .or_else(|| u64_at(case, "tokens.output"));
+    if prompt_tokens.is_none() && output_tokens.is_none() {
+        return Ok(None);
+    }
+    let generation_total_ms = number_at_any(
+        case,
+        &["timing.generation_wall_ms", "timing.openvino_perf_metrics.generate.mean_ms"],
+    );
+    let load_time_ms = number_at_any(
+        case,
+        &["timing.openvino_perf_metrics.load_time_ms", "timing.pipeline_construct_wall_ms"],
+    );
+    let total_response_ms = number_at_any(case, &["timing.total_response_ms"])
+        .or_else(|| sum_optional(load_time_ms, generation_total_ms).or(generation_total_ms));
+    Ok(Some(OpenVinoCorpusOperatorTimingContext {
+        source_receipt: path_string(&path),
+        case_id: string_at(case, "id").unwrap_or_else(|| "unknown_case".to_string()),
+        profile_id: string_at(case, "profile").unwrap_or_else(|| "unknown_profile".to_string()),
+        prompt_tokens,
+        output_tokens,
+        load_time_ms,
+        tokenize_ms: number_at_any(case, &["timing.openvino_perf_metrics.tokenization.mean_ms"]),
+        first_token_ms: number_at_any(
+            case,
+            &[
+                "timing.openvino_perf_metrics.time_to_first_token.mean_ms",
+                "timing.first_streamed_text_chunk_ms",
+            ],
+        ),
+        generation_total_ms,
+        total_response_ms,
+        throughput_tokens_per_s: number_at_any(
+            case,
+            &["timing.openvino_perf_metrics.throughput.mean_ms"],
+        )
+        .filter(|value| *value > 0.0)
+        .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms)),
+        direct_generated_token_ids_available: bool_at_any(
+            case,
+            &["generated_token_ids_available_from_pipeline"],
+        ) == Some(true),
+    }))
 }
 
 fn openvino_corpus_operator_timing_context(
@@ -13346,6 +13452,205 @@ mod tests {
         let fallback = ProfileQualityEvidence { fallback_used: Some(true), ..clean };
         assert!(!profile_regression_bundle_evidence_satisfied(Some(&fallback)));
         assert!(!profile_regression_bundle_evidence_satisfied(None));
+    }
+
+    #[test]
+    fn route_profile_comparison_uses_openvino_profile_run_for_heavy_profiles() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_route_corpus_v2_receipts(temp.path())?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {"total_ms": 150.0},
+                "tokens": {"prompt_count": 38, "generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            OPENVINO_PROFILE_RUN,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_profile_run",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "runtime_device": "GPU.0",
+                            "fallback_used": false,
+                            "cases": [
+                                {
+                                    "id": "prefill_heavy_route_policy_long_context",
+                                    "profile": "prefill_heavy",
+                                    "prompt_token_count": 2731,
+                                    "generated_token_count": 64,
+                                    "generated_token_ids_available_from_pipeline": true,
+                                    "timing": {
+                                        "pipeline_construct_wall_ms": 1000.0,
+                                        "generation_wall_ms": 1500.0,
+                                        "first_streamed_text_chunk_ms": 600.0,
+                                        "openvino_perf_metrics": {
+                                            "load_time_ms": 900.0,
+                                            "tokenization": {"mean_ms": 2.0},
+                                            "time_to_first_token": {"mean_ms": 610.0},
+                                            "num_generated_tokens": 64,
+                                            "throughput": {"mean_ms": 40.0}
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "decode_heavy_route_policy_long_generation",
+                                    "profile": "decode_heavy",
+                                    "prompt_token_count": 66,
+                                    "generated_token_count": 512,
+                                    "generated_token_ids_available_from_pipeline": true,
+                                    "timing": {
+                                        "pipeline_construct_wall_ms": 1000.0,
+                                        "generation_wall_ms": 9000.0,
+                                        "first_streamed_text_chunk_ms": 400.0,
+                                        "openvino_perf_metrics": {
+                                            "load_time_ms": 900.0,
+                                            "tokenization": {"mean_ms": 2.0},
+                                            "time_to_first_token": {"mean_ms": 410.0},
+                                            "num_generated_tokens": 512,
+                                            "throughput": {"mean_ms": 55.0}
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "runtime_device": "NPU",
+                            "fallback_used": false,
+                            "cases": [
+                                {
+                                    "id": "prefill_heavy_route_policy_long_context",
+                                    "profile": "prefill_heavy",
+                                    "prompt_token_count": 2731,
+                                    "generated_token_count": 64,
+                                    "generated_token_ids_available_from_pipeline": true,
+                                    "timing": {
+                                        "pipeline_construct_wall_ms": 1000.0,
+                                        "generation_wall_ms": 4200.0,
+                                        "first_streamed_text_chunk_ms": 1400.0
+                                    }
+                                },
+                                {
+                                    "id": "decode_heavy_route_policy_long_generation",
+                                    "profile": "decode_heavy",
+                                    "prompt_token_count": 66,
+                                    "generated_token_count": 512,
+                                    "generated_token_ids_available_from_pipeline": true,
+                                    "timing": {
+                                        "pipeline_construct_wall_ms": 1000.0,
+                                        "generation_wall_ms": 24000.0,
+                                        "first_streamed_text_chunk_ms": 400.0
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let profiles = build_route_profile_comparison_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            Some(Path::new(DENSE_CPU_CORPUS_V2)),
+            Some(Path::new(DENSE_OV_CORPUS_V2)),
+            None,
+            "2026-05-19T07:20:00Z".to_string(),
+        )?;
+
+        let prefill = profiles
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "prefill_heavy")
+            .context("missing prefill_heavy profile")?;
+        let gpu_prefill = prefill
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+            .context("missing GPU prefill route")?;
+        assert_eq!(gpu_prefill.timing_applicability.measured_prompt_tokens, Some(2731));
+        assert_eq!(gpu_prefill.timing_applicability.measured_output_tokens, Some(64));
+        assert!(gpu_prefill.timing_applicability.timing_matches_profile);
+        assert!(gpu_prefill.timing.phase_coverage.iter().any(|coverage| {
+            coverage
+                == "profile_timing_from_openvino_profile_run_case_prefill_heavy_route_policy_long_context"
+        }));
+
+        let decode = profiles
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "decode_heavy")
+            .context("missing decode_heavy profile")?;
+        let npu_decode = decode
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_npu_candidate")
+            .context("missing NPU decode route")?;
+        assert_eq!(npu_decode.timing_applicability.measured_prompt_tokens, Some(66));
+        assert_eq!(npu_decode.timing_applicability.measured_output_tokens, Some(512));
+        assert!(npu_decode.timing_applicability.timing_matches_profile);
+        assert_eq!(profiles.timing_coverage.candidate_proxy_or_missing_route_count, 0);
+        assert!(
+            !profiles
+                .timing_coverage
+                .proxy_or_missing_routes
+                .iter()
+                .any(|route| route.contains("dense_slm_openvino"))
+        );
+        Ok(())
     }
 
     #[test]
