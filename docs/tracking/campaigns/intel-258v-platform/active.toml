@@ -6216,7 +6216,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-014"
-status = "in_progress"
+status = "merged"
+pr = 5712
+head_sha = "8c51931846232aaecd93b66ccaa8d46f5c6f2dd5"
+merge_sha = "5f0abaf1e79c6b522a9856987680b3d05b063d92"
 branch = "codex/lunar-lake/LNL258V-ROUTE-014-blocker-summary"
 stackable = false
 review_mode = "codex_premerge"

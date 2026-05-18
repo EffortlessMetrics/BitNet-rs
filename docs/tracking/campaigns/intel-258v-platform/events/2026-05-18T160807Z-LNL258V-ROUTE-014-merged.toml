@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T16:08:07Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-014"
+event = "merged"
+actor = "codex"
+pr = 5712
+head_sha = "8c51931846232aaecd93b66ccaa8d46f5c6f2dd5"
+merge_sha = "5f0abaf1e79c6b522a9856987680b3d05b063d92"
+branch = "codex/lunar-lake/LNL258V-ROUTE-014-blocker-summary"
+summary = "Merged LNL258V-ROUTE-014 after adding grouped candidate-route blocker summaries with next-action hints to Lunar Lake route-profile receipts."
+notes = [
+  "PR #5712 preserved no new inference, route promotion, speedup, power advantage, acceleration, native OpenCL/NPU, or BitNet QK256/I2_S claim.",
+]
