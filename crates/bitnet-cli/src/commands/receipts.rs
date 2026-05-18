@@ -1586,7 +1586,7 @@ mod tests {
     }
 
     #[test]
-    fn receipts_explain_links_bitnet_receipt_to_model_coverage() {
+    fn receipts_explain_links_bitnet_receipt_to_model_coverage() -> Result<()> {
         let receipt = json!({
             "artifact_kind": "bitnet_cuda_answer",
             "model": {
@@ -1640,7 +1640,7 @@ mod tests {
                 .any(|warning| warning.contains("not dense SLM CUDA proof"))
         );
 
-        let value = serde_json::to_value(&explanation).expect("serialize receipt explanation");
+        let value = serde_json::to_value(&explanation)?;
         assert_eq!(value["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
         assert_eq!(value["current_tier"], "product_cli_ready");
         assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
@@ -1653,10 +1653,11 @@ mod tests {
         assert_eq!(value["full_residency_claim"], false);
         assert_eq!(value["bitnet_packed_i2s_qk256_proof"], true);
         assert_eq!(value["dense_regular_llm_cuda_proof"], false);
+        Ok(())
     }
 
     #[test]
-    fn receipts_explain_links_dense_qwen_receipt_to_model_coverage() {
+    fn receipts_explain_links_dense_qwen_receipt_to_model_coverage() -> Result<()> {
         let receipt = json!({
             "artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof",
             "claim": "dense_gguf_qwen_warm_session_strict_cuda_proof_recorded",
@@ -1711,7 +1712,7 @@ mod tests {
                 .any(|warning| warning.contains("not BitNet packed I2_S/QK256 proof"))
         );
 
-        let value = serde_json::to_value(&explanation).expect("serialize receipt explanation");
+        let value = serde_json::to_value(&explanation)?;
         assert_eq!(value["model_coverage_row"], "dense_qwen25_05b_q8_cuda");
         assert_eq!(value["current_tier"], "product_cli_ready");
         assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
@@ -1724,10 +1725,11 @@ mod tests {
         assert_eq!(value["full_residency_claim"], false);
         assert_eq!(value["bitnet_packed_i2s_qk256_proof"], false);
         assert_eq!(value["dense_regular_llm_cuda_proof"], true);
+        Ok(())
     }
 
     #[test]
-    fn receipts_explain_links_qwen3_dense_receipt_to_candidate_coverage() {
+    fn receipts_explain_links_qwen3_dense_receipt_to_candidate_coverage() -> Result<()> {
         let receipt = json!({
             "artifact_kind": "dense_gguf_qwen_ask_strict_cuda_proof",
             "claim": "dense_gguf_qwen_ask_strict_cuda_proof_recorded",
@@ -1782,7 +1784,7 @@ mod tests {
         assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(false));
         assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(true));
 
-        let value = serde_json::to_value(&explanation).expect("serialize receipt explanation");
+        let value = serde_json::to_value(&explanation)?;
         assert_eq!(value["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
         assert_eq!(value["current_tier"], "accelerator_answer_ready");
         assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
@@ -1795,6 +1797,7 @@ mod tests {
         assert_eq!(value["full_residency_claim"], false);
         assert_eq!(value["bitnet_packed_i2s_qk256_proof"], false);
         assert_eq!(value["dense_regular_llm_cuda_proof"], true);
+        Ok(())
     }
 
     #[test]
