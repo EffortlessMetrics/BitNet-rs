@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
   "proof_stage": "openvino_candidate_quality_diagnosis_no_promotion_change",
-  "created_utc": "2026-05-17T15:00:00Z",
+  "created_utc": "2026-05-18T03:55:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
@@ -37,8 +37,7 @@
     ],
     "failure_classes": {
       "answer_content_failed": 2,
-      "answer_content_missing_required_terms": 2,
-      "generation_budget_or_truncation": 1
+      "answer_content_missing_required_terms": 3
     }
   },
   "profile_diagnoses": [
@@ -49,7 +48,7 @@
       "failed": 1,
       "blocked": true,
       "failed_case_ids": [
-        "short_reasoning_heavier_object"
+        "short_reasoning_apples_left"
       ],
       "route_profile_status": "candidate_blocked_by_quality",
       "route_blockers": [
@@ -141,10 +140,10 @@
       "missing_required_keywords": [],
       "forbidden_tokens_observed": [],
       "expected_normalized": "yes",
-      "observed_normalized": "yes, the sky on a clear day",
-      "answer_preview": "Yes, the sky on a clear day",
+      "observed_normalized": "yes, it's usually clear and blue",
+      "answer_preview": "Yes, it's usually clear and blue",
       "generated_tokens": 8,
-      "prompt_tokens": 44,
+      "prompt_tokens": 49,
       "run_receipt_path": null,
       "fallback_used": false,
       "classification": "answer_content_failed",
@@ -205,7 +204,7 @@
       "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen CPU control route; adjust prompt/gate only if the expected answer contract is too narrow."
     },
     {
-      "id": "short_reasoning_heavier_object",
+      "id": "short_reasoning_apples_left",
       "profile": "ask_normal",
       "category": "short_reasoning",
       "task_family": null,
@@ -213,24 +212,22 @@
       "gate_kind": "contains_any",
       "scoring_kind": "required_keywords",
       "failed_rules": [
-        "answer_gate",
         "required_keywords_missing"
       ],
       "failure_taxonomy": [
-        "answer_gate_failed",
         "required_keyword_missing"
       ],
       "missing_required_keywords": [
-        "full"
+        "yes"
       ],
       "forbidden_tokens_observed": [],
-      "answer_preview": "An empty mug is heavier.",
-      "generated_tokens": 6,
-      "prompt_tokens": 47,
+      "answer_preview": "Yes, Tom will have one apple left after he gives away one of his apples",
+      "generated_tokens": 16,
+      "prompt_tokens": 51,
       "run_receipt_path": null,
       "fallback_used": false,
-      "classification": "generation_budget_or_truncation",
-      "recommended_fix": "Rerun this bounded case with either a tighter prompt or a slightly larger max_new_tokens budget; classify as output-budget drift before changing route policy."
+      "classification": "answer_content_missing_required_terms",
+      "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen CPU control route; adjust prompt/gate only if the expected answer contract is too narrow."
     },
     {
       "id": "decode_heavy_short_list",
@@ -251,9 +248,9 @@
         "model"
       ],
       "forbidden_tokens_observed": [],
-      "answer_preview": "1. Verify the route's availability and security.\n2. Ensure there is sufficient network bandwidth to support traffic.\n3. Confirm that the destination IP address or domain name is reachable.\n4. Check for any firewalls or network security meas...",
-      "generated_tokens": 64,
-      "prompt_tokens": 45,
+      "answer_preview": "1. **Fallback Route Check**\n2. **Route Selection Criteria**\n3. **Route Validation Process**\n4. **Route Optimization Strategy**\n5. **Route Monitoring System**\n6. **Route Adaptation Algorithm**",
+      "generated_tokens": 43,
+      "prompt_tokens": 49,
       "run_receipt_path": null,
       "fallback_used": false,
       "classification": "answer_content_missing_required_terms",
@@ -264,17 +261,10 @@
     "fixture_verified": true,
     "expected_case_count": 12,
     "observed_case_count": 12,
-    "missing_case_ids": [
-      "short_reasoning_apples_left"
-    ],
-    "stale_or_unexpected_case_ids": [
-      "short_reasoning_heavier_object"
-    ],
-    "aligned_with_active_fixture": false,
-    "blockers": [
-      "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
-      "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]"
-    ]
+    "missing_case_ids": [],
+    "stale_or_unexpected_case_ids": [],
+    "aligned_with_active_fixture": true,
+    "blockers": []
   },
   "generated_token_visibility": {
     "direct_generated_token_ids_available": false,
@@ -285,12 +275,9 @@
   },
   "route_blocked": true,
   "blocker_summary": [
-    "1 failed case(s) classified as generation_budget_or_truncation",
     "2 failed case(s) classified as answer_content_failed",
-    "2 failed case(s) classified as answer_content_missing_required_terms",
+    "3 failed case(s) classified as answer_content_missing_required_terms",
     "5 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, prefill_heavy, regression_tiny]",
-    "dense_slm_openvino_gpu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
-    "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
     "generated token IDs are not directly available from OpenVINO GenAI pipeline internals"
   ],
   "recommended_next_actions": [
