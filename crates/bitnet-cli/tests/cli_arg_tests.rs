@@ -1227,8 +1227,9 @@ fn model_verify_json_includes_dense_m4_artifact_provenance()
 }
 
 #[test]
-fn model_verify_json_includes_bitnet_external_tokenizer_provenance() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn model_verify_json_includes_bitnet_external_tokenizer_provenance()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let cache_str = cache.to_string_lossy().into_owned();
 
@@ -1253,6 +1254,7 @@ fn model_verify_json_includes_bitnet_external_tokenizer_provenance() {
         .stdout(predicate::str::contains("\"identity\": \"bitnetcpp-answer\""))
         .stdout(predicate::str::contains("Redistribution boundary recorded"))
         .stdout(predicate::str::contains("does not prove BitNet chat"));
+    Ok(())
 }
 
 #[test]
@@ -2773,6 +2775,43 @@ fn mac_chat_rejects_full_metal_request_before_cache_lookup() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("mac chat routes the supported Mac local-answer path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
+fn mac_chat_smoke_help_documents_dense_conformance_receipt() {
+    bitnet()
+        .args(["mac", "chat-smoke", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("fixed dense SLM resident chat conformance smoke"))
+        .stdout(predicate::str::contains("--model-id <MODEL_ID>"))
+        .stdout(predicate::str::contains("--timeout-seconds <TIMEOUT_SECONDS>"))
+        .stdout(predicate::str::contains("--json-out <PATH>"));
+}
+
+#[test]
+fn mac_chat_smoke_reaches_cache_lookup_for_default_model() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "chat-smoke", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_chat_smoke_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "chat-smoke"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "mac chat-smoke routes the supported Mac local-answer path",
+        ))
         .stderr(predicate::str::contains("Full apple-m4-metal inference"));
 }
 

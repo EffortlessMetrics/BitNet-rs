@@ -1,0 +1,27 @@
+timestamp = "2026-05-18T14:05:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-010"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5681
+head_sha = "4b8d26ae4e661275a15cc5d367f737b672a1d9a2"
+merge_sha = "baec0c19728f1eb7670aa0394def0ac71d0a5e8d"
+branch = "codex/lunar-lake/LNL258V-QUAL-010-long-decode-fixtures"
+summary = "Merged PR #5681 for LNL258V-QUAL-010, stabilizing the corpus-v2 prefill-heavy and decode-heavy fixtures across dense GGUF CPU and OpenVINO CPU/GPU/NPU candidate routes."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5681",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "Merged with dense GGUF CPU and OpenVINO CPU/GPU/NPU corpus-v2 routes at 12/12 pass and fallback_used=false.",
+  "OpenVINO GPU/NPU remain candidate-only; this closeout does not claim route promotion, speedup, power advantage, native accelerator execution, Arc/NPU acceleration, full BitNet accelerator inference, or BitNet QK256/I2_S behavior change.",
+]

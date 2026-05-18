@@ -1,0 +1,14 @@
+timestamp = "2026-05-18T12:08:10Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-DENSE-CHAT-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-CHAT-001-cli-chat-conformance"
+
+notes = [
+  "Started dense SLM CLI ask/chat conformance evidence for supported M4 model identities.",
+  "Scope is bounded to dense SLM chat-smoke receipts with prompt template, stop behavior, resident history, per-turn receipts, generated text, token IDs, backend, fallback state, and model/tokenizer identity.",
+  "No BitNet chat behavior, BitNet serve behavior, broad quality, broad performance, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, or speedup claim.",
+]

@@ -75,7 +75,7 @@
 | apple-m4-inference-excellence | M4-CANARY-001 | M4-ACCURACY-000, M4-REPRO-003 | merged |
 | apple-m4-inference-excellence | M4-DENSE-REF-000 | M4-CANARY-001, M4-REPRO-003, M4-REPRO-004 | merged |
 | apple-m4-inference-excellence | M4-DENSE-REF-001 | M4-ACCURACY-001, M4-CANARY-001, M4-DENSE-REF-000, M4-REPRO-004 | merged |
-| apple-m4-inference-excellence | M4-DENSE-CHAT-001 | M4-CANARY-001, M4-REPRO-003 | proposed |
+| apple-m4-inference-excellence | M4-DENSE-CHAT-001 | M4-CANARY-001, M4-REPRO-003 | pr_open |
 | apple-m4-inference-excellence | M4-ROBUSTNESS-001 | M4-ACCURACY-007, M4-BITNET-EX-012, M4-CANARY-001, M4-REPRO-003 | proposed |
 | apple-m4-inference-excellence | M4-BENCH-004 | M4-REPRO-001 | merged |
 | apple-m4-inference-excellence | M4-BENCH-002 | M4-BENCH-001, M4-BENCH-004, M4-BENCH-007 | proposed |
@@ -337,7 +337,7 @@
 | intel-258v-platform | LNL258V-OV-QUAL-003 | LNL258V-OV-QUAL-002 | merged |
 | intel-258v-platform | LNL258V-OV-QUAL-004 | LNL258V-OV-QUAL-003 | merged |
 | intel-258v-platform | LNL258V-QUAL-009 | LNL258V-OPENVINO-QUAL-RERUN-002 | merged |
-| intel-258v-platform | LNL258V-QUAL-010 | LNL258V-QUAL-009 | pr_open |
+| intel-258v-platform | LNL258V-QUAL-010 | LNL258V-QUAL-009 | merged |
 | intel-258v-platform | LNL258V-BENCH-005 | LNL258V-ROUTE-009 | merged |
 | intel-258v-platform | LNL258V-ROUTE-007 | LNL258V-OV-QUAL-005, LNL258V-ROUTE-006 | merged |
 | intel-258v-platform | LNL258V-ROUTE-008 | LNL258V-ROUTE-007 | merged |
