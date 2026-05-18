@@ -1,0 +1,20 @@
+timestamp = "2026-05-18T14:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-004"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-004-quality-phase-specs"
+summary = "Started LNL258V-OPENVINO-DOCS-004 to define OpenVINO quality-corpus and phase-timing receipt contracts."
+
+artifacts = [
+  "docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-PHASE-TIMING.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The specs define corpus-v2 profile gates, failure taxonomy, direct versus retokenized token accounting, generation config, profile timing applicability, phase fields, and telemetry requirements.",
+  "No route promotion, speedup, power-advantage, broad dense SLM quality, BitNet QK256/I2_S, native OpenCL, native NPU kernel, or server-readiness claim is in scope.",
+]
