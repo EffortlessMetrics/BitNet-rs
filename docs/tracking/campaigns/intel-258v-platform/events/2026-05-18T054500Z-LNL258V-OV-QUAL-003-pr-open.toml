@@ -7,7 +7,7 @@ to = "pr_open"
 actor = "codex"
 branch = "codex/lunar-lake/LNL258V-OV-QUAL-003-quality-failure-taxonomy"
 pr = 5518
-head_sha = "ec3bbd18ed17e3992fc90aac6a6a1ab614e0d11f"
+head_sha = "0c36024f6667bfb15e94cf68d9bf9b4d41bc5128"
 summary = "Opened LNL258V-OV-QUAL-003 to refine OpenVINO candidate corpus-v2 quality failure taxonomy."
 
 artifacts = [
