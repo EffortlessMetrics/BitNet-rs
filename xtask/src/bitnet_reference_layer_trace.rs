@@ -1657,6 +1657,11 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                 &selected_query_downstream_score_residual_frontier,
                 &cpu_comparison,
             );
+        let selected_key_mixed_qk_frontier = attention_selected_key_mixed_qk_frontier(
+            &selected_query_downstream_score_residual_frontier,
+            &cpu_comparison,
+            &selected_pre_rope_f64_residual,
+        );
         let selected_query_history_residual_frontier =
             attention_selected_query_history_residual_frontier(
                 &selected_qk_downstream_score_residual_frontier,
@@ -1703,6 +1708,7 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             selected_query_downstream_score_residual_frontier;
         cpu_comparison["attention_selected_qk_downstream_score_residual_frontier"] =
             selected_qk_downstream_score_residual_frontier;
+        cpu_comparison["attention_selected_key_mixed_qk_frontier"] = selected_key_mixed_qk_frontier;
         cpu_comparison["attention_selected_query_history_residual_frontier"] =
             selected_query_history_residual_frontier;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
@@ -33598,6 +33604,389 @@ fn attention_selected_qk_downstream_score_residual_frontier(
     })
 }
 
+fn selected_key_mixed_qk_frontier_next_diagnostic(classification: &str) -> &'static str {
+    match classification {
+        "selected_key_mixed_qk_frontier_post_rope_bucket_crossing" => {
+            "localize selected post-RoPE key bucket source before changing score accumulation or softmax"
+        }
+        "selected_key_mixed_qk_frontier_post_rope_capture_replay_mismatch" => {
+            "pin selected post-RoPE capture/replay mismatch before runtime math changes"
+        }
+        "selected_key_mixed_qk_frontier_post_rope_runtime_projection_pair_delta" => {
+            "follow selected post-RoPE runtime replay into pre-RoPE projection pair delta before changing score accumulation"
+        }
+        "selected_key_mixed_qk_frontier_pre_rope_projection_pair_delta" => {
+            "localize selected pre-RoPE projection pair/history source before changing K projection or RMSNorm math"
+        }
+        "selected_key_mixed_qk_frontier_pre_rope_attention_norm_output" => {
+            "pin selected pre-RoPE attention-norm output source before production RMSNorm changes"
+        }
+        "selected_key_mixed_qk_frontier_f64_residual_score_history" => {
+            "localize the remaining f64 score-history residual before changing RMSNorm, score accumulation, softmax, or value mix"
+        }
+        "selected_key_mixed_qk_frontier_query_only" => {
+            "continue selected query residual attribution before following selected key runtime math"
+        }
+        "selected_key_mixed_qk_frontier_clean" => {
+            "selected key mixed-QK frontier is clean; rerun downstream score, probability, value-mix, and logits parity"
+        }
+        "selected_key_mixed_qk_frontier_missing_context" => {
+            "capture selected query downstream, mixed Q/K, selected key slot, post-RoPE replay, pre-RoPE projection, and f64 residual context before runtime changes"
+        }
+        _ => "keep selected key mixed-QK frontier diagnostic-only",
+    }
+}
+
+fn compact_selected_key_mixed_qk_source_row(row: &Value) -> Value {
+    if row.is_null() {
+        return Value::Null;
+    }
+    json!({
+        "classification": row.pointer("/classification").cloned().unwrap_or(Value::Null),
+        "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+        "kv_head": row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+        "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+        "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+        "contributor_dim": row.pointer("/contributor_dim").cloned().unwrap_or(Value::Null),
+        "selected_k_output_dim": row.pointer("/selected_k_output_dim").cloned().unwrap_or(Value::Null),
+        "probe_dim": row.pointer("/probe_dim").cloned().unwrap_or(Value::Null),
+        "blocked_reasons": row.pointer("/blocked_reasons").cloned().unwrap_or(Value::Null),
+        "runtime_replay_delta": row.pointer("/runtime_replay_delta").cloned().unwrap_or(Value::Null),
+        "linearized_delta_for_probe_dim": row.pointer("/linearized_delta_for_probe_dim").cloned().unwrap_or(Value::Null),
+        "dominant_projection_input": row.pointer("/dominant_projection_input").cloned().unwrap_or(Value::Null),
+        "dominant_projection_input_dim": row.pointer("/dominant_projection_input_dim").cloned().unwrap_or(Value::Null),
+        "dominant_linearized_contribution": row.pointer("/dominant_linearized_contribution").cloned().unwrap_or(Value::Null),
+        "max_input_abs_delta": row.pointer("/max_input_abs_delta").cloned().unwrap_or(Value::Null),
+        "max_output_abs_delta": row.pointer("/max_output_abs_delta").cloned().unwrap_or(Value::Null),
+        "baseline_max_abs_delta": row.pointer("/baseline_max_abs_delta").cloned().unwrap_or(Value::Null),
+        "f64_max_abs_delta": row.pointer("/f64_max_abs_delta").cloned().unwrap_or(Value::Null),
+        "f64_clears_bucket": row.pointer("/f64_clears_bucket").cloned().unwrap_or(Value::Null),
+    })
+}
+
+fn attention_selected_key_mixed_qk_frontier(
+    selected_query_downstream: &Value,
+    base_comparison: &Value,
+    selected_pre_rope_f64_residual: &Value,
+) -> Value {
+    let mixed_qk = base_comparison
+        .pointer("/attention_selected_score_mixed_qk_contribution")
+        .unwrap_or(&Value::Null);
+    let slot_probe = base_comparison
+        .pointer("/attention_selected_key_dim_token_slot_probe")
+        .unwrap_or(&Value::Null);
+    let post_rope_history = base_comparison
+        .pointer("/attention_selected_post_rope_history_bucket_source")
+        .unwrap_or(&Value::Null);
+    let post_rope_capture = base_comparison
+        .pointer("/attention_selected_post_rope_capture_replay_source")
+        .unwrap_or(&Value::Null);
+    let rust_post_rope_capture = base_comparison
+        .pointer("/attention_selected_rust_post_rope_capture_source")
+        .unwrap_or(&Value::Null);
+    let post_rope_runtime = base_comparison
+        .pointer("/attention_selected_post_rope_runtime_replay_source")
+        .unwrap_or(&Value::Null);
+    let pre_rope_pair = base_comparison
+        .pointer("/attention_selected_pre_rope_projection_pair_source")
+        .unwrap_or(&Value::Null);
+    let pre_rope_history = base_comparison
+        .pointer("/attention_selected_pre_rope_projection_history_source")
+        .unwrap_or(&Value::Null);
+    let pre_rope_norm = base_comparison
+        .pointer("/attention_selected_pre_rope_attention_norm_history_source")
+        .unwrap_or(&Value::Null);
+    let pre_rope_f64_effect = base_comparison
+        .pointer("/attention_selected_pre_rope_attention_norm_f64_effect")
+        .unwrap_or(&Value::Null);
+
+    let query_downstream_classification = selected_report_classification(selected_query_downstream);
+    let mixed_classification = selected_report_classification(mixed_qk);
+    let slot_classification = selected_report_classification(slot_probe);
+    let post_rope_history_classification = selected_report_classification(post_rope_history);
+    let post_rope_capture_classification = selected_report_classification(post_rope_capture);
+    let rust_post_rope_capture_classification =
+        selected_report_classification(rust_post_rope_capture);
+    let post_rope_runtime_classification = selected_report_classification(post_rope_runtime);
+    let pre_rope_pair_classification = selected_report_classification(pre_rope_pair);
+    let pre_rope_history_classification = selected_report_classification(pre_rope_history);
+    let pre_rope_norm_classification = selected_report_classification(pre_rope_norm);
+    let pre_rope_f64_effect_classification = selected_report_classification(pre_rope_f64_effect);
+    let pre_rope_f64_residual_classification =
+        selected_report_classification(selected_pre_rope_f64_residual);
+
+    let key_relevant = matches!(
+        query_downstream_classification,
+        Some("selected_query_downstream_score_residual_selected_k_history")
+            | Some("selected_query_downstream_score_residual_selected_qk_history")
+    ) || matches!(
+        mixed_classification,
+        Some("selected_score_drift_has_mixed_qk_contribution")
+            | Some("selected_score_drift_key_dominant")
+            | Some("selected_score_drift_split_query_key_contribution")
+    );
+    let key_context_present = [
+        slot_classification,
+        post_rope_history_classification,
+        post_rope_capture_classification,
+        rust_post_rope_capture_classification,
+        post_rope_runtime_classification,
+        pre_rope_pair_classification,
+        pre_rope_history_classification,
+        pre_rope_norm_classification,
+        pre_rope_f64_effect_classification,
+        pre_rope_f64_residual_classification,
+    ]
+    .iter()
+    .any(Option::is_some);
+
+    let classification = if query_downstream_classification.is_none() {
+        "selected_key_mixed_qk_frontier_missing_context"
+    } else if query_downstream_classification
+        == Some("selected_query_downstream_score_residual_clean")
+        && matches!(slot_classification, None | Some("selected_key_dim_token_slot_probe_clean"))
+    {
+        "selected_key_mixed_qk_frontier_clean"
+    } else if !key_relevant
+        || query_downstream_classification
+            == Some("selected_query_downstream_score_residual_selected_q_history")
+    {
+        "selected_key_mixed_qk_frontier_query_only"
+    } else if pre_rope_f64_residual_classification
+        == Some("selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix")
+    {
+        "selected_key_mixed_qk_frontier_f64_residual_score_history"
+    } else if matches!(
+        pre_rope_norm_classification,
+        Some("selected_pre_rope_attention_norm_history_source_output_replay_explains_epsilon")
+            | Some("selected_pre_rope_attention_norm_history_source_input_history_epsilon")
+            | Some("selected_pre_rope_attention_norm_history_source_output_epsilon_unpinned")
+    ) || matches!(
+        pre_rope_f64_effect_classification,
+        Some("selected_pre_rope_attention_norm_f64_effect_clears_bucket_with_residual")
+            | Some("selected_pre_rope_attention_norm_f64_effect_clears_bucket_exact")
+    ) {
+        "selected_key_mixed_qk_frontier_pre_rope_attention_norm_output"
+    } else if matches!(
+        pre_rope_pair_classification,
+        Some("selected_pre_rope_projection_pair_source_raw_projection_pair_delta")
+            | Some("selected_pre_rope_projection_pair_source_projection_bucket_crossing")
+    ) || pre_rope_history_classification
+        == Some("selected_pre_rope_projection_history_replay_explains_pair_delta")
+    {
+        "selected_key_mixed_qk_frontier_pre_rope_projection_pair_delta"
+    } else if post_rope_runtime_classification
+        == Some("selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing")
+    {
+        "selected_key_mixed_qk_frontier_post_rope_runtime_projection_pair_delta"
+    } else if matches!(
+        post_rope_history_classification,
+        Some("selected_post_rope_history_bucket_source_capture_replay_mismatch")
+            | Some("selected_post_rope_history_bucket_source_projection_bucket_crossing")
+            | Some("selected_post_rope_history_bucket_source_projection_subbucket_midpoint")
+            | Some("selected_post_rope_history_bucket_source_f16_midpoint_sensitive")
+    ) || post_rope_capture_classification
+        == Some("selected_post_rope_capture_replay_source_mismatch")
+        || rust_post_rope_capture_classification
+            == Some("selected_rust_post_rope_capture_source_runtime_replay_unclean")
+    {
+        "selected_key_mixed_qk_frontier_post_rope_capture_replay_mismatch"
+    } else if slot_classification
+        == Some("selected_key_dim_token_slot_probe_post_rope_bucket_crossing")
+    {
+        "selected_key_mixed_qk_frontier_post_rope_bucket_crossing"
+    } else if key_relevant && !key_context_present {
+        "selected_key_mixed_qk_frontier_missing_context"
+    } else {
+        "selected_key_mixed_qk_frontier_missing_context"
+    };
+
+    let blocked_reasons = if classification == "selected_key_mixed_qk_frontier_missing_context" {
+        json!(["selected_key_mixed_qk_frontier_missing_context"])
+    } else {
+        json!([])
+    };
+
+    let mut report = serde_json::Map::new();
+    report.insert("diagnostic_only".to_string(), json!(true));
+    report.insert("claim_allowed".to_string(), json!(false));
+    report.insert(
+        "policy".to_string(),
+        json!("Selected key mixed-QK frontier is diagnostic-only evidence for summarizing the active selected key-side boundary after selected-query downstream score residual attribution; it does not change runtime math or promote reference parity, A770 semantic quality, attention score residency, softmax residency, value-mix residency, selected attention, resident KV, full residency, performance, or completion"),
+    );
+    report.insert("classification".to_string(), json!(classification));
+    report.insert(
+        "selected_query_downstream_classification".to_string(),
+        json!(query_downstream_classification),
+    );
+    report
+        .insert("selected_score_mixed_qk_classification".to_string(), json!(mixed_classification));
+    report.insert("selected_key_slot_probe_classification".to_string(), json!(slot_classification));
+    report.insert(
+        "selected_post_rope_history_bucket_source_classification".to_string(),
+        json!(post_rope_history_classification),
+    );
+    report.insert(
+        "selected_post_rope_capture_replay_source_classification".to_string(),
+        json!(post_rope_capture_classification),
+    );
+    report.insert(
+        "selected_rust_post_rope_capture_source_classification".to_string(),
+        json!(rust_post_rope_capture_classification),
+    );
+    report.insert(
+        "selected_post_rope_runtime_replay_source_classification".to_string(),
+        json!(post_rope_runtime_classification),
+    );
+    report.insert(
+        "selected_pre_rope_projection_pair_source_classification".to_string(),
+        json!(pre_rope_pair_classification),
+    );
+    report.insert(
+        "selected_pre_rope_projection_history_source_classification".to_string(),
+        json!(pre_rope_history_classification),
+    );
+    report.insert(
+        "selected_pre_rope_attention_norm_history_source_classification".to_string(),
+        json!(pre_rope_norm_classification),
+    );
+    report.insert(
+        "selected_pre_rope_attention_norm_f64_effect_classification".to_string(),
+        json!(pre_rope_f64_effect_classification),
+    );
+    report.insert(
+        "selected_pre_rope_attention_norm_f64_residual_classification".to_string(),
+        json!(pre_rope_f64_residual_classification),
+    );
+    report.insert(
+        "selected_query_head".to_string(),
+        json!(value_u64(selected_query_downstream, "/selected_query_head")),
+    );
+    report.insert(
+        "selected_query_dim".to_string(),
+        json!(value_u64(selected_query_downstream, "/selected_query_dim")),
+    );
+    report.insert(
+        "selected_query_token".to_string(),
+        json!(value_u64(selected_query_downstream, "/selected_query_token")),
+    );
+    report.insert(
+        "selected_query_key_slot".to_string(),
+        json!(value_u64(selected_query_downstream, "/selected_query_key_slot")),
+    );
+    report.insert("key_relevant".to_string(), json!(key_relevant));
+    report.insert("key_context_present".to_string(), json!(key_context_present));
+    report.insert(
+        "mixed_qk_dominant_count".to_string(),
+        json!(value_u64(mixed_qk, "/mixed_qk_dominant_count")),
+    );
+    report.insert(
+        "query_dominant_count".to_string(),
+        json!(value_u64(mixed_qk, "/query_dominant_count")),
+    );
+    report.insert(
+        "key_dominant_count".to_string(),
+        json!(value_u64(mixed_qk, "/key_dominant_count")),
+    );
+    report.insert(
+        "max_abs_product_delta".to_string(),
+        mixed_qk.pointer("/max_abs_product_delta").cloned().unwrap_or(Value::Null),
+    );
+    report.insert(
+        "slot_probe_max_abs_stage_delta".to_string(),
+        slot_probe.pointer("/max_abs_stage_delta").cloned().unwrap_or(Value::Null),
+    );
+    report.insert(
+        "runtime_replay_max_abs_delta".to_string(),
+        post_rope_runtime.pointer("/max_abs_runtime_replay_delta").cloned().unwrap_or(Value::Null),
+    );
+    report.insert(
+        "pre_rope_projection_max_abs_delta".to_string(),
+        pre_rope_pair.pointer("/max_abs_projection_delta").cloned().unwrap_or(Value::Null),
+    );
+    report.insert(
+        "pre_rope_attention_norm_max_output_delta".to_string(),
+        pre_rope_norm.pointer("/max_output_abs_delta").cloned().unwrap_or(Value::Null),
+    );
+    report.insert(
+        "f64_residual_downstream_frontier".to_string(),
+        selected_pre_rope_f64_residual
+            .pointer("/downstream_frontier")
+            .cloned()
+            .unwrap_or(Value::Null),
+    );
+    report.insert(
+        "first_mixed_qk_product_row".to_string(),
+        compact_selected_score_product_row(
+            mixed_qk.pointer("/first_product_row").unwrap_or(&Value::Null),
+        ),
+    );
+    report.insert(
+        "first_slot_probe_row".to_string(),
+        compact_selected_key_slot_probe_row(slot_probe.pointer("/rows/0").unwrap_or(&Value::Null)),
+    );
+    report.insert(
+        "first_post_rope_history_row".to_string(),
+        compact_selected_key_mixed_qk_source_row(
+            post_rope_history.pointer("/rows/0").unwrap_or(&Value::Null),
+        ),
+    );
+    report.insert(
+        "first_post_rope_capture_row".to_string(),
+        compact_selected_key_mixed_qk_source_row(
+            post_rope_capture.pointer("/rows/0").unwrap_or(&Value::Null),
+        ),
+    );
+    report.insert(
+        "first_rust_post_rope_capture_row".to_string(),
+        compact_selected_key_mixed_qk_source_row(
+            rust_post_rope_capture.pointer("/rows/0").unwrap_or(&Value::Null),
+        ),
+    );
+    report.insert(
+        "first_post_rope_runtime_row".to_string(),
+        compact_selected_key_mixed_qk_source_row(
+            post_rope_runtime.pointer("/rows/0").unwrap_or(&Value::Null),
+        ),
+    );
+    report.insert(
+        "first_pre_rope_projection_pair_row".to_string(),
+        compact_selected_key_mixed_qk_source_row(
+            pre_rope_pair.pointer("/rows/0").unwrap_or(&Value::Null),
+        ),
+    );
+    report.insert(
+        "first_pre_rope_projection_history_row".to_string(),
+        compact_selected_key_mixed_qk_source_row(
+            pre_rope_history.pointer("/rows/0").unwrap_or(&Value::Null),
+        ),
+    );
+    report.insert(
+        "first_pre_rope_attention_norm_row".to_string(),
+        compact_selected_key_mixed_qk_source_row(
+            pre_rope_norm.pointer("/rows/0").unwrap_or(&Value::Null),
+        ),
+    );
+    report.insert(
+        "first_pre_rope_f64_effect_row".to_string(),
+        compact_selected_key_mixed_qk_source_row(
+            pre_rope_f64_effect.pointer("/rows/0").unwrap_or(&Value::Null),
+        ),
+    );
+    report.insert(
+        "first_pre_rope_f64_residual_row".to_string(),
+        compact_selected_key_mixed_qk_source_row(
+            selected_pre_rope_f64_residual.pointer("/rows/0").unwrap_or(&Value::Null),
+        ),
+    );
+    report.insert("blocked_reasons".to_string(), blocked_reasons);
+    report.insert(
+        "next_diagnostic".to_string(),
+        json!(selected_key_mixed_qk_frontier_next_diagnostic(classification)),
+    );
+    Value::Object(report)
+}
+
 fn selected_query_history_residual_next_diagnostic(classification: &str) -> &'static str {
     match classification {
         "selected_query_history_residual_query_score_input_source" => {
@@ -53843,6 +54232,306 @@ mod tests {
         assert_eq!(
             report.pointer("/blocked_reasons/0"),
             Some(&json!("selected_qk_downstream_score_residual_missing_context"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    fn selected_key_mixed_qk_base() -> Value {
+        let mut base = selected_qk_downstream_base(
+            "selected_score_drift_has_mixed_qk_contribution",
+            "post_fix_score_input_frontier_selected_dim_token_score_history_context",
+            "selected_key_dim_token_slot_probe_post_rope_bucket_crossing",
+        );
+        base["attention_selected_post_rope_history_bucket_source"] = json!({
+            "classification": "selected_post_rope_history_bucket_source_unpinned",
+            "rows": [
+                {
+                    "classification": "selected_post_rope_history_bucket_source_unpinned",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 17,
+                    "query_token": 17,
+                    "contributor_dim": 69
+                }
+            ]
+        });
+        base["attention_selected_post_rope_capture_replay_source"] = json!({
+            "classification": "selected_post_rope_capture_replay_source_clean",
+            "rows": [
+                {
+                    "classification": "selected_post_rope_capture_replay_source_clean",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 17,
+                    "query_token": 17,
+                    "contributor_dim": 69
+                }
+            ]
+        });
+        base["attention_selected_rust_post_rope_capture_source"] = json!({
+            "classification": "selected_rust_post_rope_capture_source_clean",
+            "rows": [
+                {
+                    "classification": "selected_rust_post_rope_capture_source_clean",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 17,
+                    "query_token": 17,
+                    "contributor_dim": 69
+                }
+            ]
+        });
+        base["attention_selected_post_rope_runtime_replay_source"] = json!({
+            "classification": "selected_post_rope_runtime_replay_source_clean",
+            "rows": [
+                {
+                    "classification": "selected_post_rope_runtime_replay_source_clean",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 17,
+                    "query_token": 17,
+                    "contributor_dim": 69
+                }
+            ]
+        });
+        base["attention_selected_pre_rope_projection_pair_source"] = json!({
+            "classification": "selected_pre_rope_projection_pair_source_unpinned",
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_projection_pair_source_unpinned",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 17,
+                    "query_token": 17,
+                    "contributor_dim": 69
+                }
+            ]
+        });
+        base["attention_selected_pre_rope_projection_history_source"] = json!({
+            "classification": "selected_pre_rope_projection_history_source_unpinned",
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_projection_history_source_unpinned",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 17,
+                    "query_token": 17,
+                    "contributor_dim": 69
+                }
+            ]
+        });
+        base["attention_selected_pre_rope_attention_norm_history_source"] = json!({
+            "classification": "selected_pre_rope_attention_norm_history_source_clean",
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_attention_norm_history_source_clean",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 17,
+                    "query_token": 17,
+                    "selected_k_output_dim": 69
+                }
+            ]
+        });
+        base["attention_selected_pre_rope_attention_norm_f64_effect"] = json!({
+            "classification": "selected_pre_rope_attention_norm_f64_effect_not_better",
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_attention_norm_f64_effect_not_better",
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 17,
+                    "query_token": 17,
+                    "selected_k_output_dim": 69
+                }
+            ]
+        });
+        base
+    }
+
+    fn selected_key_mixed_qk_f64_residual(classification: &str) -> Value {
+        json!({
+            "classification": classification,
+            "downstream_frontier": "f64_downstream_residual_frontier_score_history_drives_value_mix",
+            "rows": [
+                {
+                    "classification": classification,
+                    "head": 5,
+                    "kv_head": 1,
+                    "key_slot": 17,
+                    "query_token": 17,
+                    "selected_k_output_dim": 69,
+                    "baseline_max_abs_delta": 0.0009765625_f64,
+                    "f64_max_abs_delta": 0.0000002384185791015625_f64
+                }
+            ]
+        })
+    }
+
+    fn selected_key_mixed_qk_report(
+        query_classification: &str,
+        base: &Value,
+        f64_residual_classification: &str,
+    ) -> Value {
+        attention_selected_key_mixed_qk_frontier(
+            &selected_qk_downstream_query_report(query_classification),
+            base,
+            &selected_key_mixed_qk_f64_residual(f64_residual_classification),
+        )
+    }
+
+    #[test]
+    fn selected_key_mixed_qk_frontier_reports_f64_residual_score_history() {
+        let report = selected_key_mixed_qk_report(
+            "selected_query_downstream_score_residual_selected_qk_history",
+            &selected_key_mixed_qk_base(),
+            "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix",
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_mixed_qk_frontier_f64_residual_score_history"))
+        );
+        assert_eq!(
+            report.pointer("/first_pre_rope_f64_residual_row/classification"),
+            Some(&json!(
+                "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_key_mixed_qk_frontier_reports_pre_rope_attention_norm_output() {
+        let mut base = selected_key_mixed_qk_base();
+        base["attention_selected_pre_rope_attention_norm_history_source"]["classification"] =
+            json!("selected_pre_rope_attention_norm_history_source_output_replay_explains_epsilon");
+        let report = selected_key_mixed_qk_report(
+            "selected_query_downstream_score_residual_selected_qk_history",
+            &base,
+            "selected_pre_rope_attention_norm_f64_residual_not_better",
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_mixed_qk_frontier_pre_rope_attention_norm_output"))
+        );
+    }
+
+    #[test]
+    fn selected_key_mixed_qk_frontier_reports_pre_rope_projection_pair_delta() {
+        let mut base = selected_key_mixed_qk_base();
+        base["attention_selected_pre_rope_projection_pair_source"]["classification"] =
+            json!("selected_pre_rope_projection_pair_source_raw_projection_pair_delta");
+        let report = selected_key_mixed_qk_report(
+            "selected_query_downstream_score_residual_selected_qk_history",
+            &base,
+            "selected_pre_rope_attention_norm_f64_residual_not_better",
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_mixed_qk_frontier_pre_rope_projection_pair_delta"))
+        );
+    }
+
+    #[test]
+    fn selected_key_mixed_qk_frontier_reports_post_rope_runtime_projection_pair_delta() {
+        let mut base = selected_key_mixed_qk_base();
+        base["attention_selected_post_rope_runtime_replay_source"]["classification"] =
+            json!("selected_post_rope_runtime_replay_source_projection_pair_delta_bucket_crossing");
+        let report = selected_key_mixed_qk_report(
+            "selected_query_downstream_score_residual_selected_qk_history",
+            &base,
+            "selected_pre_rope_attention_norm_f64_residual_not_better",
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_mixed_qk_frontier_post_rope_runtime_projection_pair_delta"))
+        );
+    }
+
+    #[test]
+    fn selected_key_mixed_qk_frontier_reports_post_rope_capture_replay_mismatch() {
+        let mut base = selected_key_mixed_qk_base();
+        base["attention_selected_post_rope_history_bucket_source"]["classification"] =
+            json!("selected_post_rope_history_bucket_source_capture_replay_mismatch");
+        let report = selected_key_mixed_qk_report(
+            "selected_query_downstream_score_residual_selected_qk_history",
+            &base,
+            "selected_pre_rope_attention_norm_f64_residual_not_better",
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_mixed_qk_frontier_post_rope_capture_replay_mismatch"))
+        );
+    }
+
+    #[test]
+    fn selected_key_mixed_qk_frontier_reports_post_rope_bucket_crossing() {
+        let report = selected_key_mixed_qk_report(
+            "selected_query_downstream_score_residual_selected_qk_history",
+            &selected_key_mixed_qk_base(),
+            "selected_pre_rope_attention_norm_f64_residual_not_better",
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_mixed_qk_frontier_post_rope_bucket_crossing"))
+        );
+        assert_eq!(
+            report.pointer("/first_slot_probe_row/classification"),
+            Some(&json!("selected_key_dim_token_slot_probe_post_rope_bucket_crossing"))
+        );
+    }
+
+    #[test]
+    fn selected_key_mixed_qk_frontier_reports_query_only() {
+        let report = selected_key_mixed_qk_report(
+            "selected_query_downstream_score_residual_selected_q_history",
+            &selected_key_mixed_qk_base(),
+            "selected_pre_rope_attention_norm_f64_residual_not_better",
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_mixed_qk_frontier_query_only"))
+        );
+    }
+
+    #[test]
+    fn selected_key_mixed_qk_frontier_reports_clean() {
+        let mut base = selected_key_mixed_qk_base();
+        base["attention_selected_score_mixed_qk_contribution"]["classification"] =
+            json!("selected_score_product_delta_clean");
+        base["attention_selected_key_dim_token_slot_probe"]["classification"] =
+            json!("selected_key_dim_token_slot_probe_clean");
+        let report = selected_key_mixed_qk_report(
+            "selected_query_downstream_score_residual_clean",
+            &base,
+            "selected_pre_rope_attention_norm_f64_residual_not_better",
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_mixed_qk_frontier_clean"))
+        );
+    }
+
+    #[test]
+    fn selected_key_mixed_qk_frontier_reports_missing_context() {
+        let report = attention_selected_key_mixed_qk_frontier(&json!({}), &json!({}), &json!({}));
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_key_mixed_qk_frontier_missing_context"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_key_mixed_qk_frontier_missing_context"))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
