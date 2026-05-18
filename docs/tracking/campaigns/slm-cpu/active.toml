@@ -2415,8 +2415,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-040"
-status = "pr_open"
+status = "merged"
 pr = 5715
+head_sha = "153ea5a22ad0d6949c27c7229eba068a2ed89b12"
+merge_sha = "1060a032a7a0c01e1e48b8676328874a873ef88d"
 branch = "codex/slm-cpu-040-workspace-down-proj-storage"
 stackable = false
 review_mode = "codex_premerge"
@@ -2456,6 +2458,60 @@ forbidden_paths = [
 may_claim = [
   "The next Qwen3 Q8_0 Kaby allocation slice is scoped to the exact FeedForward::down_proj output storage hook behind the existing workspace-owned feed_forward.output boundary.",
   "A valid implementation may either enable one reusable workspace-backed output slot or record a narrower no-reuse proof for this API boundary.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "A runtime speedup is proven without before/after behavior-preserving receipts.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-041"
+status = "ready"
+branch = "codex/slm-cpu-041-linear-output-storage-api"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-040"]
+acceptance = "Add or adopt a behavior-preserving dense linear output-storage API boundary that can fill a caller-provided workspace slot for the Qwen3 Q8_0 Kaby FeedForward::down_proj output, or prove with a narrower implementation note why Candle's current Tensor/Linear surface still prevents this without changing math semantics. The slice must preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false when behavior artifacts are regenerated; it must keep SLM-CPU-040's no-speedup/no-throughput boundary unless reusable storage is actually implemented and proven with before/after receipts."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli warm_session_aggregate_allocation_audit",
+  "cargo clippy --locked -p bitnet-cli --no-default-features --features cpu,full-cli --all-targets -- -D warnings",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "The next Qwen3 Q8_0 Kaby allocation slice is scoped to a behavior-preserving dense linear output-storage API boundary for FeedForward::down_proj output.",
+  "A valid implementation may enable one reusable workspace-backed output slot only if generated IDs/text and strict receipts remain unchanged.",
+  "A valid no-reuse slice may narrow the blocker if Candle's current linear API still prevents safe caller-provided output storage.",
 ]
 must_not_claim = [
   "Sustained 8250U throughput is proven.",
