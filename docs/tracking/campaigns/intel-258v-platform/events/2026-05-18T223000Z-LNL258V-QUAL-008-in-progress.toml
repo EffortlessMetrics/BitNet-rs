@@ -1,0 +1,23 @@
+timestamp = "2026-05-18T22:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-008"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-QUAL-008-stop-token-fixture"
+summary = "Started LNL258V-QUAL-008 to tighten the remaining dense Qwen corpus-v2 stop-token fixture against tested CPU prompt evidence."
+
+artifacts = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "Local CPU prompt probing showed the old stop_token_one_word_done wording generated Completed while exact-lowercase wording generated done.",
+  "This work refreshes CPU dense Qwen evidence only and does not rerun OpenVINO GPU/NPU quality, promote routes, claim speedup, or change BitNet QK256/I2_S behavior.",
+]
