@@ -13802,6 +13802,18 @@ mod tests {
             audit["prompt_prefill_breakdown"]["forward_boundary"]["claim_scope"],
             "allocation-boundary classification only; no dense math, kernel, or sustained-throughput claim is made"
         );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["reuse_status"],
+            "not_reusable_without_transformer_api_change"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["required_api_boundary"],
+            "typed_transformer_forward_workspace"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["behavior_gate"],
+            "generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false must match the Qwen3 Q8_0 baseline"
+        );
         assert!(audit["ranked_hotspots"].as_array().is_some_and(|hotspots| {
             hotspots.iter().any(|hotspot| hotspot["component"] == "prompt_prefill.forward")
         }));
@@ -13845,6 +13857,8 @@ mod tests {
         assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill");
         assert_eq!(audit["dominant_hotspot"]["alloc_bytes"], 1_500);
         assert_eq!(audit["next_optimization_target"]["target"], "prefill_forward_buffer_boundary");
+        assert_eq!(audit["next_optimization_target"]["status"], "blocked_by_owned_tensor_outputs");
+        assert_eq!(audit["optimization_deferred"], true);
         assert_eq!(
             audit["next_optimization_target"]["claim_scope"],
             "diagnostic prioritization only; no runtime optimization or sustained-throughput claim is made"
@@ -13874,8 +13888,13 @@ mod tests {
         let audit = warm_session_aggregate_allocation_audit_json(true, "cpu", &prompt_summaries);
 
         assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill.forward");
-        assert_eq!(audit["next_optimization_target"]["target"], "prefill_forward_buffer_boundary");
+        assert_eq!(
+            audit["next_optimization_target"]["target"],
+            "typed_transformer_forward_workspace_api"
+        );
         assert_eq!(audit["next_optimization_target"]["component"], "prompt_prefill.forward");
+        assert_eq!(audit["next_optimization_target"]["status"], "blocked_by_owned_tensor_outputs");
+        assert_eq!(audit["optimization_deferred"], true);
     }
 
     #[test]

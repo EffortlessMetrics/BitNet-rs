@@ -1497,6 +1497,12 @@ fn evaluate_quality(
         failed_rules
             .extend(scoring_result.failed_rules.iter().map(|rule| format!("scoring_{rule}")));
     }
+    let exact_scoring_passed = scoring
+        .map(|scoring| {
+            matches!(scoring.kind(), "exact_match" | "normalized_match" | "numeric_tolerance")
+        })
+        .unwrap_or(false)
+        && scoring_result.as_ref().is_some_and(|result| result.passed);
     if let Some(minimum) = min_generated_tokens
         && generated_token_count < minimum
     {
@@ -1504,6 +1510,7 @@ fn evaluate_quality(
     }
     if let Some(minimum) = min_distinct_generated_tokens
         && distinct_generated_tokens < minimum
+        && !exact_scoring_passed
     {
         failed_rules.push("generated_token_variation".to_string());
     }
@@ -3355,6 +3362,23 @@ mod tests {
         assert!(!quality.passed);
         assert!(quality.failed_rules.contains(&"generated_token_min".to_string()));
         assert!(quality.failed_rules.contains(&"generated_token_variation".to_string()));
+        assert_eq!(quality.distinct_generated_tokens, 1);
+    }
+
+    #[test]
+    fn exact_scored_single_token_answer_does_not_need_variation() {
+        let gate = AnswerGate {
+            starts_with_any: Some(vec!["yes".to_string()]),
+            ..gate("starts_with_any")
+        };
+        let scoring = AnswerScoring {
+            expected_normalized: Some("yes".to_string()),
+            ..scoring("normalized_match")
+        };
+        let quality =
+            evaluate_quality("Yes", &gate, Some(&scoring), Some(&[9454]), Some(1), Some(2));
+
+        assert!(quality.passed, "{:?}", quality.failed_rules);
         assert_eq!(quality.distinct_generated_tokens, 1);
     }
 
