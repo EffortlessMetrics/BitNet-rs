@@ -2460,9 +2460,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-030"
-status = "pr_open"
+status = "merged"
 pr = 5457
-head_sha = "ea532c57aea04aa772cbc2a9bd1c9070d57a84f0"
+head_sha = "9c2400fb4c781c2189a4935f1e3744b85567bd3d"
+merge_sha = "87325006e25bb5820fd5c366ee7dad88fd7ea77c"
 branch = "codex/slm-cpu-030-prompt-setup-attribution"
 stackable = false
 review_mode = "codex_premerge"
