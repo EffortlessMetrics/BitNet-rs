@@ -2390,13 +2390,13 @@ fn regular_plural_form(needle: &str) -> Option<String> {
         || needle.ends_with("sh")
     {
         format!("{needle}es")
-    } else if needle.ends_with('y') {
-        let preceding = needle[..needle.len() - 1].chars().next_back();
+    } else if let Some(stem) = needle.strip_suffix('y') {
+        let preceding = stem.chars().next_back();
         if preceding.is_some_and(|ch| {
             ch.is_ascii_alphabetic()
                 && !matches!(ch.to_ascii_lowercase(), 'a' | 'e' | 'i' | 'o' | 'u')
         }) {
-            format!("{}ies", &needle[..needle.len() - 1])
+            format!("{stem}ies")
         } else {
             format!("{needle}s")
         }
@@ -2410,7 +2410,7 @@ fn contains_keyword_form(haystack: &str, needle: &str) -> bool {
     let needle_starts_alnum = needle.chars().next().is_some_and(char::is_alphanumeric);
     let needle_ends_alnum = needle.chars().next_back().is_some_and(char::is_alphanumeric);
     let mut search_from = 0usize;
-    while let Some(relative_index) = haystack[search_from..].find(&needle) {
+    while let Some(relative_index) = haystack[search_from..].find(needle) {
         let start = search_from + relative_index;
         let end = start + needle.len();
         let before = haystack[..start].chars().next_back();

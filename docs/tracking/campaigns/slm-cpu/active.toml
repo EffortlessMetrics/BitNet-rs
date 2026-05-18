@@ -2305,7 +2305,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-038"
-status = "ready"
+status = "pr_open"
+pr = 5679
+head_sha = "cae4c1daac323e1cc0ee9190b6fc2fe210bc05d4"
 branch = "codex/slm-cpu-038-typed-transformer-forward-workspace"
 stackable = false
 review_mode = "codex_premerge"

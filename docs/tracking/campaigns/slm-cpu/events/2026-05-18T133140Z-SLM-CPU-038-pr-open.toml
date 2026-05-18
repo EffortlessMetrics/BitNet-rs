@@ -1,0 +1,16 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T13:31:40Z"
+event = "pr_open"
+item = "SLM-CPU-038"
+pr = 5679
+head_sha = "cae4c1daac323e1cc0ee9190b6fc2fe210bc05d4"
+branch = "codex/slm-cpu-038-typed-transformer-forward-workspace"
+actor = "codex"
+summary = "Opened the typed transformer forward workspace API boundary PR."
+
+notes = [
+  "PR #5679 adds TransformerForwardWorkspace and forward_with_workspace entry points through TransformerModel, TransformerBlock, and FeedForward.",
+  "The slice records the typed API boundary while preserving the existing owned Candle tensor-output behavior path.",
+  "No sustained-throughput, runtime-speedup, broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

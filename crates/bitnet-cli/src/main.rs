@@ -13812,7 +13812,7 @@ mod tests {
         assert_eq!(audit["prompt_prefill_breakdown"]["forward"]["alloc_bytes_total"], 320);
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["first_reusable_allocation_surface"],
-            "transformer_forward_workspace_and_owned_tensor_outputs"
+            "transformer_forward_workspace_api_and_owned_tensor_outputs"
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["claim_scope"],
@@ -13820,7 +13820,7 @@ mod tests {
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["reuse_status"],
-            "not_reusable_without_transformer_api_change"
+            "api_boundary_present_owned_tensor_reuse_not_enabled"
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["required_api_boundary"],
@@ -13873,7 +13873,10 @@ mod tests {
         assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill");
         assert_eq!(audit["dominant_hotspot"]["alloc_bytes"], 1_500);
         assert_eq!(audit["next_optimization_target"]["target"], "prefill_forward_buffer_boundary");
-        assert_eq!(audit["next_optimization_target"]["status"], "blocked_by_owned_tensor_outputs");
+        assert_eq!(
+            audit["next_optimization_target"]["status"],
+            "workspace_api_present_reuse_deferred"
+        );
         assert_eq!(audit["optimization_deferred"], true);
         assert_eq!(
             audit["next_optimization_target"]["claim_scope"],
@@ -13909,7 +13912,10 @@ mod tests {
             "typed_transformer_forward_workspace_api"
         );
         assert_eq!(audit["next_optimization_target"]["component"], "prompt_prefill.forward");
-        assert_eq!(audit["next_optimization_target"]["status"], "blocked_by_owned_tensor_outputs");
+        assert_eq!(
+            audit["next_optimization_target"]["status"],
+            "workspace_api_present_reuse_deferred"
+        );
         assert_eq!(audit["optimization_deferred"], true);
     }
 
