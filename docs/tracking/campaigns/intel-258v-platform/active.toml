@@ -6229,3 +6229,52 @@ must_not_claim = [
   "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
   "BitNet QK256/I2_S behavior changed.",
 ]
+
+[[work_item]]
+id = "LNL258V-OV-DOCS-001"
+status = "ready"
+branch = "codex/openvino-lunar-lake/docs-route-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add the Lunar Lake OpenVINO productization proposal, route identity contract, and implementation plan without runtime changes, route promotion, speedup/power/server claims, or BitNet QK256/native OpenCL claim leakage."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/proposals/BITNET-PROP-0004-openvino-lunar-lake-productization.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md",
+  "plans/openvino-lunar-lake/README.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "docs/tracking/campaigns/intel-258v-platform/generated/status.md",
+  "docs/tracking/generated/global-dashboard.md",
+  "docs/tracking/generated/lane-dashboard.md",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO is documented as BitNet-rs's governed Intel-runtime lane for dense SLMs and selected small LLMs on Lunar Lake CPU/GPU/NPU.",
+  "OpenVINO route identity and proof-family boundaries are specified for CPU, Arc 140V GPU, Intel AI Boost NPU, BitNet subgraph reference, and exact-profile server routes.",
+  "The OpenVINO Lunar Lake implementation plan sequences docs/spec, receipt validation, quality, timing, NPU cache/warm, promotion review, status UX, Rust bridge, server, and BitNet subgraph research work.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO dense SLM quality broadly passes.",
+  "OpenVINO NPU cold one-off usability is proven.",
+  "OpenVINO GPU proof is native OpenCL proof.",
+  "OpenVINO NPU proof is Arc 140V proof.",
+  "Dense SLM OpenVINO receipts prove BitNet QK256/I2_S behavior.",
+  "Retokenized generated text is direct pipeline-internal generated token IDs.",
+]
