@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T05:10:00Z"
+event = "merged"
+item = "LNL258V-ROUTE-017"
+branch = "codex/lunar-lake/LNL258V-ROUTE-017-profile-scoped-status"
+pr = 5777
+head_sha = "096791818064238ce73d4e646e1d8e702f0b2dae"
+merge_sha = "320d794048d9f428bc7cdaf93a1085ef9bf457f6"
+actor = "codex"
+summary = "Merged LNL258V-ROUTE-017 after making route-profile route_status profile-scoped and preserving ledger_route_status."
+
+notes = [
+  "The merged receipts keep dense Qwen OpenVINO GPU promoted only for ask_short and ask_normal.",
+  "Non-promoted profiles report candidate route rows even when a route is globally promoted elsewhere.",
+  "The merge does not claim new inference, NPU promotion, power advantage, native OpenCL/NPU execution, broad accelerator acceleration, full BitNet accelerator inference, or BitNet QK256/I2_S behavior changes.",
+]
