@@ -15261,7 +15261,10 @@ fn validate_m4_robustness_eval_summary_receipt(
         let expected_template = match family_name {
             "dense_slm" => QWEN_PROMPT_TEMPLATE,
             "bitnet" => BITNET_M4_PROMPT_TEMPLATE,
-            _ => unreachable!(),
+            _ => anyhow::bail!(
+                "{} robustness receipt has unsupported model_family {family_name}",
+                path.display()
+            ),
         };
         require_exact_string_at(path, family, &["prompt_template"], expected_template)?;
         require_bool_at(path, family, &["dry_run"], true)?;
