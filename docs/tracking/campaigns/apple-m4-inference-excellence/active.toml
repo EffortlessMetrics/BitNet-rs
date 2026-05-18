@@ -554,7 +554,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DENSE-REF-000"
-status = "in_progress"
+status = "pr_open"
+pr = 5640
+head_sha = "02931951a8b460a14eb39610c1ed7f7a7bf1e9fc"
 branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-000-reference-receipt-contract"
 stackable = false
 review_mode = "codex_premerge"

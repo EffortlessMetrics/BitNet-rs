@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T10:23:10Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-DENSE-REF-000"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-000-reference-receipt-contract"
+pr = 5640
+head_sha = "02931951a8b460a14eb39610c1ed7f7a7bf1e9fc"
+
+notes = [
+  "Opened PR #5640 for the dense SLM reference-vs-Rust comparison receipt contract.",
+  "Scope remains validator, schema-only fixture, docs, and tracker status; no live dense reference-runner or Rust M4 comparison receipt is claimed.",
+  "No BitNet proof, BitNet chat or serve enablement, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claim.",
+]
