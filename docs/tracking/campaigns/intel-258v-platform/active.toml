@@ -6017,6 +6017,8 @@ must_not_claim = [
 [[work_item]]
 id = "LNL258V-NPU-RESIDENT-001"
 status = "in_progress"
+pr = 5726
+head_sha = "e3e5fa7ff5b78db2922ddef7a269acbbe12434d0"
 branch = "codex/lunar-lake/LNL258V-NPU-RESIDENT-001"
 stackable = false
 review_mode = "codex_premerge"
