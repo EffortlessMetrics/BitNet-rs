@@ -1393,10 +1393,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OPS-UX-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-001-evidence-command"
 pr = 5460
-head_sha = "07800ad56285432fc87363fb2244214099fba54c"
+head_sha = "3311bdd0d6e12c0fb1fa1567f14eeb7b53da1268"
+merge_sha = "a08566cb34db58cad82ee26e160b686dacf32830"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

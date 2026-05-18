@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T01:20:22Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OPS-UX-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5460
+head_sha = "3311bdd0d6e12c0fb1fa1567f14eeb7b53da1268"
+merge_sha = "a08566cb34db58cad82ee26e160b686dacf32830"
+branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-001-evidence-command"
+
+notes = [
+  "Closed M4-OPS-UX-001 after PR #5460 merged the operator evidence summary command.",
+  "The merged route reports committed M4 receipt state, cache/disk health, dense and BitNet evidence pointers, unsupported claims, and a recommended next command without running live inference.",
+  "Closeout records a tracker-only state transition; it does not add fresh runtime proof, model support, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claims.",
+]
