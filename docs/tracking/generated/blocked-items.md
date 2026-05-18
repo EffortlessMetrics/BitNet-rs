@@ -73,7 +73,8 @@
 | apple-m4-inference-excellence | M4-ACCURACY-006 | M4-ACCURACY-005 | merged |
 | apple-m4-inference-excellence | M4-ACCURACY-007 | M4-ACCURACY-006 | merged |
 | apple-m4-inference-excellence | M4-CANARY-001 | M4-ACCURACY-000, M4-REPRO-003 | merged |
-| apple-m4-inference-excellence | M4-DENSE-REF-001 | M4-ACCURACY-001, M4-CANARY-001, M4-REPRO-004 | proposed |
+| apple-m4-inference-excellence | M4-DENSE-REF-000 | M4-CANARY-001, M4-REPRO-003, M4-REPRO-004 | proposed |
+| apple-m4-inference-excellence | M4-DENSE-REF-001 | M4-ACCURACY-001, M4-CANARY-001, M4-DENSE-REF-000, M4-REPRO-004 | proposed |
 | apple-m4-inference-excellence | M4-DENSE-CHAT-001 | M4-CANARY-001, M4-REPRO-003 | proposed |
 | apple-m4-inference-excellence | M4-ROBUSTNESS-001 | M4-ACCURACY-007, M4-BITNET-EX-012, M4-CANARY-001, M4-REPRO-003 | proposed |
 | apple-m4-inference-excellence | M4-BENCH-004 | M4-REPRO-001 | merged |
@@ -106,6 +107,7 @@
 | apple-m4-inference-excellence | M4-REPRO-003 | M4-REPRO-001 | merged |
 | apple-m4-inference-excellence | M4-REPRO-004 | M4-REPRO-003 | merged |
 | apple-m4-inference-excellence | M4-RECEIPT-001 | M4-REPRO-001 | proposed |
+| apple-m4-inference-excellence | M4-GATE-HYGIENE-001 | M4-RECEIPT-001 | proposed |
 | apple-m4-inference-excellence | M4-STABILITY-001 | M4-BENCH-002, M4-EXCELLENCE-003 | proposed |
 | apple-m4-inference-excellence | M4-STABILITY-002 | M4-REPRO-002, M4-OPS-UX-003 | proposed |
 | apple-m4-inference-excellence | M4-STABILITY-003 | M4-STABILITY-001, M4-STABILITY-002, M4-EXCELLENCE-004 | proposed |
@@ -115,7 +117,7 @@
 | apple-m4-inference-excellence | M4-SERVE-EX-002 | M4-SERVE-EX-001, M4-BITNET-EX-007 | proposed |
 | apple-m4-inference-excellence | M4-SERVE-EX-003 | M4-SERVE-EX-001 | proposed |
 | apple-m4-inference-excellence | M4-SERVE-EX-004 | M4-SERVE-EX-001, M4-SERVE-EX-003, M4-CONTEXT-001 | proposed |
-| apple-m4-inference-excellence | M4-CI-001 | M4-RECEIPT-001, M4-STABILITY-003 | proposed |
+| apple-m4-inference-excellence | M4-CI-001 | M4-GATE-HYGIENE-001, M4-RECEIPT-001, M4-STABILITY-003 | proposed |
 | apple-m4-inference-excellence | M4-SETUP-001 | M4-REPRO-002, M4-STABILITY-002, M4-OPS-UX-003 | proposed |
 | apple-m4-inference-excellence | M4-BENCH-007 | M4-BENCH-004, M4-REPRO-001 | proposed |
 | apple-m4-inference-excellence | M4-ROUTE-MATRIX-001 | M4-DENSE-CHAT-001, M4-BITNET-EX-006, M4-BITNET-EX-007, M4-SERVE-EX-002, M4-OPS-SLO-001 | proposed |
@@ -125,7 +127,7 @@
 | apple-m4-inference-excellence | M4-MODEL-LIFECYCLE-001 | M4-REPRO-002, M4-OPS-SLO-001, M4-CI-001 | proposed |
 | apple-m4-inference-excellence | M4-COMPAT-001 | M4-SETUP-001, M4-MODEL-LIFECYCLE-001, M4-CI-001, M4-REPRO-001 | proposed |
 | apple-m4-inference-excellence | M4-CLAIM-LINT-001 | M4-COMPAT-001, M4-REPRO-001 | proposed |
-| apple-m4-inference-excellence | M4-RELEASE-001 | M4-ACCURACY-007, M4-BENCH-003, M4-BENCH-007, M4-BITNET-EX-005, M4-BITNET-EX-015, M4-BITNET-REG-001, M4-CANARY-001, M4-CLAIM-LINT-001, M4-COMPAT-001, M4-CONTEXT-001, M4-CONTEXT-002, M4-DENSE-CHAT-001, M4-DENSE-REF-001, M4-EVIDENCE-REPLAY-001, M4-MODEL-LIFECYCLE-001, M4-OBS-001, M4-OPS-SLO-001, M4-OPS-UX-003, M4-RELIABILITY-001, M4-ROBUSTNESS-001, M4-ROUTE-MATRIX-001, M4-SERVE-EX-004, M4-SETUP-001, M4-TREND-001, M4-WORKLOAD-001, M4-CI-001 | proposed |
+| apple-m4-inference-excellence | M4-RELEASE-001 | M4-ACCURACY-007, M4-BENCH-003, M4-BENCH-007, M4-BITNET-EX-005, M4-BITNET-EX-015, M4-BITNET-REG-001, M4-CANARY-001, M4-CLAIM-LINT-001, M4-COMPAT-001, M4-CONTEXT-001, M4-CONTEXT-002, M4-DENSE-CHAT-001, M4-DENSE-REF-001, M4-EVIDENCE-REPLAY-001, M4-GATE-HYGIENE-001, M4-MODEL-LIFECYCLE-001, M4-OBS-001, M4-OPS-SLO-001, M4-OPS-UX-003, M4-RELIABILITY-001, M4-ROBUSTNESS-001, M4-ROUTE-MATRIX-001, M4-SERVE-EX-004, M4-SETUP-001, M4-TREND-001, M4-WORKLOAD-001, M4-CI-001 | proposed |
 | apple-m4-inference-excellence | M4-METAL-EX-001 | M4-EXCELLENCE-004 | proposed |
 | apple-m4-inference-excellence | M4-METAL-EX-002 | M4-METAL-EX-001 | proposed |
 | apple-m4-inference-ops | M4-INF-OPS-002 | M4-INF-OPS-001 | merged |

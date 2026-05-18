@@ -396,6 +396,12 @@ receipts while genuinely different template families still fail.
 Dense SLMs also get a bounded reference-vs-Rust control so reference runner,
 template, tokenizer, and Rust behavior can be distinguished without using that
 control as broad model-quality evidence.
+`M4-DENSE-REF-000` must land before live dense comparison receipts: it defines
+the `apple_m4_slm_reference_vs_rust_comparison_v1` receipt contract and
+validator for supported Qwen identities, reference-runner command identity,
+prompt/template/tokenizer authority, Rust token IDs, mechanical-score deltas,
+summary totals, token-ID availability, and claim-boundary flags. `M4-DENSE-REF-001`
+then records the bounded live comparison evidence against that validator.
 
 ## BitNet Ladder
 
@@ -932,6 +938,11 @@ status, operator envelope text, and operator-facing command strings. It should
 reject unsupported broad Apple Silicon, MacBook, full Metal, Neural Engine,
 MPSGraph, QK256, dense-as-BitNet, broad quality/performance, or speedup wording
 unless the wording is tied to a matching accepted receipt gate.
+
+`M4-GATE-HYGIENE-001` keeps the code-health gate surface honest for this lane:
+`check-no-panic-family` must be clean or explicitly justified before the M4 CI
+and release-gate items are treated as ready. This is gate hygiene only; it does
+not prove runtime quality, speed, BitNet behavior, or any Apple backend support.
 
 ## Metal Boundary
 
