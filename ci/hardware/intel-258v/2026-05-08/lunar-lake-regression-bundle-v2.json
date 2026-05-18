@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T00:15:00Z",
+  "created_utc": "2026-05-18T14:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -95,6 +95,7 @@
       "route not promoted for profile low_power",
       "route not promoted for profile prefill_heavy",
       "route not promoted for profile regression_tiny",
+      "timing coverage has missing profile fields",
       "timing evidence is not profile-specific for profile decode_heavy",
       "timing evidence is not profile-specific for profile prefill_heavy"
     ],
