@@ -1,5 +1,39 @@
 # Specs Index
 
+## Apple Silicon productization
+
+Use these specs before implementing or claiming Apple Silicon dense SLM, BitNet,
+Metal, MPSGraph, Neural Engine, M4 Mac Mini, or MacBook behavior:
+
+1. [Apple Silicon source-of-truth map](../apple-silicon/README.md)
+   - Routes Apple proof families to the current proposal, specs, plans,
+     campaigns, operator docs, and machine-artifact authorities.
+2. [Apple Silicon productization proposal](../proposals/BITNET-PROP-0005-apple-silicon-productization.md)
+   - Explains the dense SLM-first, BitNet CPU/NEON-second, phase-scoped Metal,
+     and MacBook-auxiliary product rationale.
+3. [Apple Silicon route contract](BITNET-SPEC-APPLE-SILICON-ROUTE-CONTRACT.md)
+   - Defines route labels, proof families, receipt fields, and fallback rules.
+4. [Apple M4 dense SLM appliance](BITNET-SPEC-APPLE-M4-DENSE-SLM-APPLIANCE.md)
+   - Codifies supported dense model states and promotion gates.
+5. [Apple M4 BitNet CPU/NEON](BITNET-SPEC-APPLE-M4-BITNET-CPU-NEON.md)
+   - Defines accepted BitNet artifact proof ladder and not-claims.
+6. [Apple Metal phased acceleration](BITNET-SPEC-APPLE-METAL-PHASED-ACCELERATION.md)
+   - Keeps Metal proof phase-scoped until a full route is separately proven.
+7. [Apple quality corpus](BITNET-SPEC-APPLE-QUALITY-CORPUS.md)
+   - Separates dense SLM and BitNet mechanical corpus evidence.
+8. [Apple benchmark envelope](BITNET-SPEC-APPLE-BENCHMARK-ENVELOPE.md)
+   - Defines operator benchmark metrics, profiles, and overclaim boundaries.
+9. [Apple reproducible run identity](BITNET-SPEC-APPLE-REPRODUCIBLE-RUN-IDENTITY.md)
+   - Defines machine/software/model/tokenizer/prompt/backend/fallback identity.
+10. [Apple MacBook auxiliary lane](BITNET-SPEC-APPLE-MACBOOK-AUXILIARY-LANE.md)
+    - Allows MacBook exploration without promoting M4 Mac Mini claims.
+11. [Apple service surface](BITNET-SPEC-APPLE-SERVICE-SURFACE.md)
+    - Defines doctor/evidence/ask/chat/serve/readiness receipt semantics.
+
+Do not use dense SLM evidence as BitNet proof, CPU/NEON evidence as Metal proof,
+MacBook evidence as M4 Mac Mini proof, or one M4 Mac Mini profile as broad Apple
+Silicon proof.
+
 ## A770 BitNet Productization
 
 Use these specs before implementing or claiming A770 BitNet product support:
