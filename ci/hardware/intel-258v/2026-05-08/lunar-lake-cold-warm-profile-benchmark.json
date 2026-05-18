@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-18T10:05:00Z",
+  "created_utc": "2026-05-18T11:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -52,6 +52,18 @@
             "known_gaps": [
               "bounded math ask only; not expanded profile regression corpus",
               "thermal sensor context unavailable in telemetry receipt"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "regression_tiny",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "telemetry": {
@@ -106,6 +118,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "regression_tiny",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "telemetry": {
@@ -174,6 +198,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "regression_tiny",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "telemetry": {
@@ -262,6 +298,18 @@
               "thermal sensor context unavailable in telemetry receipt"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "ask_short",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=64`",
+              "output timing count 9 satisfies `<=32`"
+            ]
+          },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
             "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
@@ -314,6 +362,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_short",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "telemetry": {
@@ -382,6 +442,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_short",
+            "required_prompt_tokens": "<=64",
+            "required_output_tokens": "<=32",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=64`",
+              "output timing count 9 satisfies `<=32`"
             ]
           },
           "telemetry": {
@@ -470,6 +542,18 @@
               "thermal sensor context unavailable in telemetry receipt"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "ask_normal",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=512`",
+              "output timing count 9 satisfies `<=128`"
+            ]
+          },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
             "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
@@ -522,6 +606,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_normal",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "telemetry": {
@@ -585,6 +681,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "ask_normal",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "telemetry": {
@@ -669,6 +777,18 @@
               "thermal sensor context unavailable in telemetry receipt"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "prefill_heavy",
+            "required_prompt_tokens": ">=2048",
+            "required_output_tokens": "<=64",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt timing count 38 does not satisfy `>=2048`",
+              "output timing count 9 satisfies `<=64`"
+            ]
+          },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
             "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
@@ -723,6 +843,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "prefill_heavy",
+            "required_prompt_tokens": ">=2048",
+            "required_output_tokens": "<=64",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `>=2048`",
+              "output timing count 9 satisfies `<=64`"
             ]
           },
           "telemetry": {
@@ -790,6 +922,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "prefill_heavy",
+            "required_prompt_tokens": ">=2048",
+            "required_output_tokens": "<=64",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `>=2048`",
+              "output timing count 9 satisfies `<=64`"
             ]
           },
           "telemetry": {
@@ -878,6 +1022,18 @@
               "thermal sensor context unavailable in telemetry receipt"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "decode_heavy",
+            "required_prompt_tokens": "<=256",
+            "required_output_tokens": ">=512",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt timing count 38 satisfies `<=256`",
+              "output timing count 9 does not satisfy `>=512`"
+            ]
+          },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
             "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
@@ -932,6 +1088,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "decode_heavy",
+            "required_prompt_tokens": "<=256",
+            "required_output_tokens": ">=512",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=256`",
+              "output timing count 9 does not satisfy `>=512`"
             ]
           },
           "telemetry": {
@@ -999,6 +1167,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "decode_heavy",
+            "required_prompt_tokens": "<=256",
+            "required_output_tokens": ">=512",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=256`",
+              "output timing count 9 does not satisfy `>=512`"
             ]
           },
           "telemetry": {
@@ -1081,6 +1261,18 @@
               "thermal sensor context unavailable in telemetry receipt"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "structured",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=256",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=512`",
+              "output timing count 9 satisfies `<=256`"
+            ]
+          },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
             "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
@@ -1149,6 +1341,18 @@
               "thermal sensor context unavailable in telemetry receipt"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "low_power",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=512`",
+              "output timing count 9 satisfies `<=128`"
+            ]
+          },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
             "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
@@ -1204,6 +1408,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "low_power",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "telemetry": {
@@ -1272,6 +1488,18 @@
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
               "generated token IDs are not available directly from OpenVINO GenAI internals"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "low_power",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
+            "notes": [
+              "prompt token count missing for numeric requirement `<=512`",
+              "output timing count 9 satisfies `<=128`"
             ]
           },
           "telemetry": {
@@ -1346,6 +1574,19 @@
               "BitNet route remains a strict reference route, not a general dense SLM ask route"
             ]
           },
+          "timing_applicability": {
+            "profile_id": "bitnet_strict_reference",
+            "required_prompt_tokens": "fixed BitNet corpus",
+            "required_output_tokens": "bounded",
+            "measured_prompt_tokens": null,
+            "measured_output_tokens": null,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt requirement `fixed BitNet corpus` is not a numeric promotion gate",
+              "output requirement `bounded` is not a numeric promotion gate",
+              "profile token requirement is descriptive, not mechanically checked"
+            ]
+          },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
             "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
@@ -1368,6 +1609,35 @@
       "profile_gaps": []
     }
   ],
+  "timing_coverage": {
+    "route_count": 20,
+    "profile_specific_route_count": 6,
+    "proxy_or_missing_route_count": 14,
+    "promotion_eligible_route_count": 4,
+    "promotion_eligible_profile_specific_route_count": 4,
+    "candidate_route_count": 12,
+    "candidate_proxy_or_missing_route_count": 12,
+    "promotion_eligible_routes_have_profile_specific_timing": true,
+    "proxy_or_missing_timing_routes_blocked": true,
+    "proxy_or_missing_routes": [
+      "ask_normal:dense_slm_openvino_gpu_candidate",
+      "ask_normal:dense_slm_openvino_npu_candidate",
+      "ask_short:dense_slm_openvino_gpu_candidate",
+      "ask_short:dense_slm_openvino_npu_candidate",
+      "decode_heavy:dense_slm_default_cpu",
+      "decode_heavy:dense_slm_openvino_gpu_candidate",
+      "decode_heavy:dense_slm_openvino_npu_candidate",
+      "low_power:dense_slm_openvino_gpu_candidate",
+      "low_power:dense_slm_openvino_npu_candidate",
+      "prefill_heavy:dense_slm_default_cpu",
+      "prefill_heavy:dense_slm_openvino_gpu_candidate",
+      "prefill_heavy:dense_slm_openvino_npu_candidate",
+      "regression_tiny:dense_slm_openvino_gpu_candidate",
+      "regression_tiny:dense_slm_openvino_npu_candidate"
+    ],
+    "promotion_eligible_proxy_or_missing_routes": [],
+    "unblocked_proxy_or_missing_routes": []
+  },
   "gaps": [],
   "claim_boundary": {
     "new_inference_executed": false,
