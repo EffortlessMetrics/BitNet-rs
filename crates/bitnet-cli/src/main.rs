@@ -13394,8 +13394,9 @@ mod tests {
         assert_eq!(audit["prompt_setup_breakdown"]["token_seed"]["alloc_bytes_total"], 60);
         assert_eq!(audit["prompt_setup_breakdown"]["kv_cache"]["alloc_bytes_total"], 250);
         assert_eq!(audit["prompt_setup_breakdown"]["sampler_setup"]["alloc_bytes_total"], 50);
-        let hotspots = audit["ranked_hotspots"].as_array().unwrap();
-        assert!(hotspots.iter().any(|hotspot| hotspot["component"] == "prompt_setup.kv_cache"));
+        assert!(audit["ranked_hotspots"].as_array().is_some_and(|hotspots| {
+            hotspots.iter().any(|hotspot| hotspot["component"] == "prompt_setup.kv_cache")
+        }));
     }
 
     #[test]
