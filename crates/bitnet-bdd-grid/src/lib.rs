@@ -29,15 +29,18 @@ mod tests {
     use crate::features::curated_features;
 
     #[test]
-    fn test_grid_lookup_and_validation() {
+    fn test_grid_lookup_and_validation() -> Result<(), Box<dyn std::error::Error>> {
         let grid = curated();
         let cell = grid.find(TestingScenario::Unit, ExecutionEnvironment::Local);
         assert!(cell.is_some());
 
         let active = curated_features(&["inference", "kernels", "tokenizers"]);
-        let cell = cell.unwrap_or_else(|| panic!("unit/local row exists in curated grid"));
+        let Some(cell) = cell else {
+            return Err("unit/local row exists in curated grid".into());
+        };
         assert!(cell.supports(&active));
         assert!(cell.violations(&active).0.is_empty());
         assert!(cell.violations(&active).1.is_empty());
+        Ok(())
     }
 }
