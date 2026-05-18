@@ -40,11 +40,16 @@ This is a dual-CCD X3D CPU. Receipts should record scheduler, core placement, an
 ## Claim Boundary
 
 - AVX-512 detection is not AVX-512 kernel proof.
+- AVX-512 receipt labels are not AVX-512 kernel execution proof unless selected kernel IDs and invocation counters show the concrete AVX-512 QK256 path ran.
 - AVX2 proof is not AVX-512 proof.
+- AVX-512 execution is not an AVX-512 speedup claim.
+- AVX-512 microbenchmark speed is not decode, first-token, prefill, or sustained speed proof.
 - Short boost behavior is not sustained performance.
 - X3D/cache-sensitive wins must be tied to benchmark receipts.
 - CPU proof is not GPU/NPU proof.
 - GPU/NPU fallback cannot be involved in strict CPU proof.
+
+The AVX-512 proof contract and strict ISA selection rules live in `docs/specs/BITNET-SPEC-CPU-AVX512-KERNEL-CONTRACT.md` and `docs/specs/BITNET-SPEC-CPU-ISA-SELECTION.md`.
 
 ## Validation Levels
 
@@ -55,6 +60,34 @@ This is a dual-CCD X3D CPU. Receipts should record scheduler, core placement, an
 | 2 | Scalar, AVX2, and AVX-512 kernel smoke pass | CPU kernel smoke tested |
 | 3 | Strict CPU inference receipt validates | CPU proof receipt backed |
 | 4 | Cache-sensitive and sustained-power baselines exist | Modern desktop CPU benchmark recorded |
+
+## Required Profiles
+
+The 9950X3D AVX-512 lane must distinguish micro, phase, answer, and sustained receipts. Required profiles are:
+
+```text
+micro_qk256_f32_gemv
+micro_qk256_i8s_scaled_gemv
+layer_0_decode
+prefill_128
+prefill_512
+first_token
+decode_32
+decode_128
+warm_session_3_turns
+sustained_decode_10min
+```
+
+Required comparisons are:
+
+```text
+scalar vs avx2
+scalar vs avx512
+avx2 vs avx512
+avx512 vs cuda diagnostic
+```
+
+The CUDA comparison is diagnostic only and does not convert CPU proof into GPU proof.
 
 ## Receipt Fields
 
@@ -78,9 +111,17 @@ Minimum CPU proof receipt:
     "avx512_detected": true,
     "tdp_watts": 170
   },
+  "cpu_topology": {
+    "ccd_count": 2,
+    "x3d_cache_domain": "...",
+    "core_affinity": "...",
+    "scheduler_policy": "...",
+    "smt_enabled": true
+  },
   "power": {
     "mode": "...",
-    "sustained_run": true
+    "sustained_run": true,
+    "duration_seconds": 600
   }
 }
 ```
@@ -97,7 +138,7 @@ Collect OS, CPU flags, topology, scheduler/core placement context, memory, gover
 
 ### AMD9950X3D-003 - Scalar, AVX2, and AVX-512 Dispatch Proof
 
-Prove scalar, AVX2, and AVX-512 paths can be forced independently and receipts record selected CPU kernel path.
+Prove scalar, AVX2, and AVX-512 paths can be forced independently and receipts record selected CPU kernel path. AVX-512 proof requires stable kernel IDs, strict fallback rejection, subfeature-aware runtime checks, and invocation counters; a detection result or receipt label alone is insufficient.
 
 ### AMD9950X3D-004 - Strict CPU Proof Run
 

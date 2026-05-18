@@ -801,3 +801,44 @@ must_not_claim = [
   "GPU, NPU, or server inference is involved.",
   "A speedup or throughput claim is proven.",
 ]
+
+[[work_item]]
+id = "CPU-AVX512-000"
+status = "ready"
+branch = "codex/cpu-avx512-000-kernel-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "Document the AVX-512 CPU kernel proof contract, strict ISA selection rails, implementation sequence, 9950X3D profile boundaries, and QK256 kernel matrix entries without runtime changes or speed claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-CPU-AVX512-KERNEL-CONTRACT.md",
+  "docs/specs/BITNET-SPEC-CPU-ISA-SELECTION.md",
+  "docs/specs/amd-9950x3d-cpu-roadmap.md",
+  "docs/bitnet/BITNET_KERNEL_MATRIX.md",
+  "plans/cpu-avx512/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/**",
+]
+may_claim = [
+  "The AVX-512 CPU kernel proof contract and strict ISA selection rails are documented after merge.",
+  "The 9950X3D AVX-512 lane distinguishes detection, selection, execution, parity, performance, and sustained proof after merge.",
+]
+must_not_claim = [
+  "AVX-512 kernels are implemented.",
+  "AVX-512 execution is proven.",
+  "AVX-512 is faster than AVX2.",
+  "Auto-selection promotes AVX-512.",
+  "GPU, NPU, server, or production readiness is proven.",
+]
