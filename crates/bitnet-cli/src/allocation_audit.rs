@@ -284,12 +284,12 @@ pub(crate) fn warm_session_prompt_allocation_audit_json(
             "embed": allocation_samples_json(audit.prompt_prefill_embed),
             "forward": allocation_samples_json(audit.prompt_prefill_forward),
             "forward_boundary": {
-                "first_reusable_allocation_surface": "transformer_forward_workspace_and_owned_tensor_outputs",
-                "classification": "model.forward returns owned tensors and uses transformer-layer workspace/tensor outputs that are not yet caller-reusable from the warm-session loop",
-                "reuse_status": "not_reusable_without_transformer_api_change",
-                "no_reuse_reason": "TransformerModel::forward, TransformerBlock::forward, and FeedForward::forward return owned Candle tensors from per-op outputs; caller-side warm-session buffers cannot safely reuse those outputs without threading a typed transformer workspace through the model API",
+                "first_reusable_allocation_surface": "transformer_forward_workspace_api_and_owned_tensor_outputs",
+                "classification": "the typed transformer forward workspace API boundary now exists, but model.forward still returns owned tensors and does not reuse Candle tensor outputs",
+                "reuse_status": "api_boundary_present_owned_tensor_reuse_not_enabled",
+                "no_reuse_reason": "TransformerModel::forward_with_workspace, TransformerBlock::forward_with_workspace, and FeedForward::forward_with_workspace thread a typed workspace through the model, but this slice deliberately delegates tensor math to the existing owned-output path before enabling reusable tensor storage",
                 "required_api_boundary": "typed_transformer_forward_workspace",
-                "next_safe_change": "add a transformer-owned workspace API with generated-ID and strict-receipt preservation tests before replacing owned tensor outputs",
+                "next_safe_change": "replace one owned transformer tensor output with workspace-owned storage behind generated-ID and strict-receipt preservation tests",
                 "behavior_gate": "generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false must match the Qwen3 Q8_0 baseline",
                 "claim_scope": "allocation-boundary classification only; no dense math, kernel, or sustained-throughput claim is made",
             },
@@ -368,7 +368,7 @@ pub(crate) fn warm_session_aggregate_allocation_audit_json(
     let dominant_hotspot = ranked.first().cloned().unwrap_or(serde_json::Value::Null);
     let next_optimization_target = warm_session_next_optimization_target(&ranked);
     let optimization_deferred =
-        next_optimization_target["status"].as_str() == Some("blocked_by_owned_tensor_outputs");
+        next_optimization_target["status"].as_str() == Some("workspace_api_present_reuse_deferred");
 
     serde_json::json!({
         "enabled": true,
@@ -392,13 +392,13 @@ fn warm_session_next_optimization_target(
     let (target, rationale, status) = match component {
         "prompt_prefill" => (
             "prefill_forward_buffer_boundary",
-            "prompt prefill dominates aggregate allocation counters; prompt_prefill.forward is the measured subcomponent and the next safe target is reusable transformer forward buffers",
-            "blocked_by_owned_tensor_outputs",
+            "prompt prefill dominates aggregate allocation counters; prompt_prefill.forward is the measured subcomponent and the typed transformer workspace API is present but owned tensor reuse remains deferred",
+            "workspace_api_present_reuse_deferred",
         ),
         "prompt_prefill.forward" => (
             "typed_transformer_forward_workspace_api",
-            "prompt_prefill.forward dominates aggregate allocation counters, but caller-side reuse is blocked because transformer forward APIs return owned tensor outputs",
-            "blocked_by_owned_tensor_outputs",
+            "prompt_prefill.forward dominates aggregate allocation counters; the typed transformer workspace API boundary exists, but reusable tensor storage is not enabled yet",
+            "workspace_api_present_reuse_deferred",
         ),
         "prompt_prefill.embed" => (
             "prefill_embedding_allocation_attribution",

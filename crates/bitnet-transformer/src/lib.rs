@@ -411,6 +411,18 @@ impl FeedForward {
         Ok(output)
     }
 
+    pub fn forward_with_workspace(
+        &self,
+        x: &Tensor,
+        raw_tensors: &std::collections::HashMap<String, Tensor>,
+        workspace: &mut TransformerForwardWorkspace,
+    ) -> Result<Tensor> {
+        workspace.record_feed_forward_input(x);
+        let output = self.forward(x, raw_tensors)?;
+        workspace.record_feed_forward_output(&output);
+        Ok(output)
+    }
+
     fn apply_activation(&self, input: &Tensor) -> Result<Tensor> {
         apply_ffn_activation(input, self.activation_type)
     }
@@ -470,6 +482,92 @@ pub struct TransformerBlock {
     ffn_norm: LayerNorm,
 }
 
+/// Typed transformer forward workspace boundary.
+///
+/// This is intentionally conservative: it records the API surface that future
+/// slices can use for reusable transformer-owned buffers, but it does not reuse
+/// Candle tensor outputs yet. Keeping tensor math delegated to the existing
+/// `forward` path preserves the current Qwen3 Q8_0 behavior oracle while making
+/// the owned-output boundary explicit in code.
+#[derive(Debug, Clone, Default)]
+pub struct TransformerForwardWorkspace {
+    model_forward_calls: usize,
+    block_forward_calls: usize,
+    feed_forward_calls: usize,
+    last_input_shape: Vec<usize>,
+    last_output_shape: Vec<usize>,
+    tensor_reuse_enabled: bool,
+}
+
+impl TransformerForwardWorkspace {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn clear(&mut self) {
+        *self = Self::default();
+    }
+
+    pub fn model_forward_calls(&self) -> usize {
+        self.model_forward_calls
+    }
+
+    pub fn block_forward_calls(&self) -> usize {
+        self.block_forward_calls
+    }
+
+    pub fn feed_forward_calls(&self) -> usize {
+        self.feed_forward_calls
+    }
+
+    pub fn last_input_shape(&self) -> &[usize] {
+        &self.last_input_shape
+    }
+
+    pub fn last_output_shape(&self) -> &[usize] {
+        &self.last_output_shape
+    }
+
+    pub fn tensor_reuse_enabled(&self) -> bool {
+        self.tensor_reuse_enabled
+    }
+
+    pub fn reuse_status(&self) -> &'static str {
+        if self.tensor_reuse_enabled {
+            "typed_transformer_forward_workspace_reuse_enabled"
+        } else {
+            "api_boundary_present_owned_tensor_reuse_not_enabled"
+        }
+    }
+
+    fn record_model_input(&mut self, tensor: &Tensor) {
+        self.model_forward_calls += 1;
+        self.last_input_shape = tensor.dims().to_vec();
+    }
+
+    fn record_model_output(&mut self, tensor: &Tensor) {
+        self.last_output_shape = tensor.dims().to_vec();
+    }
+
+    fn record_block_input(&mut self, tensor: &Tensor) {
+        self.block_forward_calls += 1;
+        self.last_input_shape = tensor.dims().to_vec();
+    }
+
+    fn record_block_output(&mut self, tensor: &Tensor) {
+        self.last_output_shape = tensor.dims().to_vec();
+    }
+
+    fn record_feed_forward_input(&mut self, tensor: &Tensor) {
+        self.feed_forward_calls += 1;
+        self.last_input_shape = tensor.dims().to_vec();
+    }
+
+    fn record_feed_forward_output(&mut self, tensor: &Tensor) {
+        self.last_output_shape = tensor.dims().to_vec();
+    }
+}
+
 impl TransformerBlock {
     pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
         let hidden_size = config.model.hidden_size;
@@ -501,6 +599,29 @@ impl TransformerBlock {
         x: &Tensor,
         kv_cache: Option<&mut LayerKVCache>,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
+    ) -> Result<Tensor> {
+        self.forward_impl(x, kv_cache, raw_tensors, None)
+    }
+
+    pub fn forward_with_workspace(
+        &self,
+        x: &Tensor,
+        kv_cache: Option<&mut LayerKVCache>,
+        raw_tensors: &std::collections::HashMap<String, Tensor>,
+        workspace: &mut TransformerForwardWorkspace,
+    ) -> Result<Tensor> {
+        workspace.record_block_input(x);
+        let output = self.forward_impl(x, kv_cache, raw_tensors, Some(workspace))?;
+        workspace.record_block_output(&output);
+        Ok(output)
+    }
+
+    fn forward_impl(
+        &self,
+        x: &Tensor,
+        kv_cache: Option<&mut LayerKVCache>,
+        raw_tensors: &std::collections::HashMap<String, Tensor>,
+        mut workspace: Option<&mut TransformerForwardWorkspace>,
     ) -> Result<Tensor> {
         // Debug input activation norms
         if debug_attn_enabled() {
@@ -651,7 +772,11 @@ impl TransformerBlock {
             });
         }
 
-        let x = self.feed_forward.forward(&x, raw_tensors)?;
+        let x = if let Some(workspace) = workspace.as_mut() {
+            self.feed_forward.forward_with_workspace(&x, raw_tensors, workspace)?
+        } else {
+            self.feed_forward.forward(&x, raw_tensors)?
+        };
         let x = (x + residual)?;
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.output", Some(self.attention.layer_idx), &x)?;
@@ -1157,7 +1282,28 @@ impl TransformerModel {
     ///
     /// **Performance note**: Accepts ownership of `hidden` to avoid cloning on hot path.
     /// Caller should pass owned tensor or use `.clone()` explicitly if needed.
-    pub fn forward(&self, hidden: Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
+    pub fn forward(&self, hidden: Tensor, kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
+        self.forward_impl(hidden, kv_cache, None)
+    }
+
+    pub fn forward_with_workspace(
+        &self,
+        hidden: Tensor,
+        kv_cache: Option<&mut KVCache>,
+        workspace: &mut TransformerForwardWorkspace,
+    ) -> Result<Tensor> {
+        workspace.record_model_input(&hidden);
+        let output = self.forward_impl(hidden, kv_cache, Some(workspace))?;
+        workspace.record_model_output(&output);
+        Ok(output)
+    }
+
+    fn forward_impl(
+        &self,
+        hidden: Tensor,
+        mut kv_cache: Option<&mut KVCache>,
+        mut workspace: Option<&mut TransformerForwardWorkspace>,
+    ) -> Result<Tensor> {
         let mut x = hidden; // Take ownership - no clone needed!
 
         // Tracepoint 1: Embeddings (incremental path - single token)
@@ -1179,7 +1325,11 @@ impl TransformerModel {
 
         for (i, layer) in self.layers.iter().enumerate() {
             let layer_cache = kv_cache.as_mut().and_then(|c| c.layer_mut(i));
-            x = layer.forward(&x, layer_cache, &self.raw_tensors)?;
+            x = if let Some(workspace) = workspace.as_mut() {
+                layer.forward_with_workspace(&x, layer_cache, &self.raw_tensors, workspace)?
+            } else {
+                layer.forward(&x, layer_cache, &self.raw_tensors)?
+            };
 
             // Debug layer activation norms (show all layers when debugging)
             if debug_attn_enabled()
