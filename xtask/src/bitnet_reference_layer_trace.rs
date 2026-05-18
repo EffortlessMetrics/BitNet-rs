@@ -1573,6 +1573,10 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                 &f64_downstream,
                 &cpu_comparison,
             );
+        let selected_query_score_input_candidate_policy =
+            attention_selected_query_score_input_candidate_policy_frontier(
+                &selected_query_score_input_bucket_source,
+            );
         let selected_query_head_boundary_frontier = attention_selected_query_head_boundary_frontier(
             &selected_query_score_input_bucket_source,
         );
@@ -1696,6 +1700,8 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             f64_qk_score_input_bucket_residual;
         cpu_comparison["attention_selected_f64_query_score_input_bucket_source"] =
             selected_query_score_input_bucket_source;
+        cpu_comparison["attention_selected_query_score_input_candidate_policy_frontier"] =
+            selected_query_score_input_candidate_policy;
         cpu_comparison["attention_selected_query_head_boundary_frontier"] =
             selected_query_head_boundary_frontier;
         cpu_comparison["attention_selected_query_rope_to_f16_head_conversion_frontier"] =
@@ -32269,6 +32275,197 @@ fn attention_selected_f64_query_score_input_bucket_source(
     })
 }
 
+fn selected_query_score_input_candidate_policy_next_diagnostic(
+    classification: &str,
+) -> &'static str {
+    match classification {
+        "selected_query_score_input_candidate_policy_reference_q_f16_rust_q_f32" => {
+            "capture the selected query boundary rows for the reference q-F16 vs Rust q-F32 candidate policy before changing score-input policy"
+        }
+        "selected_query_score_input_candidate_policy_reference_q_f32_rust_q_f16" => {
+            "capture the selected query boundary rows for the reference q-F32 vs Rust q-F16 candidate policy before changing score-input policy"
+        }
+        "selected_query_score_input_candidate_policy_query_policy_unpinned" => {
+            "pin whether the selected query candidate-policy delta is projection, RoPE, F16 conversion, or score-input serialization"
+        }
+        "selected_query_score_input_candidate_policy_key_policy" => {
+            "follow key-side candidate-policy attribution before changing query-side score-input policy"
+        }
+        "selected_query_score_input_candidate_policy_mixed_qk_policy" => {
+            "separate selected query and key candidate-policy deltas before changing score accumulation"
+        }
+        "selected_query_score_input_candidate_policy_same_policy_residual" => {
+            "replay selected raw QK score accumulation because candidate score-input policies match"
+        }
+        "selected_query_score_input_candidate_policy_clean" => {
+            "selected query candidate-policy frontier is clean; rerun downstream score residual attribution"
+        }
+        "selected_query_score_input_candidate_policy_missing_context" => {
+            "capture selected query score-position product-delta candidate context before changing runtime math"
+        }
+        _ => "keep selected query score-input candidate policy diagnostic-only",
+    }
+}
+
+fn selected_query_candidate_product_context_present(product_delta: &Value) -> bool {
+    if product_delta.is_null() {
+        return false;
+    }
+    let top_contributor_present = product_delta
+        .pointer("/top_abs_product_delta_contributors/0")
+        .or_else(|| product_delta.pointer("/top_contributors/0"))
+        .is_some_and(|row| !row.is_null());
+    top_contributor_present
+        && product_delta.pointer("/dominant_input").and_then(Value::as_str).is_some()
+        && product_delta.pointer("/reference_query_source").and_then(Value::as_str).is_some()
+        && product_delta.pointer("/rust_query_source").and_then(Value::as_str).is_some()
+        && product_delta.pointer("/reference_key_source").and_then(Value::as_str).is_some()
+        && product_delta.pointer("/rust_key_source").and_then(Value::as_str).is_some()
+}
+
+fn attention_selected_query_score_input_candidate_policy_frontier(
+    selected_query_source: &Value,
+) -> Value {
+    let primary_selected_row =
+        selected_query_source.pointer("/selected_qk_bucket_row").unwrap_or(&Value::Null);
+    let mixed_score_row =
+        selected_query_source.pointer("/mixed_score_position_row").unwrap_or(&Value::Null);
+    let primary_product_delta =
+        primary_selected_row.pointer("/product_delta").unwrap_or(&Value::Null);
+    let mixed_product_delta = mixed_score_row.pointer("/product_delta").unwrap_or(&Value::Null);
+    let mixed_context_present =
+        selected_query_candidate_product_context_present(mixed_product_delta);
+    let primary_context_present =
+        selected_query_candidate_product_context_present(primary_product_delta);
+    let (selected_row, selected_row_context_source) =
+        if !primary_context_present && mixed_context_present {
+            (mixed_score_row, "mixed_score_position_row_candidate_context")
+        } else {
+            (primary_selected_row, "selected_qk_bucket_row")
+        };
+    let product_delta = selected_row.pointer("/product_delta").unwrap_or(&Value::Null);
+    let top_contributor = product_delta
+        .pointer("/top_abs_product_delta_contributors/0")
+        .or_else(|| product_delta.pointer("/top_contributors/0"))
+        .unwrap_or(&Value::Null);
+    let source_classification =
+        selected_query_source.pointer("/classification").and_then(Value::as_str);
+    let dominant_input = product_delta.pointer("/dominant_input").and_then(Value::as_str);
+    let reference_query_source =
+        product_delta.pointer("/reference_query_source").and_then(Value::as_str);
+    let rust_query_source = product_delta.pointer("/rust_query_source").and_then(Value::as_str);
+    let reference_key_source =
+        product_delta.pointer("/reference_key_source").and_then(Value::as_str);
+    let rust_key_source = product_delta.pointer("/rust_key_source").and_then(Value::as_str);
+    let reference_query_f16 =
+        value_bool(product_delta, "/reference_query_f16_roundtrip").unwrap_or(false);
+    let rust_query_f16 = value_bool(product_delta, "/rust_query_f16_roundtrip").unwrap_or(false);
+    let reference_key_f16 =
+        value_bool(product_delta, "/reference_key_f16_roundtrip").unwrap_or(false);
+    let rust_key_f16 = value_bool(product_delta, "/rust_key_f16_roundtrip").unwrap_or(false);
+    let query_changed_dim_count = value_u64(product_delta, "/query_changed_dim_count").unwrap_or(0);
+    let key_changed_dim_count = value_u64(product_delta, "/key_changed_dim_count").unwrap_or(0);
+    let material_product_delta_count =
+        value_u64(product_delta, "/material_product_delta_count").unwrap_or(0);
+    let max_abs_product_delta = value_f64(product_delta, "/max_abs_product_delta").unwrap_or(0.0);
+    let same_query_source =
+        reference_query_source.is_some() && reference_query_source == rust_query_source;
+    let same_key_source = reference_key_source.is_some() && reference_key_source == rust_key_source;
+    let same_query_policy = same_query_source && reference_query_f16 == rust_query_f16;
+    let same_key_policy = same_key_source && reference_key_f16 == rust_key_f16;
+    let product_context_present = selected_query_candidate_product_context_present(product_delta);
+
+    let classification = if !product_context_present {
+        "selected_query_score_input_candidate_policy_missing_context"
+    } else if material_product_delta_count == 0
+        || max_abs_product_delta == 0.0
+        || dominant_input == Some("none")
+    {
+        "selected_query_score_input_candidate_policy_clean"
+    } else if dominant_input == Some("query")
+        && same_query_source
+        && same_key_source
+        && same_key_policy
+        && key_changed_dim_count == 0
+        && query_changed_dim_count > 0
+        && reference_query_f16
+        && !rust_query_f16
+    {
+        "selected_query_score_input_candidate_policy_reference_q_f16_rust_q_f32"
+    } else if dominant_input == Some("query")
+        && same_query_source
+        && same_key_source
+        && same_key_policy
+        && key_changed_dim_count == 0
+        && query_changed_dim_count > 0
+        && !reference_query_f16
+        && rust_query_f16
+    {
+        "selected_query_score_input_candidate_policy_reference_q_f32_rust_q_f16"
+    } else if dominant_input == Some("query") && !same_query_policy {
+        "selected_query_score_input_candidate_policy_query_policy_unpinned"
+    } else if dominant_input == Some("key")
+        || (key_changed_dim_count > 0 && query_changed_dim_count == 0)
+    {
+        "selected_query_score_input_candidate_policy_key_policy"
+    } else if dominant_input == Some("query_and_key")
+        || (query_changed_dim_count > 0 && key_changed_dim_count > 0)
+    {
+        "selected_query_score_input_candidate_policy_mixed_qk_policy"
+    } else if same_query_policy && same_key_policy {
+        "selected_query_score_input_candidate_policy_same_policy_residual"
+    } else {
+        "selected_query_score_input_candidate_policy_query_policy_unpinned"
+    };
+
+    let blocked_reasons =
+        if classification == "selected_query_score_input_candidate_policy_missing_context" {
+            json!(["selected_query_score_input_candidate_policy_missing_context"])
+        } else {
+            json!([])
+        };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected query score-input candidate-policy frontier is diagnostic-only evidence for summarizing whether the selected query-side score residual is explained by candidate score-input policy differences such as q-F16 versus q-F32 operands; it does not change RMSNorm, QK256, RoPE, F16 score-input conversion, score accumulation, softmax, value-mix, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "source_report": "attention_selected_f64_query_score_input_bucket_source",
+        "source_classification": source_classification,
+        "head": value_u64(selected_query_source, "/head"),
+        "selected_dim": value_u64(selected_query_source, "/selected_dim"),
+        "selected_token": value_u64(selected_query_source, "/selected_token"),
+        "key_slot": value_u64(selected_row, "/key_slot"),
+        "selected_row_source": selected_query_source.pointer("/selected_row_source").cloned().unwrap_or(Value::Null),
+        "selected_row_context_source": selected_row_context_source,
+        "dominant_input": dominant_input,
+        "reference_score_input_variant": product_delta.pointer("/reference_score_input_variant").cloned().unwrap_or(Value::Null),
+        "rust_score_input_variant": product_delta.pointer("/rust_score_input_variant").cloned().unwrap_or(Value::Null),
+        "reference_query_source": reference_query_source,
+        "rust_query_source": rust_query_source,
+        "reference_key_source": reference_key_source,
+        "rust_key_source": rust_key_source,
+        "reference_query_f16_roundtrip": reference_query_f16,
+        "rust_query_f16_roundtrip": rust_query_f16,
+        "reference_key_f16_roundtrip": reference_key_f16,
+        "rust_key_f16_roundtrip": rust_key_f16,
+        "same_query_source": same_query_source,
+        "same_key_source": same_key_source,
+        "same_query_policy": same_query_policy,
+        "same_key_policy": same_key_policy,
+        "query_changed_dim_count": query_changed_dim_count,
+        "key_changed_dim_count": key_changed_dim_count,
+        "material_product_delta_count": material_product_delta_count,
+        "max_abs_product_delta": product_delta.pointer("/max_abs_product_delta").cloned().unwrap_or(Value::Null),
+        "product_abs_delta_sum": product_delta.pointer("/product_abs_delta_sum").cloned().unwrap_or(Value::Null),
+        "product_signed_delta_sum": product_delta.pointer("/product_signed_delta_sum").cloned().unwrap_or(Value::Null),
+        "top_contributor": top_contributor.clone(),
+        "product_context_present": product_context_present,
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": selected_query_score_input_candidate_policy_next_diagnostic(classification),
+    })
+}
+
 fn selected_query_head_boundary_next_diagnostic(classification: &str) -> &'static str {
     match classification {
         "selected_query_head_boundary_reference_to_rope" => {
@@ -52866,6 +53063,218 @@ mod tests {
                 "capture selected query score-input boundary rows before changing runtime math"
             ))
         );
+    }
+
+    fn selected_query_candidate_policy_source(product_delta: Value) -> Value {
+        json!({
+            "classification": "selected_query_score_input_bucket_source_unpinned",
+            "head": 0,
+            "selected_dim": 36,
+            "selected_token": 0,
+            "selected_row_source": "mixed_score_position_row",
+            "selected_qk_bucket_row": {
+                "head": 0,
+                "key_slot": 0,
+                "query_token": 0,
+                "product_delta": product_delta
+            }
+        })
+    }
+
+    fn selected_query_candidate_product_delta(
+        dominant_input: &str,
+        reference_query_f16: bool,
+        rust_query_f16: bool,
+        query_changed_dim_count: u64,
+        key_changed_dim_count: u64,
+    ) -> Value {
+        json!({
+            "dominant_input": dominant_input,
+            "query_changed_dim_count": query_changed_dim_count,
+            "key_changed_dim_count": key_changed_dim_count,
+            "material_product_delta_count": if query_changed_dim_count + key_changed_dim_count > 0 { 1 } else { 0 },
+            "max_abs_product_delta": if query_changed_dim_count + key_changed_dim_count > 0 { 0.0014656414277851582_f64 } else { 0.0 },
+            "product_abs_delta_sum": if query_changed_dim_count + key_changed_dim_count > 0 { 0.0014656414277851582_f64 } else { 0.0 },
+            "product_signed_delta_sum": if query_changed_dim_count + key_changed_dim_count > 0 { 0.0014656414277851582_f64 } else { 0.0 },
+            "reference_score_input_variant": if reference_query_f16 { "q_f16_k_trace" } else { "q_trace_k_f32" },
+            "rust_score_input_variant": if rust_query_f16 { "q_f16_k_trace" } else { "q_trace_k_f32" },
+            "reference_query_source": "reference_q_score_input_head",
+            "rust_query_source": "reference_q_score_input_head",
+            "reference_key_source": "reference_k_score_input_head",
+            "rust_key_source": "reference_k_score_input_head",
+            "reference_query_f16_roundtrip": reference_query_f16,
+            "rust_query_f16_roundtrip": rust_query_f16,
+            "reference_key_f16_roundtrip": false,
+            "rust_key_f16_roundtrip": false,
+            "top_abs_product_delta_contributors": [
+                {
+                    "dim": 36,
+                    "query_delta": if query_changed_dim_count > 0 { -0.0005371570587158203_f64 } else { 0.0 },
+                    "key_delta": if key_changed_dim_count > 0 { 0.00048828125_f64 } else { 0.0 },
+                    "abs_product_delta": if query_changed_dim_count + key_changed_dim_count > 0 { 0.0014656414277851582_f64 } else { 0.0 }
+                }
+            ]
+        })
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_reports_reference_q_f16_rust_q_f32() {
+        let report = attention_selected_query_score_input_candidate_policy_frontier(
+            &selected_query_candidate_policy_source(selected_query_candidate_product_delta(
+                "query", true, false, 128, 0,
+            )),
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_reference_q_f16_rust_q_f32"))
+        );
+        assert_eq!(report.pointer("/head"), Some(&json!(0)));
+        assert_eq!(report.pointer("/selected_dim"), Some(&json!(36)));
+        assert_eq!(report.pointer("/reference_query_f16_roundtrip"), Some(&json!(true)));
+        assert_eq!(report.pointer("/rust_query_f16_roundtrip"), Some(&json!(false)));
+        assert_eq!(report.pointer("/key_changed_dim_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "capture the selected query boundary rows for the reference q-F16 vs Rust q-F32 candidate policy before changing score-input policy"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_prefers_mixed_row_when_selected_row_lacks_policy_context() {
+        let report = attention_selected_query_score_input_candidate_policy_frontier(&json!({
+            "classification": "selected_query_score_input_bucket_source_reference_to_rope",
+            "head": 5,
+            "selected_dim": 69,
+            "selected_token": 17,
+            "selected_row_source": "f64_qk_residual_query_bucket_row",
+            "selected_qk_bucket_row": {
+                "head": 5,
+                "key_slot": 17,
+                "query_token": 17,
+                "product_delta": {
+                    "query_changed_dim_count": 1,
+                    "key_changed_dim_count": 0,
+                    "material_product_delta_count": 1,
+                    "max_abs_product_delta": 0.0011529922485351562_f64,
+                    "top_contributors": [
+                        {
+                            "dim": 69,
+                            "query_delta": 0.000244140625_f64,
+                            "key_delta": 0.0
+                        }
+                    ]
+                }
+            },
+            "mixed_score_position_row": {
+                "head": 5,
+                "key_slot": 17,
+                "query_token": 17,
+                "product_delta": selected_query_candidate_product_delta("query", true, false, 128, 0)
+            }
+        }));
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_reference_q_f16_rust_q_f32"))
+        );
+        assert_eq!(
+            report.pointer("/selected_row_context_source"),
+            Some(&json!("mixed_score_position_row_candidate_context"))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_reports_reference_q_f32_rust_q_f16() {
+        let report = attention_selected_query_score_input_candidate_policy_frontier(
+            &selected_query_candidate_policy_source(selected_query_candidate_product_delta(
+                "query", false, true, 128, 0,
+            )),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_reference_q_f32_rust_q_f16"))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_reports_key_policy() {
+        let report = attention_selected_query_score_input_candidate_policy_frontier(
+            &selected_query_candidate_policy_source(selected_query_candidate_product_delta(
+                "key", false, false, 0, 128,
+            )),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_key_policy"))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_reports_mixed_qk_policy() {
+        let report = attention_selected_query_score_input_candidate_policy_frontier(
+            &selected_query_candidate_policy_source(selected_query_candidate_product_delta(
+                "query_and_key",
+                false,
+                true,
+                128,
+                128,
+            )),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_mixed_qk_policy"))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_reports_same_policy_residual() {
+        let report = attention_selected_query_score_input_candidate_policy_frontier(
+            &selected_query_candidate_policy_source(selected_query_candidate_product_delta(
+                "query", false, false, 128, 0,
+            )),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_same_policy_residual"))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_reports_clean() {
+        let report = attention_selected_query_score_input_candidate_policy_frontier(
+            &selected_query_candidate_policy_source(selected_query_candidate_product_delta(
+                "none", false, false, 0, 0,
+            )),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_clean"))
+        );
+    }
+
+    #[test]
+    fn selected_query_candidate_policy_reports_missing_context() {
+        let report = attention_selected_query_score_input_candidate_policy_frontier(&json!({}));
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_score_input_candidate_policy_missing_context"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_query_score_input_candidate_policy_missing_context"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
     }
 
     #[test]
