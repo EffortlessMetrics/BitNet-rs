@@ -51,6 +51,35 @@ claim boundary / not allowed claims
 
 Do not paste private paths, tokens, credentials, or model files.
 
+## Server Response Metadata
+
+For `/v1/chat/completions`, the response metadata links the response to the
+same receipt that is embedded in the response body:
+
+```json
+{
+  "metadata": {
+    "receipt_id": "uuid",
+    "receipt_path": "/receipts/uuid",
+    "latest_receipt_path": "/receipts/latest",
+    "readiness_path": "/readiness",
+    "model_coverage_row": "dense_qwen25_05b_q8_cuda",
+    "model_coverage_tier": "product_cli_ready",
+    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+    "selected_route": "dense_regular_llm_cuda",
+    "fallback_used": false
+  }
+}
+```
+
+Use these server endpoints for support triage:
+
+- `GET /receipts/latest`: latest retained server shared-engine receipt.
+- `GET /receipts/{receipt_id}`: retained receipt by response metadata id.
+- `GET /readiness`: readiness and claim-boundary state.
+- `GET /v1/readiness`: versioned readiness alias.
+- `GET /v1/models`: loaded model inventory.
+
 ## If `fallback_used=true`
 
 The run is not strict RTX 5070 Ti CUDA proof. Treat it as a rejected or
