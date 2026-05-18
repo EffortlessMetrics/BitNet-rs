@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T07:20:00Z"
+event = "pr_open"
+item = "LNL258V-PROFILE-RUN-001"
+pr = 5801
+head_sha = "c115ac4b4d1c8b2d524c3b98ce5d63d7132e2d62"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-001-openvino-heavy-profiles"
+actor = "codex"
+summary = "Opened PR #5801 for explicit OpenVINO heavy-profile timing evidence."
+
+notes = [
+  "The PR adds lunar-lake-openvino-profile-run.json and wires it into route-profile timing so OpenVINO GPU/NPU prefill_heavy and decode_heavy rows use profile-matched prompt/output token counts.",
+  "The PR keeps GPU/NPU promotion, speedup, power advantage, native accelerator, full BitNet inference, packed QK256 decode, and BitNet QK256/I2_S behavior-change claims unchanged.",
+]

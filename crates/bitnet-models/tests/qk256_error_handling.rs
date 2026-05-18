@@ -140,15 +140,16 @@ fn test_qk256_zero_input_vector() {
 
 /// Test spec: i2s-dual-flavor.md#zero-weights-handling
 ///
-/// Verify QK256 handles zero weights correctly (code 0 and 2 average to zero)
+/// Verify QK256 handles zero-mean packed weights correctly (code 0 and 2 cancel)
 #[test]
 fn test_qk256_zero_weights_effect() {
     let rows = 2;
     let cols = 256;
 
-    // Alternating codes: 0 (-2.0) and 3 (+2.0) should cancel out
-    // Pattern: 0b_11_00_11_00 = 0xCC
-    let qs_data = vec![0xCCu8; rows * QK256_PACKED_BYTES];
+    // Alternating canonical codes: 0 (-1.0) and 2 (+1.0) should cancel out.
+    // In QK256 lane order, 0x88 = 0b_10_00_10_00 unpacks to [2, 0, 2, 0]
+    // across the four 32-value lanes for each byte.
+    let qs_data = vec![0x88u8; rows * QK256_PACKED_BYTES];
 
     let input = vec![1.0f32; cols];
     let mut output = vec![0.0f32; rows];
@@ -156,7 +157,7 @@ fn test_qk256_zero_weights_effect() {
     gemv_qk256(&qs_data, &input, &mut output, rows, cols, QK256_PACKED_BYTES)
         .expect("Alternating weights should succeed");
 
-    // Outputs should be near zero (half -2.0, half +2.0)
+    // Outputs should be near zero (half -1.0, half +1.0)
     for (i, &val) in output.iter().enumerate() {
         assert!(val.abs() < 1e-3, "Row {}: expected ~0.0 (alternating weights), got {}", i, val);
     }
@@ -405,20 +406,23 @@ fn test_unpack_qk256_block_all_ones() {
 /// Verify unpack_qk256_block correctly unpacks alternating patterns
 #[test]
 fn test_unpack_qk256_block_alternating_pattern() {
-    // Pattern: 0x96 = 0b10010110
-    // Bit extraction order: [1:0], [3:2], [5:4], [7:6]
-    // 0b10010110 unpacks to: [0b10, 0b01, 0b01, 0b10] = [2, 1, 1, 2]
+    // Pattern: 0x96 = 0b10010110. QK256 stores one group position across
+    // four 32-value lanes, high bits first, so each byte unpacks to
+    // [0b10, 0b01, 0b01, 0b10] = [2, 1, 1, 2] at offsets gp, gp+32,
+    // gp+64, and gp+96 within each 128-value chunk.
     let packed = [0x96u8; QK256_PACKED_BYTES];
     let mut codes = [0u8; QK256_BLOCK];
 
     unpack_qk256_block(&packed, &mut codes);
 
-    // Each byte unpacks to [2, 1, 1, 2] based on bit order
-    for chunk_idx in 0..(QK256_BLOCK / 4) {
-        assert_eq!(codes[chunk_idx * 4], 2, "Code {} should be 2", chunk_idx * 4);
-        assert_eq!(codes[chunk_idx * 4 + 1], 1, "Code {} should be 1", chunk_idx * 4 + 1);
-        assert_eq!(codes[chunk_idx * 4 + 2], 1, "Code {} should be 1", chunk_idx * 4 + 2);
-        assert_eq!(codes[chunk_idx * 4 + 3], 2, "Code {} should be 2", chunk_idx * 4 + 3);
+    for chunk in 0..2 {
+        let elem_base = chunk * 128;
+        for gp in 0..32 {
+            assert_eq!(codes[elem_base + gp], 2, "Code {} should be 2", elem_base + gp);
+            assert_eq!(codes[elem_base + 32 + gp], 1, "Code {} should be 1", elem_base + 32 + gp);
+            assert_eq!(codes[elem_base + 64 + gp], 1, "Code {} should be 1", elem_base + 64 + gp);
+            assert_eq!(codes[elem_base + 96 + gp], 2, "Code {} should be 2", elem_base + 96 + gp);
+        }
     }
 }
 
@@ -444,7 +448,7 @@ fn test_gemv_qk256_row_minimum_cols() {
 /// Verify gemv_qk256_row handles exact block size (256 elements)
 #[test]
 fn test_gemv_qk256_row_exact_block() {
-    let qs = [0x55u8; QK256_PACKED_BYTES]; // Code 1 → -1.0
+    let qs = [0x00u8; QK256_PACKED_BYTES]; // Code 0 → -1.0
     let input = vec![2.0f32; QK256_BLOCK];
     let cols = QK256_BLOCK;
 

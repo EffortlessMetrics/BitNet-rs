@@ -95,7 +95,7 @@
 | apple-m4-inference-excellence | M4-BITNET-EX-011 | M4-BITNET-EX-010 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-012 | M4-BITNET-EX-011 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-013 | M4-BITNET-EX-012, M4-REPRO-003 | merged |
-| apple-m4-inference-excellence | M4-BITNET-EX-014 | M4-BITNET-EX-013 | proposed |
+| apple-m4-inference-excellence | M4-BITNET-EX-014 | M4-BITNET-EX-013 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-015 | M4-BITNET-EX-014, M4-BENCH-006 | proposed |
 | apple-m4-inference-excellence | M4-OPS-UX-001 | M4-EXCELLENCE-003 | merged |
 | apple-m4-inference-excellence | M4-OPS-UX-002 | M4-OPS-UX-001 | merged |
@@ -341,11 +341,13 @@
 | intel-258v-platform | LNL258V-NPU-CACHE-002 | LNL258V-NPU-CACHE-001 | merged |
 | intel-258v-platform | LNL258V-QUAL-009 | LNL258V-OPENVINO-QUAL-RERUN-002 | merged |
 | intel-258v-platform | LNL258V-NPU-RESIDENT-001 | LNL258V-NPU-COLD-001, LNL258V-ROUTE-014, LNL258V-REG-006 | merged |
+| intel-258v-platform | LNL258V-NPU-RESIDENT-002 | LNL258V-ROUTE-019, LNL258V-NPU-RESIDENT-001, LNL258V-NPU-CACHE-001 | merged |
 | intel-258v-platform | LNL258V-ROUTE-011 | LNL258V-ROUTE-010, LNL258V-QUAL-010 | merged |
 | intel-258v-platform | LNL258V-ROUTE-012 | LNL258V-ROUTE-011 | merged |
 | intel-258v-platform | LNL258V-ROUTE-013 | LNL258V-ROUTE-012 | merged |
 | intel-258v-platform | LNL258V-ROUTE-014 | LNL258V-ROUTE-013 | merged |
 | intel-258v-platform | LNL258V-REG-006 | LNL258V-ROUTE-014 | merged |
+| intel-258v-platform | LNL258V-REG-007 | LNL258V-BITNET-INTAKE-001 | merged |
 | intel-258v-platform | LNL258V-QUAL-010 | LNL258V-QUAL-009 | merged |
 | intel-258v-platform | LNL258V-BENCH-005 | LNL258V-ROUTE-009 | merged |
 | intel-258v-platform | LNL258V-ROUTE-007 | LNL258V-OV-QUAL-005, LNL258V-ROUTE-006 | merged |
@@ -371,6 +373,8 @@
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-RERUN-002 | LNL258V-QUAL-008 | merged |
 | intel-258v-platform | LNL258V-OV-TOKEN-001 | LNL258V-NPU-CACHE-002 | merged |
 | intel-258v-platform | LNL258V-ROUTE-015 | LNL258V-OV-TOKEN-001 | merged |
+| intel-258v-platform | LNL258V-PROFILE-RUN-001 | LNL258V-ROUTE-019 | merged |
+| intel-258v-platform | LNL258V-ROUTE-019 | LNL258V-REG-007 | merged |
 | intel-258v-platform | LNL258V-BITNET-INTAKE-001 | LNL258V-ROUTE-018 | merged |
 | intel-258v-platform | LNL258V-ROUTE-018 | LNL258V-ROUTE-017 | merged |
 | intel-258v-platform | LNL258V-ROUTE-017 | LNL258V-ROUTE-016 | merged |
@@ -580,7 +584,7 @@
 | slm-cpu | SLM-CPU-040 | SLM-CPU-039 | merged |
 | slm-cpu | SLM-CPU-041 | SLM-CPU-040 | merged |
 | slm-cpu | SLM-CPU-042 | SLM-CPU-041 | merged |
-| slm-cpu | SLM-CPU-043 | SLM-CPU-042 | ready |
+| slm-cpu | SLM-CPU-043 | SLM-CPU-042 | merged |
 | slm-cpu | SLM-CPU-024 | SLM-CPU-023 | merged |
 | slm-cpu | SLM-CPU-025 | SLM-CPU-024 | merged |
 | slm-cpu | SLM-CPU-026 | SLM-CPU-025 | merged |

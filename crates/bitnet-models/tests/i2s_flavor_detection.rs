@@ -174,7 +174,7 @@ fn fail_closed_on_invalid_size() {
     // Expected split: 3 * 8 = 24 bytes
     // Expected qk256: ceil(96/256)=1 block * 64 = 64 bytes
     // Provide invalid size: 50 bytes (exceeds tolerance of 8 for all)
-    let nelems = 96;
+    let nelems: usize = 96;
     let info = mk_info("blk.0.invalid.weight", &[96], 50);
 
     let result = detect_i2s_flavor(&info, false, nelems);
@@ -275,16 +275,25 @@ fn tolerance_boundary_positive() {
 }
 
 #[test]
+#[serial_test::serial]
 fn tolerance_boundary_negative() {
-    // Test tolerance boundary (8 bytes)
-    // 96 elements → 3 blocks → inline needs 30 bytes
-    // Provide 30 + 9 = 39 bytes (exceeds tolerance of 8)
-    let nelems = 96;
-    let info = mk_info("blk.0.boundary_fail.weight", &[96], 39);
+    temp_env::with_var_unset("BITNET_STRICT_MODE", || {
+        // Test that a payload beyond the adaptive tolerance for every candidate
+        // layout is rejected.
+        let nelems: usize = 96;
+        let blocks32 = nelems.div_ceil(32);
+        let blocks256 = nelems.div_ceil(256);
+        let inline_need = blocks32 * I2SFlavor::BitNet32F16.total_bytes_per_block();
+        let split_need = blocks32 * I2SFlavor::Split32WithSibling.total_bytes_per_block();
+        let qk256_need = blocks256 * I2SFlavor::GgmlQk256NoScale.total_bytes_per_block();
+        let tolerance = bitnet_quantization::qk256_tolerance_bytes(inline_need.min(qk256_need));
+        let oversized = inline_need.max(split_need).max(qk256_need) + tolerance + 1;
+        let info = mk_info("blk.0.boundary_fail.weight", &[96], oversized as u64);
 
-    let result = detect_i2s_flavor(&info, false, nelems);
+        let result = detect_i2s_flavor(&info, false, nelems);
 
-    assert!(result.is_err(), "should fail beyond tolerance");
+        assert!(result.is_err(), "should fail beyond tolerance");
+    });
 }
 
 #[test]

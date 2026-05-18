@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T05:30:00Z",
+  "created_utc": "2026-05-19T07:15:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -53,25 +53,22 @@
       "decode_heavy",
       "structured",
       "low_power",
+      "warm_resident",
       "bitnet_strict_reference"
     ],
     "timing_coverage": {
-      "route_count": 20,
-      "profile_specific_route_count": 14,
-      "proxy_or_missing_route_count": 6,
+      "route_count": 23,
+      "profile_specific_route_count": 21,
+      "proxy_or_missing_route_count": 2,
       "promotion_eligible_route_count": 4,
       "promotion_eligible_profile_specific_route_count": 4,
-      "candidate_route_count": 12,
-      "candidate_proxy_or_missing_route_count": 4,
+      "candidate_route_count": 14,
+      "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
       "proxy_or_missing_routes": [
         "decode_heavy:dense_slm_default_cpu",
-        "decode_heavy:dense_slm_openvino_gpu_candidate",
-        "decode_heavy:dense_slm_openvino_npu_candidate",
-        "prefill_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_openvino_gpu_candidate",
-        "prefill_heavy:dense_slm_openvino_npu_candidate"
+        "prefill_heavy:dense_slm_default_cpu"
       ],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
@@ -92,9 +89,8 @@
       "route not promoted for profile low_power",
       "route not promoted for profile prefill_heavy",
       "route not promoted for profile regression_tiny",
-      "timing coverage has missing profile fields",
-      "timing evidence is not profile-specific for profile decode_heavy",
-      "timing evidence is not profile-specific for profile prefill_heavy"
+      "route not promoted for profile warm_resident",
+      "timing coverage has missing profile fields"
     ],
     "gpu_npu_promotion_blocker_summary": [
       {
@@ -115,7 +111,7 @@
       },
       {
         "blocker": "benchmark_qualified_speedup_or_power_advantage",
-        "occurrence_count": 6,
+        "occurrence_count": 7,
         "route_ids": [
           "dense_slm_openvino_npu_candidate"
         ],
@@ -125,13 +121,14 @@
           "decode_heavy",
           "low_power",
           "prefill_heavy",
-          "regression_tiny"
+          "regression_tiny",
+          "warm_resident"
         ],
         "next_action": "produce benchmark-qualified latency, throughput, power, or stability advantage evidence before promotion"
       },
       {
         "blocker": "candidate route requires benchmark-qualified profile evidence",
-        "occurrence_count": 6,
+        "occurrence_count": 7,
         "route_ids": [
           "dense_slm_openvino_npu_candidate"
         ],
@@ -141,20 +138,22 @@
           "decode_heavy",
           "low_power",
           "prefill_heavy",
-          "regression_tiny"
+          "regression_tiny",
+          "warm_resident"
         ],
         "next_action": "produce benchmark-qualified latency, throughput, power, or stability advantage evidence before promotion"
       },
       {
         "blocker": "corpus_v2 profile quality evidence missing",
-        "occurrence_count": 3,
+        "occurrence_count": 6,
         "route_ids": [
           "dense_slm_default_cpu",
           "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
-          "low_power"
+          "low_power",
+          "warm_resident"
         ],
         "next_action": "run corpus-v2 profile evidence for this route/profile before evaluating promotion"
       },
@@ -173,12 +172,13 @@
       },
       {
         "blocker": "profile_regression_bundle",
-        "occurrence_count": 1,
+        "occurrence_count": 2,
         "route_ids": [
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
-          "low_power"
+          "low_power",
+          "warm_resident"
         ],
         "next_action": "run corpus-v2 profile evidence for this route/profile before evaluating promotion"
       },
@@ -258,40 +258,28 @@
         "next_action": "keep route candidate-only until all profile-specific promotion evidence clears"
       },
       {
+        "blocker": "route not promoted for profile warm_resident",
+        "occurrence_count": 3,
+        "route_ids": [
+          "dense_slm_default_cpu",
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "profile_ids": [
+          "warm_resident"
+        ],
+        "next_action": "run NPU cache/resident warm-route proof and keep cold one-off routing blocked until classified"
+      },
+      {
         "blocker": "timing coverage has missing profile fields",
-        "occurrence_count": 2,
-        "route_ids": [
-          "dense_slm_openvino_gpu_candidate",
-          "dense_slm_openvino_npu_candidate"
-        ],
-        "profile_ids": [
-          "low_power"
-        ],
-        "next_action": "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
-      },
-      {
-        "blocker": "timing evidence is not profile-specific for profile decode_heavy",
         "occurrence_count": 3,
         "route_ids": [
-          "dense_slm_default_cpu",
           "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
-          "decode_heavy"
-        ],
-        "next_action": "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
-      },
-      {
-        "blocker": "timing evidence is not profile-specific for profile prefill_heavy",
-        "occurrence_count": 3,
-        "route_ids": [
-          "dense_slm_default_cpu",
-          "dense_slm_openvino_gpu_candidate",
-          "dense_slm_openvino_npu_candidate"
-        ],
-        "profile_ids": [
-          "prefill_heavy"
+          "low_power",
+          "warm_resident"
         ],
         "next_action": "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
       }
@@ -325,25 +313,22 @@
       "decode_heavy",
       "structured",
       "low_power",
+      "warm_resident",
       "bitnet_strict_reference"
     ],
     "timing_coverage": {
-      "route_count": 20,
-      "profile_specific_route_count": 14,
-      "proxy_or_missing_route_count": 6,
+      "route_count": 23,
+      "profile_specific_route_count": 21,
+      "proxy_or_missing_route_count": 2,
       "promotion_eligible_route_count": 4,
       "promotion_eligible_profile_specific_route_count": 4,
-      "candidate_route_count": 12,
-      "candidate_proxy_or_missing_route_count": 4,
+      "candidate_route_count": 14,
+      "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
       "proxy_or_missing_routes": [
         "decode_heavy:dense_slm_default_cpu",
-        "decode_heavy:dense_slm_openvino_gpu_candidate",
-        "decode_heavy:dense_slm_openvino_npu_candidate",
-        "prefill_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_openvino_gpu_candidate",
-        "prefill_heavy:dense_slm_openvino_npu_candidate"
+        "prefill_heavy:dense_slm_default_cpu"
       ],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
@@ -412,7 +397,16 @@
       "regression_tiny:dense_slm_openvino_npu_candidate=thermal_context_unavailable",
       "structured:dense_slm_default_cpu=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
       "structured:dense_slm_default_cpu=thermal sensor context is not available from the current OS telemetry probe",
-      "structured:dense_slm_default_cpu=thermal_context_unavailable"
+      "structured:dense_slm_default_cpu=thermal_context_unavailable",
+      "warm_resident:dense_slm_default_cpu=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "warm_resident:dense_slm_default_cpu=thermal sensor context is not available from the current OS telemetry probe",
+      "warm_resident:dense_slm_default_cpu=thermal_context_unavailable",
+      "warm_resident:dense_slm_openvino_gpu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "warm_resident:dense_slm_openvino_gpu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "warm_resident:dense_slm_openvino_gpu_candidate=thermal_context_unavailable",
+      "warm_resident:dense_slm_openvino_npu_candidate=power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+      "warm_resident:dense_slm_openvino_npu_candidate=thermal sensor context is not available from the current OS telemetry probe",
+      "warm_resident:dense_slm_openvino_npu_candidate=thermal_context_unavailable"
     ],
     "route_promotion_scope": {
       "openvino_gpu_promoted_profiles": [
@@ -450,6 +444,24 @@
     "regression_ready": true,
     "gaps": []
   },
+  "bitnet_semantic_intake": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+    "intake_ready": true,
+    "rerun_required": false,
+    "pending_shared_change_count": 1,
+    "merged_to_main_count": 0,
+    "stale_after_merged_count": 0,
+    "source_lanes": [
+      "a770"
+    ],
+    "pending_changes": [
+      "a770#5020 fix(bitnet): preserve K precision for attention scores"
+    ],
+    "required_reruns": [],
+    "claim_boundary_preserved": true,
+    "regression_ready": true,
+    "gaps": []
+  },
   "regression_surface": {
     "surface_id": "lunar_lake_regression_v2",
     "strict_default": true,
@@ -457,6 +469,7 @@
     "route_profile_comparison_indexed": true,
     "cold_warm_benchmark_indexed": true,
     "durability_bundle_indexed": true,
+    "bitnet_semantic_intake_indexed": true,
     "required_answer_profiles": [
       "regression_tiny",
       "ask_short",
@@ -486,6 +499,7 @@
       "decode_heavy",
       "structured",
       "low_power",
+      "warm_resident",
       "bitnet_strict_reference"
     ],
     "required_durability_profiles": [
@@ -498,22 +512,18 @@
     "benchmark_qualified_advantage_claimed": true,
     "cold_warm_benchmark_ready": true,
     "timing_coverage": {
-      "route_count": 20,
-      "profile_specific_route_count": 14,
-      "proxy_or_missing_route_count": 6,
+      "route_count": 23,
+      "profile_specific_route_count": 21,
+      "proxy_or_missing_route_count": 2,
       "promotion_eligible_route_count": 4,
       "promotion_eligible_profile_specific_route_count": 4,
-      "candidate_route_count": 12,
-      "candidate_proxy_or_missing_route_count": 4,
+      "candidate_route_count": 14,
+      "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
       "proxy_or_missing_routes": [
         "decode_heavy:dense_slm_default_cpu",
-        "decode_heavy:dense_slm_openvino_gpu_candidate",
-        "decode_heavy:dense_slm_openvino_npu_candidate",
-        "prefill_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_openvino_gpu_candidate",
-        "prefill_heavy:dense_slm_openvino_npu_candidate"
+        "prefill_heavy:dense_slm_default_cpu"
       ],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
@@ -636,13 +646,13 @@
         "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json"
       ],
       "notes": [
-        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,bitnet_strict_reference",
+        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,warm_resident,bitnet_strict_reference",
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
-        "profile_specific_timing=14/20",
+        "profile_specific_timing=21/23",
         "proxy_or_missing_timing_routes_blocked=true",
-        "promotion_blocker_summary_count=15",
+        "promotion_blocker_summary_count=14",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short",
         "openvino_npu_promoted_profiles=",
         "profile_scoped_promotion_only=true"
@@ -655,14 +665,14 @@
         "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json"
       ],
       "notes": [
-        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,bitnet_strict_reference",
+        "profiles=regression_tiny,ask_short,ask_normal,prefill_heavy,decode_heavy,structured,low_power,warm_resident,bitnet_strict_reference",
         "benchmark_gate_ready=true",
         "promoted_routes_have_critical_timing=true",
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
-        "telemetry_gap_count=60",
-        "profile_specific_timing=14/20",
+        "telemetry_gap_count=69",
+        "profile_specific_timing=21/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short",
         "openvino_npu_promoted_profiles=",
@@ -685,6 +695,22 @@
         "answer_drift_detected=false",
         "route_drift_detected=false",
         "repeated_run_stability_claim=true"
+      ]
+    },
+    {
+      "check_id": "bitnet_semantic_intake_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json"
+      ],
+      "notes": [
+        "intake_ready=true",
+        "rerun_required=false",
+        "pending_shared_change_count=1",
+        "merged_to_main_count=0",
+        "stale_after_merged_count=0",
+        "source_lanes=a770",
+        "claim_boundary_preserved=true"
       ]
     }
   ],

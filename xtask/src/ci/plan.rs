@@ -58,8 +58,12 @@ pub struct Budget {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Classification {
+    pub no_rust_inputs: bool,
     pub docs_only: bool,
     pub tracker_only: bool,
+    pub tracker_or_campaign_only: bool,
+    pub hardware_receipt_only: bool,
+    pub policy_docs_only: bool,
     pub rust_inputs_changed: bool,
     pub manifest_or_toolchain_changed: bool,
     pub public_api_changed: bool,
@@ -443,6 +447,14 @@ fn is_tracker_path(path: &str) -> bool {
     path.starts_with("docs/tracking/") || path.starts_with(".codex/campaigns/")
 }
 
+fn is_hardware_receipt_path(path: &str) -> bool {
+    path.starts_with("ci/hardware/")
+}
+
+fn is_policy_docs_path(path: &str) -> bool {
+    path.starts_with("policy/") || path.starts_with("docs/ci/") || path == "codecov.yml"
+}
+
 fn is_docs_path(path: &str) -> bool {
     path.starts_with("docs/")
         || path.ends_with(".md")
@@ -453,6 +465,19 @@ fn is_docs_path(path: &str) -> bool {
         || path.starts_with("COMPATIBILITY")
         || path.starts_with("THIRD_PARTY")
         || path == "CLAUDE.md"
+}
+
+fn is_rust_input_path(path: &str) -> bool {
+    path.starts_with("crates/")
+        || path.starts_with("crossval/")
+        || path.starts_with("tests/")
+        || path.starts_with("tools/bitnet-task/")
+        || path.starts_with("xtask/")
+        || path.starts_with("fuzz/")
+        || path == "Cargo.toml"
+        || path == "Cargo.lock"
+        || path == "rust-toolchain.toml"
+        || path == "Makefile"
 }
 
 fn manifest_or_toolchain_changed(files: &[String]) -> bool {
@@ -524,12 +549,23 @@ fn build_classification(
 ) -> Classification {
     let has_label = |label: &str| labels.iter().any(|item| item == label);
     let tracker_only = !changed.is_empty() && changed.iter().all(|path| is_tracker_path(path));
+    let tracker_or_campaign_only = tracker_only;
+    let hardware_receipt_only =
+        !changed.is_empty() && changed.iter().all(|path| is_hardware_receipt_path(path));
+    let policy_docs_only =
+        !changed.is_empty() && changed.iter().all(|path| is_policy_docs_path(path));
     let docs_only = !changed.is_empty()
         && changed.iter().all(|path| is_docs_path(path) && !is_tracker_path(path));
+    let no_rust_inputs =
+        !changed.is_empty() && changed.iter().all(|path| !is_rust_input_path(path));
 
     Classification {
+        no_rust_inputs,
         docs_only,
         tracker_only,
+        tracker_or_campaign_only,
+        hardware_receipt_only,
+        policy_docs_only,
         rust_inputs_changed: touched.get("rust_core").copied().unwrap_or(false),
         manifest_or_toolchain_changed: manifest_or_toolchain_changed(changed),
         public_api_changed: public_api_changed(changed),
@@ -942,7 +978,9 @@ mod tests {
         let plan = build_plan(&s(&["docs/foo.md", "README.md"]), &[]);
         assert_eq!(plan.posture, "docs-only");
         assert_eq!(plan.estimated_lem, 9); // route jobs plus always-on guards
+        assert!(plan.classification.no_rust_inputs);
         assert!(plan.classification.docs_only);
+        assert!(!plan.classification.tracker_only);
         assert_eq!(plan.budget.posture, "pennies");
     }
 
@@ -1073,8 +1111,12 @@ mod tests {
     fn ci_plan_fixture_docs_only() -> Result<()> {
         let plan = build_plan(&fixture_lines("docs.txt")?, &[]);
         let value = serde_json::to_value(&plan)?;
+        assert_eq!(value.pointer("/classification/no_rust_inputs"), Some(&json!(true)));
         assert_eq!(value.pointer("/classification/docs_only"), Some(&json!(true)));
         assert_eq!(value.pointer("/classification/tracker_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/tracker_or_campaign_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/hardware_receipt_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/policy_docs_only"), Some(&json!(false)));
         assert_eq!(value.pointer("/classification/rust_inputs_changed"), Some(&json!(false)));
         assert_eq!(value.pointer("/budget/preferred_default_lem"), Some(&json!(25)));
         assert_eq!(value.pointer("/budget/default_limit_lem"), Some(&json!(35)));
@@ -1085,9 +1127,39 @@ mod tests {
     fn ci_plan_fixture_tracker_only() -> Result<()> {
         let plan = build_plan(&fixture_lines("tracker.txt")?, &[]);
         let value = serde_json::to_value(&plan)?;
+        assert_eq!(value.pointer("/classification/no_rust_inputs"), Some(&json!(true)));
         assert_eq!(value.pointer("/classification/docs_only"), Some(&json!(false)));
         assert_eq!(value.pointer("/classification/tracker_only"), Some(&json!(true)));
+        assert_eq!(value.pointer("/classification/tracker_or_campaign_only"), Some(&json!(true)));
         assert_eq!(plan.posture, "tracking-only");
+        Ok(())
+    }
+
+    #[test]
+    fn ci_plan_fixture_hardware_receipt_only() -> Result<()> {
+        let plan = build_plan(&fixture_lines("hardware-receipt.txt")?, &[]);
+        let value = serde_json::to_value(&plan)?;
+        assert_eq!(value.pointer("/classification/no_rust_inputs"), Some(&json!(true)));
+        assert_eq!(value.pointer("/classification/docs_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/tracker_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/hardware_receipt_only"), Some(&json!(true)));
+        assert_eq!(value.pointer("/classification/policy_docs_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/rust_inputs_changed"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/model_validation_changed"), Some(&json!(true)));
+        Ok(())
+    }
+
+    #[test]
+    fn ci_plan_fixture_policy_docs_only() -> Result<()> {
+        let plan = build_plan(&fixture_lines("policy-docs.txt")?, &[]);
+        let value = serde_json::to_value(&plan)?;
+        assert_eq!(value.pointer("/classification/no_rust_inputs"), Some(&json!(true)));
+        assert_eq!(value.pointer("/classification/docs_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/tracker_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/policy_docs_only"), Some(&json!(true)));
+        assert_eq!(value.pointer("/classification/hardware_receipt_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/rust_inputs_changed"), Some(&json!(false)));
+        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "policy"));
         Ok(())
     }
 

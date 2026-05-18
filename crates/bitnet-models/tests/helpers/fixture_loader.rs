@@ -116,6 +116,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(not(feature = "fixtures"), ignore = "Requires disk GGUF fixtures")]
     fn test_fixture_path_exists() {
         let path = fixture_path("qk256_4x256.gguf");
         assert!(path.exists(), "Fixture path should exist: {:?}", path);
@@ -123,6 +124,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(not(feature = "fixtures"), ignore = "Requires disk GGUF fixtures")]
     fn test_load_fixture_bytes() {
         let bytes = load_fixture_bytes("qk256_4x256.gguf");
         assert!(bytes.len() > 8, "Fixture should have GGUF header");

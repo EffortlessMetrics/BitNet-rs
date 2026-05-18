@@ -13,7 +13,7 @@
 | apple-m4-continuity | M4-CONT-005 | #4270 | merged | none | This is an M4 Mac mini local campaign; do not execute MacBook artifact sweeps or MacBook receipts here. |
 | apple-m4-dense-slm-regression | M4-SLM-REG-005 | #4198 | merged | none | Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns. |
 | apple-m4-durable-inference-evidence | M4-DURABLE-005 | #5025 | merged | none | This is an M4 Mac mini evidence-refresh campaign. |
-| apple-m4-inference-excellence | M4-BITNET-EX-014 | TBD | proposed | M4-BITNET-EX-015 | This is an M4 Mac mini inference-excellence campaign. |
+| apple-m4-inference-excellence | M4-RECEIPT-001 | TBD | proposed | M4-GATE-HYGIENE-001 | This is an M4 Mac mini inference-excellence campaign. |
 | apple-m4-inference-ops | M4-INF-OPS-004 | #4969 | merged | none | This is an M4 Mac mini operations campaign. |
 | apple-m4-local-answer | M4-BITNET-WARM-002 | #4705 | merged | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-local-server | M4-SERVE-005 | #4374 | merged | none | This is an M4 Mac mini dense SLM service campaign. |
@@ -43,6 +43,6 @@
 | nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |
 | official-bitnet-2b | OFFICIAL-2B-000 | TBD | ready | OFFICIAL-2B-001 | Do not commit model binaries. |
 | server-real-inference | SERVER-005 | #4490 | merged | none | Do not reintroduce simulated inference. |
-| slm-cpu | SLM-CPU-043 | TBD | ready | SLM-CPU-027 | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | SLM-CPU-027 | TBD | blocked | none | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM-002 | TBD | ready | WASM-003 | WASM detection is not inference. |

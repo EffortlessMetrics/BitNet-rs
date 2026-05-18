@@ -64,6 +64,7 @@ const OPENVINO_NPU_RESIDENT_SESSION: &str = "lunar-lake-openvino-npu-resident-se
 const OPENVINO_NPU_CACHE_EXPERIMENT: &str = "lunar-lake-openvino-npu-cache-experiment.json";
 const OPENVINO_GENERATION_BUDGET_SENSITIVITY: &str =
     "lunar-lake-openvino-generation-budget-sensitivity.json";
+const OPENVINO_PROFILE_RUN: &str = "lunar-lake-openvino-profile-run.json";
 const OPENVINO_GPU_PROFILE_PROMOTION_TARGETS: &[&str] = &["ask_short", "ask_normal"];
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
@@ -94,6 +95,7 @@ const REQUIRED_ROUTE_PROFILES: &[&str] = &[
     "decode_heavy",
     "structured",
     "low_power",
+    "warm_resident",
     "bitnet_strict_reference",
 ];
 const BENCHMARK_QUALIFIED_LATENCY_RATIO_MAX: f64 = 0.90;
@@ -156,6 +158,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = DURABILITY_BUNDLE)]
         durability_bundle: Option<PathBuf>,
+
+        /// Optional BitNet semantic-intake receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = BITNET_SEMANTIC_INTAKE)]
+        bitnet_semantic_intake: Option<PathBuf>,
 
         /// Output JSON regression bundle to file.
         #[arg(long)]
@@ -779,6 +786,8 @@ pub struct LunarLakeRegressionBundle {
     pub cold_warm_benchmark: Option<ColdWarmRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub durability_bundle: Option<DurabilityRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bitnet_semantic_intake: Option<BitnetSemanticIntakeRegressionSummary>,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
     pub regression_passed: bool,
@@ -796,6 +805,8 @@ pub struct RegressionSurfaceSummary {
     pub cold_warm_benchmark_indexed: bool,
     #[serde(default)]
     pub durability_bundle_indexed: bool,
+    #[serde(default)]
+    pub bitnet_semantic_intake_indexed: bool,
     pub required_answer_profiles: Vec<String>,
     pub required_answer_categories: Vec<String>,
     pub required_route_profiles: Vec<String>,
@@ -824,6 +835,7 @@ impl Default for RegressionSurfaceSummary {
             route_profile_comparison_indexed: false,
             cold_warm_benchmark_indexed: false,
             durability_bundle_indexed: false,
+            bitnet_semantic_intake_indexed: false,
             required_answer_profiles: REQUIRED_CORPUS_V2_PROFILES
                 .iter()
                 .map(|profile| (*profile).to_string())
@@ -850,6 +862,7 @@ impl Default for RegressionSurfaceSummary {
                 "route profile comparison is not indexed".to_string(),
                 "cold/warm benchmark qualification is not indexed".to_string(),
                 "durability bundle is not indexed".to_string(),
+                "BitNet semantic intake is not indexed".to_string(),
             ],
         }
     }
@@ -945,6 +958,22 @@ pub struct DurabilityRegressionSummary {
     pub answer_drift_detected: bool,
     pub route_drift_detected: bool,
     pub repeated_run_stability_claim: bool,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BitnetSemanticIntakeRegressionSummary {
+    pub path: String,
+    pub intake_ready: bool,
+    pub rerun_required: bool,
+    pub pending_shared_change_count: usize,
+    pub merged_to_main_count: usize,
+    pub stale_after_merged_count: usize,
+    pub source_lanes: Vec<String>,
+    pub pending_changes: Vec<String>,
+    pub required_reruns: Vec<String>,
+    pub claim_boundary_preserved: bool,
     pub regression_ready: bool,
     pub gaps: Vec<String>,
 }
@@ -2059,6 +2088,7 @@ impl LunarLakeCommand {
                 route_profile_comparison,
                 cold_warm_benchmark,
                 durability_bundle,
+                bitnet_semantic_intake,
                 json_out,
                 created_utc,
                 strict,
@@ -2074,6 +2104,7 @@ impl LunarLakeCommand {
                     route_profile_comparison.as_deref(),
                     cold_warm_benchmark.as_deref(),
                     durability_bundle.as_deref(),
+                    bitnet_semantic_intake.as_deref(),
                     created_utc,
                 )?;
                 write_or_print_regression_bundle(&receipt, json_out.as_deref())?;
@@ -2675,6 +2706,7 @@ pub fn build_regression_bundle_with_created_utc(
         None,
         None,
         None,
+        None,
         created_utc,
     )
 }
@@ -2686,6 +2718,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     route_profile_comparison: Option<&Path>,
     cold_warm_benchmark: Option<&Path>,
     durability_bundle: Option<&Path>,
+    bitnet_semantic_intake: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRegressionBundle> {
     let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
@@ -2840,6 +2873,19 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     } else {
         None
     };
+    let bitnet_semantic_intake = if let Some(path) = bitnet_semantic_intake {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_bitnet_semantic_intake_regression(&path)?;
+        checks.push(regression_check_owned(
+            "bitnet_semantic_intake_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            bitnet_semantic_intake_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
     let gaps = checks
         .iter()
         .filter(|check| check.status != "passed")
@@ -2850,6 +2896,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         route_profile_comparison.as_ref(),
         cold_warm_benchmark.as_ref(),
         durability_bundle.as_ref(),
+        bitnet_semantic_intake.as_ref(),
     );
 
     Ok(LunarLakeRegressionBundle {
@@ -2864,6 +2911,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         route_profile_comparison,
         cold_warm_benchmark,
         durability_bundle,
+        bitnet_semantic_intake,
         regression_surface,
         regression_passed: gaps.is_empty(),
         checks,
@@ -2877,12 +2925,14 @@ fn build_regression_surface_summary(
     route_profile_comparison: Option<&RouteProfileRegressionSummary>,
     cold_warm_benchmark: Option<&ColdWarmRegressionSummary>,
     durability_bundle: Option<&DurabilityRegressionSummary>,
+    bitnet_semantic_intake: Option<&BitnetSemanticIntakeRegressionSummary>,
 ) -> RegressionSurfaceSummary {
     let mut summary = RegressionSurfaceSummary {
         answer_corpus_v2_indexed: answer_corpus_v2.is_some(),
         route_profile_comparison_indexed: route_profile_comparison.is_some(),
         cold_warm_benchmark_indexed: cold_warm_benchmark.is_some(),
         durability_bundle_indexed: durability_bundle.is_some(),
+        bitnet_semantic_intake_indexed: bitnet_semantic_intake.is_some(),
         candidate_routes_remain_unpromoted: route_profile_comparison
             .map(|summary| summary.candidate_routes_remain_unpromoted)
             .unwrap_or(false),
@@ -3029,6 +3079,26 @@ fn build_regression_surface_summary(
         }
     } else {
         summary.gaps.push("durability bundle is not indexed".to_string());
+    }
+
+    if let Some(intake) = bitnet_semantic_intake {
+        if !intake.regression_ready {
+            summary.gaps.push(format!(
+                "BitNet semantic intake is not regression-ready: {}",
+                intake.gaps.join("; ")
+            ));
+        }
+        if intake.rerun_required {
+            summary.gaps.push(format!(
+                "BitNet semantic intake requires Lunar Lake reruns: {}",
+                intake.required_reruns.join("; ")
+            ));
+        }
+        if !intake.claim_boundary_preserved {
+            summary.gaps.push("BitNet semantic intake claim boundary is not preserved".to_string());
+        }
+    } else {
+        summary.gaps.push("BitNet semantic intake is not indexed".to_string());
     }
 
     summary.gaps.sort();
@@ -3530,6 +3600,63 @@ fn inspect_durability_regression(path: &Path) -> Result<DurabilityRegressionSumm
     })
 }
 
+fn inspect_bitnet_semantic_intake_regression(
+    path: &Path,
+) -> Result<BitnetSemanticIntakeRegressionSummary> {
+    let intake: LunarLakeBitnetSemanticIntake = read_json_receipt(path)?;
+    let mut gaps = Vec::new();
+    if intake.artifact_kind != "lunar_lake_bitnet_semantic_intake" {
+        gaps.push(format!("unexpected artifact_kind={}", intake.artifact_kind));
+    }
+    if !intake.intake_ready {
+        gaps.push(format!("BitNet semantic intake is not ready: {}", intake.gaps.join("; ")));
+    }
+    if intake.rerun_required {
+        gaps.push(format!(
+            "shared BitNet semantic fixes require Lunar Lake reruns: {}",
+            intake.required_reruns.join("; ")
+        ));
+    }
+    if intake.source_change_summary.stale_after_merged_count > 0 {
+        gaps.push(format!(
+            "{} merged shared BitNet semantic changes are newer than Lunar Lake evidence",
+            intake.source_change_summary.stale_after_merged_count
+        ));
+    }
+
+    let claim = &intake.claim_boundary;
+    let claim_boundary_preserved = !claim.new_inference_executed
+        && !claim.route_promotion_changed
+        && !claim.answer_quality_claim
+        && !claim.speedup_claim
+        && !claim.acceleration_claim
+        && !claim.arc_or_npu_bitnet_claim
+        && !claim.qk256_behavior_changed
+        && !claim.dense_slm_as_bitnet_proof
+        && !claim.hidden_fallback_allowed;
+    if !claim_boundary_preserved {
+        gaps.push(
+            "BitNet semantic intake must preserve no-inference/no-promotion/no-speedup/no-acceleration/no-QK256-change claim boundary"
+                .to_string(),
+        );
+    }
+
+    Ok(BitnetSemanticIntakeRegressionSummary {
+        path: path_string(path),
+        intake_ready: intake.intake_ready,
+        rerun_required: intake.rerun_required,
+        pending_shared_change_count: intake.source_change_summary.pending_shared_change_count,
+        merged_to_main_count: intake.source_change_summary.merged_to_main_count,
+        stale_after_merged_count: intake.source_change_summary.stale_after_merged_count,
+        source_lanes: intake.source_change_summary.source_lanes,
+        pending_changes: intake.source_change_summary.pending_changes,
+        required_reruns: intake.required_reruns,
+        claim_boundary_preserved,
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
 fn corpus_v2_notes(summary: &AnswerCorpusV2Summary) -> Vec<String> {
     let mut notes = vec![
         format!("case_count={}", summary.case_count),
@@ -3638,6 +3765,22 @@ fn durability_regression_notes(summary: &DurabilityRegressionSummary) -> Vec<Str
         format!("answer_drift_detected={}", summary.answer_drift_detected),
         format!("route_drift_detected={}", summary.route_drift_detected),
         format!("repeated_run_stability_claim={}", summary.repeated_run_stability_claim),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
+fn bitnet_semantic_intake_regression_notes(
+    summary: &BitnetSemanticIntakeRegressionSummary,
+) -> Vec<String> {
+    let mut notes = vec![
+        format!("intake_ready={}", summary.intake_ready),
+        format!("rerun_required={}", summary.rerun_required),
+        format!("pending_shared_change_count={}", summary.pending_shared_change_count),
+        format!("merged_to_main_count={}", summary.merged_to_main_count),
+        format!("stale_after_merged_count={}", summary.stale_after_merged_count),
+        format!("source_lanes={}", summary.source_lanes.join(",")),
+        format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
     ];
     notes.extend(summary.gaps.iter().cloned());
     notes
@@ -8919,6 +9062,35 @@ fn load_npu_resident_session(
         && bool_at_any(&json, &["fallback_used"]) == Some(false)
         && bool_at_any(&json, &["resident_session.warm_resident_asks.fallback_used"]) != Some(true);
     index.add("dense_slm_openvino_npu_candidate", source_receipt, blockers);
+    let mut warm_resident_blockers = Vec::new();
+    if warm_ask_count < 30 {
+        warm_resident_blockers
+            .push(format!("NPU resident stability proof has only {warm_ask_count}/30 warm ask(s)"));
+    }
+    if bool_at_any(&json, &["stability.answer_drift_detected"]) == Some(true) {
+        warm_resident_blockers
+            .push("NPU resident stability proof observed answer drift".to_string());
+    }
+    if bool_at_any(&json, &["stability.fallback_drift_detected"]) == Some(true) {
+        warm_resident_blockers
+            .push("NPU resident stability proof observed fallback drift".to_string());
+    }
+    if bool_at_any(&json, &["stability.route_drift_detected"]) == Some(true) {
+        warm_resident_blockers
+            .push("NPU resident stability proof observed route drift".to_string());
+    }
+    if value_at(&json, "stability.resident_memory_growth_bytes").is_none() {
+        warm_resident_blockers
+            .push("NPU resident stability proof lacks memory-growth context".to_string());
+    }
+    warm_resident_blockers.sort();
+    warm_resident_blockers.dedup();
+    index.add_for_profile(
+        "dense_slm_openvino_npu_candidate",
+        "warm_resident",
+        path_string(&path),
+        warm_resident_blockers,
+    );
     Ok(resident_session_ready)
 }
 
@@ -9058,7 +9230,19 @@ fn load_npu_cold_start_diagnostic(
     }
     blockers.sort();
     blockers.dedup();
-    index.add("dense_slm_openvino_npu_candidate", path_string(&path), blockers);
+    let source_receipt = path_string(&path);
+    for profile_id in REQUIRED_ROUTE_PROFILES
+        .iter()
+        .copied()
+        .filter(|profile_id| !matches!(*profile_id, "warm_resident" | "bitnet_strict_reference"))
+    {
+        index.add_for_profile(
+            "dense_slm_openvino_npu_candidate",
+            profile_id,
+            source_receipt.clone(),
+            blockers.clone(),
+        );
+    }
     Ok(())
 }
 
@@ -10760,7 +10944,14 @@ fn profile_timing_for_route(
             route_id,
             &profile.profile_id,
             quality_index,
-        ),
+        )
+        .and_then(|timing| {
+            if profile.profile_id == "warm_resident" {
+                npu_resident_profile_timing(root).or_else(|_| Ok(timing))
+            } else {
+                Ok(timing)
+            }
+        }),
         "bitnet_reference_cpu" => Ok(ProfileTimingSummary {
             timing_scope: "bitnet_reference_cpu_not_dense_slm_profile".to_string(),
             source_receipts: vec![BITNET_PERF_APPLIED.to_string(), BITNET_CPU_BUNDLE.to_string()],
@@ -10887,6 +11078,61 @@ fn dense_cpu_profile_timing(
     })
 }
 
+fn npu_resident_profile_timing(root: &Path) -> Result<ProfileTimingSummary> {
+    let path = root.join(OPENVINO_NPU_RESIDENT_SESSION);
+    let json: Value = read_json_receipt(&path)?;
+    let warm = value_at(&json, "resident_session.warm_resident_asks")
+        .context("NPU resident-session receipt missing warm_resident_asks")?;
+    let warm_asks = json
+        .get("asks")
+        .and_then(Value::as_array)
+        .map(|asks| {
+            asks.iter()
+                .filter(|ask| string_at(ask, "phase").as_deref() == Some("warm_resident_ask"))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let prompt_tokens = warm_asks.iter().filter_map(|ask| u64_at(ask, "prompt_token_count")).max();
+    let output_tokens =
+        warm_asks.iter().filter_map(|ask| u64_at(ask, "generated_token_count")).max();
+    let direct_generated_token_ids_available = warm_asks.iter().any(|ask| {
+        bool_at_any(ask, &["generated_token_ids_available_from_pipeline"]) == Some(true)
+    });
+    let generation_total_ms = number_at_any(warm, &["generation_wall_ms.mean"]);
+    let throughput_tokens_per_s = number_at_any(warm, &["throughput_tokens_per_s.mean"])
+        .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms));
+
+    let mut phase_coverage = vec![
+        "npu_resident_same_process_warm_asks".to_string(),
+        "openvino_genai_perf_metrics".to_string(),
+        "pipeline_construct_excluded_from_warm_resident_timing".to_string(),
+    ];
+    if direct_generated_token_ids_available {
+        phase_coverage.push("direct_openvino_generated_token_ids".to_string());
+    }
+
+    Ok(ProfileTimingSummary {
+        timing_scope: "openvino_npu_resident_warm_session".to_string(),
+        source_receipts: vec![OPENVINO_NPU_RESIDENT_SESSION.to_string()],
+        prompt_tokens,
+        cold_load_ms: None,
+        tokenize_ms: None,
+        prefill_ms: None,
+        first_token_ms: number_at_any(warm, &["openvino_time_to_first_token_ms.mean"])
+            .or_else(|| number_at_any(warm, &["first_streamed_text_chunk_ms.mean"])),
+        decode_total_ms: generation_total_ms,
+        generation_total_ms,
+        total_response_ms: generation_total_ms,
+        output_tokens,
+        throughput_tokens_per_s,
+        phase_coverage,
+        known_gaps: vec![
+            "warm_resident timing excludes one-off NPU pipeline construction".to_string(),
+            "resident evidence is not a route promotion or power-advantage claim".to_string(),
+        ],
+    })
+}
+
 fn openvino_profile_timing(
     root: &Path,
     receipt_name: &str,
@@ -10914,15 +11160,17 @@ fn openvino_profile_timing(
         ],
     )
     .map(|value| value as u64);
+    let profile_run_context = openvino_profile_run_timing_context(root, route_id, profile_id)?;
     let corpus_context =
         openvino_corpus_operator_timing_context(route_id, profile_id, quality_index)?;
+    let timing_context = profile_run_context.as_ref().or(corpus_context.as_ref());
     let prompt_tokens =
-        corpus_context.as_ref().and_then(|context| context.prompt_tokens).or(direct_prompt_tokens);
-    let output_tokens = corpus_context
+        timing_context.as_ref().and_then(|context| context.prompt_tokens).or(direct_prompt_tokens);
+    let output_tokens = timing_context
         .as_ref()
         .and_then(|context| context.output_tokens)
         .or(operator_output_tokens);
-    let generation_total_ms = corpus_context
+    let generation_total_ms = timing_context
         .as_ref()
         .and_then(|context| context.generation_total_ms)
         .or(operator_generation_total_ms);
@@ -10950,13 +11198,30 @@ fn openvino_profile_timing(
                 .to_string(),
         );
     }
-    if let Some(context) = corpus_context.as_ref() {
+    if let Some(context) = profile_run_context.as_ref() {
         if !source_receipts.contains(&context.source_receipt) {
             source_receipts.push(context.source_receipt.clone());
         }
         phase_coverage
-            .push(format!("profile_timing_supplemented_from_corpus_v2_case_{}", context.case_id));
+            .push(format!("profile_timing_from_openvino_profile_run_case_{}", context.case_id));
         if context.profile_id != profile_id {
+            known_gaps.push(format!(
+                "profile timing borrowed from OpenVINO profile-run profile {} for profile {}",
+                context.profile_id, profile_id
+            ));
+        }
+    }
+    if let Some(context) = corpus_context.as_ref() {
+        if !source_receipts.contains(&context.source_receipt) {
+            source_receipts.push(context.source_receipt.clone());
+        }
+        if profile_run_context.is_none() {
+            phase_coverage.push(format!(
+                "profile_timing_supplemented_from_corpus_v2_case_{}",
+                context.case_id
+            ));
+        }
+        if profile_run_context.is_none() && context.profile_id != profile_id {
             known_gaps.push(format!(
                 "profile timing borrowed from corpus_v2 profile {} for profile {}",
                 context.profile_id, profile_id
@@ -10975,16 +11240,22 @@ fn openvino_profile_timing(
         timing_scope: timing_scope.to_string(),
         source_receipts,
         prompt_tokens,
-        cold_load_ms: number_at_any(
-            &ask,
-            &["timing.openvino_perf_metrics.load_time_ms", "timing.pipeline_construct_wall_ms"],
-        )
-        .or_else(|| corpus_context.as_ref().and_then(|context| context.load_time_ms)),
-        tokenize_ms: corpus_context.as_ref().and_then(|context| context.tokenize_ms).or_else(
+        cold_load_ms: timing_context.as_ref().and_then(|context| context.load_time_ms).or_else(
+            || {
+                number_at_any(
+                    &ask,
+                    &[
+                        "timing.openvino_perf_metrics.load_time_ms",
+                        "timing.pipeline_construct_wall_ms",
+                    ],
+                )
+            },
+        ),
+        tokenize_ms: timing_context.as_ref().and_then(|context| context.tokenize_ms).or_else(
             || number_at_any(&ask, &["timing.openvino_perf_metrics.tokenization.mean_ms"]),
         ),
         prefill_ms: None,
-        first_token_ms: corpus_context.as_ref().and_then(|context| context.first_token_ms).or_else(
+        first_token_ms: timing_context.as_ref().and_then(|context| context.first_token_ms).or_else(
             || {
                 number_at_any(
                     &ask,
@@ -10997,7 +11268,7 @@ fn openvino_profile_timing(
         ),
         decode_total_ms: generation_total_ms,
         generation_total_ms,
-        total_response_ms: corpus_context
+        total_response_ms: timing_context
             .as_ref()
             .and_then(|context| context.total_response_ms)
             .or_else(|| {
@@ -11007,7 +11278,7 @@ fn openvino_profile_timing(
                 )
             }),
         output_tokens,
-        throughput_tokens_per_s: corpus_context
+        throughput_tokens_per_s: timing_context
             .as_ref()
             .and_then(|context| context.throughput_tokens_per_s)
             .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms)),
@@ -11030,6 +11301,86 @@ struct OpenVinoCorpusOperatorTimingContext {
     total_response_ms: Option<f64>,
     throughput_tokens_per_s: Option<f64>,
     direct_generated_token_ids_available: bool,
+}
+
+fn openvino_profile_run_timing_context(
+    root: &Path,
+    route_id: &str,
+    profile_id: &str,
+) -> Result<Option<OpenVinoCorpusOperatorTimingContext>> {
+    let path = root.join(OPENVINO_PROFILE_RUN);
+    if !path.exists() {
+        return Ok(None);
+    }
+    let json: Value = read_json_receipt(&path)?;
+    if string_at(&json, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_profile_run")
+    {
+        return Ok(None);
+    }
+    let Some(devices) = value_at(&json, "generation.devices").and_then(Value::as_array) else {
+        return Ok(None);
+    };
+    let Some(device) =
+        devices.iter().find(|device| openvino_device_route_id(device) == Some(route_id))
+    else {
+        return Ok(None);
+    };
+    let Some(cases) = device.get("cases").and_then(Value::as_array) else {
+        return Ok(None);
+    };
+    let Some(case) =
+        cases.iter().find(|case| string_at(case, "profile").as_deref() == Some(profile_id))
+    else {
+        return Ok(None);
+    };
+    let prompt_tokens = u64_at(case, "prompt_token_count")
+        .or_else(|| u64_at(case, "prompt.prompt_token_count"))
+        .or_else(|| u64_at(case, "tokens.prompt"));
+    let output_tokens = u64_at(case, "generated_token_count")
+        .or_else(|| u64_at(case, "tokens.generated"))
+        .or_else(|| u64_at(case, "tokens.output"));
+    if prompt_tokens.is_none() && output_tokens.is_none() {
+        return Ok(None);
+    }
+    let generation_total_ms = number_at_any(
+        case,
+        &["timing.generation_wall_ms", "timing.openvino_perf_metrics.generate.mean_ms"],
+    );
+    let load_time_ms = number_at_any(
+        case,
+        &["timing.openvino_perf_metrics.load_time_ms", "timing.pipeline_construct_wall_ms"],
+    );
+    let total_response_ms = number_at_any(case, &["timing.total_response_ms"])
+        .or_else(|| sum_optional(load_time_ms, generation_total_ms).or(generation_total_ms));
+    Ok(Some(OpenVinoCorpusOperatorTimingContext {
+        source_receipt: path_string(&path),
+        case_id: string_at(case, "id").unwrap_or_else(|| "unknown_case".to_string()),
+        profile_id: string_at(case, "profile").unwrap_or_else(|| "unknown_profile".to_string()),
+        prompt_tokens,
+        output_tokens,
+        load_time_ms,
+        tokenize_ms: number_at_any(case, &["timing.openvino_perf_metrics.tokenization.mean_ms"]),
+        first_token_ms: number_at_any(
+            case,
+            &[
+                "timing.openvino_perf_metrics.time_to_first_token.mean_ms",
+                "timing.first_streamed_text_chunk_ms",
+            ],
+        ),
+        generation_total_ms,
+        total_response_ms,
+        throughput_tokens_per_s: number_at_any(
+            case,
+            &["timing.openvino_perf_metrics.throughput.mean_ms"],
+        )
+        .filter(|value| *value > 0.0)
+        .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms)),
+        direct_generated_token_ids_available: bool_at_any(
+            case,
+            &["generated_token_ids_available_from_pipeline"],
+        ) == Some(true),
+    }))
 }
 
 fn openvino_corpus_operator_timing_context(
@@ -11275,6 +11626,18 @@ fn workload_profiles_with_openvino_gpu_promotions(
             purpose:
                 "battery or quiet-mode ask where NPU/GPU must prove power or stability advantage"
                     .to_string(),
+            promoted_route: None,
+            candidate_routes: vec![
+                DEFAULT_ASK_ROUTE.to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+                "dense_slm_openvino_gpu_candidate".to_string(),
+            ],
+        },
+        WorkloadProfile {
+            profile_id: "warm_resident".to_string(),
+            prompt_tokens: "<=512".to_string(),
+            output_tokens: "<=128".to_string(),
+            purpose: "same-process warm or resident ask where NPU must prove stable reuse without cold-start promotion".to_string(),
             promoted_route: None,
             candidate_routes: vec![
                 DEFAULT_ASK_ROUTE.to_string(),
@@ -11850,6 +12213,45 @@ mod tests {
         assert_eq!(receipt.source_change_summary.stale_after_merged_count, 1);
         assert!(receipt.required_reruns.iter().any(|rerun| rerun.contains("answer corpus")));
         assert!(receipt.gaps.iter().any(|gap| gap.contains("refreshed Lunar Lake BitNet")));
+        Ok(())
+    }
+
+    #[test]
+    fn regression_bundle_v2_fails_when_bitnet_semantic_intake_requires_rerun() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-19T05:30:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        write_stale_bitnet_semantic_intake(temp.path(), BITNET_SEMANTIC_INTAKE)?;
+
+        let bundle = build_regression_bundle_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            None,
+            None,
+            None,
+            None,
+            Some(Path::new(BITNET_SEMANTIC_INTAKE)),
+            "2026-05-19T06:05:00Z".to_string(),
+        )?;
+
+        assert!(!bundle.regression_passed);
+        assert!(!bundle.regression_surface.strict_ready);
+        assert!(
+            strict_regression_v2_gaps(&bundle)
+                .iter()
+                .any(|gap| gap.contains("BitNet semantic intake requires Lunar Lake reruns")),
+            "{:?}",
+            strict_regression_v2_gaps(&bundle)
+        );
+        let Some(intake) = bundle.bitnet_semantic_intake.as_ref() else {
+            bail!("missing bitnet_semantic_intake summary");
+        };
+        assert!(intake.rerun_required);
+        assert_eq!(intake.stale_after_merged_count, 1);
         Ok(())
     }
 
@@ -13053,6 +13455,205 @@ mod tests {
     }
 
     #[test]
+    fn route_profile_comparison_uses_openvino_profile_run_for_heavy_profiles() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_route_corpus_v2_receipts(temp.path())?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {"total_ms": 150.0},
+                "tokens": {"prompt_count": 38, "generated_count": 8}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_PHASE_COMPARISON,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_phase_comparison",
+                "fallback_used": false,
+                "gguf_cpu_reference": {"timing": {"prefill_512": {}, "decode_128": {}}}
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            OPENVINO_PROFILE_RUN,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_profile_run",
+                "fallback_used": false,
+                "generation": {
+                    "devices": [
+                        {
+                            "runtime_device": "GPU.0",
+                            "fallback_used": false,
+                            "cases": [
+                                {
+                                    "id": "prefill_heavy_route_policy_long_context",
+                                    "profile": "prefill_heavy",
+                                    "prompt_token_count": 2731,
+                                    "generated_token_count": 64,
+                                    "generated_token_ids_available_from_pipeline": true,
+                                    "timing": {
+                                        "pipeline_construct_wall_ms": 1000.0,
+                                        "generation_wall_ms": 1500.0,
+                                        "first_streamed_text_chunk_ms": 600.0,
+                                        "openvino_perf_metrics": {
+                                            "load_time_ms": 900.0,
+                                            "tokenization": {"mean_ms": 2.0},
+                                            "time_to_first_token": {"mean_ms": 610.0},
+                                            "num_generated_tokens": 64,
+                                            "throughput": {"mean_ms": 40.0}
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "decode_heavy_route_policy_long_generation",
+                                    "profile": "decode_heavy",
+                                    "prompt_token_count": 66,
+                                    "generated_token_count": 512,
+                                    "generated_token_ids_available_from_pipeline": true,
+                                    "timing": {
+                                        "pipeline_construct_wall_ms": 1000.0,
+                                        "generation_wall_ms": 9000.0,
+                                        "first_streamed_text_chunk_ms": 400.0,
+                                        "openvino_perf_metrics": {
+                                            "load_time_ms": 900.0,
+                                            "tokenization": {"mean_ms": 2.0},
+                                            "time_to_first_token": {"mean_ms": 410.0},
+                                            "num_generated_tokens": 512,
+                                            "throughput": {"mean_ms": 55.0}
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "runtime_device": "NPU",
+                            "fallback_used": false,
+                            "cases": [
+                                {
+                                    "id": "prefill_heavy_route_policy_long_context",
+                                    "profile": "prefill_heavy",
+                                    "prompt_token_count": 2731,
+                                    "generated_token_count": 64,
+                                    "generated_token_ids_available_from_pipeline": true,
+                                    "timing": {
+                                        "pipeline_construct_wall_ms": 1000.0,
+                                        "generation_wall_ms": 4200.0,
+                                        "first_streamed_text_chunk_ms": 1400.0
+                                    }
+                                },
+                                {
+                                    "id": "decode_heavy_route_policy_long_generation",
+                                    "profile": "decode_heavy",
+                                    "prompt_token_count": 66,
+                                    "generated_token_count": 512,
+                                    "generated_token_ids_available_from_pipeline": true,
+                                    "timing": {
+                                        "pipeline_construct_wall_ms": 1000.0,
+                                        "generation_wall_ms": 24000.0,
+                                        "first_streamed_text_chunk_ms": 400.0
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }),
+        )?;
+
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-14T17:00:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-14T17:05:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-14T17:10:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_COMPARISON), serde_json::to_vec_pretty(&comparison)?)?;
+        let ledger = build_route_promotion_ledger_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-14T17:15:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
+
+        let profiles = build_route_profile_comparison_with_created_utc_and_inputs(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Path::new(DENSE_PHASE_COMPARISON),
+            None,
+            Some(Path::new(DENSE_CPU_CORPUS_V2)),
+            Some(Path::new(DENSE_OV_CORPUS_V2)),
+            None,
+            "2026-05-19T07:20:00Z".to_string(),
+        )?;
+
+        let prefill = profiles
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "prefill_heavy")
+            .context("missing prefill_heavy profile")?;
+        let gpu_prefill = prefill
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+            .context("missing GPU prefill route")?;
+        assert_eq!(gpu_prefill.timing_applicability.measured_prompt_tokens, Some(2731));
+        assert_eq!(gpu_prefill.timing_applicability.measured_output_tokens, Some(64));
+        assert!(gpu_prefill.timing_applicability.timing_matches_profile);
+        assert!(gpu_prefill.timing.phase_coverage.iter().any(|coverage| {
+            coverage
+                == "profile_timing_from_openvino_profile_run_case_prefill_heavy_route_policy_long_context"
+        }));
+
+        let decode = profiles
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "decode_heavy")
+            .context("missing decode_heavy profile")?;
+        let npu_decode = decode
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_npu_candidate")
+            .context("missing NPU decode route")?;
+        assert_eq!(npu_decode.timing_applicability.measured_prompt_tokens, Some(66));
+        assert_eq!(npu_decode.timing_applicability.measured_output_tokens, Some(512));
+        assert!(npu_decode.timing_applicability.timing_matches_profile);
+        assert_eq!(profiles.timing_coverage.candidate_proxy_or_missing_route_count, 0);
+        assert!(
+            !profiles
+                .timing_coverage
+                .proxy_or_missing_routes
+                .iter()
+                .any(|route| route.contains("dense_slm_openvino"))
+        );
+        Ok(())
+    }
+
+    #[test]
     fn npu_resident_session_clears_missing_warm_route_proof_blocker() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_json(
@@ -13128,6 +13729,18 @@ mod tests {
                 .contains(&"NPU cache or resident warm-route proof is missing".to_string()),
             "{:?}",
             evidence.blockers
+        );
+        let warm_evidence = diagnostics.get("dense_slm_openvino_npu_candidate", "warm_resident");
+        assert!(
+            !warm_evidence.blockers.iter().any(|blocker| blocker.contains("NPU cold start")),
+            "{:?}",
+            warm_evidence.blockers
+        );
+        assert!(
+            warm_evidence
+                .source_receipts
+                .iter()
+                .any(|source| { source.ends_with(OPENVINO_NPU_RESIDENT_SESSION) })
         );
         Ok(())
     }
@@ -14271,6 +14884,7 @@ mod tests {
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new("cold-warm.json")),
             None,
+            None,
             "2026-05-16T19:05:00Z".to_string(),
         )?;
         // Seed the durability builder with the pre-REG-005 strict surface it
@@ -14485,6 +15099,7 @@ mod tests {
                 }
             }),
         )?;
+        write_ready_bitnet_semantic_intake(temp.path(), BITNET_SEMANTIC_INTAKE)?;
 
         let bundle = build_regression_bundle_with_created_utc_and_inputs(
             temp.path(),
@@ -14493,6 +15108,7 @@ mod tests {
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new("cold-warm.json")),
             Some(Path::new("durability.json")),
+            Some(Path::new(BITNET_SEMANTIC_INTAKE)),
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -14542,6 +15158,7 @@ mod tests {
         assert!(bundle.regression_surface.cold_warm_benchmark_ready);
         assert!(bundle.regression_surface.durability_bundle_indexed);
         assert!(bundle.regression_surface.durability_stability_proven);
+        assert!(bundle.regression_surface.bitnet_semantic_intake_indexed);
         let Some(cold_warm) = bundle.cold_warm_benchmark.as_ref() else {
             bail!("missing cold_warm_benchmark summary");
         };
@@ -14555,6 +15172,12 @@ mod tests {
         assert!(durability.regression_ready, "{:?}", durability.gaps);
         assert!(durability.stability_proven);
         assert_eq!(durability.stable_profile_count, 3);
+        let Some(intake) = bundle.bitnet_semantic_intake.as_ref() else {
+            bail!("missing bitnet_semantic_intake summary");
+        };
+        assert!(intake.regression_ready, "{:?}", intake.gaps);
+        assert!(!intake.rerun_required);
+        assert_eq!(intake.pending_shared_change_count, 1);
         assert!(strict_regression_v2_gaps(&bundle).is_empty());
         Ok(())
     }
@@ -14642,6 +15265,7 @@ mod tests {
             "2026-05-14T17:45:00Z".to_string(),
         )?;
         fs::write(temp.path().join("cold-warm.json"), serde_json::to_vec_pretty(&cold_warm)?)?;
+        write_ready_bitnet_semantic_intake(temp.path(), BITNET_SEMANTIC_INTAKE)?;
 
         let bundle = build_regression_bundle_with_created_utc_and_inputs(
             temp.path(),
@@ -14650,6 +15274,7 @@ mod tests {
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new("cold-warm.json")),
             None,
+            Some(Path::new(BITNET_SEMANTIC_INTAKE)),
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -15444,6 +16069,143 @@ mod tests {
             }),
         )?;
         Ok(())
+    }
+
+    fn write_ready_bitnet_semantic_intake(root: &Path, file: &str) -> Result<()> {
+        write_json(
+            root,
+            file,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_bitnet_semantic_intake",
+                "proof_stage": "shared_bitnet_semantic_intake_no_new_inference",
+                "created_utc": "2026-05-19T05:45:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(root),
+                "source_changes_receipt": path_string(&root.join(BITNET_SEMANTIC_SOURCE_CHANGES)),
+                "cpu_reference_bundle": path_string(&root.join(BITNET_CPU_BUNDLE)),
+                "operator_comparison": path_string(&root.join(OPERATOR_COMPARISON)),
+                "source_change_summary": {
+                    "total_change_count": 1,
+                    "pending_shared_change_count": 1,
+                    "merged_to_main_count": 0,
+                    "stale_after_merged_count": 0,
+                    "source_lanes": ["a770"],
+                    "pending_changes": ["a770#5020 fix(bitnet): preserve K precision for attention scores"],
+                    "merged_changes": [],
+                    "notes": ["pending shared changes are indexed but do not invalidate Lunar Lake receipts until they merge to main"]
+                },
+                "lunar_lake_evidence": {
+                    "cpu_reference_bundle_created_utc": "2026-05-12T18:43:14Z",
+                    "operator_comparison_created_utc": "2026-05-19T05:30:00Z",
+                    "evidence_cutoff_utc": "2026-05-12T18:43:14Z",
+                    "cpu_reference_bundle_path": path_string(&root.join(BITNET_CPU_BUNDLE)),
+                    "operator_comparison_path": path_string(&root.join(OPERATOR_COMPARISON)),
+                    "evidence_paths": [BITNET_CPU_BUNDLE, OPERATOR_COMPARISON]
+                },
+                "changes": [
+                    {
+                        "source_lane": "a770",
+                        "source_pr": 5020,
+                        "title": "fix(bitnet): preserve K precision for attention scores",
+                        "status": "stack_open",
+                        "semantic_scope": ["attention_score_k_precision"],
+                        "requires_lunar_lake_rerun_when_merged_to_main": true,
+                        "merged_at_utc": null,
+                        "stale_after_cpu_reference": false,
+                        "stale_after_operator_comparison": false,
+                        "lunar_lake_rerun_required": false,
+                        "notes": ["pending shared semantic change will require Lunar Lake reruns after main merge"]
+                    }
+                ],
+                "rerun_required": false,
+                "required_reruns": [],
+                "intake_ready": true,
+                "gaps": [],
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "route_promotion_changed": false,
+                    "answer_quality_claim": false,
+                    "speedup_claim": false,
+                    "acceleration_claim": false,
+                    "arc_or_npu_bitnet_claim": false,
+                    "qk256_behavior_changed": false,
+                    "dense_slm_as_bitnet_proof": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )
+    }
+
+    fn write_stale_bitnet_semantic_intake(root: &Path, file: &str) -> Result<()> {
+        write_json(
+            root,
+            file,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_bitnet_semantic_intake",
+                "proof_stage": "shared_bitnet_semantic_intake_no_new_inference",
+                "created_utc": "2026-05-19T06:05:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(root),
+                "source_changes_receipt": path_string(&root.join(BITNET_SEMANTIC_SOURCE_CHANGES)),
+                "cpu_reference_bundle": path_string(&root.join(BITNET_CPU_BUNDLE)),
+                "operator_comparison": path_string(&root.join(OPERATOR_COMPARISON)),
+                "source_change_summary": {
+                    "total_change_count": 1,
+                    "pending_shared_change_count": 0,
+                    "merged_to_main_count": 1,
+                    "stale_after_merged_count": 1,
+                    "source_lanes": ["a770"],
+                    "pending_changes": [],
+                    "merged_changes": ["a770#5020 fix(bitnet): preserve K precision for attention scores"],
+                    "notes": ["merged shared semantic change is newer than Lunar Lake evidence"]
+                },
+                "lunar_lake_evidence": {
+                    "cpu_reference_bundle_created_utc": "2026-05-12T18:43:14Z",
+                    "operator_comparison_created_utc": "2026-05-19T05:30:00Z",
+                    "evidence_cutoff_utc": "2026-05-12T18:43:14Z",
+                    "cpu_reference_bundle_path": path_string(&root.join(BITNET_CPU_BUNDLE)),
+                    "operator_comparison_path": path_string(&root.join(OPERATOR_COMPARISON)),
+                    "evidence_paths": [BITNET_CPU_BUNDLE, OPERATOR_COMPARISON]
+                },
+                "changes": [
+                    {
+                        "source_lane": "a770",
+                        "source_pr": 5020,
+                        "title": "fix(bitnet): preserve K precision for attention scores",
+                        "status": "merged_to_main",
+                        "semantic_scope": ["attention_score_k_precision"],
+                        "requires_lunar_lake_rerun_when_merged_to_main": true,
+                        "merged_at_utc": "2026-05-19T06:00:00Z",
+                        "stale_after_cpu_reference": true,
+                        "stale_after_operator_comparison": true,
+                        "lunar_lake_rerun_required": true,
+                        "notes": ["merged shared semantic change is newer than Lunar Lake BitNet evidence"]
+                    }
+                ],
+                "rerun_required": true,
+                "required_reruns": [
+                    "rerun Lunar Lake BitNet CPU answer corpus",
+                    "rerun scalar-vs-AVX2 BitNet answer parity"
+                ],
+                "intake_ready": false,
+                "gaps": [
+                    "merged shared BitNet semantic changes require refreshed Lunar Lake BitNet evidence"
+                ],
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "route_promotion_changed": false,
+                    "answer_quality_claim": false,
+                    "speedup_claim": false,
+                    "acceleration_claim": false,
+                    "arc_or_npu_bitnet_claim": false,
+                    "qk256_behavior_changed": false,
+                    "dense_slm_as_bitnet_proof": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )
     }
 
     fn write_json(root: &Path, file: &str, value: Value) -> Result<()> {

@@ -26,20 +26,15 @@
 
 #![cfg(target_arch = "x86_64")]
 
-use bitnet_models::quant::i2s_qk256::{QK256_BLOCK, QK256_PACKED_BYTES, gemv_qk256_row};
+use bitnet_models::quant::i2s_qk256::{
+    QK256_BLOCK, QK256_PACKED_BYTES, code_to_f32, gemv_qk256_row,
+};
 use bitnet_models::quant::i2s_qk256_avx2::gemv_qk256_avx2;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 /// Code-to-weight mapping for QK256 format
 ///
-/// This matches the GGML I2_S specification:
-/// - Code 0 → -2.0
-/// - Code 1 → -1.0
-/// - Code 2 → +1.0
-/// - Code 3 → +2.0
-const WEIGHTS: [f32; 4] = [-2.0, -1.0, 1.0, 2.0];
-
 /// Tolerance for floating-point comparison
 ///
 /// This is set to 1e-4 to account for:
@@ -461,19 +456,21 @@ fn test_qk256_avx2_uniform_codes() {
 
         // Sanity check: expected value should be close to actual results
         // (for uniform codes, result should equal weight * sum(x), allowing for floating-point error)
-        let expected_weight = WEIGHTS[code as usize];
+        let expected_weight = code_to_f32(code);
         let sum_x: f32 = x.iter().sum();
         let expected = expected_weight * sum_x;
         let expected_diff = (scalar_result - expected).abs();
+        let expected_rel_diff =
+            if expected.abs() > 1e-6 { expected_diff / expected.abs() } else { expected_diff };
 
         // Allow larger tolerance for expected value due to summation order differences
         assert!(
-            expected_diff / expected.abs() < 0.01,
+            expected_rel_diff < 0.01,
             "Uniform code {} sanity check failed: expected={}, got={}, rel_diff={}",
             code,
             expected,
             scalar_result,
-            expected_diff / expected.abs()
+            expected_rel_diff
         );
     }
 

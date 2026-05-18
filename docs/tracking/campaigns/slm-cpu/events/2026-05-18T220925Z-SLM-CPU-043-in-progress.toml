@@ -1,0 +1,25 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T22:09:25Z"
+event = "in_progress"
+item = "SLM-CPU-043"
+branch = "codex/slm-cpu-043-q8-packed-linear-prototype"
+actor = "codex"
+summary = "Started the Q8_0 dense linear locality prototype slice after SLM-CPU-042."
+notes = [
+  "Implementation is limited to a fixture-level Q8_0 sidecar prototype and tracker/dashboard bookkeeping.",
+]
+
+[claims]
+may_claim = [
+  "SLM-CPU-043 is in progress as a bounded Q8_0 dense linear sidecar or dequant-fused prototype slice.",
+]
+must_not_claim = [
+  "A production dense runtime replacement exists.",
+  "A runtime speedup is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Q4/Q5 runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]

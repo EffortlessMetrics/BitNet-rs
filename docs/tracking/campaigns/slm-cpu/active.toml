@@ -2585,7 +2585,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-043"
-status = "ready"
+status = "merged"
+pr = 5794
+head_sha = "2661f94be70693fc3ffad5d8fb9b2bad947775ad"
+merge_sha = "f2087460628299e8474860c33633475aa7a35cf1"
 branch = "codex/slm-cpu-043-q8-packed-linear-prototype"
 stackable = false
 review_mode = "codex_premerge"
