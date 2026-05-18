@@ -283,7 +283,8 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-QUAL-REPORT-001
 
-Status: in_progress
+Status: merged
+Linked PR: #5633
 Blocked by: `LNL258V-OPENVINO-UX-001`, `LNL258V-OV-QUAL-005`
 
 Add `docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md` and classify
