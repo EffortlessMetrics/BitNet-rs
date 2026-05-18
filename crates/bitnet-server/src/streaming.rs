@@ -297,6 +297,7 @@ mod tests {
                 crate::security::SecurityValidator::new(crate::security::SecurityConfig::default())
                     .unwrap(),
             ),
+            receipt_store: Arc::new(crate::ServerReceiptStore::default()),
             metrics: Arc::new(
                 crate::monitoring::metrics::MetricsCollector::new(
                     &crate::monitoring::MonitoringConfig::default(),
