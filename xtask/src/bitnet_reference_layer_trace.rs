@@ -28,12 +28,15 @@ const DEFAULT_VALUE_PROJECTION_HISTORY_REPLAY_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-value-projection-history-replay.json";
 const DEFAULT_ATTN_NORM_CURRENT_REPLAY_OUTPUT: &str =
     "target/a770-diagnostic/bitnet-reference-attn-norm-current-replay.json";
+const DEFAULT_FINAL_NORM_REPLAY_OUTPUT: &str =
+    "target/a770-diagnostic/bitnet-reference-final-norm-replay.json";
 const DEFAULT_CPU_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-cpu";
 const DEFAULT_A770_TRACE_DIR: &str = "target/a770-diagnostic/reference-layer-trace-rust-a770";
 const DEFAULT_BITNET_MODEL: &str = "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf";
 const DEFAULT_ATTN_OUTPUT_WEIGHT: &str = "blk.0.attn_output.weight";
 const DEFAULT_VALUE_PROJECTION_WEIGHT: &str = "blk.0.attn_v.weight";
 const DEFAULT_ATTN_NORM_WEIGHT: &str = "blk.0.attn_norm.weight";
+const DEFAULT_FINAL_NORM_WEIGHT: &str = "output_norm.weight";
 
 const CRITICAL_NOT_CLAIMS: &[&str] = &[
     "selected_attention_residency",
@@ -196,6 +199,16 @@ struct ValueProjectionHistoryReplayArgs {
 
 #[derive(Debug)]
 struct AttnNormCurrentReplayArgs {
+    reference: PathBuf,
+    cpu_trace_dir: PathBuf,
+    model: Option<PathBuf>,
+    weight: String,
+    output: Option<PathBuf>,
+    format: String,
+}
+
+#[derive(Debug)]
+struct FinalNormReplayArgs {
     reference: PathBuf,
     cpu_trace_dir: PathBuf,
     model: Option<PathBuf>,
@@ -427,6 +440,24 @@ fn maybe_dispatch(args: &[String]) -> Result<bool> {
             emit_report(&report, &opts.format)?;
             Ok(true)
         }
+        Some("bitnet-reference-final-norm-replay") => {
+            if args[2..].iter().any(|arg| arg == "-h" || arg == "--help") {
+                print_final_norm_replay_help();
+                return Ok(true);
+            }
+            let opts = parse_final_norm_replay_args(args)?;
+            let report = build_final_norm_replay(&opts)?;
+            if let Some(output) = &opts.output {
+                if let Some(parent) = output.parent() {
+                    fs::create_dir_all(parent)
+                        .with_context(|| format!("creating {}", parent.display()))?;
+                }
+                fs::write(output, serde_json::to_vec_pretty(&report)?)
+                    .with_context(|| format!("writing {}", output.display()))?;
+            }
+            emit_report(&report, &opts.format)?;
+            Ok(true)
+        }
         _ => Ok(false),
     }
 }
@@ -482,6 +513,12 @@ fn print_value_projection_history_replay_help() {
 fn print_attn_norm_current_replay_help() {
     println!(
         "Replay layer-0 attention RMSNorm from reference/Rust embedding inputs and compare current-token attn_norm outputs\n\nUsage: xtask.exe bitnet-reference-attn-norm-current-replay [OPTIONS]\n\nOptions:\n      --reference <PATH>      Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>  Rust CPU trace directory [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --model <PATH>          GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>         GGUF attention RMSNorm weight [default: blk.0.attn_norm.weight]\n      --output <PATH>         Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-attn-norm-current-replay.json]\n      --format <FORMAT>       Output format: human or json [default: human]\n  -h, --help                  Print help"
+    );
+}
+
+fn print_final_norm_replay_help() {
+    println!(
+        "Replay final RMSNorm from reference/Rust layer outputs and compare result_norm/final_norm outputs\n\nUsage: xtask.exe bitnet-reference-final-norm-replay [OPTIONS]\n\nOptions:\n      --reference <PATH>      Reference layer-trace run or sidecar JSON [default: target/a770-diagnostic/bitnet-reference-layer-trace-run.json]\n      --cpu-trace-dir <PATH>  Rust CPU trace directory [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --model <PATH>          GGUF model path [default: model path from reference receipt or models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf]\n      --weight <NAME>         GGUF final RMSNorm weight [default: output_norm.weight]\n      --output <PATH>         Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-final-norm-replay.json]\n      --format <FORMAT>       Output format: human or json [default: human]\n  -h, --help                  Print help"
     );
 }
 
@@ -783,6 +820,38 @@ fn parse_attn_norm_current_replay_args(args: &[String]) -> Result<AttnNormCurren
         }
     }
     Ok(AttnNormCurrentReplayArgs { reference, cpu_trace_dir, model, weight, output, format })
+}
+
+fn parse_final_norm_replay_args(args: &[String]) -> Result<FinalNormReplayArgs> {
+    if args.get(1).map(String::as_str) != Some("bitnet-reference-final-norm-replay") {
+        bail!("parse_final_norm_replay_args called for unexpected command");
+    }
+    let mut reference = PathBuf::from(DEFAULT_RUN_OUTPUT);
+    let mut cpu_trace_dir = PathBuf::from(DEFAULT_CPU_TRACE_DIR);
+    let mut model = None::<PathBuf>;
+    let mut weight = DEFAULT_FINAL_NORM_WEIGHT.to_string();
+    let mut output = Some(PathBuf::from(DEFAULT_FINAL_NORM_REPLAY_OUTPUT));
+    let mut format = "human".to_string();
+    let mut i = 2usize;
+    while i < args.len() {
+        let key = args[i].as_str();
+        i += 1;
+        let mut value = || -> Result<String> {
+            let value = args.get(i).with_context(|| format!("{key} requires a value"))?.clone();
+            i += 1;
+            Ok(value)
+        };
+        match key {
+            "--reference" => reference = PathBuf::from(value()?),
+            "--cpu-trace-dir" => cpu_trace_dir = PathBuf::from(value()?),
+            "--model" => model = Some(PathBuf::from(value()?)),
+            "--weight" => weight = value()?,
+            "--output" => output = Some(PathBuf::from(value()?)),
+            "--format" => format = value()?,
+            other => bail!("unknown bitnet-reference-final-norm-replay option {other}"),
+        }
+    }
+    Ok(FinalNormReplayArgs { reference, cpu_trace_dir, model, weight, output, format })
 }
 
 fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
@@ -2087,6 +2156,184 @@ fn build_attn_norm_current_replay(args: &AttnNormCurrentReplayArgs) -> Result<Va
     }))
 }
 
+fn build_final_norm_replay(args: &FinalNormReplayArgs) -> Result<Value> {
+    let reference_path = normalize_path(&args.reference)?;
+    let cpu_trace_dir = normalize_path(&args.cpu_trace_dir)?;
+    let reference_root = read_json(&reference_path)?;
+    let reference_records = read_reference_records(&reference_root)?;
+    let trace = reference_trace_receipt(&reference_root)?;
+    let model_path = args
+        .model
+        .clone()
+        .or_else(|| {
+            reference_root.pointer("/model/model_path").and_then(Value::as_str).map(PathBuf::from)
+        })
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_BITNET_MODEL));
+    let model_path = normalize_path(&model_path)?;
+    let model_block_count =
+        if model_path.is_file() { read_gguf_block_count(&model_path).ok().flatten() } else { None };
+    let expected_final_layer = model_block_count.and_then(|layers| layers.checked_sub(1));
+
+    let rust_record_list = read_rust_trace_records(&cpu_trace_dir).ok();
+    let reference_input = match expected_final_layer {
+        Some(layer) => reference_records.iter().find(|record| {
+            record.stage == "l_out"
+                && record.layer.and_then(|value| usize::try_from(value).ok()) == Some(layer)
+        }),
+        None => reference_records.iter().find(|record| record.stage == "l_out"),
+    }
+    .filter(|record| record.values_available && !record.first_values.is_empty());
+    let reference_target = reference_records
+        .iter()
+        .find(|record| record.stage == "result_norm")
+        .filter(|record| record.values_available && !record.first_values.is_empty());
+    let rust_input = rust_record_list
+        .as_ref()
+        .and_then(|records| select_rust_trace_record(records, "post_layer", expected_final_layer));
+    let rust_target = rust_record_list
+        .as_ref()
+        .and_then(|records| select_rust_trace_record(records, "final_norm", None));
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !reference_path.is_file() {
+        blocked_reasons.push("reference_layer_trace_receipt_missing".to_string());
+    }
+    if !model_path.is_file() {
+        blocked_reasons.push("model_gguf_missing".to_string());
+    }
+    if reference_input.is_none() {
+        blocked_reasons.push(match expected_final_layer {
+            Some(_) => "reference_final_l_out_missing".to_string(),
+            None => "reference_l_out_missing".to_string(),
+        });
+    }
+    if reference_target.is_none() {
+        blocked_reasons.push("reference_result_norm_missing".to_string());
+    }
+    if rust_record_list.is_none() {
+        blocked_reasons.push("rust_cpu_trace_dir_unavailable".to_string());
+    }
+    if rust_input.is_none() {
+        blocked_reasons.push(match expected_final_layer {
+            Some(_) => "rust_final_post_layer_missing".to_string(),
+            None => "rust_post_layer_missing".to_string(),
+        });
+    }
+    if rust_target.is_none() {
+        blocked_reasons.push("rust_final_norm_missing".to_string());
+    }
+
+    let mut model = json!({
+        "path": path_to_string(&model_path),
+        "exists": model_path.is_file(),
+        "block_count": model_block_count,
+        "expected_final_layer": expected_final_layer,
+    });
+    let mut weight = json!({
+        "name": args.weight,
+    });
+    let mut replay = Value::Null;
+
+    if model_path.is_file() && reference_input.is_some() && reference_target.is_some() {
+        match build_final_norm_replay_body(
+            &model_path,
+            &args.weight,
+            reference_input.expect("checked above"),
+            reference_target.expect("checked above"),
+            rust_input,
+            rust_target,
+        ) {
+            Ok((model_report, weight_report, replay_report)) => {
+                model = model_report;
+                weight = weight_report;
+                replay = replay_report;
+            }
+            Err(err) => {
+                blocked_reasons.push(format!("final_norm_replay_unavailable:{err}"));
+            }
+        }
+    }
+
+    let scope_mismatch =
+        replay.pointer("/scope/scope_mismatch").and_then(Value::as_bool).unwrap_or(false);
+    let reference_input_matches_rust_input = replay
+        .pointer("/inputs/reference_vs_rust/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta <= 1.0e-6);
+    let reference_target_differs_from_rust_target = replay
+        .pointer("/targets/reference_vs_rust/max_abs_delta")
+        .and_then(Value::as_f64)
+        .is_some_and(|delta| delta > 1.0e-9);
+    let best_reference_delta = replay
+        .pointer("/reference_input_replay/best_vs_reference_target/max_abs_delta")
+        .and_then(Value::as_f64);
+    let best_rust_delta = replay
+        .pointer("/rust_input_replay/best_vs_rust_target/max_abs_delta")
+        .and_then(Value::as_f64);
+
+    let current_blocked_reasons = if blocked_reasons.is_empty() {
+        classify_final_norm_replay(
+            scope_mismatch,
+            reference_input_matches_rust_input,
+            best_reference_delta,
+            best_rust_delta,
+            reference_target_differs_from_rust_target,
+        )
+    } else {
+        blocked_reasons.clone()
+    };
+    let next_action = final_norm_replay_next_action(&current_blocked_reasons);
+
+    Ok(json!({
+        "schema_version": 1,
+        "receipt_type": "bitnet_reference_final_norm_replay",
+        "diagnostic": "bitnet_reference_final_norm_replay",
+        "producer": "cargo xtask bitnet-reference-final-norm-replay",
+        "created_at": chrono::Utc::now().to_rfc3339(),
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "promotion_allowed": false,
+        "classification": "diagnostic_only",
+        "inputs": {
+            "reference": path_to_string(&reference_path),
+            "cpu_trace_dir": path_to_string(&cpu_trace_dir),
+            "model": path_to_string(&model_path),
+            "weight": args.weight,
+        },
+        "reference_trace": {
+            "capture_scope": trace.pointer("/capture_scope").cloned().unwrap_or(Value::Null),
+            "warmup_skip_policy": trace.pointer("/warmup_skip_policy").cloned().unwrap_or(Value::Null),
+            "n_tokens": trace.pointer("/n_tokens").cloned().unwrap_or(Value::Null),
+            "n_outputs": trace.pointer("/n_outputs").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_index": trace.pointer("/sampled_output_token_index").cloned().unwrap_or(Value::Null),
+            "sampled_output_token_id": trace.pointer("/sampled_output_token_id").cloned().unwrap_or(Value::Null),
+            "model_block_count": model_block_count,
+            "expected_final_layer": expected_final_layer,
+            "l_out": reference_input.map(reference_record_summary).unwrap_or(Value::Null),
+            "result_norm": reference_target.map(reference_record_summary).unwrap_or(Value::Null),
+        },
+        "rust_trace": {
+            "present": rust_record_list.is_some(),
+            "post_layer": rust_input.map(rust_record_summary).unwrap_or(Value::Null),
+            "final_norm": rust_target.map(rust_record_summary).unwrap_or(Value::Null),
+        },
+        "model": model,
+        "weight": weight,
+        "replay": replay,
+        "decision": {
+            "scope_mismatch": scope_mismatch,
+            "reference_input_matches_rust_input": reference_input_matches_rust_input,
+            "reference_target_differs_from_rust_target": reference_target_differs_from_rust_target,
+            "best_reference_delta": best_reference_delta,
+            "best_rust_delta": best_rust_delta,
+            "current_blocked_reasons": current_blocked_reasons,
+            "next_action": next_action,
+            "claim_allowed": false,
+        },
+        "not_claims": CRITICAL_NOT_CLAIMS,
+    }))
+}
+
 fn project_qk256_same_input(
     model_path: &Path,
     weight_name: &str,
@@ -2438,6 +2685,201 @@ fn build_attn_norm_current_replay_body(
     Ok((weight.model_report, weight.weight_report, replay))
 }
 
+fn build_final_norm_replay_body(
+    model_path: &Path,
+    weight_name: &str,
+    reference_input: &ReferenceTraceRecord,
+    reference_target: &ReferenceTraceRecord,
+    rust_input: Option<&RustTraceRecord>,
+    rust_target: Option<&RustTraceRecord>,
+) -> Result<(Value, Value, Value)> {
+    let hidden = reference_target.nelements as usize;
+    if hidden == 0 {
+        bail!("reference result_norm target is empty");
+    }
+    if reference_input.first_values.len() != hidden {
+        bail!(
+            "reference l_out has {} values, expected hidden {hidden}",
+            reference_input.first_values.len()
+        );
+    }
+    if reference_target.first_values.len() != hidden {
+        bail!(
+            "reference result_norm has {} values, expected hidden {hidden}",
+            reference_target.first_values.len()
+        );
+    }
+    let weight = load_rmsnorm_weight(model_path, weight_name, hidden)?;
+    let variants = rmsnorm_replay_variants(weight.eps, &weight.eps_source);
+    let weight_candidate_scan = final_norm_weight_candidate_scan(
+        model_path,
+        hidden,
+        &reference_input.first_values,
+        &reference_target.first_values,
+        rust_input.map(|record| record.first_values.as_slice()),
+        rust_target.map(|record| record.first_values.as_slice()),
+    )?;
+    let reference_input_vs_rust = rust_input
+        .map(|record| compare_vectors(&reference_input.first_values, &record.first_values));
+    let reference_target_vs_rust = rust_target
+        .map(|record| compare_vectors(&reference_target.first_values, &record.first_values));
+    let reference_input_replay = rmsnorm_replay_section(
+        "reference_l_out",
+        &reference_input.first_values,
+        &weight.values,
+        &variants,
+        Some(&reference_target.first_values),
+        rust_target.map(|record| record.first_values.as_slice()),
+    )?;
+    let rust_input_replay = match rust_input {
+        Some(record) => rmsnorm_replay_section(
+            "rust_post_layer",
+            &record.first_values,
+            &weight.values,
+            &variants,
+            Some(&reference_target.first_values),
+            rust_target.map(|target| target.first_values.as_slice()),
+        )?,
+        None => Value::Null,
+    };
+    let scope = final_norm_replay_scope(reference_target, rust_input, rust_target);
+
+    let replay = json!({
+        "kernel": "rust_scalar_rmsnorm_final_token_replay",
+        "policy": "Final RMSNorm replay is diagnostic-only evidence for localizing the result_norm/final_norm delta; it does not promote reference parity, A770 semantic quality, selected attention, value mix residency, resident KV, full residency, performance, or completion",
+        "scope": scope,
+        "inputs": {
+            "reference_stage": "l_out",
+            "rust_stage": "post_layer",
+            "reference": row_report(&reference_input.first_values),
+            "rust": rust_input.map(|record| row_report(&record.first_values)).unwrap_or(Value::Null),
+            "reference_vs_rust": reference_input_vs_rust.unwrap_or(Value::Null),
+        },
+        "targets": {
+            "reference_stage": "result_norm",
+            "rust_stage": "final_norm",
+            "reference": row_report(&reference_target.first_values),
+            "rust": rust_target.map(|record| row_report(&record.first_values)).unwrap_or(Value::Null),
+            "reference_vs_rust": reference_target_vs_rust.unwrap_or(Value::Null),
+        },
+        "weight_candidate_scan": weight_candidate_scan,
+        "reference_input_replay": reference_input_replay,
+        "rust_input_replay": rust_input_replay,
+    });
+
+    Ok((weight.model_report, weight.weight_report, replay))
+}
+
+fn final_norm_weight_candidate_scan(
+    model_path: &Path,
+    expected_len: usize,
+    reference_input: &[f32],
+    reference_target: &[f32],
+    rust_input: Option<&[f32]>,
+    rust_target: Option<&[f32]>,
+) -> Result<Value> {
+    use bitnet_models::formats::gguf::{GgufReader, GgufTensorType};
+    use bitnet_models::loader::MmapFile;
+
+    let mmap =
+        MmapFile::open(model_path).map_err(|err| anyhow::anyhow!("opening GGUF model: {err}"))?;
+    let reader = GgufReader::new(mmap.as_slice())
+        .map_err(|err| anyhow::anyhow!("parsing GGUF model: {err}"))?;
+    let architecture = reader.get_string_metadata("general.architecture");
+    let (eps, eps_source) = gguf_rmsnorm_eps(&reader, architecture.as_deref());
+    let variants = rmsnorm_replay_variants(eps, &eps_source);
+    let mut rows = Vec::<Value>::new();
+
+    for name in reader.tensor_names() {
+        if !name.to_ascii_lowercase().contains("norm") {
+            continue;
+        }
+        let Some(info) = reader.get_tensor_info_by_name(name) else {
+            continue;
+        };
+        if !matches!(info.tensor_type, GgufTensorType::F32 | GgufTensorType::F16) {
+            continue;
+        }
+        let element_count = info.shape.iter().try_fold(1usize, |acc, dim| {
+            acc.checked_mul(*dim).context("RMSNorm candidate element count overflow")
+        })?;
+        if element_count != expected_len {
+            continue;
+        }
+        let data = reader
+            .get_tensor_data_by_info(info)
+            .map_err(|err| anyhow::anyhow!("reading raw data for '{name}': {err}"))?;
+        let values = (0..element_count)
+            .map(|index| decode_gguf_scalar(data, info.tensor_type, index))
+            .collect::<Result<Vec<_>>>()?;
+        let reference_best =
+            best_rmsnorm_candidate_delta(reference_input, &values, reference_target, &variants)?;
+        let rust_best = match (rust_input, rust_target) {
+            (Some(input), Some(target)) => {
+                best_rmsnorm_candidate_delta(input, &values, target, &variants)?
+            }
+            _ => Value::Null,
+        };
+        rows.push(json!({
+            "name": name,
+            "gguf_dtype": format!("{:?}", info.tensor_type),
+            "gguf_shape": info.shape,
+            "row": row_report(&values),
+            "best_vs_reference_target": reference_best,
+            "best_vs_rust_target": rust_best,
+        }));
+    }
+
+    rows.sort_by(|left, right| {
+        delta_metric(left, "/best_vs_reference_target/max_abs_delta")
+            .total_cmp(&delta_metric(right, "/best_vs_reference_target/max_abs_delta"))
+            .then_with(|| {
+                delta_metric(left, "/best_vs_rust_target/max_abs_delta")
+                    .total_cmp(&delta_metric(right, "/best_vs_rust_target/max_abs_delta"))
+            })
+            .then_with(|| {
+                left.pointer("/name")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .cmp(right.pointer("/name").and_then(Value::as_str).unwrap_or(""))
+            })
+    });
+
+    Ok(json!({
+        "policy": "Diagnostic-only scan of norm-like GGUF tensors with final hidden width; used to catch final-norm weight identity mistakes before changing runtime math",
+        "expected_len": expected_len,
+        "candidate_count": rows.len(),
+        "best_candidate": rows.first().cloned().unwrap_or(Value::Null),
+        "candidates": rows,
+    }))
+}
+
+fn best_rmsnorm_candidate_delta(
+    input: &[f32],
+    weight: &[f32],
+    target: &[f32],
+    variants: &[RmsNormReplayVariant],
+) -> Result<Value> {
+    let mut best = None::<(f64, Value)>;
+    for variant in variants {
+        let output = replay_rmsnorm(input, weight, variant.eps, variant.accumulation)?;
+        let delta = compare_vectors(&output, target);
+        let max_abs_delta = delta_metric(&delta, "/max_abs_delta");
+        let row = json!({
+            "id": variant.id,
+            "eps": variant.eps,
+            "eps_source": variant.eps_source,
+            "accumulation": variant.accumulation.as_str(),
+            "max_abs_delta": max_abs_delta,
+            "rms_abs_delta": delta_metric(&delta, "/rms_abs_delta"),
+        });
+        if best.as_ref().is_none_or(|(best_delta, _)| max_abs_delta < *best_delta) {
+            best = Some((max_abs_delta, row));
+        }
+    }
+    Ok(best.map(|(_, value)| value).unwrap_or(Value::Null))
+}
+
 fn load_rmsnorm_weight(
     model_path: &Path,
     weight_name: &str,
@@ -2510,6 +2952,29 @@ fn gguf_rmsnorm_eps(
         }
     }
     (1.0e-5, "default_1e-5".to_string())
+}
+
+fn read_gguf_block_count(model_path: &Path) -> Result<Option<usize>> {
+    use bitnet_models::formats::gguf::GgufReader;
+    use bitnet_models::loader::MmapFile;
+
+    let mmap =
+        MmapFile::open(model_path).map_err(|err| anyhow::anyhow!("opening GGUF model: {err}"))?;
+    let reader = GgufReader::new(mmap.as_slice())
+        .map_err(|err| anyhow::anyhow!("parsing GGUF model: {err}"))?;
+    let architecture = reader.get_string_metadata("general.architecture");
+    if let Some(architecture) = architecture {
+        let key = format!("{architecture}.block_count");
+        if let Some(block_count) = reader.get_u32_metadata(&key) {
+            return Ok(Some(block_count as usize));
+        }
+    }
+    for key in ["bitnet-b1.58.block_count", "llama.block_count", "block_count"] {
+        if let Some(block_count) = reader.get_u32_metadata(key) {
+            return Ok(Some(block_count as usize));
+        }
+    }
+    Ok(None)
 }
 
 fn rmsnorm_replay_variants(model_eps: f32, model_eps_source: &str) -> Vec<RmsNormReplayVariant> {
@@ -2744,6 +3209,112 @@ fn attn_norm_current_replay_next_action(reasons: &[String]) -> &'static str {
         "compare the selected RMSNorm replay rule against Candle/Rust runtime arithmetic before changing model math"
     } else {
         "RMSNorm replay explains current-token attention norm; continue downstream value-projection sensitivity analysis"
+    }
+}
+
+fn final_norm_replay_scope(
+    reference_target: &ReferenceTraceRecord,
+    rust_input: Option<&RustTraceRecord>,
+    rust_target: Option<&RustTraceRecord>,
+) -> Value {
+    let reference_sampled_token_index = reference_sampled_token_index(reference_target);
+    let rust_input_seq = rust_input.and_then(|record| record.seq.map(|seq| seq as u64));
+    let rust_target_seq = rust_target.and_then(|record| record.seq.map(|seq| seq as u64));
+    let mut failures = Vec::<Value>::new();
+    if let (Some(reference), Some(rust)) = (reference_sampled_token_index, rust_input_seq)
+        && reference != rust
+    {
+        failures.push(json!({
+            "reason": "reference_sampled_token_index_does_not_match_rust_post_layer_seq",
+            "reference_sampled_token_index": reference,
+            "rust_seq": rust,
+        }));
+    }
+    if let (Some(reference), Some(rust)) = (reference_sampled_token_index, rust_target_seq)
+        && reference != rust
+    {
+        failures.push(json!({
+            "reason": "reference_sampled_token_index_does_not_match_rust_final_norm_seq",
+            "reference_sampled_token_index": reference,
+            "rust_seq": rust,
+        }));
+    }
+    if let (Some(input), Some(target)) = (rust_input_seq, rust_target_seq)
+        && input != target
+    {
+        failures.push(json!({
+            "reason": "rust_post_layer_seq_does_not_match_rust_final_norm_seq",
+            "rust_input_seq": input,
+            "rust_target_seq": target,
+        }));
+    }
+    json!({
+        "reference_sampled_token_index": reference_sampled_token_index,
+        "rust_input_seq": rust_input_seq,
+        "rust_target_seq": rust_target_seq,
+        "scope_mismatch": !failures.is_empty(),
+        "failures": failures,
+    })
+}
+
+fn classify_final_norm_replay(
+    scope_mismatch: bool,
+    reference_input_matches_rust_input: bool,
+    best_reference_delta: Option<f64>,
+    best_rust_delta: Option<f64>,
+    reference_target_differs_from_rust_target: bool,
+) -> Vec<String> {
+    let mut reasons = Vec::<String>::new();
+    if scope_mismatch {
+        reasons.push("final_norm_trace_scope_mismatch".to_string());
+    }
+    if !reference_input_matches_rust_input {
+        reasons.push("final_norm_input_delta_present".to_string());
+    }
+    match best_reference_delta {
+        Some(delta) if delta > 1.0e-6 => {
+            reasons.push("rmsnorm_replay_does_not_match_reference_final_norm".to_string());
+        }
+        None => reasons.push("rmsnorm_reference_final_norm_replay_unavailable".to_string()),
+        _ => {}
+    }
+    match best_rust_delta {
+        Some(delta) if delta > 1.0e-6 => {
+            reasons.push("rmsnorm_replay_does_not_match_rust_final_norm".to_string());
+        }
+        None => reasons.push("rmsnorm_rust_final_norm_replay_unavailable".to_string()),
+        _ => {}
+    }
+    if reference_target_differs_from_rust_target {
+        reasons.push("reference_rust_final_norm_delta_present".to_string());
+    }
+    reasons.sort_unstable();
+    reasons.dedup();
+    reasons
+}
+
+fn final_norm_replay_next_action(reasons: &[String]) -> &'static str {
+    if reasons.iter().any(|reason| {
+        matches!(
+            reason.as_str(),
+            "reference_final_l_out_missing"
+                | "rust_final_post_layer_missing"
+                | "reference_l_out_missing"
+                | "rust_post_layer_missing"
+        )
+    }) {
+        "capture final-layer l_out/post_layer inputs before replaying result_norm/final_norm"
+    } else if reasons.iter().any(|reason| reason == "final_norm_trace_scope_mismatch") {
+        "align reference and Rust final-token trace scope before interpreting final RMSNorm deltas"
+    } else if reasons
+        .iter()
+        .any(|reason| reason == "rmsnorm_replay_does_not_match_reference_final_norm")
+    {
+        "pin GGML final RMSNorm epsilon, accumulation, and output rounding against the reference implementation"
+    } else if reasons.iter().any(|reason| reason == "reference_rust_final_norm_delta_present") {
+        "compare the selected final RMSNorm replay rule against Candle/Rust runtime arithmetic before changing model math"
+    } else {
+        "Final RMSNorm replay explains result_norm/final_norm; continue to logits projection attribution"
     }
 }
 
@@ -3574,13 +4145,18 @@ fn compare_vectors(left: &[f32], right: &[f32]) -> Value {
 }
 
 fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> {
+    let records = read_rust_trace_records(dir)?;
+    Ok(collapse_rust_trace_records(&records))
+}
+
+fn read_rust_trace_records(dir: &Path) -> Result<Vec<RustTraceRecord>> {
     if !dir.exists() {
         bail!("rust trace directory missing: {}", dir.display());
     }
     if !dir.is_dir() {
         bail!("rust trace path is not a directory: {}", dir.display());
     }
-    let mut records = BTreeMap::new();
+    let mut records = Vec::new();
     for entry in fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
         let entry = entry.with_context(|| format!("reading entry in {}", dir.display()))?;
         let path = entry.path();
@@ -3591,21 +4167,49 @@ fn read_rust_trace_dir(dir: &Path) -> Result<BTreeMap<String, RustTraceRecord>> 
             fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
         let record: RustTraceRecord =
             serde_json::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
-        let stage = record
-            .stage
-            .clone()
-            .unwrap_or_else(|| record.name.rsplit('/').next().unwrap_or(&record.name).to_string());
-        let should_insert = records.get(&stage).is_none_or(|existing| {
-            rust_trace_preference(&record) < rust_trace_preference(existing)
-        });
-        if should_insert {
-            records.insert(stage, record);
-        }
+        records.push(record);
     }
     if records.is_empty() {
         bail!("rust trace directory has no .trace files: {}", dir.display());
     }
     Ok(records)
+}
+
+fn collapse_rust_trace_records(records: &[RustTraceRecord]) -> BTreeMap<String, RustTraceRecord> {
+    let mut by_stage = BTreeMap::new();
+    for record in records {
+        let stage = record
+            .stage
+            .clone()
+            .unwrap_or_else(|| record.name.rsplit('/').next().unwrap_or(&record.name).to_string());
+        let should_insert = by_stage.get(&stage).is_none_or(|existing| {
+            rust_trace_preference(&record) < rust_trace_preference(existing)
+        });
+        if should_insert {
+            by_stage.insert(stage, record.clone());
+        }
+    }
+    by_stage
+}
+
+fn select_rust_trace_record<'a>(
+    records: &'a [RustTraceRecord],
+    stage: &str,
+    expected_layer: Option<usize>,
+) -> Option<&'a RustTraceRecord> {
+    records
+        .iter()
+        .filter(|record| {
+            record.stage.as_deref().unwrap_or_else(|| record.name.rsplit('/').next().unwrap_or(""))
+                == stage
+        })
+        .filter(|record| !record.first_values.is_empty())
+        .filter(|record| {
+            expected_layer.is_none_or(|layer| {
+                record.layer.and_then(|value| usize::try_from(value).ok()) == Some(layer)
+            })
+        })
+        .min_by_key(|record| rust_trace_preference(record))
 }
 
 fn rust_trace_preference(record: &RustTraceRecord) -> i64 {
@@ -10194,6 +10798,40 @@ fn emit_report(report: &Value, format: &str) -> Result<()> {
                 }
                 return Ok(());
             }
+            if receipt_type == "bitnet_reference_final_norm_replay" {
+                let block_count = report.pointer("/model/block_count").and_then(Value::as_u64);
+                let expected_final_layer =
+                    report.pointer("/model/expected_final_layer").and_then(Value::as_u64);
+                let best_reference_delta =
+                    report.pointer("/decision/best_reference_delta").and_then(Value::as_f64);
+                let best_rust_delta =
+                    report.pointer("/decision/best_rust_delta").and_then(Value::as_f64);
+                let reasons = report
+                    .pointer("/decision/current_blocked_reasons")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default();
+                println!(
+                    "bitnet reference final-norm replay: diagnostic_only=true claim_allowed=false block_count={} expected_final_layer={} best_reference_delta={} best_rust_delta={}",
+                    block_count.map(|value| value.to_string()).unwrap_or_else(|| "n/a".to_string()),
+                    expected_final_layer
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "n/a".to_string()),
+                    best_reference_delta
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "n/a".to_string()),
+                    best_rust_delta
+                        .map(|value| value.to_string())
+                        .unwrap_or_else(|| "n/a".to_string())
+                );
+                if !reasons.is_empty() {
+                    println!("blocked_reasons:");
+                    for reason in reasons {
+                        println!("  - {}", reason.as_str().unwrap_or("<non-string>"));
+                    }
+                }
+                return Ok(());
+            }
             let ready = report
                 .pointer("/decision/source_anchors_ready_for_target_local_patch")
                 .and_then(Value::as_bool)
@@ -10486,6 +11124,43 @@ mod tests {
         assert!(parsed.skip_a770);
         assert!(parsed.diag_rmsnorm_f64_accum);
         assert!(parsed.overwrite);
+        assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
+        assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
+    fn final_norm_replay_args_parse_defaults_and_overrides() {
+        let default_args =
+            vec!["xtask".to_string(), "bitnet-reference-final-norm-replay".to_string()];
+        let defaults = parse_final_norm_replay_args(&default_args).unwrap();
+        assert_eq!(defaults.reference, PathBuf::from(DEFAULT_RUN_OUTPUT));
+        assert_eq!(defaults.cpu_trace_dir, PathBuf::from(DEFAULT_CPU_TRACE_DIR));
+        assert_eq!(defaults.model, None);
+        assert_eq!(defaults.weight, DEFAULT_FINAL_NORM_WEIGHT);
+        assert_eq!(defaults.output, Some(PathBuf::from(DEFAULT_FINAL_NORM_REPLAY_OUTPUT)));
+        assert_eq!(defaults.format, "human");
+
+        let args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-final-norm-replay".to_string(),
+            "--reference".to_string(),
+            "ref.json".to_string(),
+            "--cpu-trace-dir".to_string(),
+            "cpu".to_string(),
+            "--model".to_string(),
+            "model.gguf".to_string(),
+            "--weight".to_string(),
+            "final_norm.weight".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ];
+        let parsed = parse_final_norm_replay_args(&args).unwrap();
+        assert_eq!(parsed.reference, PathBuf::from("ref.json"));
+        assert_eq!(parsed.cpu_trace_dir, PathBuf::from("cpu"));
+        assert_eq!(parsed.model, Some(PathBuf::from("model.gguf")));
+        assert_eq!(parsed.weight, "final_norm.weight");
         assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
         assert_eq!(parsed.format, "json");
     }
@@ -14661,6 +15336,138 @@ mod tests {
         assert!(reasons.contains(&json!("rust_embeddings_missing")));
         assert!(reasons.contains(&json!("rust_attn_norm_missing")));
         assert_eq!(report.pointer("/not_claims"), Some(&json!(CRITICAL_NOT_CLAIMS)));
+    }
+
+    #[test]
+    fn final_norm_replay_report_blocks_without_model_or_rust_trace() {
+        let dir = tempdir().unwrap();
+        let reference = dir.path().join("reference.json");
+        let model = dir.path().join("missing.gguf");
+        let trace_dir = dir.path().join("missing-trace-dir");
+        write_file(
+            &reference,
+            &serde_json::to_string_pretty(&json!({
+                "receipt_type": "bitnet_reference_layer_trace",
+                "records": [
+                    {
+                        "name": "l_out-0",
+                        "stage": "l_out",
+                        "graph_index": 100,
+                        "layer": 0,
+                        "dtype": "f32",
+                        "shape": [2, 1, 1, 1],
+                        "nelements": 2,
+                        "first_values": [1.0, 2.0],
+                        "values_available": true,
+                        "stats": {"rms": 1.5811388}
+                    },
+                    {
+                        "name": "result_norm-0",
+                        "stage": "result_norm",
+                        "graph_index": 101,
+                        "layer": -1,
+                        "dtype": "f32",
+                        "shape": [2, 1, 1, 1],
+                        "nelements": 2,
+                        "first_values": [0.5, 1.0],
+                        "values_available": true,
+                        "stats": {"rms": 0.7905694}
+                    }
+                ]
+            }))
+            .unwrap(),
+        );
+
+        let report = build_final_norm_replay(&FinalNormReplayArgs {
+            reference,
+            cpu_trace_dir: trace_dir,
+            model: Some(model),
+            weight: DEFAULT_FINAL_NORM_WEIGHT.to_string(),
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+        let reasons =
+            report.pointer("/decision/current_blocked_reasons").and_then(Value::as_array).unwrap();
+
+        assert_eq!(
+            report.pointer("/receipt_type"),
+            Some(&json!("bitnet_reference_final_norm_replay"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert!(reasons.contains(&json!("model_gguf_missing")));
+        assert!(reasons.contains(&json!("rust_cpu_trace_dir_unavailable")));
+        assert!(reasons.contains(&json!("rust_post_layer_missing")));
+        assert!(reasons.contains(&json!("rust_final_norm_missing")));
+        assert_eq!(
+            report.pointer("/decision/next_action"),
+            Some(&json!(
+                "capture final-layer l_out/post_layer inputs before replaying result_norm/final_norm"
+            ))
+        );
+        assert_eq!(report.pointer("/not_claims"), Some(&json!(CRITICAL_NOT_CLAIMS)));
+    }
+
+    #[test]
+    fn final_norm_replay_selects_post_layer_by_expected_final_layer() {
+        let layer0 = RustTraceRecord {
+            name: "layer0/post_layer".to_string(),
+            shape: vec![2],
+            dtype: "f32".to_string(),
+            blake3: "layer0".to_string(),
+            rms: 1.0,
+            num_elements: 2,
+            first_values: vec![1.0, 2.0],
+            seq: Some(0),
+            layer: Some(0),
+            stage: Some("post_layer".to_string()),
+        };
+        let final_layer = RustTraceRecord {
+            name: "layer29/post_layer".to_string(),
+            shape: vec![2],
+            dtype: "f32".to_string(),
+            blake3: "layer29".to_string(),
+            rms: 2.0,
+            num_elements: 2,
+            first_values: vec![3.0, 4.0],
+            seq: Some(0),
+            layer: Some(29),
+            stage: Some("post_layer".to_string()),
+        };
+        let records = vec![layer0, final_layer];
+
+        let selected = select_rust_trace_record(&records, "post_layer", Some(29)).unwrap();
+
+        assert_eq!(selected.layer, Some(29));
+        assert_eq!(selected.first_values, vec![3.0, 4.0]);
+    }
+
+    #[test]
+    fn best_rmsnorm_candidate_delta_selects_lowest_variant() {
+        let input = vec![3.0, 4.0];
+        let weight = vec![1.0, 1.0];
+        let target =
+            replay_rmsnorm(&input, &weight, 0.0, RmsNormAccumulation::F64Sequential).unwrap();
+        let variants = vec![
+            RmsNormReplayVariant {
+                id: "wrong_eps".to_string(),
+                eps: 1.0,
+                eps_source: "fixed_1".to_string(),
+                accumulation: RmsNormAccumulation::F64Sequential,
+            },
+            RmsNormReplayVariant {
+                id: "right_eps".to_string(),
+                eps: 0.0,
+                eps_source: "fixed_0".to_string(),
+                accumulation: RmsNormAccumulation::F64Sequential,
+            },
+        ];
+
+        let best = best_rmsnorm_candidate_delta(&input, &weight, &target, &variants).unwrap();
+
+        assert_eq!(best.pointer("/id"), Some(&json!("right_eps")));
+        assert_eq!(best.pointer("/max_abs_delta"), Some(&json!(0.0)));
     }
 
     #[test]
