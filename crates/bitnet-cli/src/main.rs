@@ -10163,6 +10163,7 @@ async fn handle_lunar_lake_command(
             artifact_root,
             operator_receipt,
             promotion_ledger,
+            route_profile_comparison,
             profile,
             route,
             model,
@@ -10178,6 +10179,7 @@ async fn handle_lunar_lake_command(
                 artifact_root,
                 operator_receipt,
                 promotion_ledger,
+                route_profile_comparison,
                 profile,
                 route,
                 model,
@@ -10200,6 +10202,7 @@ async fn run_lunar_lake_ask(
     artifact_root: std::path::PathBuf,
     operator_receipt: std::path::PathBuf,
     promotion_ledger: std::path::PathBuf,
+    route_profile_comparison: std::path::PathBuf,
     profile: String,
     route_id: String,
     model: std::path::PathBuf,
@@ -10217,6 +10220,7 @@ async fn run_lunar_lake_ask(
         &artifact_root,
         &operator_receipt,
         &promotion_ledger,
+        Some(&route_profile_comparison),
         &route_id,
         requested_backend_label,
         &profile,
@@ -10382,6 +10386,9 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "profile_id": ctx.route_selection.profile_id,
         "selected_route": ctx.route_selection.selected_route,
         "promotion_status": ctx.route_selection.promotion_status,
+        "route_profile_comparison": ctx.route_selection.route_profile_comparison,
+        "route_profile_status": ctx.route_selection.route_profile_status,
+        "route_profile_blockers": ctx.route_selection.route_profile_blockers,
         "route_reason": ctx.route_selection.route_reason,
         "why_not_cpu": ctx.route_selection.why_not_cpu,
         "why_not_gpu": ctx.route_selection.why_not_gpu,
@@ -10409,6 +10416,9 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
             "why_not_npu": ctx.route_selection.why_not_npu,
             "candidate_routes": ctx.route_selection.candidate_routes,
             "promotion_ledger": ctx.route_selection.promotion_ledger,
+            "route_profile_comparison": ctx.route_selection.route_profile_comparison,
+            "route_profile_status": ctx.route_selection.route_profile_status,
+            "route_profile_blockers": ctx.route_selection.route_profile_blockers,
         },
         "model_family": model_family,
         "model_architecture": model_architecture,
@@ -13152,6 +13162,9 @@ mod tests {
                 "dense_slm_openvino_npu_candidate".to_string(),
             ],
             promotion_ledger: Some("lunar-lake-route-promotion.json".to_string()),
+            route_profile_comparison: Some("lunar-lake-route-profile-comparison.json".to_string()),
+            route_profile_status: Some("promoted_route_ready".to_string()),
+            route_profile_blockers: vec![],
             route: route.clone(),
         };
         let source = serde_json::json!({
@@ -13212,7 +13225,10 @@ mod tests {
         assert_eq!(receipt["profile_id"], "ask_normal");
         assert_eq!(receipt["selected_route"], commands::lunar_lake::DEFAULT_ASK_ROUTE);
         assert_eq!(receipt["promotion_status"], "promoted");
+        assert_eq!(receipt["route_profile_status"], "promoted_route_ready");
+        assert_eq!(receipt["route_profile_comparison"], "lunar-lake-route-profile-comparison.json");
         assert_eq!(receipt["route_selection"]["selection_source"], "promotion_ledger_auto");
+        assert_eq!(receipt["route_selection"]["route_profile_status"], "promoted_route_ready");
         assert!(receipt["why_not_gpu"].as_array().is_some_and(|items| !items.is_empty()));
         assert_eq!(receipt["model_family"], "qwen");
         assert_eq!(receipt["model_architecture"], "qwen2");

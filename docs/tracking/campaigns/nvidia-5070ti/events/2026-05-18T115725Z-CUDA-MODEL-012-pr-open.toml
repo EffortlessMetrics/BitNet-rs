@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T11:57:25Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-012"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "cuda-model-012-qwen3-product-cli-review"
+pr = 5660
+head_sha = "af2804f62bf62e7159b619b1cdad43168bc9308e"
+summary = "Opened PR #5660 for the Qwen3 product CLI promotion review."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5660",
+  "docs/reports/CUDA_MODEL_012_QWEN3_PRODUCT_CLI_PROMOTION_REVIEW.md",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+]
+
+notes = [
+  "The promotion is bounded to normal ask/chat product CLI readiness on the RTX 5070 Ti dense_regular_llm_cuda route.",
+  "Server readiness, speedup, benchmark-qualified speed, full CUDA residency, broad dense GGUF readiness, Qwen2.5 inheritance, and BitNet packed I2_S/QK256 proof remain false/non-claims.",
+]

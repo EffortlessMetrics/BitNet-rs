@@ -8,14 +8,16 @@ Machine: intel-258v
 
 This report summarizes Lunar Lake OpenVINO dense SLM corpus-v2 candidate-route
 failures after rerunning the corpus under the accepted one-token
-`yes_no_clear_sky` fixture policy. It does not promote any route, claim speedup
-or power advantage, claim native Arc/NPU acceleration, or change BitNet
+`yes_no_clear_sky` fixture policy and the refreshed exact-lowercase
+`stop_token_one_word_done` fixture. It does not promote any route, claim
+speedup or power advantage, claim native Arc/NPU acceleration, or change BitNet
 QK256/I2_S behavior.
 
 ## Source Evidence
 
 ```text
 ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json
+ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-cpu-corpus-v2-diagnosis.json
 ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json
 ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json
 ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-generation-budget-sensitivity.json
@@ -31,6 +33,7 @@ decoded text, not direct OpenVINO GenAI pipeline-internal token IDs.
 
 | Route | Corpus v2 result | Failed profiles | Promotion result |
 | --- | ---: | --- | --- |
+| OpenVINO CPU | 9/12 pass, 3 fail | regression_tiny, prefill_heavy, decode_heavy | Candidate remains blocked |
 | OpenVINO GPU.0 / Arc 140V | 9/12 pass, 3 fail | regression_tiny, prefill_heavy, decode_heavy | Candidate remains blocked |
 | OpenVINO NPU | 10/12 pass, 2 fail | regression_tiny, prefill_heavy | Candidate remains blocked |
 
@@ -42,10 +45,13 @@ evidence requirements in the route-profile comparison.
 
 | Route | Case | Profile | Category | Classification | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| GPU.0 | stop_token_one_word_done | regression_tiny | stop_and_eos | exact_answer_instruction_not_followed | Expected `done`; observed `okay, understood` |
+| CPU | stop_token_one_word_done | regression_tiny | stop_and_eos | exact_answer_instruction_not_followed | Expected `done`; observed `ai` |
+| CPU | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `Lunar` |
+| CPU | decode_heavy_short_list | decode_heavy | decode_heavy | readable_output_missing_required_terms | Missing required term `model` |
+| GPU.0 | stop_token_one_word_done | regression_tiny | stop_and_eos | exact_answer_instruction_not_followed | Expected `done`; observed `ai` |
 | GPU.0 | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `Lunar` |
 | GPU.0 | decode_heavy_short_list | decode_heavy | decode_heavy | readable_output_missing_required_terms | Missing required term `model` |
-| NPU | stop_token_one_word_done | regression_tiny | stop_and_eos | exact_answer_instruction_not_followed | Expected `done`; observed `okay, understood` |
+| NPU | stop_token_one_word_done | regression_tiny | stop_and_eos | exact_answer_instruction_not_followed | Expected `done`; observed `ai` |
 | NPU | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `CPU` |
 
 ## Budget Sensitivity
@@ -79,6 +85,14 @@ OpenVINO NPU remains blocked for:
   advantage is missing, and candidate-route promotion evidence is incomplete.
 - NPU-specific: cache or resident warm-route proof is missing, and cold start is
   still classified as OpenVINO pipeline load or device compile dominated.
+
+OpenVINO CPU remains blocked for:
+
+- `regression_tiny`: one-word stop/EOS instruction miss.
+- `prefill_heavy`: required content term missing.
+- `decode_heavy`: readable output missing required term.
+- All profiles: generated token IDs are retokenized, benchmark-qualified
+  advantage is missing, and candidate-route promotion evidence is incomplete.
 
 ## Next Actions
 

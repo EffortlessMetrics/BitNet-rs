@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-18T12:55:00Z",
+  "created_utc": "2026-05-18T23:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -30,7 +30,7 @@
         "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
       ],
-      "profile_status": "promoted_route_blocked",
+      "profile_status": "promoted_route_ready",
       "route_evidence": [
         {
           "route_id": "dense_slm_default_cpu",
@@ -82,20 +82,18 @@
             ]
           },
           "benchmark_qualified_advantage": false,
-          "promotion_eligible_for_profile": false,
+          "promotion_eligible_for_profile": true,
           "profile_quality": {
             "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
             "route_id": "dense_slm_default_cpu",
             "profile_id": "regression_tiny",
             "profile_present": true,
             "cases_total": 4,
-            "passed": 3,
-            "failed": 1,
+            "passed": 4,
+            "failed": 0,
             "fallback_used": false,
-            "status": "quality_failed",
-            "notes": [
-              "1 corpus-v2 cases failed for profile regression_tiny"
-            ]
+            "status": "passed",
+            "notes": []
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
@@ -113,9 +111,7 @@
             "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
-          "blockers": [
-            "corpus_v2 profile regression_tiny has 1 quality failures"
-          ]
+          "blockers": []
         },
         {
           "route_id": "dense_slm_openvino_gpu_candidate",
@@ -316,7 +312,7 @@
           ]
         }
       ],
-      "promotion_decision": "dense_slm_default_cpu is listed as promoted for regression_tiny, but profile evidence is incomplete",
+      "promotion_decision": "dense_slm_default_cpu remains promoted for regression_tiny",
       "gaps": []
     },
     {
@@ -500,7 +496,7 @@
             "candidate route requires benchmark-qualified profile evidence",
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
-            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+            "yes_no_clear_sky has generation-budget sensitivity class fixture_budget_passes"
           ]
         },
         {
@@ -595,7 +591,7 @@
             "candidate route requires benchmark-qualified profile evidence",
             "profile_regression_bundle",
             "route not promoted for profile ask_short",
-            "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+            "yes_no_clear_sky has generation-budget sensitivity class fixture_budget_passes"
           ]
         }
       ],
@@ -1900,8 +1896,8 @@
     "route_count": 20,
     "profile_specific_route_count": 14,
     "proxy_or_missing_route_count": 6,
-    "promotion_eligible_route_count": 3,
-    "promotion_eligible_profile_specific_route_count": 3,
+    "promotion_eligible_route_count": 4,
+    "promotion_eligible_profile_specific_route_count": 4,
     "candidate_route_count": 12,
     "candidate_proxy_or_missing_route_count": 4,
     "promotion_eligible_routes_have_profile_specific_timing": true,

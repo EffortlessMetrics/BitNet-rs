@@ -3644,30 +3644,30 @@ mod tests {
     }
 
     #[test]
-    fn model_status_dashboard_lists_qwen3_as_accelerator_ready_candidate() -> Result<()> {
+    fn model_status_dashboard_lists_qwen3_as_product_cli_ready() -> Result<()> {
         let matrix_path = workspace_model_coverage_matrix_path();
         let matrix = read_model_coverage_matrix(&matrix_path)?;
         let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
 
         let qwen3 = model_status_row_for(&dashboard, "dense_qwen3_06b_q8_candidate")?;
         assert_eq!(qwen3.display_name, "qwen3-0.6b-instruct-q8_0");
-        assert_eq!(qwen3.category, "candidate");
+        assert_eq!(qwen3.category, "supported");
         assert_eq!(qwen3.route.as_deref(), Some("dense_regular_llm_cuda"));
         assert!(qwen3.cpu_answer_ready);
         assert!(qwen3.accelerator_answer_ready);
-        assert!(!qwen3.product_cli_ready);
+        assert!(qwen3.product_cli_ready);
         assert!(qwen3.dense_regular_llm_cuda_proof);
         assert!(!qwen3.bitnet_packed_i2s_qk256_proof);
         assert!(!qwen3.speedup_claim);
         assert!(!qwen3.server_ready);
         assert!(!qwen3.full_residency_claim);
-        assert_eq!(qwen3.ask, "not ready");
+        assert_eq!(qwen3.ask, "ready");
         assert_eq!(qwen3.one_token, "ready");
         assert_eq!(qwen3.short_decode, "ready");
         assert_eq!(qwen3.warm_session, "ready");
         assert_eq!(qwen3.benchmark, "reviewed, speedup not accepted");
-        assert_eq!(qwen3.tier, "accelerator_answer_ready");
-        assert!(qwen3.next_proof.contains("CUDA-MODEL-012 product CLI promotion review"));
+        assert_eq!(qwen3.tier, "product_cli_ready");
+        assert!(qwen3.next_proof.contains("server smoke/readiness review"));
         assert!(qwen3.claim_boundary.contains("dense_regular_llm_cuda RTX 5070 Ti route"));
         assert!(qwen3.claim_boundary.contains("does not inherit Qwen2.5 CUDA receipts"));
         Ok(())
@@ -3747,13 +3747,13 @@ mod tests {
             models.iter().any(|model| {
                 model["id"] == "dense_qwen3_06b_q8_candidate"
                     && model["model_coverage_row"] == "dense_qwen3_06b_q8_candidate"
-                    && model["category"] == "candidate"
-                    && model["current_tier"] == "accelerator_answer_ready"
+                    && model["category"] == "supported"
+                    && model["current_tier"] == "product_cli_ready"
                     && model["selected_backend"] == "nvidia-rtx-5070-ti-cuda"
                     && model["selected_route"] == "dense_regular_llm_cuda"
                     && model["fallback_used"] == false
-                    && model["tier"] == "accelerator_answer_ready"
-                    && model["product_cli_ready"] == false
+                    && model["tier"] == "product_cli_ready"
+                    && model["product_cli_ready"] == true
                     && model["route"] == "dense_regular_llm_cuda"
                     && model["accelerator_answer_ready"] == true
                     && model["speedup_claim"] == false

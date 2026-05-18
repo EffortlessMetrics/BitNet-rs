@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T13:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-005"
+event = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OP-005-auto-route-profile-guard"
+summary = "Started LNL258V-OP-005 to make lunar-lake ask routing fail closed against route-profile comparison evidence."
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/main.rs",
+]
+notes = [
+  "The route promotion ledger still lists dense_slm_default_cpu as promoted for regression_tiny, while current route-profile evidence blocks that profile because stop_token_one_word_done fails.",
+  "The work keeps ask_normal CPU auto-routing valid when route-profile evidence is promoted_route_ready.",
+  "The work does not run inference, promote OpenVINO GPU/NPU, claim quality or speedup, or change BitNet QK256/I2_S behavior.",
+]
