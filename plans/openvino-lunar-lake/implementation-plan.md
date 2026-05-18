@@ -337,7 +337,8 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-QUAL-FIX-001
 
-Status: in_progress
+Status: merged
+Linked PR: #5644
 Blocked by: `LNL258V-OPENVINO-QUAL-POLICY-001`
 
 Apply the accepted exact-answer policy to the corpus-v2 fixture by tightening
