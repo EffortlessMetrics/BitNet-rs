@@ -35,7 +35,7 @@
 | crate-collapse | Crate collapse | LEAF-001 | Do not combine crate movement with runtime proof. |
 | falcon-e-family | Falcon-E Family compact 1.58-bit lane | FE-000 | Do not commit model binaries. |
 | falcon3-family | Falcon3 multi-size BitNet-family onboarding | F3-000 | Do not commit model binaries. |
-| intel-258v-platform | Intel 258V platform validation | LNL258V-PROFILE-RUN-002 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
+| intel-258v-platform | Intel 258V platform validation | LNL258V-OP-006 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
 | intel-a770 | Intel Arc A770 validation | A770-003 | OpenCL-first for native A770 proof. |
 | intel-npu | Intel NPU validation | NPU-012 | Device-node detection is not inference. |
 | llama3-8b-158 | Llama3 8B 1.58 supported-model candidate | LLAMA3-158-000 | Do not commit model binaries. |
