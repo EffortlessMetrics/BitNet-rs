@@ -402,6 +402,10 @@ validator for supported Qwen identities, reference-runner command identity,
 prompt/template/tokenizer authority, Rust token IDs, mechanical-score deltas,
 summary totals, token-ID availability, and claim-boundary flags. `M4-DENSE-REF-001`
 then records the bounded live comparison evidence against that validator.
+The validator is exercised by
+`crates/bitnet-cli/tests/fixtures/apple-m4-dense-reference-vs-rust-comparison.json`;
+that fixture is schema evidence only and does not stand in for reference-runner
+or live Rust M4 output.
 
 ## BitNet Ladder
 
