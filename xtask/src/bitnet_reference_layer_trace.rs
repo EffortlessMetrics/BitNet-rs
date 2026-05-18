@@ -1581,6 +1581,7 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                 &selected_query_head_boundary_frontier,
                 &selected_query_score_input_bucket_source,
                 &f64_downstream,
+                &cpu_comparison,
             );
         let selected_query_score_input_f16_frontier =
             attention_selected_query_score_input_f16_frontier(
@@ -32190,6 +32191,7 @@ fn attention_selected_query_rope_to_f16_head_conversion_frontier(
     head_boundary: &Value,
     selected_query_source: &Value,
     f64_downstream: &Value,
+    base_comparison: &Value,
 ) -> Value {
     let head_boundary_classification = selected_report_classification(head_boundary);
     let source_classification = selected_report_classification(selected_query_source);
@@ -32213,9 +32215,19 @@ fn attention_selected_query_rope_to_f16_head_conversion_frontier(
         || selected_dim_token_context
         || value_bool(rope_to_f16, "/selected_dim_bucket").unwrap_or(false)
         || value_bool(rope_to_f16, "/selected_token_bucket").unwrap_or(false);
-    let policy_effect = f64_downstream
+    let f64_policy_effect = f64_downstream
         .pointer("/f64/probability_history_effect/attention_query_score_input_f16_policy_effect")
         .unwrap_or(&Value::Null);
+    let base_policy_effect = base_comparison
+        .pointer("/attention_query_score_input_f16_policy_effect")
+        .unwrap_or(&Value::Null);
+    let (policy_effect, policy_effect_source) = if !f64_policy_effect.is_null() {
+        (f64_policy_effect, "f64_downstream")
+    } else if !base_policy_effect.is_null() {
+        (base_policy_effect, "base_comparison")
+    } else {
+        (&Value::Null, "missing")
+    };
     let policy_effect_classification =
         policy_effect.pointer("/classification").and_then(Value::as_str);
     let policy_row = policy_effect
@@ -32288,6 +32300,7 @@ fn attention_selected_query_rope_to_f16_head_conversion_frontier(
         "head_boundary_classification": head_boundary_classification,
         "source_classification": source_classification,
         "policy_effect_classification": policy_effect_classification,
+        "policy_effect_source": policy_effect_source,
         "policy_row_classification": policy_row_classification,
         "head": head,
         "selected_dim": selected_dim,
@@ -51377,6 +51390,7 @@ mod tests {
             &head_boundary,
             &report,
             &json!({}),
+            &json!({}),
         );
         assert_eq!(
             rope_to_f16.pointer("/classification"),
@@ -51547,6 +51561,28 @@ mod tests {
         })
     }
 
+    fn selected_query_rope_to_f16_root_policy_effect(row_classification: &str) -> Value {
+        json!({
+            "attention_query_score_input_f16_policy_effect": {
+                "classification": "selected_score_drift_follows_query_f16_score_input",
+                "rows": [
+                    {
+                        "label": "first_material_position",
+                        "status": "compared",
+                        "classification": row_classification,
+                        "head": 0,
+                        "key_slot": 0,
+                        "query_token": 0,
+                        "actual_score_shift": -0.001,
+                        "f16_shift_residual_abs": 0.0,
+                        "rope_shift_residual_abs": 0.001,
+                        "score_input_shift_residual_abs": 0.0
+                    }
+                ]
+            }
+        })
+    }
+
     #[test]
     fn selected_query_rope_to_f16_head_conversion_reports_score_input_match() {
         let selected_source = selected_query_head_boundary_source(
@@ -51558,6 +51594,7 @@ mod tests {
             &head_boundary,
             &selected_source,
             &selected_query_rope_to_f16_policy_effect("score_input_matches_f16_conversion"),
+            &json!({}),
         );
 
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
@@ -51569,6 +51606,33 @@ mod tests {
         assert_eq!(report.pointer("/head"), Some(&json!(0)));
         assert_eq!(report.pointer("/selected_dim"), Some(&json!(112)));
         assert_eq!(report.pointer("/selected_token"), Some(&json!(0)));
+        assert_eq!(report.pointer("/policy_row_present"), Some(&json!(true)));
+        assert_eq!(report.pointer("/policy_effect_source"), Some(&json!("f64_downstream")));
+        assert_eq!(
+            report.pointer("/selected_policy_row/classification"),
+            Some(&json!("score_input_matches_f16_conversion"))
+        );
+    }
+
+    #[test]
+    fn selected_query_rope_to_f16_head_conversion_uses_root_policy_effect() {
+        let selected_source = selected_query_head_boundary_source(
+            "selected_query_score_input_bucket_source_head_boundary_unpinned",
+            "rust_query_f16_score_conversion",
+        );
+        let head_boundary = attention_selected_query_head_boundary_frontier(&selected_source);
+        let report = attention_selected_query_rope_to_f16_head_conversion_frontier(
+            &head_boundary,
+            &selected_source,
+            &json!({}),
+            &selected_query_rope_to_f16_root_policy_effect("score_input_matches_f16_conversion"),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_score_input_matches_f16"))
+        );
+        assert_eq!(report.pointer("/policy_effect_source"), Some(&json!("base_comparison")));
         assert_eq!(report.pointer("/policy_row_present"), Some(&json!(true)));
         assert_eq!(
             report.pointer("/selected_policy_row/classification"),
@@ -51589,6 +51653,7 @@ mod tests {
             &selected_query_rope_to_f16_policy_effect(
                 "score_delta_better_predicted_by_pre_f16_query",
             ),
+            &json!({}),
         );
 
         assert_eq!(
@@ -51615,6 +51680,7 @@ mod tests {
             &head_boundary,
             &selected_source,
             &json!({}),
+            &json!({}),
         );
 
         assert_eq!(
@@ -51634,6 +51700,7 @@ mod tests {
         let report = attention_selected_query_rope_to_f16_head_conversion_frontier(
             &head_boundary,
             &selected_source,
+            &json!({}),
             &json!({}),
         );
 
@@ -51658,6 +51725,7 @@ mod tests {
             &head_boundary,
             &selected_source,
             &selected_query_rope_to_f16_policy_effect("score_input_matches_f16_conversion"),
+            &json!({}),
         );
 
         assert_eq!(
@@ -51669,6 +51737,7 @@ mod tests {
     #[test]
     fn selected_query_rope_to_f16_head_conversion_reports_missing_context() {
         let report = attention_selected_query_rope_to_f16_head_conversion_frontier(
+            &json!({}),
             &json!({}),
             &json!({}),
             &json!({}),
