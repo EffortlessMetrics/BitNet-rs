@@ -6222,9 +6222,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-NPU-RESIDENT-002"
-status = "pr_open"
+status = "merged"
 pr = 5796
-head_sha = "eb41702cb756f05da68e72cd7f2e07d2e7de98d0"
+head_sha = "b757eff6f005988e1ca8c94dcf2363e3e8f07b30"
+merge_sha = "6d48fc2d291a886aa7342b5e8be1d47f2dc5e7fc"
 branch = "codex/lunar-lake/LNL258V-NPU-RESIDENT-002-stability"
 stackable = false
 review_mode = "codex_premerge"
