@@ -1583,6 +1583,10 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                 &reference_records,
                 cpu_f64_records,
             );
+        let selected_query_rope_expression_policy =
+            attention_selected_query_rope_expression_policy_frontier(
+                &selected_query_pre_rope_epsilon_materiality,
+            );
         cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
             selected_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_effect"] =
@@ -1598,6 +1602,8 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             selected_query_pre_score_rope_source;
         cpu_comparison["attention_selected_query_pre_rope_projection_epsilon_materiality"] =
             selected_query_pre_rope_epsilon_materiality;
+        cpu_comparison["attention_selected_query_rope_expression_policy_frontier"] =
+            selected_query_rope_expression_policy;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -32384,6 +32390,240 @@ fn attention_selected_query_pre_rope_projection_epsilon_materiality(
     report
 }
 
+#[derive(Debug, Clone, Copy)]
+struct RopeExpressionReplay {
+    term_split: f32,
+    x0_product_contracted: f32,
+    x1_product_contracted: f32,
+}
+
+fn rope_expression_replay(
+    x0: f32,
+    x1: f32,
+    sin: f32,
+    cos: f32,
+    component: &str,
+) -> Option<RopeExpressionReplay> {
+    match component {
+        "lower_x0_cos_minus_x1_sin" => {
+            let term0 = x0 * cos;
+            let term1 = x1 * sin;
+            Some(RopeExpressionReplay {
+                term_split: term0 - term1,
+                x0_product_contracted: x0.mul_add(cos, -term1),
+                x1_product_contracted: (-x1).mul_add(sin, term0),
+            })
+        }
+        "upper_x0_sin_plus_x1_cos" => {
+            let term0 = x0 * sin;
+            let term1 = x1 * cos;
+            Some(RopeExpressionReplay {
+                term_split: term0 + term1,
+                x0_product_contracted: x0.mul_add(sin, term1),
+                x1_product_contracted: x1.mul_add(cos, term0),
+            })
+        }
+        _ => None,
+    }
+}
+
+fn rope_expression_replay_json(replay: Option<RopeExpressionReplay>) -> Value {
+    match replay {
+        Some(replay) => json!({
+            "term_split": replay.term_split,
+            "term_split_bits_u32": replay.term_split.to_bits(),
+            "term_split_bits_hex": u32_bits_hex(replay.term_split.to_bits()),
+            "x0_product_contracted": replay.x0_product_contracted,
+            "x0_product_contracted_bits_u32": replay.x0_product_contracted.to_bits(),
+            "x0_product_contracted_bits_hex": u32_bits_hex(replay.x0_product_contracted.to_bits()),
+            "x1_product_contracted": replay.x1_product_contracted,
+            "x1_product_contracted_bits_u32": replay.x1_product_contracted.to_bits(),
+            "x1_product_contracted_bits_hex": u32_bits_hex(replay.x1_product_contracted.to_bits()),
+        }),
+        None => Value::Null,
+    }
+}
+
+fn rope_expression_match_summary(
+    capture: Option<f32>,
+    replay: Option<RopeExpressionReplay>,
+) -> Value {
+    let capture_bits = capture.map(f32::to_bits);
+    let term_split_bits = replay.map(|replay| replay.term_split.to_bits());
+    let x0_product_contracted_bits = replay.map(|replay| replay.x0_product_contracted.to_bits());
+    let x1_product_contracted_bits = replay.map(|replay| replay.x1_product_contracted.to_bits());
+    let matches_term_split =
+        capture_bits.zip(term_split_bits).is_some_and(|(left, right)| left == right);
+    let matches_x0_product_contracted =
+        capture_bits.zip(x0_product_contracted_bits).is_some_and(|(left, right)| left == right);
+    let matches_x1_product_contracted =
+        capture_bits.zip(x1_product_contracted_bits).is_some_and(|(left, right)| left == right);
+    let matched_any =
+        matches_term_split || matches_x0_product_contracted || matches_x1_product_contracted;
+
+    json!({
+        "capture": capture,
+        "capture_bits_u32": capture_bits,
+        "capture_bits_hex": capture_bits.map(u32_bits_hex),
+        "term_split_bits_u32": term_split_bits,
+        "term_split_bits_hex": term_split_bits.map(u32_bits_hex),
+        "x0_product_contracted_bits_u32": x0_product_contracted_bits,
+        "x0_product_contracted_bits_hex": x0_product_contracted_bits.map(u32_bits_hex),
+        "x1_product_contracted_bits_u32": x1_product_contracted_bits,
+        "x1_product_contracted_bits_hex": x1_product_contracted_bits.map(u32_bits_hex),
+        "matches_term_split": matches_term_split,
+        "matches_x0_product_contracted": matches_x0_product_contracted,
+        "matches_x1_product_contracted": matches_x1_product_contracted,
+        "matches_any": matched_any,
+    })
+}
+
+fn attention_selected_query_rope_expression_policy_next_diagnostic(
+    classification: &str,
+) -> &'static str {
+    match classification {
+        "selected_query_rope_expression_policy_same_expression_input_epsilon_bucket" => {
+            "selected query RoPE expression and capture policy are not the selected bucket source; localize the selected query projection epsilon source before runtime math changes"
+        }
+        "selected_query_rope_expression_policy_expression_mismatch" => {
+            "selected query reference and Rust captures use different RoPE expression policies; pin exact query RoPE expression policy before runtime math changes"
+        }
+        "selected_query_rope_expression_policy_reference_capture_unpinned" => {
+            "extend reference selected query RoPE capture with direct expression bits before changing runtime math"
+        }
+        "selected_query_rope_expression_policy_rust_capture_unpinned" => {
+            "extend Rust selected query RoPE capture with direct expression bits before changing runtime math"
+        }
+        "selected_query_rope_expression_policy_missing_context" => {
+            "rerun selected query projection and post-RoPE histories before changing runtime math"
+        }
+        "selected_query_rope_expression_policy_not_active" => {
+            "pin selected query pre-RoPE projection epsilon materiality before expression-policy attribution"
+        }
+        _ => "keep selected query RoPE expression policy diagnostic-only",
+    }
+}
+
+fn attention_selected_query_rope_expression_policy_frontier(materiality: &Value) -> Value {
+    let materiality_classification = materiality.pointer("/classification").and_then(Value::as_str);
+    let active = materiality_classification
+        == Some("selected_query_pre_rope_projection_epsilon_explains_rope_bucket");
+    let input_pair = materiality.pointer("/input_pair").unwrap_or(&Value::Null);
+    let trig = materiality.pointer("/epsilon_probe/trig").unwrap_or(&Value::Null);
+    let component = materiality.pointer("/epsilon_probe/output_component").and_then(Value::as_str);
+    let reference_x0 = value_f64(input_pair, "/reference_x0").map(|value| value as f32);
+    let reference_x1 = value_f64(input_pair, "/reference_x1").map(|value| value as f32);
+    let rust_x0 = value_f64(input_pair, "/rust_x0").map(|value| value as f32);
+    let rust_x1 = value_f64(input_pair, "/rust_x1").map(|value| value as f32);
+    let sin = value_f64(trig, "/sin").map(|value| value as f32);
+    let cos = value_f64(trig, "/cos").map(|value| value as f32);
+    let reference_capture = value_f64(materiality, "/epsilon_probe/post_rope/reference_capture")
+        .map(|value| value as f32);
+    let rust_capture =
+        value_f64(materiality, "/epsilon_probe/post_rope/rust_capture").map(|value| value as f32);
+
+    let reference_replay = match (reference_x0, reference_x1, sin, cos, component) {
+        (Some(x0), Some(x1), Some(sin), Some(cos), Some(component)) => {
+            rope_expression_replay(x0, x1, sin, cos, component)
+        }
+        _ => None,
+    };
+    let rust_replay = match (rust_x0, rust_x1, sin, cos, component) {
+        (Some(x0), Some(x1), Some(sin), Some(cos), Some(component)) => {
+            rope_expression_replay(x0, x1, sin, cos, component)
+        }
+        _ => None,
+    };
+    let reference_match = rope_expression_match_summary(reference_capture, reference_replay);
+    let rust_match = rope_expression_match_summary(rust_capture, rust_replay);
+    let shared_term_split = value_bool(&reference_match, "/matches_term_split") == Some(true)
+        && value_bool(&rust_match, "/matches_term_split") == Some(true);
+    let shared_x0_product_contracted =
+        value_bool(&reference_match, "/matches_x0_product_contracted") == Some(true)
+            && value_bool(&rust_match, "/matches_x0_product_contracted") == Some(true);
+    let shared_x1_product_contracted =
+        value_bool(&reference_match, "/matches_x1_product_contracted") == Some(true)
+            && value_bool(&rust_match, "/matches_x1_product_contracted") == Some(true);
+    let shared_expression_policy =
+        shared_term_split || shared_x0_product_contracted || shared_x1_product_contracted;
+    let reference_matches_any = value_bool(&reference_match, "/matches_any") == Some(true);
+    let rust_matches_any = value_bool(&rust_match, "/matches_any") == Some(true);
+
+    let mut blocked_reasons = Vec::<String>::new();
+    if !active {
+        blocked_reasons
+            .push("selected_query_pre_rope_projection_epsilon_not_bucket_material".to_string());
+    }
+    if component.is_none() {
+        blocked_reasons.push("selected_query_rope_component_missing".to_string());
+    }
+    if reference_x0.is_none() || reference_x1.is_none() {
+        blocked_reasons.push("reference_query_rope_input_pair_missing".to_string());
+    }
+    if rust_x0.is_none() || rust_x1.is_none() {
+        blocked_reasons.push("rust_query_rope_input_pair_missing".to_string());
+    }
+    if sin.is_none() || cos.is_none() {
+        blocked_reasons.push("selected_query_rope_trig_missing".to_string());
+    }
+    if reference_capture.is_none() {
+        blocked_reasons.push("reference_query_rope_capture_missing".to_string());
+    }
+    if rust_capture.is_none() {
+        blocked_reasons.push("rust_query_rope_capture_missing".to_string());
+    }
+    if reference_replay.is_none() {
+        blocked_reasons.push("reference_query_rope_expression_replay_missing".to_string());
+    }
+    if rust_replay.is_none() {
+        blocked_reasons.push("rust_query_rope_expression_replay_missing".to_string());
+    }
+    blocked_reasons.sort_unstable();
+    blocked_reasons.dedup();
+
+    let classification = if !active {
+        "selected_query_rope_expression_policy_not_active"
+    } else if !blocked_reasons.is_empty() {
+        "selected_query_rope_expression_policy_missing_context"
+    } else if !reference_matches_any {
+        "selected_query_rope_expression_policy_reference_capture_unpinned"
+    } else if !rust_matches_any {
+        "selected_query_rope_expression_policy_rust_capture_unpinned"
+    } else if shared_expression_policy {
+        "selected_query_rope_expression_policy_same_expression_input_epsilon_bucket"
+    } else {
+        "selected_query_rope_expression_policy_expression_mismatch"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected query RoPE expression policy frontier is diagnostic-only evidence for deciding whether the selected post-RoPE F16 bucket crossing is caused by expression/capture policy or by the already-pinned pre-RoPE projection epsilon; it does not change runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, softmax residency, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "materiality_classification": materiality_classification,
+        "component": component,
+        "head": materiality.pointer("/head").cloned().unwrap_or(Value::Null),
+        "selected_dim": materiality.pointer("/selected_dim").cloned().unwrap_or(Value::Null),
+        "selected_token": materiality.pointer("/selected_token").cloned().unwrap_or(Value::Null),
+        "x0_dim": input_pair.pointer("/x0_dim").cloned().unwrap_or(Value::Null),
+        "x1_dim": input_pair.pointer("/x1_dim").cloned().unwrap_or(Value::Null),
+        "sin": sin,
+        "cos": cos,
+        "reference_replay": rope_expression_replay_json(reference_replay),
+        "rust_replay": rope_expression_replay_json(rust_replay),
+        "reference_match": reference_match,
+        "rust_match": rust_match,
+        "shared_term_split": shared_term_split,
+        "shared_x0_product_contracted": shared_x0_product_contracted,
+        "shared_x1_product_contracted": shared_x1_product_contracted,
+        "shared_expression_policy": shared_expression_policy,
+        "post_rope_bucket": materiality.pointer("/post_rope_bucket").cloned().unwrap_or(Value::Null),
+        "input_pair": input_pair.clone(),
+        "blocked_reasons": blocked_reasons,
+        "next_diagnostic": attention_selected_query_rope_expression_policy_next_diagnostic(classification),
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -48433,6 +48673,47 @@ mod tests {
         })
     }
 
+    fn selected_query_expression_materiality(
+        component: &str,
+        reference_x0: f32,
+        reference_x1: f32,
+        rust_x0: f32,
+        rust_x1: f32,
+        sin: f32,
+        cos: f32,
+        reference_capture: f32,
+        rust_capture: f32,
+    ) -> Value {
+        json!({
+            "classification": "selected_query_pre_rope_projection_epsilon_explains_rope_bucket",
+            "head": 5,
+            "selected_dim": 69,
+            "selected_token": 17,
+            "input_pair": {
+                "x0_dim": 5,
+                "x1_dim": 69,
+                "reference_x0": reference_x0,
+                "reference_x1": reference_x1,
+                "rust_x0": rust_x0,
+                "rust_x1": rust_x1,
+            },
+            "epsilon_probe": {
+                "output_component": component,
+                "trig": {
+                    "sin": sin,
+                    "cos": cos,
+                },
+                "post_rope": {
+                    "reference_capture": reference_capture,
+                    "rust_capture": rust_capture,
+                }
+            },
+            "post_rope_bucket": {
+                "f16_bucket_match": false,
+            }
+        })
+    }
+
     #[test]
     fn selected_query_pre_score_rope_source_reports_reference_pre_rope_missing() {
         let selected_source = selected_query_source_fixture();
@@ -48634,6 +48915,102 @@ mod tests {
             Some(&json!("reference_qcur_history_missing"))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_query_rope_expression_policy_reports_same_expression_input_epsilon() {
+        let component = "upper_x0_sin_plus_x1_cos";
+        let reference_x0 = -3.5094399452209473_f32;
+        let reference_x1 = -0.9128643274307251_f32;
+        let rust_x0 = -3.5094401836395264_f32;
+        let rust_x1 = -0.9128644466400146_f32;
+        let sin = -0.18372225761413574_f32;
+        let cos = 0.9829781651496887_f32;
+        let reference_replay =
+            rope_expression_replay(reference_x0, reference_x1, sin, cos, component)
+                .expect("reference replay");
+        let rust_replay =
+            rope_expression_replay(rust_x0, rust_x1, sin, cos, component).expect("rust replay");
+        let materiality = selected_query_expression_materiality(
+            component,
+            reference_x0,
+            reference_x1,
+            rust_x0,
+            rust_x1,
+            sin,
+            cos,
+            reference_replay.x0_product_contracted,
+            rust_replay.x0_product_contracted,
+        );
+
+        let report = attention_selected_query_rope_expression_policy_frontier(&materiality);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!(
+                "selected_query_rope_expression_policy_same_expression_input_epsilon_bucket"
+            ))
+        );
+        assert_eq!(report.pointer("/shared_x0_product_contracted"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_query_rope_expression_policy_reports_expression_mismatch() {
+        let component = "upper_x0_sin_plus_x1_cos";
+        let reference_x0 = 1.234567_f32;
+        let reference_x1 = 1.234567_f32;
+        let rust_x0 = reference_x0;
+        let rust_x1 = reference_x1;
+        let sin = 1.234567_f32;
+        let cos = -0.0001234567_f32;
+        let reference_replay =
+            rope_expression_replay(reference_x0, reference_x1, sin, cos, component)
+                .expect("reference replay");
+        let rust_replay =
+            rope_expression_replay(rust_x0, rust_x1, sin, cos, component).expect("rust replay");
+        assert_ne!(
+            reference_replay.x0_product_contracted.to_bits(),
+            reference_replay.term_split.to_bits()
+        );
+        assert_ne!(rust_replay.x0_product_contracted.to_bits(), rust_replay.term_split.to_bits());
+        let materiality = selected_query_expression_materiality(
+            component,
+            reference_x0,
+            reference_x1,
+            rust_x0,
+            rust_x1,
+            sin,
+            cos,
+            reference_replay.x0_product_contracted,
+            rust_replay.term_split,
+        );
+
+        let report = attention_selected_query_rope_expression_policy_frontier(&materiality);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_rope_expression_policy_expression_mismatch"))
+        );
+        assert_eq!(report.pointer("/shared_expression_policy"), Some(&json!(false)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn selected_query_rope_expression_policy_reports_missing_context() {
+        let materiality = json!({
+            "classification": "selected_query_pre_rope_projection_epsilon_explains_rope_bucket",
+        });
+
+        let report = attention_selected_query_rope_expression_policy_frontier(&materiality);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_rope_expression_policy_missing_context"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        let reasons = report.pointer("/blocked_reasons").and_then(Value::as_array).unwrap();
+        assert!(reasons.contains(&json!("selected_query_rope_component_missing")));
     }
 
     #[test]
