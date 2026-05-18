@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T13:17:12Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-DENSE-CHAT-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-CHAT-001-cli-chat-conformance"
+pr = 5675
+head_sha = "8736f99161b711e96f5c8474b9590ed944a56524"
+
+notes = [
+  "Opened PR #5675 for bounded dense SLM CLI chat-smoke conformance evidence.",
+  "The PR records apple_m4_slm_chat_smoke aggregate receipts and per-turn receipts for qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m.",
+  "The route records prompt-template identity, stop behavior, timeout scope, cancel boundary, generated text, token IDs, backend, fallback state, and model/tokenizer identity.",
+  "No BitNet chat behavior, BitNet serve behavior, broad quality, broad performance, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, or speedup claim.",
+]

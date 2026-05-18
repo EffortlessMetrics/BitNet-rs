@@ -24,6 +24,7 @@ const APPLE_M3_AIR_METAL: &str = "apple-m3-air-metal";
 const APPLE_M3_AIR_MPSGRAPH: &str = "apple-m3-air-mpsgraph";
 const MAC_ASK_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-ask.json";
 const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json";
+const MAC_CHAT_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-excellence/chat-smoke.json";
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
 const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doctor.json";
 const MAC_STATUS_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-ops/mac-status.json";
@@ -56,6 +57,9 @@ const MAC_BENCHMARK_PREFLIGHT_DEFAULT_RECEIPT: &str =
 const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpus.yaml";
 const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
 const MAC_SMOKE_EXPECTED_FRAGMENT: &str = "4";
+const MAC_CHAT_SMOKE_SYSTEM_PROMPT: &str = "You are a concise local assistant.";
+const MAC_CHAT_SMOKE_PROMPTS: &[&str] =
+    &["What is 2+2? Answer with one digit.", "Name the capital of France in one word."];
 const QWEN_PROMPT_TEMPLATE: &str = "qwen2.5";
 const APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS: &[&str] =
     &["qwen2.5-0.5b-instruct-q8_0", "qwen2.5-0.5b-instruct-q4_k_m", "qwen2.5-1.5b-instruct-q4_k_m"];
@@ -860,6 +864,41 @@ enum MacAction {
         json_out: PathBuf,
     },
 
+    /// Run a fixed dense SLM resident chat conformance smoke and write a receipt.
+    ChatSmoke {
+        /// Supported dense SLM model id to prove through the resident chat route.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Optional system prompt. Defaults to the bounded smoke system prompt.
+        #[arg(long = "system", value_name = "TEXT")]
+        system_prompt: Option<String>,
+
+        /// Maximum new tokens to generate per smoke prompt.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 16)]
+        max_new_tokens: usize,
+
+        /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
+        #[arg(long, default_value_t = 0)]
+        threads: usize,
+
+        /// Timeout for the smoke generation session after cache verification.
+        #[arg(long, default_value_t = 180)]
+        timeout_seconds: u64,
+
+        /// Include scoped hot-loop allocation counter deltas in session receipts.
+        #[arg(long, default_value_t = false)]
+        allocation_audit: bool,
+
+        /// Output dense chat smoke receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_CHAT_SMOKE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
     /// Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session.
     Validate {
         /// Supported model id. Defaults to the validated Apple M4 SLM runtime artifact.
@@ -1445,6 +1484,29 @@ impl MacCommand {
                         );
                     }
                 }
+            }
+            MacAction::ChatSmoke {
+                model_id,
+                cache_dir,
+                system_prompt,
+                max_new_tokens,
+                threads,
+                timeout_seconds,
+                allocation_audit,
+                json_out,
+            } => {
+                ensure_supported_mac_device(explicit_device_label, "mac chat-smoke")?;
+                run_chat_smoke(
+                    &model_id,
+                    cache_dir,
+                    system_prompt,
+                    max_new_tokens,
+                    threads,
+                    timeout_seconds,
+                    allocation_audit,
+                    json_out,
+                )
+                .await
             }
             MacAction::Validate {
                 model_id,
@@ -8725,6 +8787,70 @@ async fn run_chat_session(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
+async fn run_chat_smoke(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    system_prompt: Option<String>,
+    max_new_tokens: usize,
+    threads: usize,
+    timeout_seconds: u64,
+    allocation_audit: bool,
+    json_out: PathBuf,
+) -> Result<()> {
+    if timeout_seconds == 0 {
+        anyhow::bail!("mac chat-smoke --timeout-seconds must be greater than zero");
+    }
+    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir.clone())?;
+    let prompts: Vec<String> =
+        MAC_CHAT_SMOKE_PROMPTS.iter().map(|prompt| (*prompt).to_string()).collect();
+    let prompt_count = prompts.len();
+    let effective_system_prompt =
+        system_prompt.unwrap_or_else(|| MAC_CHAT_SMOKE_SYSTEM_PROMPT.to_string());
+    let smoke = run_chat_session(
+        model_id,
+        cache_dir,
+        prompts,
+        Some(effective_system_prompt),
+        max_new_tokens,
+        0.0,
+        1,
+        1.0,
+        1.1,
+        Some(42),
+        threads,
+        false,
+        false,
+        true,
+        true,
+        false,
+        allocation_audit,
+        false,
+        json_out.clone(),
+    );
+    tokio::time::timeout(std::time::Duration::from_secs(timeout_seconds), smoke)
+        .await
+        .with_context(|| {
+            format!(
+                "mac chat-smoke timed out after {timeout_seconds}s before the aggregate receipt completed"
+            )
+        })??;
+    let summary = annotate_and_validate_dense_chat_smoke_receipt(
+        &json_out,
+        &model,
+        prompt_count,
+        timeout_seconds,
+    )?;
+    eprintln!(
+        "Mac dense chat smoke passed: {} ({}, prompts={:?}, generated_tokens={:?})",
+        json_out.display(),
+        summary.artifact_kind,
+        summary.prompt_count,
+        summary.generated_tokens
+    );
+    Ok(())
+}
+
 struct BitnetChatRun<'a> {
     model_id: &'a str,
     cache_dir: Option<PathBuf>,
@@ -10508,6 +10634,123 @@ fn annotate_and_validate_mac_receipt_silent(
     object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
     std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)
         .with_context(|| format!("failed to update Mac receipt {}", path.display()))?;
+    Ok(summary)
+}
+
+fn annotate_and_validate_dense_chat_smoke_receipt(
+    path: &Path,
+    model: &VerifiedCachedModel,
+    prompt_count: usize,
+    timeout_seconds: u64,
+) -> Result<ReceiptCheckSummary> {
+    let bytes = std::fs::read(path).with_context(|| {
+        format!("failed to read dense Mac chat smoke receipt {}", path.display())
+    })?;
+    let mut receipt: serde_json::Value = serde_json::from_slice(&bytes)
+        .with_context(|| format!("invalid dense Mac chat smoke receipt {}", path.display()))?;
+    if receipt["artifact_kind"].as_str() != Some("slm_apple_m4_warm_session") {
+        anyhow::bail!("{} was not produced by the resident warm-session engine", path.display());
+    }
+    if receipt["session"]["prompt_count"].as_u64() != Some(prompt_count as u64) {
+        anyhow::bail!("{} must record the fixed dense chat smoke prompt count", path.display());
+    }
+    let Some(object) = receipt.as_object_mut() else {
+        anyhow::bail!("dense Mac chat smoke receipt {} is not a JSON object", path.display());
+    };
+    object.insert("artifact_kind".to_string(), serde_json::json!("apple_m4_slm_chat_smoke"));
+    object.insert("operator_command".to_string(), serde_json::json!("mac chat-smoke"));
+    object.insert("model_id".to_string(), serde_json::json!(model.id));
+    object.insert(
+        "model_cache".to_string(),
+        serde_json::json!({
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        }),
+    );
+    object.insert(
+        "chat_smoke".to_string(),
+        serde_json::json!({
+            "work_item": "M4-DENSE-CHAT-001",
+            "route": "bitnet mac chat-smoke",
+            "covers_cli_chat_route": true,
+            "model_family": "dense-slm",
+            "dense_slm_only": true,
+            "prompt_count": prompt_count,
+            "prompt_source": "fixed_dense_chat_smoke",
+            "bounded_history": {
+                "mode": "resident_prompt_sequence",
+                "min_prompt_count": 2,
+                "prompt_count": prompt_count,
+                "interactive_collection": false,
+                "stdin_collection": false
+            },
+            "prompt_template": {
+                "family": QWEN_PROMPT_TEMPLATE,
+                "source": "bitnet-prompt-templates-core",
+                "identity_recorded": true
+            },
+            "stop_behavior": {
+                "manual_stop_sequences": ["<|im_end|>"],
+                "template_default_stop_sequences_recorded": true,
+                "template_stop_token_ids_recorded": true,
+                "stop_policy": "manual_plus_template_defaults"
+            },
+            "timeout_behavior": {
+                "configured_seconds": timeout_seconds,
+                "enforced": true,
+                "scope": "resident_session_after_cache_verification",
+                "reached": false,
+                "stage": null
+            },
+            "cancel_behavior": {
+                "ctrl_c_cancels_before_clean_exit": true,
+                "aggregate_receipt_requires_clean_exit": true,
+                "operator_message": "mac chat interrupted by Ctrl-C before the aggregate session receipt completed"
+            },
+            "per_turn_receipts_required": true,
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "backend_recorded": true,
+            "fallback_state_recorded": true,
+            "model_tokenizer_identity_recorded": true
+        }),
+    );
+    object.insert(
+        "mac_claim_boundary".to_string(),
+        serde_json::json!({
+            "slm_local_answer": true,
+            "dense_slm_chat_conformance": true,
+            "chat_smoke": true,
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "bitnet_chat_behavior_claimed": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        }),
+    );
+    object.entry("bitnet_quality_claimed".to_string()).or_insert(serde_json::json!(false));
+    object.entry("broad_performance_claim".to_string()).or_insert(serde_json::json!(false));
+    object.entry("speedup_claim".to_string()).or_insert(serde_json::json!(false));
+    object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
+    let summary = validate_mac_receipt_value(path, &receipt)?;
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?).with_context(|| {
+        format!("failed to update dense Mac chat smoke receipt {}", path.display())
+    })?;
     Ok(summary)
 }
 
@@ -14258,6 +14501,8 @@ fn validate_mac_receipt_value(
         validate_slm_eval_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_reference_vs_rust_comparison_v1" {
         validate_dense_slm_reference_vs_rust_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_slm_chat_smoke" {
+        validate_dense_slm_chat_smoke_receipt(path, receipt, requested_backend.as_str())?
     } else if artifact_kind == "bitnet_apple_m4_local_answer_corpus" {
         validate_bitnet_eval_answer_corpus_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_golden_token_canaries" {
@@ -14901,6 +15146,157 @@ fn validate_bitnet_chat_session_receipt(
     require_bool_at(path, receipt, &["bitnet_quality_claimed"], false)?;
     require_bool_at(path, receipt, &["broad_performance_claim"], false)?;
     require_bool_at(path, receipt, &["speedup_claim"], false)?;
+    Ok((prompt_count, generated_tokens))
+}
+
+fn validate_dense_slm_chat_smoke_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+    expected_backend: &str,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_slm_chat_smoke")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac chat-smoke")?;
+    let model_id = require_non_empty_string_at(path, receipt, &["model_id"])?;
+    if !APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.contains(&model_id) {
+        anyhow::bail!("{} dense chat smoke uses unsupported model id {model_id}", path.display());
+    }
+    let (prompt_count, generated_tokens) =
+        validate_warm_session_receipt(path, receipt, expected_backend)?;
+    let prompt_count_value = prompt_count.unwrap_or_default();
+    if prompt_count_value < 2 {
+        anyhow::bail!("{} dense chat smoke must record at least two prompts", path.display());
+    }
+    require_exact_string_at(path, receipt, &["model", "family"], "qwen")?;
+    require_non_empty_string_at(path, receipt, &["model", "sha256"])?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["generation", "prompt_template"],
+        QWEN_PROMPT_TEMPLATE,
+    )?;
+    require_bool_at(path, receipt, &["generation", "deterministic"], true)?;
+    require_number_at(path, receipt, &["generation", "temperature"], false)?;
+    let identity_template_family = require_non_empty_string_at(
+        path,
+        receipt,
+        &["prompt_generation_identity", "template", "family"],
+    )?;
+    if !prompt_template_family_matches(QWEN_PROMPT_TEMPLATE, identity_template_family) {
+        anyhow::bail!(
+            "{} dense chat smoke prompt generation identity template {:?} must match {QWEN_PROMPT_TEMPLATE}",
+            path.display(),
+            identity_template_family
+        );
+    }
+    require_non_empty_string_at(path, receipt, &["tokenizer", "source"])?;
+    require_non_empty_string_at(path, receipt, &["tokenizer", "pretokenizer_authority"])?;
+    require_bool_at(path, receipt, &["session", "per_prompt_receipts_enabled"], true)?;
+    let turn_receipts = receipt["session"]["per_prompt_receipts"].as_array().ok_or_else(|| {
+        anyhow!("{} dense chat smoke is missing per-turn receipt paths", path.display())
+    })?;
+    if turn_receipts.len() != prompt_count_value
+        || turn_receipts
+            .iter()
+            .any(|value| value.as_str().is_none_or(|text| text.trim().is_empty()))
+    {
+        anyhow::bail!(
+            "{} dense chat smoke per-turn receipt paths must match prompt count",
+            path.display()
+        );
+    }
+    require_exact_string_at(path, receipt, &["chat_smoke", "work_item"], "M4-DENSE-CHAT-001")?;
+    require_exact_string_at(path, receipt, &["chat_smoke", "route"], "bitnet mac chat-smoke")?;
+    require_bool_at(path, receipt, &["chat_smoke", "covers_cli_chat_route"], true)?;
+    require_exact_string_at(path, receipt, &["chat_smoke", "model_family"], "dense-slm")?;
+    require_bool_at(path, receipt, &["chat_smoke", "dense_slm_only"], true)?;
+    require_u64_exact(path, receipt, &["chat_smoke", "prompt_count"], prompt_count_value as u64)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["chat_smoke", "bounded_history", "mode"],
+        "resident_prompt_sequence",
+    )?;
+    require_u64_at(path, receipt, &["chat_smoke", "bounded_history", "min_prompt_count"], true)?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["chat_smoke", "bounded_history", "prompt_count"],
+        prompt_count_value as u64,
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["chat_smoke", "prompt_template", "family"],
+        QWEN_PROMPT_TEMPLATE,
+    )?;
+    require_bool_at(path, receipt, &["chat_smoke", "prompt_template", "identity_recorded"], true)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["chat_smoke", "stop_behavior", "stop_policy"],
+        "manual_plus_template_defaults",
+    )?;
+    require_non_empty_string_array_at(
+        path,
+        receipt,
+        &["chat_smoke", "stop_behavior", "manual_stop_sequences"],
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["chat_smoke", "stop_behavior", "template_default_stop_sequences_recorded"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["chat_smoke", "stop_behavior", "template_stop_token_ids_recorded"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["chat_smoke", "timeout_behavior", "enforced"], true)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["chat_smoke", "timeout_behavior", "scope"],
+        "resident_session_after_cache_verification",
+    )?;
+    require_bool_at(path, receipt, &["chat_smoke", "timeout_behavior", "reached"], false)?;
+    require_u64_at(path, receipt, &["chat_smoke", "timeout_behavior", "configured_seconds"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["chat_smoke", "cancel_behavior", "ctrl_c_cancels_before_clean_exit"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["chat_smoke", "cancel_behavior", "aggregate_receipt_requires_clean_exit"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["chat_smoke", "per_turn_receipts_required"], true)?;
+    require_bool_at(path, receipt, &["chat_smoke", "generated_text_recorded"], true)?;
+    require_bool_at(path, receipt, &["chat_smoke", "generated_token_ids_recorded"], true)?;
+    require_bool_at(path, receipt, &["chat_smoke", "backend_recorded"], true)?;
+    require_bool_at(path, receipt, &["chat_smoke", "fallback_state_recorded"], true)?;
+    require_bool_at(path, receipt, &["chat_smoke", "model_tokenizer_identity_recorded"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "dense_slm_chat_conformance"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "chat_smoke"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_chat_behavior_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "neural_engine_execution_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "speedup_claim"], false)?;
     Ok((prompt_count, generated_tokens))
 }
 
@@ -19183,6 +19579,61 @@ mod tests {
     }
 
     #[test]
+    fn dense_slm_chat_smoke_receipt_accepts_valid_contract()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = test_dense_slm_chat_smoke_receipt();
+
+        let summary = validate_mac_receipt_value(Path::new("dense-chat-smoke.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_slm_chat_smoke");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(2));
+        assert_eq!(summary.generated_tokens, Some(3));
+        Ok(())
+    }
+
+    #[test]
+    fn dense_slm_chat_smoke_receipt_rejects_missing_turn_receipts()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut receipt = test_dense_slm_chat_smoke_receipt();
+        receipt["session"]["per_prompt_receipts"] = serde_json::json!([]);
+
+        let err = match validate_mac_receipt_value(Path::new("dense-chat-smoke.json"), &receipt) {
+            Ok(summary) => {
+                return Err(format!(
+                    "dense chat smoke without turn receipts should fail, got {summary:?}"
+                )
+                .into());
+            }
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains("per-turn receipt paths"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn dense_slm_chat_smoke_receipt_rejects_bitnet_claim() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let mut receipt = test_dense_slm_chat_smoke_receipt();
+        receipt["mac_claim_boundary"]["bitnet_chat_behavior_claimed"] = serde_json::json!(true);
+
+        let err = match validate_mac_receipt_value(Path::new("dense-chat-smoke.json"), &receipt) {
+            Ok(summary) => {
+                return Err(format!(
+                    "dense chat smoke with BitNet claim should fail, got {summary:?}"
+                )
+                .into());
+            }
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains("bitnet_chat_behavior_claimed"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
     fn prompt_generation_identity_accepts_template_aliases()
     -> Result<(), Box<dyn std::error::Error>> {
         let receipt = serde_json::json!({
@@ -19554,6 +20005,165 @@ mod tests {
                     }
                 }
             ]
+        })
+    }
+
+    fn test_dense_slm_chat_smoke_receipt() -> serde_json::Value {
+        let prompt_generation_identity = test_prompt_generation_identity("qwen25-chat");
+        let prompt = |case_id: &str, text: &str, generated_tokens: u64, generated_ids: Vec<u64>| {
+            serde_json::json!({
+                "case_id": case_id,
+                "repeat_index": 0,
+                "backend": {
+                    "requested_backend": APPLE_M4_CPU_NEON,
+                    "selected_backend": APPLE_M4_CPU_NEON,
+                    "runtime_api": "cpu",
+                    "fallback_used": false
+                },
+                "text": text,
+                "generated_tokens": generated_tokens,
+                "generated_token_ids": generated_ids.clone(),
+                "tokens": {
+                    "generated": generated_tokens,
+                    "generated_ids": generated_ids.clone(),
+                    "ids": generated_ids
+                },
+                "quality": {
+                    "passed": true,
+                    "valid_utf8": true,
+                    "non_empty": true,
+                    "non_degenerate": true,
+                    "failed_rules": [],
+                    "distinct_generated_tokens": generated_tokens
+                },
+                "timing": {
+                    "time_to_first_token_ms": 12.0
+                },
+                "operator_ux": {
+                    "time_to_first_token_receipt": true
+                }
+            })
+        };
+        serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "apple_m4_slm_chat_smoke",
+            "operator_command": "mac chat-smoke",
+            "model_id": "qwen2.5-0.5b-instruct-q8_0",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "session": {
+                "model_loaded_once": true,
+                "tokenizer_loaded_once": true,
+                "prompt_count": 2,
+                "per_prompt_receipts": [
+                    "chat-smoke-prompts/01.json",
+                    "chat-smoke-prompts/02.json"
+                ],
+                "per_prompt_receipts_enabled": true,
+                "reuse_scope": "resident_session"
+            },
+            "corpus": null,
+            "generation": {
+                "mode": "greedy",
+                "temperature": 0.0,
+                "top_k": 1,
+                "top_p": 1.0,
+                "repetition_penalty": 1.1,
+                "deterministic": true,
+                "max_new_tokens": 16,
+                "prompt_template": QWEN_PROMPT_TEMPLATE
+            },
+            "prompt_generation_identity": prompt_generation_identity,
+            "model": {
+                "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+                "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+                "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                "family": "qwen",
+                "architecture": "qwen2",
+                "quantization": "Q8_0"
+            },
+            "tokenizer": {
+                "source": "gguf_metadata",
+                "strict": true,
+                "pretokenizer_authority": "qwen2"
+            },
+            "quality_summary": {
+                "passed": true
+            },
+            "operator_ux": {
+                "time_to_first_token_receipts": true,
+                "per_turn_receipts_enabled": true,
+                "stream_tokens_requested": false
+            },
+            "prompts": [
+                prompt("prompt_01", "4", 1, vec![19]),
+                prompt("prompt_02", "Paris", 2, vec![60704, 151645])
+            ],
+            "chat_smoke": {
+                "work_item": "M4-DENSE-CHAT-001",
+                "route": "bitnet mac chat-smoke",
+                "covers_cli_chat_route": true,
+                "model_family": "dense-slm",
+                "dense_slm_only": true,
+                "prompt_count": 2,
+                "prompt_source": "fixed_dense_chat_smoke",
+                "bounded_history": {
+                    "mode": "resident_prompt_sequence",
+                    "min_prompt_count": 2,
+                    "prompt_count": 2,
+                    "interactive_collection": false,
+                    "stdin_collection": false
+                },
+                "prompt_template": {
+                    "family": QWEN_PROMPT_TEMPLATE,
+                    "source": "bitnet-prompt-templates-core",
+                    "identity_recorded": true
+                },
+                "stop_behavior": {
+                    "manual_stop_sequences": ["<|im_end|>"],
+                    "template_default_stop_sequences_recorded": true,
+                    "template_stop_token_ids_recorded": true,
+                    "stop_policy": "manual_plus_template_defaults"
+                },
+                "timeout_behavior": {
+                    "configured_seconds": 180,
+                    "enforced": true,
+                    "scope": "resident_session_after_cache_verification",
+                    "reached": false,
+                    "stage": null
+                },
+                "cancel_behavior": {
+                    "ctrl_c_cancels_before_clean_exit": true,
+                    "aggregate_receipt_requires_clean_exit": true,
+                    "operator_message": "mac chat interrupted by Ctrl-C before the aggregate session receipt completed"
+                },
+                "per_turn_receipts_required": true,
+                "generated_text_recorded": true,
+                "generated_token_ids_recorded": true,
+                "backend_recorded": true,
+                "fallback_state_recorded": true,
+                "model_tokenizer_identity_recorded": true
+            },
+            "mac_claim_boundary": {
+                "slm_local_answer": true,
+                "dense_slm_chat_conformance": true,
+                "chat_smoke": true,
+                "requested_backend": APPLE_M4_CPU_NEON,
+                "bitnet_chat_behavior_claimed": false,
+                "bitnet_quality_claimed": false,
+                "full_metal_inference_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "broad_quality_claim": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            },
+            "bitnet_quality_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
         })
     }
 

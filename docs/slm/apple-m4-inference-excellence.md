@@ -870,6 +870,32 @@ multi-turn history, timeout/cancel behavior, per-turn receipts, generated text,
 token IDs, backend, fallback state, and model/tokenizer identity before the CLI
 surface is treated as excellent.
 
+`M4-DENSE-CHAT-001` adds `bitnet mac chat-smoke` as a dense-only conformance
+route for that proof. The command runs a bounded two-prompt resident session
+through the same dense chat path, writes per-turn receipts plus an aggregate
+`apple_m4_slm_chat_smoke` receipt, and validates prompt-template identity, stop
+behavior, timeout/cancel metadata, generated text, token IDs, backend,
+fallback state, model SHA, and tokenizer authority.
+
+Current M4 evidence is recorded under:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/
+```
+
+It covers the supported dense identities:
+
+```text
+qwen2.5-0.5b-instruct-q8_0
+qwen2.5-0.5b-instruct-q4_k_m
+qwen2.5-1.5b-instruct-q4_k_m
+```
+
+This is bounded dense SLM chat-route conformance. It is not BitNet chat
+evidence, broad model-quality evidence, a server claim, a full Metal inference
+claim, a QK256 claim, Neural Engine or MPSGraph execution, MacBook evidence, a
+speedup claim, or a broad Apple Silicon performance envelope.
+
 Service proof is separate from CLI proof. Dense SLM serve and later BitNet
 serve need receipts for:
 
