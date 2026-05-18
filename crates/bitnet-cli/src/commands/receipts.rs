@@ -244,7 +244,7 @@ impl ReceiptsCommand {
     }
 }
 
-fn resolve_receipt_path(path: Option<&Path>, latest: bool) -> Result<PathBuf> {
+pub(crate) fn resolve_receipt_path(path: Option<&Path>, latest: bool) -> Result<PathBuf> {
     if latest {
         let search_root = path.unwrap_or_else(|| Path::new(DEFAULT_RECEIPTS_DIR));
         return latest_receipt_under(search_root);
@@ -257,7 +257,7 @@ fn resolve_receipt_path(path: Option<&Path>, latest: bool) -> Result<PathBuf> {
     Ok(path.to_path_buf())
 }
 
-fn read_receipt_json(path: &Path) -> Result<Value> {
+pub(crate) fn read_receipt_json(path: &Path) -> Result<Value> {
     let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     serde_json::from_slice(&bytes)
         .with_context(|| format!("failed to parse receipt JSON {}", path.display()))

@@ -610,7 +610,7 @@ struct ModelCoverageEntryOutput<'a> {
 }
 
 #[derive(Debug, Serialize)]
-struct ModelStatusDashboard {
+pub(crate) struct ModelStatusDashboard {
     schema_version: u32,
     device: String,
     source: PathBuf,
@@ -618,8 +618,17 @@ struct ModelStatusDashboard {
     models: Vec<ModelStatusRow>,
 }
 
+impl ModelStatusDashboard {
+    pub(crate) fn next_proof_for_row(&self, row: &str) -> Option<&str> {
+        self.models
+            .iter()
+            .find(|model| model.model_coverage_row == row)
+            .map(|model| model.next_proof.as_str())
+    }
+}
+
 #[derive(Debug, Serialize)]
-struct ModelStatusRow {
+pub(crate) struct ModelStatusRow {
     id: String,
     model_coverage_row: String,
     display_name: String,
@@ -1443,6 +1452,15 @@ fn print_model_status(
     }
 
     Ok(())
+}
+
+pub(crate) fn model_status_dashboard_for_device(
+    device: &str,
+    matrix: Option<PathBuf>,
+) -> Result<ModelStatusDashboard> {
+    let matrix_path = resolve_model_coverage_matrix_path(matrix)?;
+    let matrix = read_model_coverage_matrix(&matrix_path)?;
+    Ok(model_status_dashboard(device, &matrix_path, &matrix))
 }
 
 fn model_status_dashboard(

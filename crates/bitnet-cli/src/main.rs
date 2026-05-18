@@ -129,8 +129,8 @@ use commands::{
     DenseGgufSamplingPolicyCommand, DenseQwenCudaAskOptions,
     ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
     InspectCommand, LunarLakeAction, LunarLakeCommand, OutputHeadLogitsAuditCommand,
-    ReceiptsCommand, ReferenceCompareCommand, ServeCommand, TransformerLayerParityCommand,
-    run_dense_qwen_cuda_ask,
+    ReceiptsCommand, ReferenceCompareCommand, ServeCommand, SupportCommand,
+    TransformerLayerParityCommand, run_dense_qwen_cuda_ask,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -477,6 +477,10 @@ enum Commands {
 
     /// Fetch, verify, list, and prune supported local model artifacts
     Model(ModelCommand),
+
+    #[cfg(feature = "full-cli")]
+    /// Collect model status and receipt evidence for support
+    Support(SupportCommand),
 
     /// RTX 5070 Ti CUDA proof-lane utilities
     Cuda {
@@ -1509,6 +1513,8 @@ async fn async_main() -> Result<()> {
             .await
         }
         Some(Commands::Model(cmd)) => cmd.execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Support(cmd)) => cmd.execute().await,
         Some(Commands::Cuda { action }) => {
             handle_cuda_command(action, explicit_device_label.as_deref())
         }
@@ -10510,13 +10516,17 @@ fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static 
         #[cfg(feature = "full-cli")]
         Some(Commands::Receipts(_)) => Some("warn"),
         #[cfg(feature = "full-cli")]
+        Some(Commands::Support(_)) => Some("warn"),
+        #[cfg(feature = "full-cli")]
         Some(Commands::Mac(cmd)) => cmd.default_log_level(),
         _ => None,
     }
 }
 
 fn skips_startup_backend_selection(command: Option<&Commands>) -> bool {
-    uses_report_only_cuda_benchmark_receipt(command) || uses_read_only_model_status(command)
+    uses_report_only_cuda_benchmark_receipt(command)
+        || uses_read_only_model_status(command)
+        || uses_read_only_support_bundle(command)
 }
 
 fn uses_report_only_cuda_benchmark_receipt(command: Option<&Commands>) -> bool {
@@ -10534,6 +10544,18 @@ fn uses_read_only_model_status(command: Option<&Commands>) -> bool {
         command,
         Some(Commands::Model(ModelCommand { action: model_cache::ModelAction::Status { .. } }))
     )
+}
+
+fn uses_read_only_support_bundle(command: Option<&Commands>) -> bool {
+    #[cfg(feature = "full-cli")]
+    {
+        matches!(command, Some(Commands::Support(_)))
+    }
+    #[cfg(not(feature = "full-cli"))]
+    {
+        let _ = command;
+        false
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -12537,6 +12559,18 @@ mod tests {
             Some("warn")
         );
         assert_eq!(
+            default_log_level_for_command(Some(&Commands::Support(SupportCommand {
+                action: commands::support::SupportAction::Bundle {
+                    path: None,
+                    latest: true,
+                    device: "nvidia-rtx-5070-ti-cuda".to_string(),
+                    matrix: None,
+                    format: commands::support::SupportBundleFormat::Json,
+                },
+            }))),
+            Some("warn")
+        );
+        assert_eq!(
             default_log_level_for_command(Some(&Commands::Chat(Box::default()))),
             Some("warn")
         );
@@ -12553,6 +12587,24 @@ mod tests {
         });
 
         assert!(uses_read_only_model_status(Some(&command)));
+        assert!(skips_startup_backend_selection(Some(&command)));
+        assert_eq!(default_log_level_for_command(Some(&command)), Some("warn"));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn support_bundle_skips_startup_backend_selection() {
+        let command = Commands::Support(SupportCommand {
+            action: commands::support::SupportAction::Bundle {
+                path: None,
+                latest: true,
+                device: "nvidia-rtx-5070-ti-cuda".to_string(),
+                matrix: None,
+                format: commands::support::SupportBundleFormat::Json,
+            },
+        });
+
+        assert!(uses_read_only_support_bundle(Some(&command)));
         assert!(skips_startup_backend_selection(Some(&command)));
         assert_eq!(default_log_level_for_command(Some(&command)), Some("warn"));
     }
