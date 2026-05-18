@@ -5854,8 +5854,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OV-QUAL-004"
-status = "in_progress"
+status = "pr_open"
+pr = 5522
 branch = "codex/lunar-lake/LNL258V-OV-QUAL-004-align-openvino-scoring"
+head_sha = "37ec2a29299e4fc9e6884ee21f9523fa0917d517"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
