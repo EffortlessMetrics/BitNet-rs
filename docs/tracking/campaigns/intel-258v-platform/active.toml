@@ -6750,9 +6750,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-QUAL-POLICY-001"
-status = "pr_open"
+status = "merged"
 pr = 5639
-head_sha = "49bf440931942b7b7eae6a19aeb19fa9bedbc039"
+head_sha = "01c2feb1ffd716df23904a6ed88b1b49dfa6edb9"
+merge_sha = "bdc19ba7b3cbaef8dc23fae5a81e58ccbb739a18"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-POLICY-001-exact-answer"
 stackable = false
 review_mode = "codex_premerge"

@@ -309,7 +309,8 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-QUAL-POLICY-001
 
-Status: in_progress
+Status: merged
+Linked PR: #5639
 Blocked by: `LNL258V-OPENVINO-QUAL-REPORT-001`, `LNL258V-OV-QUAL-005`
 
 Codify exact-answer generation policy for normalized-match OpenVINO corpus-v2
