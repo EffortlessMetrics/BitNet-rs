@@ -1560,12 +1560,15 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                 &selected_pre_rope_f64_effect,
                 &f64_downstream,
             );
+        let f64_score_history_residual =
+            attention_f64_score_history_residual(&selected_pre_rope_f64_residual, &f64_downstream);
         cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
             selected_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_effect"] =
             selected_pre_rope_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_residual"] =
             selected_pre_rope_f64_residual;
+        cpu_comparison["attention_f64_score_history_residual"] = f64_score_history_residual;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -31170,6 +31173,244 @@ fn attention_selected_pre_rope_attention_norm_f64_residual(
     })
 }
 
+fn f64_score_history_residual_next_diagnostic(classification: &str) -> &'static str {
+    match classification {
+        "f64_score_history_residual_score_input" => {
+            "localize f64 Q/K score-input history buckets before changing score accumulation, softmax, value-mix, or RMSNorm production math"
+        }
+        "f64_score_history_residual_score_accumulation" => {
+            "pin f64 raw score accumulation residual before changing softmax, value-mix, or RMSNorm production math"
+        }
+        "f64_score_history_residual_softmax_probability" => {
+            "localize f64 softmax probability history before changing value-mix or RMSNorm production math"
+        }
+        "f64_score_history_residual_value_cache_source" => {
+            "localize f64 value-cache source drift before changing value-mix or RMSNorm production math"
+        }
+        "f64_score_history_residual_value_mix_numeric" => {
+            "pin f64 value-mix numeric policy before changing RMSNorm production math"
+        }
+        "f64_score_history_residual_clean" => {
+            "rerun downstream value-mix, layer-output, and logits parity before considering production math changes"
+        }
+        "f64_score_history_residual_missing_context" => {
+            "capture selected pre-RoPE f64 residual, raw score history, probability history, and value-mix attribution before runtime changes"
+        }
+        _ => {
+            "keep the f64 score-history residual diagnostic-only until score input, score accumulation, softmax, or value-mix source is pinned"
+        }
+    }
+}
+
+fn compact_f64_score_history_context_row(row: &Value) -> Value {
+    if row.is_null() {
+        return Value::Null;
+    }
+
+    json!({
+        "classification": row.pointer("/classification").cloned().unwrap_or(Value::Null),
+        "source": row.pointer("/source").cloned().unwrap_or(Value::Null),
+        "status": row.pointer("/status").cloned().unwrap_or(Value::Null),
+        "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+        "kv_head": row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+        "token": row.pointer("/token").cloned().unwrap_or(Value::Null),
+        "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+        "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+        "dim": row.pointer("/dim").cloned().unwrap_or(Value::Null),
+        "selected_k_output_dim": row.pointer("/selected_k_output_dim").cloned().unwrap_or(Value::Null),
+        "reference_stage": row.pointer("/reference_stage").or_else(|| row.pointer("/reference/stage")).cloned().unwrap_or(Value::Null),
+        "rust_stage": row.pointer("/rust_stage").or_else(|| row.pointer("/rust/stage")).cloned().unwrap_or(Value::Null),
+        "material_mismatch": row.pointer("/material_mismatch").cloned().unwrap_or(Value::Null),
+        "delta": row.pointer("/delta").cloned().unwrap_or(Value::Null),
+        "live_delta": row.pointer("/live_delta").cloned().unwrap_or(Value::Null),
+        "max_abs_delta": row.pointer("/max_abs_delta").cloned().unwrap_or(Value::Null),
+        "scope": row.pointer("/scope").cloned().unwrap_or(Value::Null),
+    })
+}
+
+fn compact_selected_pre_rope_f64_residual_context_row(row: &Value) -> Value {
+    if row.is_null() {
+        return Value::Null;
+    }
+
+    json!({
+        "classification": row.pointer("/classification").cloned().unwrap_or(Value::Null),
+        "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+        "kv_head": row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+        "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+        "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+        "selected_k_output_dim": row.pointer("/selected_k_output_dim").cloned().unwrap_or(Value::Null),
+        "baseline_max_abs_delta": row.pointer("/baseline_max_abs_delta").cloned().unwrap_or(Value::Null),
+        "f64_max_abs_delta": row.pointer("/f64_max_abs_delta").cloned().unwrap_or(Value::Null),
+        "baseline_f16_bucket_mismatch_count": row.pointer("/baseline_f16_bucket_mismatch_count").cloned().unwrap_or(Value::Null),
+        "f64_f16_bucket_mismatch_count": row.pointer("/f64_f16_bucket_mismatch_count").cloned().unwrap_or(Value::Null),
+        "f64_clears_bucket": row.pointer("/f64_clears_bucket").cloned().unwrap_or(Value::Null),
+        "dominant_projection_pair_delta": row.pointer("/dominant_projection_pair_delta").cloned().unwrap_or(Value::Null),
+        "target_delta_rust_minus_reference": row.pointer("/target_delta_rust_minus_reference").cloned().unwrap_or(Value::Null),
+        "replay_delta_rust_minus_reference": row.pointer("/replay_delta_rust_minus_reference").cloned().unwrap_or(Value::Null),
+        "downstream_frontier_classification": row.pointer("/downstream_frontier_classification").cloned().unwrap_or(Value::Null),
+        "downstream_attention_output_first_boundary": row.pointer("/downstream_attention_output_first_boundary").cloned().unwrap_or(Value::Null),
+        "next_diagnostic": row.pointer("/next_diagnostic").cloned().unwrap_or(Value::Null),
+    })
+}
+
+fn attention_f64_score_history_residual(
+    selected_pre_rope_f64_residual: &Value,
+    f64_downstream: &Value,
+) -> Value {
+    let downstream_frontier = f64_downstream.pointer("/residual_frontier").unwrap_or(&Value::Null);
+    let probability_effect =
+        f64_downstream.pointer("/f64/probability_history_effect").unwrap_or(&Value::Null);
+    let score_history_frontier =
+        probability_effect.pointer("/score_history_residual_frontier").unwrap_or(&Value::Null);
+    let value_mix_attribution =
+        f64_downstream.pointer("/f64/value_mix_history_attribution").unwrap_or(&Value::Null);
+    let source_summary = value_mix_attribution.pointer("/source_summary").unwrap_or(&Value::Null);
+    let probability_source_summary = value_mix_attribution
+        .pointer("/probability_history_source_summary")
+        .unwrap_or(&Value::Null);
+
+    let selected_residual_classification =
+        selected_pre_rope_f64_residual.pointer("/classification").and_then(Value::as_str);
+    let downstream_frontier_classification =
+        downstream_frontier.pointer("/classification").and_then(Value::as_str);
+    let score_history_frontier_classification =
+        score_history_frontier.pointer("/classification").and_then(Value::as_str);
+    let value_mix_source_classification =
+        source_summary.pointer("/classification").and_then(Value::as_str);
+    let probability_source_classification =
+        probability_source_summary.pointer("/classification").and_then(Value::as_str);
+
+    let selected_count = value_u64(selected_pre_rope_f64_residual, "/selected_count").unwrap_or(0);
+    let selected_residual_count =
+        value_u64(selected_pre_rope_f64_residual, "/residual_count").unwrap_or(0);
+    let score_raw_history_material_count =
+        value_u64(probability_effect, "/score_raw_history_material_count").unwrap_or(0);
+    let score_raw_live_material_count =
+        value_u64(probability_effect, "/score_raw_live_material_count").unwrap_or(0);
+    let score_raw_history_missing_count =
+        value_u64(probability_effect, "/score_raw_history_missing_count").unwrap_or(0);
+    let probability_history_material_count =
+        value_u64(probability_effect, "/probability_history_material_count").unwrap_or(0);
+    let probability_history_missing_count =
+        value_u64(probability_effect, "/probability_history_missing_count").unwrap_or(0);
+    let score_frontier_missing_inputs =
+        value_u64(score_history_frontier, "/missing_inputs").unwrap_or(0);
+    let score_frontier_raw_material =
+        value_u64(score_history_frontier, "/raw_material_mismatch_count").unwrap_or(0);
+    let score_frontier_raw_live_material =
+        value_u64(score_history_frontier, "/raw_live_material_mismatch_count").unwrap_or(0);
+
+    let probability_source_drift =
+        value_bool(source_summary, "/probability_source_drift_present").unwrap_or(false);
+    let value_cache_source_drift =
+        value_bool(source_summary, "/value_cache_source_drift_present").unwrap_or(false);
+    let value_cache_source_clean =
+        value_bool(source_summary, "/value_cache_source_clean").unwrap_or(false);
+    let rust_self_recompute_drift =
+        value_bool(source_summary, "/rust_self_recompute_drift_present").unwrap_or(false);
+    let rust_self_recompute_explained =
+        value_bool(source_summary, "/rust_self_recompute_explained_by_numeric_variants")
+            .unwrap_or(false);
+
+    let selected_points_to_score_history = selected_residual_classification
+        == Some("selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix");
+    let downstream_points_to_score_history = matches!(
+        downstream_frontier_classification,
+        Some("f64_downstream_residual_frontier_score_history_drives_value_mix")
+            | Some("f64_downstream_residual_frontier_score_history")
+    );
+    let score_history_context_present = !score_history_frontier.is_null()
+        || score_raw_history_material_count > 0
+        || score_raw_live_material_count > 0
+        || probability_history_material_count > 0;
+
+    let classification = if selected_count == 0
+        || selected_residual_classification
+            == Some("selected_pre_rope_attention_norm_f64_residual_missing_context")
+        || downstream_frontier_classification
+            == Some("f64_downstream_residual_frontier_capture_not_cleared")
+        || (!selected_points_to_score_history
+            && !downstream_points_to_score_history
+            && !score_history_context_present)
+        || score_history_frontier_classification
+            == Some("f64_score_history_frontier_missing_inputs")
+        || score_frontier_missing_inputs > 0
+        || score_raw_history_missing_count > 0
+        || probability_history_missing_count > 0
+    {
+        "f64_score_history_residual_missing_context"
+    } else if value_cache_source_drift {
+        "f64_score_history_residual_value_cache_source"
+    } else if matches!(
+        score_history_frontier_classification,
+        Some("f64_score_history_frontier_qk_score_input_history_bucket_drift")
+            | Some("f64_score_history_frontier_qk_score_input_history_numeric_drift")
+            | Some("f64_score_history_frontier_current_key_score_input_drift")
+    ) {
+        "f64_score_history_residual_score_input"
+    } else if matches!(
+        score_history_frontier_classification,
+        Some("f64_score_history_frontier_qk_f16_probe_residual")
+            | Some("f64_score_history_frontier_raw_score_residual_unpinned")
+    ) || score_frontier_raw_material > 0
+        || score_frontier_raw_live_material > 0
+        || score_raw_history_material_count > 0
+        || score_raw_live_material_count > 0
+    {
+        "f64_score_history_residual_score_accumulation"
+    } else if probability_history_material_count > 0 || probability_source_drift {
+        "f64_score_history_residual_softmax_probability"
+    } else if rust_self_recompute_drift && rust_self_recompute_explained {
+        "f64_score_history_residual_value_mix_numeric"
+    } else if score_history_frontier_classification == Some("f64_score_history_frontier_clean")
+        && downstream_frontier_classification == Some("f64_downstream_residual_frontier_clear")
+    {
+        "f64_score_history_residual_clean"
+    } else {
+        "f64_score_history_residual_unpinned"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "F64 score-history residual report bridges the selected pre-RoPE f64 residual to raw score history, probability history, and value-mix input attribution; it is diagnostic-only and does not make f64 RMSNorm a production default or promote reference parity, A770 semantic quality, attention score residency, softmax residency, value-mix residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_residual_classification": selected_residual_classification,
+        "selected_count": selected_count,
+        "selected_residual_count": selected_residual_count,
+        "downstream_frontier_classification": downstream_frontier_classification,
+        "score_history_frontier_classification": score_history_frontier_classification,
+        "value_mix_source_classification": value_mix_source_classification,
+        "probability_source_classification": probability_source_classification,
+        "score_raw_history_material_count": score_raw_history_material_count,
+        "score_raw_live_material_count": score_raw_live_material_count,
+        "score_raw_history_missing_count": score_raw_history_missing_count,
+        "probability_history_material_count": probability_history_material_count,
+        "probability_history_missing_count": probability_history_missing_count,
+        "score_frontier_missing_inputs": score_frontier_missing_inputs,
+        "score_frontier_raw_material_count": score_frontier_raw_material,
+        "score_frontier_raw_live_material_count": score_frontier_raw_live_material,
+        "probability_source_drift_present": probability_source_drift,
+        "value_cache_source_drift_present": value_cache_source_drift,
+        "value_cache_source_clean": value_cache_source_clean,
+        "rust_self_recompute_drift_present": rust_self_recompute_drift,
+        "rust_self_recompute_explained_by_numeric_variants": rust_self_recompute_explained,
+        "first_selected_pre_rope_residual_row": compact_selected_pre_rope_f64_residual_context_row(selected_pre_rope_f64_residual.pointer("/rows/0").unwrap_or(&Value::Null)),
+        "first_material_score_head": compact_head_delta_row(score_history_frontier.pointer("/first_material_score_head").unwrap_or(&Value::Null)),
+        "first_live_material_score_head": compact_head_delta_row(score_history_frontier.pointer("/first_live_material_score_head").unwrap_or(&Value::Null)),
+        "first_material_key_history_head": compact_head_delta_row(score_history_frontier.pointer("/first_material_key_history_head").unwrap_or(&Value::Null)),
+        "first_material_query_history_head": compact_head_delta_row(score_history_frontier.pointer("/first_material_query_history_head").unwrap_or(&Value::Null)),
+        "first_probability_history_head": compact_head_delta_row(probability_effect.pointer("/probability_history_delta/first_material_head").unwrap_or(&Value::Null)),
+        "first_material_target_row": compact_f64_score_history_context_row(source_summary.pointer("/first_material_target_row").unwrap_or(&Value::Null)),
+        "first_material_probability_source_row": compact_f64_score_history_context_row(source_summary.pointer("/first_material_probability_source_row").unwrap_or(&Value::Null)),
+        "first_material_score_source_row": compact_f64_score_history_context_row(probability_source_summary.pointer("/first_material_score_source_row").unwrap_or(&Value::Null)),
+        "first_material_rust_self_recompute_row": compact_f64_score_history_context_row(source_summary.pointer("/first_material_rust_self_recompute_row").unwrap_or(&Value::Null)),
+        "current_blocked_reasons": f64_downstream.pointer("/current_blocked_reasons").cloned().unwrap_or(Value::Null),
+        "next_diagnostic": f64_score_history_residual_next_diagnostic(classification),
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -46272,6 +46513,306 @@ mod tests {
         assert_eq!(
             report.pointer("/next_diagnostic"),
             Some(&json!("pin selected pre-RoPE f64 effect rows before residual attribution"))
+        );
+    }
+
+    #[test]
+    fn f64_score_history_residual_points_to_score_input() {
+        let selected_residual = json!({
+            "classification": "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix",
+            "selected_count": 1,
+            "residual_count": 1,
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix",
+                    "head": 0,
+                    "key_slot": 13,
+                    "query_token": 3,
+                    "selected_k_output_dim": 6,
+                    "first_material_score_source_row": {
+                        "reference": {
+                            "first_values": [9.0]
+                        }
+                    }
+                }
+            ]
+        });
+        let f64_downstream = json!({
+            "current_blocked_reasons": [
+                "f64_score_raw_history_material_mismatch_present"
+            ],
+            "residual_frontier": {
+                "classification": "f64_downstream_residual_frontier_score_history_drives_value_mix"
+            },
+            "f64": {
+                "probability_history_effect": {
+                    "score_raw_history_material_count": 20,
+                    "score_raw_live_material_count": 20,
+                    "score_raw_history_missing_count": 0,
+                    "probability_history_material_count": 20,
+                    "probability_history_missing_count": 0,
+                    "score_history_residual_frontier": {
+                        "classification": "f64_score_history_frontier_qk_score_input_history_bucket_drift",
+                        "missing_inputs": 0,
+                        "raw_material_mismatch_count": 20,
+                        "raw_live_material_mismatch_count": 20,
+                        "first_material_score_head": {
+                            "head": 0,
+                            "delta": {
+                                "max_abs_delta": 0.006005287170410156_f64
+                            },
+                            "reference": {
+                                "first_values": [1.0, 2.0, 3.0]
+                            }
+                        },
+                        "first_material_key_history_head": {
+                            "head": 0,
+                            "kv_head": 0,
+                            "delta": {
+                                "first_f16_bucket_mismatch_layout": {
+                                    "dim": 6,
+                                    "token": 3
+                                }
+                            }
+                        }
+                    },
+                    "probability_history_delta": {
+                        "first_material_head": {
+                            "head": 0,
+                            "delta": {
+                                "max_abs_delta": 0.0001
+                            },
+                            "reference": {
+                                "first_values": [0.1, 0.2]
+                            }
+                        }
+                    }
+                },
+                "value_mix_history_attribution": {
+                    "source_summary": {
+                        "classification": "rust_value_mix_numeric_policy_and_probability_source_drift",
+                        "probability_source_drift_present": true,
+                        "value_cache_source_drift_present": false,
+                        "value_cache_source_clean": true,
+                        "rust_self_recompute_drift_present": true,
+                        "rust_self_recompute_explained_by_numeric_variants": true,
+                        "first_material_target_row": {
+                            "source": "target_delta",
+                            "head": 0,
+                            "token": 3,
+                            "reference": {
+                                "first_values": [7.0]
+                            }
+                        },
+                        "first_material_probability_source_row": {
+                            "source": "probability_source_delta",
+                            "head": 0,
+                            "token": 3
+                        },
+                        "first_material_rust_self_recompute_row": {
+                            "source": "rust_self_recompute_delta",
+                            "head": 0,
+                            "token": 3
+                        }
+                    },
+                    "probability_history_source_summary": {
+                        "classification": "probability_drift_follows_score_history_drift",
+                        "first_material_score_source_row": {
+                            "source": "score_source_delta",
+                            "head": 0,
+                            "token": 3
+                        }
+                    }
+                }
+            }
+        });
+
+        let report = attention_f64_score_history_residual(&selected_residual, &f64_downstream);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("f64_score_history_residual_score_input"))
+        );
+        assert_eq!(
+            report.pointer("/score_history_frontier_classification"),
+            Some(&json!("f64_score_history_frontier_qk_score_input_history_bucket_drift"))
+        );
+        assert_eq!(report.pointer("/first_material_score_head/reference/first_values"), None);
+        assert_eq!(report.pointer("/first_probability_history_head/reference/first_values"), None);
+        assert_eq!(report.pointer("/first_material_target_row/reference/first_values"), None);
+        assert_eq!(
+            report.pointer(
+                "/first_selected_pre_rope_residual_row/first_material_score_source_row/reference/first_values"
+            ),
+            None
+        );
+        assert_eq!(
+            report.pointer(
+                "/first_material_key_history_head/delta/first_f16_bucket_mismatch_layout/dim"
+            ),
+            Some(&json!(6))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize f64 Q/K score-input history buckets before changing score accumulation, softmax, value-mix, or RMSNorm production math"
+            ))
+        );
+    }
+
+    #[test]
+    fn f64_score_history_residual_points_to_softmax_probability() {
+        let selected_residual = json!({
+            "classification": "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix",
+            "selected_count": 1,
+            "residual_count": 1,
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix"
+                }
+            ]
+        });
+        let f64_downstream = json!({
+            "residual_frontier": {
+                "classification": "f64_downstream_residual_frontier_score_history_drives_value_mix"
+            },
+            "f64": {
+                "probability_history_effect": {
+                    "score_raw_history_material_count": 0,
+                    "score_raw_live_material_count": 0,
+                    "score_raw_history_missing_count": 0,
+                    "probability_history_material_count": 2,
+                    "probability_history_missing_count": 0,
+                    "score_history_residual_frontier": {
+                        "classification": "f64_score_history_frontier_clean",
+                        "missing_inputs": 0,
+                        "raw_material_mismatch_count": 0,
+                        "raw_live_material_mismatch_count": 0
+                    }
+                },
+                "value_mix_history_attribution": {
+                    "source_summary": {
+                        "probability_source_drift_present": true,
+                        "value_cache_source_drift_present": false,
+                        "rust_self_recompute_drift_present": false
+                    }
+                }
+            }
+        });
+
+        let report = attention_f64_score_history_residual(&selected_residual, &f64_downstream);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("f64_score_history_residual_softmax_probability"))
+        );
+        assert_eq!(report.pointer("/probability_history_material_count"), Some(&json!(2)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize f64 softmax probability history before changing value-mix or RMSNorm production math"
+            ))
+        );
+    }
+
+    #[test]
+    fn f64_score_history_residual_points_to_value_cache_source() {
+        let selected_residual = json!({
+            "classification": "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix",
+            "selected_count": 1,
+            "residual_count": 1,
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_attention_norm_f64_residual_score_history_drives_value_mix"
+                }
+            ]
+        });
+        let f64_downstream = json!({
+            "residual_frontier": {
+                "classification": "f64_downstream_residual_frontier_score_history_drives_value_mix"
+            },
+            "f64": {
+                "probability_history_effect": {
+                    "score_raw_history_material_count": 4,
+                    "score_raw_live_material_count": 0,
+                    "score_raw_history_missing_count": 0,
+                    "probability_history_material_count": 4,
+                    "probability_history_missing_count": 0,
+                    "score_history_residual_frontier": {
+                        "classification": "f64_score_history_frontier_qk_f16_probe_residual",
+                        "missing_inputs": 0,
+                        "raw_material_mismatch_count": 4,
+                        "raw_live_material_mismatch_count": 0
+                    }
+                },
+                "value_mix_history_attribution": {
+                    "source_summary": {
+                        "probability_source_drift_present": true,
+                        "value_cache_source_drift_present": true,
+                        "value_cache_source_clean": false,
+                        "rust_self_recompute_drift_present": false
+                    }
+                }
+            }
+        });
+
+        let report = attention_f64_score_history_residual(&selected_residual, &f64_downstream);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("f64_score_history_residual_value_cache_source"))
+        );
+        assert_eq!(report.pointer("/value_cache_source_drift_present"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "localize f64 value-cache source drift before changing value-mix or RMSNorm production math"
+            ))
+        );
+    }
+
+    #[test]
+    fn f64_score_history_residual_reports_missing_context() {
+        let selected_residual = json!({
+            "classification": "selected_pre_rope_attention_norm_f64_residual_missing_context",
+            "selected_count": 1,
+            "residual_count": 0,
+            "rows": [
+                {
+                    "classification": "selected_pre_rope_attention_norm_f64_residual_missing_context"
+                }
+            ]
+        });
+        let f64_downstream = json!({
+            "residual_frontier": {
+                "classification": "f64_downstream_residual_frontier_score_history_drives_value_mix"
+            },
+            "f64": {
+                "probability_history_effect": {
+                    "score_raw_history_missing_count": 1,
+                    "probability_history_missing_count": 0,
+                    "score_history_residual_frontier": {
+                        "classification": "f64_score_history_frontier_missing_inputs",
+                        "missing_inputs": 1
+                    }
+                }
+            }
+        });
+
+        let report = attention_f64_score_history_residual(&selected_residual, &f64_downstream);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("f64_score_history_residual_missing_context"))
+        );
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "capture selected pre-RoPE f64 residual, raw score history, probability history, and value-mix attribution before runtime changes"
+            ))
         );
     }
 
