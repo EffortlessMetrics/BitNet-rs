@@ -11497,6 +11497,33 @@ fn extract_last_token_hidden(
     }
 }
 
+#[cfg(test)]
+mod extract_last_token_hidden_tests {
+    use super::{extract_last_token_hidden, tensor_to_vec};
+    use bitnet_common::Tensor as _;
+
+    #[test]
+    fn extract_last_token_hidden_uses_final_sequence_position() -> anyhow::Result<()> {
+        let device = candle_core::Device::Cpu;
+        let hidden = candle_core::Tensor::from_vec(
+            vec![
+                1.0f32, 2.0, 3.0, 4.0, // position 0
+                10.0, 20.0, 30.0, 40.0, // position 1
+                100.0, 200.0, 300.0, 400.0, // position 2
+            ],
+            (1usize, 3usize, 4usize),
+            &device,
+        )?;
+        let tensor =
+            bitnet_common::ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(hidden));
+
+        let last = extract_last_token_hidden(&tensor)?;
+        assert_eq!(last.shape(), vec![1, 4]);
+        assert_eq!(tensor_to_vec(&last)?, vec![100.0f32, 200.0, 300.0, 400.0]);
+        Ok(())
+    }
+}
+
 #[cfg(any(test, feature = "full-cli"))]
 fn can_use_direct_greedy_logits(
     temperature: f32,
