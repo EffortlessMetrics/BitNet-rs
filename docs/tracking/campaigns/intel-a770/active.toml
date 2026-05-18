@@ -53,3 +53,45 @@ must_not_claim = [
   "OpenVINO GPU proves native OpenCL kernels.",
   "BitNet inference works on A770.",
 ]
+
+[[work_item]]
+id = "A770-INTELGPU-DOCS-001"
+status = "in_progress"
+branch = "codex/intel-gpu/source-of-truth-map"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add Intel GPU source-of-truth, proposal, specs, and plan docs while preserving A770 as an OpenCL-first discrete BitNet lane and making no route, receipt, speed, or residency promotion."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/intel-gpu/**",
+  "docs/proposals/BITNET-PROP-0006-intel-gpu-productization.md",
+  "docs/specs/BITNET-SPEC-INTEL-GPU-*.md",
+  "docs/specs/INDEX.md",
+  "plans/intel-gpu/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/device-kernel-routing.toml",
+  "ci/model-artifacts/**",
+]
+may_claim = [
+  "Intel GPU documentation now names A770 native OpenCL, Arc 140V native OpenCL, and OpenVINO GPU as separate proof families."
+]
+must_not_claim = [
+  "A770 OpenCL execution works.",
+  "BitNet inference works on A770.",
+  "A770 has speedup or full-residency proof.",
+  "OpenVINO GPU proves native OpenCL kernels.",
+  "Arc 140V proof is A770 proof.",
+]

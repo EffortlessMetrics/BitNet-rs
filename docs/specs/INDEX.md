@@ -1,6 +1,40 @@
 # Specs Index
 
 
+## Intel GPU Productization
+
+Use these specs before implementing or claiming Intel GPU support:
+
+1. [Intel GPU source-of-truth map](../intel-gpu/README.md)
+   - Defines the A770, Arc 140V, OpenVINO GPU, NPU, CPU, and CUDA proof-family boundaries.
+2. [Intel GPU productization proposal](../proposals/BITNET-PROP-0006-intel-gpu-productization.md)
+   - Explains why Intel GPU is a selected-device product family rather than a generic GPU bucket.
+3. [Intel GPU route contract](BITNET-SPEC-INTEL-GPU-ROUTE-CONTRACT.md)
+   - Defines route IDs, selected backend labels, runtime APIs, fallback rules, and claim levels.
+4. [Intel GPU device identity](BITNET-SPEC-INTEL-GPU-DEVICE-IDENTITY.md)
+   - Defines A770, Arc 140V, OpenCL, Level Zero, OpenVINO GPU, and telemetry identity fields.
+5. [Intel GPU BitNet QK256](BITNET-SPEC-INTEL-GPU-BITNET-QK256.md)
+   - Defines native Intel GPU BitNet QK256 proof requirements and rejects toy-kernel promotion.
+6. [Intel GPU dense SLM](BITNET-SPEC-INTEL-GPU-DENSE-SLM.md)
+   - Defines Arc/OpenVINO GPU dense SLM proof and exact-profile promotion requirements.
+7. [Intel GPU quality](BITNET-SPEC-INTEL-GPU-QUALITY.md)
+   - Defines answer-quality gates and failure taxonomy for BitNet and dense SLM routes.
+8. [Intel GPU performance](BITNET-SPEC-INTEL-GPU-PERFORMANCE.md)
+   - Defines profile-specific timing fields and benchmark qualification.
+9. [Intel GPU residency](BITNET-SPEC-INTEL-GPU-RESIDENCY.md)
+   - Defines named residency classes and prevents partial acceleration from implying full residency.
+10. [Intel GPU status surface](BITNET-SPEC-INTEL-GPU-STATUS-SURFACE.md)
+   - Defines future model-status, route, gpu-doctor, and receipts-explain truth surfaces.
+11. [Intel GPU implementation plan](../../plans/intel-gpu/implementation-plan.md)
+   - Defines the PR-by-PR sequence from source-of-truth alignment through shared UX.
+
+Do not proceed from generic Intel GPU detection, generic OpenCL selection, or a
+single OpenVINO GPU run to support, speed, or residency claims. Intel GPU
+claims require selected backend identity, concrete runtime API, `fallback_used=false`,
+quality evidence, profile-specific benchmark proof when speed is claimed, and
+explicit not-claims for unproven lanes.
+
+
 ## CPU AVX-512 Kernel Proof
 
 Use these specs before implementing or claiming AVX-512 CPU kernel support:

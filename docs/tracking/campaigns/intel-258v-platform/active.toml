@@ -6308,3 +6308,45 @@ must_not_claim = [
   "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
   "BitNet QK256/I2_S behavior changed.",
 ]
+
+[[work_item]]
+id = "LNL258V-INTELGPU-DOCS-001"
+status = "in_progress"
+branch = "codex/intel-gpu/source-of-truth-map"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add Intel GPU source-of-truth, proposal, specs, and plan docs while preserving Arc 140V OpenVINO GPU, Arc 140V OpenCL, NPU, and CPU as separate proof families and making no route, receipt, speed, or residency promotion."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/intel-gpu/**",
+  "docs/proposals/BITNET-PROP-0006-intel-gpu-productization.md",
+  "docs/specs/BITNET-SPEC-INTEL-GPU-*.md",
+  "docs/specs/INDEX.md",
+  "plans/intel-gpu/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/device-kernel-routing.toml",
+  "ci/model-artifacts/**",
+]
+may_claim = [
+  "Intel GPU documentation now keeps Arc 140V OpenVINO GPU, Arc 140V native OpenCL, Intel NPU, CPU, and A770 proof families separate."
+]
+must_not_claim = [
+  "Arc 140V OpenVINO GPU is promoted.",
+  "Arc 140V OpenCL proves BitNet QK256 inference.",
+  "OpenVINO GPU proof is NPU proof.",
+  "OpenVINO GPU proof is native OpenCL proof.",
+  "Dense SLM proof is BitNet QK256 proof.",
+]

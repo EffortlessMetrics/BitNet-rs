@@ -10,6 +10,7 @@
 | Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |
 |---|---|---:|---|---|---|---|---|
 | A770-003 | ready | TBD | `codex/intel-a770/A770-003-backend-identity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Preserve Intel Arc A770 requested and selected backend identity without adding kernels or inference claims. |
+| A770-INTELGPU-DOCS-001 | in_progress | TBD | `codex/intel-gpu/source-of-truth-map` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add Intel GPU source-of-truth, proposal, specs, and plan docs while preserving A770 as an OpenCL-first discrete BitNet lane and making no route, receipt, speed, or residency promotion. |
 
 ## Hard Constraints
 
