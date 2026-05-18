@@ -12,12 +12,12 @@ The claim is intentionally narrow:
 - route: `dense_regular_llm_cuda`
 - fallback: rejected in strict CUDA receipts
 - speed: reviewed, not accepted
-- server readiness: not broadly ready
+- server readiness: exact-profile only
 - BitNet proof: false
 
 Official BitNet I2_S/QK256 receipts do not prove this dense lane. This dense
 lane also does not prove BitNet packed I2_S/QK256 behavior, QK256 kernels,
-global dense GGUF support, full CUDA residency, accepted speedup, or production
+global dense GGUF support, full CUDA residency, accepted speedup, or broad
 server readiness.
 
 ## Prerequisites
@@ -55,7 +55,9 @@ bitnet model status --device nvidia-rtx-5070-ti-cuda --format json
 ```
 
 The dense Qwen row should show `product_cli_ready`, route
-`dense_regular_llm_cuda`, `speedup_claim=false`, and `server_ready=false`.
+`dense_regular_llm_cuda`, `speedup_claim=false`, and `server_ready=true` scoped
+only to the exact shared-engine `/v1/chat/completions` profile named by the
+model coverage matrix.
 
 ## Verify The Model Artifact
 
@@ -110,7 +112,8 @@ For a bounded chat-style session:
 
 The committed warm-session proof is a bounded CLI/session proof. It records
 model, tokenizer, and CUDA context reuse for the proof run, but it does not
-claim full CUDA residency, broad chat quality, server readiness, or speedup.
+itself claim full CUDA residency, broad chat quality, server readiness, or
+speedup.
 
 ## Explain Dense Receipts
 
