@@ -17,40 +17,101 @@
 use anyhow::{Context, Result, bail};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Lane {
+    pub id: String,
     pub name: String,
     pub lem: u64,
     pub reason: String,
+    pub blocking: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SelectedLane {
+    pub id: String,
+    pub name: String,
+    pub estimated_lem: u64,
+    pub reason: String,
+    pub blocking: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SkippedLane {
+    pub id: String,
+    pub name: String,
+    pub reason: String,
+    pub blocking: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Budget {
+    pub preferred_default_lem: u64,
+    pub default_limit_lem: u64,
+    pub estimated_lem: u64,
+    pub posture: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Classification {
+    pub docs_only: bool,
+    pub tracker_only: bool,
+    pub rust_inputs_changed: bool,
+    pub manifest_or_toolchain_changed: bool,
+    pub public_api_changed: bool,
+    pub gpu_changed: bool,
+    pub macos_changed: bool,
+    pub model_validation_changed: bool,
+    pub coverage_requested: bool,
+    pub full_ci_requested: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Packages {
+    pub changed: Vec<String>,
+    pub direct_dependents: Vec<String>,
+    pub canaries: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Plan {
-    pub posture: String,
-    pub touched: BTreeMap<String, bool>,
-    pub labels: Vec<String>,
-    pub lanes: Vec<Lane>,
-    pub estimated_lem: u64,
-    pub band: String,
-    pub changed_count: usize,
-    /// Risk packs activated by the changed paths (PR 17). Names match
-    /// the keys in `policy/ci-risk-packs.toml`.
-    #[serde(default)]
+    pub schema_version: u32,
+    pub budget: Budget,
+    pub classification: Classification,
+    pub selected_lanes: Vec<SelectedLane>,
+    pub skipped_lanes: Vec<SkippedLane>,
+    pub packages: Packages,
     pub risk_packs: Vec<String>,
+    pub labels: Vec<String>,
+    #[serde(skip_serializing)]
+    pub posture: String,
+    #[serde(skip_serializing)]
+    pub touched: BTreeMap<String, bool>,
+    #[serde(skip_serializing)]
+    pub lanes: Vec<Lane>,
+    #[serde(skip_serializing)]
+    pub estimated_lem: u64,
+    #[serde(skip_serializing)]
+    pub band: String,
+    #[serde(skip_serializing)]
+    pub changed_count: usize,
     /// Soft-budget guard verdict (PR 18). One of "ok", "warn",
     /// "strong-warn", "ack-suggested", "block".
-    #[serde(default)]
+    #[serde(skip_serializing)]
     pub guard: String,
     /// Override labels detected on the PR that may permit a budget
     /// overage (PR 18).
-    #[serde(default)]
+    #[serde(skip_serializing)]
     pub override_labels_present: Vec<String>,
 }
+
+const CI_PLAN_SCHEMA_VERSION: u32 = 1;
+const PREFERRED_DEFAULT_LEM: u64 = 25;
+const DEFAULT_LIMIT_LEM: u64 = 35;
 
 #[derive(Debug, Deserialize)]
 struct LabelsWrapper {
@@ -166,102 +227,192 @@ fn classify_areas(files: &[String]) -> BTreeMap<String, bool> {
     touched
 }
 
-fn pick_lanes(touched: &BTreeMap<String, bool>, labels: &[String], any_changed: bool) -> Vec<Lane> {
+fn lane(id: &str, name: &str, lem: u64, reason: &str, blocking: bool) -> Lane {
+    Lane { id: id.to_string(), name: name.to_string(), lem, reason: reason.to_string(), blocking }
+}
+
+fn lane_catalog() -> Vec<SkippedLane> {
+    vec![
+        skipped_lane("pr-plan", "PR Plan", false),
+        skipped_lane("ci-core-build-test", "CI (Core) - build/test/clippy/docs", true),
+        skipped_lane("feature-matrix-pr", "Feature Matrix (PR smoke)", true),
+        skipped_lane("feature-matrix-full", "Feature Matrix (full)", false),
+        skipped_lane("bdd-grid-check", "BDD Grid Check", true),
+        skipped_lane("macos-arm64-route", "Route macOS PR lane", false),
+        skipped_lane("macos-arm64-clippy", "Clippy (macOS ARM64)", false),
+        skipped_lane("performance-tracking-route", "Route Performance Tracking", false),
+        skipped_lane("test-telemetry-route", "Route Test Telemetry", false),
+        skipped_lane("compatibility-msrv-route", "Route MSRV Compatibility", false),
+        skipped_lane("compatibility-msrv", "Compatibility (MSRV)", true),
+        skipped_lane("compatibility-ffi-abi", "Compatibility (ABI/FFI)", true),
+        skipped_lane("compatibility-tokenizer", "Compatibility (tokenizer)", true),
+        skipped_lane("gpu-native", "GPU CI Matrix (native compile)", true),
+        skipped_lane("gpu-docker", "GPU CI Matrix (Docker)", false),
+        skipped_lane("property-tests", "Property Tests (smoke)", false),
+        skipped_lane("ripr-advisory", "ripr static exposure (advisory)", false),
+        skipped_lane("always-on-guards", "Guards / PR Size / Markdown / Link", true),
+    ]
+}
+
+fn skipped_lane(id: &str, name: &str, blocking: bool) -> SkippedLane {
+    SkippedLane {
+        id: id.to_string(),
+        name: name.to_string(),
+        reason: "not selected for changed files or labels".to_string(),
+        blocking,
+    }
+}
+
+fn pick_lanes(
+    touched: &BTreeMap<String, bool>,
+    labels: &[String],
+    changed: &[String],
+) -> Vec<Lane> {
     let touched_get = |k: &str| touched.get(k).copied().unwrap_or(false);
     let has = |l: &str| labels.iter().any(|x| x == l);
+    let any_changed = !changed.is_empty();
+    let manifest_or_toolchain = manifest_or_toolchain_changed(changed);
+    let public_api = public_api_changed(changed);
+    let macos_paths = macos_changed(changed);
     let mut lanes = Vec::new();
 
+    if any_changed {
+        lanes.push(lane("pr-plan", "PR Plan", 1, "plan artifact", false));
+        lanes.push(lane("macos-arm64-route", "Route macOS PR lane", 1, "cheap route job", false));
+        lanes.push(lane(
+            "performance-tracking-route",
+            "Route Performance Tracking",
+            1,
+            "cheap route job",
+            false,
+        ));
+        lanes.push(lane(
+            "test-telemetry-route",
+            "Route Test Telemetry",
+            1,
+            "cheap route job",
+            false,
+        ));
+        lanes.push(lane(
+            "compatibility-msrv-route",
+            "Route MSRV Compatibility",
+            1,
+            "cheap route job",
+            false,
+        ));
+    }
     if touched_get("rust_core") {
-        lanes.push(Lane {
-            name: "CI (Core) — build/test/clippy/docs".into(),
-            lem: 22,
-            reason: "rust_core changed".into(),
-        });
+        lanes.push(lane(
+            "ci-core-build-test",
+            "CI (Core) - build/test/clippy/docs",
+            22,
+            "rust_core changed",
+            true,
+        ));
     }
     if has("bdd") || has("grid") || has("full-ci") {
-        lanes.push(Lane {
-            name: "BDD Grid Check".into(),
-            lem: 4,
-            reason: "bdd/grid/full-ci label".into(),
-        });
+        lanes.push(lane("bdd-grid-check", "BDD Grid Check", 4, "bdd/grid/full-ci label", true));
     }
-    if has("macos") || has("full-ci") {
-        lanes.push(Lane {
-            name: "Clippy (macOS ARM64)".into(),
-            lem: 15 * 10,
-            reason: "macos/full-ci label".into(),
-        });
+    if macos_paths || has("macos") || has("apple-silicon") || has("metal") || has("full-ci") {
+        lanes.push(lane(
+            "macos-arm64-clippy",
+            "Clippy (macOS ARM64)",
+            15 * 10,
+            "macOS path or label",
+            false,
+        ));
     }
     if touched_get("rust_core") || touched_get("manifest") {
         if has("feature-matrix") || has("full-ci") {
-            lanes.push(Lane {
-                name: "Feature Matrix (full ~21 jobs)".into(),
-                lem: 70,
-                reason: "feature-matrix/full-ci label".into(),
-            });
+            lanes.push(lane(
+                "feature-matrix-full",
+                "Feature Matrix (full ~21 jobs)",
+                70,
+                "feature-matrix/full-ci label",
+                false,
+            ));
         } else {
-            lanes.push(Lane {
-                name: "Feature Matrix (PR 3-combo)".into(),
-                lem: 12,
-                reason: "rust/manifest changed".into(),
-            });
+            lanes.push(lane(
+                "feature-matrix-pr",
+                "Feature Matrix (PR smoke)",
+                12,
+                "rust/manifest changed",
+                true,
+            ));
         }
     }
     if touched_get("gpu") {
-        lanes.push(Lane {
-            name: "GPU CI Matrix (native compile)".into(),
-            lem: 18,
-            reason: "GPU paths changed".into(),
-        });
+        lanes.push(lane(
+            "gpu-native",
+            "GPU CI Matrix (native compile)",
+            18,
+            "GPU paths changed",
+            true,
+        ));
         if has("gpu-ci") || has("docker") || has("full-ci") {
-            lanes.push(Lane {
-                name: "GPU CI Matrix (Docker, ~6x)".into(),
-                lem: 90,
-                reason: "gpu-ci/docker/full-ci label".into(),
-            });
+            lanes.push(lane(
+                "gpu-docker",
+                "GPU CI Matrix (Docker, ~6x)",
+                90,
+                "gpu-ci/docker/full-ci label",
+                false,
+            ));
         }
     }
-    if touched_get("rust_core") {
-        lanes.push(Lane {
-            name: "Compatibility (MSRV)".into(),
-            lem: 12,
-            reason: "rust_core changed".into(),
-        });
+    if manifest_or_toolchain || public_api || has("msrv") || has("compatibility") || has("full-ci")
+    {
+        lanes.push(lane(
+            "compatibility-msrv",
+            "Compatibility (MSRV)",
+            12,
+            "manifest/toolchain/public-api risk or label",
+            true,
+        ));
     }
     if touched_get("ffi") || has("ffi") || has("abi") || has("full-ci") {
-        lanes.push(Lane {
-            name: "Compatibility (ABI/FFI)".into(),
-            lem: 8,
-            reason: "ffi area / label".into(),
-        });
+        lanes.push(lane(
+            "compatibility-ffi-abi",
+            "Compatibility (ABI/FFI)",
+            8,
+            "ffi area / label",
+            true,
+        ));
     }
     if touched_get("tokenizer") || has("tokenizer") || has("full-ci") {
-        lanes.push(Lane {
-            name: "Compatibility (tokenizer)".into(),
-            lem: 6,
-            reason: "tokenizer area / label".into(),
-        });
+        lanes.push(lane(
+            "compatibility-tokenizer",
+            "Compatibility (tokenizer)",
+            6,
+            "tokenizer area / label",
+            true,
+        ));
     }
     if has("property-tests") || has("full-ci") {
-        lanes.push(Lane {
-            name: "Property Tests (smoke)".into(),
-            lem: 4,
-            reason: "property-tests/full-ci label".into(),
-        });
+        lanes.push(lane(
+            "property-tests",
+            "Property Tests (smoke)",
+            4,
+            "property-tests/full-ci label",
+            false,
+        ));
     }
     if has("ripr") || has("full-ci") {
-        lanes.push(Lane {
-            name: "ripr static exposure (advisory)".into(),
-            lem: 4,
-            reason: "ripr/full-ci label".into(),
-        });
+        lanes.push(lane(
+            "ripr-advisory",
+            "ripr static exposure (advisory)",
+            4,
+            "ripr/full-ci label",
+            false,
+        ));
     }
     if any_changed {
-        lanes.push(Lane {
-            name: "Guards / PR Size Guard / Markdownlint / Link Check".into(),
-            lem: 4,
-            reason: "always-on".into(),
-        });
+        lanes.push(lane(
+            "always-on-guards",
+            "Guards / PR Size Guard / Markdownlint / Link Check",
+            4,
+            "always-on",
+            true,
+        ));
     }
     lanes
 }
@@ -276,10 +427,106 @@ fn band_for(total: u64) -> &'static str {
     }
 }
 
+fn budget_posture_for(total: u64) -> &'static str {
+    match total {
+        0..=12 => "pennies",
+        13..=35 => "default",
+        36..=75 => "elevated",
+        76..=125 => "high",
+        _ => "hard",
+    }
+}
+
+fn is_tracker_path(path: &str) -> bool {
+    path.starts_with("docs/tracking/") || path.starts_with(".codex/campaigns/")
+}
+
+fn is_docs_path(path: &str) -> bool {
+    path.starts_with("docs/")
+        || path.ends_with(".md")
+        || path.starts_with("README")
+        || path.starts_with("CHANGELOG")
+        || path.starts_with("CONTRIBUTING")
+        || path.starts_with("SECURITY")
+        || path.starts_with("COMPATIBILITY")
+        || path.starts_with("THIRD_PARTY")
+        || path == "CLAUDE.md"
+}
+
+fn manifest_or_toolchain_changed(files: &[String]) -> bool {
+    files.iter().any(|path| {
+        path == "Cargo.toml"
+            || path == "Cargo.lock"
+            || path == "rust-toolchain.toml"
+            || path.starts_with(".cargo/")
+            || (path.starts_with("crates/") && path.ends_with("/Cargo.toml"))
+    })
+}
+
+fn public_api_changed(files: &[String]) -> bool {
+    files.iter().any(|path| {
+        (path.starts_with("crates/")
+            && (path.ends_with("/src/lib.rs") || path.contains("/src/api/")))
+            || path.starts_with("crates/bitnet-ffi/")
+            || path.starts_with("crates/bitnet-py/")
+            || path == "COMPATIBILITY.md"
+            || path == "MIGRATION.md"
+            || path.starts_with("docs/release/")
+    })
+}
+
+fn macos_changed(files: &[String]) -> bool {
+    files.iter().any(|path| {
+        path.starts_with("crates/bitnet-metal/")
+            || path == ".github/workflows/macos-arm64.yml"
+            || path.starts_with("docs/apple/")
+    })
+}
+
+fn model_validation_changed(files: &[String]) -> bool {
+    files.iter().any(|path| {
+        path.starts_with("ci/model-artifacts/")
+            || path.starts_with("ci/hardware/")
+            || path.starts_with("docs/model-contracts/")
+            || path.starts_with("tests/fixtures/models/")
+            || path.starts_with("models/")
+    })
+}
+
+fn build_classification(
+    changed: &[String],
+    touched: &BTreeMap<String, bool>,
+    labels: &[String],
+) -> Classification {
+    let has_label = |label: &str| labels.iter().any(|item| item == label);
+    let tracker_only = !changed.is_empty() && changed.iter().all(|path| is_tracker_path(path));
+    let docs_only = !changed.is_empty()
+        && changed.iter().all(|path| is_docs_path(path) && !is_tracker_path(path));
+
+    Classification {
+        docs_only,
+        tracker_only,
+        rust_inputs_changed: touched.get("rust_core").copied().unwrap_or(false),
+        manifest_or_toolchain_changed: manifest_or_toolchain_changed(changed),
+        public_api_changed: public_api_changed(changed),
+        gpu_changed: touched.get("gpu").copied().unwrap_or(false),
+        macos_changed: macos_changed(changed),
+        model_validation_changed: model_validation_changed(changed)
+            || has_label("model-validation"),
+        coverage_requested: has_label("coverage") || has_label("full-ci"),
+        full_ci_requested: has_label("full-ci"),
+    }
+}
+
 fn posture_for(touched: &BTreeMap<String, bool>, any_changed: bool) -> String {
     let touched_get = |k: &str| touched.get(k).copied().unwrap_or(false);
     if !any_changed {
         return "empty".into();
+    }
+    if touched_get("tracking")
+        && !(touched_get("rust_core") || touched_get("gpu") || touched_get("ffi"))
+    {
+        return "tracking-only".into();
     }
     if touched_get("docs")
         && !(touched_get("rust_core")
@@ -289,31 +536,102 @@ fn posture_for(touched: &BTreeMap<String, bool>, any_changed: bool) -> String {
     {
         return "docs-only".into();
     }
-    if touched_get("tracking")
-        && !(touched_get("rust_core") || touched_get("gpu") || touched_get("ffi"))
-    {
-        return "tracking-only".into();
-    }
     "rust".into()
+}
+
+fn selected_lanes(lanes: &[Lane]) -> Vec<SelectedLane> {
+    lanes
+        .iter()
+        .map(|lane| SelectedLane {
+            id: lane.id.clone(),
+            name: lane.name.clone(),
+            estimated_lem: lane.lem,
+            reason: lane.reason.clone(),
+            blocking: lane.blocking,
+        })
+        .collect()
+}
+
+fn skipped_lanes(lanes: &[Lane]) -> Vec<SkippedLane> {
+    let selected: BTreeSet<&str> = lanes.iter().map(|lane| lane.id.as_str()).collect();
+    lane_catalog().into_iter().filter(|lane| !selected.contains(lane.id.as_str())).collect()
+}
+
+fn build_budget(total: u64) -> Budget {
+    Budget {
+        preferred_default_lem: PREFERRED_DEFAULT_LEM,
+        default_limit_lem: DEFAULT_LIMIT_LEM,
+        estimated_lem: total,
+        posture: budget_posture_for(total).to_string(),
+    }
+}
+
+fn package_name_for_path(path: &str) -> Option<String> {
+    let mut parts = path.split('/');
+    match parts.next()? {
+        "crates" => parts.next().map(str::to_string),
+        "xtask" => Some("xtask".to_string()),
+        "crossval" => Some("bitnet-crossval".to_string()),
+        _ => None,
+    }
+}
+
+fn build_packages(changed: &[String], risk_packs: &[String]) -> Packages {
+    let changed_packages: BTreeSet<String> =
+        changed.iter().filter_map(|path| package_name_for_path(path)).collect();
+    let risk_set: BTreeSet<&str> = risk_packs.iter().map(String::as_str).collect();
+    let mut canaries = BTreeSet::new();
+    if risk_set.contains("qk256") {
+        canaries.insert("bitnet-quantization".to_string());
+        canaries.insert("bitnet-models".to_string());
+    }
+    if risk_set.contains("kernels_cpu") {
+        canaries.insert("bitnet-kernels".to_string());
+    }
+    if risk_set.contains("gpu") {
+        canaries.insert("bitnet-gpu-hal".to_string());
+    }
+    if risk_set.contains("tokenizer") {
+        canaries.insert("bitnet-tokenizers".to_string());
+    }
+    if risk_set.contains("bdd_policy") {
+        canaries.insert("bitnet-bdd-grid".to_string());
+    }
+
+    Packages {
+        changed: changed_packages.into_iter().collect(),
+        direct_dependents: Vec::new(),
+        canaries: canaries.into_iter().collect(),
+    }
 }
 
 /// Compute the plan from a list of changed files and labels.
 pub fn build_plan(changed: &[String], labels: &[String]) -> Plan {
     let touched = classify_areas(changed);
-    let lanes = pick_lanes(&touched, labels, !changed.is_empty());
+    let lanes = pick_lanes(&touched, labels, changed);
     let total: u64 = lanes.iter().map(|l| l.lem).sum();
     let posture = posture_for(&touched, !changed.is_empty());
     let risk_packs = pick_risk_packs(changed);
     let (guard, override_labels_present) = guard_verdict(total, labels);
+    let classification = build_classification(changed, &touched, labels);
+    let packages = build_packages(changed, &risk_packs);
+    let selected_lanes = selected_lanes(&lanes);
+    let skipped_lanes = skipped_lanes(&lanes);
     Plan {
+        schema_version: CI_PLAN_SCHEMA_VERSION,
+        budget: build_budget(total),
+        classification,
+        selected_lanes,
+        skipped_lanes,
+        packages,
+        risk_packs,
+        labels: labels.to_vec(),
         posture,
         touched,
-        labels: labels.to_vec(),
         lanes,
         estimated_lem: total,
         band: band_for(total).to_string(),
         changed_count: changed.len(),
-        risk_packs,
         guard,
         override_labels_present,
     }
@@ -395,6 +713,13 @@ fn pick_risk_packs(changed: &[String]) -> Vec<String> {
         if any_match {
             out.push((*pack).to_string());
         }
+    }
+    if manifest_or_toolchain_changed(changed) && !out.iter().any(|pack| pack == "manifest_release")
+    {
+        out.push("manifest_release".to_string());
+    }
+    if public_api_changed(changed) && !out.iter().any(|pack| pack == "public_api") {
+        out.push("public_api".to_string());
     }
     out
 }
@@ -571,26 +896,50 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+    use std::path::PathBuf;
 
     fn s(v: &[&str]) -> Vec<String> {
         v.iter().map(|x| (*x).to_string()).collect()
+    }
+
+    fn fixture_lines(name: &str) -> Result<Vec<String>> {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("tests")
+            .join("fixtures")
+            .join("ci-plan")
+            .join(name);
+        let text = std::fs::read_to_string(&path)?;
+        Ok(decode_lines(text.as_bytes()))
     }
 
     #[test]
     fn docs_only_posture() {
         let plan = build_plan(&s(&["docs/foo.md", "README.md"]), &[]);
         assert_eq!(plan.posture, "docs-only");
-        assert_eq!(plan.estimated_lem, 4); // always-on guards lane
+        assert_eq!(plan.estimated_lem, 9); // route jobs plus always-on guards
+        assert!(plan.classification.docs_only);
+        assert_eq!(plan.budget.posture, "pennies");
     }
 
     #[test]
-    fn rust_core_posture_picks_core_lane_and_msrv() {
+    fn rust_core_posture_picks_core_lane_without_msrv_for_leaf_edits() {
         let plan = build_plan(&s(&["crates/bitnet-quantization/src/qk256.rs"]), &[]);
         assert_eq!(plan.posture, "rust");
         let names: Vec<&str> = plan.lanes.iter().map(|l| l.name.as_str()).collect();
         assert!(names.iter().any(|n| n.contains("CI (Core)")));
-        assert!(names.iter().any(|n| n.contains("Feature Matrix (PR 3-combo)")));
+        assert!(names.iter().any(|n| n.contains("Feature Matrix (PR smoke)")));
+        assert!(!names.iter().any(|n| n.contains("Compatibility (MSRV)")));
+    }
+
+    #[test]
+    fn manifest_or_public_api_picks_msrv() {
+        let plan = build_plan(&s(&["Cargo.lock", "crates/bitnet-cli/src/lib.rs"]), &[]);
+        let names: Vec<&str> = plan.lanes.iter().map(|l| l.name.as_str()).collect();
         assert!(names.iter().any(|n| n.contains("Compatibility (MSRV)")));
+        assert!(plan.classification.manifest_or_toolchain_changed);
+        assert!(plan.classification.public_api_changed);
     }
 
     #[test]
@@ -607,6 +956,7 @@ mod tests {
         assert_eq!(plan.posture, "empty");
         assert_eq!(plan.estimated_lem, 0);
         assert!(plan.lanes.is_empty());
+        assert!(plan.selected_lanes.is_empty());
     }
 
     #[test]
@@ -664,6 +1014,85 @@ mod tests {
     fn risk_packs_docs_tracking() {
         let plan = build_plan(&s(&["docs/foo.md", "README.md"]), &[]);
         assert!(plan.risk_packs.iter().any(|p| p == "docs_tracking"));
+    }
+
+    #[test]
+    fn ci_plan_json_schema_has_required_top_level_fields() -> Result<()> {
+        let plan = build_plan(&fixture_lines("rust.txt")?, &[]);
+        let value = serde_json::to_value(&plan)?;
+
+        assert_eq!(value.get("schema_version"), Some(&json!(1)));
+        assert!(value.get("budget").is_some());
+        assert!(value.get("classification").is_some());
+        assert!(value.get("selected_lanes").is_some());
+        assert!(value.get("skipped_lanes").is_some());
+        assert!(value.get("packages").is_some());
+        assert!(value.get("risk_packs").is_some());
+        assert!(value.get("labels").is_some());
+        assert!(value.get("lanes").is_none());
+        assert!(value.get("touched").is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn ci_plan_fixture_docs_only() -> Result<()> {
+        let plan = build_plan(&fixture_lines("docs.txt")?, &[]);
+        let value = serde_json::to_value(&plan)?;
+        assert_eq!(value.pointer("/classification/docs_only"), Some(&json!(true)));
+        assert_eq!(value.pointer("/classification/tracker_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/rust_inputs_changed"), Some(&json!(false)));
+        assert_eq!(value.pointer("/budget/preferred_default_lem"), Some(&json!(25)));
+        assert_eq!(value.pointer("/budget/default_limit_lem"), Some(&json!(35)));
+        Ok(())
+    }
+
+    #[test]
+    fn ci_plan_fixture_tracker_only() -> Result<()> {
+        let plan = build_plan(&fixture_lines("tracker.txt")?, &[]);
+        let value = serde_json::to_value(&plan)?;
+        assert_eq!(value.pointer("/classification/docs_only"), Some(&json!(false)));
+        assert_eq!(value.pointer("/classification/tracker_only"), Some(&json!(true)));
+        assert_eq!(plan.posture, "tracking-only");
+        Ok(())
+    }
+
+    #[test]
+    fn ci_plan_fixture_manifest_and_public_api() -> Result<()> {
+        let plan = build_plan(&fixture_lines("manifest.txt")?, &[]);
+        let value = serde_json::to_value(&plan)?;
+        assert_eq!(
+            value.pointer("/classification/manifest_or_toolchain_changed"),
+            Some(&json!(true))
+        );
+        assert_eq!(value.pointer("/classification/public_api_changed"), Some(&json!(true)));
+        assert!(
+            plan.selected_lanes.iter().any(|lane| lane.id == "compatibility-msrv"),
+            "manifest/public API fixture should select MSRV"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn ci_plan_fixture_gpu_and_macos() -> Result<()> {
+        let plan = build_plan(&fixture_lines("macos.txt")?, &[]);
+        let value = serde_json::to_value(&plan)?;
+        assert_eq!(value.pointer("/classification/gpu_changed"), Some(&json!(true)));
+        assert_eq!(value.pointer("/classification/macos_changed"), Some(&json!(true)));
+        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "gpu-native"));
+        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "macos-arm64-clippy"));
+        Ok(())
+    }
+
+    #[test]
+    fn ci_plan_fixture_model_validation_and_labels() -> Result<()> {
+        let changed = fixture_lines("model-validation.txt")?;
+        let plan = build_plan(&changed, &s(&["coverage", "full-ci"]));
+        let value = serde_json::to_value(&plan)?;
+        assert_eq!(value.pointer("/classification/model_validation_changed"), Some(&json!(true)));
+        assert_eq!(value.pointer("/classification/coverage_requested"), Some(&json!(true)));
+        assert_eq!(value.pointer("/classification/full_ci_requested"), Some(&json!(true)));
+        assert_eq!(value.pointer("/labels"), Some(&json!(["coverage", "full-ci"])));
+        Ok(())
     }
 
     #[test]

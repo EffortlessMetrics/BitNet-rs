@@ -1,0 +1,3 @@
+ci/model-artifacts/model-coverage-matrix.toml
+docs/model-contracts/qwen3-0.6b-instruct.yaml
+tests/fixtures/models/tiny-bitnet.gguf.sha256
