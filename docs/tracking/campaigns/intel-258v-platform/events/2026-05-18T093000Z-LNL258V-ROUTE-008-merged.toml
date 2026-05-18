@@ -1,0 +1,29 @@
+timestamp = "2026-05-18T09:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-008"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-008-profile-diagnostics"
+pr = 5533
+merge_sha = "17a8022ec91ec456df133cda000255d40fe9c183"
+head_sha = "00b9093f5134cb01ee23ad91282d4b0622a76bbd"
+summary = "Merged LNL258V-ROUTE-008 profile-scoped OpenVINO route diagnostics."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The merged PR scopes OpenVINO corpus-v2 diagnosis and generation-budget blockers by workload profile.",
+  "ask_short now carries yes_no_clear_sky overgeneration blockers without inheriting stop_token_one_word_done.",
+  "regression_tiny now indexes OpenVINO GPU/NPU candidate rows so stop_token_one_word_done remains visible on that profile.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted with no speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]
