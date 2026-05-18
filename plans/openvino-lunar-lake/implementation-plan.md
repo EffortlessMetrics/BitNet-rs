@@ -4,7 +4,7 @@ Status: active
 Owner: intel/openvino
 Created: 2026-05-18
 Linked proposal: [BITNET-PROP-0004](../../docs/proposals/BITNET-PROP-0004-openvino-lunar-lake-productization.md)
-Linked specs: [BITNET-SPEC-OPENVINO-ROUTE-CONTRACT](../../docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md), [BITNET-SPEC-OPENVINO-DENSE-SLM](../../docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md), [BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE](../../docs/specs/BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE.md)
+Linked specs: [BITNET-SPEC-OPENVINO-ROUTE-CONTRACT](../../docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md), [BITNET-SPEC-OPENVINO-DENSE-SLM](../../docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md), [BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE](../../docs/specs/BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE.md), [BITNET-SPEC-OPENVINO-QUALITY-CORPUS](../../docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md), [BITNET-SPEC-OPENVINO-PHASE-TIMING](../../docs/specs/BITNET-SPEC-OPENVINO-PHASE-TIMING.md)
 Linked ADRs: n/a
 Linked plan: n/a
 Linked issues: n/a
@@ -107,7 +107,7 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-DOCS-003
 
-Status: in progress
+Status: merged
 Linked proposal: `BITNET-PROP-0004`
 Linked specs: `BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE`
 Blocked by: `LNL258V-OPENVINO-DOCS-002`
@@ -128,9 +128,9 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-DOCS-004
 
-Status: proposed
+Status: in progress
 Linked proposal: `BITNET-PROP-0004`
-Linked specs: future quality and phase-timing specs
+Linked specs: `BITNET-SPEC-OPENVINO-QUALITY-CORPUS`, `BITNET-SPEC-OPENVINO-PHASE-TIMING`
 Blocked by: `LNL258V-OPENVINO-DOCS-003`
 
 Add:
@@ -142,6 +142,17 @@ docs/specs/BITNET-SPEC-OPENVINO-PHASE-TIMING.md
 
 Define corpus-v2 profile gates, failure taxonomy, retokenized token-ID marking,
 prompt evidence, generation config, and profile-specific timing fields.
+
+Acceptance additions:
+
+- Quality corpus receipts define required profiles/categories, prompt/template
+  evidence, stop/EOS policy, generation config, and direct versus retokenized
+  token accounting.
+- Phase timing receipts define profile token-bound applicability, cold/cache/
+  warm/resident split, OpenVINO metric gaps, telemetry context, and comparison
+  requirements.
+- Quality and timing evidence are inputs to route-promotion review but do not
+  promote OpenVINO GPU/NPU routes by themselves.
 
 ### Work item: LNL258V-OPENVINO-DOCS-005
 
