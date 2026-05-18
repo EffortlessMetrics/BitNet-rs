@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-18T16:15:00Z",
+  "created_utc": "2026-05-19T01:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -14,7 +14,8 @@
   "route_diagnosis_receipts": [
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
-    "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json"
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json"
   ],
   "profile_comparison_ready": true,
   "default_route_id": "dense_slm_default_cpu",
@@ -309,7 +310,6 @@
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
-              "NPU cache or resident warm-route proof is missing",
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
@@ -330,10 +330,10 @@
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
@@ -636,7 +636,6 @@
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
-              "NPU cache or resident warm-route proof is missing",
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
@@ -657,10 +656,10 @@
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
@@ -963,7 +962,6 @@
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
-              "NPU cache or resident warm-route proof is missing",
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
@@ -984,10 +982,10 @@
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
@@ -1297,7 +1295,6 @@
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
-              "NPU cache or resident warm-route proof is missing",
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
@@ -1320,10 +1317,10 @@
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
@@ -1634,7 +1631,6 @@
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
-              "NPU cache or resident warm-route proof is missing",
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
@@ -1657,10 +1653,10 @@
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
@@ -1931,7 +1927,6 @@
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
-              "NPU cache or resident warm-route proof is missing",
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
@@ -1956,10 +1951,10 @@
             "ci/quality/lunar-lake-answer-corpus-v2.yaml",
             "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
             "benchmark_qualified_speedup_or_power_advantage",
@@ -2186,22 +2181,6 @@
   },
   "promotion_blocker_summary": [
     {
-      "blocker": "NPU cache or resident warm-route proof is missing",
-      "occurrence_count": 6,
-      "route_ids": [
-        "dense_slm_openvino_npu_candidate"
-      ],
-      "profile_ids": [
-        "ask_normal",
-        "ask_short",
-        "decode_heavy",
-        "low_power",
-        "prefill_heavy",
-        "regression_tiny"
-      ],
-      "next_action": "run NPU cache/resident warm-route proof and keep cold one-off routing blocked until classified"
-    },
-    {
       "blocker": "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
       "occurrence_count": 6,
       "route_ids": [
@@ -2215,7 +2194,7 @@
         "prefill_heavy",
         "regression_tiny"
       ],
-      "next_action": "run NPU cache/resident warm-route proof and keep cold one-off routing blocked until classified"
+      "next_action": "keep cold one-off NPU routing blocked; use resident/cache evidence only for warm-route evaluation"
     },
     {
       "blocker": "OpenVINO generated token IDs are retokenized, not direct pipeline internals",
