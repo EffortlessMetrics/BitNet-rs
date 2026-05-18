@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T15:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-004"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5601
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-004-quality-phase-specs"
+head_sha = "91c2fc161973b7a75f27385f0d60a0a1434a5e88"
+merge_sha = "56d813a785fd4d81bb70bb80a5948ee148959f7c"
+summary = "Merged LNL258V-OPENVINO-DOCS-004, adding OpenVINO quality-corpus and phase-timing contract specs."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5601",
+  "docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-PHASE-TIMING.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The merged specs define corpus-v2 profile gates, failure taxonomy, prompt/template/stop evidence, generation config, direct versus retokenized token accounting, profile timing applicability, phase fields, OpenVINO metric gaps, and telemetry context.",
+  "The closeout is tracker-only and preserves the no route-promotion, no speedup, no power-advantage, no broad dense SLM quality, no BitNet QK256/I2_S, no native OpenCL, no native NPU kernel, and no server-readiness claim boundary.",
+]

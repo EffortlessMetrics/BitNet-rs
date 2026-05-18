@@ -6522,9 +6522,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-DOCS-004"
-status = "pr_open"
+status = "merged"
 pr = 5601
-head_sha = "8a0130642c08440ca55fa35c5debd3c782694f25"
+head_sha = "91c2fc161973b7a75f27385f0d60a0a1434a5e88"
+merge_sha = "56d813a785fd4d81bb70bb80a5948ee148959f7c"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-004-quality-phase-specs"
 stackable = false
 review_mode = "codex_premerge"
