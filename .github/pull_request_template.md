@@ -2,6 +2,35 @@
 
 <!-- Brief description of what this PR accomplishes -->
 
+
+## Source-of-truth links
+
+Proposal:
+Spec:
+ADR:
+Plan item:
+Active goal or campaign manifest:
+
+## Scope
+
+- [ ] Proposal / why
+- [ ] Spec / behavior contract
+- [ ] ADR / durable decision
+- [ ] Plan / sequencing
+- [ ] Active goal / current execution state
+- [ ] Runtime / implementation
+- [ ] Policy ledger
+- [ ] Support-tier update
+- [ ] Generated status / receipt
+
+## Non-goals
+
+<!-- What this PR explicitly does not do -->
+
+## Claim boundary
+
+<!-- What may be claimed after this PR, and what may not be claimed yet -->
+
 ## CI Requirements (check all that apply)
 
 <!-- These are enforced by the Guards workflow - violations will block merge -->
@@ -64,6 +93,10 @@ See: docs/ci/cost-and-verification-policy.md
 - [ ] README updated (if user-facing changes)
 - [ ] CLAUDE.md updated (if development workflow changes)
 - [ ] API documentation updated (if public API changes)
+
+## Rollback
+
+<!-- How to revert safely if needed -->
 
 ## Checklist
 

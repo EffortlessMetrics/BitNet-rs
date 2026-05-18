@@ -7,6 +7,36 @@ branches. See
 [`docs/development/AGENTIC_PR_OPERATIONS.md`](docs/development/AGENTIC_PR_OPERATIONS.md)
 for the durable agentic PR operations reference.
 
+## Repo Source-Of-Truth Stack
+
+BitNet-rs uses a linked source-of-truth stack:
+
+```text
+Roadmap → Proposal → Spec → ADR → Plan → Active goal → PR → Proof
+```
+
+Before changing files, Codex agents must read:
+
+1. `docs/reference/SPEC_SYSTEM.md`;
+2. `.bitnet-rs/goals/active.toml` when present, otherwise the campaign
+   `active.toml` explicitly named by the task;
+3. the linked implementation plan;
+4. the linked spec for the selected work item;
+5. linked ADRs for durable constraints.
+
+Work on exactly one ready work item per PR. Proposal PRs explain why, spec PRs
+define behavior, ADR PRs record durable decisions, plan PRs define sequencing,
+active-goal PRs define current execution state, and runtime PRs must link to
+the spec and plan item they implement.
+
+Run the proof commands listed by the selected plan or active goal, plus
+`git diff --check`. If a proof command cannot run, record the unavailable
+command, why it cannot run, substitute evidence if any, and whether that blocks
+merge. Do not hand-edit generated status; run the named generator or checker.
+
+Policy exceptions must update the relevant `policy/*.toml` ledger with owner,
+reason, coverage, creation date, review date, and expiry when temporary.
+
 ## Campaign Work Item Authority
 
 Campaign work items are the source of truth for review, PR, and merge flow.
