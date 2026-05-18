@@ -1,6 +1,46 @@
 # Specs Index
 
 
+## AMD ROCm Productization
+
+Use these specs before implementing or claiming AMD ROCm support:
+
+1. [AMD ROCm Productization Proposal](../proposals/BITNET-PROP-0008-amd-rocm-productization.md)
+   - Explains why ROCm exists as a selected-device AMD GPU lane and why HIP,
+     BitNet QK256, dense SLM, quality, speed, residency, and server proof stay
+     separate.
+2. [ROCm Route Contract](BITNET-SPEC-ROCM-ROUTE-CONTRACT.md)
+   - Defines concrete backend labels, route IDs, proof families, receipt fields,
+     and forbidden generic proof labels.
+3. [ROCm Device Identity](BITNET-SPEC-ROCM-DEVICE-IDENTITY.md)
+   - Defines Linux ROCm and Windows HIP SDK identity fields, official support
+     status, and selected-device acceptance rules.
+4. [ROCm Kernel Compile](BITNET-SPEC-ROCM-KERNEL-COMPILE.md)
+   - Separates source embedding, HIP compile, runtime launch, fixture launch,
+     and model route launch proof.
+5. [ROCm BitNet QK256](BITNET-SPEC-ROCM-BITNET-QK256.md)
+   - Defines packed I2_S/QK256 ROCm semantics, kernel IDs, fixtures, and hard
+     boundaries against dense SLM and diagnostic F32 proof.
+6. [ROCm Dense SLM](BITNET-SPEC-ROCM-DENSE-SLM.md)
+   - Defines dense ROCm model candidates and the proof ladder separate from
+     BitNet QK256.
+7. [ROCm Quality](BITNET-SPEC-ROCM-QUALITY.md)
+   - Defines answer-quality corpora, generated-token evidence, and failure
+     taxonomy for BitNet and dense SLM ROCm.
+8. [ROCm Performance](BITNET-SPEC-ROCM-PERFORMANCE.md)
+   - Defines exact profiles, timing fields, comparators, and speed promotion
+     gates.
+9. [ROCm Residency](BITNET-SPEC-ROCM-RESIDENCY.md)
+   - Defines residency classes and per-phase residency evidence.
+10. [ROCm Status Surface](BITNET-SPEC-ROCM-STATUS-SURFACE.md)
+    - Defines future `rocm doctor`, `model status`, `receipts explain`, and
+      AMD GPU doctor status fields.
+
+The ROCm lane is currently registered/scaffold only. Do not proceed from source
+text checks, ROCm installation paths, HIP visibility, or generic AMD GPU labels
+to compile, execution, model, quality, speed, residency, or server claims.
+
+
 ## CPU AVX-512 Kernel Proof
 
 Use these specs before implementing or claiming AVX-512 CPU kernel support:

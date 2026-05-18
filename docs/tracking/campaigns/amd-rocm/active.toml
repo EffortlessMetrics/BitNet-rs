@@ -1,0 +1,67 @@
+id = "amd-rocm"
+title = "AMD ROCm productization"
+status = "active"
+
+objective = "Register and sequence AMD ROCm as BitNet-rs's selected-device HIP/ROCm lane for exact AMD Radeon, Radeon PRO, and Instinct routes without inheriting CUDA, OpenCL, WGPU, CPU, OpenVINO, BitNet QK256, dense SLM, speed, residency, or server proof."
+
+end_state = [
+  "ROCm status surfaces answer which AMD GPU, ROCm/HIP runtime, GFX target, model family, route, fallback state, quality result, parity result, speed review, and not-claims apply.",
+  "Selected backend labels are concrete AMD ROCm device routes, never generic amd/gpu/rocm/hip/radeon labels.",
+  "HIP source embedding, HIP compile, HIP runtime smoke, BitNet QK256 parity, dense SLM proof, answer quality, performance, residency, and server readiness remain separate proof stages.",
+]
+
+hard_constraints = [
+  "Do not claim generic AMD GPU support.",
+  "Do not claim ROCm from source text tests.",
+  "Do not claim HIP compile from source embedding.",
+  "Do not claim execution from compile smoke.",
+  "Do not claim BitNet QK256 from dense SLM ROCm proof.",
+  "Do not claim dense SLM from BitNet QK256 proof.",
+  "Do not claim speedup without exact-profile review.",
+  "Do not claim full residency without per-phase residency evidence.",
+  "Do not add live ROCm hardware execution to ordinary PR CI.",
+]
+
+[[work_item]]
+id = "ROCM-DOCS-000"
+status = "ready"
+branch = "codex/amd-rocm/ROCM-DOCS-000-source-of-truth"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add AMD ROCm source-of-truth docs, proposal, specs, plan, campaign tracker, specs index entry, and hardware matrix row as docs-only registered/scaffold evidence with no runtime, model, speed, residency, or server promotion."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check amd-rocm",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/rocm/**",
+  "plans/rocm/**",
+  "docs/proposals/BITNET-PROP-0008-amd-rocm-productization.md",
+  "docs/specs/BITNET-SPEC-ROCM-*.md",
+  "docs/specs/INDEX.md",
+  "docs/hardware/HARDWARE_MATRIX.md",
+  "docs/tracking/campaigns/amd-rocm/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/model-artifacts/**",
+  "ci/hardware/**",
+  ".github/workflows/**",
+]
+may_claim = [
+  "AMD ROCm lane is registered as docs/status scaffold at claim level 0.",
+]
+must_not_claim = [
+  "ROCm/HIP runtime is detected.",
+  "A selected AMD GPU is proven.",
+  "HIP source compiles for a target GFX.",
+  "A HIP kernel executed.",
+  "BitNet QK256 works on ROCm.",
+  "Dense SLM works on ROCm.",
+  "ROCm answer quality passed.",
+  "ROCm speedup, full residency, product CLI readiness, or server readiness is proven.",
+]
