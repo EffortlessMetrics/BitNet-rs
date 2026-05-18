@@ -1,0 +1,15 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T09:44:31Z"
+event = "in_progress"
+item = "SLM-CPU-036"
+branch = "codex/slm-cpu-036-prefill-forward-buffer-boundary"
+actor = "codex"
+summary = "Started the Qwen3 Q8_0 Kaby prompt_prefill.forward allocation boundary slice."
+
+notes = [
+  "This slice uses the SLM-CPU-035 prefill attribution artifact to classify the first reusable allocation surface under prompt_prefill.forward.",
+  "The change records transformer forward workspace and owned tensor outputs as the next safe boundary before dense math, Q8_0 GEMV, RMSNorm, RoPE, or attention-loop optimization.",
+  "Generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend, model SHA, and fallback=false remain the behavior gates for any later buffer-reuse change.",
+  "No sustained-throughput, runtime-speedup, broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

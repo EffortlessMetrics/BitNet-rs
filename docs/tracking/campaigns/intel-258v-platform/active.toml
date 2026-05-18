@@ -6736,3 +6736,53 @@ must_not_claim = [
   "OpenVINO GPU or NPU is promoted by this PR.",
   "OpenVINO speedup, power advantage, server readiness, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, or QK256 accelerator decode is proven.",
 ]
+
+[[work_item]]
+id = "LNL258V-OPENVINO-UX-001"
+status = "merged"
+pr = 5627
+head_sha = "d3660b99b36c658ec80465dbb41ba68e86f24658"
+merge_sha = "8866db1bc1b44f73ae451598f9a9bb8aa41681f9"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-UX-001-receipts-explain"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-STATUS-001"]
+acceptance = "Teach receipts explain to summarize Lunar Lake OpenVINO route ID, selected backend, runtime API/device, proof family, selected runtime, quality status, timing scope, promotion status, blockers, and what the receipt does not prove, while preserving existing CUDA/model-coverage explanation behavior and making no inference, route-promotion, speedup, server, or accelerator claim."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/receipts.rs",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli --lib",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::receipts::tests -j 1 -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/receipts.rs",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-tokenizers/**",
+  "scripts/**",
+  "README.md",
+]
+may_claim = [
+  "receipts explain now surfaces Lunar Lake OpenVINO route identity, backend/runtime/device identity, proof family, quality status, timing scope, promotion status, blockers, and claim limits from existing receipts.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "Rust-native OpenVINO execution, server readiness, OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, or QK256 accelerator decode is proven.",
+]

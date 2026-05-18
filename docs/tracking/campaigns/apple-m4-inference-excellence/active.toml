@@ -553,6 +553,46 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-DENSE-REF-000"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-000-reference-receipt-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-CANARY-001", "M4-REPRO-003", "M4-REPRO-004"]
+acceptance = "Define and validate the dense SLM reference-runner vs Rust M4 comparison receipt contract before committing live comparison evidence: artifact kind, supported Qwen identity fields, reference-runner identity and command shape, prompt template and tokenizer authority, Rust generated token IDs, generated text, mechanical scores, summary totals, token-ID availability status, and claim-boundary flags."
+commands = [
+  "cargo test --locked -p bitnet-cli dense_slm_reference_vs_rust -- --nocapture",
+  "target/release/bitnet mac receipts-check <dense-reference-vs-rust-fixture.json> --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Dense SLM reference-vs-Rust comparison receipts have a validated schema and claim-boundary contract.",
+]
+must_not_claim = [
+  "Receipt-contract fixtures are live dense SLM runtime proof.",
+  "Dense reference-vs-Rust validation proves BitNet behavior.",
+  "Reference-only output proves Rust M4 behavior.",
+  "The receipt contract is a broad model-quality benchmark.",
+]
+
+[[work_item]]
 id = "M4-DENSE-REF-001"
 status = "proposed"
 branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-001-reference-vs-rust"
@@ -560,7 +600,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-ACCURACY-001", "M4-CANARY-001", "M4-REPRO-004"]
+blocked_by = ["M4-ACCURACY-001", "M4-CANARY-001", "M4-DENSE-REF-000", "M4-REPRO-004"]
 acceptance = "Add a bounded dense SLM reference-runner vs Rust M4 comparison for supported Qwen model identities, recording prompt template, token IDs where available, generated text, mechanical scores, and deltas so Rust/template/tokenizer regressions can be separated from model behavior."
 commands = [
   "Reference runner prompt-suite command for each supported dense Qwen identity",
@@ -1989,6 +2029,44 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-GATE-HYGIENE-001"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-GATE-HYGIENE-001-no-panic-family"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-RECEIPT-001"]
+acceptance = "Keep the repository gate surface clean for the M4 excellence lane by repairing the current check-no-panic-family failures without widening runtime or platform claims, documenting any allowlist decision, and ensuring receipt-core fixtures do not rely on unallowlisted unwrap/expect paths."
+commands = [
+  "cargo test --locked -p bitnet-receipts-core -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- check-no-panic-family --report-dir target/bitnet/reports",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-receipts-core/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The M4 excellence gate set includes a clean no-panic-family hygiene check.",
+]
+must_not_claim = [
+  "No-panic hygiene is runtime quality or performance proof.",
+  "No-panic hygiene changes dense SLM, BitNet, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon support.",
+]
+
+[[work_item]]
 id = "M4-STABILITY-001"
 status = "proposed"
 branch = "codex/apple-m4-inference-excellence/M4-STABILITY-001-mixed-model-soak"
@@ -2346,7 +2424,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-RECEIPT-001", "M4-STABILITY-003"]
+blocked_by = ["M4-GATE-HYGIENE-001", "M4-RECEIPT-001", "M4-STABILITY-003"]
 acceptance = "Codify the M4 evidence CI lanes and retention contracts: generic PR model-free checks, advisory local M4 runs, scheduled M4 refresh, release-gate M4 refresh, artifact retention, dashboard generation, and explicit non-blocking behavior for hardware-only timing jobs."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
@@ -2727,7 +2805,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-ACCURACY-007", "M4-BENCH-003", "M4-BENCH-007", "M4-BITNET-EX-005", "M4-BITNET-EX-015", "M4-BITNET-REG-001", "M4-CANARY-001", "M4-CLAIM-LINT-001", "M4-COMPAT-001", "M4-CONTEXT-001", "M4-CONTEXT-002", "M4-DENSE-CHAT-001", "M4-DENSE-REF-001", "M4-EVIDENCE-REPLAY-001", "M4-MODEL-LIFECYCLE-001", "M4-OBS-001", "M4-OPS-SLO-001", "M4-OPS-UX-003", "M4-RELIABILITY-001", "M4-ROBUSTNESS-001", "M4-ROUTE-MATRIX-001", "M4-SERVE-EX-004", "M4-SETUP-001", "M4-TREND-001", "M4-WORKLOAD-001", "M4-CI-001"]
+blocked_by = ["M4-ACCURACY-007", "M4-BENCH-003", "M4-BENCH-007", "M4-BITNET-EX-005", "M4-BITNET-EX-015", "M4-BITNET-REG-001", "M4-CANARY-001", "M4-CLAIM-LINT-001", "M4-COMPAT-001", "M4-CONTEXT-001", "M4-CONTEXT-002", "M4-DENSE-CHAT-001", "M4-DENSE-REF-001", "M4-EVIDENCE-REPLAY-001", "M4-GATE-HYGIENE-001", "M4-MODEL-LIFECYCLE-001", "M4-OBS-001", "M4-OPS-SLO-001", "M4-OPS-UX-003", "M4-RELIABILITY-001", "M4-ROBUSTNESS-001", "M4-ROUTE-MATRIX-001", "M4-SERVE-EX-004", "M4-SETUP-001", "M4-TREND-001", "M4-WORKLOAD-001", "M4-CI-001"]
 acceptance = "Publish the M4 inference release go/no-go matrix that states which dense SLM, BitNet, benchmark, stability, service, operator, and claim-boundary gates must pass before updating the public M4 expectation envelope or marking a model family route excellent."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
