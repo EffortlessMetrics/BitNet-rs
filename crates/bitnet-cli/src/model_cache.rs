@@ -518,6 +518,9 @@ pub(crate) struct AppleM4SlmModelReceiptMetadata {
     pub architecture: &'static str,
     pub quantization: &'static str,
     pub tokenizer_authority: &'static str,
+    pub prompt_template: &'static str,
+    pub prompt_template_source: &'static str,
+    pub prompt_template_sha256: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -2271,6 +2274,9 @@ pub(crate) fn apple_m4_slm_model_receipt_metadata(
         architecture: model.architecture,
         quantization: model.quantization,
         tokenizer_authority: model.tokenizer_pre,
+        prompt_template: model.prompt_template,
+        prompt_template_source: model.prompt_template_source,
+        prompt_template_sha256: sha256_hex(model.prompt_template.as_bytes()),
     })
 }
 
@@ -2838,6 +2844,12 @@ fn compute_sha256(path: &Path) -> Result<String> {
         hasher.update(&buffer[..n]);
     }
     Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
 }
 
 fn write_cache_metadata(
