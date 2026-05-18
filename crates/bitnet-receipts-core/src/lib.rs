@@ -8215,7 +8215,10 @@ fn reject_openvino_gpu_opencl_claim(object: &Value, path: &str) -> Result<()> {
 }
 
 fn validate_lunar_lake_openvino_generated_token_marking(object: &Value, path: &str) -> Result<()> {
-    if !object.get("generated_token_ids").is_some_and(|value| value.as_array().is_some()) {
+    if object
+        .get("generated_token_ids")
+        .is_none_or(|value| value.as_array().is_none())
+    {
         return Ok(());
     }
 
