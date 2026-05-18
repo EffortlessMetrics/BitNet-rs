@@ -410,6 +410,26 @@ storage. This remains an allocation-boundary proof only; it makes no speedup,
 sustained-throughput, broad-answer-quality, Q4/Q5 runtime, accelerator,
 Qwen3.5, or BitNet QK256 claim.
 
+SLM-CPU-041 narrows the blocker from "Linear is opaque" to the exact Candle
+tensor API gap. `candle_nn::Linear` exposes `weight()` and `bias()`, so the
+Qwen3 `FeedForward::down_proj` shapes can be inspected without changing math.
+The behavior-preserving compute path still uses `Tensor::matmul` plus optional
+`broadcast_add`, and those operations return owned tensors without a
+caller-provided output-storage parameter. Reusable workspace-backed storage is
+therefore still deferred until Candle grows, or this repo adopts, an explicit
+matmul/bias-add output-storage API:
+
+```text
+first_reusable_allocation_surface = feed_forward.down_proj.output
+workspace_storage_owner = TransformerForwardWorkspace
+reuse_status = dense_linear_output_storage_blocked_by_candle_tensor_ops
+required_api_boundary = dense_linear_output_storage_api_boundary
+weight_accessible = true
+bias_accessible = true
+can_fill_caller_output_storage = false
+optimization_deferred = true
+```
+
 This is a classification slice. It does not change Q8_0 GEMV, RMSNorm, RoPE,
 attention, output-head math, tokenizer behavior, or generated tokens, and it
 does not claim a speedup, sustained throughput, Q4/Q5 runtime support,

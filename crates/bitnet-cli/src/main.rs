@@ -13822,7 +13822,7 @@ mod tests {
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["reuse_status"],
-            "feed_forward_down_proj_output_storage_reuse_blocked_by_candle_linear"
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["workspace_storage_owner"],
@@ -13834,7 +13834,16 @@ mod tests {
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["required_api_boundary"],
-            "typed_transformer_forward_workspace"
+            "dense_linear_output_storage_api_boundary"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["weight_accessible"],
+            true
+        );
+        assert_eq!(audit["prompt_prefill_breakdown"]["forward_boundary"]["bias_accessible"], true);
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["can_fill_caller_output_storage"],
+            false
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["behavior_gate"],
@@ -13884,11 +13893,11 @@ mod tests {
         assert_eq!(audit["dominant_hotspot"]["alloc_bytes"], 1_500);
         assert_eq!(
             audit["next_optimization_target"]["target"],
-            "feed_forward_down_proj_output_storage_boundary"
+            "dense_linear_output_storage_api_boundary"
         );
         assert_eq!(
             audit["next_optimization_target"]["status"],
-            "down_proj_output_storage_reuse_blocked"
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
         );
         assert_eq!(audit["optimization_deferred"], true);
         assert_eq!(
@@ -13922,12 +13931,12 @@ mod tests {
         assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill.forward");
         assert_eq!(
             audit["next_optimization_target"]["target"],
-            "feed_forward_down_proj_output_storage_boundary"
+            "dense_linear_output_storage_api_boundary"
         );
         assert_eq!(audit["next_optimization_target"]["component"], "prompt_prefill.forward");
         assert_eq!(
             audit["next_optimization_target"]["status"],
-            "down_proj_output_storage_reuse_blocked"
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
         );
         assert_eq!(audit["optimization_deferred"], true);
     }

@@ -13,9 +13,11 @@
 #![cfg(feature = "cpu")]
 
 use bitnet_common::config::{BitNetConfig, ModelConfig};
-use bitnet_transformer::{KVCache, TransformerForwardWorkspace, TransformerModel};
+use bitnet_transformer::{
+    DenseLinearOutputStorageApiBoundary, KVCache, TransformerForwardWorkspace, TransformerModel,
+};
 use candle_core::{DType, Device, Tensor};
-use candle_nn::VarBuilder;
+use candle_nn::{Linear, VarBuilder};
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -215,7 +217,7 @@ fn test_incremental_forward_workspace_matches_existing_path() -> anyhow::Result<
     assert_eq!(workspace.last_output_shape(), &[1, 1, hidden]);
     assert_eq!(
         workspace.reuse_status(),
-        "feed_forward_down_proj_output_storage_reuse_blocked_by_candle_linear"
+        "dense_linear_output_storage_blocked_by_candle_tensor_ops"
     );
     assert_eq!(workspace.workspace_owned_output_count(), model.config.model.num_layers);
     assert_eq!(workspace.down_proj_output_storage_attempts(), model.config.model.num_layers);
@@ -224,11 +226,42 @@ fn test_incremental_forward_workspace_matches_existing_path() -> anyhow::Result<
     };
     assert_eq!(surface.name, "feed_forward.down_proj.output");
     assert_eq!(surface.storage_owner, "TransformerForwardWorkspace");
-    assert_eq!(surface.status, "down_proj_output_storage_reuse_blocked_by_candle_linear_api");
+    assert_eq!(surface.status, "dense_linear_output_storage_blocked_by_candle_tensor_ops");
     assert_eq!(surface.last_shape, vec![1, 1, hidden]);
+    assert_eq!(surface.linear_weight_shape, vec![hidden, hidden * 4]);
+    assert_eq!(surface.linear_bias_shape, Some(vec![hidden]));
+    assert!(surface.weight_accessible);
+    assert!(surface.bias_accessible);
+    assert!(!surface.can_fill_caller_output_storage);
     assert!(
         !workspace.tensor_reuse_enabled(),
-        "SLM-CPU-040 proves the down_proj output hook still lacks reusable Candle storage"
+        "SLM-CPU-041 proves the dense linear output hook still lacks reusable Candle storage"
+    );
+    Ok(())
+}
+
+#[test]
+fn dense_linear_output_storage_boundary_records_candle_tensor_blocker() -> anyhow::Result<()> {
+    let device = Device::Cpu;
+    let weight = Tensor::zeros((3, 2), DType::F32, &device)?;
+    let bias = Tensor::zeros(3, DType::F32, &device)?;
+    let linear = Linear::new(weight, Some(bias));
+
+    let boundary = DenseLinearOutputStorageApiBoundary::from_candle_linear(
+        "feed_forward.down_proj.output",
+        &linear,
+    );
+
+    assert_eq!(boundary.role, "feed_forward.down_proj.output");
+    assert_eq!(boundary.weight_shape, vec![3, 2]);
+    assert_eq!(boundary.bias_shape, Some(vec![3]));
+    assert!(boundary.weight_accessible);
+    assert!(boundary.bias_accessible);
+    assert!(!boundary.can_fill_caller_output_storage);
+    assert_eq!(boundary.status, "dense_linear_output_storage_blocked_by_candle_tensor_ops");
+    assert!(
+        boundary.reason.contains("Tensor::matmul")
+            && boundary.reason.contains("caller-provided output-storage")
     );
     Ok(())
 }

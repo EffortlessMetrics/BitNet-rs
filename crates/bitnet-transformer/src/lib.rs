@@ -408,7 +408,8 @@ impl FeedForward {
 
         let output = self.apply_linear(&hidden, &self.down_proj, "down_proj", raw_tensors)?;
         if let Some(workspace) = workspace {
-            workspace.record_down_proj_output_storage_boundary(&output);
+            let boundary = self.down_proj_output_storage_boundary(&output);
+            workspace.record_down_proj_output_storage_boundary(&output, boundary);
         }
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("mlp.down_proj", Some(self.layer_idx), &output)?;
@@ -477,6 +478,29 @@ impl FeedForward {
         record_bitnet_linear_cpu_fallback();
         linear.forward(input).map_err(BitNetError::from)
     }
+
+    fn down_proj_output_storage_boundary(
+        &self,
+        output: &Tensor,
+    ) -> TransformerWorkspaceOutputSurface {
+        let boundary = DenseLinearOutputStorageApiBoundary::from_candle_linear(
+            "feed_forward.down_proj.output",
+            &self.down_proj,
+        );
+        TransformerWorkspaceOutputSurface {
+            name: "feed_forward.down_proj.output",
+            storage_owner: "TransformerForwardWorkspace",
+            status: boundary.status,
+            reason: boundary.reason,
+            next_api_hook: boundary.next_api_hook,
+            last_shape: output.dims().to_vec(),
+            linear_weight_shape: boundary.weight_shape,
+            linear_bias_shape: boundary.bias_shape,
+            weight_accessible: boundary.weight_accessible,
+            bias_accessible: boundary.bias_accessible,
+            can_fill_caller_output_storage: boundary.can_fill_caller_output_storage,
+        }
+    }
 }
 
 fn apply_ffn_activation(input: &Tensor, activation_type: ActivationType) -> Result<Tensor> {
@@ -524,6 +548,49 @@ pub struct TransformerWorkspaceOutputSurface {
     pub reason: &'static str,
     pub next_api_hook: &'static str,
     pub last_shape: Vec<usize>,
+    pub linear_weight_shape: Vec<usize>,
+    pub linear_bias_shape: Option<Vec<usize>>,
+    pub weight_accessible: bool,
+    pub bias_accessible: bool,
+    pub can_fill_caller_output_storage: bool,
+}
+
+/// Behavior-preserving dense linear output-storage API boundary.
+///
+/// Candle exposes the read-side pieces (`Linear::weight` and `Linear::bias`),
+/// but the compute-side `Tensor::matmul` and optional bias add still allocate
+/// and return owned tensors. This boundary records that narrower fact so Kaby
+/// SLM allocation work does not mistake read access for a reusable output slot.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DenseLinearOutputStorageApiBoundary {
+    pub role: &'static str,
+    pub status: &'static str,
+    pub reason: &'static str,
+    pub next_api_hook: &'static str,
+    pub weight_shape: Vec<usize>,
+    pub bias_shape: Option<Vec<usize>>,
+    pub weight_accessible: bool,
+    pub bias_accessible: bool,
+    pub can_fill_caller_output_storage: bool,
+}
+
+impl DenseLinearOutputStorageApiBoundary {
+    pub fn from_candle_linear(role: &'static str, linear: &Linear) -> Self {
+        let weight_shape = linear.weight().dims().to_vec();
+        let bias_shape = linear.bias().map(|bias| bias.dims().to_vec());
+
+        Self {
+            role,
+            status: "dense_linear_output_storage_blocked_by_candle_tensor_ops",
+            reason: "candle_nn::Linear exposes weight and optional bias tensors, but its behavior-preserving compute path is Tensor::matmul plus optional broadcast_add, and those operations return owned Tensors without a caller-provided output-storage parameter",
+            next_api_hook: "add or adopt a Candle Tensor matmul/bias-add output-storage API before replacing FeedForward::down_proj output construction with reusable workspace-backed storage",
+            weight_shape,
+            bias_shape,
+            weight_accessible: true,
+            bias_accessible: true,
+            can_fill_caller_output_storage: false,
+        }
+    }
 }
 
 impl TransformerForwardWorkspace {
@@ -575,7 +642,7 @@ impl TransformerForwardWorkspace {
         if self.tensor_reuse_enabled {
             "typed_transformer_forward_workspace_reuse_enabled"
         } else if self.feed_forward_output_surface.is_some() {
-            "feed_forward_down_proj_output_storage_reuse_blocked_by_candle_linear"
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
         } else {
             "api_boundary_present_owned_tensor_reuse_not_enabled"
         }
@@ -608,22 +675,22 @@ impl TransformerForwardWorkspace {
         self.last_output_shape = tensor.dims().to_vec();
     }
 
-    fn record_down_proj_output_storage_boundary(&mut self, tensor: &Tensor) {
+    fn record_down_proj_output_storage_boundary(
+        &mut self,
+        tensor: &Tensor,
+        boundary: TransformerWorkspaceOutputSurface,
+    ) {
         self.down_proj_output_storage_attempts += 1;
         self.last_output_shape = tensor.dims().to_vec();
+        self.feed_forward_output_surface = Some(boundary);
     }
 
     fn store_feed_forward_output(&mut self, tensor: Tensor) {
         let last_shape = tensor.dims().to_vec();
         self.last_output_shape = last_shape.clone();
-        self.feed_forward_output_surface = Some(TransformerWorkspaceOutputSurface {
-            name: "feed_forward.down_proj.output",
-            storage_owner: "TransformerForwardWorkspace",
-            status: "down_proj_output_storage_reuse_blocked_by_candle_linear_api",
-            reason: "FeedForward::forward_with_workspace reaches the exact down_proj output boundary, but candle_nn::Linear::forward constructs and returns a new Tensor and does not expose an out-parameter or reusable output-storage hook",
-            next_api_hook: "add or adopt a behavior-preserving linear output-storage API before replacing FeedForward::down_proj output construction with reusable workspace-backed storage",
-            last_shape,
-        });
+        if let Some(surface) = self.feed_forward_output_surface.as_mut() {
+            surface.last_shape = last_shape;
+        }
         self.workspace_owned_output_count += 1;
         self.feed_forward_output_slot = Some(tensor);
     }
