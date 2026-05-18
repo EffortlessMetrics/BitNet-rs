@@ -7998,10 +7998,11 @@ must_not_claim = [
 ]
 [[work_item]]
 id = "LNL258V-OV-TOKEN-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-OV-TOKEN-001"
 pr = 5742
-head_sha = "0c6dd4dadd8c08a7a0c93d40257ef56eec5da3f8"
+head_sha = "aa016ec247dd660460c05927b90dd3cf89daf648"
+merge_sha = "de85a1aa7d6362faa5d7ff24837f51b99e6165b1"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
