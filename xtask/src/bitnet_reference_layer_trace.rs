@@ -7890,6 +7890,7 @@ fn compare_reference_to_rust_with_records_with_model(
             reference_records,
             rust_records,
             &score_position_drilldown,
+            &score_position_qk_recompute,
         );
     report["attention_score_raw_history_position_drilldown"] = score_position_drilldown;
     report["attention_score_raw_history_source_summary"] =
@@ -24407,10 +24408,42 @@ fn score_shift_residual(predicted_shift: &Value, actual_shift: Option<f64>) -> V
     }
 }
 
+fn score_position_qk_recompute_row_for_position<'a>(
+    score_position_qk_recompute: &'a Value,
+    label: &str,
+    head: Option<usize>,
+    key_slot: Option<usize>,
+    query_token: Option<usize>,
+) -> &'a Value {
+    score_position_qk_recompute
+        .pointer("/rows")
+        .and_then(Value::as_array)
+        .and_then(|rows| {
+            rows.iter().find(|row| {
+                row.pointer("/label").and_then(Value::as_str) == Some(label)
+                    || (value_u64(row, "/head").and_then(|value| usize::try_from(value).ok())
+                        == head
+                        && value_u64(row, "/key_slot")
+                            .and_then(|value| usize::try_from(value).ok())
+                            == key_slot
+                        && value_u64(row, "/query_token")
+                            .and_then(|value| usize::try_from(value).ok())
+                            == query_token)
+            })
+        })
+        .unwrap_or(&Value::Null)
+}
+
+fn score_position_qk_recompute_top_dim(row: &Value) -> Option<u64> {
+    row.pointer("/best_candidate_product_delta/top_abs_product_delta_contributors/0/dim")
+        .and_then(Value::as_u64)
+}
+
 fn attention_query_score_input_f16_policy_effect(
     reference_records: &[ReferenceTraceRecord],
     rust_records: &BTreeMap<String, RustTraceRecord>,
     position_drilldown: &Value,
+    score_position_qk_recompute: &Value,
 ) -> Value {
     let reference_score_query_heads = reference_records
         .iter()
@@ -24521,6 +24554,21 @@ fn attention_query_score_input_f16_policy_effect(
         let reference_score = position.pointer("/left").and_then(Value::as_f64);
         let rust_score = position.pointer("/right").and_then(Value::as_f64);
         let actual_score_shift = reference_score.zip(rust_score).map(|(left, right)| right - left);
+        let qk_recompute_row = score_position_qk_recompute_row_for_position(
+            score_position_qk_recompute,
+            label,
+            head,
+            key_slot,
+            query_token,
+        );
+        let selected_dim = score_position_qk_recompute_top_dim(qk_recompute_row);
+        let selected_dim_source = if selected_dim.is_some() {
+            "best_candidate_product_delta_top_contributor"
+        } else if qk_recompute_row.is_null() {
+            "missing_qk_recompute_row"
+        } else {
+            "missing_top_product_contributor"
+        };
         let kv_head = head.zip(group_size).map(|(head, group_size)| head / group_size);
         let reference_query = head
             .and_then(|head| reference_score_query_heads.get(&head).copied())
@@ -24697,6 +24745,9 @@ fn attention_query_score_input_f16_policy_effect(
             "kv_head": kv_head,
             "key_slot": key_slot,
             "query_token": query_token,
+            "selected_dim": selected_dim,
+            "selected_dim_source": selected_dim_source,
+            "selected_dim_context_present": selected_dim.is_some(),
             "head_dim": head_dim,
             "reference_score": reference_score,
             "rust_score": rust_score,
@@ -24705,6 +24756,8 @@ fn attention_query_score_input_f16_policy_effect(
             "reference_key_layout": reference_key_layout.label(),
             "blocked_reasons": row_blockers,
             "candidates": candidates,
+            "top_abs_product_delta_contributors": qk_recompute_row.pointer("/best_candidate_product_delta/top_abs_product_delta_contributors").cloned().unwrap_or(Value::Null),
+            "selected_dim_abs_product_delta": qk_recompute_row.pointer("/best_candidate_product_delta/top_abs_product_delta_contributors/0/abs_product_delta").cloned().unwrap_or(Value::Null),
             "rope_shift_from_reference": rope_shift,
             "f16_shift_from_reference": f16_shift,
             "score_input_shift_from_reference": score_input_shift,
@@ -32211,7 +32264,7 @@ fn attention_selected_query_rope_to_f16_head_conversion_frontier(
     let head_boundary_classification = selected_report_classification(head_boundary);
     let source_classification = selected_report_classification(selected_query_source);
     let head = value_u64(head_boundary, "/head");
-    let selected_dim = value_u64(head_boundary, "/selected_dim");
+    let selected_dim_from_boundary = value_u64(head_boundary, "/selected_dim");
     let selected_token = value_u64(head_boundary, "/selected_token");
     let selected_row = selected_query_source
         .pointer("/selected_qk_bucket_row")
@@ -32257,6 +32310,8 @@ fn attention_selected_query_rope_to_f16_head_conversion_frontier(
         })
         .unwrap_or(&Value::Null);
     let policy_row_classification = policy_row.pointer("/classification").and_then(Value::as_str);
+    let selected_dim =
+        selected_dim_from_boundary.or_else(|| value_u64(policy_row, "/selected_dim"));
     let active = matches!(
         head_boundary_classification,
         Some("selected_query_head_boundary_f16_conversion")
@@ -32375,10 +32430,15 @@ fn compact_query_f16_policy_row(row: &Value) -> Value {
         "kv_head": row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
         "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
         "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+        "selected_dim": row.pointer("/selected_dim").cloned().unwrap_or(Value::Null),
+        "selected_dim_source": row.pointer("/selected_dim_source").cloned().unwrap_or(Value::Null),
+        "selected_dim_context_present": row.pointer("/selected_dim_context_present").cloned().unwrap_or(Value::Null),
         "head_dim": row.pointer("/head_dim").cloned().unwrap_or(Value::Null),
         "actual_score_shift": row.pointer("/actual_score_shift").cloned().unwrap_or(Value::Null),
         "reference_key_source": row.pointer("/reference_key_source").cloned().unwrap_or(Value::Null),
         "reference_key_layout": row.pointer("/reference_key_layout").cloned().unwrap_or(Value::Null),
+        "selected_dim_abs_product_delta": row.pointer("/selected_dim_abs_product_delta").cloned().unwrap_or(Value::Null),
+        "top_abs_product_delta_contributors": row.pointer("/top_abs_product_delta_contributors").cloned().unwrap_or(Value::Null),
         "rope_shift_from_reference": row.pointer("/rope_shift_from_reference").cloned().unwrap_or(Value::Null),
         "f16_shift_from_reference": row.pointer("/f16_shift_from_reference").cloned().unwrap_or(Value::Null),
         "score_input_shift_from_reference": row.pointer("/score_input_shift_from_reference").cloned().unwrap_or(Value::Null),
@@ -32563,8 +32623,9 @@ fn attention_selected_query_score_frontier(
         == Some("selected_query_score_input_bucket_source_head_boundary_unpinned")
         && rope_to_f16_head_classification
             == Some("selected_query_rope_to_f16_head_conversion_score_input_matches_f16");
-    let head_policy_without_selected_dim =
-        source_pinned_by_head_policy && value_u64(score_input_source, "/selected_dim").is_none();
+    let selected_dim = value_u64(score_input_source, "/selected_dim")
+        .or_else(|| value_u64(rope_to_f16_head_conversion, "/selected_dim"));
+    let head_policy_without_selected_dim = source_pinned_by_head_policy && selected_dim.is_none();
 
     let classification = if missing_context {
         "selected_query_score_frontier_missing_context"
@@ -32613,7 +32674,7 @@ fn attention_selected_query_score_frontier(
         "classification": classification,
         "source_report": "attention_selected_f64_query_score_input_bucket_source",
         "head": value_u64(score_input_source, "/head"),
-        "selected_dim": value_u64(score_input_source, "/selected_dim"),
+        "selected_dim": selected_dim,
         "selected_token": value_u64(score_input_source, "/selected_token"),
         "key_slot": value_u64(score_input_source, "/selected_qk_bucket_row/key_slot"),
         "score_input_source_classification": source_classification,
@@ -47377,6 +47438,7 @@ mod tests {
             ("attention_q_rope_head0_history_ref_layout", vec![1.0, 9.0, 2.0, 8.0]),
             ("attention_q_rope_f16_roundtrip_head0_history_ref_layout", vec![1.5, 9.0, 2.0, 8.0]),
             ("attention_q_score_input_head0_history_ref_layout", vec![1.5, 9.0, 2.0, 8.0]),
+            ("attention_k_score_input_head0_history_ref_layout", vec![10.0, 11.0, 20.0, 21.0]),
         ] {
             rust_records.insert(
                 stage.to_string(),
@@ -47414,6 +47476,16 @@ mod tests {
         assert_eq!(effect.pointer("/rows/0/actual_score_shift"), Some(&json!(5.0)));
         assert_eq!(effect.pointer("/rows/0/f16_shift_from_reference"), Some(&json!(5.0)));
         assert_eq!(effect.pointer("/rows/0/f16_shift_residual_abs"), Some(&json!(0.0)));
+        assert_eq!(effect.pointer("/rows/0/selected_dim"), Some(&json!(0)));
+        assert_eq!(
+            effect.pointer("/rows/0/selected_dim_source"),
+            Some(&json!("best_candidate_product_delta_top_contributor"))
+        );
+        assert_eq!(effect.pointer("/rows/0/selected_dim_context_present"), Some(&json!(true)));
+        assert_eq!(
+            effect.pointer("/rows/0/top_abs_product_delta_contributors/0/dim"),
+            Some(&json!(0))
+        );
     }
 
     #[test]
@@ -52035,6 +52107,47 @@ mod tests {
     }
 
     #[test]
+    fn selected_query_rope_to_f16_head_conversion_uses_policy_selected_dim_context() {
+        let head_boundary = json!({
+            "classification": "selected_query_head_boundary_f16_conversion",
+            "head": 0,
+            "selected_dim": Value::Null,
+            "selected_token": 0,
+            "rust_rope_to_f16": {
+                "selected_dim_bucket": false,
+                "selected_token_bucket": false,
+                "selected_dim_and_token_bucket": false,
+                "exact_selected_bucket": false
+            },
+            "first_mixed_score_position_row": {
+                "head": 0,
+                "key_slot": 0,
+                "query_token": 0
+            }
+        });
+        let mut policy_effect =
+            selected_query_rope_to_f16_policy_effect("score_input_matches_f16_conversion");
+        policy_effect["f64"]["probability_history_effect"]["attention_query_score_input_f16_policy_effect"]
+            ["rows"][0]["selected_dim"] = json!(6);
+        policy_effect["f64"]["probability_history_effect"]["attention_query_score_input_f16_policy_effect"]
+            ["rows"][0]["selected_dim_context_present"] = json!(true);
+
+        let report = attention_selected_query_rope_to_f16_head_conversion_frontier(
+            &head_boundary,
+            &json!({}),
+            &policy_effect,
+            &json!({}),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_rope_to_f16_head_conversion_score_input_matches_f16"))
+        );
+        assert_eq!(report.pointer("/selected_dim"), Some(&json!(6)));
+        assert_eq!(report.pointer("/selected_policy_row/selected_dim"), Some(&json!(6)));
+    }
+
+    #[test]
     fn selected_query_rope_to_f16_head_conversion_reports_not_active() {
         let selected_source = selected_query_head_boundary_source(
             "selected_query_score_input_bucket_source_reference_to_rope",
@@ -52383,6 +52496,52 @@ mod tests {
                 "replay the head-level query F16 score-operand policy before attributing pre-score RoPE source rows or changing runtime math"
             ))
         );
+    }
+
+    #[test]
+    fn selected_query_score_frontier_uses_head_policy_selected_dim_context() {
+        let mut source = selected_query_score_frontier_source_fixture();
+        source["classification"] =
+            json!("selected_query_score_input_bucket_source_head_boundary_unpinned");
+        source["selected_dim"] = Value::Null;
+
+        let report = attention_selected_query_score_frontier(
+            &source,
+            &json!({
+                "classification": "selected_query_rope_to_f16_head_conversion_score_input_matches_f16",
+                "selected_dim": 69
+            }),
+            &json!({
+                "classification": "selected_query_score_input_f16_frontier_not_f16_boundary"
+            }),
+            &json!({
+                "classification": "selected_query_pre_score_rope_source_pre_rope_projection_epsilon"
+            }),
+            &json!({
+                "classification": "selected_query_pre_rope_projection_epsilon_explains_rope_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_rope_expression_policy_same_expression_input_epsilon_bucket"
+            }),
+            &json!({
+                "classification": "selected_query_projection_epsilon_source_attention_norm_input_history"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output"
+            }),
+            &json!({
+                "classification": "selected_query_attention_norm_replay_policy_clean"
+            }),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!(
+                "selected_query_score_frontier_downstream_score_residual_after_clean_norm_replay"
+            ))
+        );
+        assert_eq!(report.pointer("/selected_dim"), Some(&json!(69)));
+        assert_eq!(report.pointer("/head_policy_without_selected_dim"), Some(&json!(false)));
     }
 
     #[test]
