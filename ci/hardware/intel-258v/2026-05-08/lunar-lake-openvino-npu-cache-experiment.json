@@ -3,7 +3,7 @@
   "artifact_kind": "lunar_lake_openvino_npu_cache_experiment",
   "campaign": "intel-258v-platform",
   "item": "LNL258V-NPU-CACHE-001",
-  "created_utc": "2026-05-19T01:35:00Z",
+  "created_utc": "2026-05-19T02:30:00Z",
   "machine_id": "intel-258v",
   "proof_stage": "candidate_route_cache_hit_miss_experiment_no_promotion_change",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
@@ -36,7 +36,7 @@
     }
   },
   "cache": {
-    "cache_dir": "target/openvino-cache/lnl258v-npu-cache-001",
+    "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
     "cache_enabled": true,
     "cache_writable": true,
     "cache_hit_evidence": "cache_files_created_then_second_process_timing_improved",
@@ -47,14 +47,14 @@
     "material_improvement_ms_threshold": 2000.0,
     "cache_effective_by_timing": true,
     "initial_snapshot": {
-      "cache_dir": "target/openvino-cache/lnl258v-npu-cache-001",
+      "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
       "exists": true,
       "file_count": 0,
       "total_bytes": 0,
       "files": []
     },
     "after_first_process_snapshot": {
-      "cache_dir": "target/openvino-cache/lnl258v-npu-cache-001",
+      "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
       "exists": true,
       "file_count": 1,
       "total_bytes": 154693720,
@@ -62,13 +62,13 @@
         {
           "path": "8993114486211131037.blob",
           "bytes": 154693720,
-          "mtime_ns": 1779126985239892900,
+          "mtime_ns": 1779129075212284000,
           "sha256": null
         }
       ]
     },
     "after_second_process_snapshot": {
-      "cache_dir": "target/openvino-cache/lnl258v-npu-cache-001",
+      "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
       "exists": true,
       "file_count": 1,
       "total_bytes": 154693720,
@@ -76,7 +76,7 @@
         {
           "path": "8993114486211131037.blob",
           "bytes": 154693720,
-          "mtime_ns": 1779126985239892900,
+          "mtime_ns": 1779129075212284000,
           "sha256": null
         }
       ]
@@ -94,9 +94,9 @@
         "--model-dir",
         "models\\openvino\\qwen2.5-0.5b-instruct-int4-sym",
         "--cache-dir",
-        "target\\openvino-cache\\lnl258v-npu-cache-001",
+        "target\\openvino-cache\\lnl258v-ov-token-npu-cache-fresh",
         "--json-out",
-        "target\\openvino-cache\\lnl258v-npu-cache-probe-runs\\first-process.json",
+        "target\\openvino-cache\\lnl258v-ov-token-npu-cache-probe-runs\\first-process.json",
         "--device",
         "NPU",
         "--question",
@@ -107,9 +107,9 @@
         "8"
       ],
       "process_returncode": 0,
-      "process_wall_ms": 42111.3658999966,
+      "process_wall_ms": 29286.901900020894,
       "stdout_tail": "",
-      "stderr_tail": "The tokenizer you are loading from 'models\\openvino\\qwen2.5-0.5b-instruct-int4-sym' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.\nC:\\Code\\Rust\\BitNet-rs\\scripts\\openvino_genai_npu_cache_probe.py:166: DeprecationWarning: 'config' parameters is deprecated, please use kwargs to pass config properties instead.\n  pipe = ov_genai.LLMPipeline(str(args.model_dir), args.device, {\"CACHE_DIR\": str(args.cache_dir)})\n",
+      "stderr_tail": "C:\\Code\\Rust\\BitNet-rs\\scripts\\openvino_genai_npu_cache_probe.py:152: DeprecationWarning: 'config' parameters is deprecated, please use kwargs to pass config properties instead.\n  pipe = ov_genai.LLMPipeline(str(args.model_dir), args.device, {\"CACHE_DIR\": str(args.cache_dir)})\n",
       "child_receipt": {
         "iteration": "first_process",
         "runtime_api": "openvino_genai",
@@ -117,8 +117,8 @@
         "resolved_device": "Intel(R) AI Boost",
         "selected_backend": "openvino-npu",
         "fallback_used": false,
-        "cache_dir": "target/openvino-cache/lnl258v-npu-cache-001",
-        "pipeline_construct_wall_ms": 32804.23970002448,
+        "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
+        "pipeline_construct_wall_ms": 28103.867300000275,
         "prompt": {
           "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
           "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
@@ -178,45 +178,46 @@
           19,
           13
         ],
-        "generated_token_ids_available_from_pipeline": false,
-        "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-        "generation_wall_ms": 597.3590999783482,
-        "first_streamed_text_chunk_ms": 416.5078999940306,
+        "generated_token_ids_available_from_pipeline": true,
+        "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+        "generated_token_count": 8,
+        "generation_wall_ms": 469.54329998698086,
+        "first_streamed_text_chunk_ms": 331.8116999871563,
         "streamed_chunks_count": 7,
         "streamed_text": "2 + 2 equals 4.",
         "openvino_perf_metrics": {
-          "load_time_ms": 32752.0,
+          "load_time_ms": 28083.0,
           "tokenization": {
-            "mean_ms": 18.222999572753906,
-            "std_ms": 0.0
+            "mean_ms": -1.0,
+            "std_ms": -1.0
           },
           "generate": {
-            "mean_ms": 592.6829833984375,
+            "mean_ms": 450.6629943847656,
             "std_ms": 0.0
           },
           "inference": {
-            "mean_ms": 569.8270263671875,
+            "mean_ms": 448.2550048828125,
             "std_ms": 0.0
           },
           "time_to_first_token": {
-            "mean_ms": 276.2915954589844,
+            "mean_ms": 229.32159423828125,
             "std_ms": 0.0
           },
           "time_per_output_token": {
-            "mean_ms": 45.1048583984375,
-            "std_ms": 14.874100685119629
+            "mean_ms": 31.55044174194336,
+            "std_ms": 9.563253402709961
           },
           "inter_token_latency": {
-            "mean_ms": 71.22837829589844,
-            "std_ms": 71.13735961914062
+            "mean_ms": 56.03187561035156,
+            "std_ms": 65.90382385253906
           },
           "throughput": {
-            "mean_ms": 22.170560836791992,
-            "std_ms": 7.311122417449951
+            "mean_ms": 31.69527816772461,
+            "std_ms": 9.60715389251709
           },
           "detokenization": {
-            "mean_ms": 0.16200000047683716,
-            "std_ms": 0.0
+            "mean_ms": -1.0,
+            "std_ms": -1.0
           },
           "num_input_tokens": 39,
           "num_generated_tokens": 8
@@ -240,9 +241,9 @@
         "--model-dir",
         "models\\openvino\\qwen2.5-0.5b-instruct-int4-sym",
         "--cache-dir",
-        "target\\openvino-cache\\lnl258v-npu-cache-001",
+        "target\\openvino-cache\\lnl258v-ov-token-npu-cache-fresh",
         "--json-out",
-        "target\\openvino-cache\\lnl258v-npu-cache-probe-runs\\second-process.json",
+        "target\\openvino-cache\\lnl258v-ov-token-npu-cache-probe-runs\\second-process.json",
         "--device",
         "NPU",
         "--question",
@@ -253,9 +254,9 @@
         "8"
       ],
       "process_returncode": 0,
-      "process_wall_ms": 8528.760500019416,
+      "process_wall_ms": 1821.1383000016212,
       "stdout_tail": "",
-      "stderr_tail": "The tokenizer you are loading from 'models\\openvino\\qwen2.5-0.5b-instruct-int4-sym' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.\nC:\\Code\\Rust\\BitNet-rs\\scripts\\openvino_genai_npu_cache_probe.py:166: DeprecationWarning: 'config' parameters is deprecated, please use kwargs to pass config properties instead.\n  pipe = ov_genai.LLMPipeline(str(args.model_dir), args.device, {\"CACHE_DIR\": str(args.cache_dir)})\n",
+      "stderr_tail": "C:\\Code\\Rust\\BitNet-rs\\scripts\\openvino_genai_npu_cache_probe.py:152: DeprecationWarning: 'config' parameters is deprecated, please use kwargs to pass config properties instead.\n  pipe = ov_genai.LLMPipeline(str(args.model_dir), args.device, {\"CACHE_DIR\": str(args.cache_dir)})\n",
       "child_receipt": {
         "iteration": "second_process",
         "runtime_api": "openvino_genai",
@@ -263,8 +264,8 @@
         "resolved_device": "Intel(R) AI Boost",
         "selected_backend": "openvino-npu",
         "fallback_used": false,
-        "cache_dir": "target/openvino-cache/lnl258v-npu-cache-001",
-        "pipeline_construct_wall_ms": 1772.0903000154067,
+        "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
+        "pipeline_construct_wall_ms": 872.6620000088587,
         "prompt": {
           "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
           "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
@@ -324,45 +325,46 @@
           19,
           13
         ],
-        "generated_token_ids_available_from_pipeline": false,
-        "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-        "generation_wall_ms": 474.02240001247264,
-        "first_streamed_text_chunk_ms": 332.7393000072334,
+        "generated_token_ids_available_from_pipeline": true,
+        "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+        "generated_token_count": 8,
+        "generation_wall_ms": 443.70689999777824,
+        "first_streamed_text_chunk_ms": 307.4178999813739,
         "streamed_chunks_count": 7,
         "streamed_text": "2 + 2 equals 4.",
         "openvino_perf_metrics": {
-          "load_time_ms": 1734.0,
+          "load_time_ms": 853.0,
           "tokenization": {
-            "mean_ms": 14.345999717712402,
-            "std_ms": 0.0
+            "mean_ms": -1.0,
+            "std_ms": -1.0
           },
           "generate": {
-            "mean_ms": 473.7799987792969,
+            "mean_ms": 438.3030090332031,
             "std_ms": 0.0
           },
           "inference": {
-            "mean_ms": 457.3450012207031,
+            "mean_ms": 436.7879943847656,
             "std_ms": 0.0
           },
           "time_to_first_token": {
-            "mean_ms": 243.4713897705078,
+            "mean_ms": 230.22381591796875,
             "std_ms": 0.0
           },
           "time_per_output_token": {
-            "mean_ms": 32.82735824584961,
-            "std_ms": 7.8466973304748535
+            "mean_ms": 29.67557144165039,
+            "std_ms": 5.514401912689209
           },
           "inter_token_latency": {
-            "mean_ms": 57.16812515258789,
-            "std_ms": 65.24454498291016
+            "mean_ms": 54.5984992980957,
+            "std_ms": 66.48574829101562
           },
           "throughput": {
-            "mean_ms": 30.4623966217041,
-            "std_ms": 7.281402111053467
+            "mean_ms": 33.697750091552734,
+            "std_ms": 6.261815071105957
           },
           "detokenization": {
-            "mean_ms": 0.08799999952316284,
-            "std_ms": 0.0
+            "mean_ms": -1.0,
+            "std_ms": -1.0
           },
           "num_input_tokens": 39,
           "num_generated_tokens": 8
@@ -377,10 +379,10 @@
     }
   ],
   "comparison": {
-    "first_pipeline_construct_wall_ms": 32804.23970002448,
-    "second_pipeline_construct_wall_ms": 1772.0903000154067,
-    "second_to_first_construct_ratio": 0.05402016069325588,
-    "construct_improvement_ms": 31032.149400009075,
+    "first_pipeline_construct_wall_ms": 28103.867300000275,
+    "second_pipeline_construct_wall_ms": 872.6620000088587,
+    "second_to_first_construct_ratio": 0.03105131371043907,
+    "construct_improvement_ms": 27231.205299991416,
     "first_answer_gate_passed": true,
     "second_answer_gate_passed": true,
     "cache_experiment_ready": true,
@@ -393,8 +395,8 @@
     "openvino_genai_version": "2026.1.0.0-2957-1dabb8c2255"
   },
   "generated_token_visibility": {
-    "direct_generated_token_ids_available": false,
-    "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids"
+    "direct_generated_token_ids_available": true,
+    "generated_token_ids_source": "openvino_genai_encoded_results_tokens"
   },
   "claim_boundary": {
     "route_promotion_changed": false,

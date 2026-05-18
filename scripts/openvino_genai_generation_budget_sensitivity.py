@@ -16,8 +16,6 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from transformers import AutoTokenizer
-
 from openvino_genai_corpus_v2 import (
     DEVICE_BACKENDS,
     evaluate_gate,
@@ -28,6 +26,7 @@ from openvino_genai_corpus_v2 import (
     prompt_evidence,
     quality_status,
 )
+from openvino_genai_token_utils import generate_with_direct_token_ids
 
 
 def parse_args() -> argparse.Namespace:
@@ -88,7 +87,6 @@ def unique_budgets(case: dict[str, Any], defaults: dict[str, Any], variants: lis
 def run_device(
     device: str,
     model_dir: Path,
-    tokenizer: Any,
     ov_genai: Any,
     ov_core: Any,
     cases: list[dict[str, Any]],
@@ -111,6 +109,7 @@ def run_device(
     construct_start = time.perf_counter()
     pipe = ov_genai.LLMPipeline(str(model_dir), device)
     construct_wall_ms = (time.perf_counter() - construct_start) * 1000.0
+    tokenizer = pipe.get_tokenizer()
 
     case_results: list[dict[str, Any]] = []
     for case in cases:
@@ -130,20 +129,20 @@ def run_device(
                 chunks.append({"elapsed_ms": (now - generation_start) * 1000.0, "text": text})
                 return ov_genai.StreamingStatus.RUNNING
 
-            result = pipe.generate(
-                [question],
-                max_new_tokens=max_new_tokens,
-                do_sample=False,
-                num_beams=1,
-                apply_chat_template=True,
+            generation = generate_with_direct_token_ids(
+                pipe,
+                tokenizer,
+                ov_genai,
+                question,
+                max_new_tokens,
                 streamer=streamer,
             )
             generation_wall_ms = (time.perf_counter() - generation_start) * 1000.0
-            generated_text = result.texts[0] if getattr(result, "texts", None) else ""
+            result = generation["result"]
+            generated_text = generation["generated_text"]
             gate = evaluate_gate(case.get("gate"), generated_text)
             scoring = evaluate_scoring(case.get("scoring"), generated_text)
             quality = quality_status(gate, scoring, generated_text)
-            generated_ids = tokenizer.encode(generated_text, add_special_tokens=False)
             first_chunk_ms = None
             if first_chunk_at[0] is not None:
                 first_chunk_ms = (first_chunk_at[0] - generation_start) * 1000.0
@@ -154,10 +153,12 @@ def run_device(
                     "generated_text": generated_text,
                     "decoded_preview": generated_text[:240],
                     "normalized_output": normalize_text(generated_text),
-                    "generated_token_ids": generated_ids,
-                    "generated_token_ids_available_from_pipeline": False,
-                    "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-                    "generated_token_count": len(generated_ids),
+                    "generated_token_ids": generation["generated_token_ids"],
+                    "generated_token_ids_available_from_pipeline": generation[
+                        "generated_token_ids_available_from_pipeline"
+                    ],
+                    "generated_token_ids_source": generation["generated_token_ids_source"],
+                    "generated_token_count": generation["generated_token_count"],
                     "answer_gate": gate,
                     "scoring": scoring,
                     "quality": quality,
@@ -247,13 +248,11 @@ def main() -> int:
     except Exception as exc:  # pragma: no cover - depends on local OpenVINO install.
         raise SystemExit(f"OpenVINO GenAI import failed: {type(exc).__name__}: {exc}") from exc
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_dir, trust_remote_code=True)
     ov_core = ov.Core()
     devices = [
         run_device(
             device=device,
             model_dir=args.model_dir,
-            tokenizer=tokenizer,
             ov_genai=ov_genai,
             ov_core=ov_core,
             cases=cases,
