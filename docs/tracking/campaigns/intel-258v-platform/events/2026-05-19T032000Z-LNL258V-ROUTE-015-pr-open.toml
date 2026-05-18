@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T03:20:00Z"
+event = "pr_open"
+item = "LNL258V-ROUTE-015"
+branch = "codex/lunar-lake/LNL258V-ROUTE-015-benchmark-qualified-advantage"
+pr = 5744
+head_sha = "fc3f9d9376b8c252d0ebf678085af0537fc37612"
+actor = "codex"
+summary = "Opened PR #5744 for LNL258V-ROUTE-015 to classify benchmark-qualified latency evidence while keeping OpenVINO GPU/NPU routes unpromoted."
+
+notes = [
+  "The PR allows benchmark-qualified latency evidence only when profile quality, fallback-free execution, direct-token visibility, profile-matched timing, and promoted CPU-baseline comparison gates pass.",
+  "The refreshed route-profile and cold/warm benchmark artifacts mark OpenVINO GPU as benchmark-qualified for regression_tiny, ask_short, and ask_normal while preserving candidate-only route status.",
+  "The PR preserves no route promotion, no speedup claim, no power-advantage claim, no Arc/NPU acceleration claim, no native OpenCL/NPU claim, and no BitNet QK256/I2_S behavior change.",
+]

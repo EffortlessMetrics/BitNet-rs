@@ -8070,6 +8070,8 @@ must_not_claim = [
 [[work_item]]
 id = "LNL258V-ROUTE-015"
 status = "in_progress"
+pr = 5744
+head_sha = "fc3f9d9376b8c252d0ebf678085af0537fc37612"
 branch = "codex/lunar-lake/LNL258V-ROUTE-015-benchmark-qualified-advantage"
 stackable = false
 review_mode = "codex_premerge"
