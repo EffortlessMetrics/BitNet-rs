@@ -21,6 +21,28 @@ Apple, or A770 claims without route-specific specs and receipts. Dense SLM
 proof and diagnostic no-scale F32 QK256 proof do not satisfy production
 BitNet packed I2_S/QK256 proof.
 
+## Falcon-E Family Compact 1.58-bit Lane
+
+Use these specs before implementing or claiming Falcon-E support:
+
+1. [Falcon-E Family Proposal](../proposals/BITNET-PROP-0013-falcon-e-family-supported-models.md)
+   - Explains why Falcon-E is a compact direct-GGUF 1.58-bit validation lane and why it remains separate from Microsoft BitNet, 1bitLLM, Falcon3, and dense Falcon.
+2. [Falcon-E Artifact Contract](BITNET-SPEC-FALCON-E-FAMILY-ARTIFACT-CONTRACT.md)
+   - Defines the 1B and 3B direct `I2_S` GGUF candidate artifacts and inventory receipt fields.
+3. [Falcon-E Route Compatibility](BITNET-SPEC-FALCON-E-FAMILY-ROUTE-COMPATIBILITY.md)
+   - Defines x86/ARM `I2_S`, `TL1`, and `TL2` initial route status and diagnostic boundaries.
+4. [Falcon-E Tokenizer and Prompt](BITNET-SPEC-FALCON-E-FAMILY-TOKENIZER-PROMPT.md) and [Reference Quality](BITNET-SPEC-FALCON-E-FAMILY-REFERENCE-QUALITY.md)
+   - Define tokenizer/prompt authority and bounded reference answer gates.
+5. [Falcon-E I2_S](BITNET-SPEC-FALCON-E-FAMILY-I2S.md) and [TL1/TL2](BITNET-SPEC-FALCON-E-FAMILY-TL1-TL2.md)
+   - Define layout-proof requirements before QK256 aliasing or TL backend work.
+6. [Falcon-E CPU](BITNET-SPEC-FALCON-E-FAMILY-CPU.md), [CUDA](BITNET-SPEC-FALCON-E-FAMILY-CUDA.md), [Apple](BITNET-SPEC-FALCON-E-FAMILY-APPLE.md), [A770/OpenCL](BITNET-SPEC-FALCON-E-FAMILY-A770-OPENCL.md), and [Performance](BITNET-SPEC-FALCON-E-FAMILY-PERFORMANCE.md)
+   - Define backend and benchmark proof ladders with fallback-explicit receipts.
+
+Do not proceed from direct GGUF availability, upstream support listings, or one
+Falcon-E size to answer, backend, speed, server, or full-residency claims. Claims
+require exact artifact, tokenizer/prompt, layout, quality, and backend receipts
+for the specific model size and route.
+
 ## NPU productization
 
 Use these artifacts before implementing or claiming NPU product support:

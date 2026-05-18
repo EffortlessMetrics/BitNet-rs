@@ -1240,3 +1240,228 @@ claim_boundary = "Docs-only modern LLM slots document future proof ladders and c
   full_residency_claim = false
   bitnet_packed_i2s_qk256_proof = false
   dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_1b_instruct_i2s_gguf_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "gguf_i2_s_candidate"
+contract_id = "tiiuae_falcon_e_1b_instruct_i2s_gguf"
+status = "registered_direct_gguf_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_reference_good"
+accelerator_routes = []
+required_receipts = [
+  "artifact_inventory",
+  "tokenizer_prompt_authority",
+  "reference_runner_quality",
+  "i2s_layout_proof",
+  "cpu_answer_corpus",
+]
+forbidden_claims = [
+  "microsoft_2b_proof_inheritance",
+  "falcon3_proof_inheritance",
+  "onebitllm_proof_inheritance",
+  "dense_falcon_proof_inheritance",
+  "cuda_answer_ready",
+  "apple_answer_ready",
+  "a770_answer_ready",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Exact artifact inventory, tokenizer/prompt authority, reference-good output, I2_S layout proof, and strict Rust CPU answer corpus."
+claim_boundary = "Falcon-E 1B direct I2_S GGUF is registered only; no answer, backend, speed, server, or full-residency claim."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_3b_instruct_i2s_gguf_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "gguf_i2_s_candidate"
+contract_id = "tiiuae_falcon_e_3b_instruct_i2s_gguf"
+status = "registered_direct_gguf_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_reference_good"
+accelerator_routes = []
+required_receipts = [
+  "artifact_inventory",
+  "tokenizer_prompt_authority",
+  "reference_runner_quality",
+  "i2s_layout_proof",
+  "cpu_answer_corpus",
+]
+forbidden_claims = [
+  "falcon_e_1b_proof_inheritance",
+  "microsoft_2b_proof_inheritance",
+  "falcon3_proof_inheritance",
+  "onebitllm_proof_inheritance",
+  "dense_falcon_proof_inheritance",
+  "cuda_answer_ready",
+  "apple_answer_ready",
+  "a770_answer_ready",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Exact artifact inventory, tokenizer/prompt authority, reference-good output, I2_S layout proof, and strict Rust CPU answer corpus."
+claim_boundary = "Falcon-E 3B direct I2_S GGUF is registered only and must not inherit Falcon-E 1B proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_1b_tl1_arm_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "tl1_arm_candidate"
+contract_id = "tiiuae_falcon_e_1b_tl1_arm_candidate"
+status = "registered_tl_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_tl_scalar_oracle_and_reference_good"
+accelerator_routes = []
+required_receipts = ["tl_layout_spec", "tl_scalar_oracle", "artifact_inventory", "reference_runner_quality"]
+forbidden_claims = ["i2_s_qk256_proof_inheritance", "x86_tl2_inheritance", "cuda_answer_ready", "speedup", "server_ready"]
+next_proof = "TL1 layout spec and scalar oracle before ARM CPU/NEON proof."
+claim_boundary = "ARM TL1 is a registered future route only."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_3b_tl1_arm_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "tl1_arm_candidate"
+contract_id = "tiiuae_falcon_e_3b_tl1_arm_candidate"
+status = "registered_tl_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_tl_scalar_oracle_and_reference_good"
+accelerator_routes = []
+required_receipts = ["tl_layout_spec", "tl_scalar_oracle", "artifact_inventory", "reference_runner_quality"]
+forbidden_claims = ["falcon_e_1b_proof_inheritance", "i2_s_qk256_proof_inheritance", "x86_tl2_inheritance", "cuda_answer_ready", "speedup", "server_ready"]
+next_proof = "TL1 layout spec and scalar oracle before ARM CPU/NEON proof."
+claim_boundary = "ARM TL1 3B is a registered future route only and must not inherit 1B proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_1b_tl2_x86_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "tl2_x86_candidate"
+contract_id = "tiiuae_falcon_e_1b_tl2_x86_candidate"
+status = "registered_tl_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_tl_scalar_oracle_and_reference_good"
+accelerator_routes = []
+required_receipts = ["tl_layout_spec", "tl_scalar_oracle", "artifact_inventory", "reference_runner_quality"]
+forbidden_claims = ["i2_s_qk256_proof_inheritance", "arm_tl1_inheritance", "cuda_answer_ready", "speedup", "server_ready"]
+next_proof = "TL2 layout spec and scalar oracle before x86 backend proof."
+claim_boundary = "x86 TL2 is a registered future route only."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
+id = "falcon_e_3b_tl2_x86_candidate"
+model_class = "bitnet"
+family = "falcon_e_158bit"
+artifact_kind = "tl2_x86_candidate"
+contract_id = "tiiuae_falcon_e_3b_tl2_x86_candidate"
+status = "registered_tl_candidate"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_authority = "pending_falcon_e_prompt_audit"
+cpu_reference = "pending_tl_scalar_oracle_and_reference_good"
+accelerator_routes = []
+required_receipts = ["tl_layout_spec", "tl_scalar_oracle", "artifact_inventory", "reference_runner_quality"]
+forbidden_claims = ["falcon_e_1b_proof_inheritance", "i2_s_qk256_proof_inheritance", "arm_tl1_inheritance", "cuda_answer_ready", "speedup", "server_ready"]
+next_proof = "TL2 layout spec and scalar oracle before x86 backend proof."
+claim_boundary = "x86 TL2 3B is a registered future route only and must not inherit 1B proof."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false

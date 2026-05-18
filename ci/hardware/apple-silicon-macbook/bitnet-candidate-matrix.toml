@@ -194,26 +194,27 @@ source_url = "https://huggingface.co/tiiuae/Falcon-E-1B-Instruct-GGUF"
 file = "ggml-model-i2_s.gguf"
 known_sha256 = "pending"
 known_size_bytes = 0
-storage_estimate = "1b_class; exact bytes pending candidate probe"
+storage_estimate = "HF repo listing reports 666 MB; exact bytes and SHA256 pending candidate probe"
 format = "gguf"
 quantization = "i2_s"
-tokenizer_authority = "pending"
-pretokenizer_authority = "pending"
-prompt_template = "pending_reference_runner_decision"
-reference_runner = "microsoft_bitnet_cpp_or_intended_falcon_e_runner"
-reference_status = "secondary_family_not_first_proof_target"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+pretokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_template = "pending_falcon_e_prompt_audit"
+reference_runner = "microsoft_bitnet_cpp_or_llama_cpp_falcon_e_runner"
+reference_status = "registered_only_pending_artifact_inventory_tokenizer_prompt_reference_good"
 cleanup_required = true
 next_item = "future_after_microsoft_and_1bitllm"
 notes = [
-  "Use after Microsoft and 1bitLLM behavior is understood.",
+  "Use after Microsoft and 1bitLLM behavior is understood in the Apple artifact lane, or in the dedicated Falcon-E family lane once FE-000 source-of-truth docs land.",
   "Different family and architecture assumptions mean it cannot replace Microsoft BitNet artifact authority.",
+  "Falcon-E 1B proof does not prove Falcon-E 3B, Falcon3, 1bitLLM, Microsoft BitNet, or dense Falcon behavior.",
 ]
 
   [[candidate.route]]
   arch = "arm"
   kernel = "i2_s"
-  status = "candidate_verify_runner"
-  proof_use = "secondary_family_diagnostic"
+  status = "listed_supported_verify_runner"
+  proof_use = "registered_candidate_only_until_artifact_tokenizer_reference_and_i2s_layout_receipts_pass"
 
 [[candidate]]
 id = "falcon_e_3b_instruct_i2s_secondary"
@@ -225,23 +226,24 @@ source_url = "https://huggingface.co/tiiuae/Falcon-E-3B-Instruct-GGUF"
 file = "ggml-model-i2_s.gguf"
 known_sha256 = "pending"
 known_size_bytes = 0
-storage_estimate = "3b_class; exact bytes pending candidate probe"
+storage_estimate = "HF repo listing reports 1,000 MB; exact bytes and SHA256 pending candidate probe"
 format = "gguf"
 quantization = "i2_s"
-tokenizer_authority = "pending"
-pretokenizer_authority = "pending"
-prompt_template = "pending_reference_runner_decision"
-reference_runner = "microsoft_bitnet_cpp_or_intended_falcon_e_runner"
-reference_status = "secondary_family_not_first_proof_target"
+tokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+pretokenizer_authority = "pending_falcon_e_tokenizer_prompt_audit"
+prompt_template = "pending_falcon_e_prompt_audit"
+reference_runner = "microsoft_bitnet_cpp_or_llama_cpp_falcon_e_runner"
+reference_status = "registered_only_pending_artifact_inventory_tokenizer_prompt_reference_good"
 cleanup_required = true
 next_item = "future_after_microsoft_and_1bitllm"
 notes = [
   "Use only after smaller/official candidate behavior is clear and MacBook storage is sufficient.",
   "Different family and architecture assumptions mean it cannot replace Microsoft BitNet artifact authority.",
+  "Falcon-E 3B requires its own artifact, tokenizer, prompt, reference, layout, answer, and backend receipts; Falcon-E 1B proof is not sufficient.",
 ]
 
   [[candidate.route]]
   arch = "arm"
   kernel = "i2_s"
-  status = "candidate_verify_runner"
-  proof_use = "secondary_family_diagnostic"
+  status = "listed_supported_verify_runner"
+  proof_use = "registered_candidate_only_until_artifact_tokenizer_reference_and_i2s_layout_receipts_pass"
