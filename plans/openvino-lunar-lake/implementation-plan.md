@@ -4,7 +4,7 @@ Status: active
 Owner: intel/openvino
 Created: 2026-05-18
 Linked proposal: [BITNET-PROP-0004](../../docs/proposals/BITNET-PROP-0004-openvino-lunar-lake-productization.md)
-Linked specs: [BITNET-SPEC-OPENVINO-ROUTE-CONTRACT](../../docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md)
+Linked specs: [BITNET-SPEC-OPENVINO-ROUTE-CONTRACT](../../docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md), [BITNET-SPEC-OPENVINO-DENSE-SLM](../../docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md), [BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE](../../docs/specs/BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE.md)
 Linked ADRs: n/a
 Linked plan: n/a
 Linked issues: n/a
@@ -26,7 +26,7 @@ OpenCL, BitNet QK256, and server proof families separate.
 
 ### Work item: LNL258V-OPENVINO-DOCS-001
 
-Status: ready
+Status: merged
 Campaign item: `LNL258V-OPENVINO-DOCS-001`
 Linked proposal: `BITNET-PROP-0004`
 Linked specs: `BITNET-SPEC-OPENVINO-ROUTE-CONTRACT`
@@ -88,7 +88,7 @@ or server-readiness claim.
 
 ### Work item: LNL258V-OPENVINO-DOCS-002
 
-Status: in progress
+Status: merged
 Linked proposal: `BITNET-PROP-0004`
 Linked specs: `BITNET-SPEC-OPENVINO-ROUTE-CONTRACT`, `BITNET-SPEC-OPENVINO-DENSE-SLM`
 Blocked by: `LNL258V-OPENVINO-DOCS-001`
@@ -107,15 +107,24 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-DOCS-003
 
-Status: proposed
+Status: in progress
 Linked proposal: `BITNET-PROP-0004`
-Linked specs: future `BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE`
+Linked specs: `BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE`
 Blocked by: `LNL258V-OPENVINO-DOCS-002`
 
 Add `docs/specs/BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE.md` defining NPU
 first-ever compile, cached startup, warm second ask, resident session, cache,
 `PREFILL_HINT`, `GENERATE_HINT`, `MAX_PROMPT_LEN`, and `MIN_RESPONSE_LEN`
 receipt requirements. Do not claim cold one-off NPU usability.
+
+Acceptance additions:
+
+- First-ever cold, cached cold-process, warm same-process, and resident-session
+  timing modes are separate receipt modes.
+- NPU cache identity, cache hit/miss evidence, GenAI configuration, phase
+  timing, answer quality, fallback, and route-promotion fields are required.
+- Hot first-token/decode evidence alone cannot support cold one-off NPU
+  usability, speedup, power-advantage, or route-promotion claims.
 
 ### Work item: LNL258V-OPENVINO-DOCS-004
 

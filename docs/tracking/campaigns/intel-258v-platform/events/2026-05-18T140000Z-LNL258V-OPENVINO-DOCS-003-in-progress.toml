@@ -1,0 +1,19 @@
+timestamp = "2026-05-18T14:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-003"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-003-npu-cold-warm-cache"
+summary = "Started LNL258V-OPENVINO-DOCS-003 to define OpenVINO NPU cold/cache/warm/resident receipt requirements."
+
+artifacts = [
+  "docs/specs/BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The spec separates first-ever cold, cached cold-process, warm same-process, and resident-session evidence so hot-path timing cannot imply cold one-off NPU usability.",
+  "No NPU route promotion, speedup, power-advantage, broad dense SLM quality, BitNet QK256/I2_S, dynamic decode, native NPU kernel, or server-readiness claim is in scope.",
+]

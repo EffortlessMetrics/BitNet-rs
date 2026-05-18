@@ -6479,3 +6479,42 @@ must_not_claim = [
   "OpenVINO GPU or NPU is promoted by this PR.",
   "OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, cold one-off NPU usability, or server readiness is proven.",
 ]
+
+[[work_item]]
+id = "LNL258V-OPENVINO-DOCS-003"
+status = "pr_open"
+pr = 5587
+head_sha = "884807cce29364de0e3c9a1b2089db332b4b931f"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-003-npu-cold-warm-cache"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-DOCS-002"]
+acceptance = "Add the OpenVINO NPU cold/cache/warm/resident timing contract spec, including first-ever compile, cached startup, warm same-process ask, resident-session, cache identity, PREFILL_HINT, GENERATE_HINT, MAX_PROMPT_LEN, MIN_RESPONSE_LEN, phase timing, fallback, quality, route-reason, and promotion-blocking requirements without claiming cold one-off NPU usability."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "docs/tracking/campaigns/intel-258v-platform/generated/status.md",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO NPU cold/cache/warm/resident receipt requirements are documented.",
+]
+must_not_claim = [
+  "OpenVINO NPU is promoted by this PR.",
+  "OpenVINO NPU cold one-off usability, speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, dynamic decode, native NPU kernel execution, or server readiness is proven.",
+]

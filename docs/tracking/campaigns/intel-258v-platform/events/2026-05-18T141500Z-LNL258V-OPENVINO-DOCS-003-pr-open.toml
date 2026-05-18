@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T14:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-003"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5587
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-003-npu-cold-warm-cache"
+head_sha = "884807cce29364de0e3c9a1b2089db332b4b931f"
+summary = "Opened PR #5587 for the OpenVINO NPU cold/cache/warm/resident timing contract spec."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5587",
+  "docs/specs/BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The PR defines first-ever cold, cached cold-process, warm same-process, and resident-session NPU receipt requirements.",
+  "No NPU route promotion, cold one-off usability, speedup, power-advantage, broad dense SLM quality, BitNet QK256/I2_S, dynamic decode, native NPU kernel, or server-readiness claim is made.",
+]
