@@ -1,0 +1,16 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T15:07:08Z"
+event = "pr_open"
+item = "SLM-CPU-039"
+pr = 5698
+head_sha = "c2d07ba5fccd45fb664d575040ddc5cb178fe4a7"
+branch = "codex/slm-cpu-039-workspace-owned-tensor-output"
+actor = "codex"
+summary = "Opened the workspace-owned feed-forward output PR."
+
+notes = [
+  "PR #5698 stores the FeedForward::forward_with_workspace down_proj output handle in TransformerForwardWorkspace and returns a clone of that workspace-owned handle.",
+  "The implementation preserves the existing Candle math path and does not enable reusable tensor storage.",
+  "Local campaign generate and campaign doctor timed out under Cargo contention; CI Campaign Tracker remains the authoritative generated-dashboard proof.",
+]

@@ -89,7 +89,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-036 | merged | #5625 classifies `prompt_prefill.forward` as transformer forward workspace and owned tensor outputs before changing dense math. |
 | SLM-CPU-037 | merged | #5643 explicitly rules out caller-side transformer-forward buffer reuse at the current owned tensor-output boundary and points the next safe hook at a typed transformer forward workspace API. |
 | SLM-CPU-038 | merged | #5679 introduced the first typed transformer forward workspace API boundary while preserving the existing owned tensor-output behavior oracle. |
-| SLM-CPU-039 | ready | Use the typed workspace API boundary to replace or further narrow one owned transformer tensor output with workspace-owned storage. |
+| SLM-CPU-039 | pr_open | #5698 owns the feed-forward `down_proj` output handle in the typed workspace while preserving the existing Candle math path and storage-reuse claim boundary. |
 
 ## Review Policy
 

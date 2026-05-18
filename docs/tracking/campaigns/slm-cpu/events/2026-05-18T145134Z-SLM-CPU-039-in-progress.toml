@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T14:51:34Z"
+event = "in_progress"
+item = "SLM-CPU-039"
+branch = "codex/slm-cpu-039-workspace-owned-tensor-output"
+actor = "codex"
+summary = "Started the workspace-owned transformer tensor output slice."
+
+notes = [
+  "The implementation targets one narrow transformer-owned output boundary: FeedForward::forward_with_workspace stores the down_proj output handle in TransformerForwardWorkspace.",
+  "Candle tensor math and generated-token behavior remain delegated to the existing path.",
+  "The slice does not claim reusable Candle storage, speedup, sustained throughput, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, Q4/Q5 runtime, or BitNet QK256 changes.",
+]

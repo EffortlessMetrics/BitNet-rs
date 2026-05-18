@@ -374,12 +374,25 @@ status = workspace_api_present_reuse_deferred
 optimization_deferred = true
 ```
 
-The next safe implementation target is replacing one owned transformer tensor
-output with workspace-owned storage behind tests that preserve generated IDs,
-decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel,
-model SHA, and `fallback=false`. This remains an allocation-boundary proof
-only; it makes no speedup, sustained-throughput, broad-answer-quality, Q4/Q5
-runtime, accelerator, Qwen3.5, or BitNet QK256 claim.
+SLM-CPU-039 replaces the first narrow owned-output return boundary with a
+workspace-owned handle: `FeedForward::forward_with_workspace` stores the
+`down_proj` output in `TransformerForwardWorkspace` and returns a clone of that
+workspace-held tensor handle. This preserves the existing Candle math path and
+does not enable reusable tensor storage. The receipt surface records:
+
+```text
+reuse_status = workspace_owned_feed_forward_output_candle_storage_reuse_not_enabled
+workspace_owned_tensor_output.boundary = FeedForward::forward_with_workspace down_proj output
+workspace_owned_tensor_output.storage_reuse_enabled = false
+```
+
+The next safe implementation target is replacing another owned transformer
+tensor output or proving a narrower no-reuse boundary behind tests that
+preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected
+CPU backend/kernel, model SHA, and `fallback=false`. This remains an
+allocation-boundary proof only; it makes no speedup, sustained-throughput,
+broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256
+claim.
 
 This is a classification slice. It does not change Q8_0 GEMV, RMSNorm, RoPE,
 attention, output-head math, tokenizer behavior, or generated tokens, and it

@@ -211,13 +211,25 @@ fn test_incremental_forward_workspace_matches_existing_path() -> anyhow::Result<
     assert_eq!(workspace.model_forward_calls(), 1);
     assert_eq!(workspace.block_forward_calls(), model.config.model.num_layers);
     assert_eq!(workspace.feed_forward_calls(), model.config.model.num_layers);
+    assert_eq!(workspace.workspace_owned_feed_forward_outputs(), model.config.model.num_layers);
     assert_eq!(workspace.last_output_shape(), with_workspace.dims());
     assert_eq!(workspace.last_output_shape(), &[1, 1, hidden]);
+    assert_eq!(workspace.last_workspace_owned_feed_forward_shape(), &[1, 1, hidden]);
+    assert!(workspace.has_workspace_owned_feed_forward_output());
+    assert_eq!(
+        workspace.output_ownership_status(),
+        "workspace_owned_feed_forward_output_candle_storage_reuse_not_enabled"
+    );
     assert_eq!(workspace.reuse_status(), "api_boundary_present_owned_tensor_reuse_not_enabled");
     assert!(
         !workspace.tensor_reuse_enabled(),
-        "SLM-CPU-038 introduces the API boundary before enabling tensor reuse"
+        "SLM-CPU-039 owns the FFN output handle in the workspace before enabling storage reuse"
     );
+
+    workspace.clear();
+    assert_eq!(workspace.workspace_owned_feed_forward_outputs(), 0);
+    assert!(!workspace.has_workspace_owned_feed_forward_output());
+    assert_eq!(workspace.output_ownership_status(), "workspace_owned_tensor_output_not_recorded");
     Ok(())
 }
 

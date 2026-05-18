@@ -13820,7 +13820,22 @@ mod tests {
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["reuse_status"],
-            "api_boundary_present_owned_tensor_reuse_not_enabled"
+            "workspace_owned_feed_forward_output_candle_storage_reuse_not_enabled"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["workspace_owned_tensor_output"]
+                ["boundary"],
+            "FeedForward::forward_with_workspace down_proj output"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["workspace_owned_tensor_output"]
+                ["storage_reuse_enabled"],
+            false
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["workspace_owned_tensor_output"]
+                ["claim_scope"],
+            "one transformer feed-forward output handle is workspace-owned; Candle tensor storage reuse and speedup are not claimed"
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["required_api_boundary"],
