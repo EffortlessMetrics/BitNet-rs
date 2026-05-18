@@ -1603,6 +1603,10 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
                 cpu_f64_records,
                 Some(&model_path),
             );
+        let selected_query_attention_norm_replay_policy =
+            attention_selected_query_attention_norm_replay_policy(
+                &selected_query_attention_norm_input_history_epsilon,
+            );
         cpu_comparison["attention_selected_historical_k_attention_norm_f64_effect"] =
             selected_f64_effect;
         cpu_comparison["attention_selected_pre_rope_attention_norm_f64_effect"] =
@@ -1624,6 +1628,8 @@ fn compare_reference_layer_trace(args: &LayerTraceCompareArgs) -> Result<Value> 
             selected_query_projection_epsilon_source;
         cpu_comparison["attention_selected_query_attention_norm_input_history_epsilon"] =
             selected_query_attention_norm_input_history_epsilon;
+        cpu_comparison["attention_selected_query_attention_norm_replay_policy"] =
+            selected_query_attention_norm_replay_policy;
         cpu_comparison["layer_0_attention_norm_f64_downstream_effect"] = f64_downstream;
         cpu_comparison["layer_0_attention_norm_f64_capture_for_value_projection"] = f64_capture;
     }
@@ -33429,6 +33435,279 @@ fn attention_selected_query_attention_norm_input_history_epsilon(
     report
 }
 
+fn selected_query_attention_norm_replay_policy_next_diagnostic(
+    classification: &str,
+) -> &'static str {
+    match classification {
+        "selected_query_attention_norm_replay_policy_accumulation_split" => {
+            "pin whether reference and Rust intentionally use different attention RMSNorm accumulation policies before changing production RMSNorm math"
+        }
+        "selected_query_attention_norm_replay_policy_output_rounding_split" => {
+            "pin whether attention RMSNorm output rounding or F16 serialization explains the selected query epsilon before changing runtime math"
+        }
+        "selected_query_attention_norm_replay_policy_trace_serialization_delta" => {
+            "pin attention RMSNorm trace serialization/capture for the selected query output before changing runtime math"
+        }
+        "selected_query_attention_norm_replay_policy_upstream_input_history" => {
+            "localize selected query attention-norm input-history epsilon before changing RMSNorm accumulation policy"
+        }
+        "selected_query_attention_norm_replay_policy_missing_context" => {
+            "capture selected query attention-norm replay rows with target fits and accumulation probes before runtime changes"
+        }
+        "no_selected_query_attention_norm_replay_rows" => {
+            "pin selected query attention-norm input-history epsilon before replay-policy attribution"
+        }
+        "selected_query_attention_norm_replay_policy_clean" => {
+            "selected query attention RMSNorm replay policy is clean; inspect downstream score residual before runtime math changes"
+        }
+        _ => "keep selected query attention RMSNorm replay policy diagnostic-only",
+    }
+}
+
+fn classify_selected_query_attention_norm_replay_policy(
+    selected_count: usize,
+    missing_context_count: usize,
+    upstream_input_count: usize,
+    accumulation_split_count: usize,
+    output_rounding_split_count: usize,
+    trace_serialization_count: usize,
+    clean_count: usize,
+) -> &'static str {
+    if selected_count == 0 {
+        "no_selected_query_attention_norm_replay_rows"
+    } else if missing_context_count == selected_count {
+        "selected_query_attention_norm_replay_policy_missing_context"
+    } else if upstream_input_count > 0 {
+        "selected_query_attention_norm_replay_policy_upstream_input_history"
+    } else if accumulation_split_count > 0 {
+        "selected_query_attention_norm_replay_policy_accumulation_split"
+    } else if output_rounding_split_count > 0 {
+        "selected_query_attention_norm_replay_policy_output_rounding_split"
+    } else if trace_serialization_count > 0 {
+        "selected_query_attention_norm_replay_policy_trace_serialization_delta"
+    } else if clean_count > 0 {
+        "selected_query_attention_norm_replay_policy_clean"
+    } else {
+        "selected_query_attention_norm_replay_policy_unpinned"
+    }
+}
+
+fn attention_selected_query_attention_norm_replay_policy(input_history_epsilon: &Value) -> Value {
+    let selected_rows = input_history_epsilon
+        .pointer("/rows")
+        .and_then(Value::as_array)
+        .map(|rows| {
+            rows.iter()
+                .filter(|row| {
+                    row.pointer("/classification").and_then(Value::as_str)
+                        == Some(
+                            "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output",
+                        )
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut rows = Vec::<Value>::new();
+    let mut selected_count = 0usize;
+    let mut compared_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut upstream_input_count = 0usize;
+    let mut accumulation_split_count = 0usize;
+    let mut output_rounding_split_count = 0usize;
+    let mut trace_serialization_count = 0usize;
+    let mut clean_count = 0usize;
+    let mut max_input_abs_delta = 0.0f64;
+    let mut max_output_abs_delta = 0.0f64;
+    let mut max_reference_replay_delta = 0.0f64;
+    let mut max_rust_replay_delta = 0.0f64;
+
+    for source_row in selected_rows {
+        selected_count += 1;
+        let reference_best = source_row.pointer("/reference_input_replay/best_vs_reference_target");
+        let rust_best = source_row.pointer("/rust_input_replay/best_vs_rust_target");
+        let reference_accumulation =
+            reference_best.and_then(|value| value.pointer("/accumulation")).and_then(Value::as_str);
+        let rust_accumulation =
+            rust_best.and_then(|value| value.pointer("/accumulation")).and_then(Value::as_str);
+        let reference_output_rounding = reference_best
+            .and_then(|value| value.pointer("/output_rounding"))
+            .and_then(Value::as_str);
+        let rust_output_rounding =
+            rust_best.and_then(|value| value.pointer("/output_rounding")).and_then(Value::as_str);
+        let reference_replay_delta = reference_best
+            .and_then(|value| value.pointer("/max_abs_delta"))
+            .and_then(Value::as_f64);
+        let rust_replay_delta =
+            rust_best.and_then(|value| value.pointer("/max_abs_delta")).and_then(Value::as_f64);
+        let input_abs_delta =
+            source_row.pointer("/same_index_input_delta/abs_delta").and_then(Value::as_f64);
+        let output_abs_delta =
+            source_row.pointer("/same_index_output_delta/abs_delta").and_then(Value::as_f64);
+        let replay_explains_targets = source_row
+            .pointer("/replay_explains_targets")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let rule_split = source_row
+            .pointer("/accumulation_rule_probe/rule_split")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let reference_prefers_f64 = source_row
+            .pointer("/accumulation_rule_probe/reference_input/reference_prefers_f64")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let rust_prefers_f32 = source_row
+            .pointer("/accumulation_rule_probe/rust_input/rust_prefers_f32")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+
+        if let Some(delta) = input_abs_delta {
+            max_input_abs_delta = max_input_abs_delta.max(delta);
+        }
+        if let Some(delta) = output_abs_delta {
+            max_output_abs_delta = max_output_abs_delta.max(delta);
+        }
+        if let Some(delta) = reference_replay_delta {
+            max_reference_replay_delta = max_reference_replay_delta.max(delta);
+        }
+        if let Some(delta) = rust_replay_delta {
+            max_rust_replay_delta = max_rust_replay_delta.max(delta);
+        }
+
+        let mut blocked_reasons = Vec::<String>::new();
+        if reference_best.is_none() {
+            blocked_reasons
+                .push("reference_selected_query_rmsnorm_best_variant_missing".to_string());
+        }
+        if rust_best.is_none() {
+            blocked_reasons.push("rust_selected_query_rmsnorm_best_variant_missing".to_string());
+        }
+        if reference_accumulation.is_none() {
+            blocked_reasons
+                .push("reference_selected_query_rmsnorm_accumulation_missing".to_string());
+        }
+        if rust_accumulation.is_none() {
+            blocked_reasons.push("rust_selected_query_rmsnorm_accumulation_missing".to_string());
+        }
+        if reference_output_rounding.is_none() {
+            blocked_reasons
+                .push("reference_selected_query_rmsnorm_output_rounding_missing".to_string());
+        }
+        if rust_output_rounding.is_none() {
+            blocked_reasons.push("rust_selected_query_rmsnorm_output_rounding_missing".to_string());
+        }
+        if !replay_explains_targets {
+            blocked_reasons
+                .push("selected_query_rmsnorm_replay_no_longer_explains_targets".to_string());
+        }
+
+        let input_history_present = input_abs_delta.is_some_and(|delta| delta > 0.0);
+        let output_delta_present = output_abs_delta.is_some_and(|delta| delta > 0.0);
+        let accumulation_split = rule_split
+            || reference_accumulation.zip(rust_accumulation).is_some_and(|(l, r)| l != r);
+        let output_rounding_split =
+            reference_output_rounding.zip(rust_output_rounding).is_some_and(|(l, r)| l != r);
+
+        let row_classification = if !blocked_reasons.is_empty() {
+            missing_context_count += 1;
+            "selected_query_attention_norm_replay_policy_missing_context"
+        } else if input_history_present {
+            upstream_input_count += 1;
+            "selected_query_attention_norm_replay_policy_upstream_input_history"
+        } else if accumulation_split {
+            accumulation_split_count += 1;
+            "selected_query_attention_norm_replay_policy_accumulation_split"
+        } else if output_rounding_split {
+            output_rounding_split_count += 1;
+            "selected_query_attention_norm_replay_policy_output_rounding_split"
+        } else if output_delta_present {
+            trace_serialization_count += 1;
+            "selected_query_attention_norm_replay_policy_trace_serialization_delta"
+        } else {
+            clean_count += 1;
+            "selected_query_attention_norm_replay_policy_clean"
+        };
+        if blocked_reasons.is_empty() {
+            compared_count += 1;
+        }
+
+        rows.push(json!({
+            "classification": row_classification,
+            "input_pair_component": source_row.pointer("/input_pair_component").cloned().unwrap_or(Value::Null),
+            "head": source_row.pointer("/head").cloned().unwrap_or(Value::Null),
+            "selected_token": source_row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+            "selected_query_projection_dim": source_row.pointer("/selected_query_projection_dim").cloned().unwrap_or(Value::Null),
+            "materiality_delta": source_row.pointer("/materiality_delta").cloned().unwrap_or(Value::Null),
+            "blocked_reasons": blocked_reasons,
+            "same_index_input_delta": source_row.pointer("/same_index_input_delta").cloned().unwrap_or(Value::Null),
+            "same_index_output_delta": source_row.pointer("/same_index_output_delta").cloned().unwrap_or(Value::Null),
+            "reference_best_variant": reference_best.cloned().unwrap_or(Value::Null),
+            "rust_best_variant": rust_best.cloned().unwrap_or(Value::Null),
+            "reference_accumulation": reference_accumulation,
+            "rust_accumulation": rust_accumulation,
+            "reference_output_rounding": reference_output_rounding,
+            "rust_output_rounding": rust_output_rounding,
+            "reference_replay_delta": reference_replay_delta,
+            "rust_replay_delta": rust_replay_delta,
+            "accumulation_rule_probe": source_row.pointer("/accumulation_rule_probe").cloned().unwrap_or(Value::Null),
+            "rule_split": rule_split,
+            "reference_prefers_f64": reference_prefers_f64,
+            "rust_prefers_f32": rust_prefers_f32,
+            "runtime_change_candidate": match row_classification {
+                "selected_query_attention_norm_replay_policy_accumulation_split" => {
+                    "pin_attention_rmsnorm_accumulation_policy_before_runtime_change"
+                }
+                "selected_query_attention_norm_replay_policy_output_rounding_split" => {
+                    "pin_attention_rmsnorm_output_rounding_policy_before_runtime_change"
+                }
+                "selected_query_attention_norm_replay_policy_trace_serialization_delta" => {
+                    "pin_attention_rmsnorm_trace_serialization_before_runtime_change"
+                }
+                "selected_query_attention_norm_replay_policy_upstream_input_history" => {
+                    "localize_selected_query_attention_norm_input_history_before_runtime_change"
+                }
+                "selected_query_attention_norm_replay_policy_clean" => {
+                    "none_from_selected_query_attention_norm_replay_policy"
+                }
+                _ => "selected_query_attention_norm_replay_policy_context_missing",
+            },
+            "source_row": source_row.clone(),
+        }));
+    }
+
+    let classification = classify_selected_query_attention_norm_replay_policy(
+        selected_count,
+        missing_context_count,
+        upstream_input_count,
+        accumulation_split_count,
+        output_rounding_split_count,
+        trace_serialization_count,
+        clean_count,
+    );
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected query attention RMSNorm replay policy is diagnostic-only evidence for whether the selected query projection input epsilon follows attention RMSNorm accumulation policy, output rounding, or trace serialization; it does not change RMSNorm, QK256, RoPE, score-input, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, softmax residency, value-mix residency, full residency, performance, or completion",
+        "classification": classification,
+        "source_report": "attention_selected_query_attention_norm_input_history_epsilon",
+        "selected_count": selected_count,
+        "compared_count": compared_count,
+        "missing_context_count": missing_context_count,
+        "upstream_input_count": upstream_input_count,
+        "accumulation_split_count": accumulation_split_count,
+        "output_rounding_split_count": output_rounding_split_count,
+        "trace_serialization_count": trace_serialization_count,
+        "clean_count": clean_count,
+        "max_input_abs_delta": max_input_abs_delta,
+        "max_output_abs_delta": max_output_abs_delta,
+        "max_reference_replay_delta": max_reference_replay_delta,
+        "max_rust_replay_delta": max_rust_replay_delta,
+        "rows": rows,
+        "next_diagnostic": selected_query_attention_norm_replay_policy_next_diagnostic(classification),
+    })
+}
+
 fn find_qk_recompute_row<'a>(
     rows: Option<&'a Vec<Value>>,
     head: Option<u64>,
@@ -50006,6 +50285,216 @@ mod tests {
                 "pin selected query projection epsilon source before attention-norm input attribution"
             ))
         );
+    }
+
+    #[test]
+    fn selected_query_attention_norm_replay_policy_classifies_accumulation_split() {
+        let report = attention_selected_query_attention_norm_replay_policy(&json!({
+            "rows": [
+                {
+                    "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output",
+                    "input_pair_component": "x0",
+                    "head": 0,
+                    "key_slot": 17,
+                    "selected_query_projection_dim": 5,
+                    "materiality_delta": -2.38418579101562e-7_f64,
+                    "same_index_input_delta": {
+                        "present": true,
+                        "abs_delta": 0.0
+                    },
+                    "same_index_output_delta": {
+                        "present": true,
+                        "abs_delta": 7.450580596923828e-9_f64
+                    },
+                    "replay_explains_targets": true,
+                    "reference_input_replay": {
+                        "best_vs_reference_target": {
+                            "id": "reference_f64",
+                            "accumulation": "f64_sequential",
+                            "output_rounding": "f32",
+                            "max_abs_delta": 0.0
+                        }
+                    },
+                    "rust_input_replay": {
+                        "best_vs_rust_target": {
+                            "id": "rust_f32",
+                            "accumulation": "f32_sequential",
+                            "output_rounding": "f32",
+                            "max_abs_delta": 0.0
+                        }
+                    },
+                    "accumulation_rule_probe": {
+                        "rule_split": true,
+                        "reference_input": {
+                            "reference_prefers_f64": true
+                        },
+                        "rust_input": {
+                            "rust_prefers_f32": true
+                        }
+                    }
+                }
+            ]
+        }));
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_attention_norm_replay_policy_accumulation_split"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/compared_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/accumulation_split_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/runtime_change_candidate"),
+            Some(&json!("pin_attention_rmsnorm_accumulation_policy_before_runtime_change"))
+        );
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin whether reference and Rust intentionally use different attention RMSNorm accumulation policies before changing production RMSNorm math"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_attention_norm_replay_policy_classifies_output_rounding_split() {
+        let report = attention_selected_query_attention_norm_replay_policy(&json!({
+            "rows": [
+                {
+                    "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output",
+                    "same_index_input_delta": {
+                        "abs_delta": 0.0
+                    },
+                    "same_index_output_delta": {
+                        "abs_delta": 7.450580596923828e-9_f64
+                    },
+                    "replay_explains_targets": true,
+                    "reference_input_replay": {
+                        "best_vs_reference_target": {
+                            "accumulation": "f32_sequential",
+                            "output_rounding": "f32",
+                            "max_abs_delta": 0.0
+                        }
+                    },
+                    "rust_input_replay": {
+                        "best_vs_rust_target": {
+                            "accumulation": "f32_sequential",
+                            "output_rounding": "f16",
+                            "max_abs_delta": 0.0
+                        }
+                    },
+                    "accumulation_rule_probe": {
+                        "rule_split": false
+                    }
+                }
+            ]
+        }));
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_attention_norm_replay_policy_output_rounding_split"))
+        );
+        assert_eq!(report.pointer("/output_rounding_split_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/runtime_change_candidate"),
+            Some(&json!("pin_attention_rmsnorm_output_rounding_policy_before_runtime_change"))
+        );
+    }
+
+    #[test]
+    fn selected_query_attention_norm_replay_policy_classifies_trace_serialization_delta() {
+        let report = attention_selected_query_attention_norm_replay_policy(&json!({
+            "rows": [
+                {
+                    "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output",
+                    "same_index_input_delta": {
+                        "abs_delta": 0.0
+                    },
+                    "same_index_output_delta": {
+                        "abs_delta": 7.450580596923828e-9_f64
+                    },
+                    "replay_explains_targets": true,
+                    "reference_input_replay": {
+                        "best_vs_reference_target": {
+                            "accumulation": "f32_sequential",
+                            "output_rounding": "f32",
+                            "max_abs_delta": 0.0
+                        }
+                    },
+                    "rust_input_replay": {
+                        "best_vs_rust_target": {
+                            "accumulation": "f32_sequential",
+                            "output_rounding": "f32",
+                            "max_abs_delta": 0.0
+                        }
+                    },
+                    "accumulation_rule_probe": {
+                        "rule_split": false
+                    }
+                }
+            ]
+        }));
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_attention_norm_replay_policy_trace_serialization_delta"))
+        );
+        assert_eq!(report.pointer("/trace_serialization_count"), Some(&json!(1)));
+        assert_eq!(
+            report.pointer("/rows/0/runtime_change_candidate"),
+            Some(&json!("pin_attention_rmsnorm_trace_serialization_before_runtime_change"))
+        );
+    }
+
+    #[test]
+    fn selected_query_attention_norm_replay_policy_reports_no_rows() {
+        let report = attention_selected_query_attention_norm_replay_policy(&json!({
+            "rows": [
+                {
+                    "classification": "selected_query_attention_norm_input_history_epsilon_clean"
+                }
+            ]
+        }));
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("no_selected_query_attention_norm_replay_rows"))
+        );
+        assert_eq!(report.pointer("/selected_count"), Some(&json!(0)));
+        assert_eq!(
+            report.pointer("/next_diagnostic"),
+            Some(&json!(
+                "pin selected query attention-norm input-history epsilon before replay-policy attribution"
+            ))
+        );
+    }
+
+    #[test]
+    fn selected_query_attention_norm_replay_policy_keeps_missing_context_explicit() {
+        let report = attention_selected_query_attention_norm_replay_policy(&json!({
+            "rows": [
+                {
+                    "classification": "selected_query_attention_norm_input_history_epsilon_rmsnorm_replay_explains_output",
+                    "input_pair_component": "x0",
+                    "replay_explains_targets": false
+                }
+            ]
+        }));
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_attention_norm_replay_policy_missing_context"))
+        );
+        assert_eq!(report.pointer("/missing_context_count"), Some(&json!(1)));
+        assert!(report.pointer("/rows/0/blocked_reasons").and_then(Value::as_array).is_some_and(
+            |reasons| {
+                reasons.contains(&json!("selected_query_rmsnorm_replay_no_longer_explains_targets"))
+                    && reasons
+                        .contains(&json!("reference_selected_query_rmsnorm_best_variant_missing"))
+            }
+        ));
     }
 
     #[test]
