@@ -809,17 +809,37 @@ fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::er
             report_root_str.as_str(),
             "--json-out",
             receipt_str.as_str(),
+            "--explain",
+            "--open-targets",
         ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Apple M4 report refresh manifest"))
         .stdout(predicate::str::contains("dense_slm_eval_v2"))
         .stdout(predicate::str::contains("bitnet_benchmark"))
+        .stdout(predicate::str::contains("Status explanations"))
+        .stdout(predicate::str::contains("Open targets"))
         .stdout(predicate::str::contains("no live model run"));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_report_refresh_manifest");
     assert_eq!(receipt_json["operator_command"], "mac report-refresh");
+    assert_eq!(
+        receipt_json["operator_affordances"]["explain_command"]
+            .as_str()
+            .is_some_and(|command| command.contains("--explain")),
+        true
+    );
+    assert_eq!(
+        receipt_json["operator_affordances"]["open_targets_command"]
+            .as_str()
+            .is_some_and(|command| command.contains("--open-targets")),
+        true
+    );
+    assert_eq!(
+        receipt_json["status_explanations"]["comparable"]["meaning"].as_str().is_some(),
+        true
+    );
     assert_eq!(receipt_json["fallback_used"], false);
     assert_eq!(receipt_json["refresh_modes"]["generic_pr_ci_model_free"], true);
     assert_eq!(receipt_json["refresh_modes"]["generic_pr_ci_live_model_run"], false);
@@ -833,6 +853,10 @@ fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::er
         family["id"] == "dense_slm_eval_v2"
             && family["evidence_family"] == "dense_slm"
             && family["expected_artifact_kind"] == "apple_m4_slm_eval_summary"
+            && family["operator_status"] == "comparable"
+            && family["operator_status_reason"]
+                .as_str()
+                .is_some_and(|reason| reason.contains("committed report"))
             && family["report_count"].as_u64().is_some_and(|count| count >= 3)
             && family["generic_pr_ci"]["live_model_run"] == false
             && family["claim_boundary"]["bitnet_evidence"] == false
@@ -879,15 +903,37 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
             receipt_str.as_str(),
             "--markdown-out",
             markdown_str.as_str(),
+            "--explain",
+            "--open-targets",
         ])
         .assert()
         .success()
         .stdout(predicate::str::contains("Apple M4 regression dashboard"))
+        .stdout(predicate::str::contains("Group explanations"))
+        .stdout(predicate::str::contains("Open targets"))
         .stdout(predicate::str::contains("dense SLM and BitNet evidence stay separate"));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_regression_dashboard");
     assert_eq!(receipt_json["operator_command"], "mac regression-dashboard");
+    assert_eq!(
+        receipt_json["operator_affordances"]["explain_command"]
+            .as_str()
+            .is_some_and(|command| command.contains("--explain")),
+        true
+    );
+    assert_eq!(
+        receipt_json["operator_affordances"]["open_markdown_hint"]
+            .as_str()
+            .is_some_and(|hint| hint.contains("open ")),
+        true
+    );
+    assert_eq!(
+        receipt_json["status_explanations"]["insufficient_history"]["next_action"]
+            .as_str()
+            .is_some_and(|action| action.contains("second matching report")),
+        true
+    );
     assert_eq!(receipt_json["fallback_used"], false);
     assert_eq!(receipt_json["dashboard_contract"]["model_free"], true);
     assert_eq!(receipt_json["dashboard_contract"]["matching_requires_same_model_id"], true);
@@ -904,6 +950,15 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
         family["id"] == "dense_slm_benchmark_v2"
             && family["evidence_family"] == "dense_slm"
             && family["group_count"].as_u64().is_some_and(|count| count >= 3)
+            && family["groups"].as_array().is_some_and(|groups| {
+                groups.iter().any(|group| {
+                    group["operator_status"] == "comparable"
+                        && group["operator_status_reason"]
+                            .as_str()
+                            .is_some_and(|reason| reason.contains("matching reports"))
+                        && group["open_targets"]["latest_report"].as_str().is_some()
+                })
+            })
             && family["claim_boundary"]["bitnet_evidence"] == false
     }));
     assert!(families.iter().any(|family| {
