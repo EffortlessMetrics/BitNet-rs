@@ -26,6 +26,13 @@ static CUDA_QK256_HOST_TO_DEVICE_BYTES: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_DEVICE_TO_HOST_BYTES: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_KERNEL_TIME_MICROS: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_KERNEL_TIME_SAMPLES: AtomicU64 = AtomicU64::new(0);
+static QK256_F32_SCALAR_GEMV_INVOCATIONS: AtomicU64 = AtomicU64::new(0);
+static QK256_F32_AVX2_GEMV_INVOCATIONS: AtomicU64 = AtomicU64::new(0);
+static QK256_I8S_SCALED_SCALAR_INVOCATIONS: AtomicU64 = AtomicU64::new(0);
+static QK256_I8S_SCALED_AVX2_INVOCATIONS: AtomicU64 = AtomicU64::new(0);
+static QK256_FLAT_BYTES_EXTRACTED_COUNT: AtomicU64 = AtomicU64::new(0);
+static QK256_INPUT_ROWS_MATERIALIZED_COUNT: AtomicU64 = AtomicU64::new(0);
+static QK256_OUTPUT_ROWS_ALLOCATED_COUNT: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(feature = "cuda")]
 thread_local! {
@@ -45,6 +52,25 @@ pub struct Qk256DispatchCoverageCounters {
     pub unsupported_ops: Vec<String>,
     /// Human-readable claim boundary for partial routing.
     pub execution_claim: &'static str,
+}
+
+/// Diagnostic counters for CPU QK256 hot-path auditing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Qk256CpuHotPathCounters {
+    /// No-scale F32 QK256 scalar GEMV row invocations.
+    pub qk256_f32_scalar_gemv_invocations: u64,
+    /// No-scale F32 QK256 AVX2 GEMV row invocations.
+    pub qk256_f32_avx2_gemv_invocations: u64,
+    /// BitNet.cpp-style scaled I2_S × I8_S scalar GEMV row invocations.
+    pub qk256_i8s_scaled_scalar_invocations: u64,
+    /// BitNet.cpp-style scaled I2_S × I8_S AVX2 GEMV row invocations.
+    pub qk256_i8s_scaled_avx2_invocations: u64,
+    /// Number of times packed QK256 tensor bytes were materialized into a flat Vec.
+    pub qk256_flat_bytes_extracted_count: u64,
+    /// Number of activation rows materialized into Rust Vec rows for QK256 dispatch.
+    pub input_rows_materialized_count: u64,
+    /// Number of output rows allocated as Rust Vec rows for QK256 dispatch.
+    pub output_rows_allocated_count: u64,
 }
 
 /// CUDA weight residency summary for QK256 routed inference receipts.
@@ -99,6 +125,22 @@ pub fn qk256_dispatch_coverage() -> Qk256DispatchCoverageCounters {
     }
 }
 
+/// Snapshot CPU QK256 hot-path diagnostic counters.
+pub fn qk256_cpu_hot_path_counters() -> Qk256CpuHotPathCounters {
+    Qk256CpuHotPathCounters {
+        qk256_f32_scalar_gemv_invocations: QK256_F32_SCALAR_GEMV_INVOCATIONS
+            .load(Ordering::Relaxed),
+        qk256_f32_avx2_gemv_invocations: QK256_F32_AVX2_GEMV_INVOCATIONS.load(Ordering::Relaxed),
+        qk256_i8s_scaled_scalar_invocations: QK256_I8S_SCALED_SCALAR_INVOCATIONS
+            .load(Ordering::Relaxed),
+        qk256_i8s_scaled_avx2_invocations: QK256_I8S_SCALED_AVX2_INVOCATIONS
+            .load(Ordering::Relaxed),
+        qk256_flat_bytes_extracted_count: QK256_FLAT_BYTES_EXTRACTED_COUNT.load(Ordering::Relaxed),
+        input_rows_materialized_count: QK256_INPUT_ROWS_MATERIALIZED_COUNT.load(Ordering::Relaxed),
+        output_rows_allocated_count: QK256_OUTPUT_ROWS_ALLOCATED_COUNT.load(Ordering::Relaxed),
+    }
+}
+
 /// Reset dispatch coverage counters.
 ///
 /// This is public so CLI and integration tests can scope receipt counters to a
@@ -112,6 +154,13 @@ pub fn reset_qk256_dispatch_coverage() {
     CUDA_QK256_DEVICE_TO_HOST_BYTES.store(0, Ordering::Relaxed);
     CUDA_QK256_KERNEL_TIME_MICROS.store(0, Ordering::Relaxed);
     CUDA_QK256_KERNEL_TIME_SAMPLES.store(0, Ordering::Relaxed);
+    QK256_F32_SCALAR_GEMV_INVOCATIONS.store(0, Ordering::Relaxed);
+    QK256_F32_AVX2_GEMV_INVOCATIONS.store(0, Ordering::Relaxed);
+    QK256_I8S_SCALED_SCALAR_INVOCATIONS.store(0, Ordering::Relaxed);
+    QK256_I8S_SCALED_AVX2_INVOCATIONS.store(0, Ordering::Relaxed);
+    QK256_FLAT_BYTES_EXTRACTED_COUNT.store(0, Ordering::Relaxed);
+    QK256_INPUT_ROWS_MATERIALIZED_COUNT.store(0, Ordering::Relaxed);
+    QK256_OUTPUT_ROWS_ALLOCATED_COUNT.store(0, Ordering::Relaxed);
     reset_cuda_qk256_context();
 }
 
@@ -211,19 +260,37 @@ pub fn forward_qk256_with_scale(
     forward_qk256_cpu(input, qk256_tensor, weight_name, inline_scale)
 }
 
+fn requested_qk256_f32_kernel() -> Option<&'static str> {
+    match std::env::var("BITNET_CPU_KERNEL") {
+        Ok(value) if value.eq_ignore_ascii_case("avx2") => {
+            Some(bitnet_quantization::i2s_qk256::QK256_AVX2_GEMV_KERNEL_ID)
+        }
+        Ok(value) if value.eq_ignore_ascii_case("scalar") => {
+            Some(bitnet_quantization::i2s_qk256::QK256_SCALAR_GEMV_KERNEL_ID)
+        }
+        _ => None,
+    }
+}
+
+fn strict_cpu_kernel_requested() -> bool {
+    std::env::var("BITNET_STRICT_MODE").as_deref() == Ok("1")
+        || std::env::var("BITNET_STRICT_CPU_KERNEL").as_deref() == Ok("1")
+}
+
 fn forward_qk256_cpu(
     input: &Tensor,
     qk256_tensor: &Tensor,
     weight_name: &str,
     inline_scale: Option<f32>,
 ) -> Result<Tensor> {
-    use bitnet_quantization::i2s_qk256::{gemv_qk256, gemv_qk256_bitnet_i8s_scaled};
+    use bitnet_quantization::i2s_qk256::{
+        QK256_AVX2_GEMV_KERNEL_ID, gemv_qk256_bitnet_i8s_scaled, gemv_qk256_with_kernel_selection,
+    };
 
     let prepared = prepare_qk256_forward(input, qk256_tensor, weight_name)?;
-    let mut output_rows = vec![
-        vec![0.0f32; prepared.layout.rows];
-        prepared.shape.batch_size * prepared.shape.seq_len
-    ];
+    let output_row_count = prepared.shape.batch_size * prepared.shape.seq_len;
+    let mut output_rows = vec![vec![0.0f32; prepared.layout.rows]; output_row_count];
+    QK256_OUTPUT_ROWS_ALLOCATED_COUNT.fetch_add(output_row_count as u64, Ordering::Relaxed);
 
     if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && weight_name.contains("layers.0.")
     {
@@ -242,6 +309,7 @@ fn forward_qk256_cpu(
 
     for (row_index, input_row) in prepared.input_rows.iter().enumerate() {
         let gemv_result = if let Some(scale) = inline_scale {
+            QK256_I8S_SCALED_SCALAR_INVOCATIONS.fetch_add(1, Ordering::Relaxed);
             gemv_qk256_bitnet_i8s_scaled(
                 &prepared.flat_bytes,
                 input_row,
@@ -252,14 +320,25 @@ fn forward_qk256_cpu(
                 scale,
             )
         } else {
-            gemv_qk256(
+            let requested_kernel = requested_qk256_f32_kernel();
+            let result = gemv_qk256_with_kernel_selection(
                 &prepared.flat_bytes,
                 input_row,
                 &mut output_rows[row_index],
                 prepared.layout.rows,
                 prepared.layout.cols,
                 prepared.layout.row_stride_bytes,
-            )
+                requested_kernel,
+                strict_cpu_kernel_requested(),
+            );
+            if let Ok(selection) = &result {
+                if selection.selected_kernel == QK256_AVX2_GEMV_KERNEL_ID {
+                    QK256_F32_AVX2_GEMV_INVOCATIONS.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    QK256_F32_SCALAR_GEMV_INVOCATIONS.fetch_add(1, Ordering::Relaxed);
+                }
+            }
+            result.map(|_| ())
         };
         gemv_result.map_err(|e| {
             BitNetError::Validation(format!(
@@ -401,6 +480,7 @@ fn prepare_qk256_forward(
 ) -> Result<PreparedQk256Forward> {
     let prepared = prepare_qk256_activation(input, qk256_tensor, weight_name)?;
     let flat_bytes = extract_qk256_flat_bytes(qk256_tensor, &prepared.layout, weight_name)?;
+    QK256_FLAT_BYTES_EXTRACTED_COUNT.fetch_add(1, Ordering::Relaxed);
 
     Ok(PreparedQk256Forward {
         layout: prepared.layout,
@@ -437,6 +517,7 @@ fn prepare_qk256_activation(
             weight_name, e
         ))
     })?;
+    QK256_INPUT_ROWS_MATERIALIZED_COUNT.fetch_add(input_rows.len() as u64, Ordering::Relaxed);
 
     Ok(PreparedQk256Activation { layout, shape, input_rows })
 }

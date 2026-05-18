@@ -1,4 +1,7 @@
-use bitnet_qk256_dispatch::{forward_qk256, forward_qk256_with_scale};
+use bitnet_qk256_dispatch::{
+    forward_qk256, forward_qk256_with_scale, qk256_cpu_hot_path_counters,
+    reset_qk256_dispatch_coverage,
+};
 use candle_core::{Device, Tensor};
 
 #[test]
@@ -48,6 +51,32 @@ fn forward_qk256_with_scale_uses_bitnet_i8s_activation_path() {
 
     let out_vals = out.to_vec2::<f32>().unwrap();
     assert!((out_vals[0][0] - 128.0).abs() < 1e-4);
+}
+
+#[test]
+fn forward_qk256_cpu_hot_path_counters_distinguish_scaled_and_materialized_rows() {
+    reset_qk256_dispatch_coverage();
+    let device = Device::Cpu;
+    let input = Tensor::from_vec(vec![1.0f32; 2 * 256], (2, 256), &device).unwrap();
+    let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();
+
+    let out = forward_qk256_with_scale(
+        &input,
+        &qk,
+        "layers.0.attention.q_proj.weight.qk256_qs",
+        Some(0.5),
+    )
+    .unwrap();
+    assert_eq!(out.dims(), &[2, 1]);
+
+    let counters = qk256_cpu_hot_path_counters();
+    assert_eq!(counters.qk256_i8s_scaled_scalar_invocations, 2);
+    assert_eq!(counters.qk256_i8s_scaled_avx2_invocations, 0);
+    assert_eq!(counters.qk256_f32_scalar_gemv_invocations, 0);
+    assert_eq!(counters.qk256_f32_avx2_gemv_invocations, 0);
+    assert_eq!(counters.qk256_flat_bytes_extracted_count, 1);
+    assert_eq!(counters.input_rows_materialized_count, 2);
+    assert_eq!(counters.output_rows_allocated_count, 2);
 }
 
 #[test]
