@@ -6482,9 +6482,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-DOCS-003"
-status = "pr_open"
+status = "merged"
 pr = 5587
-head_sha = "884807cce29364de0e3c9a1b2089db332b4b931f"
+head_sha = "884a165d5bdff5e64cd59ebc3e5b8aa30ac21318"
+merge_sha = "24d308a58388d8f6be0f26558ae6f3ff6d7304fa"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-003-npu-cold-warm-cache"
 stackable = false
 review_mode = "codex_premerge"
