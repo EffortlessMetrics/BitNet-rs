@@ -1,0 +1,18 @@
+timestamp = "2026-05-18T13:05:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-005"
+event = "pr_open"
+actor = "codex"
+pr = 5662
+head_sha = "aa9c8a2443d4e0cbd6684d7a9bf9f25c8d83906e"
+branch = "codex/lunar-lake/LNL258V-OP-005-auto-route-profile-guard"
+summary = "Opened PR #5662 for LNL258V-OP-005 to make lunar-lake ask routing fail closed against route-profile comparison evidence."
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/main.rs",
+]
+notes = [
+  "PR #5662 preserves ask_normal dense Qwen CPU route selection when route-profile evidence is promoted_route_ready.",
+  "PR #5662 blocks regression_tiny before generation when route-profile comparison records the current stop_token_one_word_done quality blocker.",
+  "The PR does not run inference, promote OpenVINO GPU/NPU, claim quality or speedup, or change BitNet QK256/I2_S behavior.",
+]
