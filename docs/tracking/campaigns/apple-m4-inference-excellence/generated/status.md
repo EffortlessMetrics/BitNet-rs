@@ -75,6 +75,7 @@
 | M4-RELEASE-001 | proposed | TBD | `codex/apple-m4-inference-excellence/M4-RELEASE-001-go-no-go` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Publish the M4 inference release go/no-go matrix that states which dense SLM, BitNet, benchmark, stability, service, operator, and claim-boundary gates must pass before updating the public M4 expectation envelope or marking a model family route excellent. |
 | M4-METAL-EX-001 | proposed | TBD | `codex/apple-m4-inference-excellence/M4-METAL-EX-001-phase-choice` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Choose one named future Apple M4 Metal phase from existing proof boundaries, document CPU reference parity requirements, fallback=false receipt fields, phase-local timing, and explicit CPU/NEON remainder before any code route changes. |
 | M4-METAL-EX-002 | proposed | TBD | `codex/apple-m4-inference-excellence/M4-METAL-EX-002-phase-parity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Implement the selected Metal phase fixture with CPU reference parity, same generated token IDs/text where required by the phase, fallback=false phase receipts, and phase-local timing only. |
+| M4-APPLE-RAILS-000 | proposed | TBD | `codex/apple-silicon/source-of-truth-map` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add the Apple Silicon source-of-truth map and docs rollout plan so M4 dense SLM, BitNet CPU/NEON, Metal phase, MPSGraph reference, Neural Engine research, MacBook auxiliary, machine artifact, and historical campaign authorities are explicit without promoting runtime claims. |
 
 ## Hard Constraints
 
@@ -87,3 +88,4 @@
 - Do not add live model downloads, hardware timing runs, BitNet runtime runs, or long resident soaks to generic required PR CI.
 - Never commit model binaries.
 - Do not let eval, benchmark, serve, or status commands contact external services except for explicit model fetch commands.
+- Do not treat Apple Silicon docs/spec rails as model, backend, performance, or service promotions without matching receipt-backed work items.

@@ -1,5 +1,28 @@
 # Specs Index
 
+## Apple Silicon Source-of-Truth
+
+Use these maps before implementing or claiming Apple Silicon product support:
+
+1. [Apple Silicon Source-of-Truth Map](../apple-silicon/README.md)
+   - Identifies the proof-family boundaries for M4 dense SLM, M4 BitNet,
+     phase-scoped Metal, MPSGraph reference work, Neural Engine research, and
+     MacBook auxiliary evidence.
+2. [Apple Silicon Implementation Plan](../../plans/apple-silicon/implementation-plan.md)
+   - Defines the documentation-first PR sequence for adding Apple Silicon
+     proposal/spec rails without promoting runtime claims.
+3. [Apple M4 Mac mini Roadmap](apple-m4-mac-mini-roadmap.md)
+   - Defines the M4 hardware lane, current Metal/MPSGraph/CPU labels, and
+     claim boundaries.
+4. [Apple M4 Dense SLM Support Matrix](../slm/apple-m4-dense-slm-model-support-matrix.md)
+   - Defines the supported dense Qwen-class M4 model identities and promotion
+     gates.
+
+Do not proceed from one Mac run, Metal visibility, MPSGraph smoke, CPU fallback,
+MacBook evidence, or dense SLM receipts to broad Apple Silicon, BitNet, Metal,
+Neural Engine, or QK256 claims. The Apple Silicon specs added by this rollout
+are contractual rails, not runtime promotions.
+
 ## A770 BitNet Productization
 
 Use these specs before implementing or claiming A770 BitNet product support:

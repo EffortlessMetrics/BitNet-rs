@@ -18,6 +18,7 @@ end_state = [
   "Release gates state exactly which eval, benchmark, stability, service, and operator checks must pass before updating the public M4 expectation envelope.",
   "Operator UX exposes supported models, cache/disk health, last dense and BitNet reports, current regressions, unsupported claim boundaries, and recommended next commands.",
   "Metal work remains phase-scoped with CPU parity, fallback-free phase receipts, and explicit CPU/NEON remainder until a full route is separately proven.",
+  "Apple Silicon source-of-truth docs point dense SLM, BitNet, Metal, MPSGraph, Neural Engine, MacBook, machine artifacts, and historical campaigns to their own authorities without creating new runtime claims.",
 ]
 
 hard_constraints = [
@@ -30,6 +31,7 @@ hard_constraints = [
   "Do not add live model downloads, hardware timing runs, BitNet runtime runs, or long resident soaks to generic required PR CI.",
   "Never commit model binaries.",
   "Do not let eval, benchmark, serve, or status commands contact external services except for explicit model fetch commands.",
+  "Do not treat Apple Silicon docs/spec rails as model, backend, performance, or service promotions without matching receipt-backed work items.",
 ]
 
 [[work_item]]
@@ -2615,4 +2617,43 @@ must_not_claim = [
   "Full apple-m4-metal inference works.",
   "The phase proves end-to-end speedup.",
   "QK256, Neural Engine, or MPSGraph inference is supported.",
+]
+
+[[work_item]]
+id = "M4-APPLE-RAILS-000"
+status = "proposed"
+branch = "codex/apple-silicon/source-of-truth-map"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add the Apple Silicon source-of-truth map and docs rollout plan so M4 dense SLM, BitNet CPU/NEON, Metal phase, MPSGraph reference, Neural Engine research, MacBook auxiliary, machine artifact, and historical campaign authorities are explicit without promoting runtime claims."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/apple-silicon/**",
+  "plans/apple-silicon/**",
+  "docs/specs/INDEX.md",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Apple Silicon source-of-truth docs identify separate authorities and proof families for M4 dense SLM, M4 BitNet, Metal phase, MPSGraph reference, Neural Engine research, MacBook auxiliary, and machine-artifact evidence.",
+]
+must_not_claim = [
+  "The source-of-truth map proves a new model, backend, service, speed, or broad Apple Silicon claim.",
+  "MacBook evidence proves M4 Mac mini runtime behavior.",
+  "Dense SLM evidence proves BitNet behavior.",
+  "BitNet CPU/NEON evidence proves Metal execution.",
 ]
