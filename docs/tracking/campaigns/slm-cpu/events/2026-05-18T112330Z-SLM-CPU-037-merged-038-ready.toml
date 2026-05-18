@@ -1,0 +1,19 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T11:23:30Z"
+event = "merged"
+item = "SLM-CPU-037"
+pr = 5643
+head_sha = "fc18f1147d93c62c4cf3e94764c775cf6aa55c3a"
+merge_sha = "724a42346fb38130c868def7faaedd1655bd0078"
+branch = "codex/slm-cpu-037-transformer-forward-buffer-reuse"
+actor = "codex"
+summary = "Merged the transformer forward no-reuse classification and advanced SLM-CPU-038."
+
+notes = [
+  "SLM-CPU-037 records that prompt_prefill.forward caller-side reuse is blocked by owned Candle tensor outputs at the current TransformerModel::forward, TransformerBlock::forward, and FeedForward::forward API boundary.",
+  "The receipt/audit surface now records reuse_status, no_reuse_reason, required_api_boundary, behavior_gate, status, and optimization_deferred=true for the owned tensor-output boundary.",
+  "The policy follow-up removed three Lunar Lake OpenVINO validator test unwraps so the no-panic family gate stays green.",
+  "SLM-CPU-038 is ready to introduce or further narrow the typed transformer forward workspace API boundary while preserving generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false.",
+  "No sustained-throughput, runtime-speedup, broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
