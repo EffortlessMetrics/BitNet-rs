@@ -598,7 +598,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DENSE-REF-001"
-status = "in_progress"
+status = "pr_open"
+pr = 5653
+head_sha = "330379518cb6d77c34882ba8d92bd6c42d672fbb"
 branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-001-reference-vs-rust"
 stackable = false
 review_mode = "codex_premerge"
