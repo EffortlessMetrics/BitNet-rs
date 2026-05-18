@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T05:50:00Z"
+event = "pr_open"
+item = "LNL258V-BITNET-INTAKE-001"
+branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-001"
+pr = 5785
+head_sha = "b73d1e85690d0b0d30c10e2808d5bcada05e00c2"
+actor = "codex"
+summary = "Opened LNL258V-BITNET-INTAKE-001 to add a Lunar Lake shared BitNet semantic-intake guard."
+
+notes = [
+  "The PR adds a bitnet-intake command that fails closed if merged-to-main shared BitNet semantic fixes are newer than current 258V BitNet/operator evidence.",
+  "The initial source-change ledger records A770 PR #5020 as stack_open, so it does not currently require Lunar Lake reruns.",
+  "The PR does not run inference, promote routes, claim speedup, claim acceleration, treat dense SLM receipts as BitNet proof, or change BitNet QK256/I2_S behavior.",
+]

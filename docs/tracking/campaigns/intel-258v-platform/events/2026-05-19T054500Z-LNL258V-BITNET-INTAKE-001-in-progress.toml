@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T05:45:00Z"
+event = "in_progress"
+item = "LNL258V-BITNET-INTAKE-001"
+branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-001"
+actor = "codex"
+summary = "Started LNL258V-BITNET-INTAKE-001 to add a Lunar Lake guardrail for shared BitNet semantic fixes from other hardware lanes."
+
+notes = [
+  "The intake receipt indexes shared BitNet semantic-fix candidates and records whether any merged-to-main fix is newer than the current 258V CPU/operator evidence.",
+  "Pending stack changes do not stale Lunar Lake evidence until they merge to main.",
+  "The work does not run inference, promote routes, claim speedup, claim acceleration, treat dense SLM receipts as BitNet proof, or change BitNet QK256/I2_S behavior.",
+]

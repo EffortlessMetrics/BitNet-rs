@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_bitnet_semantic_source_changes",
+  "created_utc": "2026-05-19T05:45:00Z",
+  "machine_id": "intel-258v",
+  "changes": [
+    {
+      "source_lane": "a770",
+      "source_pr": 5020,
+      "title": "fix(bitnet): preserve K precision for attention scores",
+      "status": "stack_open",
+      "base_ref": "a770/diag-score-input-attribution",
+      "head_sha": "dc4a8ac77750e781c99e2e02af1279a40d476ac7",
+      "semantic_scope": [
+        "attention_score_k_precision"
+      ],
+      "requires_lunar_lake_rerun_when_merged_to_main": true,
+      "claim_boundary": "shared CPU/A770 runtime correctness fix candidate; not merged to main and not yet a Lunar Lake intake event"
+    }
+  ]
+}
