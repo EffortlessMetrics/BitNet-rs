@@ -104,7 +104,7 @@
 | apple-m4-inference-excellence | M4-CONTEXT-002 | M4-CONTEXT-001, M4-BENCH-007, M4-REPRO-003 | proposed |
 | apple-m4-inference-excellence | M4-REPRO-002 | M4-REPRO-001 | merged |
 | apple-m4-inference-excellence | M4-REPRO-003 | M4-REPRO-001 | merged |
-| apple-m4-inference-excellence | M4-REPRO-004 | M4-REPRO-003 | in_progress |
+| apple-m4-inference-excellence | M4-REPRO-004 | M4-REPRO-003 | pr_open |
 | apple-m4-inference-excellence | M4-RECEIPT-001 | M4-REPRO-001 | proposed |
 | apple-m4-inference-excellence | M4-STABILITY-001 | M4-BENCH-002, M4-EXCELLENCE-003 | proposed |
 | apple-m4-inference-excellence | M4-STABILITY-002 | M4-REPRO-002, M4-OPS-UX-003 | proposed |
