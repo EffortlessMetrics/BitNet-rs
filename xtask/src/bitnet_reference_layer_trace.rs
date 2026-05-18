@@ -152,6 +152,7 @@ struct LayerTraceRustCaptureArgs {
     cpu_trace_dir: PathBuf,
     a770_trace_dir: PathBuf,
     skip_a770: bool,
+    diag_rmsnorm_f64_accum: bool,
     overwrite: bool,
     output: Option<PathBuf>,
     format: String,
@@ -450,7 +451,7 @@ fn print_compare_help() {
 
 fn print_rust_capture_help() {
     println!(
-        "Run the Rust CPU and strict A770 commands from the matched reference plan with BITNET_TRACE_DIR set\n\nUsage: xtask.exe bitnet-reference-layer-trace-capture-rust [OPTIONS]\n\nOptions:\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --a770-trace-dir <PATH>  Strict A770 BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-a770]\n      --skip-a770              Capture CPU trace only and report strict A770 as skipped\n      --overwrite              Remove existing top-level .trace files from output trace directories before running\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
+        "Run the Rust CPU and strict A770 commands from the matched reference plan with BITNET_TRACE_DIR set\n\nUsage: xtask.exe bitnet-reference-layer-trace-capture-rust [OPTIONS]\n\nOptions:\n      --plan <PATH>            Reference plan JSON [default: target/a770-diagnostic/bitnet-reference-plan.json]\n      --cpu-trace-dir <PATH>   Rust CPU BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-cpu]\n      --a770-trace-dir <PATH>  Strict A770 BITNET_TRACE_DIR output [default: target/a770-diagnostic/reference-layer-trace-rust-a770]\n      --skip-a770              Capture CPU trace only and report strict A770 as skipped\n      --diag-rmsnorm-f64-accum Capture Rust traces with BITNET_DIAG_RMSNORM_F64_ACCUM=1\n      --overwrite              Remove existing top-level .trace files from output trace directories before running\n      --output <PATH>          Output JSON receipt [default: target/a770-diagnostic/bitnet-reference-layer-trace-rust-capture.json]\n      --format <FORMAT>        Output format: human or json [default: human]\n  -h, --help                   Print help"
     );
 }
 
@@ -587,6 +588,7 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
     let mut cpu_trace_dir = PathBuf::from(DEFAULT_CPU_TRACE_DIR);
     let mut a770_trace_dir = PathBuf::from(DEFAULT_A770_TRACE_DIR);
     let mut skip_a770 = false;
+    let mut diag_rmsnorm_f64_accum = false;
     let mut overwrite = false;
     let mut output = Some(PathBuf::from(DEFAULT_RUST_CAPTURE_OUTPUT));
     let mut format = "human".to_string();
@@ -604,6 +606,7 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
             "--cpu-trace-dir" => cpu_trace_dir = PathBuf::from(value()?),
             "--a770-trace-dir" => a770_trace_dir = PathBuf::from(value()?),
             "--skip-a770" => skip_a770 = true,
+            "--diag-rmsnorm-f64-accum" => diag_rmsnorm_f64_accum = true,
             "--overwrite" => overwrite = true,
             "--output" => output = Some(PathBuf::from(value()?)),
             "--format" => format = value()?,
@@ -615,6 +618,7 @@ fn parse_rust_capture_args(args: &[String]) -> Result<LayerTraceRustCaptureArgs>
         cpu_trace_dir,
         a770_trace_dir,
         skip_a770,
+        diag_rmsnorm_f64_accum,
         overwrite,
         output,
         format,
@@ -1157,6 +1161,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             cpu_argv.as_deref().unwrap_or(&[]),
             &cpu_trace_dir,
             trace_target_seq,
+            args.diag_rmsnorm_f64_accum,
         )?
     } else {
         skipped_rust_trace_capture("cpu", cpu_argv.as_deref(), &cpu_trace_dir)
@@ -1169,6 +1174,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             a770_argv.as_deref().unwrap_or(&[]),
             &a770_trace_dir,
             trace_target_seq,
+            args.diag_rmsnorm_f64_accum,
         )?
     } else {
         if args.skip_a770 {
@@ -1204,6 +1210,7 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             "cpu_trace_dir": path_to_string(&cpu_trace_dir),
             "a770_trace_dir": path_to_string(&a770_trace_dir),
             "skip_a770": args.skip_a770,
+            "diag_rmsnorm_f64_accum": args.diag_rmsnorm_f64_accum,
             "overwrite": args.overwrite,
         },
         "model": plan.pointer("/model").cloned().unwrap_or(Value::Null),
@@ -1220,6 +1227,10 @@ fn capture_rust_layer_traces(args: &LayerTraceRustCaptureArgs) -> Result<Value> 
             "trace_target_source": trace_target_seq.map(|_| "prompt_identity.prompt_token_count_minus_one"),
             "cpu_trace_feature_injected": cpu_trace_feature_injected.unwrap_or(false),
             "a770_trace_feature_injected": a770_trace_feature_injected.unwrap_or(false),
+            "diag_rmsnorm_f64_accum": args.diag_rmsnorm_f64_accum,
+            "diag_rmsnorm_f64_accum_env": args
+                .diag_rmsnorm_f64_accum
+                .then_some("BITNET_DIAG_RMSNORM_F64_ACCUM=1"),
             "cpu_trace_dir_prepare": cpu_prepare,
             "a770_trace_dir_prepare": a770_prepare,
             "first_values_limit_env": std::env::var("BITNET_TRACE_FIRST_VALUES_LIMIT").ok(),
@@ -5844,6 +5855,14 @@ fn attention_score_input_attribution(
         })
         .filter(|(_, record)| !record.first_values.is_empty())
         .collect::<BTreeMap<_, _>>();
+    let rust_score_key_f16_probe_heads = rust_records
+        .iter()
+        .filter_map(|(stage, record)| {
+            parse_stage_head(stage, "attention_k_score_input_f16_roundtrip_head")
+                .map(|head| (head, record))
+        })
+        .filter(|(_, record)| !record.first_values.is_empty())
+        .collect::<BTreeMap<_, _>>();
     let rust_fallback_key_heads = rust_records
         .iter()
         .filter_map(|(stage, record)| {
@@ -5920,6 +5939,7 @@ fn attention_score_input_attribution(
             ScoreKeyLayout::TokenMajor
         };
         let actual_rust_key = rust_score_key_heads.get(&head).copied();
+        let rust_key_f16_probe = rust_score_key_f16_probe_heads.get(&head).copied();
         let fallback_rust_key =
             kv_head.and_then(|kv_head| rust_fallback_key_heads.get(&kv_head).copied());
         let rust_key = actual_rust_key.or(fallback_rust_key);
@@ -5948,7 +5968,7 @@ fn attention_score_input_attribution(
                 .min(rust_key_token_count(rust_key).unwrap_or(rust_score.first_values.len()))
                 .min(reference_score.first_values.len())
                 .min(rust_score.first_values.len());
-            let candidates = [
+            let mut candidates = vec![
                 ScoreInputAttributionCandidate {
                     id: "reference_q_reference_k_q_f16_k_f32",
                     base_candidate: "reference_q_reference_k",
@@ -6046,6 +6066,32 @@ fn attention_score_input_attribution(
                     key_values: &rust_key.first_values,
                 },
             ];
+            if let Some(rust_key_f16_probe) = rust_key_f16_probe {
+                candidates.push(ScoreInputAttributionCandidate {
+                    id: "reference_q_rust_k_f16_probe_q_f16_k_trace_f16",
+                    base_candidate: "reference_q_rust_k_f16_probe",
+                    score_input_variant: "q_f16_k_trace_f16",
+                    query_source: "reference_Qcur",
+                    key_source: "rust_attention_k_score_input_f16_roundtrip_head",
+                    key_layout: ScoreKeyLayout::DimMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: false,
+                    query_values: &reference_query.first_values,
+                    key_values: &rust_key_f16_probe.first_values,
+                });
+                candidates.push(ScoreInputAttributionCandidate {
+                    id: "rust_q_rust_k_f16_probe_q_f16_k_trace_f16",
+                    base_candidate: "rust_q_rust_k_f16_probe",
+                    score_input_variant: "q_f16_k_trace_f16",
+                    query_source: "rust_attention_q_rope",
+                    key_source: "rust_attention_k_score_input_f16_roundtrip_head",
+                    key_layout: ScoreKeyLayout::DimMajor,
+                    query_f16_roundtrip: true,
+                    key_f16_roundtrip: false,
+                    query_values: &rust_query.first_values,
+                    key_values: &rust_key_f16_probe.first_values,
+                });
+            }
 
             let mut candidate_rows = Vec::new();
             let mut reference_deltas = BTreeMap::<&str, Value>::new();
@@ -6152,6 +6198,7 @@ fn attention_score_input_attribution(
                 "reference_key_source_kind": reference_key_source_kind,
                 "rust_key_source": rust_key_source,
                 "rust_key_source_kind": rust_key_source_kind,
+                "rust_key_f16_probe_present": rust_key_f16_probe.is_some(),
                 "reference_best_candidate": reference_best_info.map(|candidate| candidate.base_candidate),
                 "reference_best_candidate_id": reference_best,
                 "reference_best_score_input_variant": reference_best_info.map(|candidate| candidate.score_input_variant),
@@ -6174,6 +6221,7 @@ fn attention_score_input_attribution(
                 "reference_kcur_history_key_present": reference_kcur_history_key.is_some(),
                 "reference_legacy_key_present": reference_legacy_key.is_some(),
                 "rust_key_present": rust_key.is_some(),
+                "rust_score_key_f16_probe_present": rust_score_key_f16_probe_heads.contains_key(&head),
                 "rust_score_key_present": actual_rust_key.is_some(),
                 "rust_fallback_key_present": fallback_rust_key.is_some(),
                 "reference_score_present": true,
@@ -6207,6 +6255,7 @@ fn attention_score_input_attribution(
             rust_score_key_heads.len()
         },
         "rust_score_key_head_count": rust_score_key_heads.len(),
+        "rust_score_key_f16_probe_head_count": rust_score_key_f16_probe_heads.len(),
         "rust_fallback_key_head_count": rust_fallback_key_heads.len(),
         "rust_key_stage_source": if rust_score_key_heads.is_empty() {
             "attention_k_cache_f16_roundtrip_kv_head_fallback"
@@ -9731,6 +9780,7 @@ fn run_rust_trace_capture(
     argv: &[String],
     trace_dir: &Path,
     trace_target_seq: Option<usize>,
+    diag_rmsnorm_f64_accum: bool,
 ) -> Result<Value> {
     let executable = argv.first().context("empty Rust trace command")?;
     let mut command = Command::new(executable);
@@ -9740,6 +9790,9 @@ fn run_rust_trace_capture(
         .env("BITNET_DETERMINISTIC", "1")
         .env("BITNET_SEED", "0")
         .stdin(Stdio::null());
+    if diag_rmsnorm_f64_accum {
+        command.env("BITNET_DIAG_RMSNORM_F64_ACCUM", "1");
+    }
     if let Some(trace_target_seq) = trace_target_seq {
         command.env("BITNET_TRACE_TARGET_SEQ", trace_target_seq.to_string());
     }
@@ -9751,6 +9804,9 @@ fn run_rust_trace_capture(
         "trace_dir": path_to_string(trace_dir),
         "trace_target_seq": trace_target_seq,
         "trace_target_source": trace_target_seq.map(|_| "prompt_identity.prompt_token_count_minus_one"),
+        "diag_rmsnorm_f64_accum": diag_rmsnorm_f64_accum,
+        "diag_rmsnorm_f64_accum_env": diag_rmsnorm_f64_accum
+            .then_some("BITNET_DIAG_RMSNORM_F64_ACCUM=1"),
         "argv": argv,
         "command": capture_json(Some(&capture)),
         "trace": trace,
@@ -10353,6 +10409,7 @@ mod tests {
             cpu_trace_dir: dir.path().join("cpu"),
             a770_trace_dir: dir.path().join("a770"),
             skip_a770: false,
+            diag_rmsnorm_f64_accum: false,
             overwrite: false,
             output: None,
             format: "json".to_string(),
@@ -10363,8 +10420,78 @@ mod tests {
 
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
         assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/inputs/diag_rmsnorm_f64_accum"), Some(&json!(false)));
+        assert_eq!(report.pointer("/preflight/diag_rmsnorm_f64_accum"), Some(&json!(false)));
+        assert_eq!(report.pointer("/preflight/diag_rmsnorm_f64_accum_env"), Some(&Value::Null));
         assert!(reasons.contains(&json!("reference_plan_missing")));
         assert_eq!(report.pointer("/decision/compare_ready"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn rust_capture_args_parse_diag_rmsnorm_f64_accum_flag() {
+        let default_args =
+            vec!["xtask".to_string(), "bitnet-reference-layer-trace-capture-rust".to_string()];
+        let defaults = parse_rust_capture_args(&default_args).unwrap();
+        assert_eq!(defaults.plan, PathBuf::from(DEFAULT_REFERENCE_PLAN));
+        assert_eq!(defaults.cpu_trace_dir, PathBuf::from(DEFAULT_CPU_TRACE_DIR));
+        assert_eq!(defaults.a770_trace_dir, PathBuf::from(DEFAULT_A770_TRACE_DIR));
+        assert!(!defaults.skip_a770);
+        assert!(!defaults.diag_rmsnorm_f64_accum);
+        assert!(!defaults.overwrite);
+        assert_eq!(defaults.output, Some(PathBuf::from(DEFAULT_RUST_CAPTURE_OUTPUT)));
+        assert_eq!(defaults.format, "human");
+
+        let args = vec![
+            "xtask".to_string(),
+            "bitnet-reference-layer-trace-capture-rust".to_string(),
+            "--plan".to_string(),
+            "plan.json".to_string(),
+            "--cpu-trace-dir".to_string(),
+            "cpu".to_string(),
+            "--a770-trace-dir".to_string(),
+            "a770".to_string(),
+            "--skip-a770".to_string(),
+            "--diag-rmsnorm-f64-accum".to_string(),
+            "--overwrite".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+            "--format".to_string(),
+            "json".to_string(),
+        ];
+        let parsed = parse_rust_capture_args(&args).unwrap();
+        assert_eq!(parsed.plan, PathBuf::from("plan.json"));
+        assert_eq!(parsed.cpu_trace_dir, PathBuf::from("cpu"));
+        assert_eq!(parsed.a770_trace_dir, PathBuf::from("a770"));
+        assert!(parsed.skip_a770);
+        assert!(parsed.diag_rmsnorm_f64_accum);
+        assert!(parsed.overwrite);
+        assert_eq!(parsed.output, Some(PathBuf::from("out.json")));
+        assert_eq!(parsed.format, "json");
+    }
+
+    #[test]
+    fn rust_capture_report_records_diag_rmsnorm_f64_accum_intent() {
+        let dir = tempdir().unwrap();
+        let report = capture_rust_layer_traces(&LayerTraceRustCaptureArgs {
+            plan: dir.path().join("missing-plan.json"),
+            cpu_trace_dir: dir.path().join("cpu"),
+            a770_trace_dir: dir.path().join("a770"),
+            skip_a770: true,
+            diag_rmsnorm_f64_accum: true,
+            overwrite: false,
+            output: None,
+            format: "json".to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/inputs/diag_rmsnorm_f64_accum"), Some(&json!(true)));
+        assert_eq!(report.pointer("/preflight/diag_rmsnorm_f64_accum"), Some(&json!(true)));
+        assert_eq!(
+            report.pointer("/preflight/diag_rmsnorm_f64_accum_env"),
+            Some(&json!("BITNET_DIAG_RMSNORM_F64_ACCUM=1"))
+        );
     }
 
     #[test]
@@ -10383,6 +10510,7 @@ mod tests {
             cpu_trace_dir: cpu,
             a770_trace_dir: a770,
             skip_a770: false,
+            diag_rmsnorm_f64_accum: false,
             overwrite: false,
             output: None,
             format: "json".to_string(),
@@ -11384,6 +11512,18 @@ mod tests {
             },
         );
         rust_records.insert(
+            "attention_k_score_input_f16_roundtrip_head0_live_ref_layout".to_string(),
+            RustTraceRecord {
+                shape: vec![2, 2],
+                num_elements: 4,
+                first_values: vec![30.0, 50.0, 40.0, 60.0],
+                ..test_rust_trace_record(
+                    "attention_k_score_input_f16_roundtrip_head0_live_ref_layout",
+                    vec![30.0, 50.0, 40.0, 60.0],
+                )
+            },
+        );
+        rust_records.insert(
             "attention_scores_raw_head0".to_string(),
             RustTraceRecord {
                 shape: vec![2],
@@ -11402,6 +11542,7 @@ mod tests {
             Some(&json!("attention_k_score_input_head"))
         );
         assert_eq!(report.pointer("/rust_score_key_head_count"), Some(&json!(1)));
+        assert_eq!(report.pointer("/rust_score_key_f16_probe_head_count"), Some(&json!(1)));
         assert_eq!(report.pointer("/rust_fallback_key_head_count"), Some(&json!(1)));
         assert_eq!(
             report.pointer("/rows/0/rust_key_source"),
@@ -11412,6 +11553,7 @@ mod tests {
             Some(&json!("actual_score_input"))
         );
         assert_eq!(report.pointer("/rows/0/rust_best_candidate"), Some(&json!("rust_q_rust_k")));
+        assert_eq!(report.pointer("/rows/0/rust_key_f16_probe_present"), Some(&json!(true)));
         assert_eq!(
             report.pointer("/rows/0/candidates/3/key_source"),
             Some(&json!("reference_k_kv_head"))
@@ -11426,6 +11568,17 @@ mod tests {
                 },
             );
         assert!(has_actual_k_f16_candidate);
+        let has_probe_candidate =
+            report.pointer("/rows/0/candidates").and_then(Value::as_array).unwrap().iter().any(
+                |candidate| {
+                    candidate.pointer("/base_candidate") == Some(&json!("rust_q_rust_k_f16_probe"))
+                        && candidate.pointer("/score_input_variant")
+                            == Some(&json!("q_f16_k_trace_f16"))
+                        && candidate.pointer("/key_source")
+                            == Some(&json!("rust_attention_k_score_input_f16_roundtrip_head"))
+                },
+            );
+        assert!(has_probe_candidate);
     }
 
     #[test]
