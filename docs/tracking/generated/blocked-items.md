@@ -436,6 +436,9 @@
 | nvidia-5070ti | CUDA-MODEL-006 | CUDA-MODEL-005 | merged |
 | nvidia-5070ti | CUDA-MODEL-007 | CUDA-MODEL-006 | merged |
 | nvidia-5070ti | CUDA-MODEL-008 | CUDA-MODEL-007 | merged |
+| nvidia-5070ti | CUDA-MODEL-009 | CUDA-MODEL-008 | merged |
+| nvidia-5070ti | CUDA-MODEL-010 | CUDA-MODEL-009 | merged |
+| nvidia-5070ti | CUDA-MODEL-011 | CUDA-MODEL-010 | pr_open |
 | nvidia-5070ti | CUDA-MODEL-SMOLLM2-001 | CUDA-MODEL-008 | merged |
 | nvidia-5070ti | CUDA-UX-009 | CUDA-PROD-010 | merged |
 | nvidia-5070ti | CUDA-UX-010 | CUDA-UX-008, CUDA-UX-009 | merged |
