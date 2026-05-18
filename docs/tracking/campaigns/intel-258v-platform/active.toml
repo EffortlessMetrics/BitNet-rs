@@ -3176,7 +3176,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OV-QUAL-002"
-status = "in_progress"
+status = "pr_open"
+pr = 5510
+head_sha = "a3d0aa5ae4e8ac89fcf076cfcf965e664738a205"
 branch = "codex/lunar-lake/LNL258V-OV-QUAL-002-refresh-openvino-corpus-v2"
 stackable = false
 review_mode = "codex_premerge"

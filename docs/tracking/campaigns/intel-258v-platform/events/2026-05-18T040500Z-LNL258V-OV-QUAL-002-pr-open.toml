@@ -1,0 +1,25 @@
+timestamp = "2026-05-18T04:05:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OV-QUAL-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OV-QUAL-002-refresh-openvino-corpus-v2"
+pr = 5510
+head_sha = "a3d0aa5ae4e8ac89fcf076cfcf965e664738a205"
+summary = "Opened LNL258V-OV-QUAL-002 to refresh OpenVINO corpus-v2 evidence against the active Lunar Lake fixture."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "PR #5510 records refreshed OpenVINO CPU/GPU/NPU corpus-v2 evidence against the active fixture.",
+  "GPU/NPU diagnosis case alignment is clean; remaining blockers are bounded quality and direct-token-visibility blockers.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted with no speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]
