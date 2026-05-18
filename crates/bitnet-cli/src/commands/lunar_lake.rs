@@ -1037,8 +1037,24 @@ pub struct ProfileRouteEvidence {
     pub profile_quality: Option<ProfileQualityEvidence>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub telemetry: Option<BenchmarkTelemetry>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_advantage_context: Option<ProfileRouteAdvantageContext>,
     pub evidence: Vec<String>,
     pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct ProfileRouteAdvantageContext {
+    pub baseline_route_id: String,
+    pub baseline_route_status: String,
+    pub baseline_total_response_ms: Option<f64>,
+    pub route_total_response_ms: Option<f64>,
+    pub route_to_baseline_total_response_ratio: Option<f64>,
+    pub observed_total_response_lower_than_baseline: Option<bool>,
+    pub benchmark_qualified: bool,
+    pub qualification_status: String,
+    pub qualification_blockers: Vec<String>,
+    pub notes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -1231,6 +1247,8 @@ pub struct ColdWarmRouteBenchmark {
     pub timing: ProfileTimingSummary,
     #[serde(default)]
     pub timing_applicability: ProfileTimingApplicability,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_advantage_context: Option<ProfileRouteAdvantageContext>,
     pub telemetry: BenchmarkTelemetry,
     pub critical_timing_present: bool,
     pub benchmark_qualified_advantage: bool,
@@ -6070,6 +6088,7 @@ fn cold_warm_route_benchmark(
         phase_timing_present: route.phase_timing_present,
         timing: route.timing.clone(),
         timing_applicability: route.timing_applicability.clone(),
+        route_advantage_context: route.route_advantage_context.clone(),
         telemetry,
         critical_timing_present,
         benchmark_qualified_advantage,
@@ -8987,7 +9006,7 @@ fn evaluate_workload_profile(
         }
     }
 
-    let route_evidence = route_ids
+    let mut route_evidence = route_ids
         .iter()
         .map(|route_id| {
             evaluate_profile_route(
@@ -9003,6 +9022,7 @@ fn evaluate_workload_profile(
             )
         })
         .collect::<Result<Vec<_>>>()?;
+    attach_route_advantage_context(profile, &mut route_evidence);
 
     let mut gaps = Vec::new();
     if route_evidence.is_empty() {
@@ -9180,9 +9200,124 @@ fn evaluate_profile_route(
         promotion_eligible_for_profile,
         profile_quality,
         telemetry,
+        route_advantage_context: None,
         evidence,
         blockers,
     })
+}
+
+fn attach_route_advantage_context(
+    profile: &WorkloadProfile,
+    route_evidence: &mut [ProfileRouteEvidence],
+) {
+    let baseline_route_id = profile
+        .promoted_route
+        .as_deref()
+        .filter(|route_id| route_evidence.iter().any(|route| route.route_id == **route_id))
+        .or_else(|| {
+            route_evidence
+                .iter()
+                .any(|route| route.route_id == DEFAULT_ASK_ROUTE)
+                .then_some(DEFAULT_ASK_ROUTE)
+        });
+    let Some(baseline_route_id) = baseline_route_id else {
+        return;
+    };
+    let Some(baseline) =
+        route_evidence.iter().find(|route| route.route_id == baseline_route_id).cloned()
+    else {
+        return;
+    };
+
+    for route in route_evidence.iter_mut() {
+        if route.route_id == baseline.route_id {
+            continue;
+        }
+        route.route_advantage_context =
+            Some(profile_route_advantage_context(profile, &baseline, route));
+    }
+}
+
+fn profile_route_advantage_context(
+    profile: &WorkloadProfile,
+    baseline: &ProfileRouteEvidence,
+    route: &ProfileRouteEvidence,
+) -> ProfileRouteAdvantageContext {
+    let baseline_total_response_ms = baseline.timing.total_response_ms;
+    let route_total_response_ms = route.timing.total_response_ms;
+    let route_to_baseline_total_response_ratio =
+        match (route_total_response_ms, baseline_total_response_ms) {
+            (Some(route_total), Some(baseline_total)) if baseline_total > 0.0 => {
+                Some(route_total / baseline_total)
+            }
+            _ => None,
+        };
+    let observed_total_response_lower_than_baseline =
+        match (route_total_response_ms, baseline_total_response_ms) {
+            (Some(route_total), Some(baseline_total)) => Some(route_total < baseline_total),
+            _ => None,
+        };
+
+    let mut qualification_blockers = route.blockers.clone();
+    if baseline_total_response_ms.is_none() {
+        qualification_blockers
+            .push(format!("baseline route {} has no total response timing", baseline.route_id));
+    }
+    if route_total_response_ms.is_none() {
+        qualification_blockers.push("route has no total response timing".to_string());
+    }
+    if !route.timing_applicability.timing_matches_profile {
+        qualification_blockers.push(format!(
+            "route timing is not profile-specific for profile {}",
+            profile.profile_id
+        ));
+    }
+    if !route.benchmark_qualified_advantage {
+        qualification_blockers.push(
+            "benchmark-qualified advantage is false; comparison is diagnostic only".to_string(),
+        );
+    }
+    if route.route_status != "promoted" {
+        qualification_blockers
+            .push("route is not promoted; candidate evidence remains blocked".to_string());
+    }
+    qualification_blockers.sort();
+    qualification_blockers.dedup();
+
+    let benchmark_qualified =
+        route.benchmark_qualified_advantage && qualification_blockers.is_empty();
+    let qualification_status = if benchmark_qualified {
+        "benchmark_qualified".to_string()
+    } else {
+        "diagnostic_only_not_benchmark_qualified".to_string()
+    };
+    let mut notes = vec![
+        "observed total response comparison is route-policy evidence, not a speedup claim"
+            .to_string(),
+        format!(
+            "baseline route {} remains the comparison reference for profile {}",
+            baseline.route_id, profile.profile_id
+        ),
+    ];
+    if observed_total_response_lower_than_baseline == Some(true) {
+        notes.push(
+            "lower observed total response still requires route-promotion evidence before use"
+                .to_string(),
+        );
+    }
+
+    ProfileRouteAdvantageContext {
+        baseline_route_id: baseline.route_id.clone(),
+        baseline_route_status: baseline.route_status.clone(),
+        baseline_total_response_ms,
+        route_total_response_ms,
+        route_to_baseline_total_response_ratio,
+        observed_total_response_lower_than_baseline,
+        benchmark_qualified,
+        qualification_status,
+        qualification_blockers,
+        notes,
+    }
 }
 
 fn timing_applicability_for_profile(
@@ -10976,6 +11111,28 @@ mod tests {
         assert_eq!(gpu_route.timing_applicability.measured_output_tokens, Some(2));
         assert!(gpu_route.timing_applicability.timing_matches_profile);
         assert!(gpu_route.timing.throughput_tokens_per_s.is_some_and(|value| value > 0.0));
+        let gpu_advantage = gpu_route
+            .route_advantage_context
+            .as_ref()
+            .context("missing GPU route advantage context")?;
+        assert_eq!(gpu_advantage.baseline_route_id, DEFAULT_ASK_ROUTE);
+        assert!(!gpu_advantage.benchmark_qualified);
+        assert_eq!(gpu_advantage.qualification_status, "diagnostic_only_not_benchmark_qualified");
+        assert!(gpu_advantage.route_total_response_ms.is_some());
+        assert!(gpu_advantage.baseline_total_response_ms.is_some());
+        assert!(gpu_advantage.route_to_baseline_total_response_ratio.is_some());
+        assert!(
+            gpu_advantage
+                .qualification_blockers
+                .iter()
+                .any(|blocker| { blocker.contains("benchmark-qualified advantage is false") })
+        );
+        assert!(
+            gpu_advantage
+                .qualification_blockers
+                .iter()
+                .any(|blocker| { blocker.contains("route is not promoted") })
+        );
         assert!(
             gpu_route.timing.phase_coverage.iter().any(|coverage| {
                 coverage == "profile_timing_supplemented_from_corpus_v2_case_yes_no_clear_sky"
@@ -11270,6 +11427,13 @@ mod tests {
             .context("missing GPU route benchmark")?;
         assert!(gpu.promotion_blocked);
         assert!(!gpu.benchmark_qualified_advantage);
+        let gpu_advantage = gpu
+            .route_advantage_context
+            .as_ref()
+            .context("missing benchmark GPU route advantage context")?;
+        assert_eq!(gpu_advantage.baseline_route_id, DEFAULT_ASK_ROUTE);
+        assert_eq!(gpu_advantage.qualification_status, "diagnostic_only_not_benchmark_qualified");
+        assert!(!gpu_advantage.benchmark_qualified);
         let Some(low_power) =
             benchmark.profiles.iter().find(|profile| profile.profile_id == "low_power")
         else {
