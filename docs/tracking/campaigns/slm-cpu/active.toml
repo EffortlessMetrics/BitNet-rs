@@ -2511,8 +2511,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-031"
-status = "pr_open"
+status = "merged"
 pr = 5499
+head_sha = "24ba402d3ffb9b01599f4f04d0cb114a3205ab99"
+merge_sha = "db0600dd43eb18702fbb766126f07df2bcfca6c4"
 branch = "codex/slm-cpu-031-kv-cache-session-reuse"
 stackable = false
 review_mode = "codex_premerge"

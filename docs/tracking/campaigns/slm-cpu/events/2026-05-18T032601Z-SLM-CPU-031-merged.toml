@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T03:26:01Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-031"
+event = "merged"
+pr = 5499
+head_sha = "24ba402d3ffb9b01599f4f04d0cb114a3205ab99"
+merge_sha = "db0600dd43eb18702fbb766126f07df2bcfca6c4"
+actor = "codex"
+notes = [
+  "Merged the bounded Qwen3 Q8_0 Kaby warm-session KV cache reuse slice.",
+  "Receipts distinguish session-level KV cache allocation from per-prompt KV cache clear/reset attribution.",
+  "The slice does not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server/GPU/NPU/OpenVINO/UHD 620 execution, Qwen3.5, or BitNet QK256 changes.",
+]
