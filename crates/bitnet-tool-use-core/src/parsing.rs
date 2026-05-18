@@ -57,7 +57,11 @@ mod tests {
     fn parse_tool_call_valid() {
         let text =
             r#"<tool_call>{"name":"get_weather","arguments":{"location":"London"}}</tool_call>"#;
-        let call = parse_tool_call(text, &ToolUseFormat::ChatMLTools).expect("valid tool call");
+        let call = parse_tool_call(text, &ToolUseFormat::ChatMLTools);
+        assert!(call.is_some(), "valid tool call");
+        let Some(call) = call else {
+            return;
+        };
         assert_eq!(call.name, "get_weather");
         assert!(call.arguments.contains("London"));
     }

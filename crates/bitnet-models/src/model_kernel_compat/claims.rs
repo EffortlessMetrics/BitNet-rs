@@ -114,8 +114,13 @@ fn decision_reason(
             kernel.as_str(),
             claim.as_str()
         ),
-        ModelKernelSupport::SupportedReference | ModelKernelSupport::Supported => {
-            unreachable!("supported routes are allowed at the compatibility layer")
-        }
+        ModelKernelSupport::SupportedReference | ModelKernelSupport::Supported => format!(
+            "{} {} {} is {}; compatibility policy expected this supported route to be allowed before evaluating {}",
+            model_id,
+            arch.as_str(),
+            kernel.as_str(),
+            support.as_str(),
+            claim.as_str()
+        ),
     }
 }
