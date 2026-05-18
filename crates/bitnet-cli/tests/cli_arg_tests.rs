@@ -1227,8 +1227,9 @@ fn model_verify_json_includes_dense_m4_artifact_provenance()
 }
 
 #[test]
-fn model_verify_json_includes_bitnet_external_tokenizer_provenance() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn model_verify_json_includes_bitnet_external_tokenizer_provenance()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let cache_str = cache.to_string_lossy().into_owned();
 
@@ -1253,6 +1254,7 @@ fn model_verify_json_includes_bitnet_external_tokenizer_provenance() {
         .stdout(predicate::str::contains("\"identity\": \"bitnetcpp-answer\""))
         .stdout(predicate::str::contains("Redistribution boundary recorded"))
         .stdout(predicate::str::contains("does not prove BitNet chat"));
+    Ok(())
 }
 
 #[test]
