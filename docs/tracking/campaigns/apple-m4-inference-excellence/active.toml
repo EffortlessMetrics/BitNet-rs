@@ -1663,7 +1663,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-REPRO-001"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-REPRO-001-run-identity"
 stackable = false
 review_mode = "codex_premerge"
@@ -1681,6 +1681,7 @@ commands = [
 allowed_paths = [
   "crates/bitnet-cli/**",
   "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-inference-excellence/**",
   "docs/tracking/generated/**",

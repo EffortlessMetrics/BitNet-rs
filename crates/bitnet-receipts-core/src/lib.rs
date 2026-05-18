@@ -53,13 +53,16 @@ pub use artifact_kinds::{
     DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND,
-    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND, DENSE_REGULAR_LLM_MODEL_CLASS, RECEIPT_SCHEMA,
-    RECEIPT_SCHEMA_VERSION, SERVER_SHARED_ENGINE_CHAT_COMPLETION_RECEIPT_KIND,
+    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND, DENSE_REGULAR_LLM_MODEL_CLASS,
+    M4_RUN_IDENTITY_CONTRACT_VERSION, RECEIPT_SCHEMA, RECEIPT_SCHEMA_VERSION,
+    SERVER_SHARED_ENGINE_CHAT_COMPLETION_RECEIPT_KIND,
 };
 pub use schema::{
     AccuracyMetric, AccuracyTestResults, CacheEfficiency, CrossValidation, DeterminismTestResults,
-    KVCacheTestResults, ModelInfo, ParityMetadata, PerformanceBaseline, StrictInferenceProvenance,
-    TestResults,
+    KVCacheTestResults, M4RunIdentity, M4RunIdentityBackend, M4RunIdentityBinary,
+    M4RunIdentityCommand, M4RunIdentityEvidence, M4RunIdentityGit, M4RunIdentityModel,
+    M4RunIdentityOs, M4RunIdentityPromptTemplate, M4RunIdentityTiming, M4RunIdentityTokenizer,
+    ModelInfo, ParityMetadata, PerformanceBaseline, StrictInferenceProvenance, TestResults,
 };
 
 use artifact_kinds::{
@@ -7986,6 +7989,167 @@ pub fn validate_cuda_parity_receipt_file(path: &Path) -> Result<()> {
 fn load_json_receipt(path: &Path) -> Result<Value> {
     let content = std::fs::read_to_string(path)?;
     Ok(serde_json::from_str(&content)?)
+}
+
+/// Return the canonical SHA256 identity digest for an Apple M4 `run_identity`.
+pub fn m4_run_identity_sha256(run_identity: &Value) -> Result<String> {
+    let bytes = serde_json::to_vec(run_identity)?;
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+/// Validate the reusable Apple M4 run-identity contract on a receipt.
+///
+/// This checks the top-level `run_identity` object and, when present, the
+/// top-level `run_identity_sha256` digest. It also cross-checks the common
+/// top-level backend and artifact fields so receipt validators can share one
+/// identity gate without duplicating field-level checks.
+pub fn validate_m4_run_identity_contract_json(receipt: &Value) -> Result<()> {
+    let identity = object_field(receipt, "run_identity")?;
+    require_string_eq(identity, "contract_version", M4_RUN_IDENTITY_CONTRACT_VERSION)?;
+    require_string_non_empty_not_tbd(identity, "machine_id")?;
+    require_string_non_empty_not_tbd(identity, "soc")?;
+    require_string_non_empty_not_tbd(identity, "artifact_kind")?;
+    require_string_non_empty_not_tbd(identity, "evidence_family")?;
+
+    if let Some(receipt_artifact_kind) = receipt.get("artifact_kind").and_then(Value::as_str) {
+        let identity_artifact_kind = required_string(identity, "artifact_kind")?;
+        if identity_artifact_kind != receipt_artifact_kind {
+            return Err(anyhow!("run_identity.artifact_kind must match receipt artifact_kind"));
+        }
+    }
+
+    validate_m4_run_identity_os(object_field(identity, "os")?)?;
+    validate_m4_run_identity_git(object_field(identity, "git")?)?;
+    validate_m4_run_identity_binary(object_field(identity, "binary")?)?;
+    validate_m4_run_identity_command(object_field(identity, "command")?)?;
+    validate_m4_run_identity_model(object_field(identity, "model")?)?;
+    validate_m4_run_identity_tokenizer(object_field(identity, "tokenizer")?)?;
+    validate_m4_run_identity_prompt_template(object_field(identity, "prompt_template")?)?;
+    validate_m4_run_identity_backend(receipt, object_field(identity, "backend")?)?;
+    validate_m4_run_identity_evidence(object_field(identity, "evidence_identity")?)?;
+    validate_m4_run_identity_timing(object_field(identity, "timing")?)?;
+
+    let digest = object_field(receipt, "run_identity_sha256")?
+        .as_str()
+        .ok_or_else(|| anyhow!("field `run_identity_sha256` must be a string"))?;
+    if digest.len() != 64 || !digest.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        return Err(anyhow!(
+            "field `run_identity_sha256` must be a 64-character sha256 hex digest"
+        ));
+    }
+    let expected = m4_run_identity_sha256(identity)?;
+    if digest != expected {
+        return Err(anyhow!("field `run_identity_sha256` does not match run_identity"));
+    }
+
+    Ok(())
+}
+
+fn validate_m4_run_identity_os(os: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(os, "name")?;
+    require_string_non_empty_not_tbd(os, "version")?;
+    require_string_non_empty_not_tbd(os, "version_source")
+}
+
+fn validate_m4_run_identity_git(git: &Value) -> Result<()> {
+    let commit = required_string(git, "commit")?;
+    if commit.trim().is_empty() || commit == "TBD" || commit == "unknown" {
+        return Err(anyhow!("field `commit` must record a concrete git commit"));
+    }
+    require_string_non_empty_not_tbd(git, "commit_source")
+}
+
+fn validate_m4_run_identity_binary(binary: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(binary, "crate_version")?;
+    let build_profile = binary.get("build_profile").and_then(Value::as_str);
+    let binary_sha256 = binary.get("binary_sha256").and_then(Value::as_str);
+    if build_profile.is_none_or(|value| value.trim().is_empty())
+        && binary_sha256.is_none_or(str::is_empty)
+    {
+        return Err(anyhow!("run_identity.binary must record build_profile or binary_sha256"));
+    }
+    if let Some(sha256) = binary_sha256
+        && (sha256.len() != 64 || !sha256.chars().all(|ch| ch.is_ascii_hexdigit()))
+    {
+        return Err(anyhow!("field `binary_sha256` must be a 64-character sha256 hex digest"));
+    }
+    Ok(())
+}
+
+fn validate_m4_run_identity_command(command: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(command, "class")?;
+    object_field(command, "live_model_run")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `live_model_run` must be a boolean"))?;
+    Ok(())
+}
+
+fn validate_m4_run_identity_model(model: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(model, "id")?;
+    require_sha256_or_not_applicable(model, "sha256")
+}
+
+fn validate_m4_run_identity_tokenizer(tokenizer: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(tokenizer, "authority")?;
+    require_sha256_or_not_applicable(tokenizer, "sha256")?;
+    if let Some(strict) = tokenizer.get("strict") {
+        strict.as_bool().ok_or_else(|| anyhow!("field `strict` must be a boolean"))?;
+    }
+    Ok(())
+}
+
+fn validate_m4_run_identity_prompt_template(prompt_template: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(prompt_template, "id")?;
+    require_sha256(prompt_template, "sha256")
+}
+
+fn validate_m4_run_identity_backend(receipt: &Value, backend: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(backend, "requested_backend")?;
+    require_string_non_empty_not_tbd(backend, "selected_backend")?;
+    require_string_non_empty_not_tbd(backend, "runtime_api")?;
+    require_bool_eq(backend, "fallback_used", false)?;
+    require_same_string(
+        backend,
+        "requested_backend",
+        backend,
+        "selected_backend",
+        "run_identity backend selection",
+    )?;
+    for field in ["requested_backend", "selected_backend", "runtime_api"] {
+        if let Some(top_level) = receipt.get(field).and_then(Value::as_str) {
+            let identity_value = required_string(backend, field)?;
+            if top_level != identity_value {
+                return Err(anyhow!("run_identity.backend.{field} must match receipt {field}"));
+            }
+        }
+    }
+    if let Some(top_level_fallback) = receipt.get("fallback_used").and_then(Value::as_bool)
+        && top_level_fallback != object_field(backend, "fallback_used")?.as_bool().unwrap_or(true)
+    {
+        return Err(anyhow!("run_identity.backend.fallback_used must match receipt fallback_used"));
+    }
+    Ok(())
+}
+
+fn validate_m4_run_identity_evidence(evidence: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(evidence, "scope")?;
+    require_string_non_empty_not_tbd(evidence, "seed")?;
+    require_string_non_empty_not_tbd(evidence, "corpus_id")?;
+    require_string_non_empty_not_tbd(evidence, "profile_id")
+}
+
+fn validate_m4_run_identity_timing(timing: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(timing, "source")
+}
+
+fn require_sha256_or_not_applicable(object: &Value, field: &str) -> Result<()> {
+    let value = required_string(object, field)?;
+    if value == "not_applicable" {
+        return Ok(());
+    }
+    require_sha256(object, field)
 }
 
 fn validate_cuda_receipt_common<'a>(

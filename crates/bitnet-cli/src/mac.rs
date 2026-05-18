@@ -1596,8 +1596,14 @@ fn apple_m4_inference_status_receipt(
         "bitnet_warm": bitnet["commands"]["warm_cached_model"].clone(),
         "bitnet_chat_gate": format!("bitnet mac bitnet-chat-gate --model-id {BITNET_M4_MODEL_ID} --warm-receipt <warm.json> --failure-receipt <failure.json> --streaming-receipt <streaming.json>"),
     });
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_inference_status",
+        "mac status",
+        "operator_status",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
     serde_json::json!({
-        "schema_version": "1.1.0",
+        "schema_version": "1.2.0",
         "artifact_kind": "apple_m4_inference_status",
         "generated_at": chrono::Utc::now().to_rfc3339(),
         "operator_command": "mac status",
@@ -1611,6 +1617,8 @@ fn apple_m4_inference_status_receipt(
             "id": "apple-m4-mac-mini",
             "scope": "local operator readiness summary",
         },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
         "disk": {
             "available": disk_available,
             "low_disk": disk_low,
@@ -1884,8 +1892,14 @@ fn apple_m4_operator_evidence_receipt(
     } else {
         "bitnet mac regression-dashboard".to_string()
     };
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_operator_evidence_summary",
+        "mac evidence",
+        "operator_evidence_summary",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
     serde_json::json!({
-        "schema_version": "1.1.0",
+        "schema_version": "1.2.0",
         "artifact_kind": "apple_m4_operator_evidence_summary",
         "generated_at": chrono::Utc::now().to_rfc3339(),
         "operator_command": "mac evidence",
@@ -1899,6 +1913,8 @@ fn apple_m4_operator_evidence_receipt(
             "id": "apple-m4-mac-mini",
             "scope": "operator evidence summary from committed receipts and local cache state",
         },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
         "evidence_contract": {
             "committed_reports_only": true,
             "local_cache_inventory_only": true,
@@ -2203,8 +2219,14 @@ fn apple_m4_report_refresh_manifest_receipt(root: &Path, json_out: &Path) -> ser
         families.iter().filter_map(|family| family["report_count"].as_u64()).sum::<u64>();
     let complete =
         families.iter().all(|family| family["report_count"].as_u64().unwrap_or_default() > 0);
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_report_refresh_manifest",
+        "mac report-refresh",
+        "report_refresh_manifest",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
     serde_json::json!({
-        "schema_version": "1.0.0",
+        "schema_version": "1.2.0",
         "artifact_kind": "apple_m4_report_refresh_manifest",
         "generated_at": chrono::Utc::now().to_rfc3339(),
         "operator_command": "mac report-refresh",
@@ -2218,6 +2240,8 @@ fn apple_m4_report_refresh_manifest_receipt(root: &Path, json_out: &Path) -> ser
             "id": "apple-m4-mac-mini",
             "scope": "committed report refresh manifest",
         },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
         "report_root": root,
         "family_count": families.len(),
         "report_count": report_count,
@@ -2626,8 +2650,14 @@ fn apple_m4_regression_dashboard_receipt(
         families.iter().filter_map(|family| family["comparable_group_count"].as_u64()).sum::<u64>();
     let report_count =
         families.iter().filter_map(|family| family["report_count"].as_u64()).sum::<u64>();
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_regression_dashboard",
+        "mac regression-dashboard",
+        "regression_dashboard",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
     serde_json::json!({
-        "schema_version": "1.0.0",
+        "schema_version": "1.2.0",
         "artifact_kind": "apple_m4_regression_dashboard",
         "generated_at": chrono::Utc::now().to_rfc3339(),
         "operator_command": "mac regression-dashboard",
@@ -2642,6 +2672,8 @@ fn apple_m4_regression_dashboard_receipt(
             "id": "apple-m4-mac-mini",
             "scope": "committed report regression dashboard",
         },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
         "report_root": root,
         "report_count": report_count,
         "family_count": families.len(),
@@ -4877,6 +4909,131 @@ fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     format!("{:x}", hasher.finalize())
+}
+
+fn apple_m4_model_free_run_identity_json(
+    artifact_kind: &str,
+    command_class: &str,
+    evidence_scope: &str,
+) -> serde_json::Value {
+    let prompt_template = "not_applicable";
+    serde_json::json!({
+        "contract_version": bitnet_receipts_core::M4_RUN_IDENTITY_CONTRACT_VERSION,
+        "machine_id": "apple-m4-mac-mini",
+        "soc": "apple-m4",
+        "artifact_kind": artifact_kind,
+        "evidence_family": "operator",
+        "os": {
+            "name": std::env::consts::OS,
+            "version": apple_m4_host_os_version(),
+            "version_source": apple_m4_host_os_version_source(),
+        },
+        "git": {
+            "commit": apple_m4_git_commit(),
+            "commit_source": apple_m4_git_commit_source(),
+        },
+        "binary": {
+            "crate_version": env!("CARGO_PKG_VERSION"),
+            "build_profile": apple_m4_build_profile(),
+            "binary_sha256": serde_json::Value::Null,
+            "binary_sha256_status": "not_recorded_build_profile_used",
+        },
+        "command": {
+            "class": command_class,
+            "live_model_run": false,
+        },
+        "model": {
+            "id": "not_applicable",
+            "sha256": "not_applicable",
+            "identity_scope": "model_free",
+        },
+        "tokenizer": {
+            "authority": "not_applicable",
+            "sha256": "not_applicable",
+            "identity_scope": "model_free",
+        },
+        "prompt_template": {
+            "id": prompt_template,
+            "sha256": sha256_hex(prompt_template.as_bytes()),
+            "identity_scope": "model_free",
+        },
+        "backend": {
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+        },
+        "evidence_identity": {
+            "scope": evidence_scope,
+            "seed": "not_applicable",
+            "corpus_id": "not_applicable",
+            "profile_id": "not_applicable",
+        },
+        "timing": {
+            "source": "wall_clock_utc",
+        },
+    })
+}
+
+fn apple_m4_run_identity_sha256(identity: &serde_json::Value) -> String {
+    bitnet_receipts_core::m4_run_identity_sha256(identity)
+        .expect("M4 run_identity must serialize for hashing")
+}
+
+fn apple_m4_build_profile() -> &'static str {
+    if cfg!(debug_assertions) { "debug" } else { "release" }
+}
+
+fn apple_m4_git_commit() -> String {
+    option_env!("GITHUB_SHA")
+        .filter(|sha| !sha.trim().is_empty())
+        .map(str::to_string)
+        .or_else(|| command_output_trimmed("git", &["rev-parse", "HEAD"]))
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
+fn apple_m4_git_commit_source() -> &'static str {
+    if option_env!("GITHUB_SHA").is_some_and(|sha| !sha.trim().is_empty()) {
+        "GITHUB_SHA"
+    } else if command_output_trimmed("git", &["rev-parse", "HEAD"]).is_some() {
+        "git_rev_parse"
+    } else {
+        "unknown"
+    }
+}
+
+fn apple_m4_host_os_version() -> String {
+    command_output_trimmed("sw_vers", &["-productVersion"])
+        .or_else(|| command_output_trimmed("uname", &["-sr"]))
+        .unwrap_or_else(|| std::env::consts::OS.to_string())
+}
+
+fn apple_m4_host_os_version_source() -> &'static str {
+    if command_output_trimmed("sw_vers", &["-productVersion"]).is_some() {
+        "sw_vers"
+    } else if command_output_trimmed("uname", &["-sr"]).is_some() {
+        "uname"
+    } else {
+        "std_env_consts"
+    }
+}
+
+fn command_output_trimmed(program: &str, args: &[&str]) -> Option<String> {
+    #[cfg(unix)]
+    {
+        let output = Command::new(program).args(args).output().ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let text = String::from_utf8(output.stdout).ok()?;
+        let trimmed = text.trim();
+        if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (program, args);
+        None
+    }
 }
 
 fn mac_ask_operator_summary_line(model: &VerifiedCachedModel, json_out: &Path) -> String {
@@ -13646,6 +13803,12 @@ fn validate_mac_receipt_value(
     {
         anyhow::bail!("{} claims broad Mac performance or speedup", path.display());
     }
+    if receipt["schema_version"].as_str() == Some("1.2.0")
+        || !receipt["run_identity_sha256"].is_null()
+    {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
 
     let (prompt_count, generated_tokens) = if artifact_kind == "slm_apple_m4_warm_session"
         || artifact_kind == "slm_apple_m3_air_warm_session"
@@ -14632,7 +14795,12 @@ fn validate_apple_m4_inference_status_receipt(
     require_bool_at(path, receipt, &["bitnet", "claim_boundary", "serve_enabled"], false)?;
     require_bool_at(path, receipt, &["bitnet", "claim_boundary", "bitnet_quality_claimed"], false)?;
 
-    if schema_version == "1.1.0" {
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
+
+    if m4_report_ops_has_operator_affordances(schema_version) {
         require_m4_operator_route_readiness(path, receipt, &["readiness"])?;
     }
 
@@ -14659,7 +14827,11 @@ fn validate_apple_m4_operator_evidence_summary_receipt(
     path: &Path,
     receipt: &serde_json::Value,
 ) -> Result<(Option<usize>, Option<usize>)> {
-    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
     require_exact_string_at(
         path,
         receipt,
@@ -14782,7 +14954,11 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
     receipt: &serde_json::Value,
 ) -> Result<(Option<usize>, Option<usize>)> {
     let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
-    let require_operator_affordances = schema_version == "1.1.0";
+    let require_operator_affordances = m4_report_ops_has_operator_affordances(schema_version);
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
     require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_report_refresh_manifest")?;
     require_exact_string_at(path, receipt, &["operator_command"], "mac report-refresh")?;
     require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
@@ -14974,7 +15150,11 @@ fn validate_apple_m4_regression_dashboard_receipt(
     receipt: &serde_json::Value,
 ) -> Result<(Option<usize>, Option<usize>)> {
     let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
-    let require_operator_affordances = schema_version == "1.1.0";
+    let require_operator_affordances = m4_report_ops_has_operator_affordances(schema_version);
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
     require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_regression_dashboard")?;
     require_exact_string_at(path, receipt, &["operator_command"], "mac regression-dashboard")?;
     require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
@@ -15272,13 +15452,21 @@ fn require_m4_report_ops_schema_version<'a>(
     receipt: &'a serde_json::Value,
 ) -> Result<&'a str> {
     let schema_version = require_non_empty_string_at(path, receipt, &["schema_version"])?;
-    if schema_version != "1.0.0" && schema_version != "1.1.0" {
+    if schema_version != "1.0.0" && schema_version != "1.1.0" && schema_version != "1.2.0" {
         anyhow::bail!(
-            "{} unsupported M4 report ops schema_version {schema_version:?}; expected 1.0.0 or 1.1.0",
+            "{} unsupported M4 report ops schema_version {schema_version:?}; expected 1.0.0, 1.1.0, or 1.2.0",
             path.display()
         );
     }
     Ok(schema_version)
+}
+
+fn m4_report_ops_has_operator_affordances(schema_version: &str) -> bool {
+    matches!(schema_version, "1.1.0" | "1.2.0")
+}
+
+fn m4_report_ops_requires_run_identity(schema_version: &str) -> bool {
+    schema_version == "1.2.0"
 }
 
 fn require_m4_operator_status_at<'a>(

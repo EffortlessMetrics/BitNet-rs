@@ -1013,6 +1013,77 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
 }
 
 #[test]
+fn mac_receipts_check_accepts_m4_report_ops_run_identity() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
+    let receipt = dir.path().join("report-refresh-manifest.json");
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "report-refresh",
+            "--root",
+            report_root_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["schema_version"], "1.2.0");
+    assert_eq!(receipt_json["run_identity"]["contract_version"], "m4-run-identity-v1");
+    assert_eq!(receipt_json["run_identity"]["machine_id"], "apple-m4-mac-mini");
+    assert_eq!(receipt_json["run_identity"]["soc"], "apple-m4");
+    assert_eq!(receipt_json["run_identity"]["artifact_kind"], "apple_m4_report_refresh_manifest");
+    assert_eq!(receipt_json["run_identity"]["backend"]["fallback_used"], false);
+    assert!(receipt_json["run_identity_sha256"].as_str().is_some_and(|sha| sha.len() == 64));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_report_refresh_manifest"));
+    Ok(())
+}
+
+#[test]
+fn mac_receipts_check_rejects_m4_report_ops_missing_run_identity()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
+    let receipt = dir.path().join("report-refresh-manifest.json");
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "report-refresh",
+            "--root",
+            report_root_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let mut receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    receipt_json.as_object_mut().unwrap().remove("run_identity");
+    std::fs::write(&receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("run_identity"));
+    Ok(())
+}
+
+#[test]
 fn mac_models_rejects_full_metal_request_before_cache_lookup() {
     bitnet()
         .args(["--device", "apple-m4-metal", "mac", "models"])
