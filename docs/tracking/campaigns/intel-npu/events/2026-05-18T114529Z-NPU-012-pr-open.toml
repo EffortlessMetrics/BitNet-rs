@@ -5,8 +5,9 @@ event = "pr_open"
 actor = "codex"
 previous_status = "in_progress"
 new_status = "pr_open"
-branch = "codex/intel-npu/NPU-012-source-of-truth-map"
+branch = "codex/add-npu-productization-proposal"
 pr = 5634
+head_sha = "663feef4cf1521fd37dcfafb6a6bade2f2260665"
 
 notes = [
   "Opened PR #5634 for the docs-only NPU source-of-truth map and implementation plan.",
