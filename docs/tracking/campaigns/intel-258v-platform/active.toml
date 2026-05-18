@@ -6807,9 +6807,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-QUAL-FIX-001"
-status = "pr_open"
+status = "merged"
 pr = 5644
-head_sha = "db98ce36977e0d3aa43f3f0f8eae082529cc1faa"
+head_sha = "7e182402101fb9cf4fc25cdd9f8c65f2d78d1ca7"
+merge_sha = "785e47b94ac86263c737ab1254e21c6cd90f3fb1"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-FIX-001-exact-answer-fixture"
 stackable = false
 review_mode = "codex_premerge"
