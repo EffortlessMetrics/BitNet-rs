@@ -2777,6 +2777,43 @@ fn mac_chat_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_chat_smoke_help_documents_dense_conformance_receipt() {
+    bitnet()
+        .args(["mac", "chat-smoke", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("fixed dense SLM resident chat conformance smoke"))
+        .stdout(predicate::str::contains("--model-id <MODEL_ID>"))
+        .stdout(predicate::str::contains("--timeout-seconds <TIMEOUT_SECONDS>"))
+        .stdout(predicate::str::contains("--json-out <PATH>"));
+}
+
+#[test]
+fn mac_chat_smoke_reaches_cache_lookup_for_default_model() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "chat-smoke", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_chat_smoke_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "chat-smoke"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "mac chat-smoke routes the supported Mac local-answer path",
+        ))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
 fn mac_regression_help_documents_advisory_mode() {
     bitnet()
         .args(["mac", "regression", "--help"])

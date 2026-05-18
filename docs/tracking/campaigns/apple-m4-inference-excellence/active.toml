@@ -643,7 +643,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DENSE-CHAT-001"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-DENSE-CHAT-001-cli-chat-conformance"
 stackable = false
 review_mode = "codex_premerge"
@@ -652,6 +652,7 @@ human_gate = "on_blocker_only"
 blocked_by = ["M4-CANARY-001", "M4-REPRO-003"]
 acceptance = "Prove dense SLM CLI ask/chat conformance on M4 for supported model identities: prompt template and stop behavior, bounded multi-turn history, timeout/cancel behavior, per-turn receipts, generated text, token IDs, backend, fallback state, and model/tokenizer identity."
 commands = [
+  "cargo build --locked -p bitnet-cli --release",
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_chat -- --nocapture",
   "target/release/bitnet --device apple-m4-cpu-neon mac chat-smoke --model-id <model-id> --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-chat/<model-id>/chat-smoke.json",
   "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/slm-chat/<model-id>/chat-smoke.json --json",
