@@ -1,0 +1,18 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T09:23:54Z"
+event = "merged"
+item = "SLM-CPU-035"
+pr = 5615
+head_sha = "d25b49bed9c2bdf505439ae3e4d91fe1b39afba9"
+merge_sha = "a6d69818e3099c71b21a33c3428bd085bedb2119"
+branch = "codex/slm-cpu-035-prefill-attribution-artifact"
+actor = "codex"
+summary = "Merged the real i5-8250U Qwen3 Q8_0 prefill attribution artifact and advanced SLM-CPU-036."
+
+notes = [
+  "The SLM-CPU-035 artifact records prompt_prefill_breakdown.embed and prompt_prefill_breakdown.forward, with generated IDs and decoded text matching the prompt-token-cache baseline.",
+  "Strict GGUF tokenizer authority, selected CPU backend, model SHA, and fallback=false are preserved.",
+  "SLM-CPU-036 is ready to narrow the prompt_prefill.forward/model.forward allocation boundary before any dense math or kernel optimization.",
+  "No sustained-throughput, runtime-speedup, broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
