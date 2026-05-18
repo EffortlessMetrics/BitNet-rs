@@ -276,6 +276,11 @@ Test Telemetry also stays selected-only. Ordinary PRs only run its route job;
 `test-telemetry`, `slow-tests`, or `full-ci` runs the nextest/JUnit lane for
 PR observability, while `main` and manual dispatch keep the same summaries.
 
+MSRV compatibility follows risk routing. Ordinary leaf implementation PRs only
+run the compatibility route job; `msrv`, `compatibility`, or `full-ci` selects
+MSRV checks, and manifest/toolchain/public API/release-package paths select the
+same proof automatically.
+
 ## Label Matrix
 
 | Label | Workflow | Duration | Blocking on `main` | Blocking on PRs |

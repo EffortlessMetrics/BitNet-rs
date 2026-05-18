@@ -219,6 +219,11 @@ Test Telemetry is advisory observability, not a merge gate. Ordinary PRs run
 only its cheap route job; nextest/JUnit and slow-test summaries run on `main`,
 manual dispatch, or labels `test-telemetry`, `slow-tests`, and `full-ci`.
 
+MSRV compatibility is global-risk proof. Ordinary leaf implementation PRs run
+only the compatibility route job; the MSRV checks run for manifest, lockfile,
+toolchain, `.cargo`, public API, FFI, release/package surfaces, `main`, manual
+dispatch, or labels `msrv`, `compatibility`, and `full-ci`.
+
 The goal is not to spend less by testing less. **The goal is to spend less on
 unrelated work so we can afford more verification where the change actually
 creates risk.**
