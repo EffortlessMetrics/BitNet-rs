@@ -91,10 +91,9 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_observe_builds_report_for_each_component() {
+    fn evaluate_observe_builds_report_for_each_component() -> Result<()> {
         for component in COMPONENTS {
-            let report = StartupContractReport::evaluate(component, ContractPolicy::Observe)
-                .expect("observe policy should not reject startup diagnostics");
+            let report = StartupContractReport::evaluate(component, ContractPolicy::Observe)?;
 
             assert_eq!(report.contract.component().label(), component.label());
             assert!(!report.info.is_empty(), "report must include informational diagnostics");
@@ -104,13 +103,14 @@ mod tests {
                 component.label()
             );
         }
+
+        Ok(())
     }
 
     #[test]
-    fn profile_summary_includes_context_and_feature_sections() {
+    fn profile_summary_includes_context_and_feature_sections() -> Result<()> {
         let report =
-            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)
-                .expect("observe policy should not reject startup diagnostics");
+            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)?;
         let summary = report.profile_summary();
 
         assert!(summary.contains("scenario="));
@@ -118,24 +118,26 @@ mod tests {
         assert!(summary.contains(",required="));
         assert!(summary.contains(",optional="));
         assert!(summary.contains(",forbidden="));
+
+        Ok(())
     }
 
     #[test]
-    fn populate_lines_always_adds_summary_and_profile_summary() {
+    fn populate_lines_always_adds_summary_and_profile_summary() -> Result<()> {
         let report =
-            StartupContractReport::evaluate(RuntimeComponent::Test, ContractPolicy::Observe)
-                .expect("observe policy should not reject startup diagnostics");
+            StartupContractReport::evaluate(RuntimeComponent::Test, ContractPolicy::Observe)?;
 
         assert_eq!(report.info.len(), 2);
         assert_eq!(report.info[0], report.contract.summary());
         assert_eq!(report.info[1], format!("Profile summary: {}", report.profile_summary()));
+
+        Ok(())
     }
 
     #[test]
-    fn warnings_reflect_contract_compatibility() {
+    fn warnings_reflect_contract_compatibility() -> Result<()> {
         let report =
-            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)
-                .expect("observe policy should not reject startup diagnostics");
+            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)?;
 
         if report.contract.is_compatible() {
             assert!(report.warnings.is_empty());
@@ -147,26 +149,28 @@ mod tests {
                     .any(|line| line.contains("Startup contract is non-compliant"))
             );
         }
+
+        Ok(())
     }
 
     #[test]
-    fn violation_warning_is_present_only_when_violation_lists_are_non_empty() {
+    fn violation_warning_is_present_only_when_violation_lists_are_non_empty() -> Result<()> {
         let report =
-            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)
-                .expect("observe policy should not reject startup diagnostics");
+            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)?;
         let has_violations = !report.contract.missing_required().is_empty()
             || !report.contract.forbidden_active().is_empty();
         let has_violation_warning =
             report.warnings.iter().any(|line| line.contains("Profile violations for active build"));
 
         assert_eq!(has_violation_warning, has_violations);
+
+        Ok(())
     }
 
     #[test]
-    fn report_keeps_contract_feature_lists_in_profile_summary() {
+    fn report_keeps_contract_feature_lists_in_profile_summary() -> Result<()> {
         let report =
-            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)
-                .expect("observe policy should not reject startup diagnostics");
+            StartupContractReport::evaluate(RuntimeComponent::Custom, ContractPolicy::Observe)?;
         let summary = report.profile_summary();
 
         assert!(
@@ -185,5 +189,7 @@ mod tests {
             "forbidden={}",
             join_features(report.contract.forbidden_features())
         )));
+
+        Ok(())
     }
 }
