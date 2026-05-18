@@ -320,6 +320,7 @@ impl AnswerCorpusCommand {
             aggregate_case_str(&rows, &["kernel", "selected_kernel"])
                 .unwrap_or(&top_level_runtime_api)
                 .to_string();
+        let aggregate_qk256_hot_path = aggregate_qk256_hot_path(&rows, self.cpu_kernel);
         let top_level_backend_lane =
             answer_corpus_backend_lane(&device, slm_answer_path, &top_level_model_family);
         let answer_ready_artifact_available = corpus_answer_ready_artifact_available(&corpus.model);
@@ -344,6 +345,7 @@ impl AnswerCorpusCommand {
             "tokenizer_source": top_level_tokenizer_source,
             "prompt_template": corpus.defaults.prompt_template.as_str(),
             "selected_kernel_or_runtime": top_level_selected_kernel_or_runtime,
+            "qk256_hot_path": aggregate_qk256_hot_path,
             "corpus": {
                 "id": corpus.corpus_id(),
                 "path": self.corpus.display().to_string(),
@@ -680,6 +682,8 @@ impl AnswerCorpusCommand {
             "latency": run_receipt.get("latency").cloned().unwrap_or(Value::Null),
             "throughput": run_receipt.get("throughput").cloned().unwrap_or(Value::Null),
             "execution_plan": run_receipt.get("execution_plan").cloned().unwrap_or(Value::Null),
+            "execution_coverage": run_receipt.get("execution_coverage").cloned().unwrap_or(Value::Null),
+            "qk256_hot_path": run_receipt.get("qk256_hot_path").cloned().unwrap_or(Value::Null),
             "kernel": {
                 "selected_kernel": run_receipt["kernel"]["kernel_id"].clone(),
                 "family": run_receipt["kernel"]["family"].clone(),
@@ -2768,6 +2772,99 @@ fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
 
 fn is_sha256_hex(value: &str) -> bool {
     value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn aggregate_qk256_hot_path(rows: &[Value], cpu_kernel: Option<AnswerCpuKernel>) -> Value {
+    let mut f32_avx2 = 0u64;
+    let mut f32_scalar = 0u64;
+    let mut scaled_avx2 = 0u64;
+    let mut scaled_scalar = 0u64;
+    let mut flat = 0u64;
+    let mut input_rows = 0u64;
+    let mut output_rows = 0u64;
+
+    for row in rows {
+        let hot_path = &row["qk256_hot_path"];
+        f32_avx2 +=
+            hot_path["invocations"]["qk256_f32_avx2_gemv_invocations"].as_u64().unwrap_or(0);
+        f32_scalar +=
+            hot_path["invocations"]["qk256_f32_scalar_gemv_invocations"].as_u64().unwrap_or(0);
+        scaled_avx2 +=
+            hot_path["invocations"]["qk256_i8s_scaled_avx2_invocations"].as_u64().unwrap_or(0);
+        scaled_scalar +=
+            hot_path["invocations"]["qk256_i8s_scaled_scalar_invocations"].as_u64().unwrap_or(0);
+        flat +=
+            hot_path["materialization"]["qk256_flat_bytes_extracted_count"].as_u64().unwrap_or(0);
+        input_rows +=
+            hot_path["materialization"]["input_rows_materialized_count"].as_u64().unwrap_or(0);
+        output_rows +=
+            hot_path["materialization"]["output_rows_allocated_count"].as_u64().unwrap_or(0);
+    }
+
+    let scaled = scaled_avx2 + scaled_scalar;
+    let f32 = f32_avx2 + f32_scalar;
+    let path = if scaled > 0 && f32 > 0 {
+        "mixed_scaled_i8s_and_no_scale_f32"
+    } else if scaled > 0 {
+        "scaled_i2s_i8s"
+    } else if f32 > 0 {
+        "no_scale_f32"
+    } else {
+        "not_observed"
+    };
+    let selected_kernel = if scaled_avx2 > 0 {
+        "qk256-avx2-i2s-i8s-gemv"
+    } else if scaled_scalar > 0 {
+        "qk256-scalar-i2s-i8s-gemv"
+    } else if f32_avx2 > 0 {
+        "qk256-avx2-gemv"
+    } else if f32_scalar > 0 {
+        "qk256-scalar-gemv"
+    } else {
+        "not_observed"
+    };
+    let requested_kernel = match cpu_kernel {
+        Some(AnswerCpuKernel::Avx2) if scaled > 0 => "qk256-avx2-i2s-i8s-gemv",
+        Some(AnswerCpuKernel::Avx2) => "qk256-avx2-gemv",
+        Some(AnswerCpuKernel::Scalar) if scaled > 0 => "qk256-scalar-i2s-i8s-gemv",
+        Some(AnswerCpuKernel::Scalar) => "qk256-scalar-gemv",
+        Some(AnswerCpuKernel::Avx512) if scaled > 0 => "qk256-avx512-i2s-i8s-gemv",
+        Some(AnswerCpuKernel::Avx512) => "qk256-avx512-gemv",
+        None => "auto",
+    };
+    let fallback_used = matches!(requested_kernel, "qk256-avx2-i2s-i8s-gemv" | "qk256-avx2-gemv")
+        && selected_kernel.contains("scalar");
+    let fallback_reason = if fallback_used && selected_kernel == "qk256-scalar-i2s-i8s-gemv" {
+        Some(
+            "scaled I2_S×I8_S AVX2 kernel not implemented or not wired; inline-scale path used scalar oracle",
+        )
+    } else if fallback_used {
+        Some("requested AVX2 QK256 kernel selected scalar execution")
+    } else {
+        None
+    };
+
+    json!({
+        "requested_kernel": requested_kernel,
+        "selected_kernel": selected_kernel,
+        "path": path,
+        "scaled_vs_no_scale_path": path,
+        "fallback_used": fallback_used,
+        "fallback_reason": fallback_reason,
+        "speedup_claim": false,
+        "invocations": {
+            "qk256_f32_avx2_gemv_invocations": f32_avx2,
+            "qk256_f32_scalar_gemv_invocations": f32_scalar,
+            "qk256_i8s_scaled_avx2_invocations": scaled_avx2,
+            "qk256_i8s_scaled_scalar_invocations": scaled_scalar
+        },
+        "materialization": {
+            "qk256_flat_bytes_extracted_count": flat,
+            "input_rows_materialized_count": input_rows,
+            "output_rows_allocated_count": output_rows,
+            "tensor_to_vec_weight_copies_per_token": Value::Null
+        }
+    })
 }
 
 fn aggregate_execution_plan(rows: &[Value], device: &str) -> Value {
