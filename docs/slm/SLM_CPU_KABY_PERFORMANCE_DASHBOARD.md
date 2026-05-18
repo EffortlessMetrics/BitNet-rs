@@ -306,6 +306,21 @@ The target is diagnostic. It tells the next runtime slice to attribute
 or dense math. It does not prove a speedup and it does not broaden the Kaby
 claim boundary.
 
+## Prompt Prefill Attribution
+
+SLM-CPU-034 keeps the existing `prompt_prefill` allocation total for receipt
+continuity and adds nested subcomponent counters:
+
+```text
+prompt_prefill_breakdown.embed
+prompt_prefill_breakdown.forward
+ranked_hotspots includes prompt_prefill.embed and prompt_prefill.forward
+```
+
+This is attribution only. It identifies whether the prefill hotspot is coming
+from token embedding or dense model forward execution before any Q8_0 GEMV,
+RMSNorm, RoPE, or attention-loop optimization is attempted.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:
