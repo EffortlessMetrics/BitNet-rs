@@ -67,6 +67,11 @@ reversed. A live refresh after reopening showed 157 open scoped PRs: 150
 content inventory until each one is audited by exact content, not age or branch
 distance.
 
+Post-cleanup note on 2026-05-18: `#5724` landed the canonical tracker/CI-plan
+fix, `#5740` was closed as its duplicate, `#5731` was closed as a duplicate of
+`#5730`, and the remaining scoped Codex PRs were `#5730`, `#5732`, `#5733`, and
+`#5741`.
+
 ## Disposition Rule
 
 Do not merge current A770 diagnostic probes directly into `main`.
@@ -117,7 +122,7 @@ Read-only audit on 2026-05-18 found:
 | --- | --- | --- |
 | #4774-#5131 | No exact-superseded group was proven. Many PRs preserve unique layer scope, trace infrastructure, report shape, or diagnostic evidence. | Keep open while replacement PRs are built; do not close by range. |
 | #4751-#4770, #4801, #4837, #4845, #4850, #4853, #4855, #4883, #4885, #4892, #4959, #4961, #5010, #5012, #5020 | Runtime, loader, tokenizer, QK256, embedding, attention, CLI, and proof candidates may still contain useful invariants. | Audit against current `main`; port smallest confirmed fixes with direct tests. |
-| #5730, #5731 | Exact duplicate docs/specs pair by stable patch-id. | Keep one survivor after rebase; only then close the duplicate with the kept PR named. |
+| #5730, #5731 | Exact duplicate docs/specs pair by stable patch-id. | #5731 was closed after naming #5730 as the survivor. Keep #5730 for a real rebase/content review. |
 
 No diagnostic PR should be closed as "historical evidence" unless this map or a
 successor ledger names the exact report, test, or behavior that preserves its

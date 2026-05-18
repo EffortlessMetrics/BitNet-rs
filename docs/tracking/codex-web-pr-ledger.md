@@ -70,6 +70,10 @@ Snapshot source:
   6 `codex/*`, and 1 `claude/*`. The increased open count is intentional until
   each PR has a content-audited merge, rebase, port, duplicate, or historical
   evidence disposition.
+- Follow-up cleanup on 2026-05-18: #5724 landed as the canonical
+  SLM-CPU-040/041 tracker sync and `xtask/src/ci/plan.rs` dead
+  `changed_count` fix; #5740 was closed as superseded by #5724; #5731 was
+  closed as a duplicate of #5730.
 
 ## Post-Reopen Content Audit Addendum
 
@@ -79,10 +83,10 @@ queue pass.
 
 | PRs | Content audit result | Required action |
 |---|---|---|
-| #5730, #5731 | Exact duplicate BitNet-large docs/specs/plans by stable patch-id `d3a8898c691015cdf8fcc5f7468d9beb0bd792c1`. | Pick one survivor, rebase it, and close the duplicate only with the kept PR named. |
+| #5730, #5731 | Exact duplicate BitNet-large docs/specs/plans by stable patch-id `d3a8898c691015cdf8fcc5f7468d9beb0bd792c1`. | #5731 was closed with #5730 named as the survivor. Rebase/review #5730 before merge. |
 | #5732 | Unique Llama3-8B-1.58 candidate docs/specs/campaign lane. GitHub reports conflicts. | Rebase or port conflicts; do not close for non-mergeability. |
 | #5733 | Unique BitNet 3B TL candidate docs/specs/campaign lane. GitHub reports conflicts. | Rebase or port conflicts; do not close for non-mergeability. |
-| #5724, #5740 | Both touch `xtask/src/ci/plan.rs` dead `changed_count` cleanup; #5724 also carries SLM tracker updates. | Choose the canonical path after CI and diff review. Do not close either as duplicate until the surviving change lands. |
+| #5724, #5740 | Both touched `xtask/src/ci/plan.rs` dead `changed_count` cleanup; #5724 also carried SLM tracker updates. | #5724 merged after green CI and #5740 was closed as superseded. |
 | #5092 | Draft AVX2 QK256 performance branch with a speedup claim. | Keep draft/proof-gated until parity, benchmark context, CPU flags, samples, and receipts are current. |
 | #4774-#5131 | Reopened A770 diagnostic chain contains content-bearing trace, score, probability, value-mix, cache, layer, and reference tooling evidence. | Keep open by default. Port or merge useful reports; close only after exact successor, duplicate, or historical-only evidence is recorded. |
 
