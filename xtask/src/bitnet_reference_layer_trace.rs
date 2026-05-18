@@ -7767,6 +7767,8 @@ fn compare_reference_to_rust_with_records_with_model(
     );
     report["attention_score_raw_history_position_qk_recompute"] =
         score_position_qk_recompute.clone();
+    report["attention_reference_score_input_capture_frontier"] =
+        attention_reference_score_input_capture_frontier(&score_position_qk_recompute);
     report["attention_selected_score_mixed_qk_contribution"] =
         attention_selected_score_mixed_qk_contribution(
             &score_position_qk_recompute,
@@ -21265,6 +21267,183 @@ fn score_position_reference_input_stage_provenance(
         "missing_key_stage_count": missing_key_stage_count,
         "rows": summary_rows,
         "next_diagnostic": next_diagnostic,
+    })
+}
+
+fn reference_score_input_capture_next_diagnostic(classification: &str) -> &'static str {
+    match classification {
+        "reference_score_input_capture_incomplete" => {
+            "rerun reference and Rust trace capture with first_values_limit at least recommended_first_values_limit before changing score math"
+        }
+        "reference_score_input_capture_exact_bound_residual" => {
+            "reference Q/K inputs are fully sampled and exact graph-bound but residual remains; inspect score accumulation or score-stage capture precision"
+        }
+        "reference_score_input_capture_unpinned" => {
+            "pin exact reference score graph inputs or parent sources before interpreting score residuals"
+        }
+        "reference_score_input_capture_clean" => {
+            "reference score-input capture is clean; continue downstream score/probability/value-mix attribution"
+        }
+        "reference_score_input_capture_missing_context" => {
+            "capture selected raw score Q/K recompute and reference score input provenance before changing score math"
+        }
+        _ => "keep reference score-input capture frontier diagnostic-only",
+    }
+}
+
+fn reference_stage_first_values_len(stage: &Value) -> Option<u64> {
+    value_u64(stage, "/first_values_len")
+}
+
+fn reference_stage_required_values(stage: &Value) -> Option<u64> {
+    value_u64(stage, "/nelements").or_else(|| {
+        stage.pointer("/shape").and_then(Value::as_array).map(|shape| {
+            shape
+                .iter()
+                .filter_map(Value::as_u64)
+                .fold(1_u64, |acc, value| acc.saturating_mul(value))
+        })
+    })
+}
+
+fn reference_stage_capture_incomplete(stage: &Value) -> bool {
+    value_bool(stage, "/present").unwrap_or(false)
+        && reference_stage_first_values_len(stage)
+            .zip(reference_stage_required_values(stage))
+            .is_some_and(|(available, required)| available < required)
+}
+
+fn compact_reference_score_input_capture_row(row: &Value) -> Value {
+    let query_stage = row.pointer("/query_stage").unwrap_or(&Value::Null);
+    let key_stage = row.pointer("/key_stage").unwrap_or(&Value::Null);
+    json!({
+        "label": row.pointer("/label").cloned().unwrap_or(Value::Null),
+        "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+        "kv_head": row.pointer("/kv_head").cloned().unwrap_or(Value::Null),
+        "key_slot": row.pointer("/key_slot").cloned().unwrap_or(Value::Null),
+        "query_token": row.pointer("/query_token").cloned().unwrap_or(Value::Null),
+        "reference_residual_over_warn": row.pointer("/reference_residual_over_warn").cloned().unwrap_or(Value::Null),
+        "reference_best_abs_delta": row.pointer("/reference_best_abs_delta").cloned().unwrap_or(Value::Null),
+        "classification": row.pointer("/classification").cloned().unwrap_or(Value::Null),
+        "query_stage": {
+            "present": query_stage.pointer("/present").cloned().unwrap_or(Value::Null),
+            "stage": query_stage.pointer("/stage").cloned().unwrap_or(Value::Null),
+            "dtype": query_stage.pointer("/dtype").cloned().unwrap_or(Value::Null),
+            "first_values_len": reference_stage_first_values_len(query_stage),
+            "required_values": reference_stage_required_values(query_stage),
+            "capture_incomplete": reference_stage_capture_incomplete(query_stage),
+        },
+        "key_stage": {
+            "present": key_stage.pointer("/present").cloned().unwrap_or(Value::Null),
+            "stage": key_stage.pointer("/stage").cloned().unwrap_or(Value::Null),
+            "dtype": key_stage.pointer("/dtype").cloned().unwrap_or(Value::Null),
+            "first_values_len": reference_stage_first_values_len(key_stage),
+            "required_values": reference_stage_required_values(key_stage),
+            "capture_incomplete": reference_stage_capture_incomplete(key_stage),
+        },
+    })
+}
+
+fn attention_reference_score_input_capture_frontier(score_position_qk_recompute: &Value) -> Value {
+    let qk_classification = selected_report_classification(score_position_qk_recompute);
+    let provenance = score_position_qk_recompute
+        .pointer("/reference_input_stage_provenance")
+        .unwrap_or(&Value::Null);
+    let provenance_classification = selected_report_classification(provenance);
+    let rows = provenance.pointer("/rows").and_then(Value::as_array);
+    let mut compared_row_count = 0_u64;
+    let mut residual_row_count = 0_u64;
+    let mut incomplete_row_count = 0_u64;
+    let mut incomplete_residual_row_count = 0_u64;
+    let mut missing_stage_count = 0_u64;
+    let mut recommended_first_values_limit = 0_u64;
+    let mut first_incomplete_residual_row = Value::Null;
+    let mut first_full_residual_row = Value::Null;
+
+    if let Some(rows) = rows {
+        for row in rows {
+            compared_row_count += 1;
+            let query_stage = row.pointer("/query_stage").unwrap_or(&Value::Null);
+            let key_stage = row.pointer("/key_stage").unwrap_or(&Value::Null);
+            let residual = value_bool(row, "/reference_residual_over_warn").unwrap_or(false);
+            let query_missing = !value_bool(query_stage, "/present").unwrap_or(false);
+            let key_missing = !value_bool(key_stage, "/present").unwrap_or(false);
+            let query_incomplete = reference_stage_capture_incomplete(query_stage);
+            let key_incomplete = reference_stage_capture_incomplete(key_stage);
+            let row_incomplete = query_incomplete || key_incomplete;
+            let row_missing = query_missing || key_missing;
+            let row_required = [
+                reference_stage_required_values(query_stage),
+                reference_stage_required_values(key_stage),
+            ]
+            .into_iter()
+            .flatten()
+            .max()
+            .unwrap_or(0);
+            recommended_first_values_limit = recommended_first_values_limit.max(row_required);
+
+            if residual {
+                residual_row_count += 1;
+            }
+            if row_missing {
+                missing_stage_count += 1;
+            }
+            if row_incomplete {
+                incomplete_row_count += 1;
+                if residual {
+                    incomplete_residual_row_count += 1;
+                    if first_incomplete_residual_row.is_null() {
+                        first_incomplete_residual_row =
+                            compact_reference_score_input_capture_row(row);
+                    }
+                }
+            } else if residual && first_full_residual_row.is_null() {
+                first_full_residual_row = compact_reference_score_input_capture_row(row);
+            }
+        }
+    }
+
+    let classification = if qk_classification.is_none()
+        || provenance_classification.is_none()
+        || rows.is_none()
+        || compared_row_count == 0
+    {
+        "reference_score_input_capture_missing_context"
+    } else if residual_row_count == 0 {
+        "reference_score_input_capture_clean"
+    } else if incomplete_residual_row_count > 0 {
+        "reference_score_input_capture_incomplete"
+    } else if missing_stage_count > 0 {
+        "reference_score_input_capture_missing_context"
+    } else if provenance_classification == Some("reference_score_inputs_exact_graph_bound") {
+        "reference_score_input_capture_exact_bound_residual"
+    } else {
+        "reference_score_input_capture_unpinned"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Reference score-input capture frontier is diagnostic-only evidence for whether selected raw-score residuals are blocked by truncated reference Q/K first_values samples before score math is changed; it does not change RMSNorm, QK256, RoPE, F16 score-input conversion, score accumulation, softmax, value-mix, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "qk_recompute_classification": qk_classification,
+        "reference_input_stage_provenance_classification": provenance_classification,
+        "compared_row_count": compared_row_count,
+        "reference_residual_row_count": residual_row_count,
+        "incomplete_row_count": incomplete_row_count,
+        "incomplete_residual_row_count": incomplete_residual_row_count,
+        "missing_stage_count": missing_stage_count,
+        "recommended_first_values_limit": if recommended_first_values_limit == 0 { Value::Null } else { json!(recommended_first_values_limit) },
+        "first_incomplete_residual_row": first_incomplete_residual_row,
+        "first_full_residual_row": first_full_residual_row,
+        "blocked_reasons": if classification == "reference_score_input_capture_incomplete" {
+            json!(["reference_score_input_first_values_truncated"])
+        } else if classification == "reference_score_input_capture_missing_context" {
+            json!(["reference_score_input_capture_missing_context"])
+        } else {
+            json!([])
+        },
+        "next_diagnostic": reference_score_input_capture_next_diagnostic(classification),
     })
 }
 
@@ -45101,6 +45280,117 @@ mod tests {
             Some(&json!("reference_q_score_input_head"))
         );
         assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+    }
+
+    fn reference_score_input_capture_fixture(
+        residual: bool,
+        query_len: u64,
+        query_required: u64,
+        key_len: u64,
+        key_required: u64,
+    ) -> Value {
+        json!({
+            "classification": "selected_score_positions_recomputed_from_qk",
+            "reference_input_stage_provenance": {
+                "classification": "reference_score_inputs_exact_graph_bound",
+                "rows": [
+                    {
+                        "label": "max_material_position",
+                        "head": 13,
+                        "kv_head": 3,
+                        "key_slot": 0,
+                        "query_token": 13,
+                        "reference_residual_over_warn": residual,
+                        "reference_best_abs_delta": if residual { 0.01776123046875_f64 } else { 0.0 },
+                        "classification": "reference_score_inputs_exact_graph_bound",
+                        "query_stage": {
+                            "present": true,
+                            "stage": "q_score_input_head13_history_ref_layout",
+                            "dtype": "f32",
+                            "first_values_len": query_len,
+                            "nelements": query_required
+                        },
+                        "key_stage": {
+                            "present": true,
+                            "stage": "k_score_input_head3_history_ref_layout",
+                            "dtype": "f16",
+                            "first_values_len": key_len,
+                            "nelements": key_required
+                        }
+                    }
+                ]
+            }
+        })
+    }
+
+    #[test]
+    fn reference_score_input_capture_frontier_reports_truncated_residual_inputs() {
+        let report = attention_reference_score_input_capture_frontier(
+            &reference_score_input_capture_fixture(true, 16, 2304, 16, 2304),
+        );
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("reference_score_input_capture_incomplete"))
+        );
+        assert_eq!(report.pointer("/recommended_first_values_limit"), Some(&json!(2304)));
+        assert_eq!(
+            report.pointer("/first_incomplete_residual_row/query_stage/capture_incomplete"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/first_incomplete_residual_row/key_stage/capture_incomplete"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("reference_score_input_first_values_truncated"))
+        );
+    }
+
+    #[test]
+    fn reference_score_input_capture_frontier_reports_exact_bound_residual() {
+        let report = attention_reference_score_input_capture_frontier(
+            &reference_score_input_capture_fixture(true, 2304, 2304, 2304, 2304),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("reference_score_input_capture_exact_bound_residual"))
+        );
+        assert_eq!(
+            report.pointer("/first_full_residual_row/query_stage/capture_incomplete"),
+            Some(&json!(false))
+        );
+    }
+
+    #[test]
+    fn reference_score_input_capture_frontier_reports_clean() {
+        let report = attention_reference_score_input_capture_frontier(
+            &reference_score_input_capture_fixture(false, 2304, 2304, 2304, 2304),
+        );
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("reference_score_input_capture_clean"))
+        );
+        assert_eq!(report.pointer("/blocked_reasons"), Some(&json!([])));
+    }
+
+    #[test]
+    fn reference_score_input_capture_frontier_reports_missing_context() {
+        let report = attention_reference_score_input_capture_frontier(&json!({}));
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("reference_score_input_capture_missing_context"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("reference_score_input_capture_missing_context"))
+        );
     }
 
     #[test]
