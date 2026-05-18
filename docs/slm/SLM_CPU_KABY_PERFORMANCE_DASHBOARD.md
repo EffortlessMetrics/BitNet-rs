@@ -227,6 +227,33 @@ speedup; allocation counters for the dominant tensor-producing components are
 unchanged, and the evidence is scoped to removal of avoidable sampler setup in
 the existing 4-thread appliance profile.
 
+## Warm-Session KV Cache Reuse
+
+SLM-CPU-031 reuses one CPU KV cache across Qwen3 Q8_0 warm-session prompts and
+clears it before each prompt. The reuse is scoped to the resident session and
+keeps prompt isolation explicit; it moves the large KV-cache tensor allocation
+out of per-prompt `prompt_setup` and records it once as session setup.
+
+```text
+evidence = ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-kv-cache-session-reuse.json
+generated_outputs_match_baseline = true
+quality_passed = true
+determinism_passed = true
+kv_cache_recreated_per_prompt = false
+kv_cache_reused_across_prompts = true
+kv_cache_cleared_per_prompt = true
+kv_cache_reused_prompt_count = 6
+session_setup_kv_cache_alloc_bytes = 9395257760
+prompt_setup.kv_cache_alloc_bytes_per_first_prompt = 0
+fallback_used = false
+speedup_claim = false
+sustained_throughput_claim = false
+```
+
+This does not claim sustained throughput or a portable performance result. It
+only narrows the resident-session allocation boundary for the existing Qwen3
+Q8_0 4-thread Kaby appliance profile.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:

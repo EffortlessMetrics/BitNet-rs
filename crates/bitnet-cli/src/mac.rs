@@ -16512,10 +16512,13 @@ fn validate_profile_set_receipt(
                 path.display()
             );
         }
-        if profile["resident_session"]["kv_cache_reuse_policy"].as_str()
-            != Some("recreated_per_prompt_for_prompt_isolation")
-            || profile["resident_session"]["sampler_reuse_policy"].as_str()
-                != Some("recreated_per_prompt_for_deterministic_prompt_independence")
+        let kv_cache_reuse_policy = profile["resident_session"]["kv_cache_reuse_policy"].as_str();
+        if !matches!(
+            kv_cache_reuse_policy,
+            Some("recreated_per_prompt_for_prompt_isolation")
+                | Some("single_kv_cache_cleared_per_prompt_for_prompt_isolation")
+        ) || profile["resident_session"]["sampler_reuse_policy"].as_str()
+            != Some("recreated_per_prompt_for_deterministic_prompt_independence")
         {
             anyhow::bail!("{} profile must record prompt runtime reset policies", path.display());
         }

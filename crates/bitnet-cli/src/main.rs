@@ -7246,6 +7246,11 @@ async fn run_cuda_warm_session(
         "recreated_per_prompt_for_rng_state_independence",
         0,
         prompts.len(),
+        true,
+        false,
+        "recreated_per_turn_for_prompt_isolation",
+        0,
+        prompts.len(),
     );
     let cuda_execution_residency =
         cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
@@ -8059,6 +8064,12 @@ async fn run_slm_warm_session(
         SamplingConfig { temperature, top_k: top_k as u32, top_p, repetition_penalty, seed };
     let sampler_reuse_enabled = warm_session_sampler_reuse_enabled(&sampling_config);
     let sampler_reuse_policy = warm_session_sampler_reuse_policy(sampler_reuse_enabled);
+    let kv_cache_reuse_policy = "single_kv_cache_cleared_per_prompt_for_prompt_isolation";
+    let kv_cache_session_alloc_start = AllocationAuditSnapshot::current();
+    let mut session_kv_cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
+    let kv_cache_session_alloc = AllocationAuditSnapshot::delta_since(kv_cache_session_alloc_start);
+    let kv_cache_reused_across_prompts = true;
+    let mut kv_cache_reused_prompt_count = 0usize;
     let mut session_sampler = sampler_reuse_enabled.then(|| {
         let mut sampler = SamplingStrategy::new(sampling_config.clone());
         sampler.reserve_logits_capacity(logits_capacity);
@@ -8127,8 +8138,8 @@ async fn run_slm_warm_session(
         let logits_scratch = &mut session_buffers.logits_scratch;
         let prompt_token_count = tokens.len();
         let prompt_setup_kv_cache_alloc_start = AllocationAuditSnapshot::current();
-        let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
-        let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
+        session_kv_cache.clear();
+        kv_cache_reused_prompt_count += 1;
         let prompt_setup_kv_cache_alloc =
             AllocationAuditSnapshot::delta_since(prompt_setup_kv_cache_alloc_start);
         let prompt_setup_sampler_alloc_start = AllocationAuditSnapshot::current();
@@ -8159,7 +8170,7 @@ async fn run_slm_warm_session(
             for token in &tokens[..tokens.len() - 1] {
                 let prefill_alloc_start = AllocationAuditSnapshot::current();
                 let x = model.embed(&[*token])?;
-                let _ = model.forward(&x, any_cache.as_mut())?;
+                let _ = model.forward(&x, &mut session_kv_cache as &mut dyn std::any::Any)?;
                 if allocation_audit_enabled {
                     prefill_step_allocs
                         .push(AllocationAuditSnapshot::delta_since(prefill_alloc_start));
@@ -8184,7 +8195,7 @@ async fn run_slm_warm_session(
 
             let forward_start = std::time::Instant::now();
             let forward_alloc_start = AllocationAuditSnapshot::current();
-            let h = model.forward(&x, any_cache.as_mut())?;
+            let h = model.forward(&x, &mut session_kv_cache as &mut dyn std::any::Any)?;
             if allocation_audit_enabled {
                 forward_step_allocs.push(AllocationAuditSnapshot::delta_since(forward_alloc_start));
             }
@@ -8474,7 +8485,10 @@ async fn run_slm_warm_session(
                 "timing_buffers_reused": true,
                 "allocation_audit_buffers_reused": true,
                 "stop_tail_buffer_reused": max_stop_len > 0,
-                "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+                "kv_cache_reuse_policy": kv_cache_reuse_policy,
+                "kv_cache_reused_across_prompts": kv_cache_reused_across_prompts,
+                "kv_cache_cleared_per_prompt": true,
+                "kv_cache_recreated_per_prompt": false,
                 "sampler_reuse_policy": sampler_reuse_policy,
                 "sampler_reused_across_prompts": sampler_reuse_enabled,
                 "sampler_recreated_per_prompt": !sampler_reuse_enabled,
@@ -8620,6 +8634,11 @@ async fn run_slm_warm_session(
         sampler_reuse_policy,
         sampler_reused_prompt_count,
         sampler_recreated_prompt_count,
+        false,
+        kv_cache_reused_across_prompts,
+        kv_cache_reuse_policy,
+        kv_cache_reused_prompt_count,
+        0,
     );
     let determinism = slm_warm_session_determinism_receipt(&determinism_records);
     let quality_passed = quality_failed_prompts.is_empty();
@@ -8663,7 +8682,12 @@ async fn run_slm_warm_session(
             "timing_buffers_reused": true,
             "allocation_audit_buffers_reused": true,
             "stop_tail_buffer_reused": max_stop_len > 0,
-            "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+            "kv_cache_reuse_policy": kv_cache_reuse_policy,
+            "kv_cache_reused_across_prompts": kv_cache_reused_across_prompts,
+            "kv_cache_cleared_per_prompt": true,
+            "kv_cache_recreated_per_prompt": false,
+            "kv_cache_reused_prompt_count": kv_cache_reused_prompt_count,
+            "kv_cache_recreated_prompt_count": 0,
             "sampler_reuse_policy": sampler_reuse_policy,
             "sampler_reused_across_prompts": sampler_reuse_enabled,
             "sampler_recreated_per_prompt": !sampler_reuse_enabled,
@@ -8799,6 +8823,12 @@ async fn run_slm_warm_session(
             backend_identity.requested_backend.as_str(),
             &prompt_summaries,
         ),
+        "session_setup_allocation_audit": {
+            "enabled": allocation_audit_enabled,
+            "scope": "resident warm-session setup before prompt loop",
+            "kv_cache": allocation_samples_json(std::slice::from_ref(&kv_cache_session_alloc)),
+            "kv_cache_reuse_policy": kv_cache_reuse_policy,
+        },
         "claim_boundary": {
             "warm_session_flow": true,
             "model_loaded_once": true,
@@ -9325,6 +9355,11 @@ impl WarmSessionSpeedAccumulator {
         sampler_reuse_policy: &str,
         sampler_reused_prompt_count: usize,
         sampler_recreated_prompt_count: usize,
+        kv_cache_recreated_per_prompt: bool,
+        kv_cache_reused_across_prompts: bool,
+        kv_cache_reuse_policy: &str,
+        kv_cache_reused_prompt_count: usize,
+        kv_cache_recreated_prompt_count: usize,
     ) -> serde_json::Value {
         serde_json::json!({
             "measurement_scope": measurement_scope,
@@ -9343,8 +9378,12 @@ impl WarmSessionSpeedAccumulator {
                 "timing_buffers_reused": true,
                 "allocation_audit_buffers_reused": true,
                 "stop_tail_buffer_reused": true,
-                "kv_cache_recreated_per_prompt": true,
-                "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
+                "kv_cache_recreated_per_prompt": kv_cache_recreated_per_prompt,
+                "kv_cache_reused_across_prompts": kv_cache_reused_across_prompts,
+                "kv_cache_cleared_per_prompt": kv_cache_reused_across_prompts,
+                "kv_cache_reuse_policy": kv_cache_reuse_policy,
+                "kv_cache_reused_prompt_count": kv_cache_reused_prompt_count,
+                "kv_cache_recreated_prompt_count": kv_cache_recreated_prompt_count,
                 "sampler_recreated_per_prompt": !sampler_reuse_enabled,
                 "sampler_reused_across_prompts": sampler_reuse_enabled,
                 "sampler_reuse_policy": sampler_reuse_policy,
@@ -13210,6 +13249,11 @@ mod tests {
             "single_sampler_reused_for_temperature_zero_prompt_independence",
             2,
             0,
+            false,
+            true,
+            "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+            2,
+            0,
         );
 
         assert_eq!(receipt["counts"]["prompt_count"], 2);
@@ -13221,6 +13265,14 @@ mod tests {
         assert_eq!(receipt["broad_performance_claim"], false);
         assert_eq!(receipt["reuse"]["model_loaded_once"], true);
         assert_eq!(receipt["reuse"]["logits_buffer_reuse_claimed"], false);
+        assert_eq!(receipt["reuse"]["kv_cache_recreated_per_prompt"], false);
+        assert_eq!(receipt["reuse"]["kv_cache_reused_across_prompts"], true);
+        assert_eq!(receipt["reuse"]["kv_cache_cleared_per_prompt"], true);
+        assert_eq!(
+            receipt["reuse"]["kv_cache_reuse_policy"],
+            "single_kv_cache_cleared_per_prompt_for_prompt_isolation"
+        );
+        assert_eq!(receipt["reuse"]["kv_cache_reused_prompt_count"], 2);
         assert_eq!(receipt["reuse"]["sampler_recreated_per_prompt"], false);
         assert_eq!(receipt["reuse"]["sampler_reused_across_prompts"], true);
         assert_eq!(receipt["reuse"]["sampler_reused_prompt_count"], 2);
