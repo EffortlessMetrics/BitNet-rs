@@ -165,8 +165,10 @@ pub(crate) fn prompt_generation_identity(
 }
 
 fn sha256_json<T: serde::Serialize + ?Sized>(value: &T) -> String {
-    let bytes = serde_json::to_vec(value).expect("prompt generation identity must serialize");
-    sha256_hex(&bytes)
+    match serde_json::to_vec(value) {
+        Ok(bytes) => sha256_hex(&bytes),
+        Err(error) => sha256_hex(error.to_string().as_bytes()),
+    }
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {

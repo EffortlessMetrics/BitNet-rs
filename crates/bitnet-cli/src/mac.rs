@@ -14325,54 +14325,40 @@ fn validate_prompt_generation_identity_contract(
         identity["template_family"].as_str().filter(|value| !value.trim().is_empty()).ok_or_else(
             || anyhow!("{} prompt_generation_identity.template_family is required", path.display()),
         )?;
-    for field in [
-        "template_sha256",
-        "stop_criteria_sha256",
-        "stop_sequences_sha256",
-        "stop_token_ids_sha256",
-        "generation_params_sha256",
-        "identity_sha256",
-    ] {
-        let Some(value) = identity[field].as_str() else {
-            anyhow::bail!("{} prompt_generation_identity.{field} is required", path.display());
-        };
-        if !is_sha256_hex(value) {
-            anyhow::bail!(
-                "{} prompt_generation_identity.{field} must be a SHA256 hex digest",
-                path.display()
-            );
-        }
-    }
-    if sha256_json_value(&identity["template"])? != identity["template_sha256"].as_str().unwrap() {
+    let template_sha256 =
+        prompt_generation_identity_sha256_field(identity, "template_sha256", path)?;
+    let stop_criteria_sha256 =
+        prompt_generation_identity_sha256_field(identity, "stop_criteria_sha256", path)?;
+    let stop_sequences_sha256 =
+        prompt_generation_identity_sha256_field(identity, "stop_sequences_sha256", path)?;
+    let stop_token_ids_sha256 =
+        prompt_generation_identity_sha256_field(identity, "stop_token_ids_sha256", path)?;
+    let generation_params_sha256 =
+        prompt_generation_identity_sha256_field(identity, "generation_params_sha256", path)?;
+    let identity_sha256 =
+        prompt_generation_identity_sha256_field(identity, "identity_sha256", path)?;
+    if sha256_json_value(&identity["template"])? != template_sha256 {
         anyhow::bail!("{} prompt_generation_identity.template_sha256 mismatch", path.display());
     }
-    if sha256_json_value(&identity["stop_criteria"])?
-        != identity["stop_criteria_sha256"].as_str().unwrap()
-    {
+    if sha256_json_value(&identity["stop_criteria"])? != stop_criteria_sha256 {
         anyhow::bail!(
             "{} prompt_generation_identity.stop_criteria_sha256 mismatch",
             path.display()
         );
     }
-    if sha256_json_value(&identity["stop_criteria"]["stop_sequences"])?
-        != identity["stop_sequences_sha256"].as_str().unwrap()
-    {
+    if sha256_json_value(&identity["stop_criteria"]["stop_sequences"])? != stop_sequences_sha256 {
         anyhow::bail!(
             "{} prompt_generation_identity.stop_sequences_sha256 mismatch",
             path.display()
         );
     }
-    if sha256_json_value(&identity["stop_criteria"]["stop_token_ids"])?
-        != identity["stop_token_ids_sha256"].as_str().unwrap()
-    {
+    if sha256_json_value(&identity["stop_criteria"]["stop_token_ids"])? != stop_token_ids_sha256 {
         anyhow::bail!(
             "{} prompt_generation_identity.stop_token_ids_sha256 mismatch",
             path.display()
         );
     }
-    if sha256_json_value(&identity["generation_parameters"])?
-        != identity["generation_params_sha256"].as_str().unwrap()
-    {
+    if sha256_json_value(&identity["generation_parameters"])? != generation_params_sha256 {
         anyhow::bail!(
             "{} prompt_generation_identity.generation_params_sha256 mismatch",
             path.display()
@@ -14382,7 +14368,7 @@ fn validate_prompt_generation_identity_contract(
     if let Some(object) = identity_without_hash.as_object_mut() {
         object.remove("identity_sha256");
     }
-    if sha256_json_value(&identity_without_hash)? != identity["identity_sha256"].as_str().unwrap() {
+    if sha256_json_value(&identity_without_hash)? != identity_sha256 {
         anyhow::bail!("{} prompt_generation_identity.identity_sha256 mismatch", path.display());
     }
     for observed in [
@@ -14403,6 +14389,23 @@ fn validate_prompt_generation_identity_contract(
         }
     }
     Ok(())
+}
+
+fn prompt_generation_identity_sha256_field<'a>(
+    identity: &'a serde_json::Value,
+    field: &str,
+    path: &Path,
+) -> Result<&'a str> {
+    let Some(value) = identity[field].as_str() else {
+        anyhow::bail!("{} prompt_generation_identity.{field} is required", path.display());
+    };
+    if !is_sha256_hex(value) {
+        anyhow::bail!(
+            "{} prompt_generation_identity.{field} must be a SHA256 hex digest",
+            path.display()
+        );
+    }
+    Ok(value)
 }
 
 fn sha256_json_value(value: &serde_json::Value) -> Result<String> {
