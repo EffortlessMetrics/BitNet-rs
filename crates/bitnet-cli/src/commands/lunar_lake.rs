@@ -7952,17 +7952,23 @@ fn diagnose_corpus_v2_failed_case(case: &Value) -> CorpusV2FailedCaseDiagnosis {
         .unwrap_or_default();
     let failed_rules = string_array_at(case, "quality.failed_rules");
     let scoring_passed = scoring.and_then(|value| value.get("passed")).and_then(Value::as_bool);
+    let gate_passed = bool_at_any(case, &["quality.answer_gate.passed", "answer_gate.passed"]);
     let gate_kind = string_at(case, "quality.gate_kind");
     let generated_tokens = u64_at(case, "quality.generated_tokens")
         .or_else(|| u64_at(case, "tokens.generated"))
         .or_else(|| u64_at(case, "generated_token_count"));
+    let expected_normalized = details.and_then(|value| string_at(value, "expected_normalized"));
+    let observed_normalized = details.and_then(|value| string_at(value, "observed_normalized"));
     let classification = classify_corpus_v2_failure(
         &answer,
         gate_kind.as_deref(),
+        gate_passed,
         scoring_passed,
         &failed_rules,
         &missing_required_keywords,
         generated_tokens,
+        expected_normalized.as_deref(),
+        observed_normalized.as_deref(),
     );
     let recommended_fix =
         recommended_corpus_v2_case_fix(&classification, gate_kind.as_deref(), scoring_passed);
@@ -7979,8 +7985,8 @@ fn diagnose_corpus_v2_failed_case(case: &Value) -> CorpusV2FailedCaseDiagnosis {
         failure_taxonomy: string_array_at(case, "quality.failure_taxonomy"),
         missing_required_keywords,
         forbidden_tokens_observed,
-        expected_normalized: details.and_then(|value| string_at(value, "expected_normalized")),
-        observed_normalized: details.and_then(|value| string_at(value, "observed_normalized")),
+        expected_normalized,
+        observed_normalized,
         answer_preview: answer_preview(&answer),
         generated_tokens,
         prompt_tokens: u64_at(case, "tokens.prompt").or_else(|| u64_at(case, "prompt_token_count")),
@@ -7994,10 +8000,13 @@ fn diagnose_corpus_v2_failed_case(case: &Value) -> CorpusV2FailedCaseDiagnosis {
 fn classify_corpus_v2_failure(
     answer: &str,
     gate_kind: Option<&str>,
+    gate_passed: Option<bool>,
     scoring_passed: Option<bool>,
     failed_rules: &[String],
     missing_required_keywords: &[String],
     generated_tokens: Option<u64>,
+    expected_normalized: Option<&str>,
+    observed_normalized: Option<&str>,
 ) -> String {
     let trimmed = answer.trim_start();
     if trimmed.starts_with(':')
@@ -8010,6 +8019,17 @@ fn classify_corpus_v2_failure(
     if trimmed.starts_with(':') && scoring_passed == Some(true) {
         return "gate_stricter_than_scoring_after_prefix".to_string();
     }
+    if failed_rules.iter().any(|rule| rule.contains("normalized_match")) {
+        if normalized_answer_overgenerated(expected_normalized, observed_normalized) {
+            return "exact_answer_overgenerated".to_string();
+        }
+        if matches!(gate_kind, Some("starts_with_any")) && gate_passed == Some(false) {
+            return "exact_answer_instruction_not_followed".to_string();
+        }
+        if gate_passed == Some(true) && scoring_passed == Some(false) {
+            return "exact_answer_scoring_mismatch_after_gate_pass".to_string();
+        }
+    }
     if !missing_required_keywords.is_empty()
         && generated_tokens.is_some_and(|tokens| tokens <= 8)
         && (trimmed.ends_with('+') || trimmed.split_whitespace().count() < 6)
@@ -8017,12 +8037,66 @@ fn classify_corpus_v2_failure(
         return "generation_budget_or_truncation".to_string();
     }
     if !missing_required_keywords.is_empty() {
+        if missing_keywords_present_case_insensitive(answer, missing_required_keywords) {
+            return "case_sensitive_required_keyword_mismatch".to_string();
+        }
+        if any_missing_keyword_present_case_insensitive(answer, missing_required_keywords) {
+            return "required_terms_missing_or_case_mismatch".to_string();
+        }
+        if gate_kind == Some("readable") {
+            return "readable_output_missing_required_terms".to_string();
+        }
         return "answer_content_missing_required_terms".to_string();
     }
-    if failed_rules.iter().any(|rule| rule.starts_with("gate_")) {
+    if failed_rules.iter().any(|rule| rule.starts_with("gate_") || rule == "answer_gate") {
         return "answer_gate_mismatch".to_string();
     }
     "answer_content_failed".to_string()
+}
+
+fn normalized_answer_overgenerated(
+    expected_normalized: Option<&str>,
+    observed_normalized: Option<&str>,
+) -> bool {
+    let Some(expected) = expected_normalized.map(str::trim).filter(|value| !value.is_empty())
+    else {
+        return false;
+    };
+    let Some(observed) = observed_normalized.map(str::trim).filter(|value| !value.is_empty())
+    else {
+        return false;
+    };
+    if observed == expected {
+        return false;
+    }
+    let Some(remainder) = observed.strip_prefix(expected) else {
+        return false;
+    };
+    remainder
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_whitespace() || matches!(ch, ',' | '.' | ':' | ';' | '!' | '?'))
+}
+
+fn missing_keywords_present_case_insensitive(
+    answer: &str,
+    missing_required_keywords: &[String],
+) -> bool {
+    !missing_required_keywords.is_empty()
+        && missing_required_keywords
+            .iter()
+            .all(|keyword| contains_case_insensitive(answer, keyword))
+}
+
+fn any_missing_keyword_present_case_insensitive(
+    answer: &str,
+    missing_required_keywords: &[String],
+) -> bool {
+    missing_required_keywords.iter().any(|keyword| contains_case_insensitive(answer, keyword))
+}
+
+fn contains_case_insensitive(answer: &str, keyword: &str) -> bool {
+    answer.to_lowercase().contains(&keyword.to_lowercase())
 }
 
 fn recommended_corpus_v2_case_fix(
@@ -8040,8 +8114,26 @@ fn recommended_corpus_v2_case_fix(
         "generation_budget_or_truncation" => {
             "Rerun this bounded case with either a tighter prompt or a slightly larger max_new_tokens budget; classify as output-budget drift before changing route policy.".to_string()
         }
+        "exact_answer_overgenerated" => {
+            "The answer began with the expected exact token but continued; tighten stop/max-token policy or the prompt before treating this as a model-quality failure.".to_string()
+        }
+        "exact_answer_instruction_not_followed" => {
+            "The route ignored a one-word exact-answer instruction; rerun with stricter generation/stop policy before profile promotion.".to_string()
+        }
+        "exact_answer_scoring_mismatch_after_gate_pass" => {
+            "The loose answer gate passed but exact scoring failed; keep the profile blocked until the exact-answer contract is rerun cleanly or intentionally revised.".to_string()
+        }
+        "case_sensitive_required_keyword_mismatch" => {
+            "The output contains the required term only with different casing; review whether the corpus gate should normalize case before rerunning.".to_string()
+        }
+        "required_terms_missing_or_case_mismatch" => {
+            "The output contains some required terms only by case-insensitive match and still misses others; keep the profile blocked and tune prompt/gate wording before promotion.".to_string()
+        }
+        "readable_output_missing_required_terms" => {
+            "Readable output was produced but missed required route-policy terms; tune the prompt or expected keywords before route promotion.".to_string()
+        }
         "answer_content_missing_required_terms" => {
-            "Treat this as a bounded answer-content failure for the dense Qwen CPU control route; adjust prompt/gate only if the expected answer contract is too narrow.".to_string()
+            "Treat this as a bounded answer-content failure for the dense Qwen route; adjust prompt/gate only if the expected answer contract is too narrow.".to_string()
         }
         _ if gate_kind == Some("readable") && scoring_passed == Some(false) => {
             "Readable output was produced but missed required route-policy terms; tune the prompt or expected keywords before route promotion.".to_string()
@@ -8056,8 +8148,7 @@ fn corpus_v2_blocker_summary(
 ) -> Vec<String> {
     let mut blockers = Vec::new();
     if fallback_used != Some(false) {
-        blockers
-            .push("fallback_used is not false in the dense Qwen CPU corpus-v2 receipt".to_string());
+        blockers.push("fallback_used is not false in the dense Qwen corpus-v2 receipt".to_string());
     }
     if quality.failed > 0 {
         blockers.push(format!(
@@ -8095,6 +8186,22 @@ fn corpus_v2_recommended_actions(
     if classes.contains("generation_budget_or_truncation") {
         actions.push(
             "Check short-answer max_new_tokens budgets before treating truncated math output as model incapability."
+                .to_string(),
+        );
+    }
+    if classes.contains("exact_answer_overgenerated")
+        || classes.contains("exact_answer_instruction_not_followed")
+    {
+        actions.push(
+            "Tighten exact-answer prompts, max-token budgets, or stop/EOS handling before promoting affected routes."
+                .to_string(),
+        );
+    }
+    if classes.contains("case_sensitive_required_keyword_mismatch")
+        || classes.contains("required_terms_missing_or_case_mismatch")
+    {
+        actions.push(
+            "Review corpus case-sensitivity versus model output casing before interpreting required-keyword misses as true answer failures."
                 .to_string(),
         );
     }
@@ -10533,6 +10640,7 @@ mod tests {
         assert_eq!(receipt.quality_summary.failed, 1);
         assert_eq!(receipt.failed_cases.len(), 1);
         assert_eq!(receipt.failed_cases[0].answer_preview, "Yes, the sky on a clear day");
+        assert_eq!(receipt.failed_cases[0].classification, "exact_answer_overgenerated");
         assert_eq!(
             receipt.answer_corpus_v2_fixture.as_deref(),
             Some(path_string(&temp.path().join("corpus-v2.yaml")).as_str())
@@ -10567,6 +10675,53 @@ mod tests {
         assert!(!receipt.claim_boundary.arc_or_npu_execution_claim);
         assert!(!receipt.claim_boundary.bitnet_qk256_i2s_behavior_changed);
         Ok(())
+    }
+
+    #[test]
+    fn corpus_v2_failure_classifier_separates_exact_and_keyword_contracts() {
+        let empty = Vec::<String>::new();
+        assert_eq!(
+            classify_corpus_v2_failure(
+                "Yes, it is usually blue",
+                Some("starts_with_any"),
+                Some(true),
+                Some(false),
+                &["normalized_match_failed".to_string()],
+                &empty,
+                Some(8),
+                Some("yes"),
+                Some("yes, it is usually blue"),
+            ),
+            "exact_answer_overgenerated"
+        );
+        assert_eq!(
+            classify_corpus_v2_failure(
+                "Yes, Tom still has one apple",
+                Some("contains_any"),
+                Some(true),
+                Some(false),
+                &["required_keywords_missing".to_string()],
+                &["yes".to_string()],
+                Some(8),
+                None,
+                None,
+            ),
+            "case_sensitive_required_keyword_mismatch"
+        );
+        assert_eq!(
+            classify_corpus_v2_failure(
+                "Fallback route check",
+                Some("readable"),
+                Some(true),
+                Some(false),
+                &["required_keywords_missing".to_string()],
+                &["fallback".to_string(), "model".to_string()],
+                Some(16),
+                None,
+                None,
+            ),
+            "required_terms_missing_or_case_mismatch"
+        );
     }
 
     #[test]
@@ -11228,7 +11383,7 @@ mod tests {
         assert!(
             receipt.quality_summary.failure_classes.contains_key("generation_budget_or_truncation")
         );
-        assert!(receipt.quality_summary.failure_classes.contains_key("answer_content_failed"));
+        assert!(receipt.quality_summary.failure_classes.contains_key("exact_answer_overgenerated"));
         assert!(
             !receipt.quality_summary.failure_classes.contains_key("assistant_prefix_gate_mismatch")
         );

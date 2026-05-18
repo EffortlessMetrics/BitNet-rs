@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
   "proof_stage": "openvino_candidate_quality_diagnosis_no_promotion_change",
-  "created_utc": "2026-05-18T03:55:00Z",
+  "created_utc": "2026-05-18T05:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
@@ -36,8 +36,11 @@
       "yes_no"
     ],
     "failure_classes": {
-      "answer_content_failed": 2,
-      "answer_content_missing_required_terms": 3
+      "answer_content_missing_required_terms": 1,
+      "case_sensitive_required_keyword_mismatch": 1,
+      "exact_answer_instruction_not_followed": 1,
+      "exact_answer_overgenerated": 1,
+      "required_terms_missing_or_case_mismatch": 1
     }
   },
   "profile_diagnoses": [
@@ -146,8 +149,8 @@
       "prompt_tokens": 49,
       "run_receipt_path": null,
       "fallback_used": false,
-      "classification": "answer_content_failed",
-      "recommended_fix": "Keep this profile blocked until the case has a clean rerun or the corpus gate is intentionally revised."
+      "classification": "exact_answer_overgenerated",
+      "recommended_fix": "The answer began with the expected exact token but continued; tighten stop/max-token policy or the prompt before treating this as a model-quality failure."
     },
     {
       "id": "stop_token_one_word_done",
@@ -174,8 +177,8 @@
       "prompt_tokens": 36,
       "run_receipt_path": null,
       "fallback_used": false,
-      "classification": "answer_content_failed",
-      "recommended_fix": "Keep this profile blocked until the case has a clean rerun or the corpus gate is intentionally revised."
+      "classification": "exact_answer_instruction_not_followed",
+      "recommended_fix": "The route ignored a one-word exact-answer instruction; rerun with stricter generation/stop policy before profile promotion."
     },
     {
       "id": "long_prompt_summary_route_policy",
@@ -201,7 +204,7 @@
       "run_receipt_path": null,
       "fallback_used": false,
       "classification": "answer_content_missing_required_terms",
-      "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen CPU control route; adjust prompt/gate only if the expected answer contract is too narrow."
+      "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen route; adjust prompt/gate only if the expected answer contract is too narrow."
     },
     {
       "id": "short_reasoning_apples_left",
@@ -226,8 +229,8 @@
       "prompt_tokens": 51,
       "run_receipt_path": null,
       "fallback_used": false,
-      "classification": "answer_content_missing_required_terms",
-      "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen CPU control route; adjust prompt/gate only if the expected answer contract is too narrow."
+      "classification": "case_sensitive_required_keyword_mismatch",
+      "recommended_fix": "The output contains the required term only with different casing; review whether the corpus gate should normalize case before rerunning."
     },
     {
       "id": "decode_heavy_short_list",
@@ -253,8 +256,8 @@
       "prompt_tokens": 49,
       "run_receipt_path": null,
       "fallback_used": false,
-      "classification": "answer_content_missing_required_terms",
-      "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen CPU control route; adjust prompt/gate only if the expected answer contract is too narrow."
+      "classification": "required_terms_missing_or_case_mismatch",
+      "recommended_fix": "The output contains some required terms only by case-insensitive match and still misses others; keep the profile blocked and tune prompt/gate wording before promotion."
     }
   ],
   "case_alignment": {
@@ -275,8 +278,11 @@
   },
   "route_blocked": true,
   "blocker_summary": [
-    "2 failed case(s) classified as answer_content_failed",
-    "3 failed case(s) classified as answer_content_missing_required_terms",
+    "1 failed case(s) classified as answer_content_missing_required_terms",
+    "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+    "1 failed case(s) classified as exact_answer_instruction_not_followed",
+    "1 failed case(s) classified as exact_answer_overgenerated",
+    "1 failed case(s) classified as required_terms_missing_or_case_mismatch",
     "5 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, prefill_heavy, regression_tiny]",
     "generated token IDs are not directly available from OpenVINO GenAI pipeline internals"
   ],

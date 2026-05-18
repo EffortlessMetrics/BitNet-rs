@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-18T04:00:00Z",
+  "created_utc": "2026-05-18T05:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -249,8 +249,11 @@
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
-            "2 failed case(s) classified as answer_content_failed",
-            "3 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+            "1 failed case(s) classified as exact_answer_instruction_not_followed",
+            "1 failed case(s) classified as exact_answer_overgenerated",
+            "1 failed case(s) classified as required_terms_missing_or_case_mismatch",
             "5 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, prefill_heavy, regression_tiny]",
             "OpenVINO corpus-v2 diagnosis keeps route blocked",
             "OpenVINO diagnosis reports 5 corpus-v2 quality failures",
@@ -334,8 +337,10 @@
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "2 failed case(s) classified as answer_content_failed",
-            "2 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+            "1 failed case(s) classified as exact_answer_instruction_not_followed",
+            "1 failed case(s) classified as exact_answer_overgenerated",
             "4 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, prefill_heavy, regression_tiny]",
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
@@ -505,8 +510,11 @@
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
-            "2 failed case(s) classified as answer_content_failed",
-            "3 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+            "1 failed case(s) classified as exact_answer_instruction_not_followed",
+            "1 failed case(s) classified as exact_answer_overgenerated",
+            "1 failed case(s) classified as required_terms_missing_or_case_mismatch",
             "5 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, prefill_heavy, regression_tiny]",
             "OpenVINO corpus-v2 diagnosis keeps route blocked",
             "OpenVINO diagnosis reports 5 corpus-v2 quality failures",
@@ -590,8 +598,10 @@
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "2 failed case(s) classified as answer_content_failed",
-            "2 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+            "1 failed case(s) classified as exact_answer_instruction_not_followed",
+            "1 failed case(s) classified as exact_answer_overgenerated",
             "4 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, prefill_heavy, regression_tiny]",
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
@@ -764,8 +774,11 @@
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
-            "2 failed case(s) classified as answer_content_failed",
-            "3 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+            "1 failed case(s) classified as exact_answer_instruction_not_followed",
+            "1 failed case(s) classified as exact_answer_overgenerated",
+            "1 failed case(s) classified as required_terms_missing_or_case_mismatch",
             "5 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, prefill_heavy, regression_tiny]",
             "OpenVINO corpus-v2 diagnosis keeps route blocked",
             "OpenVINO diagnosis reports 5 corpus-v2 quality failures",
@@ -849,8 +862,10 @@
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "2 failed case(s) classified as answer_content_failed",
-            "2 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+            "1 failed case(s) classified as exact_answer_instruction_not_followed",
+            "1 failed case(s) classified as exact_answer_overgenerated",
             "4 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, prefill_heavy, regression_tiny]",
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
@@ -1023,8 +1038,11 @@
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
-            "2 failed case(s) classified as answer_content_failed",
-            "3 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+            "1 failed case(s) classified as exact_answer_instruction_not_followed",
+            "1 failed case(s) classified as exact_answer_overgenerated",
+            "1 failed case(s) classified as required_terms_missing_or_case_mismatch",
             "5 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, prefill_heavy, regression_tiny]",
             "OpenVINO corpus-v2 diagnosis keeps route blocked",
             "OpenVINO diagnosis reports 5 corpus-v2 quality failures",
@@ -1106,8 +1124,10 @@
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "2 failed case(s) classified as answer_content_failed",
-            "2 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+            "1 failed case(s) classified as exact_answer_instruction_not_followed",
+            "1 failed case(s) classified as exact_answer_overgenerated",
             "4 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, prefill_heavy, regression_tiny]",
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
@@ -1341,8 +1361,10 @@
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json"
           ],
           "blockers": [
-            "2 failed case(s) classified as answer_content_failed",
-            "2 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+            "1 failed case(s) classified as exact_answer_instruction_not_followed",
+            "1 failed case(s) classified as exact_answer_overgenerated",
             "4 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, prefill_heavy, regression_tiny]",
             "NPU cache or resident warm-route proof is missing",
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
@@ -1415,8 +1437,11 @@
             "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json"
           ],
           "blockers": [
-            "2 failed case(s) classified as answer_content_failed",
-            "3 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as answer_content_missing_required_terms",
+            "1 failed case(s) classified as case_sensitive_required_keyword_mismatch",
+            "1 failed case(s) classified as exact_answer_instruction_not_followed",
+            "1 failed case(s) classified as exact_answer_overgenerated",
+            "1 failed case(s) classified as required_terms_missing_or_case_mismatch",
             "5 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, prefill_heavy, regression_tiny]",
             "OpenVINO corpus-v2 diagnosis keeps route blocked",
             "OpenVINO diagnosis reports 5 corpus-v2 quality failures",
