@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T03:58:17Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-004"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5511
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-004-environment-preflight"
+head_sha = "4a154effc0d6a223cb5988538cdc40d11a08d734"
+summary = "Opened PR #5511 for Apple M4 benchmark environment preflight evidence."
+
+notes = [
+  "PR #5511 adds `bitnet mac benchmark-preflight` and an `apple_m4_benchmark_preflight` receipt validator for comparable dense SLM benchmark environments.",
+  "The preflight records git/build identity, macOS product/build version, M4 hardware probe, memory pressure, thermal pressure, power state, supported model cache state, disk headroom, model cache root, operator background-load notes, and invalid-comparison reasons.",
+  "The PR is preflight-only: it does not run live model inference, record benchmark timing, download models, claim speedups, claim broad performance or quality, provide BitNet evidence, enable BitNet chat or serve, or claim Metal, QK256, Neural Engine, MPSGraph, or MacBook evidence.",
+]
