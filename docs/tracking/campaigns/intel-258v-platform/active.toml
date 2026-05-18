@@ -7170,9 +7170,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-QUAL-008"
-status = "pr_open"
+status = "merged"
 pr = 5665
-head_sha = "88de79b836ad8b05e9e330f5ef8fd6085cb1c149"
+head_sha = "17da2d3d07fd89e9dc520bc5c69088325329a186"
+merge_sha = "5135018fdc308bc4d03bc771487242e2eb63e53a"
 branch = "codex/lunar-lake/LNL258V-QUAL-008-stop-token-fixture"
 stackable = false
 review_mode = "codex_premerge"
