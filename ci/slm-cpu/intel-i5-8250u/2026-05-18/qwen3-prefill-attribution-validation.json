@@ -1,0 +1,31 @@
+{
+  "artifact_kind": "slm_cpu_prefill_attribution_validation",
+  "work_item": "SLM-CPU-035",
+  "baseline": "ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache.json",
+  "after": "ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prefill-attribution.json",
+  "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+  "generated_outputs_match_baseline": true,
+  "decoded_text_matches_baseline": true,
+  "strict_provenance_preserved": true,
+  "tokenizer_source": "gguf_metadata",
+  "tokenizer_strict": true,
+  "selected_backend": "cpu-rust",
+  "fallback_used": false,
+  "prompt_count": 6,
+  "prefill_attribution": {
+    "prompt_prefill_breakdown_present": true,
+    "ranked_hotspots_include_prompt_prefill_embed": true,
+    "ranked_hotspots_include_prompt_prefill_forward": true,
+    "first_prompt_prefill_embed_alloc_bytes": 157108,
+    "first_prompt_prefill_forward_alloc_bytes": 554666438
+  },
+  "claim_boundary": {
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "q4_q5_runtime_support_claim": false,
+    "accelerator_claim": false,
+    "qwen35_claim": false,
+    "bitnet_qk256_claim": false
+  }
+}

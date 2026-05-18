@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T09:20:32Z"
+event = "in_progress"
+item = "SLM-CPU-035"
+branch = "codex/slm-cpu-035-prefill-attribution-artifact"
+actor = "codex"
+summary = "Started the Qwen3 Q8_0 Kaby prefill attribution artifact slice."
+
+notes = [
+  "This slice records the real i5-8250U warm-session artifact after SLM-CPU-034 added prompt_prefill embed/forward attribution.",
+  "The validation compares generated IDs and decoded text against the SLM-CPU-032/034 behavior oracle and preserves strict GGUF tokenizer provenance, selected CPU backend, model SHA, and fallback=false.",
+  "No sustained-throughput, runtime-speedup, broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
