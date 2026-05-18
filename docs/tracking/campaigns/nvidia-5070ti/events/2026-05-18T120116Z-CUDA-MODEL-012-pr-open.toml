@@ -19,4 +19,3 @@ notes = [
   "The conflict was limited to generated tracker dashboard output after concurrent campaign PRs landed.",
   "The resolved dashboard includes the Apple M4 active PR from main and the CUDA-MODEL-012 active PR.",
 ]
-

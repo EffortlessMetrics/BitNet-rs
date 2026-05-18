@@ -21,4 +21,3 @@ notes = [
   "Qwen3 is product CLI-ready only for bounded ask/chat user paths on the RTX 5070 Ti dense_regular_llm_cuda route.",
   "Server readiness, speedup, benchmark-qualified speed, full CUDA residency, broad dense GGUF readiness, Qwen2.5 inheritance, and BitNet packed I2_S/QK256 proof remain false/non-claims.",
 ]
-

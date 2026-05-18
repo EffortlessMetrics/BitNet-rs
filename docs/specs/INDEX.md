@@ -1,5 +1,27 @@
 # Specs Index
 
+## NPU productization
+
+Use these artifacts before implementing or claiming NPU product support:
+
+1. [BitNet-rs NPU Source of Truth](../npu/README.md)
+   - Maps current Intel NPU evidence, not-claims, future NPU families, and
+     source-of-truth artifacts.
+2. [Intel Lunar Lake NPU Roadmap](intel-lunar-lake-npu-roadmap.md)
+   - Defines the current Intel AI Boost NPU through OpenVINO validation lane,
+     proof levels, OpenVINO constraints, and static-shape claim boundary.
+3. [NPU Productization Plan](../../plans/npu/implementation-plan.md)
+   - Defines the PR-by-PR sequence from governance cleanup to dense-SLM
+     warm/resident route promotion and future NPU research lanes.
+4. [OpenVINO Route Contract](BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md)
+   - Defines existing OpenVINO dense-SLM route labels and fallback rules that
+     future NPU contracts must preserve.
+
+Do not proceed from NPU detection, OpenVINO visibility, static graph smoke, or
+static BitNet-shaped subgraph parity to full inference, QK256 decode, speedup,
+full residency, or generic NPU claims. CPU fallback, OpenVINO GPU, and Arc 140V
+OpenCL evidence do not count as selected NPU proof.
+
 
 ## AMD ROCm Productization
 
