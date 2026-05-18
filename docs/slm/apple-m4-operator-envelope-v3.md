@@ -52,6 +52,9 @@ The model-free refresh sequence is:
 ```bash
 bitnet mac models
 bitnet mac status
+bitnet mac evidence \
+  --json-out target/apple-m4-inference-excellence/evidence-summary.json \
+  --json
 bitnet mac report-refresh \
   --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json \
   --json
@@ -60,6 +63,7 @@ bitnet mac regression-dashboard \
   --markdown-out target/apple-m4-inference-excellence/regression-dashboard.md \
   --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/regression-dashboard.json --json
+bitnet mac receipts-check target/apple-m4-inference-excellence/evidence-summary.json --json
 ```
 
 The live refresh sequence belongs only in advisory, scheduled, or release lanes:

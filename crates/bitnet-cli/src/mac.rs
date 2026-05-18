@@ -27,6 +27,7 @@ const MAC_CHAT_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-chat.json
 const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.json";
 const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doctor.json";
 const MAC_STATUS_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-ops/mac-status.json";
+const MAC_EVIDENCE_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-ops/evidence-summary.json";
 const MAC_REPORT_REFRESH_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-ops/report-refresh-manifest.json";
 const MAC_REGRESSION_DASHBOARD_DEFAULT_RECEIPT: &str =
@@ -283,6 +284,25 @@ enum MacAction {
         /// Output strict Mac status receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_STATUS_DEFAULT_RECEIPT)]
         json_out: PathBuf,
+    },
+
+    /// Summarize committed M4 evidence, cache/disk state, regressions, and next command.
+    Evidence {
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// Committed Apple M4 report root to inventory.
+        #[arg(long, value_name = "PATH", default_value = APPLE_M4_REPORT_ROOT)]
+        root: PathBuf,
+
+        /// Output strict evidence summary receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_EVIDENCE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Emit JSON to stdout after writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
     },
 
     /// Generate a model-free advisory/nightly Apple M4 report refresh manifest.
@@ -1025,6 +1045,10 @@ impl MacCommand {
                 ensure_supported_mac_device(explicit_device_label, "mac status")?;
                 run_status(cache_dir, json_out, json)
             }
+            MacAction::Evidence { cache_dir, root, json_out, json } => {
+                ensure_supported_mac_device(explicit_device_label, "mac evidence")?;
+                run_evidence(cache_dir, root, json_out, json)
+            }
             MacAction::ReportRefresh { root, json_out, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac report-refresh")?;
                 run_report_refresh_manifest(root, json_out, json)
@@ -1637,6 +1661,304 @@ fn print_mac_status_summary(receipt: &serde_json::Value, json_out: &Path) {
     println!("Receipt: {}", json_out.display());
     println!(
         "Claim boundary: status only; no live model run, no BitNet chat/serve, no full Metal/QK256/Neural Engine/MPSGraph/MacBook/broad performance claim."
+    );
+}
+
+fn run_evidence(
+    cache_dir: Option<PathBuf>,
+    root: PathBuf,
+    json_out: PathBuf,
+    json: bool,
+) -> Result<()> {
+    let catalog = model_cache::apple_m4_models_catalog_json(cache_dir.clone())
+        .context("failed to build Apple M4 model catalog for mac evidence")?;
+    let bitnet = bitnet_mac_ask_readiness_json(cache_dir);
+    let receipt = apple_m4_operator_evidence_receipt(&root, &json_out, catalog, bitnet);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_mac_evidence_summary(&receipt, &json_out);
+    }
+    Ok(())
+}
+
+fn apple_m4_operator_evidence_receipt(
+    root: &Path,
+    json_out: &Path,
+    catalog: serde_json::Value,
+    bitnet: serde_json::Value,
+) -> serde_json::Value {
+    let rows = catalog["rows"].as_array().cloned().unwrap_or_default();
+    let dense_rows = rows
+        .iter()
+        .filter(|row| matches!(row["state"].as_str(), Some("default" | "supported")))
+        .cloned()
+        .collect::<Vec<_>>();
+    let dense_ready =
+        dense_rows.iter().filter(|row| row["cache_state"].as_str() == Some("ready")).count();
+    let supported_dense_model_ids = dense_rows
+        .iter()
+        .filter_map(|row| row["id"].as_str().map(ToOwned::to_owned))
+        .collect::<Vec<_>>();
+    let default_model_id = catalog["default_model_id"]
+        .as_str()
+        .unwrap_or(model_cache::M4_SLM_RUNTIME_MODEL_ID)
+        .to_string();
+    let default_row = rows
+        .iter()
+        .find(|row| row["id"].as_str() == Some(default_model_id.as_str()))
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
+    let default_cache_state = default_row["cache_state"].as_str().unwrap_or("unknown").to_string();
+    let default_cache_ready = default_cache_state == "ready";
+    let report_manifest = apple_m4_report_refresh_manifest_receipt(
+        root,
+        Path::new(MAC_REPORT_REFRESH_DEFAULT_RECEIPT),
+    );
+    let regression_dashboard = apple_m4_regression_dashboard_receipt(
+        root,
+        Path::new(MAC_REGRESSION_DASHBOARD_DEFAULT_RECEIPT),
+        Path::new(MAC_REGRESSION_DASHBOARD_DEFAULT_MARKDOWN),
+    );
+    let report_count = report_manifest["report_count"].as_u64().unwrap_or_default();
+    let low_disk = catalog["disk"]["low_disk"].as_bool().unwrap_or(false);
+    let recommended_next_command = if low_disk {
+        "bitnet model prune --dry-run".to_string()
+    } else if !default_cache_ready {
+        format!("bitnet model fetch {default_model_id}")
+    } else if report_count == 0 {
+        "bitnet mac report-refresh".to_string()
+    } else {
+        "bitnet mac regression-dashboard".to_string()
+    };
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_operator_evidence_summary",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac evidence",
+        "status": "ok",
+        "receipt_path": json_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "operator evidence summary from committed receipts and local cache state",
+        },
+        "evidence_contract": {
+            "committed_reports_only": true,
+            "local_cache_inventory_only": true,
+            "no_live_model_run": true,
+            "no_model_download": true,
+            "dense_slm_and_bitnet_evidence_separated": true,
+        },
+        "default_model": {
+            "id": default_model_id,
+            "cache_state": default_cache_state,
+            "cache_ready": default_cache_ready,
+            "row": default_row,
+        },
+        "supported_models": {
+            "dense_slm_model_ids": supported_dense_model_ids,
+            "dense_slm_supported_count": dense_rows.len(),
+            "dense_slm_ready_count": dense_ready,
+            "bitnet_model_id": BITNET_M4_MODEL_ID,
+            "bitnet_state": "supported-ask",
+            "bitnet_ask_enabled": true,
+            "bitnet_warm_enabled": true,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+        },
+        "cache": {
+            "root": catalog["cache_root"].clone(),
+            "rows": rows,
+            "claim_boundary": catalog["claim_boundary"].clone(),
+        },
+        "disk": {
+            "available": catalog["disk"]["available"].clone(),
+            "available_bytes": catalog["disk"]["available_bytes"].clone(),
+            "low_disk": catalog["disk"]["low_disk"].clone(),
+            "recommendation": catalog["disk"]["recommendation"].clone(),
+            "guidance": catalog["disk"]["guidance"].clone(),
+            "recommended_first_model_id": catalog["disk"]["recommended_first_model_id"].clone(),
+        },
+        "reports": apple_m4_operator_evidence_reports(root, &report_manifest),
+        "current_regressions": apple_m4_operator_regression_summary(&regression_dashboard),
+        "unsupported_claims": {
+            "bitnet_chat": false,
+            "bitnet_serve": false,
+            "full_metal_inference": false,
+            "qk256": false,
+            "neural_engine": false,
+            "mpsgraph": false,
+            "macbook_runtime": false,
+            "broad_apple_silicon_performance": false,
+            "broad_model_quality": false,
+            "broad_performance": false,
+            "speedup": false,
+        },
+        "bitnet_readiness": bitnet,
+        "recommended_next_command": recommended_next_command,
+        "commands": {
+            "models": "bitnet mac models",
+            "status": "bitnet mac status",
+            "evidence": "bitnet mac evidence",
+            "report_refresh": "bitnet mac report-refresh",
+            "regression_dashboard": "bitnet mac regression-dashboard",
+            "doctor": "bitnet mac doctor",
+            "dense_smoke": "bitnet mac smoke",
+            "bitnet_smoke": "bitnet mac smoke --model-family bitnet",
+            "default_ask": "bitnet mac ask \"What is 2+2?\"",
+            "bitnet_ask": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \"Answer with a single digit: 2+2=\"",
+            "regression": "bitnet mac regression <current.json> --baseline <baseline.json>",
+        },
+        "claim_boundary": {
+            "evidence_summary_only": true,
+            "no_live_model_run": true,
+            "no_model_download": true,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_operator_evidence_reports(
+    root: &Path,
+    report_manifest: &serde_json::Value,
+) -> serde_json::Value {
+    serde_json::json!({
+        "root": root,
+        "report_count": report_manifest["report_count"].clone(),
+        "family_count": report_manifest["family_count"].clone(),
+        "last_dense_report": latest_matching_report(root, "slm-eval-v2", "summary.json"),
+        "last_dense_benchmark": latest_matching_report(root, "slm-benchmark-v2", "summary.json"),
+        "last_bitnet_report": latest_of_matching_reports(root, &[
+            ("bitnet-eval-250", "larger-corpus-decision.json"),
+            ("bitnet-eval-250", "answer-corpus.json"),
+            ("bitnet-eval", "answer-corpus.json"),
+        ]),
+        "last_bitnet_benchmark": latest_matching_report(root, "bitnet-benchmark", "summary.json"),
+        "last_bitnet_variable_warm": latest_of_matching_reports(root, &[
+            ("bitnet-warm", "variable-warm-session.json"),
+            ("bitnet-productization", "variable-warm-session.json"),
+        ]),
+        "families": report_manifest["families"].clone(),
+    })
+}
+
+fn latest_of_matching_reports(root: &Path, queries: &[(&str, &str)]) -> Option<String> {
+    let mut matches = Vec::new();
+    for (segment, filename) in queries {
+        matches.extend(matching_reports(root, segment, filename));
+    }
+    matches.sort();
+    matches.pop().map(|path| path.to_string_lossy().to_string())
+}
+
+fn apple_m4_operator_regression_summary(dashboard: &serde_json::Value) -> serde_json::Value {
+    let mut insufficient_history = 0_u64;
+    let mut ready = 0_u64;
+    let mut groups_out = Vec::new();
+    if let Some(families) = dashboard["families"].as_array() {
+        for family in families {
+            if let Some(groups) = family["groups"].as_array() {
+                for group in groups {
+                    match group["comparison_status"].as_str() {
+                        Some("ready") => ready = ready.saturating_add(1),
+                        Some("insufficient_history") => {
+                            insufficient_history = insufficient_history.saturating_add(1)
+                        }
+                        _ => {}
+                    }
+                    groups_out.push(serde_json::json!({
+                        "family": family["id"].clone(),
+                        "evidence_family": group["evidence_family"].clone(),
+                        "model_id": group["model_id"].clone(),
+                        "report_count": group["report_count"].clone(),
+                        "comparison_status": group["comparison_status"].clone(),
+                        "latest_report": group["latest_report"].clone(),
+                        "baseline_report": group["baseline_report"].clone(),
+                        "regression_command": group["regression_command"].clone(),
+                    }));
+                }
+            }
+        }
+    }
+    serde_json::json!({
+        "dashboard_status": dashboard["status"].clone(),
+        "report_count": dashboard["report_count"].clone(),
+        "family_count": dashboard["family_count"].clone(),
+        "group_count": dashboard["group_count"].clone(),
+        "comparable_group_count": dashboard["comparable_group_count"].clone(),
+        "ready_group_count": ready,
+        "insufficient_history_group_count": insufficient_history,
+        "groups": groups_out,
+        "claim_boundary": {
+            "dashboard_only": true,
+            "no_live_model_run": true,
+            "dense_slm_and_bitnet_evidence_separated": true,
+        },
+    })
+}
+
+fn print_mac_evidence_summary(receipt: &serde_json::Value, json_out: &Path) {
+    println!("Apple M4 evidence summary: {}", receipt["status"].as_str().unwrap_or("unknown"));
+    println!(
+        "Default model: {} ({})",
+        receipt["default_model"]["id"].as_str().unwrap_or("<unknown>"),
+        receipt["default_model"]["cache_state"].as_str().unwrap_or("unknown")
+    );
+    println!(
+        "Supported dense models: ready={}/{}",
+        receipt["supported_models"]["dense_slm_ready_count"].as_u64().unwrap_or(0),
+        receipt["supported_models"]["dense_slm_supported_count"].as_u64().unwrap_or(0)
+    );
+    println!(
+        "Disk: available={}, low_disk={}, recommendation={}",
+        receipt["disk"]["available"].as_str().unwrap_or("unknown"),
+        receipt["disk"]["low_disk"]
+            .as_bool()
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "unknown".to_string()),
+        receipt["disk"]["recommendation"].as_str().unwrap_or("unknown")
+    );
+    println!(
+        "Last dense report: {}",
+        receipt["reports"]["last_dense_report"].as_str().unwrap_or("<missing>")
+    );
+    println!(
+        "Last BitNet report: {}",
+        receipt["reports"]["last_bitnet_report"].as_str().unwrap_or("<missing>")
+    );
+    println!(
+        "Regressions: groups={}, comparable={}, insufficient_history={}",
+        receipt["current_regressions"]["group_count"].as_u64().unwrap_or(0),
+        receipt["current_regressions"]["comparable_group_count"].as_u64().unwrap_or(0),
+        receipt["current_regressions"]["insufficient_history_group_count"].as_u64().unwrap_or(0)
+    );
+    println!(
+        "Unsupported: BitNet chat=false, BitNet serve=false, full Metal=false, QK256=false, Neural Engine=false, MPSGraph=false, MacBook=false"
+    );
+    println!(
+        "Next: {}",
+        receipt["recommended_next_command"].as_str().unwrap_or("bitnet mac regression-dashboard")
+    );
+    println!("Receipt: {}", json_out.display());
+    println!(
+        "Claim boundary: evidence summary only; no live model run, no model download, dense SLM and BitNet evidence stay separate."
     );
 }
 
@@ -12883,6 +13205,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_local_server_check_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_inference_status" {
         validate_apple_m4_inference_status_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_operator_evidence_summary" {
+        validate_apple_m4_operator_evidence_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_report_refresh_manifest" {
         validate_apple_m4_report_refresh_manifest_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_regression_dashboard" {
@@ -13836,6 +14160,128 @@ fn validate_apple_m4_inference_status_receipt(
         require_non_empty_string_at(path, receipt, &["commands", field])?;
     }
     require_non_empty_string_at(path, receipt, &["report_inventory", "root"])?;
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_operator_evidence_summary_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "apple_m4_operator_evidence_summary",
+    )?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac evidence")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_bool_at(path, receipt, &["evidence_contract", "committed_reports_only"], true)?;
+    require_bool_at(path, receipt, &["evidence_contract", "local_cache_inventory_only"], true)?;
+    require_bool_at(path, receipt, &["evidence_contract", "no_live_model_run"], true)?;
+    require_bool_at(path, receipt, &["evidence_contract", "no_model_download"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["evidence_contract", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+
+    require_non_empty_string_at(path, receipt, &["default_model", "id"])?;
+    require_non_empty_string_at(path, receipt, &["default_model", "cache_state"])?;
+    if json_value_at(receipt, &["default_model", "cache_ready"]).as_bool().is_none() {
+        anyhow::bail!("{} evidence summary must record default_model.cache_ready", path.display());
+    }
+    require_u64_at(path, receipt, &["supported_models", "dense_slm_supported_count"], true)?;
+    require_u64_at(path, receipt, &["supported_models", "dense_slm_ready_count"], false)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["supported_models", "bitnet_model_id"],
+        BITNET_M4_MODEL_ID,
+    )?;
+    require_exact_string_at(path, receipt, &["supported_models", "bitnet_state"], "supported-ask")?;
+    require_bool_at(path, receipt, &["supported_models", "bitnet_ask_enabled"], true)?;
+    require_bool_at(path, receipt, &["supported_models", "bitnet_warm_enabled"], true)?;
+    require_bool_at(path, receipt, &["supported_models", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["supported_models", "bitnet_serve_enabled"], false)?;
+
+    require_non_empty_string_at(path, receipt, &["cache", "root"])?;
+    if receipt["cache"]["rows"].as_array().is_none_or(|rows| rows.is_empty()) {
+        anyhow::bail!("{} evidence summary must include cache rows", path.display());
+    }
+    require_non_empty_string_at(path, receipt, &["disk", "recommendation"])?;
+    require_non_empty_string_at(path, receipt, &["disk", "guidance"])?;
+
+    require_non_empty_string_at(path, receipt, &["reports", "root"])?;
+    require_u64_at(path, receipt, &["reports", "report_count"], true)?;
+    require_u64_at(path, receipt, &["reports", "family_count"], true)?;
+    require_non_empty_string_at(path, receipt, &["reports", "last_dense_report"])?;
+    require_non_empty_string_at(path, receipt, &["reports", "last_bitnet_report"])?;
+
+    require_u64_at(path, receipt, &["current_regressions", "group_count"], false)?;
+    require_u64_at(path, receipt, &["current_regressions", "comparable_group_count"], false)?;
+    require_u64_at(
+        path,
+        receipt,
+        &["current_regressions", "insufficient_history_group_count"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["current_regressions", "claim_boundary", "dashboard_only"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["current_regressions", "claim_boundary", "no_live_model_run"],
+        true,
+    )?;
+
+    for claim in [
+        "bitnet_chat",
+        "bitnet_serve",
+        "full_metal_inference",
+        "qk256",
+        "neural_engine",
+        "mpsgraph",
+        "macbook_runtime",
+        "broad_apple_silicon_performance",
+        "broad_model_quality",
+        "broad_performance",
+        "speedup",
+    ] {
+        require_bool_at(path, receipt, &["unsupported_claims", claim], false)?;
+    }
+    require_non_empty_string_at(path, receipt, &["recommended_next_command"])?;
+    for field in
+        ["models", "status", "evidence", "report_refresh", "regression_dashboard", "doctor"]
+    {
+        require_non_empty_string_at(path, receipt, &["commands", field])?;
+    }
+
+    require_bool_at(path, receipt, &["claim_boundary", "evidence_summary_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
     Ok((Some(0), Some(0)))
 }
 

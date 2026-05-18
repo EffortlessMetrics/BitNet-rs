@@ -728,6 +728,72 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
 }
 
 #[test]
+fn mac_evidence_writes_operator_summary() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
+    let receipt = dir.path().join("evidence-summary.json");
+    let cache_str = cache.to_string_lossy().into_owned();
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "evidence",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--root",
+            report_root_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Apple M4 evidence summary"))
+        .stdout(predicate::str::contains("Last dense report:"))
+        .stdout(predicate::str::contains("Last BitNet report:"))
+        .stdout(predicate::str::contains("Regressions:"))
+        .stdout(predicate::str::contains("no live model run"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_operator_evidence_summary");
+    assert_eq!(receipt_json["operator_command"], "mac evidence");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["evidence_contract"]["committed_reports_only"], true);
+    assert_eq!(receipt_json["evidence_contract"]["no_live_model_run"], true);
+    assert_eq!(receipt_json["default_model"]["id"], "qwen2.5-0.5b-instruct-q8_0");
+    assert_eq!(receipt_json["supported_models"]["dense_slm_supported_count"], 3);
+    assert_eq!(receipt_json["supported_models"]["bitnet_state"], "supported-ask");
+    assert_eq!(receipt_json["supported_models"]["bitnet_chat_enabled"], false);
+    assert_eq!(receipt_json["supported_models"]["bitnet_serve_enabled"], false);
+    assert!(
+        receipt_json["reports"]["last_dense_report"]
+            .as_str()
+            .is_some_and(|path| { path.contains("slm-eval-v2") && path.ends_with("summary.json") })
+    );
+    assert!(receipt_json["reports"]["last_bitnet_report"].as_str().is_some_and(|path| {
+        path.contains("bitnet-eval-250") && path.ends_with("larger-corpus-decision.json")
+    }));
+    assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
+    assert_eq!(receipt_json["unsupported_claims"]["full_metal_inference"], false);
+    assert_eq!(receipt_json["unsupported_claims"]["qk256"], false);
+    assert!(
+        receipt_json["recommended_next_command"]
+            .as_str()
+            .is_some_and(|command| command.starts_with("bitnet "))
+    );
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_operator_evidence_summary"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
 fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");

@@ -806,9 +806,12 @@ recommended next command
 route envelope class
 ```
 
-`bitnet mac status`, `doctor`, `report-refresh`, and
-`regression-dashboard` remain model-free by default. Live model runs belong in
-local, advisory, scheduled, or release lanes.
+`bitnet mac evidence` is the operator-facing summary for that view. It reads
+the model catalog, disk/cache state, committed report inventory, and regression
+dashboard groups, then writes an `apple_m4_operator_evidence_summary` receipt
+without running live inference or downloading models. `bitnet mac status`,
+`doctor`, `report-refresh`, and `regression-dashboard` remain model-free by
+default. Live model runs belong in local, advisory, scheduled, or release lanes.
 
 Envelope classes should translate evidence into local user expectations:
 
