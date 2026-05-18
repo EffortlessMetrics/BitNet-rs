@@ -568,7 +568,7 @@
 | slm-cpu | SLM-CPU-038 | SLM-CPU-037 | merged |
 | slm-cpu | SLM-CPU-039 | SLM-CPU-038 | merged |
 | slm-cpu | SLM-CPU-040 | SLM-CPU-039 | merged |
-| slm-cpu | SLM-CPU-041 | SLM-CPU-040 | ready |
+| slm-cpu | SLM-CPU-041 | SLM-CPU-040 | pr_open |
 | slm-cpu | SLM-CPU-024 | SLM-CPU-023 | merged |
 | slm-cpu | SLM-CPU-025 | SLM-CPU-024 | merged |
 | slm-cpu | SLM-CPU-026 | SLM-CPU-025 | merged |
