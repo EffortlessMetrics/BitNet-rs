@@ -420,8 +420,7 @@ impl FeedForward {
         workspace.record_feed_forward_input(x);
         let output = self.forward(x, raw_tensors)?;
         workspace.record_feed_forward_output(&output);
-        workspace.store_feed_forward_output(output);
-        Ok(workspace.take_feed_forward_output())
+        workspace.store_feed_forward_output(output)
     }
 
     fn apply_activation(&self, input: &Tensor) -> Result<Tensor> {
@@ -591,7 +590,7 @@ impl TransformerForwardWorkspace {
         self.last_output_shape = tensor.dims().to_vec();
     }
 
-    fn store_feed_forward_output(&mut self, tensor: Tensor) {
+    fn store_feed_forward_output(&mut self, tensor: Tensor) -> Result<Tensor> {
         let last_shape = tensor.dims().to_vec();
         self.last_output_shape = last_shape.clone();
         self.feed_forward_output_surface = Some(TransformerWorkspaceOutputSurface {
@@ -604,12 +603,13 @@ impl TransformerForwardWorkspace {
         });
         self.workspace_owned_output_count += 1;
         self.feed_forward_output_slot = Some(tensor);
-    }
-
-    fn take_feed_forward_output(&mut self) -> Tensor {
-        self.feed_forward_output_slot.take().expect(
-            "TransformerForwardWorkspace feed-forward output slot must be populated before take",
-        )
+        if let Some(output) = self.feed_forward_output_slot.take() {
+            Ok(output)
+        } else {
+            Err(BitNetError::Validation(
+                "TransformerForwardWorkspace feed-forward output slot was empty".to_string(),
+            ))
+        }
     }
 }
 
