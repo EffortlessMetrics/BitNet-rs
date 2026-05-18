@@ -801,3 +801,39 @@ must_not_claim = [
   "GPU, NPU, or server inference is involved.",
   "A speedup or throughput claim is proven.",
 ]
+
+[[work_item]]
+id = "CPU-AVX2-HOTPATH-001"
+status = "ready"
+branch = "codex/cpu-avx2-hotpath-001-docs"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "Document CPU AVX2 BitNet hot-path source-of-truth rails: target end state, strict fallback rules, required receipt fields, scalar parity gate, scaled I2_S x I8_S hot-path requirement, performance promotion requirements, forbidden claims, and the follow-on implementation sequence."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "git diff --check",
+]
+allowed_paths = [
+  "plans/cpu-avx2-bitnet/**",
+  "docs/specs/BITNET-SPEC-CPU-AVX2-HOTPATH.md",
+  "docs/bitnet/BITNET_CPU_AVX2_STATUS.md",
+  "docs/tracking/campaigns/cpu-proof/active.toml",
+]
+forbidden_paths = [
+  "crates/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The CPU AVX2 BitNet hot-path implementation plan, spec, status boundary, and tracker entry exist after merge.",
+]
+must_not_claim = [
+  "Scaled I2_S x I8_S AVX2 execution is implemented.",
+  "Strict AVX2 inference selected the scaled I2_S x I8_S AVX2 path.",
+  "CPU AVX2 speedup or throughput is proven.",
+  "Server, GPU, NPU, OpenVINO, dense SLM, Qwen, TL1/TL2, or broad chat quality is proven.",
+]
