@@ -1002,8 +1002,19 @@ pub struct LunarLakeRouteProfileComparison {
     pub profiles: Vec<WorkloadProfileEvaluation>,
     #[serde(default)]
     pub timing_coverage: TimingApplicabilityCoverageSummary,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub promotion_blocker_summary: Vec<PromotionBlockerSummary>,
     pub gaps: Vec<String>,
     pub claim_boundary: ClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct PromotionBlockerSummary {
+    pub blocker: String,
+    pub occurrence_count: u64,
+    pub route_ids: Vec<String>,
+    pub profile_ids: Vec<String>,
+    pub next_action: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -3666,6 +3677,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
     }
 
     let profile_comparison_ready = gaps.is_empty();
+    let promotion_blocker_summary = promotion_blocker_summary(&profiles);
     Ok(LunarLakeRouteProfileComparison {
         schema_version: "1.0.0".to_string(),
         artifact_kind: "lunar_lake_route_profile_comparison".to_string(),
@@ -3686,6 +3698,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
         default_route_id: ledger.default_route_id,
         profiles,
         timing_coverage,
+        promotion_blocker_summary,
         gaps,
         claim_boundary: ledger.claim_boundary,
     })
@@ -9217,6 +9230,75 @@ fn profile_regression_bundle_evidence_satisfied(
     })
 }
 
+fn promotion_blocker_summary(
+    profiles: &[WorkloadProfileEvaluation],
+) -> Vec<PromotionBlockerSummary> {
+    let mut grouped: BTreeMap<String, (BTreeSet<String>, BTreeSet<String>, u64)> = BTreeMap::new();
+    for profile in profiles {
+        for route in &profile.route_evidence {
+            if route.route_status != "candidate" {
+                continue;
+            }
+            for blocker in &route.blockers {
+                let (route_ids, profile_ids, occurrence_count) =
+                    grouped.entry(blocker.clone()).or_default();
+                route_ids.insert(route.route_id.clone());
+                profile_ids.insert(profile.profile_id.clone());
+                *occurrence_count += 1;
+            }
+        }
+    }
+
+    grouped
+        .into_iter()
+        .map(|(blocker, (route_ids, profile_ids, occurrence_count))| PromotionBlockerSummary {
+            next_action: promotion_blocker_next_action(&blocker),
+            blocker,
+            occurrence_count,
+            route_ids: route_ids.into_iter().collect(),
+            profile_ids: profile_ids.into_iter().collect(),
+        })
+        .collect()
+}
+
+fn promotion_blocker_next_action(blocker: &str) -> String {
+    if blocker.contains("benchmark_qualified_speedup_or_power_advantage")
+        || blocker.contains("benchmark-qualified")
+    {
+        "produce benchmark-qualified latency, throughput, power, or stability advantage evidence before promotion"
+            .to_string()
+    } else if blocker.contains("generated token IDs")
+        || blocker.contains("retokenized")
+        || blocker.contains("direct pipeline internals")
+    {
+        "add direct OpenVINO generated-token visibility, or keep the route blocked with re-tokenized output identity"
+            .to_string()
+    } else if blocker.contains("NPU cold start") || blocker.contains("resident") {
+        "run NPU cache/resident warm-route proof and keep cold one-off routing blocked until classified"
+            .to_string()
+    } else if blocker.contains("power advantage") || blocker.contains("low_power") {
+        "collect profile-specific low-power telemetry and compare against the promoted CPU baseline"
+            .to_string()
+    } else if blocker.contains("profile_regression_bundle")
+        || blocker.contains("corpus_v2 profile quality evidence missing")
+    {
+        "run corpus-v2 profile evidence for this route/profile before evaluating promotion"
+            .to_string()
+    } else if blocker.contains("timing evidence is not profile-specific")
+        || blocker.contains("timing coverage has missing profile fields")
+    {
+        "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
+            .to_string()
+    } else if blocker.contains("route not promoted")
+        || blocker.contains("candidate route requires benchmark-qualified profile evidence")
+    {
+        "keep route candidate-only until all profile-specific promotion evidence clears".to_string()
+    } else {
+        "classify and clear this blocker in the relevant route-quality or route-performance lane"
+            .to_string()
+    }
+}
+
 fn attach_route_advantage_context(
     profile: &WorkloadProfile,
     route_evidence: &mut [ProfileRouteEvidence],
@@ -11278,6 +11360,25 @@ mod tests {
             ),
             "{:?}",
             npu_route.blockers
+        );
+        assert!(
+            profiles.promotion_blocker_summary.iter().any(|summary| {
+                summary.blocker.contains("generated token IDs")
+                    && summary.route_ids.contains(&"dense_slm_openvino_gpu_candidate".to_string())
+                    && summary.route_ids.contains(&"dense_slm_openvino_npu_candidate".to_string())
+                    && summary.next_action.contains("direct OpenVINO generated-token visibility")
+            }),
+            "{:?}",
+            profiles.promotion_blocker_summary
+        );
+        assert!(
+            profiles.promotion_blocker_summary.iter().any(|summary| {
+                summary.blocker == "benchmark_qualified_speedup_or_power_advantage"
+                    && summary.profile_ids.contains(&"ask_short".to_string())
+                    && summary.next_action.contains("benchmark-qualified latency")
+            }),
+            "{:?}",
+            profiles.promotion_blocker_summary
         );
         let Some(regression_tiny) =
             profiles.profiles.iter().find(|profile| profile.profile_id == "regression_tiny")
