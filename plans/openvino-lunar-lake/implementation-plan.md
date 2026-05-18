@@ -335,9 +335,36 @@ Acceptance additions:
 - Claim boundaries preserve no inference, route promotion, speedup, power,
   accelerator, or BitNet QK256/I2_S claims.
 
+### Work item: LNL258V-OPENVINO-QUAL-FIX-001
+
+Status: in_progress
+Blocked by: `LNL258V-OPENVINO-QUAL-POLICY-001`
+
+Apply the accepted exact-answer policy to the corpus-v2 fixture by tightening
+only the `yes_no_clear_sky` generation budget from the overgeneration-sensitive
+fixture value to the tested passing one-token budget. Leave
+`stop_token_one_word_done` unchanged because committed sensitivity evidence
+classifies it as a true exact-answer instruction miss for the tested budgets.
+
+Production delta: fixture and tracker wiring only. Validate with
+`answer-corpus --dry-run`; do not run model inference, refresh committed route
+receipts, promote routes, or claim OpenVINO quality, speedup, power advantage,
+native OpenCL/NPU execution, accelerator proof, or BitNet QK256/I2_S behavior.
+
+Acceptance additions:
+
+- The canonical corpus-v2 fixture uses `max_new_tokens=1` for
+  `yes_no_clear_sky`.
+- The `stop_token_one_word_done` case remains a blocking exact-answer
+  instruction miss until prompt, template, generation policy, or model behavior
+  is corrected and rerun.
+- Corpus shape dry-run validation passes without loading a model.
+- Route promotion remains blocked until CPU/OpenVINO corpus-v2 receipts are
+  rerun under the updated fixture and exact-profile timing/power gates are met.
+
 ### Remaining Phase C Items
 
-1. Rerun corpus-v2 only after fixture/generation policy fixes or documentation.
+1. Rerun corpus-v2 after the exact-answer fixture-policy update.
 
 No route can promote until profile cases pass or an explicit spec marks a case
 diagnostic-only.
