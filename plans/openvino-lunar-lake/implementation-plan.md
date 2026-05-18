@@ -4,7 +4,7 @@ Status: active
 Owner: intel/openvino
 Created: 2026-05-18
 Linked proposal: [BITNET-PROP-0004](../../docs/proposals/BITNET-PROP-0004-openvino-lunar-lake-productization.md)
-Linked specs: [BITNET-SPEC-OPENVINO-ROUTE-CONTRACT](../../docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md), [BITNET-SPEC-OPENVINO-DENSE-SLM](../../docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md), [BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE](../../docs/specs/BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE.md), [BITNET-SPEC-OPENVINO-QUALITY-CORPUS](../../docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md), [BITNET-SPEC-OPENVINO-PHASE-TIMING](../../docs/specs/BITNET-SPEC-OPENVINO-PHASE-TIMING.md), [BITNET-SPEC-OPENVINO-ROUTE-PROMOTION](../../docs/specs/BITNET-SPEC-OPENVINO-ROUTE-PROMOTION.md), [BITNET-SPEC-OPENVINO-BITNET-BOUNDARY](../../docs/specs/BITNET-SPEC-OPENVINO-BITNET-BOUNDARY.md)
+Linked specs: [BITNET-SPEC-OPENVINO-ROUTE-CONTRACT](../../docs/specs/BITNET-SPEC-OPENVINO-ROUTE-CONTRACT.md), [BITNET-SPEC-OPENVINO-DENSE-SLM](../../docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md), [BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE](../../docs/specs/BITNET-SPEC-OPENVINO-NPU-COLD-WARM-CACHE.md), [BITNET-SPEC-OPENVINO-QUALITY-CORPUS](../../docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md), [BITNET-SPEC-OPENVINO-PHASE-TIMING](../../docs/specs/BITNET-SPEC-OPENVINO-PHASE-TIMING.md), [BITNET-SPEC-OPENVINO-ROUTE-PROMOTION](../../docs/specs/BITNET-SPEC-OPENVINO-ROUTE-PROMOTION.md), [BITNET-SPEC-OPENVINO-BITNET-BOUNDARY](../../docs/specs/BITNET-SPEC-OPENVINO-BITNET-BOUNDARY.md), [BITNET-SPEC-OPENVINO-RUST-BRIDGE](../../docs/specs/BITNET-SPEC-OPENVINO-RUST-BRIDGE.md), [BITNET-SPEC-OPENVINO-SERVER](../../docs/specs/BITNET-SPEC-OPENVINO-SERVER.md)
 Linked ADRs: n/a
 Linked plan: n/a
 Linked issues: n/a
@@ -156,7 +156,7 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-DOCS-005
 
-Status: in progress
+Status: merged
 Linked proposal: `BITNET-PROP-0004`
 Linked specs: `BITNET-SPEC-OPENVINO-ROUTE-PROMOTION`, `BITNET-SPEC-OPENVINO-BITNET-BOUNDARY`
 Blocked by: `LNL258V-OPENVINO-DOCS-004`
@@ -184,9 +184,9 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-DOCS-006
 
-Status: proposed
+Status: in progress
 Linked proposal: `BITNET-PROP-0004`
-Linked specs: future Rust bridge and server specs
+Linked specs: `BITNET-SPEC-OPENVINO-RUST-BRIDGE`, `BITNET-SPEC-OPENVINO-SERVER`
 Blocked by: `LNL258V-OPENVINO-DOCS-005`
 
 Add:
@@ -198,6 +198,16 @@ docs/specs/BITNET-SPEC-OPENVINO-SERVER.md
 
 Define the Python-to-Rust bridge stages and exact-profile server readiness only
 after ask/chat route readiness.
+
+Acceptance additions:
+
+- Rust bridge spec defines staged proof from Python harness through Rust wrapper,
+  validator, subprocess bridge, binding, and product surfaces.
+- Server spec defines exact-profile server receipts, underlying route linkage,
+  cold/warm timing, fallback behavior, exposure fields, and streaming/
+  concurrency boundaries.
+- Neither spec claims route promotion, broad server readiness, speedup, power
+  advantage, or BitNet QK256/I2_S behavior.
 
 ## Phase B: Improve Receipt Validation and Status Without Runtime Promotion
 
