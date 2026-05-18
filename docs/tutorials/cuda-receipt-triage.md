@@ -37,6 +37,11 @@ fallback_used
 quality gate result
 speedup_claim
 server_ready
+server_scope
+server_endpoint
+server_streaming
+server_smoke
+server_reason
 full_residency_claim
 bitnet_packed_i2s_qk256_proof
 dense_regular_llm_cuda_proof
@@ -159,6 +164,8 @@ Check:
 - selected backend;
 - fallback status;
 - model coverage row;
+- `server_smoke`, `server_scope`, `server_endpoint`, and `server_streaming`
+  from `bitnet model status --format json`;
 - response quality;
 - receipt emission path;
 - whether the row was explicitly promoted by an exact-profile readiness gate.
@@ -166,6 +173,12 @@ Check:
 Allowed claim: bounded server-smoke evidence when a receipt exists.
 Not allowed: production server readiness, global dense server readiness, or
 BitNet server readiness unless the exact route has its own receipt and row.
+
+For the RTX 5070 Ti lane, Qwen2.5 exact-profile server readiness should show
+`server_ready=true`, `server_scope=exact_profile`, endpoint
+`/v1/chat/completions`, and `server_streaming=false`. Official BitNet QK256
+server smoke should show `server_smoke=true`, `server_ready=false`, and
+`server_reason=broad production readiness not qualified`.
 
 ## If Dense Proof Is Mistaken For BitNet Proof
 

@@ -52,9 +52,10 @@ For automation:
 bitnet model status --device nvidia-rtx-5070-ti-cuda --format json
 ```
 
-The BitNet row should stay scoped to `bitnet_qk256_cuda`, show server readiness
-as false until a server smoke lands, and keep speed unqualified unless a
-profile-specific benchmark review accepts it.
+The BitNet row should stay scoped to `bitnet_qk256_cuda`, show server smoke as
+bounded evidence while keeping `server_ready=false` for broad production
+readiness, and keep speed unqualified unless a profile-specific benchmark
+review accepts it.
 
 ## Verify The Model Artifact
 
