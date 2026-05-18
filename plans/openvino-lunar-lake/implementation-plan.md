@@ -184,7 +184,7 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-DOCS-006
 
-Status: in progress
+Status: merged
 Linked proposal: `BITNET-PROP-0004`
 Linked specs: `BITNET-SPEC-OPENVINO-RUST-BRIDGE`, `BITNET-SPEC-OPENVINO-SERVER`
 Blocked by: `LNL258V-OPENVINO-DOCS-005`
@@ -213,13 +213,26 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-VALIDATE-001
 
-Status: proposed
+Status: in progress
 Blocked by: Phase A specs
 
 Add validators for selected backend/device consistency, `fallback_used=false` on
 strict routes, retokenized token-ID marking, no dense-SLM-to-BitNet claim leak,
 no OpenVINO-GPU-to-native-OpenCL claim leak, and NPU cache/warm fields when NPU
 promotion is attempted.
+
+Production delta: receipt validation only. No inference, no route promotion, no
+runtime execution change, and no committed hardware artifact refresh.
+
+Acceptance additions:
+
+- `bitnet-receipts-core` exposes a Lunar Lake OpenVINO receipt validator and
+  synthetic rejection tests for fallback, device/backend mismatch, token-ID
+  source ambiguity, claim leakage, and premature NPU promotion.
+- `bitnet validate open-vino-lunar-lake --receipt <path>` runs the validator and
+  can emit a validation summary without changing the source receipt.
+- Existing committed OpenVINO corpus, phase, route-profile, route-promotion,
+  operator-ask, and NPU cold-start diagnosis receipts pass the new validator.
 
 ### Work item: LNL258V-OPENVINO-STATUS-001
 
