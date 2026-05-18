@@ -421,7 +421,7 @@ impl FeedForward {
         let output = self.forward(x, raw_tensors)?;
         workspace.record_feed_forward_output(&output);
         workspace.store_feed_forward_output(output);
-        Ok(workspace.take_feed_forward_output())
+        workspace.take_feed_forward_output()
     }
 
     fn apply_activation(&self, input: &Tensor) -> Result<Tensor> {
@@ -606,10 +606,13 @@ impl TransformerForwardWorkspace {
         self.feed_forward_output_slot = Some(tensor);
     }
 
-    fn take_feed_forward_output(&mut self) -> Tensor {
-        self.feed_forward_output_slot.take().expect(
-            "TransformerForwardWorkspace feed-forward output slot must be populated before take",
-        )
+    fn take_feed_forward_output(&mut self) -> Result<Tensor> {
+        self.feed_forward_output_slot.take().ok_or_else(|| {
+            BitNetError::Validation(
+                "TransformerForwardWorkspace feed-forward output slot must be populated before take"
+                    .into(),
+            )
+        })
     }
 }
 

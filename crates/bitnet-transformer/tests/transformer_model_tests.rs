@@ -215,8 +215,9 @@ fn test_incremental_forward_workspace_matches_existing_path() -> anyhow::Result<
     assert_eq!(workspace.last_output_shape(), &[1, 1, hidden]);
     assert_eq!(workspace.reuse_status(), "feed_forward_output_workspace_owned_reuse_not_enabled");
     assert_eq!(workspace.workspace_owned_output_count(), model.config.model.num_layers);
-    let surface =
-        workspace.first_output_surface().expect("workspace should classify one output surface");
+    let surface = workspace
+        .first_output_surface()
+        .ok_or_else(|| anyhow::anyhow!("workspace should classify one output surface"))?;
     assert_eq!(surface.name, "feed_forward.output");
     assert_eq!(surface.storage_owner, "TransformerForwardWorkspace");
     assert_eq!(surface.status, "workspace_owns_returned_tensor_reuse_not_enabled");
