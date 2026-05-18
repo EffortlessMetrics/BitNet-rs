@@ -105,7 +105,7 @@ known_sha256 = "pending"
 known_size_bytes = 13297592664
 storage_estimate = "official_safetensors_shards_total_13297592664_bytes; current M3 Air preflight would leave about 4435547 KiB free after shards"
 format = "blocked_no_official_gguf"
-quantization = "tl1_or_tl2_only_until_compatibility_changes"
+quantization = "arm_tl1_candidate_only_until_compatibility_changes"
 tokenizer_authority = "official_tokenizer_files_present"
 pretokenizer_authority = "pending_runner_conversion_path"
 prompt_template = "blocked_until_gguf_or_converter_path"
@@ -117,7 +117,8 @@ notes = [
   "Compatibility ledger marks 3B I2_S unsupported upstream for ARM and x86.",
   "The official repository at revision af89e318d78a70802061246bf037199d2fb97020 contains safetensors shards and tokenizer/config files, but no .gguf artifact.",
   "Current M3 Air preflight records only 17427716 KiB available; downloading the official safetensors shards without cleanup or conversion approval would leave about 4435547 KiB, below the hard free-space floor.",
-  "Use only TL1/TL2 diagnostic routes if a verified runner path and coherent reference output exist.",
+  "Use only ARM TL1 diagnostic routes if a verified runner path and coherent reference output exist; ARM TL2 is unsupported by the compatibility ledger.",
+  "Treat 3B as a separate TL-model lane; do not inherit Microsoft 2B I2_S/QK256 proof or dense SLM proof.",
 ]
 
   [[candidate.route]]
@@ -135,8 +136,8 @@ notes = [
   [[candidate.route]]
   arch = "arm"
   kernel = "tl2"
-  status = "blocked_no_official_gguf_or_conversion_path"
-  proof_use = "diagnostic_route_until_runner_path_verified"
+  status = "unsupported_upstream"
+  proof_use = "diagnostic_rejection_only"
 
 [[candidate]]
 id = "falcon_e_1b_instruct_i2s_secondary"
