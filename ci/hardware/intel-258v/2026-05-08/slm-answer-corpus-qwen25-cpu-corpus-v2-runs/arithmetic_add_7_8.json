@@ -72,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 9744,
-    "decode_first_ms": 9744,
-    "total_ms": 12383
+    "cmd_to_first_ms": 9647,
+    "decode_first_ms": 9647,
+    "total_ms": 12209
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -270,82 +270,82 @@
     "decode": {
       "embed_ms": {
         "count": 9,
-        "max_ms": 0.047,
+        "max_ms": 0.046,
         "mean_ms": 0.025,
-        "min_ms": 0.019,
-        "p50_ms": 0.021,
-        "p95_ms": 0.047,
-        "total_ms": 0.228
+        "min_ms": 0.016,
+        "p50_ms": 0.022,
+        "p95_ms": 0.046,
+        "total_ms": 0.223
       },
-      "first_token_decode_ms": 332.552,
+      "first_token_decode_ms": 341.042,
       "forward_ms": {
         "count": 9,
-        "max_ms": 238.078,
-        "mean_ms": 234.084,
-        "min_ms": 225.333,
-        "p50_ms": 235.771,
-        "p95_ms": 238.078,
-        "total_ms": 2106.754
+        "max_ms": 245.703,
+        "mean_ms": 229.493,
+        "min_ms": 222.273,
+        "p50_ms": 227.923,
+        "p95_ms": 245.703,
+        "total_ms": 2065.439
       },
       "generated_tokens": 9,
       "logits_ms": {
         "count": 9,
-        "max_ms": 91.967,
-        "mean_ms": 86.766,
-        "min_ms": 82.365,
-        "p50_ms": 86.392,
-        "p95_ms": 91.967,
-        "total_ms": 780.89
+        "max_ms": 85.754,
+        "mean_ms": 83.731,
+        "min_ms": 81.709,
+        "p50_ms": 83.852,
+        "p95_ms": 85.754,
+        "total_ms": 753.578
       },
       "per_token_ms": {
         "count": 9,
-        "max_ms": 337.756,
-        "mean_ms": 330.026,
-        "min_ms": 321.484,
-        "p50_ms": 332.493,
-        "p95_ms": 337.756,
-        "total_ms": 2970.236
+        "max_ms": 341.042,
+        "mean_ms": 322.493,
+        "min_ms": 313.514,
+        "p50_ms": 321.48,
+        "p95_ms": 341.042,
+        "total_ms": 2902.44
       },
       "sample_ms": {
         "count": 9,
-        "max_ms": 2.483,
-        "mean_ms": 2.211,
-        "min_ms": 2.052,
-        "p50_ms": 2.2,
-        "p95_ms": 2.483,
-        "total_ms": 19.898
+        "max_ms": 3.09,
+        "mean_ms": 2.273,
+        "min_ms": 2.008,
+        "p50_ms": 2.136,
+        "p95_ms": 3.09,
+        "total_ms": 20.459
       },
       "steady_per_token_ms": {
         "count": 8,
-        "max_ms": 337.756,
-        "mean_ms": 329.71,
-        "min_ms": 321.484,
-        "p50_ms": 328.903,
-        "p95_ms": 337.756,
-        "total_ms": 2637.684
+        "max_ms": 330.428,
+        "mean_ms": 320.175,
+        "min_ms": 313.514,
+        "p50_ms": 319.665,
+        "p95_ms": 330.428,
+        "total_ms": 2561.397
       },
-      "steady_state_tok_s": 3.033,
+      "steady_state_tok_s": 3.123,
       "steady_state_tokens": 8,
       "token_decode_ms": {
         "count": 9,
-        "max_ms": 0.075,
-        "mean_ms": 0.035,
-        "min_ms": 0.019,
-        "p50_ms": 0.023,
-        "p95_ms": 0.075,
-        "total_ms": 0.318
+        "max_ms": 0.064,
+        "mean_ms": 0.032,
+        "min_ms": 0.02,
+        "p50_ms": 0.026,
+        "p95_ms": 0.064,
+        "total_ms": 0.292
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13307.364,
+    "model_load_ms": 13432.827,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 9411.215,
+      "ms": 9305.053,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -357,9 +357,9 @@
       },
       "tokens": 40
     },
-    "prompt_tokenize_ms": 484.206,
+    "prompt_tokenize_ms": 567.371,
     "requested": false,
-    "tokenizer_load_ms": 575.891
+    "tokenizer_load_ms": 606.237
   },
   "prompt": "Answer with exactly the number: 7 + 8 =",
   "prompt_generation_identity": {
@@ -480,7 +480,7 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 9,
-    "decode_tps": 0.7268028749091497,
+    "decode_tps": 0.7371611106560734,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -500,22 +500,22 @@
   "text": "7 + 8 = 15<|im_end|>",
   "throughput": {
     "decoded_tokens": 9,
-    "tokens_per_second": 0.7268028749091497
+    "tokens_per_second": 0.7371611106560734
   },
-  "timestamp": "2026-05-18T12:14:47.379757500+00:00",
+  "timestamp": "2026-05-18T12:54:13.938308100+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.033,
-    "decode_total_ms": 2970.236,
+    "decode_steady_state_tok_s": 3.123,
+    "decode_total_ms": 2902.44,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 332.552,
-    "first_token_ms": 9744,
+    "first_token_decode_ms": 341.042,
+    "first_token_ms": 9647,
     "host_to_device_bytes": null,
-    "model_load_ms": 13307.364,
-    "prefill_ms": 9411.215,
-    "sampling_ms_per_token": 2.211,
-    "tokenize_ms": 484.206,
-    "tokenizer_load_ms": 575.891
+    "model_load_ms": 13432.827,
+    "prefill_ms": 9305.053,
+    "sampling_ms_per_token": 2.273,
+    "tokenize_ms": 567.371,
+    "tokenizer_load_ms": 606.237
   },
   "tokenizer": {
     "bos": 151643,

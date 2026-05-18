@@ -8248,6 +8248,7 @@ fn load_openvino_generation_budget_sensitivity(
                     Some("no_budget_variant_passes") => {
                         Some(format!("{case_id} has no passing tested generation budget"))
                     }
+                    Some("fixture_budget_passes") => None,
                     Some(classification) => Some(format!(
                         "{case_id} has generation-budget sensitivity class {classification}"
                     )),
@@ -10745,6 +10746,14 @@ mod tests {
                                 "any_budget_passed": false,
                                 "first_passing_budget": null,
                                 "blocker_class": "no_budget_variant_passes"
+                            },
+                            {
+                                "id": "copy_exact_color_triplet",
+                                "profile": "regression_tiny",
+                                "fixture_budget_passed": true,
+                                "any_budget_passed": true,
+                                "first_passing_budget": 4,
+                                "blocker_class": "fixture_budget_passes"
                             }
                         ]
                     },
@@ -10776,6 +10785,14 @@ mod tests {
                                 "any_budget_passed": false,
                                 "first_passing_budget": null,
                                 "blocker_class": "no_budget_variant_passes"
+                            },
+                            {
+                                "id": "copy_exact_color_triplet",
+                                "profile": "regression_tiny",
+                                "fixture_budget_passed": true,
+                                "any_budget_passed": true,
+                                "first_passing_budget": 4,
+                                "blocker_class": "fixture_budget_passes"
                             }
                         ]
                     }
@@ -10969,6 +10986,13 @@ mod tests {
         assert!(regression_gpu.blockers.contains(
             &"stop_token_one_word_done has no passing tested generation budget".to_string()
         ));
+        assert!(
+            !regression_gpu.blockers.iter().any(|blocker| blocker.contains(
+                "copy_exact_color_triplet has generation-budget sensitivity class fixture_budget_passes"
+            )),
+            "{:?}",
+            regression_gpu.blockers
+        );
         Ok(())
     }
 

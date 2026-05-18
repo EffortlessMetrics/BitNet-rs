@@ -8,10 +8,10 @@ Machine: intel-258v
 
 This report summarizes Lunar Lake OpenVINO dense SLM corpus-v2 candidate-route
 failures after rerunning the corpus under the accepted one-token
-`yes_no_clear_sky` fixture policy and the refreshed exact-lowercase
-`stop_token_one_word_done` fixture. It does not promote any route, claim
-speedup or power advantage, claim native Arc/NPU acceleration, or change BitNet
-QK256/I2_S behavior.
+`yes_no_clear_sky` fixture policy and the cross-runtime exact-text
+`stop_token_one_word_done` fixture. It does not promote any route, claim speedup
+or power advantage, claim native Arc/NPU acceleration, or change BitNet QK256/I2_S
+behavior.
 
 ## Source Evidence
 
@@ -33,25 +33,22 @@ decoded text, not direct OpenVINO GenAI pipeline-internal token IDs.
 
 | Route | Corpus v2 result | Failed profiles | Promotion result |
 | --- | ---: | --- | --- |
-| OpenVINO CPU | 9/12 pass, 3 fail | regression_tiny, prefill_heavy, decode_heavy | Candidate remains blocked |
-| OpenVINO GPU.0 / Arc 140V | 9/12 pass, 3 fail | regression_tiny, prefill_heavy, decode_heavy | Candidate remains blocked |
-| OpenVINO NPU | 10/12 pass, 2 fail | regression_tiny, prefill_heavy | Candidate remains blocked |
+| OpenVINO CPU | 10/12 pass, 2 fail | prefill_heavy, decode_heavy | Candidate remains blocked |
+| OpenVINO GPU.0 / Arc 140V | 10/12 pass, 2 fail | prefill_heavy, decode_heavy | Candidate remains blocked |
+| OpenVINO NPU | 11/12 pass, 1 fail | prefill_heavy | Candidate remains blocked |
 
-Both routes also remain blocked by missing benchmark-qualified speed or power
-advantage, incomplete direct generated-token visibility, and profile-regression
-evidence requirements in the route-profile comparison.
+Candidate routes also remain blocked by missing benchmark-qualified speed or
+power advantage, incomplete direct generated-token visibility, and
+profile-regression evidence requirements in the route-profile comparison.
 
 ## Failure Classification
 
 | Route | Case | Profile | Category | Classification | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| CPU | stop_token_one_word_done | regression_tiny | stop_and_eos | exact_answer_instruction_not_followed | Expected `done`; observed `ai` |
 | CPU | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `Lunar` |
 | CPU | decode_heavy_short_list | decode_heavy | decode_heavy | readable_output_missing_required_terms | Missing required term `model` |
-| GPU.0 | stop_token_one_word_done | regression_tiny | stop_and_eos | exact_answer_instruction_not_followed | Expected `done`; observed `ai` |
 | GPU.0 | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `Lunar` |
 | GPU.0 | decode_heavy_short_list | decode_heavy | decode_heavy | readable_output_missing_required_terms | Missing required term `model` |
-| NPU | stop_token_one_word_done | regression_tiny | stop_and_eos | exact_answer_instruction_not_followed | Expected `done`; observed `ai` |
 | NPU | long_prompt_summary_route_policy | prefill_heavy | long_prompt_summarization | answer_content_missing_required_terms | Missing required term `CPU` |
 
 ## Budget Sensitivity
@@ -61,17 +58,16 @@ The generation-budget sensitivity receipt isolates the normalized-match cases:
 | Case | CPU | GPU.0 | NPU | Interpretation |
 | --- | --- | --- | --- | --- |
 | yes_no_clear_sky | passes at max_new_tokens=1 only | passes at max_new_tokens=1 only | passes at max_new_tokens=1 only | Accepted one-token fixture policy; rerun now passes |
-| stop_token_one_word_done | no tested budget passes | no tested budget passes | no tested budget passes | True exact-answer instruction miss for tested budgets |
+| stop_token_one_word_done | passes at max_new_tokens=1/2/4 | passes at max_new_tokens=1/2/4 | passes at max_new_tokens=1/2/4 | Cross-runtime exact-text fixture now passes |
 
 This means the yes/no failure was a stop/max-token fixture-budget issue rather
 than a standing route-quality blocker after rerun. The one-word `done` case is
-not explained by the tested smaller budgets.
+no longer an OpenVINO candidate blocker under the cross-runtime fixture wording.
 
 ## Profile Blockers
 
 OpenVINO GPU.0 remains blocked for:
 
-- `regression_tiny`: one-word stop/EOS instruction miss.
 - `prefill_heavy`: required content term missing.
 - `decode_heavy`: readable output missing required term.
 - All profiles: generated token IDs are retokenized, benchmark-qualified
@@ -79,7 +75,6 @@ OpenVINO GPU.0 remains blocked for:
 
 OpenVINO NPU remains blocked for:
 
-- `regression_tiny`: one-word stop/EOS instruction miss.
 - `prefill_heavy`: required content term missing.
 - All profiles: generated token IDs are retokenized, benchmark-qualified
   advantage is missing, and candidate-route promotion evidence is incomplete.
@@ -88,7 +83,6 @@ OpenVINO NPU remains blocked for:
 
 OpenVINO CPU remains blocked for:
 
-- `regression_tiny`: one-word stop/EOS instruction miss.
 - `prefill_heavy`: required content term missing.
 - `decode_heavy`: readable output missing required term.
 - All profiles: generated token IDs are retokenized, benchmark-qualified
@@ -98,13 +92,11 @@ OpenVINO CPU remains blocked for:
 
 1. Keep OpenVINO GPU/NPU routes unpromoted until profile failures pass or are
    intentionally re-gated by spec.
-2. Fix or document exact-answer generation policy for
-   `stop_token_one_word_done`.
-3. Revisit prefill-heavy and decode-heavy expected terms only if the answer
+2. Revisit prefill-heavy and decode-heavy expected terms only if the answer
    contracts are too narrow for the intended user profile.
-4. Preserve direct versus retokenized generated-token visibility in every
+3. Preserve direct versus retokenized generated-token visibility in every
    OpenVINO candidate receipt.
-5. Run route promotion only after quality gates pass and exact-profile timing
+4. Run route promotion only after quality gates pass and exact-profile timing
    or power evidence proves an advantage over the current promoted CPU route.
 
 ## Claim Boundary

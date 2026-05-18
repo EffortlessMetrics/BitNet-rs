@@ -393,7 +393,8 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-QUAL-RERUN-002
 
-Status: in progress
+Status: merged
+Linked PR: #5669
 Blocked by: `LNL258V-QUAL-008`
 
 Rerun OpenVINO CPU/GPU/NPU corpus-v2 candidate evidence after the canonical
@@ -412,6 +413,32 @@ Acceptance additions:
 - OpenVINO CPU/GPU/NPU candidate blockers remain current and route-profile
   evidence stays candidate-only unless a separate promotion item proves
   exact-profile quality plus timing or power advantage.
+
+### Work item: LNL258V-QUAL-009
+
+Status: in progress
+Blocked by: `LNL258V-OPENVINO-QUAL-RERUN-002`
+
+Tighten `stop_token_one_word_done` to a tested cross-runtime exact-text
+fixture. The prior wording passes the promoted dense GGUF CPU route but still
+fails OpenVINO CPU/GPU/NPU as `ai`; the replacement wording is the narrowest
+known prompt that passes dense GGUF CPU and OpenVINO CPU/GPU/NPU without
+changing route policy. Also keep route-profile budget sensitivity honest:
+`fixture_budget_passes` is passing evidence, not a candidate blocker.
+
+Production delta: corpus fixture and receipt refresh only. Do not promote
+GPU/NPU routes, claim speedup or power advantage, claim native Arc/NPU
+acceleration, alter BitNet QK256/I2_S behavior, or treat dense SLM evidence as
+BitNet proof.
+
+Acceptance additions:
+
+- The canonical corpus-v2 stop-token fixture uses cross-runtime wording.
+- Dense GGUF CPU and OpenVINO CPU/GPU/NPU corpus-v2 receipts are rerun.
+- Route-profile budget sensitivity ignores passing fixture budgets as blockers.
+- Route-profile/regression/comparison artifacts are refreshed and GPU/NPU
+  routes remain candidate-only unless a separate promotion item proves exact
+  profile quality plus timing or power advantage.
 
 ### Remaining Phase C Items
 

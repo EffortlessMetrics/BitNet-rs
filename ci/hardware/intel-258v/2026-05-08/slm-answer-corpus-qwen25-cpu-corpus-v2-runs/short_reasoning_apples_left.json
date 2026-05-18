@@ -72,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 12090,
-    "decode_first_ms": 12090,
-    "total_ms": 12747
+    "cmd_to_first_ms": 11933,
+    "decode_first_ms": 11933,
+    "total_ms": 12593
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -270,82 +270,82 @@
     "decode": {
       "embed_ms": {
         "count": 3,
-        "max_ms": 0.033,
-        "mean_ms": 0.026,
-        "min_ms": 0.017,
-        "p50_ms": 0.03,
-        "p95_ms": 0.033,
-        "total_ms": 0.079
+        "max_ms": 0.044,
+        "mean_ms": 0.036,
+        "min_ms": 0.03,
+        "p50_ms": 0.033,
+        "p95_ms": 0.044,
+        "total_ms": 0.107
       },
-      "first_token_decode_ms": 327.819,
+      "first_token_decode_ms": 336.543,
       "forward_ms": {
         "count": 3,
-        "max_ms": 238.419,
-        "mean_ms": 234.326,
-        "min_ms": 230.653,
-        "p50_ms": 233.908,
-        "p95_ms": 238.419,
-        "total_ms": 702.979
+        "max_ms": 241.139,
+        "mean_ms": 237.379,
+        "min_ms": 232.773,
+        "p50_ms": 238.225,
+        "p95_ms": 241.139,
+        "total_ms": 712.138
       },
       "generated_tokens": 3,
       "logits_ms": {
         "count": 3,
-        "max_ms": 85.069,
-        "mean_ms": 82.904,
-        "min_ms": 81.347,
-        "p50_ms": 82.295,
-        "p95_ms": 85.069,
-        "total_ms": 248.711
+        "max_ms": 85.356,
+        "mean_ms": 84.998,
+        "min_ms": 84.628,
+        "p50_ms": 85.009,
+        "p95_ms": 85.356,
+        "total_ms": 254.993
       },
       "per_token_ms": {
         "count": 3,
-        "max_ms": 330.726,
-        "mean_ms": 327.43,
-        "min_ms": 323.746,
-        "p50_ms": 327.819,
-        "p95_ms": 330.726,
-        "total_ms": 982.291
+        "max_ms": 336.543,
+        "mean_ms": 331.654,
+        "min_ms": 326.845,
+        "p50_ms": 331.575,
+        "p95_ms": 336.543,
+        "total_ms": 994.963
       },
       "sample_ms": {
         "count": 3,
-        "max_ms": 3.783,
-        "mean_ms": 3.118,
-        "min_ms": 2.035,
-        "p50_ms": 3.537,
-        "p95_ms": 3.783,
-        "total_ms": 9.355
+        "max_ms": 2.244,
+        "mean_ms": 2.058,
+        "min_ms": 1.838,
+        "p50_ms": 2.091,
+        "p95_ms": 2.244,
+        "total_ms": 6.173
       },
       "steady_per_token_ms": {
         "count": 2,
-        "max_ms": 330.726,
-        "mean_ms": 327.236,
-        "min_ms": 323.746,
-        "p50_ms": 323.746,
-        "p95_ms": 330.726,
-        "total_ms": 654.472
+        "max_ms": 331.575,
+        "mean_ms": 329.21,
+        "min_ms": 326.845,
+        "p50_ms": 326.845,
+        "p95_ms": 331.575,
+        "total_ms": 658.42
       },
-      "steady_state_tok_s": 3.056,
+      "steady_state_tok_s": 3.038,
       "steady_state_tokens": 2,
       "token_decode_ms": {
         "count": 3,
-        "max_ms": 0.087,
-        "mean_ms": 0.044,
-        "min_ms": 0.02,
-        "p50_ms": 0.025,
-        "p95_ms": 0.087,
-        "total_ms": 0.132
+        "max_ms": 0.075,
+        "mean_ms": 0.056,
+        "min_ms": 0.038,
+        "p50_ms": 0.054,
+        "p95_ms": 0.075,
+        "total_ms": 0.168
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13396.584,
+    "model_load_ms": 13067.064,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 11761.83,
+      "ms": 11596.255,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -357,9 +357,9 @@
       },
       "tokens": 50
     },
-    "prompt_tokenize_ms": 526.001,
+    "prompt_tokenize_ms": 590.676,
     "requested": false,
-    "tokenizer_load_ms": 577.585
+    "tokenizer_load_ms": 622.446
   },
   "prompt": "Tom has two apples and gives away one apple. Does Tom have one apple left? Reply yes or no.",
   "prompt_generation_identity": {
@@ -480,7 +480,7 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 3,
-    "decode_tps": 0.2353494939985879,
+    "decode_tps": 0.23822758675454617,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -500,22 +500,22 @@
   "text": "Yes.<|im_end|>",
   "throughput": {
     "decoded_tokens": 3,
-    "tokens_per_second": 0.2353494939985879
+    "tokens_per_second": 0.23822758675454617
   },
-  "timestamp": "2026-05-18T12:19:23.896235400+00:00",
+  "timestamp": "2026-05-18T12:58:49.312866100+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.056,
-    "decode_total_ms": 982.291,
+    "decode_steady_state_tok_s": 3.038,
+    "decode_total_ms": 994.963,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 327.819,
-    "first_token_ms": 12090,
+    "first_token_decode_ms": 336.543,
+    "first_token_ms": 11933,
     "host_to_device_bytes": null,
-    "model_load_ms": 13396.584,
-    "prefill_ms": 11761.83,
-    "sampling_ms_per_token": 3.118,
-    "tokenize_ms": 526.001,
-    "tokenizer_load_ms": 577.585
+    "model_load_ms": 13067.064,
+    "prefill_ms": 11596.255,
+    "sampling_ms_per_token": 2.058,
+    "tokenize_ms": 590.676,
+    "tokenizer_load_ms": 622.446
   },
   "tokenizer": {
     "bos": 151643,

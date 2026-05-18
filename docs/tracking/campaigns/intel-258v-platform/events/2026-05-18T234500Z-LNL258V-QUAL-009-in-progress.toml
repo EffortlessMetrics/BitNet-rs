@@ -1,0 +1,23 @@
+timestamp = "2026-05-18T23:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-009"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-QUAL-009-cross-runtime-stop-token"
+summary = "Started LNL258V-QUAL-009 to tighten the Lunar Lake stop_token_one_word_done fixture to a cross-runtime wording and rerun CPU/OpenVINO evidence."
+
+artifacts = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "Local prompt probes showed `Return exactly this text and nothing else: done` passes dense GGUF CPU and OpenVINO CPU/GPU/NPU for the stop-token case.",
+  "Route-profile budget sensitivity should not retain `fixture_budget_passes` as a candidate blocker once the fixture budget passes.",
+  "This item must keep OpenVINO GPU/NPU candidate-only and make no route promotion, speedup, power advantage, native accelerator, or BitNet QK256/I2_S claim.",
+]
