@@ -1,0 +1,25 @@
+timestamp = "2026-05-18T05:50:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OV-QUAL-003"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OV-QUAL-003-quality-failure-taxonomy"
+pr = 5518
+head_sha = "87c62cbfc4b649ff00a3420539ff4d83284f7b75"
+merge_sha = "a755a8dc7a927d06552d8859878469d142d429f6"
+summary = "Merged LNL258V-OV-QUAL-003 OpenVINO candidate quality taxonomy refinement."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "PR #5518 merged with refined OpenVINO GPU/NPU corpus-v2 failure taxonomy.",
+  "Candidate GPU/NPU routes remain unpromoted and blocked by quality, direct-token-visibility, timing, and promotion-evidence requirements.",
+  "No inference, speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim was added.",
+]
