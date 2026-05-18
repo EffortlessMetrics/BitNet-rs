@@ -619,6 +619,7 @@ pub(crate) struct ModelStatusDashboard {
 }
 
 impl ModelStatusDashboard {
+    #[cfg(feature = "full-cli")]
     pub(crate) fn next_proof_for_row(&self, row: &str) -> Option<&str> {
         self.models
             .iter()
@@ -1454,6 +1455,7 @@ fn print_model_status(
     Ok(())
 }
 
+#[cfg(feature = "full-cli")]
 pub(crate) fn model_status_dashboard_for_device(
     device: &str,
     matrix: Option<PathBuf>,
