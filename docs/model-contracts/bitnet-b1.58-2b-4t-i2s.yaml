@@ -33,12 +33,16 @@ cpu:
   quality_gate: required
 
 a770:
-  support: trusted_partial
+  support: diagnostic
+  target_support: trusted_partial
+  claim_status: diagnostic_pending_claim_grade_receipts
   selected_backend: intel-arc-a770-opencl
+  receipt_requirement: "Commit strict selected-device OpenCL receipts before promoting qk256_linears, embedding, or lm_head_tied_logits."
   required_claimed_ops:
     - qk256_linears
     - embedding
     - lm_head_tied_logits
+  claim_ready_required_ops: []
   not_claims:
     - selected_attention_residency
     - resident_kv_decode

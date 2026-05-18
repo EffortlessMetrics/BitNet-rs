@@ -49,7 +49,10 @@ Do not merge CPU, Metal, MPSGraph, CUDA, WGPU, Intel Arc GPU, OpenVINO GPU, or O
 
 ## Required Identity Fields
 
-Every receipt or hardware artifact should preserve separate identity fields:
+Every receipt or hardware artifact should preserve separate identity fields.
+The example path below is a required shape, not a claim that the artifact already
+exists; A770 OpenCL claims require a committed receipt linked from the route and
+capability matrices.
 
 ```json
 {
@@ -61,7 +64,7 @@ Every receipt or hardware artifact should preserve separate identity fields:
     "pci_device_id": "0x56A0"
   },
   "fallback_used": false,
-  "artifact_path": "ci/hardware/intel-arc-a770/2026-05-05/opencl-smoke.json"
+  "artifact_path": "ci/hardware/amd-5700x-intel-a770/<date>/opencl-smoke.json"
 }
 ```
 

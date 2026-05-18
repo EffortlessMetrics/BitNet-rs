@@ -17,7 +17,7 @@ kernel_variant = "a770_opencl_qk256_i2s_route_pending_claim_receipts"
 claim_level = "diagnostic"
 fallback_allowed = false
 proof_receipts = []
-reason = "A770 route is explicit, but claim-grade A770 QK256 receipts are not committed yet."
+reason = "A770 route is explicit and remains diagnostic because no committed claim-grade strict A770 OpenCL QK256 receipts exist."
 not_claims = [
   "selected_attention_residency",
   "resident_kv_decode",
@@ -43,7 +43,7 @@ kernel_variant = "a770_opencl_embedding_route_pending_claim_receipts"
 claim_level = "diagnostic"
 fallback_allowed = false
 proof_receipts = []
-reason = "A770 embedding route is explicit, but claim-grade receipts are not committed yet."
+reason = "A770 embedding route is explicit and remains diagnostic because no committed claim-grade strict A770 OpenCL embedding receipts exist."
 not_claims = [
   "selected_attention_residency",
   "resident_kv_decode",
@@ -69,7 +69,7 @@ kernel_variant = "a770_opencl_lm_head_route_pending_claim_receipts"
 claim_level = "diagnostic"
 fallback_allowed = false
 proof_receipts = []
-reason = "A770 lm_head route is explicit, but claim-grade receipts are not committed yet."
+reason = "A770 lm_head route is explicit and remains diagnostic because no committed claim-grade strict A770 OpenCL LM-head receipts exist."
 not_claims = [
   "selected_attention_residency",
   "resident_kv_decode",
