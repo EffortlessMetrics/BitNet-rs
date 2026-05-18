@@ -43,12 +43,25 @@ Kernel family and kernel implementation are different fields. For example:
 
 | Kernel family | Example requested kernel | Meaning |
 |---|---|---|
-| `qk256` | `qk256-scalar-gemv` | Scalar packed decode truth kernel |
-| `qk256` | `qk256-scalar-gemm` | Scalar packed prefill truth kernel |
+| `qk256` | `qk256-scalar-f32-gemv` | Scalar F32/no-scale diagnostic decode kernel |
+| `qk256` | `qk256-scalar-f32-gemm` | Scalar F32/no-scale diagnostic prefill kernel |
+| `qk256` | `qk256-scalar-i8s-scaled-gemv` | Production scalar BitNet.cpp-style scaled I2_S × I8_S decode kernel |
+| `qk256` | `qk256-scalar-i8s-scaled-gemm` | Production scalar BitNet.cpp-style scaled I2_S × I8_S prefill kernel |
+| `qk256` | `qk256-scalar-gemv` | Compatibility alias for `qk256-scalar-f32-gemv`; new receipts should avoid it |
+| `qk256` | `qk256-scalar-gemm` | Compatibility alias for `qk256-scalar-f32-gemm`; new receipts should avoid it |
 | `qk256` | `qk256-avx2-gemv` | AVX2 decode-first packed GEMV |
 | `qk256` | `qk256-neon-gemv` | ARM64 NEON decode-first packed GEMV |
 
 Strict receipts must record both `kernel_family` and requested/selected kernel IDs.
+Real inline-scale I2_S runs must not use the F32/no-scale scalar IDs as a substitute for scaled BitNet I8S semantics. Strict accelerated requests must fail instead of silently selecting scalar; non-strict fallback must record `fallback_used=true`, the fallback reason, and the precise selected scalar ID.
+
+The scalar contract stack is maintained in:
+
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-KERNEL-CONTRACT.md`;
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-HOTPATH.md`;
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-PARITY.md`;
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-PERFORMANCE.md`;
+- `plans/cpu-scalar/implementation-plan.md`.
 
 ### ARM / M4 Lane
 
@@ -137,7 +150,10 @@ Every kernel proof must record:
     "kernel_format": "i2_s",
     "layout": "...",
     "fallback_layout": null,
-    "dequantizes_before_compute": false
+    "dequantizes_before_compute": false,
+    "requested_kernel": "qk256-scalar-i8s-scaled-gemv",
+    "selected_kernel": "qk256-scalar-i8s-scaled-gemv",
+    "fallback_used": false
   }
 }
 ```

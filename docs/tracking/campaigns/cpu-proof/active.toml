@@ -801,3 +801,47 @@ must_not_claim = [
   "GPU, NPU, or server inference is involved.",
   "A speedup or throughput claim is proven.",
 ]
+
+[[work_item]]
+id = "CPU-SCALAR-000"
+status = "in_progress"
+branch = "codex/cpu-scalar-000-docs-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "Docs-only scalar CPU productization rails are added: scalar kernel contract, hot-path contract, parity contract, performance contract, implementation plan, CPU path links, kernel matrix precise scalar IDs, and tracker work item claim boundaries. No runtime behavior changes are made."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-KERNEL-CONTRACT.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-HOTPATH.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-PARITY.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-PERFORMANCE.md",
+  "plans/cpu-scalar/implementation-plan.md",
+  "docs/bitnet/BITNET_CPU_PATH_PLAN.md",
+  "docs/bitnet/BITNET_KERNEL_MATRIX.md",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Scalar CPU oracle and hot-path documentation rails are defined after merge.",
+  "Precise scalar kernel ID requirements are documented after merge.",
+]
+must_not_claim = [
+  "Runtime scalar kernel IDs are implemented.",
+  "Scaled scalar selection metadata is implemented.",
+  "Strict scalar answer corpus passes because of this docs PR.",
+  "Scalar performance is improved or measured by this docs PR.",
+  "GPU, NPU, server, or SIMD support is proven.",
+]
