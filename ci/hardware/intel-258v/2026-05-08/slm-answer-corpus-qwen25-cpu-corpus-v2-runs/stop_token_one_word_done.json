@@ -36,7 +36,7 @@
     "fallback_used": false,
     "generated_tokens": 2,
     "phase": "decode",
-    "prompt_tokens": 36,
+    "prompt_tokens": 37,
     "requested_backend": "cpu",
     "runtime_api": "cpu",
     "selected_backend": "cpu-rust",
@@ -55,7 +55,7 @@
     "deterministic": true,
     "explicit_bos_requested": false,
     "greedy": true,
-    "max_new_tokens": 8,
+    "max_new_tokens": 4,
     "parse_special": true,
     "qwen_no_think": false,
     "repetition_penalty": 1.100000023841858,
@@ -72,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 8404,
-    "decode_first_ms": 8404,
-    "total_ms": 8734
+    "cmd_to_first_ms": 8919,
+    "decode_first_ms": 8919,
+    "total_ms": 9255
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -270,82 +270,82 @@
     "decode": {
       "embed_ms": {
         "count": 2,
-        "max_ms": 0.048,
+        "max_ms": 0.045,
         "mean_ms": 0.035,
-        "min_ms": 0.023,
-        "p50_ms": 0.023,
-        "p95_ms": 0.048,
-        "total_ms": 0.071
+        "min_ms": 0.024,
+        "p50_ms": 0.024,
+        "p95_ms": 0.045,
+        "total_ms": 0.069
       },
-      "first_token_decode_ms": 329.885,
+      "first_token_decode_ms": 344.568,
       "forward_ms": {
         "count": 2,
-        "max_ms": 237.608,
-        "mean_ms": 237.168,
-        "min_ms": 236.728,
-        "p50_ms": 236.728,
-        "p95_ms": 237.608,
-        "total_ms": 474.335
+        "max_ms": 242.953,
+        "mean_ms": 240.906,
+        "min_ms": 238.859,
+        "p50_ms": 238.859,
+        "p95_ms": 242.953,
+        "total_ms": 481.812
       },
       "generated_tokens": 2,
       "logits_ms": {
         "count": 2,
-        "max_ms": 82.242,
-        "mean_ms": 81.866,
-        "min_ms": 81.49,
-        "p50_ms": 81.49,
-        "p95_ms": 82.242,
-        "total_ms": 163.732
+        "max_ms": 91.324,
+        "mean_ms": 88.919,
+        "min_ms": 86.514,
+        "p50_ms": 86.514,
+        "p95_ms": 91.324,
+        "total_ms": 177.837
       },
       "per_token_ms": {
         "count": 2,
-        "max_ms": 329.885,
-        "mean_ms": 328.706,
-        "min_ms": 327.526,
-        "p50_ms": 327.526,
-        "p95_ms": 329.885,
-        "total_ms": 657.411
+        "max_ms": 344.568,
+        "mean_ms": 339.541,
+        "min_ms": 334.514,
+        "p50_ms": 334.514,
+        "p95_ms": 344.568,
+        "total_ms": 679.082
       },
       "sample_ms": {
         "count": 2,
-        "max_ms": 2.176,
-        "mean_ms": 2.107,
-        "min_ms": 2.038,
-        "p50_ms": 2.038,
-        "p95_ms": 2.176,
-        "total_ms": 4.214
+        "max_ms": 2.376,
+        "mean_ms": 2.253,
+        "min_ms": 2.13,
+        "p50_ms": 2.13,
+        "p95_ms": 2.376,
+        "total_ms": 4.506
       },
       "steady_per_token_ms": {
         "count": 1,
-        "max_ms": 327.526,
-        "mean_ms": 327.526,
-        "min_ms": 327.526,
-        "p50_ms": 327.526,
-        "p95_ms": 327.526,
-        "total_ms": 327.526
+        "max_ms": 334.514,
+        "mean_ms": 334.514,
+        "min_ms": 334.514,
+        "p50_ms": 334.514,
+        "p95_ms": 334.514,
+        "total_ms": 334.514
       },
-      "steady_state_tok_s": 3.053,
+      "steady_state_tok_s": 2.989,
       "steady_state_tokens": 1,
       "token_decode_ms": {
         "count": 2,
-        "max_ms": 0.113,
-        "mean_ms": 0.067,
-        "min_ms": 0.02,
-        "p50_ms": 0.02,
-        "p95_ms": 0.113,
-        "total_ms": 0.133
+        "max_ms": 0.094,
+        "mean_ms": 0.058,
+        "min_ms": 0.022,
+        "p50_ms": 0.022,
+        "p95_ms": 0.094,
+        "total_ms": 0.116
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13501.571,
+    "model_load_ms": 13408.129,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 8074.621,
+      "ms": 8573.91,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -355,19 +355,19 @@
         "p95_ms": null,
         "total_ms": 0.0
       },
-      "tokens": 35
+      "tokens": 36
     },
-    "prompt_tokenize_ms": 445.497,
+    "prompt_tokenize_ms": 427.005,
     "requested": false,
-    "tokenizer_load_ms": 541.319
+    "tokenizer_load_ms": 571.643
   },
-  "prompt": "Answer with exactly one word: done",
+  "prompt": "Reply with exactly this lowercase word: done",
   "prompt_generation_identity": {
     "generation_parameters": {
       "deterministic": true,
       "fixed_token_count": false,
       "greedy": true,
-      "max_new_tokens": 8,
+      "max_new_tokens": 4,
       "qwen_no_think": false,
       "repetition_penalty": 1.100000023841858,
       "seed": null,
@@ -377,8 +377,8 @@
       "top_k": 0,
       "top_p": 1.0
     },
-    "generation_params_sha256": "3e323f0d547b84415ad67df1f3c39717f1ed531fa05107348e67411eb45c2eaf",
-    "identity_sha256": "b7c2b1c33e751e2fbaac61c242b9ece7495f79feb320ceaea4ef5d21438f2ccf",
+    "generation_params_sha256": "00b261527dacd7ea460d8dcba87057f37a91c328d7b64eedd4c73641e805c8d5",
+    "identity_sha256": "c4c25baecbf60fa496bf1a8e9aa3513fcccc9da8f30af6474693719bd6d1d5dc",
     "schema_version": "1.0.0",
     "stop_criteria": {
       "manual_stop_sequences": [],
@@ -413,17 +413,17 @@
   "prompt_identity": {
     "bos_policy": false,
     "parse_special": true,
-    "prompt_token_count": 36,
-    "prompt_token_ids_sha256": "8022bc0467f6b24b6ea4d215444b6aa35ba4cbd2506e995879767933f9ff5d35",
-    "rendered_prompt_sha256": "5ccf2c36652a4e193f13136dc8679aeb33fabc31cf25edc5c0ea5291fa0701df",
+    "prompt_token_count": 37,
+    "prompt_token_ids_sha256": "06b0fe68bd04c3c9800e74bbf1b641c0bb8607359a37e888b50e2690df53e54d",
+    "rendered_prompt_sha256": "a79c47d439d69237159e38e1ab7b8f446d0ad15c0799a540dfe22b567a9fbd6b",
     "template": "qwen25-chat"
   },
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
     "qwen_no_think": false,
-    "rendered_sha256": "5ccf2c36652a4e193f13136dc8679aeb33fabc31cf25edc5c0ea5291fa0701df",
-    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nAnswer with exactly one word: done<|im_end|>\n<|im_start|>assistant\n",
+    "rendered_sha256": "a79c47d439d69237159e38e1ab7b8f446d0ad15c0799a540dfe22b567a9fbd6b",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nReply with exactly this lowercase word: done<|im_end|>\n<|im_start|>assistant\n",
     "stop_sequences": [
       "<|im_end|>",
       "<|im_start|>"
@@ -480,13 +480,13 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 2,
-    "decode_tps": 0.2289901534234028,
+    "decode_tps": 0.21609940572663425,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
     "model_family": "qwen",
     "phase": "decode",
-    "prompt_tokens": 36,
+    "prompt_tokens": 37,
     "provenance": "dense_slm_gguf_cpu_reference",
     "quant_format": "Q8_0",
     "requested_backend": "cpu",
@@ -497,25 +497,25 @@
     "tokenizer_source": "gguf_metadata",
     "tokenizer_strict": true
   },
-  "text": "Completed<|im_end|>",
+  "text": "done<|im_end|>",
   "throughput": {
     "decoded_tokens": 2,
-    "tokens_per_second": 0.2289901534234028
+    "tokens_per_second": 0.21609940572663425
   },
-  "timestamp": "2026-05-18T11:30:36.924113400+00:00",
+  "timestamp": "2026-05-18T12:17:05.199829300+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.053,
-    "decode_total_ms": 657.411,
+    "decode_steady_state_tok_s": 2.989,
+    "decode_total_ms": 679.082,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 329.885,
-    "first_token_ms": 8404,
+    "first_token_decode_ms": 344.568,
+    "first_token_ms": 8919,
     "host_to_device_bytes": null,
-    "model_load_ms": 13501.571,
-    "prefill_ms": 8074.621,
-    "sampling_ms_per_token": 2.107,
-    "tokenize_ms": 445.497,
-    "tokenizer_load_ms": 541.319
+    "model_load_ms": 13408.129,
+    "prefill_ms": 8573.91,
+    "sampling_ms_per_token": 2.253,
+    "tokenize_ms": 427.005,
+    "tokenizer_load_ms": 571.643
   },
   "tokenizer": {
     "bos": 151643,
@@ -530,14 +530,14 @@
   "tokens": {
     "generated": 2,
     "generated_ids": [
-      22724,
+      10438,
       151645
     ],
     "ids": [
-      22724,
+      10438,
       151645
     ],
-    "prompt": 36,
+    "prompt": 37,
     "prompt_ids": [
       151644,
       8948,
@@ -563,10 +563,11 @@
       151644,
       872,
       198,
-      16141,
+      20841,
       448,
       6896,
-      825,
+      419,
+      42047,
       3409,
       25,
       2814,
@@ -576,6 +577,6 @@
       77091,
       198
     ],
-    "total": 38
+    "total": 39
   }
 }

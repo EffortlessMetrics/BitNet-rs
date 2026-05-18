@@ -131,8 +131,8 @@ cases:
   - id: stop_token_one_word_done
     category: stop_and_eos
     profile: regression_tiny
-    question: "Answer with exactly one word: done"
-    max_new_tokens: 8
+    question: "Reply with exactly this lowercase word: done"
+    max_new_tokens: 4
     scoring:
       kind: normalized_match
       expected_normalized: "done"

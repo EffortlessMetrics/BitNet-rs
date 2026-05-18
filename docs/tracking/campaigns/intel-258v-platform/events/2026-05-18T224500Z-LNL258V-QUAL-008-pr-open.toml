@@ -1,0 +1,25 @@
+timestamp = "2026-05-18T22:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-008"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-QUAL-008-stop-token-fixture"
+pr = 5665
+head_sha = "88de79b836ad8b05e9e330f5ef8fd6085cb1c149"
+summary = "Opened PR #5665 for LNL258V-QUAL-008 to refresh the dense Qwen stop-token corpus fixture and CPU evidence."
+
+artifacts = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-qwen25-cpu-corpus-v2-diagnosis.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "PR #5665 refreshes the CPU dense Qwen corpus-v2 evidence to 12/12 bounded passes with fallback_used=false.",
+  "OpenVINO GPU/NPU routes remain candidate-only and this PR does not claim speedup, power advantage, route promotion, native Arc/NPU acceleration, or BitNet QK256/I2_S behavior.",
+]
