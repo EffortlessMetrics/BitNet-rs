@@ -8138,9 +8138,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-BITNET-INTAKE-001"
-status = "pr_open"
+status = "merged"
 pr = 5785
-head_sha = "b73d1e85690d0b0d30c10e2808d5bcada05e00c2"
+head_sha = "c657bbc3a913bc95d9f9662778b94e1a4e2faa78"
+merge_sha = "57263796fa4d382e004e13adb32d037192911b4a"
 branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-001"
 stackable = false
 review_mode = "codex_premerge"

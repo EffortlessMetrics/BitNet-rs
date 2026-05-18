@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T06:00:00Z"
+event = "merged"
+item = "LNL258V-BITNET-INTAKE-001"
+branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-001"
+pr = 5785
+head_sha = "c657bbc3a913bc95d9f9662778b94e1a4e2faa78"
+merge_sha = "57263796fa4d382e004e13adb32d037192911b4a"
+actor = "codex"
+summary = "Merged LNL258V-BITNET-INTAKE-001 after adding a Lunar Lake shared BitNet semantic-intake guard."
+
+notes = [
+  "The merged intake receipt indexes A770 PR #5020 as stack_open and records that no Lunar Lake BitNet rerun is required until the shared semantic fix merges to main.",
+  "The intake gate fails closed when merged-to-main shared BitNet semantic fixes are newer than current 258V CPU/operator evidence.",
+  "The merge does not claim new inference, answer quality, route promotion, speedup, acceleration, dense SLM proof for BitNet, or BitNet QK256/I2_S behavior changes.",
+]
