@@ -6697,9 +6697,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-QUAL-RERUN-001"
-status = "pr_open"
+status = "merged"
 pr = 5650
-head_sha = "2715ad2a788b1757181aeba1b523a3ed3a6f2dd4"
+head_sha = "8672e998f2c9673a8906e57a634d84f493416b54"
+merge_sha = "089d3f5a0dc05c7ea9230696f90fb27c5a38545a"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-RERUN-001"
 stackable = false
 review_mode = "codex_premerge"
