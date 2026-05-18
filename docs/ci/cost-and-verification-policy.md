@@ -151,11 +151,14 @@ uploads the receipt directory with `if: always()`. Future M3 Air model, artifact
 or timing lanes should either reuse that pattern or explain why the selected
 lane can safely discard partial work.
 
-The shared macOS Apple Silicon PR workflow follows the same cancellation rule
-for started jobs. It is still bounded by per-job `timeout-minutes` and path
-filters, but it uses `cancel-in-progress: false` so platform-specific compile
-and test evidence is not thrown away by a later push after runner time has
-already been spent.
+The shared macOS Apple Silicon workflow follows the same cancellation rule only
+after Apple proof is selected. On pull requests, a cheap Linux routing job runs
+first; the `macos-14` jobs start only for labels `macos`, `apple-silicon`,
+`metal`, or `full-ci`, or for Mac/Metal-specific paths. Ordinary Rust PRs keep
+the branch-protection-compatible summary check, but they do not launch Apple
+Silicon runners. Once a selected macOS job starts, `cancel-in-progress: false`
+keeps platform-specific compile and test evidence from being thrown away by a
+later push after runner time has already been spent.
 
 ## Why the budget target is aggressive
 

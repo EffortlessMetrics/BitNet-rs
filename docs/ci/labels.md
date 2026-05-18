@@ -260,6 +260,12 @@ and mirrored in `policy/ci-routed-rollout.toml`.
 | `gpu-ci` | GPU native compile proof. | Runs GPU compile lanes for GPU risk only. |
 | `coverage` | Codecov/coverage evidence with `rust-cpu` flag. | Runs coverage outside ordinary PR defaults. |
 
+The shared Apple Silicon workflow still emits a cheap Linux route/summary check
+on pull requests so existing branch protection does not see a missing check.
+Those control jobs do not start `macos-14`. Applying `macos`,
+`apple-silicon`, `metal`, or `full-ci` selects the expensive Apple jobs; main,
+manual, merge-queue, and Mac/Metal-path changes still preserve Apple proof.
+
 ## Label Matrix
 
 | Label | Workflow | Duration | Blocking on `main` | Blocking on PRs |
