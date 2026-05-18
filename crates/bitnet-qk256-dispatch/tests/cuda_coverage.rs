@@ -45,6 +45,56 @@ fn cpu_selected_qk256_forward_records_total_without_fallback() {
 }
 
 #[test]
+fn cpu_qk256_forward_records_materialization_and_no_scale_kernel_counters() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    clear_backend_env();
+    reset_qk256_dispatch_coverage();
+    let device = Device::Cpu;
+    let input = Tensor::ones(&[1, 1, 256], DType::F32, &device).unwrap();
+    let qk256 = qk256_tensor(2, 256, &device);
+
+    let _ = forward_qk256(&input, &qk256, "layers.0.attention.q_proj.weight.qk256_qs").unwrap();
+    let coverage = qk256_dispatch_coverage();
+
+    assert_eq!(coverage.qk256_flat_bytes_extracted_count, 1);
+    assert_eq!(coverage.input_rows_materialized_count, 1);
+    assert_eq!(coverage.output_rows_allocated_count, 1);
+    assert_eq!(
+        coverage.qk256_f32_avx2_gemv_invocations + coverage.qk256_f32_scalar_gemv_invocations,
+        1
+    );
+    assert_eq!(coverage.qk256_i8s_scaled_scalar_invocations, 0);
+    assert_eq!(coverage.qk256_i8s_scaled_avx2_invocations, 0);
+}
+
+#[test]
+fn cpu_qk256_forward_with_inline_scale_records_scaled_scalar_hot_path() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    clear_backend_env();
+    reset_qk256_dispatch_coverage();
+    let device = Device::Cpu;
+    let input = Tensor::ones(&[1, 1, 256], DType::F32, &device).unwrap();
+    let qk256 = qk256_tensor(2, 256, &device);
+
+    let _ = bitnet_qk256_dispatch::forward_qk256_with_scale(
+        &input,
+        &qk256,
+        "layers.0.attention.q_proj.weight.qk256_qs",
+        Some(1.0),
+    )
+    .unwrap();
+    let coverage = qk256_dispatch_coverage();
+
+    assert_eq!(coverage.qk256_i8s_scaled_scalar_invocations, 1);
+    assert_eq!(coverage.qk256_i8s_scaled_avx2_invocations, 0);
+    assert_eq!(coverage.qk256_f32_avx2_gemv_invocations, 0);
+    assert_eq!(coverage.qk256_f32_scalar_gemv_invocations, 0);
+    assert_eq!(coverage.qk256_flat_bytes_extracted_count, 1);
+    assert_eq!(coverage.input_rows_materialized_count, 1);
+    assert_eq!(coverage.output_rows_allocated_count, 1);
+}
+
+#[test]
 fn missing_qk256_tensor_fallback_counter_is_backend_aware() {
     let _guard = ENV_LOCK.lock().unwrap();
     clear_backend_env();

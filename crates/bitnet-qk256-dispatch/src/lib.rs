@@ -26,6 +26,13 @@ static CUDA_QK256_HOST_TO_DEVICE_BYTES: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_DEVICE_TO_HOST_BYTES: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_KERNEL_TIME_MICROS: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_KERNEL_TIME_SAMPLES: AtomicU64 = AtomicU64::new(0);
+static QK256_F32_AVX2_GEMV_INVOCATIONS: AtomicU64 = AtomicU64::new(0);
+static QK256_F32_SCALAR_GEMV_INVOCATIONS: AtomicU64 = AtomicU64::new(0);
+static QK256_I8S_SCALED_SCALAR_INVOCATIONS: AtomicU64 = AtomicU64::new(0);
+static QK256_I8S_SCALED_AVX2_INVOCATIONS: AtomicU64 = AtomicU64::new(0);
+static QK256_FLAT_BYTES_EXTRACTED_COUNT: AtomicU64 = AtomicU64::new(0);
+static QK256_INPUT_ROWS_MATERIALIZED_COUNT: AtomicU64 = AtomicU64::new(0);
+static QK256_OUTPUT_ROWS_ALLOCATED_COUNT: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(feature = "cuda")]
 thread_local! {
@@ -43,6 +50,20 @@ pub struct Qk256DispatchCoverageCounters {
     pub bitnet_linear_layers_cpu_fallback: u64,
     /// Unsupported operations that prevent a full CUDA inference claim.
     pub unsupported_ops: Vec<String>,
+    /// No-scale F32 QK256 GEMV calls that selected the AVX2/FMA kernel.
+    pub qk256_f32_avx2_gemv_invocations: u64,
+    /// No-scale F32 QK256 GEMV calls that selected the scalar kernel.
+    pub qk256_f32_scalar_gemv_invocations: u64,
+    /// Inline-scaled BitNet I2_S × I8_S calls that used the scalar oracle.
+    pub qk256_i8s_scaled_scalar_invocations: u64,
+    /// Inline-scaled BitNet I2_S × I8_S calls that used an AVX2 implementation.
+    pub qk256_i8s_scaled_avx2_invocations: u64,
+    /// Number of QK256 tensor-to-flat-byte materializations.
+    pub qk256_flat_bytes_extracted_count: u64,
+    /// Number of input tensor row materializations.
+    pub input_rows_materialized_count: u64,
+    /// Number of output row-buffer allocations.
+    pub output_rows_allocated_count: u64,
     /// Human-readable claim boundary for partial routing.
     pub execution_claim: &'static str,
 }
@@ -89,6 +110,16 @@ pub fn qk256_dispatch_coverage() -> Qk256DispatchCoverageCounters {
         bitnet_linear_layers_on_cuda: on_cuda,
         bitnet_linear_layers_cpu_fallback: cpu_fallback,
         unsupported_ops,
+        qk256_f32_avx2_gemv_invocations: QK256_F32_AVX2_GEMV_INVOCATIONS.load(Ordering::Relaxed),
+        qk256_f32_scalar_gemv_invocations: QK256_F32_SCALAR_GEMV_INVOCATIONS
+            .load(Ordering::Relaxed),
+        qk256_i8s_scaled_scalar_invocations: QK256_I8S_SCALED_SCALAR_INVOCATIONS
+            .load(Ordering::Relaxed),
+        qk256_i8s_scaled_avx2_invocations: QK256_I8S_SCALED_AVX2_INVOCATIONS
+            .load(Ordering::Relaxed),
+        qk256_flat_bytes_extracted_count: QK256_FLAT_BYTES_EXTRACTED_COUNT.load(Ordering::Relaxed),
+        input_rows_materialized_count: QK256_INPUT_ROWS_MATERIALIZED_COUNT.load(Ordering::Relaxed),
+        output_rows_allocated_count: QK256_OUTPUT_ROWS_ALLOCATED_COUNT.load(Ordering::Relaxed),
         execution_claim: if on_cuda > 0 {
             "cuda_inference_contribution"
         } else if cuda_bitnet_backend_requested() {
@@ -112,6 +143,13 @@ pub fn reset_qk256_dispatch_coverage() {
     CUDA_QK256_DEVICE_TO_HOST_BYTES.store(0, Ordering::Relaxed);
     CUDA_QK256_KERNEL_TIME_MICROS.store(0, Ordering::Relaxed);
     CUDA_QK256_KERNEL_TIME_SAMPLES.store(0, Ordering::Relaxed);
+    QK256_F32_AVX2_GEMV_INVOCATIONS.store(0, Ordering::Relaxed);
+    QK256_F32_SCALAR_GEMV_INVOCATIONS.store(0, Ordering::Relaxed);
+    QK256_I8S_SCALED_SCALAR_INVOCATIONS.store(0, Ordering::Relaxed);
+    QK256_I8S_SCALED_AVX2_INVOCATIONS.store(0, Ordering::Relaxed);
+    QK256_FLAT_BYTES_EXTRACTED_COUNT.store(0, Ordering::Relaxed);
+    QK256_INPUT_ROWS_MATERIALIZED_COUNT.store(0, Ordering::Relaxed);
+    QK256_OUTPUT_ROWS_ALLOCATED_COUNT.store(0, Ordering::Relaxed);
     reset_cuda_qk256_context();
 }
 
@@ -217,13 +255,17 @@ fn forward_qk256_cpu(
     weight_name: &str,
     inline_scale: Option<f32>,
 ) -> Result<Tensor> {
-    use bitnet_quantization::i2s_qk256::{gemv_qk256, gemv_qk256_bitnet_i8s_scaled};
+    use bitnet_quantization::i2s_qk256::{
+        QK256_AVX2_GEMV_KERNEL_ID, gemv_qk256, gemv_qk256_bitnet_i8s_scaled,
+        select_qk256_gemv_kernel,
+    };
 
     let prepared = prepare_qk256_forward(input, qk256_tensor, weight_name)?;
     let mut output_rows = vec![
         vec![0.0f32; prepared.layout.rows];
         prepared.shape.batch_size * prepared.shape.seq_len
     ];
+    QK256_OUTPUT_ROWS_ALLOCATED_COUNT.fetch_add(1, Ordering::Relaxed);
 
     if std::env::var("BITNET_TRACE_RMS").as_deref() == Ok("1") && weight_name.contains("layers.0.")
     {
@@ -242,6 +284,7 @@ fn forward_qk256_cpu(
 
     for (row_index, input_row) in prepared.input_rows.iter().enumerate() {
         let gemv_result = if let Some(scale) = inline_scale {
+            QK256_I8S_SCALED_SCALAR_INVOCATIONS.fetch_add(1, Ordering::Relaxed);
             gemv_qk256_bitnet_i8s_scaled(
                 &prepared.flat_bytes,
                 input_row,
@@ -252,6 +295,14 @@ fn forward_qk256_cpu(
                 scale,
             )
         } else {
+            match select_qk256_gemv_kernel(None, false) {
+                Ok(selection) if selection.selected_kernel == QK256_AVX2_GEMV_KERNEL_ID => {
+                    QK256_F32_AVX2_GEMV_INVOCATIONS.fetch_add(1, Ordering::Relaxed);
+                }
+                _ => {
+                    QK256_F32_SCALAR_GEMV_INVOCATIONS.fetch_add(1, Ordering::Relaxed);
+                }
+            }
             gemv_qk256(
                 &prepared.flat_bytes,
                 input_row,
@@ -437,6 +488,7 @@ fn prepare_qk256_activation(
             weight_name, e
         ))
     })?;
+    QK256_INPUT_ROWS_MATERIALIZED_COUNT.fetch_add(1, Ordering::Relaxed);
 
     Ok(PreparedQk256Activation { layout, shape, input_rows })
 }
@@ -446,6 +498,7 @@ fn extract_qk256_flat_bytes(
     layout: &Qk256Layout,
     weight_name: &str,
 ) -> Result<Vec<u8>> {
+    QK256_FLAT_BYTES_EXTRACTED_COUNT.fetch_add(1, Ordering::Relaxed);
     let bytes_2d = qk256_tensor.to_vec2::<u8>().map_err(|e| {
         BitNetError::Validation(format!("Failed to extract QK256 bytes for {}: {}", weight_name, e))
     })?;

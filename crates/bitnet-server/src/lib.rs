@@ -1168,6 +1168,27 @@ fn qk256_dispatch_coverage_delta(
         bitnet_linear_layers_on_cuda,
         bitnet_linear_layers_cpu_fallback,
         unsupported_ops: unsupported_delta,
+        qk256_f32_avx2_gemv_invocations: after
+            .qk256_f32_avx2_gemv_invocations
+            .saturating_sub(before.qk256_f32_avx2_gemv_invocations),
+        qk256_f32_scalar_gemv_invocations: after
+            .qk256_f32_scalar_gemv_invocations
+            .saturating_sub(before.qk256_f32_scalar_gemv_invocations),
+        qk256_i8s_scaled_scalar_invocations: after
+            .qk256_i8s_scaled_scalar_invocations
+            .saturating_sub(before.qk256_i8s_scaled_scalar_invocations),
+        qk256_i8s_scaled_avx2_invocations: after
+            .qk256_i8s_scaled_avx2_invocations
+            .saturating_sub(before.qk256_i8s_scaled_avx2_invocations),
+        qk256_flat_bytes_extracted_count: after
+            .qk256_flat_bytes_extracted_count
+            .saturating_sub(before.qk256_flat_bytes_extracted_count),
+        input_rows_materialized_count: after
+            .input_rows_materialized_count
+            .saturating_sub(before.input_rows_materialized_count),
+        output_rows_allocated_count: after
+            .output_rows_allocated_count
+            .saturating_sub(before.output_rows_allocated_count),
         execution_claim: if bitnet_linear_layers_on_cuda > 0 {
             "cuda_inference_contribution"
         } else {
