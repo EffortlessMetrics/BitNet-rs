@@ -213,10 +213,17 @@ fn test_incremental_forward_workspace_matches_existing_path() -> anyhow::Result<
     assert_eq!(workspace.feed_forward_calls(), model.config.model.num_layers);
     assert_eq!(workspace.last_output_shape(), with_workspace.dims());
     assert_eq!(workspace.last_output_shape(), &[1, 1, hidden]);
-    assert_eq!(workspace.reuse_status(), "api_boundary_present_owned_tensor_reuse_not_enabled");
+    assert_eq!(workspace.reuse_status(), "feed_forward_output_workspace_owned_reuse_not_enabled");
+    assert_eq!(workspace.workspace_owned_output_count(), model.config.model.num_layers);
+    let surface =
+        workspace.first_output_surface().expect("workspace should classify one output surface");
+    assert_eq!(surface.name, "feed_forward.output");
+    assert_eq!(surface.storage_owner, "TransformerForwardWorkspace");
+    assert_eq!(surface.status, "workspace_owns_returned_tensor_reuse_not_enabled");
+    assert_eq!(surface.last_shape, vec![1, 1, hidden]);
     assert!(
         !workspace.tensor_reuse_enabled(),
-        "SLM-CPU-038 introduces the API boundary before enabling tensor reuse"
+        "SLM-CPU-039 routes one output through the workspace before enabling reusable storage"
     );
     Ok(())
 }

@@ -420,7 +420,8 @@ impl FeedForward {
         workspace.record_feed_forward_input(x);
         let output = self.forward(x, raw_tensors)?;
         workspace.record_feed_forward_output(&output);
-        Ok(output)
+        workspace.store_feed_forward_output(output);
+        Ok(workspace.take_feed_forward_output())
     }
 
     fn apply_activation(&self, input: &Tensor) -> Result<Tensor> {
@@ -496,7 +497,20 @@ pub struct TransformerForwardWorkspace {
     feed_forward_calls: usize,
     last_input_shape: Vec<usize>,
     last_output_shape: Vec<usize>,
+    feed_forward_output_slot: Option<Tensor>,
+    feed_forward_output_surface: Option<TransformerWorkspaceOutputSurface>,
+    workspace_owned_output_count: usize,
     tensor_reuse_enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransformerWorkspaceOutputSurface {
+    pub name: &'static str,
+    pub storage_owner: &'static str,
+    pub status: &'static str,
+    pub reason: &'static str,
+    pub next_api_hook: &'static str,
+    pub last_shape: Vec<usize>,
 }
 
 impl TransformerForwardWorkspace {
@@ -532,9 +546,19 @@ impl TransformerForwardWorkspace {
         self.tensor_reuse_enabled
     }
 
+    pub fn workspace_owned_output_count(&self) -> usize {
+        self.workspace_owned_output_count
+    }
+
+    pub fn first_output_surface(&self) -> Option<&TransformerWorkspaceOutputSurface> {
+        self.feed_forward_output_surface.as_ref()
+    }
+
     pub fn reuse_status(&self) -> &'static str {
         if self.tensor_reuse_enabled {
             "typed_transformer_forward_workspace_reuse_enabled"
+        } else if self.feed_forward_output_surface.is_some() {
+            "feed_forward_output_workspace_owned_reuse_not_enabled"
         } else {
             "api_boundary_present_owned_tensor_reuse_not_enabled"
         }
@@ -565,6 +589,27 @@ impl TransformerForwardWorkspace {
 
     fn record_feed_forward_output(&mut self, tensor: &Tensor) {
         self.last_output_shape = tensor.dims().to_vec();
+    }
+
+    fn store_feed_forward_output(&mut self, tensor: Tensor) {
+        let last_shape = tensor.dims().to_vec();
+        self.last_output_shape = last_shape.clone();
+        self.feed_forward_output_surface = Some(TransformerWorkspaceOutputSurface {
+            name: "feed_forward.output",
+            storage_owner: "TransformerForwardWorkspace",
+            status: "workspace_owns_returned_tensor_reuse_not_enabled",
+            reason: "FeedForward::forward_with_workspace now routes the owned output tensor through TransformerForwardWorkspace before returning it, but Candle tensor storage is still produced by the existing owned-output math path",
+            next_api_hook: "replace FeedForward::down_proj output construction with reusable workspace-backed storage after behavior-preservation artifacts stay identical",
+            last_shape,
+        });
+        self.workspace_owned_output_count += 1;
+        self.feed_forward_output_slot = Some(tensor);
+    }
+
+    fn take_feed_forward_output(&mut self) -> Tensor {
+        self.feed_forward_output_slot.take().expect(
+            "TransformerForwardWorkspace feed-forward output slot must be populated before take",
+        )
     }
 }
 

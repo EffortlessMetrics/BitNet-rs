@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-19T00:15:00Z",
+  "created_utc": "2026-05-18T14:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -129,19 +129,19 @@
             ],
             "prompt_tokens": 39,
             "cold_load_ms": 6001.0,
-            "tokenize_ms": 22.948999404907227,
+            "tokenize_ms": 17.054000854492188,
             "prefill_ms": null,
-            "first_token_ms": 1455.4078369140625,
-            "decode_total_ms": 2458.3375999936834,
-            "generation_total_ms": 2458.3375999936834,
-            "total_response_ms": 8547.64849995263,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 3.661010595136781,
+            "first_token_ms": 306.2801818847656,
+            "decode_total_ms": 534.9463000020478,
+            "generation_total_ms": 534.9463000020478,
+            "total_response_ms": 4924.946300002048,
+            "output_tokens": 8,
+            "throughput_tokens_per_s": 30.809385299682617,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
@@ -155,11 +155,11 @@
             "required_prompt_tokens": "<=64",
             "required_output_tokens": "<=32",
             "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_output_tokens": 8,
             "timing_matches_profile": true,
             "notes": [
               "prompt timing count 39 satisfies `<=64`",
-              "output timing count 9 satisfies `<=32`"
+              "output timing count 8 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -219,19 +219,19 @@
             ],
             "prompt_tokens": 39,
             "cold_load_ms": 40263.0,
-            "tokenize_ms": 17.43000030517578,
+            "tokenize_ms": 15.677000045776367,
             "prefill_ms": null,
-            "first_token_ms": 323.50177001953125,
-            "decode_total_ms": 943.2322999928148,
-            "generation_total_ms": 943.2322999928148,
-            "total_response_ms": 41255.641800002195,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 9.541657977646185,
+            "first_token_ms": 270.0706787109375,
+            "decode_total_ms": 507.36039999173954,
+            "generation_total_ms": 507.36039999173954,
+            "total_response_ms": 31479.36039999174,
+            "output_tokens": 8,
+            "throughput_tokens_per_s": 29.674758911132812,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
@@ -245,11 +245,11 @@
             "required_prompt_tokens": "<=64",
             "required_output_tokens": "<=32",
             "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_output_tokens": 8,
             "timing_matches_profile": true,
             "notes": [
               "prompt timing count 39 satisfies `<=64`",
-              "output timing count 9 satisfies `<=32`"
+              "output timing count 8 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -407,21 +407,21 @@
               "slm-openvino-cpu-gpu-npu-phase-runner.json",
               "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": 39,
+            "prompt_tokens": 49,
             "cold_load_ms": 6001.0,
-            "tokenize_ms": 22.948999404907227,
+            "tokenize_ms": 13.105999946594238,
             "prefill_ms": null,
-            "first_token_ms": 1455.4078369140625,
-            "decode_total_ms": 2458.3375999936834,
-            "generation_total_ms": 2458.3375999936834,
-            "total_response_ms": 8547.64849995263,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 3.661010595136781,
+            "first_token_ms": 84.5331039428711,
+            "decode_total_ms": 86.13689997582696,
+            "generation_total_ms": 86.13689997582696,
+            "total_response_ms": 4476.136899975827,
+            "output_tokens": 1,
+            "throughput_tokens_per_s": 11.609426393109516,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_yes_no_clear_sky",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
@@ -434,12 +434,12 @@
             "profile_id": "ask_short",
             "required_prompt_tokens": "<=64",
             "required_output_tokens": "<=32",
-            "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_prompt_tokens": 49,
+            "measured_output_tokens": 1,
             "timing_matches_profile": true,
             "notes": [
-              "prompt timing count 39 satisfies `<=64`",
-              "output timing count 9 satisfies `<=32`"
+              "prompt timing count 49 satisfies `<=64`",
+              "output timing count 1 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -497,21 +497,21 @@
               "slm-openvino-cpu-gpu-npu-phase-runner.json",
               "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": 39,
+            "prompt_tokens": 49,
             "cold_load_ms": 40263.0,
-            "tokenize_ms": 17.43000030517578,
+            "tokenize_ms": 10.94499969482422,
             "prefill_ms": null,
-            "first_token_ms": 323.50177001953125,
-            "decode_total_ms": 943.2322999928148,
-            "generation_total_ms": 943.2322999928148,
-            "total_response_ms": 41255.641800002195,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 9.541657977646185,
+            "first_token_ms": 162.4727020263672,
+            "decode_total_ms": 163.12580002704635,
+            "generation_total_ms": 163.12580002704635,
+            "total_response_ms": 31135.125800027046,
+            "output_tokens": 1,
+            "throughput_tokens_per_s": 6.1302381342142045,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_yes_no_clear_sky",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
@@ -524,12 +524,12 @@
             "profile_id": "ask_short",
             "required_prompt_tokens": "<=64",
             "required_output_tokens": "<=32",
-            "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_prompt_tokens": 49,
+            "measured_output_tokens": 1,
             "timing_matches_profile": true,
             "notes": [
-              "prompt timing count 39 satisfies `<=64`",
-              "output timing count 9 satisfies `<=32`"
+              "prompt timing count 49 satisfies `<=64`",
+              "output timing count 1 satisfies `<=32`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -687,21 +687,21 @@
               "slm-openvino-cpu-gpu-npu-phase-runner.json",
               "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": 39,
+            "prompt_tokens": 36,
             "cold_load_ms": 6001.0,
-            "tokenize_ms": 22.948999404907227,
+            "tokenize_ms": 7.578999996185303,
             "prefill_ms": null,
-            "first_token_ms": 1455.4078369140625,
-            "decode_total_ms": 2458.3375999936834,
-            "generation_total_ms": 2458.3375999936834,
-            "total_response_ms": 8547.64849995263,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 3.661010595136781,
+            "first_token_ms": 61.54940032958984,
+            "decode_total_ms": 383.0667000147514,
+            "generation_total_ms": 383.0667000147514,
+            "total_response_ms": 4773.066700014751,
+            "output_tokens": 23,
+            "throughput_tokens_per_s": 71.86006927490234,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_instruction_single_sentence_rust",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
@@ -714,12 +714,12 @@
             "profile_id": "ask_normal",
             "required_prompt_tokens": "<=512",
             "required_output_tokens": "<=128",
-            "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_prompt_tokens": 36,
+            "measured_output_tokens": 23,
             "timing_matches_profile": true,
             "notes": [
-              "prompt timing count 39 satisfies `<=512`",
-              "output timing count 9 satisfies `<=128`"
+              "prompt timing count 36 satisfies `<=512`",
+              "output timing count 23 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -777,21 +777,21 @@
               "slm-openvino-cpu-gpu-npu-phase-runner.json",
               "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": 39,
+            "prompt_tokens": 36,
             "cold_load_ms": 40263.0,
-            "tokenize_ms": 17.43000030517578,
+            "tokenize_ms": 10.743000030517578,
             "prefill_ms": null,
-            "first_token_ms": 323.50177001953125,
-            "decode_total_ms": 943.2322999928148,
-            "generation_total_ms": 943.2322999928148,
-            "total_response_ms": 41255.641800002195,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 9.541657977646185,
+            "first_token_ms": 168.69760131835938,
+            "decode_total_ms": 885.8958999917377,
+            "generation_total_ms": 885.8958999917377,
+            "total_response_ms": 31857.895899991738,
+            "output_tokens": 23,
+            "throughput_tokens_per_s": 32.1248664855957,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_instruction_single_sentence_rust",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
@@ -804,12 +804,12 @@
             "profile_id": "ask_normal",
             "required_prompt_tokens": "<=512",
             "required_output_tokens": "<=128",
-            "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_prompt_tokens": 36,
+            "measured_output_tokens": 23,
             "timing_matches_profile": true,
             "notes": [
-              "prompt timing count 39 satisfies `<=512`",
-              "output timing count 9 satisfies `<=128`"
+              "prompt timing count 36 satisfies `<=512`",
+              "output timing count 23 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -971,21 +971,21 @@
               "slm-openvino-cpu-gpu-npu-phase-runner.json",
               "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": 39,
+            "prompt_tokens": 97,
             "cold_load_ms": 6001.0,
-            "tokenize_ms": 22.948999404907227,
+            "tokenize_ms": 12.91800022125244,
             "prefill_ms": null,
-            "first_token_ms": 1455.4078369140625,
-            "decode_total_ms": 2458.3375999936834,
-            "generation_total_ms": 2458.3375999936834,
-            "total_response_ms": 8547.64849995263,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 3.661010595136781,
+            "first_token_ms": 364.7374877929687,
+            "decode_total_ms": 699.8619000078179,
+            "generation_total_ms": 699.8619000078179,
+            "total_response_ms": 5089.861900007818,
+            "output_tokens": 22,
+            "throughput_tokens_per_s": 66.0411376953125,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_long_prompt_summary_route_policy",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
@@ -998,12 +998,12 @@
             "profile_id": "prefill_heavy",
             "required_prompt_tokens": ">=2048",
             "required_output_tokens": "<=64",
-            "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_prompt_tokens": 97,
+            "measured_output_tokens": 22,
             "timing_matches_profile": false,
             "notes": [
-              "prompt timing count 39 does not satisfy `>=2048`",
-              "output timing count 9 satisfies `<=64`"
+              "prompt timing count 97 does not satisfy `>=2048`",
+              "output timing count 22 satisfies `<=64`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1062,21 +1062,21 @@
               "slm-openvino-cpu-gpu-npu-phase-runner.json",
               "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": 39,
+            "prompt_tokens": 97,
             "cold_load_ms": 40263.0,
-            "tokenize_ms": 17.43000030517578,
+            "tokenize_ms": 13.319000244140623,
             "prefill_ms": null,
-            "first_token_ms": 323.50177001953125,
-            "decode_total_ms": 943.2322999928148,
-            "generation_total_ms": 943.2322999928148,
-            "total_response_ms": 41255.641800002195,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 9.541657977646185,
+            "first_token_ms": 178.5052032470703,
+            "decode_total_ms": 933.57819999801,
+            "generation_total_ms": 933.57819999801,
+            "total_response_ms": 31905.57819999801,
+            "output_tokens": 25,
+            "throughput_tokens_per_s": 33.136756896972656,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_long_prompt_summary_route_policy",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
@@ -1089,12 +1089,12 @@
             "profile_id": "prefill_heavy",
             "required_prompt_tokens": ">=2048",
             "required_output_tokens": "<=64",
-            "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_prompt_tokens": 97,
+            "measured_output_tokens": 25,
             "timing_matches_profile": false,
             "notes": [
-              "prompt timing count 39 does not satisfy `>=2048`",
-              "output timing count 9 satisfies `<=64`"
+              "prompt timing count 97 does not satisfy `>=2048`",
+              "output timing count 25 satisfies `<=64`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1257,21 +1257,21 @@
               "slm-openvino-cpu-gpu-npu-phase-runner.json",
               "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": 39,
+            "prompt_tokens": 57,
             "cold_load_ms": 6001.0,
-            "tokenize_ms": 22.948999404907227,
+            "tokenize_ms": 7.840000152587891,
             "prefill_ms": null,
-            "first_token_ms": 1455.4078369140625,
-            "decode_total_ms": 2458.3375999936834,
-            "generation_total_ms": 2458.3375999936834,
-            "total_response_ms": 8547.64849995263,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 3.661010595136781,
+            "first_token_ms": 63.05430221557617,
+            "decode_total_ms": 369.73040000884794,
+            "generation_total_ms": 369.73040000884794,
+            "total_response_ms": 4759.730400008848,
+            "output_tokens": 19,
+            "throughput_tokens_per_s": 62.37828063964844,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_decode_heavy_short_list",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
@@ -1284,12 +1284,12 @@
             "profile_id": "decode_heavy",
             "required_prompt_tokens": "<=256",
             "required_output_tokens": ">=512",
-            "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_prompt_tokens": 57,
+            "measured_output_tokens": 19,
             "timing_matches_profile": false,
             "notes": [
-              "prompt timing count 39 satisfies `<=256`",
-              "output timing count 9 does not satisfy `>=512`"
+              "prompt timing count 57 satisfies `<=256`",
+              "output timing count 19 does not satisfy `>=512`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1348,21 +1348,21 @@
               "slm-openvino-cpu-gpu-npu-phase-runner.json",
               "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
             ],
-            "prompt_tokens": 39,
+            "prompt_tokens": 57,
             "cold_load_ms": 40263.0,
-            "tokenize_ms": 17.43000030517578,
+            "tokenize_ms": 7.798999786376953,
             "prefill_ms": null,
-            "first_token_ms": 323.50177001953125,
-            "decode_total_ms": 943.2322999928148,
-            "generation_total_ms": 943.2322999928148,
-            "total_response_ms": 41255.641800002195,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 9.541657977646185,
+            "first_token_ms": 161.26409912109375,
+            "decode_total_ms": 732.1939000103157,
+            "generation_total_ms": 732.1939000103157,
+            "total_response_ms": 31704.193900010316,
+            "output_tokens": 19,
+            "throughput_tokens_per_s": 33.31805419921875,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_decode_heavy_short_list",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
@@ -1375,12 +1375,12 @@
             "profile_id": "decode_heavy",
             "required_prompt_tokens": "<=256",
             "required_output_tokens": ">=512",
-            "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_prompt_tokens": 57,
+            "measured_output_tokens": 19,
             "timing_matches_profile": false,
             "notes": [
-              "prompt timing count 39 satisfies `<=256`",
-              "output timing count 9 does not satisfy `>=512`"
+              "prompt timing count 57 satisfies `<=256`",
+              "output timing count 19 does not satisfy `>=512`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1632,25 +1632,26 @@
             ],
             "prompt_tokens": 39,
             "cold_load_ms": 40263.0,
-            "tokenize_ms": 17.43000030517578,
+            "tokenize_ms": 15.677000045776367,
             "prefill_ms": null,
-            "first_token_ms": 323.50177001953125,
-            "decode_total_ms": 943.2322999928148,
-            "generation_total_ms": 943.2322999928148,
-            "total_response_ms": 41255.641800002195,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 9.541657977646185,
+            "first_token_ms": 270.0706787109375,
+            "decode_total_ms": 507.36039999173954,
+            "generation_total_ms": 507.36039999173954,
+            "total_response_ms": 31479.36039999174,
+            "output_tokens": 8,
+            "throughput_tokens_per_s": 29.674758911132812,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
-              "generated token IDs are not available directly from OpenVINO GenAI internals"
+              "generated token IDs are not available directly from OpenVINO GenAI internals",
+              "profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power"
             ]
           },
           "timing_applicability": {
@@ -1658,11 +1659,11 @@
             "required_prompt_tokens": "<=512",
             "required_output_tokens": "<=128",
             "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_output_tokens": 8,
             "timing_matches_profile": true,
             "notes": [
               "prompt timing count 39 satisfies `<=512`",
-              "output timing count 9 satisfies `<=128`"
+              "output timing count 8 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1695,7 +1696,8 @@
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "power advantage evidence missing for low_power promotion",
             "profile_regression_bundle",
-            "route not promoted for profile low_power"
+            "route not promoted for profile low_power",
+            "timing coverage has missing profile fields"
           ]
         },
         {
@@ -1715,25 +1717,26 @@
             ],
             "prompt_tokens": 39,
             "cold_load_ms": 6001.0,
-            "tokenize_ms": 22.948999404907227,
+            "tokenize_ms": 17.054000854492188,
             "prefill_ms": null,
-            "first_token_ms": 1455.4078369140625,
-            "decode_total_ms": 2458.3375999936834,
-            "generation_total_ms": 2458.3375999936834,
-            "total_response_ms": 8547.64849995263,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 3.661010595136781,
+            "first_token_ms": 306.2801818847656,
+            "decode_total_ms": 534.9463000020478,
+            "generation_total_ms": 534.9463000020478,
+            "total_response_ms": 4924.946300002048,
+            "output_tokens": 8,
+            "throughput_tokens_per_s": 30.809385299682617,
             "phase_coverage": [
               "bounded_operator_ask_math_brief",
               "openvino_genai_perf_metrics",
               "pipeline_construct_and_generation_wall_time",
-              "operator_prompt_token_count_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
+              "profile_timing_supplemented_from_corpus_v2_case_math_2_plus_2_brief",
               "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
               "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
-              "generated token IDs are not available directly from OpenVINO GenAI internals"
+              "generated token IDs are not available directly from OpenVINO GenAI internals",
+              "profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power"
             ]
           },
           "timing_applicability": {
@@ -1741,11 +1744,11 @@
             "required_prompt_tokens": "<=512",
             "required_output_tokens": "<=128",
             "measured_prompt_tokens": 39,
-            "measured_output_tokens": 9,
+            "measured_output_tokens": 8,
             "timing_matches_profile": true,
             "notes": [
               "prompt timing count 39 satisfies `<=512`",
-              "output timing count 9 satisfies `<=128`"
+              "output timing count 8 satisfies `<=128`"
             ]
           },
           "benchmark_qualified_advantage": false,
@@ -1775,7 +1778,8 @@
             "generated token IDs are not directly available from OpenVINO GenAI pipeline internals",
             "power advantage evidence missing for low_power promotion",
             "profile_regression_bundle",
-            "route not promoted for profile low_power"
+            "route not promoted for profile low_power",
+            "timing coverage has missing profile fields"
           ]
         }
       ],
