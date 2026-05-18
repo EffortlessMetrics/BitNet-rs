@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T02:02:14Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OPS-UX-002"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5478
+head_sha = "3ce6f87063d344e89c74bb17dccb6f827c104a4e"
+merge_sha = "594cf82b8936f40d90e7f740a5132967a753b135"
+branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-002-explain-open"
+
+notes = [
+  "Closed M4-OPS-UX-002 after PR #5478 merged model-free report-refresh and regression-dashboard explanation/open-target affordances.",
+  "The merged commands expose status meanings and per-family/per-group reasons for comparable, warning, failed, and insufficient-history states without live inference or model downloads.",
+  "Closeout records a tracker-only state transition; it does not add fresh runtime proof, model support, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claims.",
+]
