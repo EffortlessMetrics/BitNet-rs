@@ -329,6 +329,11 @@
 | intel-258v-platform | LNL258V-ROUTE-008 | LNL258V-ROUTE-007 | merged |
 | intel-258v-platform | LNL258V-ROUTE-009 | LNL258V-ROUTE-008 | merged |
 | intel-258v-platform | LNL258V-OV-QUAL-005 | LNL258V-OV-QUAL-004 | merged |
+| intel-a770 | A770-003 | A770-000 | proposed |
+| intel-a770 | A770-004 | A770-003 | proposed |
+| intel-a770 | A770-005 | A770-004 | proposed |
+| intel-a770 | A770-006 | A770-005 | proposed |
+| intel-a770 | A770-007 | A770-006 | proposed |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
