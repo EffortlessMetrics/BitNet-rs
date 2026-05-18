@@ -3036,6 +3036,16 @@ mod tests {
             .with_context(|| format!("missing model status row {id}"))
     }
 
+    fn model_status_json_row_for<'a>(
+        value: &'a serde_json::Value,
+        id: &str,
+    ) -> &'a serde_json::Value {
+        value["models"]
+            .as_array()
+            .and_then(|models| models.iter().find(|model| model["id"] == id))
+            .unwrap_or_else(|| panic!("missing model status JSON row {id}"))
+    }
+
     #[test]
     fn supported_manifest_contains_m4_runtime_artifact() {
         let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
@@ -3720,84 +3730,87 @@ mod tests {
 
         assert_eq!(value["schema_version"], 1);
         assert_eq!(value["device"], "nvidia-rtx-5070-ti-cuda");
-        assert!(value["models"].as_array().is_some_and(|models| {
-            models.iter().any(|model| {
-                model["id"] == "dense_qwen25_05b_q8_cuda"
-                    && model["model_coverage_row"] == "dense_qwen25_05b_q8_cuda"
-                    && model["current_tier"] == "product_cli_ready"
-                    && model["selected_backend"] == "nvidia-rtx-5070-ti-cuda"
-                    && model["selected_route"] == "dense_regular_llm_cuda"
-                    && model["fallback_used"] == false
-                    && model["product_cli_ready"] == true
-                    && model["route"] == "dense_regular_llm_cuda"
-                    && model["speedup_claim"] == false
-                    && model["server_ready"] == true
-                    && model["server_ready_scope"] == "exact_profile"
-                    && model["server_scope"] == "exact_profile"
-                    && model["full_residency_claim"] == false
-                    && model["server_endpoint"] == "/v1/chat/completions"
-                    && model["server_streaming"] == false
-                    && model["server_smoke"] == true
-                    && model["server_reason"].is_null()
-                    && model["bitnet_packed_i2s_qk256_proof"] == false
-                    && model["dense_regular_llm_cuda_proof"] == true
-            })
-        }));
-        assert!(value["models"].as_array().is_some_and(|models| {
-            models.iter().any(|model| {
-                model["id"] == "dense_qwen3_06b_q8_candidate"
-                    && model["model_coverage_row"] == "dense_qwen3_06b_q8_candidate"
-                    && model["category"] == "supported"
-                    && model["current_tier"] == "product_cli_ready"
-                    && model["selected_backend"] == "nvidia-rtx-5070-ti-cuda"
-                    && model["selected_route"] == "dense_regular_llm_cuda"
-                    && model["fallback_used"] == false
-                    && model["tier"] == "product_cli_ready"
-                    && model["product_cli_ready"] == true
-                    && model["route"] == "dense_regular_llm_cuda"
-                    && model["accelerator_answer_ready"] == true
-                    && model["speedup_claim"] == false
-                    && model["server_ready"] == false
-                    && model["server_ready_scope"].is_null()
-                    && model["full_residency_claim"] == false
-                    && model["server_smoke"] == false
-                    && model["bitnet_packed_i2s_qk256_proof"] == false
-                    && model["dense_regular_llm_cuda_proof"] == true
-            })
-        }));
-        assert!(value["models"].as_array().is_some_and(|models| {
-            models.iter().any(|model| {
-                model["id"] == "bitnet_official_2b_i2s_qk256"
-                    && model["selected_route"] == "bitnet_qk256_cuda"
-                    && model["product_cli_ready"] == true
-                    && model["server_ready"] == false
-                    && model["server_ready_scope"].is_null()
-                    && model["server_scope"].is_null()
-                    && model["full_residency_claim"] == false
-                    && model["server_endpoint"] == "/v1/chat/completions"
-                    && model["server_streaming"] == false
-                    && model["server_smoke"] == true
-                    && model["server_reason"] == "broad production readiness not qualified"
-            })
-        }));
-        assert!(value["models"].as_array().is_some_and(|models| {
-            models.iter().any(|model| {
-                model["id"] == "dense_smollm2_360m_candidate"
-                    && model["model_coverage_row"] == "dense_smollm2_360m_candidate"
-                    && model["category"] == "candidate"
-                    && model["current_tier"] == "structurally_valid"
-                    && model["selected_backend"] == "nvidia-rtx-5070-ti-cuda"
-                    && model["selected_route"].is_null()
-                    && model["fallback_used"].is_null()
-                    && model["product_cli_ready"] == false
-                    && model["speedup_claim"] == false
-                    && model["server_ready"] == false
-                    && model["server_ready_scope"].is_null()
-                    && model["full_residency_claim"] == false
-                    && model["bitnet_packed_i2s_qk256_proof"] == false
-                    && model["dense_regular_llm_cuda_proof"] == false
-            })
-        }));
+
+        let bitnet = model_status_json_row_for(&value, "bitnet_official_2b_i2s_qk256");
+        assert_eq!(bitnet["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
+        assert_eq!(bitnet["current_tier"], "product_cli_ready");
+        assert_eq!(bitnet["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(bitnet["selected_route"], "bitnet_qk256_cuda");
+        assert_eq!(bitnet["fallback_used"], false);
+        assert_eq!(bitnet["product_cli_ready"], true);
+        assert_eq!(bitnet["route"], "bitnet_qk256_cuda");
+        assert_eq!(bitnet["speedup_claim"], false);
+        assert_eq!(bitnet["server_ready"], false);
+        assert!(bitnet["server_ready_scope"].is_null());
+        assert!(bitnet["server_scope"].is_null());
+        assert_eq!(bitnet["full_residency_claim"], false);
+        assert_eq!(bitnet["server_endpoint"], "/v1/chat/completions");
+        assert_eq!(bitnet["server_streaming"], false);
+        assert_eq!(bitnet["server_smoke"], true);
+        assert_eq!(bitnet["server_reason"], "broad production readiness not qualified");
+        assert_eq!(bitnet["bitnet_packed_i2s_qk256_proof"], true);
+        assert_eq!(bitnet["dense_regular_llm_cuda_proof"], false);
+
+        let qwen25 = model_status_json_row_for(&value, "dense_qwen25_05b_q8_cuda");
+        assert_eq!(qwen25["model_coverage_row"], "dense_qwen25_05b_q8_cuda");
+        assert_eq!(qwen25["current_tier"], "product_cli_ready");
+        assert_eq!(qwen25["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(qwen25["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(qwen25["fallback_used"], false);
+        assert_eq!(qwen25["product_cli_ready"], true);
+        assert_eq!(qwen25["route"], "dense_regular_llm_cuda");
+        assert_eq!(qwen25["speedup_claim"], false);
+        assert_eq!(qwen25["server_ready"], true);
+        assert_eq!(qwen25["server_ready_scope"], "exact_profile");
+        assert_eq!(qwen25["server_scope"], "exact_profile");
+        assert_eq!(qwen25["full_residency_claim"], false);
+        assert_eq!(qwen25["server_endpoint"], "/v1/chat/completions");
+        assert_eq!(qwen25["server_streaming"], false);
+        assert_eq!(qwen25["server_smoke"], true);
+        assert!(qwen25["server_reason"].is_null());
+        assert_eq!(qwen25["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(qwen25["dense_regular_llm_cuda_proof"], true);
+
+        let qwen3 = model_status_json_row_for(&value, "dense_qwen3_06b_q8_candidate");
+        assert_eq!(qwen3["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+        assert_eq!(qwen3["category"], "supported");
+        assert_eq!(qwen3["current_tier"], "product_cli_ready");
+        assert_eq!(qwen3["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(qwen3["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(qwen3["fallback_used"], false);
+        assert_eq!(qwen3["tier"], "product_cli_ready");
+        assert_eq!(qwen3["product_cli_ready"], true);
+        assert_eq!(qwen3["route"], "dense_regular_llm_cuda");
+        assert_eq!(qwen3["accelerator_answer_ready"], true);
+        assert_eq!(qwen3["speedup_claim"], false);
+        assert_eq!(qwen3["server_ready"], false);
+        assert!(qwen3["server_ready_scope"].is_null());
+        assert_eq!(qwen3["full_residency_claim"], false);
+        assert_eq!(qwen3["server_smoke"], false);
+        assert_eq!(qwen3["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(qwen3["dense_regular_llm_cuda_proof"], true);
+
+        let smollm2 = model_status_json_row_for(&value, "dense_smollm2_360m_candidate");
+        assert_eq!(smollm2["model_coverage_row"], "dense_smollm2_360m_candidate");
+        assert_eq!(smollm2["category"], "candidate");
+        assert_eq!(smollm2["current_tier"], "structurally_valid");
+        assert_eq!(smollm2["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert!(smollm2["selected_route"].is_null());
+        assert!(smollm2["fallback_used"].is_null());
+        assert_eq!(smollm2["product_cli_ready"], false);
+        assert_eq!(smollm2["cpu_answer_ready"], false);
+        assert_eq!(smollm2["accelerator_answer_ready"], false);
+        assert_eq!(smollm2["speedup_claim"], false);
+        assert_eq!(smollm2["server_ready"], false);
+        assert!(smollm2["server_ready_scope"].is_null());
+        assert_eq!(smollm2["full_residency_claim"], false);
+        assert_eq!(smollm2["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(smollm2["dense_regular_llm_cuda_proof"], false);
+        assert!(
+            smollm2["next_proof"]
+                .as_str()
+                .is_some_and(|next| { next.contains("same-prompt SmolLM2") })
+        );
         Ok(())
     }
 
