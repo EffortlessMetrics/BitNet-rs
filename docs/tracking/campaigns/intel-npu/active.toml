@@ -502,8 +502,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-012"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/intel-npu/NPU-012-source-of-truth-map"
+pr = 5634
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
