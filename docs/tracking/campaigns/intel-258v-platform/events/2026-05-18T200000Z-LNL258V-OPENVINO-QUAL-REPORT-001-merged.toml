@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T20:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-QUAL-REPORT-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-001-corpus-v2-failures"
+pr = 5633
+head_sha = "0f897f56ba5d24eeaaa79b101eb5b93d21fe5bc9"
+merge_sha = "f0894d6fdd426baeaf93417ba0ac49a08fa7e405"
+summary = "Merged PR #5633 for the no-new-inference OpenVINO Lunar Lake corpus-v2 failure report."
+
+artifacts = [
+  "docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "PR #5633 added a report classifying existing OpenVINO GPU/NPU corpus-v2 candidate failures by route, profile, case, failure class, generation-budget sensitivity, and promotion blocker.",
+  "The merge does not claim new inference, OpenVINO GPU/NPU route promotion, speedup, power advantage, native OpenCL/NPU execution, Arc/NPU acceleration, full BitNet accelerator inference, QK256 accelerator decode, or BitNet QK256/I2_S behavior changes.",
+]
