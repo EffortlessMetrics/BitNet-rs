@@ -14383,7 +14383,7 @@ fn validate_prompt_generation_identity_contract(
     .into_iter()
     .flatten()
     {
-        if observed != template_family {
+        if !prompt_template_family_matches(observed, template_family) {
             anyhow::bail!(
                 "{} prompt_generation_identity.template_family {template_family:?} conflicts with receipt template {observed:?}",
                 path.display()
@@ -14391,6 +14391,15 @@ fn validate_prompt_generation_identity_contract(
         }
     }
     Ok(())
+}
+
+fn prompt_template_family_matches(observed: &str, identity_family: &str) -> bool {
+    if observed == identity_family {
+        return true;
+    }
+    let observed = observed.parse::<bitnet_inference::TemplateType>();
+    let identity = identity_family.parse::<bitnet_inference::TemplateType>();
+    matches!((observed, identity), (Ok(observed), Ok(identity)) if observed == identity)
 }
 
 fn prompt_generation_identity_sha256_field<'a>(
@@ -18717,6 +18726,42 @@ mod tests {
     }
 
     #[test]
+    fn prompt_generation_identity_accepts_template_aliases()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = serde_json::json!({
+            "generation": {
+                "prompt_template": "qwen2.5"
+            },
+            "prompt_generation_identity": test_prompt_generation_identity("qwen25-chat"),
+        });
+
+        validate_prompt_generation_identity_contract(Path::new("identity.json"), &receipt)?;
+        Ok(())
+    }
+
+    #[test]
+    fn prompt_generation_identity_rejects_different_template_family()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = serde_json::json!({
+            "generation": {
+                "prompt_template": "qwen2.5"
+            },
+            "prompt_generation_identity": test_prompt_generation_identity(BITNET_M4_PROMPT_TEMPLATE),
+        });
+
+        let err = match validate_prompt_generation_identity_contract(
+            Path::new("identity.json"),
+            &receipt,
+        ) {
+            Ok(()) => return Err("template family mismatch should fail".into()),
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains("conflicts with receipt template"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
     fn mac_receipts_check_accepts_bitnet_larger_corpus_decision()
     -> Result<(), Box<dyn std::error::Error>> {
         let receipt = test_bitnet_larger_corpus_decision_receipt();
@@ -18901,6 +18946,39 @@ mod tests {
                 }
             ]
         })
+    }
+
+    fn test_prompt_generation_identity(template_family: &str) -> serde_json::Value {
+        crate::simple_generation::prompt::prompt_generation_identity(
+            crate::simple_generation::prompt::PromptGenerationIdentityInput {
+                template_family,
+                template_source: "bitnet-prompt-templates-core",
+                tokenizer_source: Some("gguf_metadata"),
+                tokenizer_authority: Some("qwen2"),
+                tokenizer_sha256: None,
+                tokenizer_strict: Some(true),
+                manual_stop_sequences: &["<|im_end|>".to_string()],
+                stop_sequences: &["<|im_end|>".to_string(), "<|im_start|>".to_string()],
+                manual_stop_token_ids: &[],
+                stop_token_ids: &[151645, 151644],
+                stop_string_window: None,
+                stop_policy: "manual_plus_template_defaults",
+                generation_params: crate::simple_generation::prompt::PromptGenerationParams {
+                    max_new_tokens: Some(16),
+                    temperature: Some(0.0),
+                    top_k: Some(1),
+                    top_p: Some(1.0),
+                    repetition_penalty: Some(1.1),
+                    seed: None,
+                    greedy: Some(true),
+                    deterministic: Some(true),
+                    threads: Some(1),
+                    qwen_no_think: Some(false),
+                    fixed_token_count: Some(false),
+                    stream: Some(false),
+                },
+            },
+        )
     }
 
     fn test_m3_warm_session_receipt() -> serde_json::Value {

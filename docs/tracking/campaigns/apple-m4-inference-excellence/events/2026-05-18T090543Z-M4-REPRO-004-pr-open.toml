@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T09:05:43Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-REPRO-004"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-REPRO-004-template-alias-validation"
+pr = 5610
+head_sha = "0bfb748c40f0d6882c716655d714a1870918ddbc"
+
+notes = [
+  "Opened PR #5610 for the prompt-template alias validation repair.",
+  "Validation accepts canonical Qwen2.5 ChatML aliases such as qwen2.5 and qwen25-chat while preserving rejection of genuinely different template families.",
+  "No runtime quality, benchmark speedup, BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, or broad performance claim.",
+]
