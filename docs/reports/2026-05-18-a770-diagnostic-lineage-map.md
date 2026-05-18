@@ -69,8 +69,9 @@ distance.
 
 Post-cleanup note on 2026-05-18: `#5724` landed the canonical tracker/CI-plan
 fix, `#5740` was closed as its duplicate, `#5731` was closed as a duplicate of
-`#5730`, and the remaining scoped Codex PRs were `#5730`, `#5732`, `#5733`, and
-`#5741`.
+`#5730`, and `#5730` then merged after rebase/review. After that merge, the
+remaining direct-to-main Codex docs/source-map PRs were `#5732`, `#5733`,
+`#5741`, `#5746`, `#5747`, and `#5748`.
 
 ## Disposition Rule
 
@@ -122,7 +123,8 @@ Read-only audit on 2026-05-18 found:
 | --- | --- | --- |
 | #4774-#5131 | No exact-superseded group was proven. Many PRs preserve unique layer scope, trace infrastructure, report shape, or diagnostic evidence. | Keep open while replacement PRs are built; do not close by range. |
 | #4751-#4770, #4801, #4837, #4845, #4850, #4853, #4855, #4883, #4885, #4892, #4959, #4961, #5010, #5012, #5020 | Runtime, loader, tokenizer, QK256, embedding, attention, CLI, and proof candidates may still contain useful invariants. | Audit against current `main`; port smallest confirmed fixes with direct tests. |
-| #5730, #5731 | Exact duplicate docs/specs pair by stable patch-id. | #5731 was closed after naming #5730 as the survivor. Keep #5730 for a real rebase/content review. |
+| #5730, #5731 | Exact duplicate docs/specs pair by stable patch-id. | #5731 was closed after naming #5730 as the survivor; #5730 merged after rebase/review. |
+| #5746, #5747, #5748 | New direct-to-main model-family docs/source-map lanes opened after #5730 merged. | Treat as docs/spec source-of-truth waves; compare overlap before merging independently. |
 
 No diagnostic PR should be closed as "historical evidence" unless this map or a
 successor ledger names the exact report, test, or behavior that preserves its
