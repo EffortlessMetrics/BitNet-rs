@@ -819,6 +819,11 @@ per-family or per-group reasons, receipt/Markdown/report targets, and the
 command to run next. `comparable` means matching-history comparison can proceed;
 `warning` requires operator review; `failed` blocks claims until the receipt is
 repaired; `insufficient_history` means a second matching report is needed.
+`bitnet mac status` and `bitnet mac doctor` also keep dense SLM and BitNet
+readiness separate: dense routes report default-model cache repair, BitNet
+routes report one-shot/warm readiness, BitNet chat and serve remain disabled
+until their gates pass, and both surfaces point at the latest matching receipt
+families used for operator context.
 
 Envelope classes should translate evidence into local user expectations:
 
