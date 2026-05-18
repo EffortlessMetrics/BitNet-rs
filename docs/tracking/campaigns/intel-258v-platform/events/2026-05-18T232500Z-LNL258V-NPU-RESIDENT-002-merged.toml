@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T23:25:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-NPU-RESIDENT-002"
+event = "merged"
+pr = 5796
+branch = "codex/lunar-lake/LNL258V-NPU-RESIDENT-002-stability"
+head_sha = "b757eff6f005988e1ca8c94dcf2363e3e8f07b30"
+merge_sha = "6d48fc2d291a886aa7342b5e8be1d47f2dc5e7fc"
+actor = "codex"
+summary = "Merged LNL258V-NPU-RESIDENT-002 after adding NPU resident stability evidence."
+
+notes = [
+  "PR #5796 extended OpenVINO GenAI NPU resident-session evidence to 30 warm dense Qwen asks with zero answer-gate failures.",
+  "The merged receipt records no answer drift, no generated-token drift, no fallback drift, no route drift, and process-memory growth context.",
+  "Warm_resident route-profile comparison now indexes the 30-warm-ask stability proof while NPU remains candidate-only and unpromoted.",
+  "The merge did not promote NPU, claim speedup or power advantage, claim NPU acceleration or native NPU inference outside OpenVINO GenAI, or change BitNet QK256/I2_S behavior.",
+]
