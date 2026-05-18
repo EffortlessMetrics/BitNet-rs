@@ -1,5 +1,26 @@
 # Specs Index
 
+## Official Microsoft BitNet 2B Productization
+
+Use these artifacts before implementing or claiming support for
+`microsoft/BitNet-b1.58-2B-4T`:
+
+1. [Official BitNet 2B Source Map](../bitnet/official-2b/README.md)
+   - Records the official model family, current I2_S/QK256 answer authority,
+     route split, claim boundaries, and source-of-truth stack.
+2. [Official BitNet 2B Implementation Plan](../../plans/official-bitnet-2b/implementation-plan.md)
+   - Sequences source-map, proposal, specs, CPU/CUDA excellence, Apple/A770,
+     TL1/TL2, BF16/GPU-int2, and product-polish work.
+3. [Official BitNet 2B Campaign](../tracking/campaigns/official-bitnet-2b/CAMPAIGN.md)
+   - Summarizes the active campaign boundaries and route-specific proof model.
+
+The current I2_S/QK256 row may remain bounded product-CLI-ready exactly as
+recorded in `ci/model-artifacts/model-coverage-matrix.toml`. Do not promote
+speedup, full residency, broad server readiness, TL1, TL2, BF16/GPU-int2,
+Apple, or A770 claims without route-specific specs and receipts. Dense SLM
+proof and diagnostic no-scale F32 QK256 proof do not satisfy production
+BitNet packed I2_S/QK256 proof.
+
 ## NPU productization
 
 Use these artifacts before implementing or claiming NPU product support:

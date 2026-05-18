@@ -517,6 +517,8 @@
 | nvidia-5070ti | CUDA-DENSE-020 | CUDA-DENSE-019 | merged |
 | nvidia-5070ti | CUDA-UX-002 | CUDA-UX-001, CUDA-PROD-001 | merged |
 | nvidia-5070ti | CUDA-DENSE-014 | CUDA-DENSE-013 | merged |
+| official-bitnet-2b | OFFICIAL-2B-001 | OFFICIAL-2B-000 | blocked |
+| official-bitnet-2b | OFFICIAL-2B-002 | OFFICIAL-2B-001 | blocked |
 | server-real-inference | SERVER-002 | SERVER-001 | merged |
 | server-real-inference | SERVER-003 | SERVER-002 | merged |
 | server-real-inference | SERVER-004 | SERVER-003 | merged |
