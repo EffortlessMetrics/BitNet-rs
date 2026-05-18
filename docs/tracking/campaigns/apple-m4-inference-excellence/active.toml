@@ -1306,10 +1306,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BITNET-EX-011"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-011-bitnet-250-run"
 pr = 5452
 head_sha = "17462920105f0b1e8aa738356bab0205da47089e"
+merge_sha = "0c4691bd906b66a1057f61803c50837bd3c14e52"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

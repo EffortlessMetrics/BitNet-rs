@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T00:44:50Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-011"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-011-bitnet-250-run"
+pr = 5452
+merge_sha = "0c4691bd906b66a1057f61803c50837bd3c14e52"
+
+notes = [
+  "Merged PR #5452 for the bounded 250-case accepted BitNet M4 receipt publication.",
+  "The merged evidence records aggregate and child receipts, compact summary, receipt validation, and an explicit 100-case baseline context-mismatch artifact for apple-m4-cpu-neon with fallback_used=false.",
+  "Closeout records a tracker-only state transition; it does not add fresh runtime, broad BitNet quality or performance, dense SLM evidence, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claims.",
+]
