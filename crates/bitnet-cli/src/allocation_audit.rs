@@ -156,6 +156,7 @@ pub(crate) struct WarmSessionPromptAllocationAudit<'a> {
     pub(crate) requested_backend: &'a str,
     pub(crate) prompt_tokenize: AllocationAuditSnapshot,
     pub(crate) prompt_setup: AllocationAuditSnapshot,
+    pub(crate) prompt_setup_breakdown: WarmSessionPromptSetupAllocationAudit,
     pub(crate) prompt_prefill: &'a [AllocationAuditSnapshot],
     pub(crate) decode_total: &'a [AllocationAuditSnapshot],
     pub(crate) embed: &'a [AllocationAuditSnapshot],
@@ -166,6 +167,14 @@ pub(crate) struct WarmSessionPromptAllocationAudit<'a> {
     pub(crate) token_decode: &'a [AllocationAuditSnapshot],
     pub(crate) stop_tail_update: &'a [AllocationAuditSnapshot],
     pub(crate) receipt_construction: AllocationAuditSnapshot,
+}
+
+#[cfg(feature = "full-cli")]
+pub(crate) struct WarmSessionPromptSetupAllocationAudit {
+    pub(crate) buffer_reset: AllocationAuditSnapshot,
+    pub(crate) token_seed: AllocationAuditSnapshot,
+    pub(crate) kv_cache: AllocationAuditSnapshot,
+    pub(crate) sampler_setup: AllocationAuditSnapshot,
 }
 
 #[cfg(feature = "full-cli")]
@@ -182,10 +191,20 @@ pub(crate) fn warm_session_prompt_allocation_audit_json(
 
     let prompt_tokenize = std::slice::from_ref(&audit.prompt_tokenize);
     let prompt_setup = std::slice::from_ref(&audit.prompt_setup);
+    let prompt_setup_buffer_reset =
+        std::slice::from_ref(&audit.prompt_setup_breakdown.buffer_reset);
+    let prompt_setup_token_seed = std::slice::from_ref(&audit.prompt_setup_breakdown.token_seed);
+    let prompt_setup_kv_cache = std::slice::from_ref(&audit.prompt_setup_breakdown.kv_cache);
+    let prompt_setup_sampler_setup =
+        std::slice::from_ref(&audit.prompt_setup_breakdown.sampler_setup);
     let receipt_construction = std::slice::from_ref(&audit.receipt_construction);
     let mut hotspots = vec![
         allocation_hotspot("prompt_tokenize", prompt_tokenize),
         allocation_hotspot("prompt_setup", prompt_setup),
+        allocation_hotspot("prompt_setup.buffer_reset", prompt_setup_buffer_reset),
+        allocation_hotspot("prompt_setup.token_seed", prompt_setup_token_seed),
+        allocation_hotspot("prompt_setup.kv_cache", prompt_setup_kv_cache),
+        allocation_hotspot("prompt_setup.sampler_setup", prompt_setup_sampler_setup),
         allocation_hotspot("prompt_prefill", audit.prompt_prefill),
         allocation_hotspot("decode_total", audit.decode_total),
         allocation_hotspot("model.embed", audit.embed),
@@ -223,6 +242,10 @@ pub(crate) fn warm_session_prompt_allocation_audit_json(
         "instrumentation_included": [
             "prompt_tokenize",
             "prompt_setup",
+            "prompt_setup.buffer_reset",
+            "prompt_setup.token_seed",
+            "prompt_setup.kv_cache",
+            "prompt_setup.sampler_setup",
             "prompt_prefill_step",
             "decode_step_total",
             "model.embed",
@@ -242,6 +265,13 @@ pub(crate) fn warm_session_prompt_allocation_audit_json(
         ],
         "prompt_tokenize": allocation_samples_json(prompt_tokenize),
         "prompt_setup": allocation_samples_json(prompt_setup),
+        "prompt_setup_breakdown_scope": "subcomponent counter deltas nested inside prompt_setup; these are attribution evidence and do not change generation behavior",
+        "prompt_setup_breakdown": {
+            "buffer_reset": allocation_samples_json(prompt_setup_buffer_reset),
+            "token_seed": allocation_samples_json(prompt_setup_token_seed),
+            "kv_cache": allocation_samples_json(prompt_setup_kv_cache),
+            "sampler_setup": allocation_samples_json(prompt_setup_sampler_setup),
+        },
         "prompt_prefill": allocation_samples_json(audit.prompt_prefill),
         "decode": {
             "total": allocation_samples_json(audit.decode_total),
