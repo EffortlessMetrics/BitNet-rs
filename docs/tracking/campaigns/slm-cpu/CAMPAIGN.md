@@ -78,7 +78,12 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-025 | merged | #5357 isolated deterministic greedy logits extraction so exact no-penalty steps use direct tensor argmax; default repetition-penalty vector extraction remained explicit. |
 | SLM-CPU-026 | merged | #5369 reused a host logits scratch buffer for default repetition-penalty decode steps, reducing fresh logits Vec extraction while preserving generated IDs, strict tokenizer authority, cpu-rust, and fallback=false. |
 | SLM-CPU-027 | blocked | Duplicate second-model item blocked because SLM-CPU-017 and SLM-CPU-017A already recorded the SmolLM2 blocker and positive Qwen2.5 Q8_0 second-model sanity evidence. |
-| SLM-CPU-028 | pr_open | #5384 defines the bounded Q4_K_M/Q4_K_S expansion plan: candidate artifact identity, metadata, tokenizer, strict CPU, fallback, corpus, multi-token, warm-session, and operator-profile gates before any Q4 runtime support claim. |
+| SLM-CPU-028 | merged | #5384 defined the bounded Q4_K_M/Q4_K_S expansion plan: candidate artifact identity, metadata, tokenizer, strict CPU, fallback, corpus, multi-token, warm-session, and operator-profile gates before any Q4 runtime support claim. |
+| SLM-CPU-029 | merged | #5405 reduced the next Qwen3 Q8_0 warm-session allocation/layout boundary while preserving the 4-thread generated-ID oracle and strict provenance. |
+| SLM-CPU-030 | merged | #5457 added prompt setup allocation attribution for buffer reset, token seed, KV-cache, and sampler setup subcomponents. |
+| SLM-CPU-031 | merged | #5499 reused a single CPU KV cache across warm-session prompts while preserving prompt isolation through explicit clears. |
+| SLM-CPU-032 | merged | #5514 reused rendered prompt token IDs across repeated warm-session prompts and recorded prompt-token cache hit/miss counts. |
+| SLM-CPU-033 | in_progress | Records the dominant aggregate allocation hotspot and next evidence-scoped optimization target after prompt-token caching; this is diagnostic prioritization only, not a speedup or sustained-throughput claim. |
 
 ## Review Policy
 

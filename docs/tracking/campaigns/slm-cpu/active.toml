@@ -2041,6 +2041,55 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-033"
+status = "in_progress"
+branch = "codex/slm-cpu-033-forward-allocation-boundary"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-032"]
+acceptance = "Record the next Qwen3 Q8_0 Kaby warm-session allocation boundary after prompt-token caching by making aggregate allocation receipts name the dominant measured hotspot and next evidence-scoped optimization target. The slice must preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false when real artifacts are regenerated. It must not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli warm_session_aggregate_allocation_audit_names_next_target",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli warm_session_allocation_audit_reports_prompt_setup_breakdown",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "Aggregate Qwen3 Q8_0 Kaby warm-session allocation receipts name the dominant measured hotspot.",
+  "Aggregate receipts name the next evidence-scoped optimization target without changing generation behavior.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "A runtime speedup is proven by this slice.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-024"
 status = "merged"
 pr = 5342

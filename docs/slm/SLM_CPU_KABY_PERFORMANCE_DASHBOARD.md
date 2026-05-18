@@ -284,6 +284,28 @@ This is a tokenizer-boundary optimization only. It does not change dense math,
 does not claim Q4/Q5 support, and does not turn the bounded Kaby appliance
 profile into a sustained-throughput result.
 
+## Aggregate Allocation Boundary
+
+SLM-CPU-033 records the next warm-session allocation target directly in the
+aggregate receipt. After prompt-token caching, the real i5-8250U evidence still
+shows the largest allocation-counter deltas in prompt prefill and dense model
+forward execution:
+
+```text
+evidence = ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache.json
+validation = ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache-validation.json
+dominant_hotspot = prompt_prefill
+next_optimization_target = prefill_model_forward_allocation_attribution
+fallback_used = false
+speedup_claim = false
+sustained_throughput_claim = false
+```
+
+The target is diagnostic. It tells the next runtime slice to attribute
+`prompt_prefill` and `model.forward` tensor allocation before changing kernels
+or dense math. It does not prove a speedup and it does not broaden the Kaby
+claim boundary.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:
