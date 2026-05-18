@@ -6563,9 +6563,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-DOCS-005"
-status = "pr_open"
+status = "merged"
 pr = 5605
-head_sha = "d7e08c1f94dcdc611ee00a9cbba3c058b6a7a6d8"
+head_sha = "9248fb72eba4ff3fd825db87b55a8915a73f5cd7"
+merge_sha = "f1719a556657f3cec40a88ebe1ae7264c42eecd7"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-005-promotion-bitnet-boundary"
 stackable = false
 review_mode = "codex_premerge"
