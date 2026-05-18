@@ -272,6 +272,10 @@ selects the historical workspace smoke; the full benchmark matrix remains
 scheduled/manual evidence unless a later rollout explicitly promotes PR
 benchmark selection.
 
+Test Telemetry also stays selected-only. Ordinary PRs only run its route job;
+`test-telemetry`, `slow-tests`, or `full-ci` runs the nextest/JUnit lane for
+PR observability, while `main` and manual dispatch keep the same summaries.
+
 ## Label Matrix
 
 | Label | Workflow | Duration | Blocking on `main` | Blocking on PRs |

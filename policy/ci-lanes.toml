@@ -45,10 +45,16 @@ runner = "ubuntu_22_04"
 default_pr = true
 blocking = true
 
+[lane.test-telemetry-route]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
 [lane.test-telemetry]
 base_lem = 18
 runner = "ubuntu_22_04"
-default_pr = true
+default_pr = false
 blocking = false
 
 [lane.ci-actuals]

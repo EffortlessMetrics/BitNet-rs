@@ -130,12 +130,33 @@ review_after = "2026-06-07"
 expires = "2026-11-07"
 
 [[lane]]
+id = "test-telemetry-route"
+workflow = ".github/workflows/test-telemetry.yml"
+job = "Route Test Telemetry"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "testing/telemetry"
+intent = "Select test telemetry only for non-PR events or explicit telemetry labels."
+failure_mode = "Ordinary PRs spend advisory nextest/JUnit minutes even when no telemetry signal was requested."
+proof_obligation = "Evaluate event and labels and emit selected=true/false with a route reason."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
+labels = ["test-telemetry", "slow-tests", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
 id = "test-telemetry"
 workflow = ".github/workflows/test-telemetry.yml"
 job = "Test Telemetry (JUnit + slow tests)"
 kind = "observability"
 tier = "frontdoor-advisory"
-default_pr = true
+default_pr = false
 blocking = false
 runner = "ubuntu_22_04"
 base_lem = 18
@@ -144,10 +165,11 @@ intent = "Emit nextest JUnit and slow-test summaries for PR test-observability w
 failure_mode = "Per-test timing, slow-test, and future flake/actuals signals remain invisible."
 proof_obligation = "Run cargo-nextest on the CI Core Rust test surface and upload target/nextest/ci/junit.xml."
 evidence = ["target/nextest/ci/junit.xml", "GitHub step summary"]
-allowed_triggers = ["pull_request:path-gated", "push", "workflow_dispatch"]
+allowed_triggers = ["push", "workflow_dispatch", "pull_request:labeled"]
+labels = ["test-telemetry", "slow-tests", "full-ci"]
 duplicate_of = ["ci-core-build-test for pass/fail semantics"]
-review_after = "2026-06-07"
-expires = "2026-11-07"
+review_after = "2026-06-18"
+expires = "2026-11-18"
 
 [[lane]]
 id = "ci-actuals"
