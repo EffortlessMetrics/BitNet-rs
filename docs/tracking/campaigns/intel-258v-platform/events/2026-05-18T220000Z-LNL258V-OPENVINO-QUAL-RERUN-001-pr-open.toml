@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T22:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-QUAL-RERUN-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-RERUN-001"
+pr = 5650
+head_sha = "8672e998f2c9673a8906e57a634d84f493416b54"
+summary = "Opened PR #5650 for the Lunar Lake corpus-v2 rerun after the exact-answer fixture-policy update."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md",
+]
+
+notes = [
+  "PR #5650 refreshes CPU/OpenVINO corpus-v2 receipts after yes_no_clear_sky moved to the one-token budget and keeps OpenVINO GPU/NPU routes candidate-only.",
+  "The PR does not claim route promotion, speedup, power advantage, native Arc/NPU acceleration, full BitNet accelerator inference, QK256 accelerator decode, or BitNet QK256/I2_S behavior.",
+]

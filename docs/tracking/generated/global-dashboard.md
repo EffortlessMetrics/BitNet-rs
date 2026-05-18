@@ -4,6 +4,7 @@
 | Campaign | Active item | PR | State | Next | Notes |
 |---|---|---:|---|---|---|
 | amd-cpu-baselines | AMD5700X-003 | TBD | ready | AMD9950X3D-003 | These lanes are CPU proof lanes, not accelerator lanes. |
+| amd-rocm | ROCM-DOCS-000 | TBD | ready | none | Do not claim generic AMD GPU support. |
 | apple-bitnet-artifact-sweep | ABAS-001 | TBD | proposed | ABAS-002 | Use MacBook first for larger artifact sweeps; do not manufacture MacBook receipts from the M4 Mac mini. |
 | apple-m3-macbook-air | M3MBA-006 | TBD | blocked | M3MBA-007 | This is the Apple M3 MacBook Air lane, not the M4 Mac mini product, performance, or strict-proof lane. |
 | apple-m4 | M4-018 | #3826 | merged | none | Do not touch QK256 before a BitNet-specific Apple item explicitly allows it. |
@@ -32,11 +33,11 @@
 | cpu-qk256-performance | KBL8250U-004 | #3839 | merged | none | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
 | intel-258v-platform | LNL258V-OPENVINO-UX-001 | #5627 | merged | none | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
-| intel-a770 | A770-000 | TBD | ready | A770-003 | OpenCL-first for native A770 proof. |
+| intel-a770 | A770-003 | TBD | proposed | A770-004 | OpenCL-first for native A770 proof. |
 | intel-npu | NPU-011 | #4097 | merged | none | Device-node detection is not inference. |
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
-| nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |
+| nvidia-5070ti | CUDA-MODEL-011 | #5645 | pr_open | none | CUDA visibility is not kernel execution. |
 | server-real-inference | SERVER-005 | #4490 | merged | none | Do not reintroduce simulated inference. |
-| slm-cpu | SLM-CPU-037 | TBD | ready | SLM-CPU-027 | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | SLM-CPU-038 | TBD | ready | SLM-CPU-027 | Do not edit BitNet QK256/I2_S kernels. |
 | tracker-infra | TRACKER-003 | #3724 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM-002 | TBD | ready | WASM-003 | WASM detection is not inference. |

@@ -75,8 +75,8 @@ fn render_chatml(sys: &str, history: &[ChatTurn]) -> String {
     out
 }
 
-/// Build a Qwen 2.5 ChatML prompt. Qwen 2.5 reference runners leave the
-/// assistant generation marker without a trailing newline.
+/// Build a Qwen 2.5 ChatML prompt. The exported tokenizer chat template appends
+/// the assistant generation marker with a trailing newline.
 fn apply_qwen25_chatml(system: &str, user_text: &str) -> String {
     let mut result = String::new();
     result.push_str("<|im_start|>system\n");
@@ -85,7 +85,7 @@ fn apply_qwen25_chatml(system: &str, user_text: &str) -> String {
     result.push_str("<|im_start|>user\n");
     result.push_str(user_text);
     result.push_str("<|im_end|>\n");
-    result.push_str("<|im_start|>assistant");
+    result.push_str("<|im_start|>assistant\n");
     result
 }
 
@@ -102,7 +102,7 @@ fn render_qwen25_chatml(sys: &str, history: &[ChatTurn]) -> String {
         out.push_str(&turn.text);
         out.push_str("<|im_end|>\n");
     }
-    out.push_str("<|im_start|>assistant");
+    out.push_str("<|im_start|>assistant\n");
     out
 }
 
@@ -4464,7 +4464,7 @@ mod detect_logging_tests {
         assert!(result.contains("You are Qwen, created by Alibaba Cloud."));
         assert!(result.contains("<|im_end|>"));
         assert!(result.contains("<|im_start|>user\nHello!"));
-        assert!(result.ends_with("<|im_start|>assistant"));
+        assert!(result.ends_with("<|im_start|>assistant\n"));
 
         // With custom system prompt
         let result = t.apply("Hello!", Some("You are a math tutor."));
@@ -4493,7 +4493,7 @@ mod detect_logging_tests {
         assert!(s.contains("<|im_start|>system\nBe helpful.<|im_end|>"));
         assert!(s.contains("<|im_start|>user\nHello<|im_end|>"));
         assert!(s.contains("<|im_start|>assistant\nHi!<|im_end|>"));
-        assert!(s.ends_with("<|im_start|>assistant"));
+        assert!(s.ends_with("<|im_start|>assistant\n"));
     }
 
     #[test]

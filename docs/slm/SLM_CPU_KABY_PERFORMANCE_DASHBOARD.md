@@ -358,6 +358,28 @@ first_reusable_allocation_surface = transformer_forward_workspace_and_owned_tens
 claim_scope = allocation-boundary classification only
 ```
 
+SLM-CPU-037 keeps that boundary explicit instead of adding a broad caller-side
+buffer reuse patch. The current transformer API returns owned Candle tensors
+from `TransformerModel::forward`, `TransformerBlock::forward`, and
+`FeedForward::forward`, so a warm-session caller cannot safely recycle those
+outputs without changing the typed transformer API. The receipt therefore
+records:
+
+```text
+reuse_status = not_reusable_without_transformer_api_change
+required_api_boundary = typed_transformer_forward_workspace
+next_optimization_target = typed_transformer_forward_workspace_api
+status = blocked_by_owned_tensor_outputs
+optimization_deferred = true
+```
+
+The next safe implementation target is a transformer-owned workspace API whose
+tests preserve generated IDs, decoded text, strict GGUF tokenizer authority,
+selected CPU backend/kernel, model SHA, and `fallback=false`. This remains an
+allocation-boundary proof only; it makes no speedup, sustained-throughput,
+broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256
+claim.
+
 This is a classification slice. It does not change Q8_0 GEMV, RMSNorm, RoPE,
 attention, output-head math, tokenizer behavior, or generated tokens, and it
 does not claim a speedup, sustained throughput, Q4/Q5 runtime support,

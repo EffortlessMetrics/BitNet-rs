@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T03:26:32Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-009"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "cuda-model-009-qwen3-product-ux-audit"
+pr = 5507
+head_sha = "3411a38c3b21b62fa04f7c435bb5ae382d020da5"
+merge_sha = "2f77739bb75e6364f5bbc25e4218a77e7b4814cf"
+summary = "Merged PR #5507 with the Qwen3 product UX audit."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5507",
+  "docs/reports/CUDA_MODEL_009_QWEN3_PRODUCT_UX_AUDIT.md",
+]
+
+notes = [
+  "The audit mapped model verify, ask, chat/warm path, receipt explain, model status, fallback rejection, quality gate, benchmark review, and claim booleans.",
+  "Qwen3 product CLI readiness, server readiness, speedup, full CUDA residency, broad dense GGUF readiness, proof inheritance, and BitNet packed I2_S/QK256 proof remained false/non-claims.",
+]
