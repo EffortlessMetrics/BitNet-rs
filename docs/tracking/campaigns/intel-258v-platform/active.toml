@@ -5936,8 +5936,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-NPU-CACHE-001"
-status = "in_progress"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-NPU-CACHE-001"
+pr = 5735
+head_sha = "863fd6da6f3bcae473a04baa024b28fedf622648"
+merge_sha = "d95aa66d7ca87e21c5c9f35f84d06ba044dcf753"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

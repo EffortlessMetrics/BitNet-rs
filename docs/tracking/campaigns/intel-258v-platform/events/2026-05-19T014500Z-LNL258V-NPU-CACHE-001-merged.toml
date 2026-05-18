@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T01:45:00Z"
+event = "merged"
+item = "LNL258V-NPU-CACHE-001"
+branch = "codex/lunar-lake/LNL258V-NPU-CACHE-001"
+pr = 5735
+head_sha = "863fd6da6f3bcae473a04baa024b28fedf622648"
+merge_sha = "d95aa66d7ca87e21c5c9f35f84d06ba044dcf753"
+actor = "codex"
+summary = "Merged LNL258V-NPU-CACHE-001 to add OpenVINO NPU cache experiment evidence and route-profile wiring."
+
+notes = [
+  "The live cache experiment uses two separate OpenVINO GenAI NPU processes with one stable CACHE_DIR and records fallback_used=false with both bounded answer gates passing.",
+  "The first-process NPU pipeline construction was 32804.240 ms; the second cached process was 1772.090 ms, classifying the cache as materially reducing pipeline construction by timing.",
+  "Route-profile, regression-v2, and operator-comparison artifacts index the cache evidence while preserving no route promotion, no speedup claim, no power-advantage claim, no NPU acceleration claim, no native NPU inference claim, and no BitNet QK256/I2_S behavior change.",
+]
