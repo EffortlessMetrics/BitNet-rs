@@ -25,6 +25,7 @@ bitnet-test-support.workspace = true
 [features]
 default = []
 cpu = ["bitnet-quantization/cpu"]
+avx2 = ["bitnet-quantization/avx2"]
 cuda = [
   "dep:bitnet-kernels",
   "bitnet-kernels/cuda",

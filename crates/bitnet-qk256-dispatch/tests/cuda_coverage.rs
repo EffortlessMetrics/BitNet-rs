@@ -1,5 +1,5 @@
 use bitnet_qk256_dispatch::{
-    forward_qk256, qk256_cuda_runtime_stats, qk256_dispatch_coverage,
+    forward_qk256, qk256_cpu_hot_path_counters, qk256_cuda_runtime_stats, qk256_dispatch_coverage,
     record_bitnet_linear_cpu_fallback, record_bitnet_linear_unsupported,
     reset_qk256_dispatch_coverage,
 };
@@ -42,6 +42,65 @@ fn cpu_selected_qk256_forward_records_total_without_fallback() {
     assert_eq!(coverage.bitnet_linear_layers_cpu_fallback, 0);
     assert!(coverage.unsupported_ops.is_empty());
     assert_eq!(coverage.execution_claim, "cpu_reference");
+}
+
+#[test]
+fn cpu_qk256_forward_records_hot_path_materialization_and_kernel_counts() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    clear_backend_env();
+    reset_qk256_dispatch_coverage();
+    let device = Device::Cpu;
+    let input = Tensor::ones(&[1, 2, 256], DType::F32, &device).unwrap();
+    let qk256 = qk256_tensor(2, 256, &device);
+
+    forward_qk256(&input, &qk256, "layers.0.attention.q_proj.weight.qk256_qs").unwrap();
+
+    let counters = qk256_cpu_hot_path_counters();
+    assert_eq!(
+        counters.qk256_f32_scalar_gemv_invocations + counters.qk256_f32_avx2_gemv_invocations,
+        2
+    );
+    assert_eq!(counters.qk256_i8s_scaled_scalar_invocations, 0);
+    assert_eq!(counters.qk256_i8s_scaled_avx2_invocations, 0);
+    assert_eq!(counters.qk256_flat_bytes_extracted_count, 1);
+    assert_eq!(counters.input_rows_materialized_count, 2);
+    assert_eq!(counters.output_rows_allocated_count, 2);
+    assert_eq!(counters.qk256_path, "no_scale_f32");
+}
+
+#[test]
+fn cpu_qk256_inline_scale_records_scaled_scalar_hot_path() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    clear_backend_env();
+    reset_qk256_dispatch_coverage();
+    unsafe {
+        std::env::set_var("BITNET_CPU_KERNEL", "avx2");
+    }
+    let device = Device::Cpu;
+    let input = Tensor::ones(&[1, 1, 256], DType::F32, &device).unwrap();
+    let qk256 = qk256_tensor(2, 256, &device);
+
+    bitnet_qk256_dispatch::forward_qk256_with_scale(
+        &input,
+        &qk256,
+        "layers.0.attention.q_proj.weight.qk256_qs",
+        Some(1.0),
+    )
+    .unwrap();
+
+    let counters = qk256_cpu_hot_path_counters();
+    assert_eq!(counters.qk256_i8s_scaled_scalar_invocations, 1);
+    assert_eq!(counters.qk256_i8s_scaled_avx2_invocations, 0);
+    assert_eq!(counters.qk256_f32_scalar_gemv_invocations, 0);
+    assert_eq!(counters.qk256_f32_avx2_gemv_invocations, 0);
+    assert_eq!(counters.requested_kernel, Some("qk256-avx2-i2s-i8s-gemv"));
+    assert_eq!(counters.selected_kernel, Some("qk256-scalar-i2s-i8s-gemv"));
+    assert!(counters.kernel_fallback_used);
+    assert_eq!(counters.qk256_path, "scaled_i2s_i8s");
+    clear_backend_env();
+    unsafe {
+        std::env::remove_var("BITNET_CPU_KERNEL");
+    }
 }
 
 #[test]
