@@ -20,6 +20,8 @@ CUDA target:  nvidia-rtx-5070-ti-cuda
   [`BITNET-SPEC-0007`](../../docs/specs/BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md)
 - Server readiness spec:
   [`BITNET-SPEC-0010`](../../docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md)
+- CUDA route contract:
+  [`BITNET-SPEC-CUDA-ROUTE-CONTRACT`](../../docs/specs/BITNET-SPEC-CUDA-ROUTE-CONTRACT.md)
 - Bench ADR:
   [`BITNET-ADR-0004`](../../docs/adr/BITNET-ADR-0004-9950x3d-5070ti-cuda-product-bench.md)
 - CUDA campaign:
@@ -34,6 +36,7 @@ CUDA target:  nvidia-rtx-5070-ti-cuda
 ## Files
 
 - [`implementation-plan.md`](implementation-plan.md) lists the PR-sized queue.
+- [`BITNET-SPEC-CUDA-ROUTE-CONTRACT`](../../docs/specs/BITNET-SPEC-CUDA-ROUTE-CONTRACT.md) defines route IDs, common CUDA receipt fields, and proof-family rails for this plan.
 - [`bitnet-official-i2s.md`](bitnet-official-i2s.md) owns the official BitNet
   2B I2_S/QK256 product path.
 - [`dense-qwen.md`](dense-qwen.md) owns the Qwen2.5 0.5B Q8_0 dense CUDA lane.
@@ -43,6 +46,15 @@ CUDA target:  nvidia-rtx-5070-ti-cuda
   profile-specific speed decisions.
 - [`server-readiness.md`](server-readiness.md) owns exact-profile server
   readiness promotion rules.
+
+## Phase 0 Spec Rails
+
+The first CUDA end-state PR adds the route contract before any runtime change.
+That contract makes `bitnet_qk256_cuda`, `dense_regular_llm_cuda`,
+`dense_gguf_linear_cuda_parity`, `dense_gguf_layer_plan`, and
+`server_shared_engine_cuda` explicit, requires selected-backend resolution and
+execution-plan fields in promotion receipts, and keeps proof families
+non-interchangeable.
 
 ## Claim Boundary
 

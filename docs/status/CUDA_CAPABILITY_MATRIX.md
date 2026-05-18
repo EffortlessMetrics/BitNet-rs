@@ -22,11 +22,34 @@ bitnet receipts explain --latest
 | Human-readable model coverage | `docs/model-artifacts/MODEL_COVERAGE_MATRIX.md` |
 | RTX 5070 Ti campaign state | `docs/tracking/campaigns/nvidia-5070ti/CAMPAIGN.md` |
 | Strict CUDA product contract | `docs/specs/BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md` |
+| CUDA route contract | `docs/specs/BITNET-SPEC-CUDA-ROUTE-CONTRACT.md` |
 | Server readiness boundary | `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md` |
 | User quickstart | `docs/tutorials/9950x3d-5070ti-cuda-quickstart.md` |
 | BitNet CUDA guide | `docs/tutorials/rtx5070ti-bitnet-cuda.md` |
 | Dense Qwen CUDA guide | `docs/tutorials/rtx5070ti-dense-qwen-cuda.md` |
 | Receipt triage guide | `docs/tutorials/cuda-receipt-triage.md` |
+
+## Route Contract
+
+CUDA status rows use the route IDs and proof-family booleans defined by
+[BITNET-SPEC-CUDA-ROUTE-CONTRACT](../specs/BITNET-SPEC-CUDA-ROUTE-CONTRACT.md).
+A row may not treat generic `cuda` as strict RTX 5070 Ti proof unless the
+receipt resolves `selected_backend = nvidia-rtx-5070-ti-cuda`, records
+`runtime_api = cuda`, rejects fallback, and includes an execution plan for the
+selected route.
+
+The current first-class route IDs are:
+
+```text
+bitnet_qk256_cuda
+dense_regular_llm_cuda
+dense_gguf_linear_cuda_parity
+dense_gguf_layer_plan
+server_shared_engine_cuda
+```
+
+Dense CUDA proof, BitNet QK256 proof, fixture parity, layer planning, server
+readiness, speedup, and full residency are separate claims.
 
 ## Current CUDA Rows
 

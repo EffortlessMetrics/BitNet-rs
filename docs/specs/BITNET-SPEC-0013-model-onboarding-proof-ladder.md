@@ -24,6 +24,7 @@ This spec relies on existing authorities instead of replacing them:
 - [Native Rust inference product proposal](../proposals/BITNET-PROP-0003-native-rust-inference-product.md)
 - [Source-of-truth and claim boundaries](BITNET-SPEC-0001-source-of-truth-and-claim-boundaries.md)
 - [9950X3D + RTX 5070 Ti CUDA product contract](BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md)
+- [CUDA route contract](BITNET-SPEC-CUDA-ROUTE-CONTRACT.md)
 - [Server readiness proof boundary](BITNET-SPEC-0010-server-readiness-proof-boundary.md)
 - [Answer Artifact Gate](../model-artifacts/ANSWER_ARTIFACT_GATE.md)
 - [Model Coverage Matrix](../model-artifacts/MODEL_COVERAGE_MATRIX.md)
@@ -232,6 +233,25 @@ Must not claim:
 - Speedup is exact-profile only.
 - Server readiness is exact-profile unless a later spec explicitly promotes a
   broader scope.
+
+## CUDA Route Claim Boundary
+
+CUDA accelerator rows must name a selected route before promotion. The common
+route IDs are defined by
+[BITNET-SPEC-CUDA-ROUTE-CONTRACT](BITNET-SPEC-CUDA-ROUTE-CONTRACT.md):
+
+```text
+bitnet_qk256_cuda
+dense_regular_llm_cuda
+dense_gguf_linear_cuda_parity
+dense_gguf_layer_plan
+server_shared_engine_cuda
+```
+
+A receipt with generic `cuda` but no resolved selected backend cannot promote a
+strict RTX 5070 Ti claim. Dense regular-LLM CUDA and BitNet packed I2_S/QK256
+CUDA remain separate proof families, and planning or fixture routes cannot be
+used as full-model execution proof.
 
 ## Required Claim Booleans
 
