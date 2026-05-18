@@ -22,6 +22,7 @@ already use for CUDA ask/chat receipts:
 ```powershell
 bitnet receipts explain <benchmark-qualification-receipt.json>
 bitnet receipts explain <benchmark-qualification-receipt.json> --json
+bitnet receipts explain <benchmark-qualification-receipt.json> --format json
 ```
 
 Claim boundary:

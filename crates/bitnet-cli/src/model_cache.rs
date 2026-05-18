@@ -528,12 +528,17 @@ struct ModelStatusDashboard {
 #[derive(Debug, Serialize)]
 struct ModelStatusRow {
     id: String,
+    model_coverage_row: String,
     display_name: String,
     model_class: String,
     route: Option<String>,
+    selected_route: Option<String>,
+    selected_backend: String,
     tier: String,
+    current_tier: String,
     status: String,
     category: String,
+    fallback_used: Option<bool>,
     cpu_answer_ready: bool,
     accelerator_answer_ready: bool,
     benchmark_qualified: bool,
@@ -1290,7 +1295,7 @@ fn model_status_dashboard(
         .entry
         .iter()
         .filter(|entry| model_status_includes_entry(device, entry))
-        .map(model_status_row)
+        .map(|entry| model_status_row(device, entry))
         .collect();
 
     ModelStatusDashboard {
@@ -1318,7 +1323,7 @@ fn model_status_includes_entry(device: &str, entry: &ModelCoverageEntry) -> bool
         && matches!(entry.model_class.as_str(), "dense_slm" | "small_llm")
 }
 
-fn model_status_row(entry: &ModelCoverageEntry) -> ModelStatusRow {
+fn model_status_row(device: &str, entry: &ModelCoverageEntry) -> ModelStatusRow {
     let route = entry.accelerator_routes.first().cloned();
     let category =
         if entry.claims.product_cli_ready { "supported" } else { "candidate" }.to_string();
@@ -1330,12 +1335,17 @@ fn model_status_row(entry: &ModelCoverageEntry) -> ModelStatusRow {
 
     ModelStatusRow {
         id: entry.id.clone(),
+        model_coverage_row: entry.id.clone(),
         display_name: model_status_display_name(entry),
         model_class: entry.model_class.clone(),
-        route,
+        route: route.clone(),
+        selected_route: route.clone(),
+        selected_backend: device.to_string(),
         tier: entry.current_tier.clone(),
+        current_tier: entry.current_tier.clone(),
         status: entry.status.clone(),
         category,
+        fallback_used: route.is_some().then_some(false),
         cpu_answer_ready: entry.claims.cpu_answer_ready,
         accelerator_answer_ready: entry.claims.accelerator_answer_ready,
         benchmark_qualified: entry.claims.benchmark_qualified,
@@ -3034,6 +3044,11 @@ mod tests {
 
         let bitnet = model_status_row_for(&dashboard, "bitnet_official_2b_i2s_qk256")?;
         assert_eq!(bitnet.display_name, "microsoft-bitnet-b1.58-2B-4T-i2s");
+        assert_eq!(bitnet.model_coverage_row, "bitnet_official_2b_i2s_qk256");
+        assert_eq!(bitnet.current_tier, "product_cli_ready");
+        assert_eq!(bitnet.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(bitnet.selected_route.as_deref(), Some("bitnet_qk256_cuda"));
+        assert_eq!(bitnet.fallback_used, Some(false));
         assert_eq!(bitnet.category, "supported");
         assert_eq!(bitnet.model_class, "bitnet");
         assert_eq!(bitnet.route.as_deref(), Some("bitnet_qk256_cuda"));
@@ -3054,6 +3069,11 @@ mod tests {
 
         let dense = model_status_row_for(&dashboard, "dense_qwen25_05b_q8_cuda")?;
         assert_eq!(dense.display_name, "qwen2.5-0.5b-instruct-q8_0");
+        assert_eq!(dense.model_coverage_row, "dense_qwen25_05b_q8_cuda");
+        assert_eq!(dense.current_tier, "product_cli_ready");
+        assert_eq!(dense.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(dense.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(dense.fallback_used, Some(false));
         assert_eq!(dense.category, "supported");
         assert_eq!(dense.model_class, "dense_slm");
         assert_eq!(dense.route.as_deref(), Some("dense_regular_llm_cuda"));
@@ -3125,6 +3145,11 @@ mod tests {
         assert!(value["models"].as_array().is_some_and(|models| {
             models.iter().any(|model| {
                 model["id"] == "dense_qwen25_05b_q8_cuda"
+                    && model["model_coverage_row"] == "dense_qwen25_05b_q8_cuda"
+                    && model["current_tier"] == "product_cli_ready"
+                    && model["selected_backend"] == "nvidia-rtx-5070-ti-cuda"
+                    && model["selected_route"] == "dense_regular_llm_cuda"
+                    && model["fallback_used"] == false
                     && model["route"] == "dense_regular_llm_cuda"
                     && model["speedup_claim"] == false
                     && model["server_ready"] == true
@@ -3135,7 +3160,12 @@ mod tests {
         assert!(value["models"].as_array().is_some_and(|models| {
             models.iter().any(|model| {
                 model["id"] == "dense_qwen3_06b_q8_candidate"
+                    && model["model_coverage_row"] == "dense_qwen3_06b_q8_candidate"
                     && model["category"] == "candidate"
+                    && model["current_tier"] == "accelerator_answer_ready"
+                    && model["selected_backend"] == "nvidia-rtx-5070-ti-cuda"
+                    && model["selected_route"] == "dense_regular_llm_cuda"
+                    && model["fallback_used"] == false
                     && model["tier"] == "accelerator_answer_ready"
                     && model["route"] == "dense_regular_llm_cuda"
                     && model["accelerator_answer_ready"] == true

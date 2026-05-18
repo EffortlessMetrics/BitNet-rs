@@ -12310,6 +12310,7 @@ mod tests {
                     path: None,
                     latest: true,
                     json: false,
+                    format: None,
                 },
             }))),
             Some("warn")
