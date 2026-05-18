@@ -6016,7 +6016,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-011"
-status = "in_progress"
+status = "merged"
+pr = 5690
+head_sha = "41715889bab7daa914e2aa43b864a352f0a415fa"
+merge_sha = "4d72feac7e601f7067e6bd759f48d5ea94525b05"
 branch = "codex/lunar-lake/LNL258V-ROUTE-011-profile-corpus-timing"
 stackable = false
 review_mode = "codex_premerge"
