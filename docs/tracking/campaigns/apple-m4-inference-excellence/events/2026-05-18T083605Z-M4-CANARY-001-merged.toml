@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T08:36:05Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CANARY-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-CANARY-001-golden-token-traces"
+pr = 5584
+head_sha = "40b0e9fe053c52216a83decf611fd6f59171c45a"
+merge_sha = "b8adc15da2ea0f8626faff193f3afadb2322975e"
+
+notes = [
+  "PR #5584 merged M4-CANARY-001 as squash commit b8adc15da2ea0f8626faff193f3afadb2322975e.",
+  "The merged work adds golden-token canary receipt validation and a compact dense SLM plus BitNet drift-localization fixture.",
+  "No fresh live runtime proof, model support change, BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claim.",
+]
