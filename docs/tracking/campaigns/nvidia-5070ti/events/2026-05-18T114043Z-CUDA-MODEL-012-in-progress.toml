@@ -1,0 +1,21 @@
+timestamp = "2026-05-18T11:40:43Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-012"
+event = "in_progress"
+actor = "codex"
+from = "blocked"
+to = "in_progress"
+branch = "cuda-model-012-qwen3-product-cli-review"
+summary = "Started the Qwen3 product CLI promotion review after CUDA-MODEL-010 and CUDA-MODEL-011 merged ask/chat user-path receipts."
+
+artifacts = [
+  "docs/reports/CUDA_MODEL_010_QWEN3_ASK_USER_PATH_RECEIPT.md",
+  "docs/reports/CUDA_MODEL_011_QWEN3_CHAT_USER_PATH_RECEIPT.md",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-ask-user-path-cuda.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-chat-user-path-cuda.json",
+]
+
+notes = [
+  "The review is scoped to product CLI readiness only.",
+  "Server readiness, speedup, benchmark-qualified speed, full CUDA residency, broad dense GGUF readiness, Qwen2.5 inheritance, and BitNet packed I2_S/QK256 proof remain forbidden claims.",
+]
