@@ -18,8 +18,18 @@ use candle_core::Tensor;
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-const NOT_CLAIMED_OPENCL_QK256: &[&str] =
-    &["a770_qk256_opencl_execution", "a770_qk256_opencl_performance", "a770_full_device_residency"];
+const NOT_CLAIMED_OPENCL_QK256: &[&str] = &[
+    "a770_qk256_opencl_execution",
+    "a770_qk256_opencl_performance",
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion",
+];
 
 static BITNET_LINEAR_TOTAL: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_ON_CUDA: AtomicU64 = AtomicU64::new(0);

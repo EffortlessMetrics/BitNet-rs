@@ -100,6 +100,23 @@ fn qk256_dispatch_status_keeps_opencl_non_claiming() {
     assert_eq!(status.runtime_backend, "cpu_qk256_reference");
     assert!(!status.accelerator_claimable);
     assert!(status.not_claims.contains(&"a770_qk256_opencl_execution"));
+    assert!(status.not_claims.contains(&"a770_qk256_opencl_performance"));
+
+    for not_claim in [
+        "selected_attention_residency",
+        "resident_kv_decode",
+        "attention_scores_residency",
+        "softmax_residency",
+        "attention_value_mix_residency",
+        "full_support_op_residency",
+        "full_device_residency",
+        "completion",
+    ] {
+        assert!(
+            status.not_claims.contains(&not_claim),
+            "qk256 dispatch status must preserve A770 not-claim `{not_claim}`"
+        );
+    }
 
     if cfg!(feature = "oneapi") {
         assert_eq!(status.blocker, Some("oneapi_qk256_runtime_not_wired"));
