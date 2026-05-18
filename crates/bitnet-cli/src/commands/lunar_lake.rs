@@ -35,6 +35,8 @@ const BITNET_PERF_MICRO: &str = "cpu-bitnet-perf-001-i2s-microbench.json";
 const BITNET_PERF_TILING: &str = "cpu-bitnet-perf-002-i2s-tiling-matrix.json";
 const BITNET_PERF_APPLIED: &str = "cpu-bitnet-perf-003-i2s-applied-thread-matrix.json";
 const BITNET_EMBEDDING_EVIDENCE: &str = "cpu-bitnet-embd-001-q6k-embedding-evidence.json";
+const BITNET_SEMANTIC_SOURCE_CHANGES: &str = "lunar-lake-bitnet-semantic-source-changes.json";
+const BITNET_SEMANTIC_INTAKE: &str = "lunar-lake-bitnet-semantic-intake.json";
 const ARC_OPENCL_PARITY: &str = "arc-140v-opencl-parity.json";
 const NPU_RMSNORM: &str = "npu-bitnet-rmsnorm-subgraph-parity.json";
 const NPU_LINEAR: &str = "npu-bitnet-linear-projection-subgraph-parity.json";
@@ -602,6 +604,40 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the durability index violates routing or claim boundaries.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Index shared BitNet semantic fixes that require Lunar Lake reruns after merge.
+    BitnetIntake {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Source-change ledger for shared BitNet semantic fixes.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = BITNET_SEMANTIC_SOURCE_CHANGES)]
+        source_changes: PathBuf,
+
+        /// Corrected Lunar Lake BitNet CPU reference bundle.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = BITNET_CPU_BUNDLE)]
+        cpu_reference_bundle: PathBuf,
+
+        /// Operator comparison receipt to check for route/readiness freshness.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = OPERATOR_COMPARISON)]
+        operator_comparison: PathBuf,
+
+        /// Output JSON BitNet semantic-intake receipt to file.
+        #[arg(long, default_value = BITNET_SEMANTIC_INTAKE)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when merged shared semantic fixes require Lunar Lake BitNet reruns.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -1894,6 +1930,108 @@ pub struct DurabilityClaimBoundary {
     pub repeated_run_stability_claim: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BitnetSemanticSourceChanges {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub changes: Vec<BitnetSemanticSourceChange>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BitnetSemanticSourceChange {
+    pub source_lane: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_pr: Option<u64>,
+    pub title: String,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_ref: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub head_sha: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub merge_sha: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub merged_at_utc: Option<String>,
+    #[serde(default)]
+    pub semantic_scope: Vec<String>,
+    #[serde(default)]
+    pub requires_lunar_lake_rerun_when_merged_to_main: bool,
+    pub claim_boundary: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeBitnetSemanticIntake {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub source_changes_receipt: String,
+    pub cpu_reference_bundle: String,
+    pub operator_comparison: String,
+    pub source_change_summary: BitnetSemanticSourceChangeSummary,
+    pub lunar_lake_evidence: BitnetSemanticLunarLakeEvidence,
+    pub changes: Vec<BitnetSemanticChangeIntake>,
+    pub rerun_required: bool,
+    pub required_reruns: Vec<String>,
+    pub intake_ready: bool,
+    pub gaps: Vec<String>,
+    pub claim_boundary: BitnetSemanticIntakeClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BitnetSemanticSourceChangeSummary {
+    pub total_change_count: usize,
+    pub pending_shared_change_count: usize,
+    pub merged_to_main_count: usize,
+    pub stale_after_merged_count: usize,
+    pub source_lanes: Vec<String>,
+    pub pending_changes: Vec<String>,
+    pub merged_changes: Vec<String>,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BitnetSemanticLunarLakeEvidence {
+    pub cpu_reference_bundle_created_utc: Option<String>,
+    pub operator_comparison_created_utc: Option<String>,
+    pub evidence_cutoff_utc: Option<String>,
+    pub cpu_reference_bundle_path: String,
+    pub operator_comparison_path: String,
+    pub evidence_paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BitnetSemanticChangeIntake {
+    pub source_lane: String,
+    pub source_pr: Option<u64>,
+    pub title: String,
+    pub status: String,
+    pub semantic_scope: Vec<String>,
+    pub requires_lunar_lake_rerun_when_merged_to_main: bool,
+    pub merged_at_utc: Option<String>,
+    pub stale_after_cpu_reference: bool,
+    pub stale_after_operator_comparison: bool,
+    pub lunar_lake_rerun_required: bool,
+    pub notes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BitnetSemanticIntakeClaimBoundary {
+    pub new_inference_executed: bool,
+    pub route_promotion_changed: bool,
+    pub answer_quality_claim: bool,
+    pub speedup_claim: bool,
+    pub acceleration_claim: bool,
+    pub arc_or_npu_bitnet_claim: bool,
+    pub qk256_behavior_changed: bool,
+    pub dense_slm_as_bitnet_proof: bool,
+    pub hidden_fallback_allowed: bool,
+}
+
 impl LunarLakeCommand {
     pub async fn execute(&self) -> Result<()> {
         match &self.action {
@@ -2301,6 +2439,33 @@ impl LunarLakeCommand {
                 write_or_print_durability_bundle(&receipt, Some(json_out))?;
                 if *strict && !receipt.durability_index_ready {
                     bail!("Lunar Lake durability index failed: {}", receipt.gaps.join("; "));
+                }
+                Ok(())
+            }
+            LunarLakeAction::BitnetIntake {
+                artifact_root,
+                source_changes,
+                cpu_reference_bundle,
+                operator_comparison,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_bitnet_semantic_intake_with_created_utc(
+                    artifact_root,
+                    source_changes,
+                    cpu_reference_bundle,
+                    operator_comparison,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_bitnet_semantic_intake(&receipt, Some(&json_out))?;
+                if *strict && !receipt.intake_ready {
+                    bail!("Lunar Lake BitNet semantic intake failed: {}", receipt.gaps.join("; "));
                 }
                 Ok(())
             }
@@ -6629,6 +6794,298 @@ pub fn build_durability_bundle_with_created_utc(
     })
 }
 
+pub fn build_bitnet_semantic_intake_with_created_utc(
+    root: &Path,
+    source_changes: &Path,
+    cpu_reference_bundle: &Path,
+    operator_comparison: &Path,
+    created_utc: String,
+) -> Result<LunarLakeBitnetSemanticIntake> {
+    let source_changes_path = resolve_receipt_path(root, source_changes);
+    let cpu_reference_bundle_path = resolve_receipt_path(root, cpu_reference_bundle);
+    let operator_comparison_path = resolve_receipt_path(root, operator_comparison);
+
+    let source_changes_receipt: BitnetSemanticSourceChanges =
+        read_json_receipt(&source_changes_path)?;
+    let cpu_reference_bundle_json: Value = read_json_receipt(&cpu_reference_bundle_path)?;
+    let operator_comparison_json: Value = read_json_receipt(&operator_comparison_path)?;
+
+    let mut gaps = Vec::new();
+    if source_changes_receipt.artifact_kind != "lunar_lake_bitnet_semantic_source_changes" {
+        gaps.push(
+            "source changes receipt must have artifact_kind=lunar_lake_bitnet_semantic_source_changes"
+                .to_string(),
+        );
+    }
+    if source_changes_receipt.changes.is_empty() {
+        gaps.push("source changes receipt must list at least one shared BitNet change".to_string());
+    }
+    if string_at(&cpu_reference_bundle_json, "artifact_kind").as_deref()
+        != Some("intel_258v_cpu_reference_bundle")
+    {
+        gaps.push(
+            "CPU reference bundle must have artifact_kind=intel_258v_cpu_reference_bundle"
+                .to_string(),
+        );
+    }
+    if string_at(&operator_comparison_json, "artifact_kind").as_deref()
+        != Some("lunar_lake_operator_comparison")
+    {
+        gaps.push(
+            "operator comparison must have artifact_kind=lunar_lake_operator_comparison"
+                .to_string(),
+        );
+    }
+    if bool_at_any(&cpu_reference_bundle_json, &["cpu_reference.fallback_used"]) != Some(false) {
+        gaps.push("CPU reference bundle must record cpu_reference.fallback_used=false".to_string());
+    }
+    if bool_at_any(&operator_comparison_json, &["comparison_ready"]) != Some(true) {
+        gaps.push("operator comparison must be ready before semantic intake".to_string());
+    }
+    if bool_at_any(&operator_comparison_json, &["claim_boundary.hidden_fallback_allowed"])
+        == Some(true)
+    {
+        gaps.push("operator comparison must not allow hidden fallback".to_string());
+    }
+
+    let cpu_created = timestamp_at_any(
+        &cpu_reference_bundle_json,
+        &["captured_at_utc", "created_utc"],
+        "CPU reference bundle timestamp",
+        &mut gaps,
+    );
+    let operator_created = timestamp_at_any(
+        &operator_comparison_json,
+        &["created_utc", "captured_at_utc"],
+        "operator comparison timestamp",
+        &mut gaps,
+    );
+    let evidence_cutoff = match (cpu_created, operator_created) {
+        (Some(cpu), Some(operator)) => Some(cpu.min(operator)),
+        (Some(cpu), None) => Some(cpu),
+        (None, Some(operator)) => Some(operator),
+        (None, None) => None,
+    };
+
+    let mut source_lanes = BTreeSet::new();
+    let mut pending_changes = Vec::new();
+    let mut merged_changes = Vec::new();
+    let mut changes = Vec::new();
+    let mut stale_after_merged_count = 0usize;
+
+    for change in &source_changes_receipt.changes {
+        source_lanes.insert(change.source_lane.clone());
+        let change_label = bitnet_semantic_change_label(change);
+        let status = change.status.to_ascii_lowercase();
+        let merged_to_main = matches!(status.as_str(), "merged" | "merged_to_main" | "main_merged");
+        if merged_to_main {
+            merged_changes.push(change_label.clone());
+        } else {
+            pending_changes.push(change_label.clone());
+        }
+        if change.semantic_scope.is_empty() {
+            gaps.push(format!("{change_label} must record at least one semantic_scope"));
+        }
+        if change.claim_boundary.trim().is_empty() {
+            gaps.push(format!("{change_label} must record a claim boundary"));
+        }
+
+        let mut notes = Vec::new();
+        let merged_at = match change.merged_at_utc.as_deref() {
+            Some(timestamp) => match parse_utc_timestamp(timestamp) {
+                Ok(timestamp) => Some(timestamp),
+                Err(error) => {
+                    gaps.push(format!("{change_label} has invalid merged_at_utc: {error:#}"));
+                    None
+                }
+            },
+            None if merged_to_main && change.requires_lunar_lake_rerun_when_merged_to_main => {
+                gaps.push(format!("{change_label} is merged but missing merged_at_utc"));
+                None
+            }
+            None => None,
+        };
+
+        let stale_after_cpu_reference = merged_at
+            .zip(cpu_created)
+            .is_some_and(|(merged_at, cpu_created)| merged_at > cpu_created);
+        let stale_after_operator_comparison = merged_at
+            .zip(operator_created)
+            .is_some_and(|(merged_at, operator_created)| merged_at > operator_created);
+        let lunar_lake_rerun_required = merged_to_main
+            && change.requires_lunar_lake_rerun_when_merged_to_main
+            && (stale_after_cpu_reference || stale_after_operator_comparison);
+
+        if lunar_lake_rerun_required {
+            stale_after_merged_count += 1;
+            notes.push(
+                "merged shared semantic change is newer than Lunar Lake BitNet evidence"
+                    .to_string(),
+            );
+        } else if merged_to_main && change.requires_lunar_lake_rerun_when_merged_to_main {
+            notes.push(
+                "merged shared semantic change is covered by current Lunar Lake evidence timestamps"
+                    .to_string(),
+            );
+        } else if change.requires_lunar_lake_rerun_when_merged_to_main {
+            notes.push(
+                "pending shared semantic change will require Lunar Lake reruns after main merge"
+                    .to_string(),
+            );
+        } else {
+            notes.push(
+                "change is tracked for visibility and does not currently require rerun".to_string(),
+            );
+        }
+
+        changes.push(BitnetSemanticChangeIntake {
+            source_lane: change.source_lane.clone(),
+            source_pr: change.source_pr,
+            title: change.title.clone(),
+            status: change.status.clone(),
+            semantic_scope: change.semantic_scope.clone(),
+            requires_lunar_lake_rerun_when_merged_to_main: change
+                .requires_lunar_lake_rerun_when_merged_to_main,
+            merged_at_utc: change.merged_at_utc.clone(),
+            stale_after_cpu_reference,
+            stale_after_operator_comparison,
+            lunar_lake_rerun_required,
+            notes,
+        });
+    }
+
+    pending_changes.sort();
+    merged_changes.sort();
+    let mut source_lanes = source_lanes.into_iter().collect::<Vec<_>>();
+    source_lanes.sort();
+
+    let rerun_required = changes.iter().any(|change| change.lunar_lake_rerun_required);
+    let mut required_reruns = Vec::new();
+    if rerun_required {
+        required_reruns.extend([
+            "rerun Lunar Lake BitNet CPU answer corpus".to_string(),
+            "rerun scalar-vs-AVX2 BitNet answer parity".to_string(),
+            "rerun first-token divergence classifier".to_string(),
+            "rerun BitNet CPU phase receipts if kernel-affecting".to_string(),
+            "refresh Lunar Lake operator readiness".to_string(),
+            "refresh route comparison and regression surfaces".to_string(),
+        ]);
+    }
+
+    let intake_ready = gaps.is_empty() && !rerun_required;
+    if rerun_required {
+        gaps.push(
+            "merged shared BitNet semantic changes require refreshed Lunar Lake BitNet evidence"
+                .to_string(),
+        );
+    }
+
+    let mut notes = Vec::new();
+    if !pending_changes.is_empty() {
+        notes.push(
+            "pending shared changes are indexed but do not invalidate Lunar Lake receipts until they merge to main"
+                .to_string(),
+        );
+    }
+    if stale_after_merged_count == 0 {
+        notes.push(
+            "no merged-to-main shared semantic change currently stales Lunar Lake evidence"
+                .to_string(),
+        );
+    }
+
+    Ok(LunarLakeBitnetSemanticIntake {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_bitnet_semantic_intake".to_string(),
+        proof_stage: "shared_bitnet_semantic_intake_no_new_inference".to_string(),
+        created_utc,
+        machine_id: source_changes_receipt.machine_id,
+        artifact_root: path_string(root),
+        source_changes_receipt: path_string(&source_changes_path),
+        cpu_reference_bundle: path_string(&cpu_reference_bundle_path),
+        operator_comparison: path_string(&operator_comparison_path),
+        source_change_summary: BitnetSemanticSourceChangeSummary {
+            total_change_count: source_changes_receipt.changes.len(),
+            pending_shared_change_count: pending_changes.len(),
+            merged_to_main_count: merged_changes.len(),
+            stale_after_merged_count,
+            source_lanes,
+            pending_changes,
+            merged_changes,
+            notes,
+        },
+        lunar_lake_evidence: BitnetSemanticLunarLakeEvidence {
+            cpu_reference_bundle_created_utc: cpu_created.map(timestamp_string),
+            operator_comparison_created_utc: operator_created.map(timestamp_string),
+            evidence_cutoff_utc: evidence_cutoff.map(timestamp_string),
+            cpu_reference_bundle_path: path_string(&cpu_reference_bundle_path),
+            operator_comparison_path: path_string(&operator_comparison_path),
+            evidence_paths: vec![
+                BITNET_CPU_BUNDLE.to_string(),
+                BITNET_REFERENCE.to_string(),
+                BITNET_REFERENCE_DIRECT.to_string(),
+                BITNET_DIVERGENCE_DIRECT.to_string(),
+                BITNET_PERF_APPLIED.to_string(),
+                OPERATOR_COMPARISON.to_string(),
+            ],
+        },
+        changes,
+        rerun_required,
+        required_reruns,
+        intake_ready,
+        gaps,
+        claim_boundary: BitnetSemanticIntakeClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            answer_quality_claim: false,
+            speedup_claim: false,
+            acceleration_claim: false,
+            arc_or_npu_bitnet_claim: false,
+            qk256_behavior_changed: false,
+            dense_slm_as_bitnet_proof: false,
+            hidden_fallback_allowed: false,
+        },
+    })
+}
+
+fn bitnet_semantic_change_label(change: &BitnetSemanticSourceChange) -> String {
+    match change.source_pr {
+        Some(source_pr) => format!("{}#{} {}", change.source_lane, source_pr, change.title),
+        None => format!("{} {}", change.source_lane, change.title),
+    }
+}
+
+fn parse_utc_timestamp(timestamp: &str) -> Result<chrono::DateTime<chrono::Utc>> {
+    Ok(chrono::DateTime::parse_from_rfc3339(timestamp)
+        .with_context(|| format!("invalid UTC timestamp `{timestamp}`"))?
+        .with_timezone(&chrono::Utc))
+}
+
+fn timestamp_string(timestamp: chrono::DateTime<chrono::Utc>) -> String {
+    timestamp.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+}
+
+fn timestamp_at_any(
+    json: &Value,
+    paths: &[&str],
+    label: &str,
+    gaps: &mut Vec<String>,
+) -> Option<chrono::DateTime<chrono::Utc>> {
+    for path in paths {
+        if let Some(value) = string_at(json, path) {
+            match parse_utc_timestamp(&value) {
+                Ok(timestamp) => return Some(timestamp),
+                Err(error) => {
+                    gaps.push(format!("{label} has invalid {path}: {error:#}"));
+                    return None;
+                }
+            }
+        }
+    }
+    gaps.push(format!("{label} is missing"));
+    None
+}
+
 #[derive(Default, Clone)]
 struct CorpusProfileCounts {
     total: u64,
@@ -7922,6 +8379,25 @@ fn write_or_print_durability_bundle(
         }
         fs::write(path, json)?;
         println!("Lunar Lake durability bundle written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_bitnet_semantic_intake(
+    receipt: &LunarLakeBitnetSemanticIntake,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake BitNet semantic-intake receipt written to {}", path.display());
     } else {
         println!("{}", String::from_utf8_lossy(&json));
     }
@@ -11319,6 +11795,62 @@ mod tests {
         assert!(scope.profile_scoped_promotion_only);
         assert!(scope.unexpected_openvino_profile_promotions.is_empty());
         assert!(scope.notes.iter().any(|note| note.contains("profile-promoted only")));
+    }
+
+    #[test]
+    fn bitnet_semantic_intake_records_pending_stack_without_rerun() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_bitnet_semantic_intake_inputs(
+            temp.path(),
+            "stack_open",
+            None,
+            "2026-05-12T18:43:14Z",
+            "2026-05-19T05:30:00Z",
+        )?;
+
+        let receipt = build_bitnet_semantic_intake_with_created_utc(
+            temp.path(),
+            Path::new(BITNET_SEMANTIC_SOURCE_CHANGES),
+            Path::new(BITNET_CPU_BUNDLE),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-19T05:45:00Z".to_string(),
+        )?;
+
+        assert!(receipt.intake_ready, "{:?}", receipt.gaps);
+        assert!(!receipt.rerun_required);
+        assert_eq!(receipt.source_change_summary.pending_shared_change_count, 1);
+        assert_eq!(receipt.source_change_summary.merged_to_main_count, 0);
+        assert!(receipt.required_reruns.is_empty());
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.dense_slm_as_bitnet_proof);
+        Ok(())
+    }
+
+    #[test]
+    fn bitnet_semantic_intake_requires_rerun_for_newer_merged_shared_fix() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_bitnet_semantic_intake_inputs(
+            temp.path(),
+            "merged_to_main",
+            Some("2026-05-19T06:00:00Z"),
+            "2026-05-12T18:43:14Z",
+            "2026-05-19T05:30:00Z",
+        )?;
+
+        let receipt = build_bitnet_semantic_intake_with_created_utc(
+            temp.path(),
+            Path::new(BITNET_SEMANTIC_SOURCE_CHANGES),
+            Path::new(BITNET_CPU_BUNDLE),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-19T06:05:00Z".to_string(),
+        )?;
+
+        assert!(!receipt.intake_ready);
+        assert!(receipt.rerun_required);
+        assert_eq!(receipt.source_change_summary.stale_after_merged_count, 1);
+        assert!(receipt.required_reruns.iter().any(|rerun| rerun.contains("answer corpus")));
+        assert!(receipt.gaps.iter().any(|gap| gap.contains("refreshed Lunar Lake BitNet")));
+        Ok(())
     }
 
     #[test]
@@ -14852,6 +15384,65 @@ mod tests {
         {
             write_json(root, file, no_speedup.clone())?;
         }
+        Ok(())
+    }
+
+    fn write_bitnet_semantic_intake_inputs(
+        root: &Path,
+        status: &str,
+        merged_at_utc: Option<&str>,
+        cpu_captured_at_utc: &str,
+        operator_created_utc: &str,
+    ) -> Result<()> {
+        write_json(
+            root,
+            BITNET_SEMANTIC_SOURCE_CHANGES,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_bitnet_semantic_source_changes",
+                "created_utc": "2026-05-19T05:45:00Z",
+                "machine_id": "intel-258v",
+                "changes": [
+                    {
+                        "source_lane": "a770",
+                        "source_pr": 5020,
+                        "title": "fix(bitnet): preserve K precision for attention scores",
+                        "status": status,
+                        "base_ref": "a770/diag-score-input-attribution",
+                        "head_sha": "dc4a8ac77750e781c99e2e02af1279a40d476ac7",
+                        "merged_at_utc": merged_at_utc,
+                        "semantic_scope": ["attention_score_k_precision"],
+                        "requires_lunar_lake_rerun_when_merged_to_main": true,
+                        "claim_boundary": "shared CPU/A770 runtime correctness fix candidate; no Lunar Lake claim until rerun"
+                    }
+                ]
+            }),
+        )?;
+        write_json(
+            root,
+            BITNET_CPU_BUNDLE,
+            json!({
+                "artifact_kind": "intel_258v_cpu_reference_bundle",
+                "captured_at_utc": cpu_captured_at_utc,
+                "machine_id": "intel-258v",
+                "cpu_reference": {
+                    "fallback_used": false
+                }
+            }),
+        )?;
+        write_json(
+            root,
+            OPERATOR_COMPARISON,
+            json!({
+                "artifact_kind": "lunar_lake_operator_comparison",
+                "created_utc": operator_created_utc,
+                "machine_id": "intel-258v",
+                "comparison_ready": true,
+                "claim_boundary": {
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
         Ok(())
     }
 
