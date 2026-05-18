@@ -4,6 +4,7 @@ updated = "2026-05-08"
 work_item = "BITNET-COMPAT-001"
 source = "microsoft/BitNet README supported model table"
 source_url = "https://github.com/microsoft/BitNet/blob/main/README.md"
+source_map = "docs/bitnet/official-2b/README.md"
 claim_boundary = "Upstream model/kernel support is a precondition for answer_ready, reference_authority, backend_parity, and speedup claims. Unsupported combinations may only be used for diagnostic runs, artifact inspection, or unsupported-path receipts."
 
 proof_claims_rejected_when_unsupported = [
