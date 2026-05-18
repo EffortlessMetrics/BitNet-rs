@@ -6554,6 +6554,73 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-REG-007"
+status = "in_progress"
+pr = 5788
+head_sha = "05fe893d3dc1d6db56f7ec95674cc6c6993619e8"
+branch = "codex/lunar-lake/LNL258V-REG-007-bitnet-intake-regression"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-BITNET-INTAKE-001"]
+acceptance = "Wire the Lunar Lake BitNet semantic-intake receipt into strict regression v2 so bitnet lunar-lake regress --strict indexes the shared semantic-fix intake evidence, fails closed when merged shared BitNet fixes require 258V reruns, and preserves no-new-inference, no-route-promotion, no-speedup, no-power-advantage, no Arc/NPU acceleration, no dense-SLM-as-BitNet-proof, and no BitNet QK256/I2_S behavior-change boundaries."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::regression_bundle_v2_fails_when_bitnet_semantic_intake_requires_rerun -j 1 -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::regression_bundle_v2_indexes_corpus_fixture_and_profile_comparison -j 1 -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::bitnet_semantic_intake_records_pending_stack_without_rerun -j 1 -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-19T06:15:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-19T06:15:00Z --strict",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Strict Lunar Lake regression v2 now indexes the BitNet semantic-intake receipt alongside corpus v2, route profile, benchmark, and durability evidence.",
+  "Merged shared BitNet semantic fixes newer than current 258V evidence fail strict regression until Lunar Lake BitNet evidence is rerun.",
+  "Pending shared BitNet semantic-fix stacks remain visible without staling Lunar Lake evidence until they merge to main.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is proven.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Native OpenCL execution is proven.",
+  "Native NPU execution is proven.",
+  "Arc 140V acceleration is proven.",
+  "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-QUAL-010"
 status = "merged"
 branch = "codex/lunar-lake/LNL258V-QUAL-010-long-decode-fixtures"

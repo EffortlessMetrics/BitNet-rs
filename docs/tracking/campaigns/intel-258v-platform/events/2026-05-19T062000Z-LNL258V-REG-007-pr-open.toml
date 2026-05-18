@@ -1,0 +1,19 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T06:20:00Z"
+event = "pr_open"
+item = "LNL258V-REG-007"
+branch = "codex/lunar-lake/LNL258V-REG-007-bitnet-intake-regression"
+pr = 5788
+head_sha = "05fe893d3dc1d6db56f7ec95674cc6c6993619e8"
+actor = "codex"
+summary = "Opened LNL258V-REG-007 to gate strict Lunar Lake regression on BitNet semantic-intake evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "The regression v2 bundle now indexes lunar-lake-bitnet-semantic-intake.json and fails closed when merged shared BitNet semantic fixes require 258V reruns.",
+  "The PR does not run inference, promote routes, claim speedup or power advantage, claim Arc/NPU acceleration, treat dense SLM receipts as BitNet proof, or change BitNet QK256/I2_S behavior.",
+]
