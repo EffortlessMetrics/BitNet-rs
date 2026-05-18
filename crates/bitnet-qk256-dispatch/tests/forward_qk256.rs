@@ -1,5 +1,5 @@
 use bitnet_common::{BitNetError, Result};
-use bitnet_qk256_dispatch::{forward_qk256, forward_qk256_with_scale};
+use bitnet_qk256_dispatch::{forward_qk256, forward_qk256_with_scale, qk256_dispatch_status};
 use candle_core::{Device, Tensor};
 
 #[test]
@@ -89,4 +89,40 @@ fn cpu_hot_path_audit_distinguishes_no_scale_and_scaled_paths() -> Result<()> {
     assert!(mixed.input_rows_materialized_count >= 2);
     assert!(mixed.output_rows_allocated_count >= 2);
     Ok(())
+}
+
+#[test]
+fn qk256_dispatch_status_keeps_opencl_non_claiming() {
+    let status = qk256_dispatch_status();
+
+    assert_eq!(status.compiled_opencl, cfg!(feature = "opencl"));
+    assert_eq!(status.compiled_oneapi, cfg!(feature = "oneapi"));
+    assert_eq!(status.runtime_backend, "cpu_qk256_reference");
+    assert!(!status.accelerator_claimable);
+    assert!(status.not_claims.contains(&"a770_qk256_opencl_execution"));
+    assert!(status.not_claims.contains(&"a770_qk256_opencl_performance"));
+
+    for not_claim in [
+        "selected_attention_residency",
+        "resident_kv_decode",
+        "attention_scores_residency",
+        "softmax_residency",
+        "attention_value_mix_residency",
+        "full_support_op_residency",
+        "full_device_residency",
+        "completion",
+    ] {
+        assert!(
+            status.not_claims.contains(&not_claim),
+            "qk256 dispatch status must preserve A770 not-claim `{not_claim}`"
+        );
+    }
+
+    if cfg!(feature = "oneapi") {
+        assert_eq!(status.blocker, Some("oneapi_qk256_runtime_not_wired"));
+    } else if cfg!(feature = "opencl") {
+        assert_eq!(status.blocker, Some("opencl_qk256_runtime_not_wired"));
+    } else {
+        assert_eq!(status.blocker, Some("cpu_qk256_dispatch_only"));
+    }
 }

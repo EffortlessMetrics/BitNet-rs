@@ -18,6 +18,19 @@ use candle_core::Tensor;
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+const NOT_CLAIMED_OPENCL_QK256: &[&str] = &[
+    "a770_qk256_opencl_execution",
+    "a770_qk256_opencl_performance",
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion",
+];
+
 static BITNET_LINEAR_TOTAL: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_ON_CUDA: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_CPU_FALLBACK: AtomicU64 = AtomicU64::new(0);
@@ -101,6 +114,49 @@ pub struct Qk256CudaRuntimeStats {
     pub kernel_time_ms: Option<f64>,
     /// Number of kernel launches with a measured CUDA event time.
     pub kernel_time_samples: u64,
+}
+
+/// Describes which QK256 runtime is currently used by this dispatch crate.
+///
+/// OpenCL/oneAPI features currently compile route dependencies only. The GGML
+/// QK256 no-scale GEMV remains the CPU implementation until a format-correct
+/// OpenCL QK256 runtime is wired here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Qk256DispatchStatus {
+    /// True when the crate was compiled with the `opencl` feature.
+    pub compiled_opencl: bool,
+    /// True when the crate was compiled with the `oneapi` feature.
+    pub compiled_oneapi: bool,
+    /// Runtime backend used by QK256 dispatch today.
+    pub runtime_backend: &'static str,
+    /// True only when this crate can support an accelerator execution claim.
+    pub accelerator_claimable: bool,
+    /// Missing runtime component that blocks accelerator promotion.
+    pub blocker: Option<&'static str>,
+    /// Claim identifiers that this status must not promote.
+    pub not_claims: &'static [&'static str],
+}
+
+/// Returns the non-promoting QK256 dispatch status for proof receipts.
+pub fn qk256_dispatch_status() -> Qk256DispatchStatus {
+    let compiled_opencl = cfg!(feature = "opencl");
+    let compiled_oneapi = cfg!(feature = "oneapi");
+    let blocker = if compiled_oneapi {
+        Some("oneapi_qk256_runtime_not_wired")
+    } else if compiled_opencl {
+        Some("opencl_qk256_runtime_not_wired")
+    } else {
+        Some("cpu_qk256_dispatch_only")
+    };
+
+    Qk256DispatchStatus {
+        compiled_opencl,
+        compiled_oneapi,
+        runtime_backend: "cpu_qk256_reference",
+        accelerator_claimable: false,
+        blocker,
+        not_claims: NOT_CLAIMED_OPENCL_QK256,
+    }
 }
 
 /// Snapshot the current QK256 dispatch coverage counters.
