@@ -1,5 +1,5 @@
 use bitnet_qk256_dispatch::{
-    forward_qk256, qk256_cuda_runtime_stats, qk256_dispatch_coverage,
+    forward_qk256, forward_qk256_with_scale, qk256_cuda_runtime_stats, qk256_dispatch_coverage,
     record_bitnet_linear_cpu_fallback, record_bitnet_linear_unsupported,
     reset_qk256_dispatch_coverage,
 };
@@ -15,6 +15,8 @@ fn clear_backend_env() {
         std::env::remove_var("BITNET_BACKEND");
         std::env::remove_var("BITNET_STRICT_MODE");
         std::env::remove_var("BITNET_STRICT_CUDA_BACKEND");
+        std::env::remove_var("BITNET_CPU_KERNEL");
+        std::env::remove_var("BITNET_FORCE_SCALAR");
     }
 }
 
@@ -42,6 +44,40 @@ fn cpu_selected_qk256_forward_records_total_without_fallback() {
     assert_eq!(coverage.bitnet_linear_layers_cpu_fallback, 0);
     assert!(coverage.unsupported_ops.is_empty());
     assert_eq!(coverage.execution_claim, "cpu_reference");
+}
+
+#[test]
+fn inline_scaled_cpu_qk256_forward_records_scaled_scalar_and_materialization_counters() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    clear_backend_env();
+    reset_qk256_dispatch_coverage();
+    unsafe {
+        std::env::set_var("BITNET_CPU_KERNEL", "avx2");
+        std::env::set_var("BITNET_FORCE_SCALAR", "0");
+    }
+    let device = Device::Cpu;
+    let input = Tensor::ones(&[1, 1, 256], DType::F32, &device).unwrap();
+    let qk256 = qk256_tensor(2, 256, &device);
+
+    let output = forward_qk256_with_scale(
+        &input,
+        &qk256,
+        "layers.0.attention.q_proj.weight.qk256_qs",
+        Some(0.5),
+    )
+    .unwrap();
+    let coverage = qk256_dispatch_coverage();
+
+    assert_eq!(output.dims(), &[1, 1, 2]);
+    assert_eq!(coverage.bitnet_linear_layers_total, 1);
+    assert_eq!(coverage.qk256_i8s_scaled_scalar_invocations, 1);
+    assert_eq!(coverage.qk256_i8s_scaled_avx2_invocations, 0);
+    assert_eq!(coverage.qk256_f32_scalar_gemv_invocations, 0);
+    assert_eq!(coverage.qk256_f32_avx2_gemv_invocations, 0);
+    assert_eq!(coverage.qk256_flat_bytes_extracted_count, 1);
+    assert_eq!(coverage.input_rows_materialized_count, 1);
+    assert_eq!(coverage.output_rows_allocated_count, 1);
+    clear_backend_env();
 }
 
 #[test]
