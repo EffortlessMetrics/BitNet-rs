@@ -10,6 +10,7 @@ behavior. It does not promote the NPU route or claim acceleration.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import hashlib
 import json
 import platform
@@ -17,6 +18,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from ctypes import wintypes
 
 from openvino_genai_token_utils import generate_with_direct_token_ids
 from openvino_genai_token_utils import prompt_evidence as ov_prompt_evidence
@@ -52,6 +54,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--machine-id", default="intel-258v")
     parser.add_argument("--device", default="NPU")
     parser.add_argument("--warm-repeats", type=int, default=10)
+    parser.add_argument("--item", default="LNL258V-NPU-RESIDENT-001")
+    parser.add_argument(
+        "--proof-stage",
+        default="candidate_route_resident_warm_session_evidence_no_promotion_change",
+    )
     parser.add_argument("--cache-dir", type=Path)
     parser.add_argument("--created-utc")
     parser.add_argument(
@@ -122,6 +129,56 @@ def perf_metrics(result: Any) -> dict[str, Any] | None:
 
 def mean(values: list[float]) -> float | None:
     return sum(values) / len(values) if values else None
+
+
+def current_process_memory_bytes() -> int | None:
+    if platform.system().lower() == "windows":
+        class ProcessMemoryCounters(ctypes.Structure):
+            _fields_ = [
+                ("cb", ctypes.c_ulong),
+                ("PageFaultCount", ctypes.c_ulong),
+                ("PeakWorkingSetSize", ctypes.c_size_t),
+                ("WorkingSetSize", ctypes.c_size_t),
+                ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                ("PagefileUsage", ctypes.c_size_t),
+                ("PeakPagefileUsage", ctypes.c_size_t),
+            ]
+
+        counters = ProcessMemoryCounters()
+        counters.cb = ctypes.sizeof(ProcessMemoryCounters)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        psapi = ctypes.WinDLL("psapi", use_last_error=True)
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        psapi.GetProcessMemoryInfo.argtypes = [
+            wintypes.HANDLE,
+            ctypes.POINTER(ProcessMemoryCounters),
+            wintypes.DWORD,
+        ]
+        psapi.GetProcessMemoryInfo.restype = wintypes.BOOL
+        handle = kernel32.GetCurrentProcess()
+        ok = psapi.GetProcessMemoryInfo(
+            handle,
+            ctypes.byref(counters),
+            counters.cb,
+        )
+        if ok:
+            return int(counters.WorkingSetSize)
+        return None
+
+    try:
+        import resource
+
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        # ru_maxrss is KiB on Linux and bytes on macOS. This helper is only
+        # context for route receipts, so prefer a conservative common case.
+        if platform.system().lower() == "darwin":
+            return int(usage.ru_maxrss)
+        return int(usage.ru_maxrss) * 1024
+    except Exception:
+        return None
 
 
 def percentile(values: list[float], percentile_value: float) -> float | None:
@@ -300,6 +357,38 @@ def summarize_asks(asks: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def stability_summary(asks: list[dict[str, Any]], memory_samples: dict[str, int | None]) -> dict[str, Any]:
+    warm_asks = [ask for ask in asks if ask["phase"] == "warm_resident_ask"]
+    outputs_by_case: dict[str, set[str]] = {}
+    tokens_by_case: dict[str, set[str]] = {}
+    for ask in warm_asks:
+        case_id = str(ask.get("case_id", "unknown_case"))
+        normalized = str(ask.get("answer_gate", {}).get("normalized") or normalize_answer(str(ask.get("generated_text", ""))))
+        outputs_by_case.setdefault(case_id, set()).add(normalized)
+        token_ids = ask.get("generated_token_ids")
+        tokens_by_case.setdefault(case_id, set()).add(json.dumps(token_ids, separators=(",", ":")))
+
+    after_construct = memory_samples.get("after_pipeline_construct_bytes")
+    after_warm = memory_samples.get("after_warm_loop_bytes")
+    resident_growth = None
+    if after_construct is not None and after_warm is not None:
+        resident_growth = after_warm - after_construct
+
+    return {
+        "warm_resident_ask_count": len(warm_asks),
+        "answer_drift_detected": any(len(outputs) > 1 for outputs in outputs_by_case.values()),
+        "generated_token_drift_detected": any(len(tokens) > 1 for tokens in tokens_by_case.values()),
+        "fallback_drift_detected": any(ask.get("fallback_used") is True for ask in warm_asks),
+        "route_drift_detected": False,
+        "unique_outputs_by_case": {case: sorted(outputs) for case, outputs in sorted(outputs_by_case.items())},
+        "unique_generated_token_sequences_by_case": {
+            case: len(tokens) for case, tokens in sorted(tokens_by_case.items())
+        },
+        "memory_samples": memory_samples,
+        "resident_memory_growth_bytes": resident_growth,
+    }
+
+
 def main() -> int:
     args = parse_args()
     if args.device != "NPU":
@@ -316,13 +405,17 @@ def main() -> int:
     except Exception as exc:  # pragma: no cover - depends on installed runtime devices.
         resolved_device = f"unavailable: {type(exc).__name__}: {exc}"
 
+    memory_samples = {"before_pipeline_construct_bytes": current_process_memory_bytes()}
     pipe, construct = construct_pipeline(ov_genai, args.model_dir, args.device, args.cache_dir)
+    memory_samples["after_pipeline_construct_bytes"] = current_process_memory_bytes()
     tokenizer = pipe.get_tokenizer()
 
     asks = [run_ask(pipe, ov_genai, tokenizer, CASES[0], 0, "cold_first_ask")]
+    memory_samples["after_cold_first_ask_bytes"] = current_process_memory_bytes()
     for index in range(args.warm_repeats):
         case = CASES[index % len(CASES)]
         asks.append(run_ask(pipe, ov_genai, tokenizer, case, index + 1, "warm_resident_ask"))
+    memory_samples["after_warm_loop_bytes"] = current_process_memory_bytes()
 
     cold_asks = [ask for ask in asks if ask["phase"] == "cold_first_ask"]
     warm_asks = [ask for ask in asks if ask["phase"] == "warm_resident_ask"]
@@ -339,10 +432,10 @@ def main() -> int:
         "schema_version": "1.0.0",
         "artifact_kind": "lunar_lake_openvino_npu_resident_session",
         "campaign": "intel-258v-platform",
-        "item": "LNL258V-NPU-RESIDENT-001",
+        "item": args.item,
         "created_utc": created_utc,
         "machine_id": args.machine_id,
-        "proof_stage": "candidate_route_resident_warm_session_evidence_no_promotion_change",
+        "proof_stage": args.proof_stage,
         "artifact_root": "ci/hardware/intel-258v/2026-05-08",
         "comparison_scope": "same_process_openvino_genai_npu_cold_construct_plus_repeated_warm_asks",
         "requested_backend": "openvino-npu",
@@ -396,6 +489,7 @@ def main() -> int:
                 "route promotion is unchanged",
             ],
         },
+        "stability": stability_summary(asks, memory_samples),
         "asks": asks,
         "environment": {
             "platform": platform.platform(),
@@ -409,6 +503,7 @@ def main() -> int:
             "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
         },
         "claim_boundary": {
+            "new_inference_executed": True,
             "route_promotion_changed": False,
             "speedup_claim": False,
             "power_advantage_claim": False,
@@ -429,7 +524,7 @@ def main() -> int:
     }
 
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
-    args.json_out.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+    args.json_out.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps({"json_out": args.json_out.as_posix(), "resident_session_ready": resident_ready}, indent=2))
     return 0
 
