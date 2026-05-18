@@ -94,7 +94,7 @@
 | apple-m4-inference-excellence | M4-BITNET-EX-010 | M4-BITNET-EX-009 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-011 | M4-BITNET-EX-010 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-012 | M4-BITNET-EX-011 | merged |
-| apple-m4-inference-excellence | M4-BITNET-EX-013 | M4-BITNET-EX-012, M4-REPRO-003 | proposed |
+| apple-m4-inference-excellence | M4-BITNET-EX-013 | M4-BITNET-EX-012, M4-REPRO-003 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-014 | M4-BITNET-EX-013 | proposed |
 | apple-m4-inference-excellence | M4-BITNET-EX-015 | M4-BITNET-EX-014, M4-BENCH-006 | proposed |
 | apple-m4-inference-excellence | M4-OPS-UX-001 | M4-EXCELLENCE-003 | merged |
@@ -337,6 +337,7 @@
 | intel-258v-platform | LNL258V-OV-QUAL-003 | LNL258V-OV-QUAL-002 | merged |
 | intel-258v-platform | LNL258V-OV-QUAL-004 | LNL258V-OV-QUAL-003 | merged |
 | intel-258v-platform | LNL258V-QUAL-009 | LNL258V-OPENVINO-QUAL-RERUN-002 | merged |
+| intel-258v-platform | LNL258V-NPU-RESIDENT-001 | LNL258V-NPU-COLD-001, LNL258V-ROUTE-014, LNL258V-REG-006 | merged |
 | intel-258v-platform | LNL258V-ROUTE-011 | LNL258V-ROUTE-010, LNL258V-QUAL-010 | merged |
 | intel-258v-platform | LNL258V-ROUTE-012 | LNL258V-ROUTE-011 | merged |
 | intel-258v-platform | LNL258V-ROUTE-013 | LNL258V-ROUTE-012 | merged |

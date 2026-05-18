@@ -5,7 +5,7 @@ description: Seeded deterministic 250-case BitNet eval corpus for Apple M4 quali
   staging reports.
 metadata:
   campaign: apple-m4-inference-excellence
-  work_item: M4-BITNET-EX-010
+  work_item: M4-BITNET-EX-013
   seed: 912587
   generator_policy: deterministic-static-fixture-bitnet-v2
   case_count_target: 250
@@ -14,7 +14,7 @@ metadata:
   corpus_contract:
     contract_version: m4-eval-corpus-scorer-contract-v1
     corpus_id: apple-m4-bitnet-eval-seeded-corpus-250
-    corpus_version: 2.0.0
+    corpus_version: 2.1.0
     seed_generation_rules: 'Static deterministic fixtures generated from seed=912587;
       every case ID and seed_material records family, operation, index, and fixture
       inputs. M4-BITNET-EX-010 expands the BitNet corpus to 250 cases with fixed family
@@ -26,8 +26,10 @@ metadata:
     expected_output_provenance: Closed-form deterministic fixture answers derived
       from the prompt data in this YAML; reference-runner answers may be added as
       comparison evidence but do not replace the mechanical expected-output authority.
-    normalization_rules: answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v1
-      for normalized_match only; exact_match remains strict after trim.
+    normalization_rules: answer_corpus_normalize_scoring_text_v1 plus normalize_match_text_v2
+      for normalized_match and contains_expected; exact_match remains strict after trim,
+      numeric_tolerance uses final-answer numeric extraction, and rewrite_normalized
+      allows punctuation/space normalization only.
     scoring_schema: answer_corpus_mechanical_scoring_v1
     scorer_self_tests:
     - cargo test --locked -p bitnet-cli slm_eval_scoring
@@ -40,6 +42,26 @@ metadata:
     dense_slm_evidence: false
     chat_enabled: false
     serve_enabled: false
+  expected_answer_authority:
+    source: closed_form_yaml_fixture
+    owner_work_item: M4-BITNET-EX-013
+    fixed_table_qa: prompt-local table entry is the expected-answer authority;
+      reference-runner text may be compared but cannot replace the table-derived
+      expected answer.
+    numeric_tolerance: expected_number plus numeric_tolerance are the expected-answer
+      authority; final-answer extraction avoids scoring prompt-echo numbers as
+      answers.
+    rewrite_normalized: expected_normalized is the expected-answer authority;
+      punctuation, casing, and whitespace normalization are allowed, but semantic
+      substitutions are not.
+  reference_comparison_plan:
+    schema: bitnet_reference_vs_rust_v1
+    status: reference_250_sidecar_not_yet_supplied
+    owner_work_item: M4-BITNET-EX-013
+    required_for_runtime_refresh: true
+    rust_receipt_source: M4-BITNET-EX-014 repaired 250-case rerun
+    reference_authority: reference-runner text and generated_token_ids must be
+      supplied per case before matched reference-vs-Rust status can be claimed.
 model:
   repo: microsoft/bitnet-b1.58-2B-4T-gguf
   repo_revision: a1f2f1c765812aa8af3f6eda4a313707064bba15
@@ -320,7 +342,7 @@ cases:
     word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: blue
   gate:
     kind: contains_any
@@ -332,7 +354,7 @@ cases:
   question: 'Table: Ada=red, Ben=blue, Cyd=green. Who has green? Answer with one name.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: cyd
   gate:
     kind: contains_any
@@ -358,7 +380,7 @@ cases:
     9? Answer with the item letter only.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: b
   gate:
     kind: contains_any
@@ -372,7 +394,7 @@ cases:
     with one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: south
   gate:
     kind: contains_any
@@ -396,7 +418,7 @@ cases:
   question: 'Table: R1=open, R2=closed, R3=open. What is R2? Answer with one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: closed
   gate:
     kind: contains_any
@@ -409,7 +431,7 @@ cases:
     the row id.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: r2
   gate:
     kind: contains_any
@@ -423,7 +445,7 @@ cases:
     with one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: fish
   gate:
     kind: contains_any
@@ -436,7 +458,7 @@ cases:
     with one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: robin
   gate:
     kind: contains_any
@@ -1745,7 +1767,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: maple
   gate:
     kind: contains_any
@@ -1759,7 +1781,7 @@ cases:
     word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: kiwi
   gate:
     kind: contains_any
@@ -1773,7 +1795,7 @@ cases:
     word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: oslo
   gate:
     kind: contains_any
@@ -1787,7 +1809,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: teal
   gate:
     kind: contains_any
@@ -1801,7 +1823,7 @@ cases:
     word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: zinc
   gate:
     kind: contains_any
@@ -1815,7 +1837,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: saturn
   gate:
     kind: contains_any
@@ -1829,7 +1851,7 @@ cases:
     with one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: triangle
   gate:
     kind: contains_any
@@ -1843,7 +1865,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: tea
   gate:
     kind: contains_any
@@ -1857,7 +1879,7 @@ cases:
     word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: dog
   gate:
     kind: contains_any
@@ -1871,7 +1893,7 @@ cases:
     word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: drill
   gate:
     kind: contains_any
@@ -1885,7 +1907,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: jade
   gate:
     kind: contains_any
@@ -1899,7 +1921,7 @@ cases:
     word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: rye
   gate:
     kind: contains_any
@@ -1913,7 +1935,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: coder
   gate:
     kind: contains_any
@@ -1927,7 +1949,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: friday
   gate:
     kind: contains_any
@@ -1941,7 +1963,7 @@ cases:
     word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: march
   gate:
     kind: contains_any
@@ -1955,7 +1977,7 @@ cases:
     with one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: ready
   gate:
     kind: contains_any
@@ -1969,7 +1991,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: medium
   gate:
     kind: contains_any
@@ -1983,7 +2005,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: south
   gate:
     kind: contains_any
@@ -1997,7 +2019,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: gold
   gate:
     kind: contains_any
@@ -2010,7 +2032,7 @@ cases:
   question: 'Table: Qin=A, Rae=B, Sy=C. What letter is Rae? Answer with one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: b
   gate:
     kind: contains_any
@@ -2024,7 +2046,7 @@ cases:
     word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: green
   gate:
     kind: contains_any
@@ -2038,7 +2060,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: beta
   gate:
     kind: contains_any
@@ -2052,7 +2074,7 @@ cases:
     with one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: office
   gate:
     kind: contains_any
@@ -2066,7 +2088,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: silk
   gate:
     kind: contains_any
@@ -2080,7 +2102,7 @@ cases:
     one word.'
   max_new_tokens: 8
   scoring:
-    kind: normalized_match
+    kind: contains_expected
     expected_normalized: center
   gate:
     kind: contains_any

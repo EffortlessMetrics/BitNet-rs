@@ -2891,7 +2891,7 @@ human_gate = "on_blocker_only"
 blocked_by = ["LNL258V-OP-001"]
 acceptance = "Add a Lunar Lake local regression bundle command that reads the committed operator-readiness receipt, verifies dense Qwen CPU default routing, BitNet CPU reference routing, bounded OpenVINO GPU/NPU candidate routing, Arc/NPU claim boundaries, no hidden fallback, and no acceleration claim, then commits a 258V regression bundle artifact without running inference or claiming speedup, broad answer quality, Arc/NPU acceleration, full BitNet inference on accelerators, or QK256 accelerator decode."
 commands = [
-  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs crates/bitnet-receipts-core/src/lib.rs",
   "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -j 2",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -j 1 commands::lunar_lake::tests -- --nocapture",
   "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet -- lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle.json --created-utc 2026-05-13T17:05:00Z --strict",
@@ -6008,6 +6008,80 @@ must_not_claim = [
   "Native NPU execution is proven.",
   "Arc 140V acceleration is proven.",
   "Intel NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
+id = "LNL258V-NPU-RESIDENT-001"
+status = "merged"
+pr = 5726
+head_sha = "21214742420d6ca51a08b379a42b2d57178543a9"
+merge_sha = "658e421a900be4edf0e434b318da071913244705"
+branch = "codex/lunar-lake/LNL258V-NPU-RESIDENT-001"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-NPU-COLD-001", "LNL258V-ROUTE-014", "LNL258V-REG-006"]
+acceptance = "Add a live OpenVINO GenAI NPU resident-session proof for dense Qwen that constructs one NPU LLMPipeline, runs one cold ask plus at least ten same-process warm asks with fallback_used=false and bounded answer gates, records cache context and retokenized-token visibility, and wires the receipt into route-profile comparison so the missing resident proof blocker clears while cold one-off NPU startup, direct-token, benchmark-qualified advantage, and route-promotion blockers remain. Preserve no route promotion, no speedup claim, no power-advantage claim, no NPU acceleration claim, no native NPU inference outside OpenVINO GenAI, and no BitNet QK256/I2_S behavior change."
+commands = [
+  ".venv/Scripts/python.exe scripts/openvino_genai_npu_resident_session.py --model-dir models/openvino/qwen2.5-0.5b-instruct-int4-sym --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json --cache-dir target/openvino-cache/lnl258v-npu-resident --warm-repeats 10 --created-utc 2026-05-19T01:00:00Z",
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --lib --no-default-features --features cpu,full-cli commands::lunar_lake::tests::npu_resident_session_clears_missing_warm_route_proof_blocker -- --exact --nocapture",
+  "cargo test --locked -p bitnet-receipts-core tests::lunar_lake_openvino_validator_accepts_npu_resident_session_receipt -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "target/debug/bitnet.exe lunar-lake profile-compare --artifact-root ci/hardware/intel-258v/2026-05-08 --promotion-ledger lunar-lake-route-promotion.json --phase-comparison slm-openvino-cpu-gpu-npu-phase-comparison.json --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --cpu-corpus-v2 slm-answer-corpus-qwen25-cpu-corpus-v2.json --openvino-corpus-v2 slm-openvino-cpu-gpu-npu-corpus-v2.json --telemetry-context lunar-lake-power-thermal-context.json --gpu-quality-diagnosis lunar-lake-openvino-gpu-corpus-v2-diagnosis.json --npu-quality-diagnosis lunar-lake-openvino-npu-corpus-v2-diagnosis.json --npu-cold-start-diagnosis lunar-lake-openvino-npu-cold-start-diagnosis.json --npu-resident-session lunar-lake-openvino-npu-resident-session.json --openvino-budget-sensitivity lunar-lake-openvino-generation-budget-sensitivity.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json --created-utc 2026-05-19T01:05:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-19T01:10:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-19T01:15:00Z --strict",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "target/debug/bitnet.exe validate open-vino-lunar-lake --receipt ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json --json-out target/lnl258v-openvino-validate/npu-resident-session-validation.json",
+  "target/debug/bitnet.exe validate open-vino-lunar-lake --receipt ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json --json-out target/lnl258v-openvino-validate/route-profile-npu-resident-validation.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "scripts/openvino_genai_npu_resident_session.py",
+  "crates/bitnet-receipts-core/src/lib.rs",
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-tokenizers/**",
+  "README.md",
+]
+may_claim = [
+  "A same-process OpenVINO GenAI NPU resident-session proof ran one cold ask plus at least ten warm dense Qwen asks with fallback_used=false and bounded answer gates.",
+  "Route-profile comparison now indexes the NPU resident-session receipt and clears only the missing resident warm-route proof blocker.",
+  "The NPU route remains candidate-only because cold one-off startup, direct-token visibility, benchmark-qualified advantage, power-advantage, and route-promotion blockers remain.",
+]
+must_not_claim = [
+  "OpenVINO NPU is promoted by this PR.",
+  "OpenVINO NPU speedup is proven.",
+  "OpenVINO NPU power advantage is proven.",
+  "Intel NPU acceleration is proven.",
+  "Native NPU inference outside OpenVINO GenAI is proven.",
+  "OpenVINO generated token IDs are directly available from pipeline internals.",
+  "Native OpenCL execution is proven.",
   "Full BitNet inference works on Arc or NPU.",
   "Packed QK256 decode works on Arc or NPU.",
   "Dense SLM receipts prove BitNet QK256/I2_S behavior.",

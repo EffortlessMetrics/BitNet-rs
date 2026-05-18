@@ -219,6 +219,15 @@ factual-table misses, rewrite-normalized dropped from 90% in the latest
 summary families remain visibly weak. The decision requires a repair-focused
 250-case refresh before approving a 500-case BitNet campaign.
 
+`M4-BITNET-EX-013` stages that repair without making a new runtime claim. The
+250-case corpus contract is bumped to `2.1.0`, records explicit
+closed-form YAML expected-answer authority, switches fixed-table prose answers
+to a mechanical `contains_expected` scorer, tightens numeric final-answer
+extraction so prompt-echo numbers are not treated as answers, broadens
+rewrite normalization to punctuation/space-only cleanup, and records that the
+250-case reference-vs-Rust sidecar is still not supplied. The next runtime
+proof remains `M4-BITNET-EX-014`.
+
 ## M4 Benchmark Report Slice
 
 `M4-BITNET-EVAL-004` benchmarks the explicit one-shot `bitnet mac ask` route and

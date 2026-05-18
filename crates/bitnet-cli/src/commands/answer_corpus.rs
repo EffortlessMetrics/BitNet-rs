@@ -84,6 +84,7 @@ const ANSWER_RECEIPT_CHECKED_RULES: &[&str] = &[
 const ANSWER_CORPUS_SCORING_KINDS: &[&str] = &[
     "exact_match",
     "normalized_match",
+    "contains_expected",
     "json_schema",
     "numeric_tolerance",
     "required_keywords",
@@ -429,6 +430,7 @@ impl AnswerCorpusCommand {
                 top_level_fallback_used,
                 corpus.defaults.prompt_template.as_str(),
                 &corpus.model.tokenizer_authority,
+                &corpus.metadata.reference_comparison_plan,
             ),
             "receipt_quality": {
                 "case_receipt_checker": "answer_receipt_failed_rules",
@@ -837,6 +839,10 @@ struct AnswerCorpusMetadata {
     claim_boundary: Option<Value>,
     #[serde(default)]
     corpus_contract: Option<CorpusContract>,
+    #[serde(default)]
+    expected_answer_authority: Option<Value>,
+    #[serde(default)]
+    reference_comparison_plan: Option<Value>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1042,6 +1048,8 @@ struct AnswerScoring {
     required_keywords: Option<Vec<String>>,
     #[serde(default)]
     forbidden_tokens: Option<Vec<String>>,
+    #[serde(default)]
+    expected_answer_authority: Option<Value>,
 }
 
 impl AnswerScoring {
@@ -1299,6 +1307,8 @@ fn answer_corpus_metadata_receipt(corpus: &AnswerCorpus) -> Value {
         "case_count_target": corpus.metadata.case_count_target,
         "prompt_template": corpus.metadata.prompt_template,
         "scoring_status": corpus.metadata.scoring_status,
+        "expected_answer_authority": corpus.metadata.expected_answer_authority,
+        "reference_comparison_plan": corpus.metadata.reference_comparison_plan,
         "claim_boundary": corpus.metadata.claim_boundary,
     })
 }
@@ -1332,6 +1342,8 @@ fn answer_corpus_scoring_contract_receipt(corpus: &AnswerCorpus) -> Value {
         "normalization_rules": contract.map(|contract| contract.normalization_rules.as_str()),
         "expected_output_provenance": contract
             .map(|contract| contract.expected_output_provenance.as_str()),
+        "expected_answer_authority": corpus.metadata.expected_answer_authority,
+        "reference_comparison_plan": corpus.metadata.reference_comparison_plan,
         "receipt_contract": contract.map(|contract| contract.receipt_contract.as_str()),
         "scorer_self_tests": contract.map(|contract| contract.scorer_self_tests.as_slice()),
         "supported_scoring_kinds": ANSWER_CORPUS_SCORING_KINDS,
@@ -1348,7 +1360,7 @@ fn validate_answer_scoring(case: &AnswerCase) -> Result<()> {
         return Ok(());
     };
     match scoring.kind() {
-        "exact_match" | "normalized_match" => {
+        "exact_match" | "normalized_match" | "contains_expected" => {
             if scoring.expected_answer().is_none() {
                 anyhow::bail!(
                     "answer corpus case `{}` scoring `{}` requires expected or expected_normalized",
@@ -1537,6 +1549,7 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
     let mut failed_rules = Vec::new();
     let mut details = Map::new();
     details.insert("kind".to_string(), Value::String(kind.clone()));
+    insert_expected_answer_authority(&mut details, scoring);
 
     match kind.as_str() {
         "exact_match" => {
@@ -1552,13 +1565,30 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
             let expected = scoring.expected_answer().unwrap_or_default();
             let observed = normalize_match_text(&normalized_answer);
             let expected_normalized = normalize_match_text(expected);
+            let observed_compact = compact_match_text(&observed);
+            let expected_compact = compact_match_text(&expected_normalized);
             details.insert(
                 "expected_normalized".to_string(),
                 Value::String(expected_normalized.clone()),
             );
             details.insert("observed_normalized".to_string(), Value::String(observed.clone()));
-            if observed != expected_normalized {
+            details.insert("expected_compact".to_string(), Value::String(expected_compact.clone()));
+            details.insert("observed_compact".to_string(), Value::String(observed_compact.clone()));
+            if observed != expected_normalized && observed_compact != expected_compact {
                 failed_rules.push("normalized_match".to_string());
+            }
+        }
+        "contains_expected" => {
+            let expected = scoring.expected_answer().unwrap_or_default();
+            let observed = normalize_match_text(&normalized_answer);
+            let expected_normalized = normalize_match_text(expected);
+            let expected_present = !expected_normalized.is_empty()
+                && contains_keyword_form(&observed, &expected_normalized);
+            details.insert("expected_normalized".to_string(), Value::String(expected_normalized));
+            details.insert("observed_normalized".to_string(), Value::String(observed));
+            details.insert("expected_present".to_string(), Value::Bool(expected_present));
+            if !expected_present {
+                failed_rules.push("contains_expected".to_string());
             }
         }
         "json_schema" => {
@@ -1582,13 +1612,21 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
             let expected = scoring
                 .expected_number
                 .or_else(|| scoring.expected_answer().and_then(first_number));
-            let observed = first_number(&normalized_answer);
             let tolerance = scoring.numeric_tolerance.unwrap_or(0.0);
+            let observed_candidates = numeric_answer_candidates(&normalized_answer);
+            let matching = expected.and_then(|expected| {
+                observed_candidates
+                    .iter()
+                    .copied()
+                    .find(|observed| (*observed - expected).abs() <= tolerance)
+            });
+            let observed = matching.or_else(|| observed_candidates.first().copied());
             details.insert("expected_number".to_string(), json!(expected));
             details.insert("observed_number".to_string(), json!(observed));
+            details.insert("observed_number_candidates".to_string(), json!(observed_candidates));
             details.insert("numeric_tolerance".to_string(), json!(tolerance));
             match (expected, observed) {
-                (Some(expected), Some(observed)) if (observed - expected).abs() <= tolerance => {}
+                (Some(_), Some(_)) if matching.is_some() => {}
                 (Some(_), Some(_)) => failed_rules.push("numeric_tolerance".to_string()),
                 (Some(_), None) => failed_rules.push("numeric_observed_missing".to_string()),
                 (None, _) => failed_rules.push("numeric_expected_missing".to_string()),
@@ -1661,6 +1699,12 @@ fn scoring_result_json(result: Option<&ScoringResult>) -> Value {
     })
 }
 
+fn insert_expected_answer_authority(details: &mut Map<String, Value>, scoring: &AnswerScoring) {
+    if let Some(authority) = &scoring.expected_answer_authority {
+        details.insert("expected_answer_authority".to_string(), authority.clone());
+    }
+}
+
 fn scoring_not_run_json(scoring: Option<&AnswerScoring>) -> Value {
     scoring.map_or(Value::Null, |scoring| {
         json!({
@@ -1674,6 +1718,7 @@ fn scoring_not_run_json(scoring: Option<&AnswerScoring>) -> Value {
             "numeric_tolerance": scoring.numeric_tolerance,
             "required_keywords": &scoring.required_keywords,
             "forbidden_tokens": &scoring.forbidden_tokens,
+            "expected_answer_authority": &scoring.expected_answer_authority,
             "failure_taxonomy": [],
             "failure_category_labels": [],
             "failure_categories": failure_category_fields(&[]),
@@ -2047,6 +2092,7 @@ fn reference_comparison_summary(
     fallback_used: bool,
     prompt_template: &str,
     tokenizer_authority: &Option<CorpusTokenizerAuthority>,
+    reference_comparison_plan: &Option<Value>,
 ) -> Value {
     let mut status_counts = BTreeMap::<String, usize>::new();
     let mut reference_supplied = 0usize;
@@ -2088,6 +2134,7 @@ fn reference_comparison_summary(
         "schema": "bitnet_reference_vs_rust_v1",
         "enabled": bitnet_answer_path,
         "reference_runner_required": bitnet_answer_path,
+        "reference_comparison_plan": reference_comparison_plan,
         "rust_runner": {
             "selected_backend": selected_backend,
             "runtime_api": runtime_api,
@@ -2185,6 +2232,7 @@ fn scoring_failure_taxonomy(
             }
         }
         "normalized_match"
+        | "contains_expected"
         | "required_keywords"
         | "forbidden_tokens"
         | "required_forbidden_tokens" => {
@@ -2323,8 +2371,24 @@ fn normalize_scoring_text(value: &str) -> String {
 
 fn normalize_match_text(value: &str) -> String {
     normalize_scoring_text(value)
-        .trim_matches(|ch: char| matches!(ch, '.' | '!' | '?'))
-        .to_ascii_lowercase()
+        .chars()
+        .map(
+            |ch| {
+                if ch.is_alphanumeric() || ch.is_whitespace() {
+                    ch.to_ascii_lowercase()
+                } else {
+                    ' '
+                }
+            },
+        )
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn compact_match_text(value: &str) -> String {
+    value.chars().filter(|ch| ch.is_alphanumeric()).collect()
 }
 
 fn gate_evaluation_text<'a>(answer: &'a str, scoring: Option<&AnswerScoring>) -> Cow<'a, str> {
@@ -2336,10 +2400,47 @@ fn gate_evaluation_text<'a>(answer: &'a str, scoring: Option<&AnswerScoring>) ->
 }
 
 fn first_number(value: &str) -> Option<f64> {
+    all_numbers(value).into_iter().next()
+}
+
+fn numeric_answer_candidates(value: &str) -> Vec<f64> {
+    let normalized = normalize_scoring_text(value);
+    for marker in ["answer is", "answer:", "result is", "equals", "=", "therefore", " is "] {
+        if let Some(index) = normalized.to_ascii_lowercase().rfind(marker) {
+            let start = index + marker.len();
+            let candidates = all_numbers(&normalized[start..]);
+            if !candidates.is_empty() {
+                return candidates;
+            }
+        }
+    }
+
+    let candidates = all_numbers(&normalized);
+    if normalized
+        .trim_start()
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_ascii_digit() || matches!(ch, '-' | '+' | '.'))
+        || candidates.len() <= 1
+    {
+        return candidates;
+    }
+    Vec::new()
+}
+
+fn all_numbers(value: &str) -> Vec<f64> {
     value
         .split(|ch: char| !(ch.is_ascii_digit() || matches!(ch, '.' | '-' | '+')))
         .filter(|token| !token.is_empty() && !matches!(*token, "." | "-" | "+" | "-." | "+."))
-        .find_map(|token| token.parse::<f64>().ok())
+        .filter_map(parse_number_token)
+        .collect()
+}
+
+fn parse_number_token(token: &str) -> Option<f64> {
+    let trimmed = token.trim_matches(|ch| matches!(ch, '.' | '+' | '-'));
+    let start = token.find(trimmed)?;
+    let end = start + trimmed.len();
+    token[..end].parse::<f64>().ok()
 }
 
 fn missing_keywords(answer: &str, keywords: Option<&[String]>) -> Vec<String> {
@@ -3279,6 +3380,7 @@ mod tests {
             numeric_tolerance: None,
             required_keywords: None,
             forbidden_tokens: None,
+            expected_answer_authority: None,
         }
     }
 
@@ -3545,10 +3647,42 @@ mod tests {
         };
 
         assert!(evaluate_scoring("approximately 3.141", &scoring).passed);
+        assert!(evaluate_scoring("The answer is approximately 3.141.", &scoring).passed);
+        assert!(!evaluate_scoring("To find 3.141 percent of 20", &scoring).passed);
         let result = evaluate_scoring("3.20", &scoring);
         assert!(!result.passed);
         assert!(result.failed_rules.contains(&"numeric_tolerance".to_string()));
         assert!(result.failure_taxonomy.contains(&"answer_content".to_string()));
+    }
+
+    #[test]
+    fn bitnet_250_repair_scoring_normalizes_table_and_rewrite_answers() {
+        let table = AnswerScoring {
+            expected_normalized: Some("cyd".to_string()),
+            expected_answer_authority: Some(json!({
+                "source": "closed_form_yaml_fixture",
+                "case_family": "fixed_table_qa"
+            })),
+            ..scoring("contains_expected")
+        };
+        let table_result = evaluate_scoring("Cyd has green.", &table);
+        assert!(table_result.passed);
+        assert_eq!(
+            table_result.details["expected_answer_authority"]["source"],
+            "closed_form_yaml_fixture"
+        );
+
+        let rewrite = AnswerScoring {
+            expected_normalized: Some("local fast verified".to_string()),
+            ..scoring("normalized_match")
+        };
+        assert!(evaluate_scoring("local, fast, verified", &rewrite).passed);
+
+        let compact_rewrite = AnswerScoring {
+            expected_normalized: Some("receipt has tokens".to_string()),
+            ..scoring("normalized_match")
+        };
+        assert!(evaluate_scoring("receipthastokens", &compact_rewrite).passed);
     }
 
     #[test]

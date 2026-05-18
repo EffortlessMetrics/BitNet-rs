@@ -37,6 +37,15 @@ Snapshot source:
   `gh pr list` refresh showed 154 open scoped PRs: 153 `a770/*`, 0
   `codex/*`, and 1 `claude/*`. The only direct `main` PR in that scope is
   draft perf PR #5092; the A770 queue remains a stacked diagnostic chain.
+- Queue refresh: after #5715 and #5717 merged, #4741 through #4744 were
+  closed/superseded, and #5722 merged only into the A770 branch chain, a
+  follow-up `gh pr list` refresh showed 153 open scoped PRs: 152 `a770/*`, 0
+  `codex/*`, and 1 `claude/*`. The only direct `main` PR in that scope remains
+  draft perf PR #5092.
+- Queue refresh: #5725 subsequently merged into the same A770 branch chain as
+  selected-key score-input bucket source evidence. It is lineage evidence for
+  the next diagnostic slice, not mainline A770 execution, semantic quality,
+  residency, performance, reference parity, or completion proof.
 
 ## Initial Queue Summary
 
@@ -49,7 +58,7 @@ Snapshot source:
 | Draft perf PR | #5092 | AVX2 QK256 optimization claim. | `main` <- `claude/improve-avx2-performance-fdrIb` | Mergeable, draft. | Not sufficient for merge until repeatable benchmark and parity proof are current. | No. | None detected. | No speedup claim may land without CPU/flags/sample context and parity tests. | Leave draft or close/supersede; do not merge from this lane yet. |
 | A770 root experience/history chain | #4738 | Bench/experience history rails. | `main` <- `a770/llm-experience-history` | Conflicting. | PR body lists xtask `llm_experience`, help, docs, and bench receipt tests. | `Cargo.lock`. | `xtask/Cargo.toml`. | History rails cannot promote A770 quality, performance, full residency, or completion. | Do not merge as a giant root. Reconstruct useful receipt/history parts into smaller replacement PRs if needed. |
 | A770 claim gates and runbooks | #4739, #4740 | Gate A770 promotion on experience receipts and document clean rerun flow. | Stacked on A770 branches, not `main`. | Mergeable. | #4739 lists `claims verify` and docs checks; #4740 lists diff check only. | No. | None detected. | Claim gate may only prevent promotion; it must not imply support. | Keep as durable candidates if they can be rebased onto `main` and proven independently. |
-| A770 backend/CLI route identity tools | #4741, #4742, #4743, #4744 | Preserve route identity, backend fallback classification, strict backend proof guard, and non-claiming OpenCL dispatch status. | Stacked A770 chain. | Mergeable. | PR bodies list targeted cargo tests/checks plus `git diff --check`. | No. | #4741 touches `crates/bitnet-cli/Cargo.toml`; #4744 touches several crate `Cargo.toml` files. | May preserve identity/fallback receipts; must not claim A770 OpenCL execution or BitNet inference works. | Review as possible replacement PRs, starting with the smallest no-dependency identity/fallback slice. |
+| A770 backend/CLI route identity tools | #4741, #4742, #4743, #4744, #5697, #5717 | Preserve route identity, backend fallback classification, strict backend proof guard, and non-claiming OpenCL dispatch status. | Stacked A770 chain plus main-based replacements. | #4741 through #4744 closed/superseded; #5697 and #5717 merged to `main`. | Replacement PRs ran local formatting, metadata, and `git diff --check` proof; long local cargo checks timed out without diagnostics and hosted PR Gate/CI supplied the merge proof. | No. | #5717 intentionally propagated OpenCL/oneAPI feature flags through the status path; no lockfile landed. | May preserve identity/fallback receipts; must not claim A770 OpenCL execution or BitNet inference works. | Done for fallback/status pieces. Remaining identity/strict-backend ideas are replacement-only A770-003/A770-004 source material. |
 | A770 OpenCL launcher and route label branch | #4745, #4750 | Add OpenCL launcher and route labels. | Stacked A770 chain. | #4745 mergeable; #4750 conflicting. | PR bodies list QK256 dispatch tests and OpenCL/OneAPI checks. | #4745 has generated tracker/dashboard edits and `Cargo.lock`; #4750 has `Cargo.lock`. | Both touch Cargo manifests/lockfiles. | Launcher/status work must remain non-claiming and fallback-explicit. | Hold. Generated edits and conflicts make these poor direct merge candidates; salvage only after comparing against newer diagnostics. |
 | A770 loader/tokenizer/transformer/runtime fixes | #4751, #4752, #4753, #4755, #4756, #4757, #4758, #4759, #4767, #4770, #4788, #4801, #4837, #4845, #4853, #4892, #4959, #4961, #5010, #5012, #5020, #5077 | Candidate correctness fixes across loader, tokenizer, transformer, CLI, QK256, reference setup, embedding layout, and attention precision. | Stacked A770 chain, not standalone `main` PRs. | Mergeable in current stack except where blocked by ancestor conflicts. | PR bodies list crate-scoped tests/checks; several older fixes also report missing-fixture gaps or hardware/reference assumptions. | No generated files detected in this group. | No dependency files detected in this group. | May claim only the specific corrected invariant after direct proof; no A770 semantic quality, performance, selected attention, resident KV, full support/device residency, reference parity, or completion. | Highest-value A770 salvage pool. Compare against current `main`, port the smallest confirmed fixes into replacement PRs, and close original probes once evidence is preserved. |
 | A770 tests/proof/quality hardening | #4761, #4850, #4855, #4883, #4885, #5004 | Test-only, proof oracle, and prompt-suite quality hardening. | Stacked A770 chain. | Mergeable. | PR bodies list targeted CLI, QK256, model, or prompt-suite tests. | No generated files detected. | No dependency files detected. | Test/proof only unless reviewed diff shows behavior change. | Good salvage candidates after verifying they are not coupled to transient branch-chain assumptions. |
@@ -96,6 +105,11 @@ Snapshot source:
 | 2026-05-18 | #5706 | Closed as duplicate | The same no-panic-family transformer cleanup landed in #5697, so the standalone repair branch was no longer needed. |
 | 2026-05-18 | #5709 | Merged | Tracker-only M4-ROBUSTNESS-001 closeout after #5699. Campaign tracker, PR Gate, CI core, docs, and link checks were green. |
 | 2026-05-18 | #5710 | Merged | Tracker-only SLM-CPU-040 setup after SLM-CPU-039. Campaign tracker, generated dashboards, PR Gate, CI core, docs, and link checks were green. |
+| 2026-05-18 | #5715 | Merged by concurrent queue activity | SLM-CPU-040 down-projection storage boundary classification landed on `main` before the post-#5717 refresh. |
+| 2026-05-18 | #5717 | Merged | Clean `main` replacement for #4744. Local review added canonical A770 not-claims to `qk256_dispatch_status`; package fmt, `git diff --check`, OpenCL metadata, OneAPI metadata, and hosted GitHub PR Gate were green. The long local QK256 cargo test/check probes timed out without diagnostics and were recorded as environmental validation gaps. |
+| 2026-05-18 | #4741-#4744 | Closed as superseded | Backend route/fallback/status ideas were either replaced by #5697/#5717 or left as A770-003/A770-004 source material. None is a direct merge candidate. |
+| 2026-05-18 | #5722 | Merged into A770 branch chain only | Diagnostic selected-key score history evidence merged to `a770/diag-rust-score-input-operand-drift`, not `main`; it remains lineage evidence, not mainline proof. |
+| 2026-05-18 | #5725 | Merged into A770 branch chain only | Diagnostic selected-key score-input bucket source evidence merged to `a770/diag-rust-score-input-operand-drift`, not `main`; it remains lineage evidence for the next selected-key source-boundary diagnostic, not mainline proof. |
 
 ## New Open Cluster After Refresh
 
@@ -117,6 +131,6 @@ Snapshot source:
 
 | PR or cluster | Lane | Current signal | Disposition rule |
 |---:|---|---|---|
-| #5711 | A770 selected-query boundary diagnostic | Stacked on `a770/diag-rust-score-input-operand-drift`, not `main`; body reports `claim_allowed = false` and missing boundary rows. | Do not merge as-is. Salvage only through a durable trace/compare replacement PR after lineage flattening. |
-| #4744-#5131 plus #5711 | A770 diagnostic branch chain | 153 open `a770/*` PRs remain, mostly one-PR-per-probe branch-chain diagnostics. | Use `docs/reports/2026-05-18-a770-diagnostic-lineage-map.md`; no probe-by-probe merges. |
+| #5131 | A770 layer0 FFN diagnostic | Latest open A770 PR by the post-refresh list; stacked on `a770/diag-rmsnorm-f64-trace-effect`, not `main`. | Do not merge as-is. Salvage only through a durable trace/compare replacement PR after lineage flattening. |
+| #4745-#5131 plus merged branch-chain evidence through #5725 | A770 diagnostic branch chain | 152 open `a770/*` PRs remain, mostly one-PR-per-probe branch-chain diagnostics. #4741 through #4744 are closed/superseded; #5722 and #5725 merged only into the A770 branch chain. | Use `docs/reports/2026-05-18-a770-diagnostic-lineage-map.md`; no probe-by-probe merges. |
 | #5092 | Draft AVX2 QK256 perf | Only direct `main` PR in the scoped queue; still draft with a speedup claim. | Leave draft until parity proof, repeatable benchmark context, CPU flags, samples, and claim boundary are current. |
