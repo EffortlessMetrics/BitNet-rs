@@ -213,7 +213,7 @@ Acceptance additions:
 
 ### Work item: LNL258V-OPENVINO-VALIDATE-001
 
-Status: in progress
+Status: merged
 Blocked by: Phase A specs
 
 Add validators for selected backend/device consistency, `fallback_used=false` on

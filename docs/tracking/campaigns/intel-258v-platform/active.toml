@@ -6645,9 +6645,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OPENVINO-VALIDATE-001"
-status = "pr_open"
+status = "merged"
 pr = 5614
-head_sha = "a08a19738c8f935dfd240fef3fdadb615f294b1f"
+head_sha = "da2c13f8e608c0a2b1c41e2605b3deeb3222d702"
+merge_sha = "54c332b664b6548788167df3d4b2d2ea61b5209d"
 branch = "codex/lunar-lake/LNL258V-OPENVINO-VALIDATE-001-receipt-gates"
 stackable = false
 review_mode = "codex_premerge"
