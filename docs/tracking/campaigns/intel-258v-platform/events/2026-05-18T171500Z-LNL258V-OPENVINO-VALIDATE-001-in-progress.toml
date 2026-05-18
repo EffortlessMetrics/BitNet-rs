@@ -1,0 +1,20 @@
+timestamp = "2026-05-18T17:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-VALIDATE-001"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-VALIDATE-001-receipt-gates"
+summary = "Started LNL258V-OPENVINO-VALIDATE-001 to enforce Lunar Lake OpenVINO receipt-boundary validators."
+
+artifacts = [
+  "crates/bitnet-receipts-core/src/lib.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The validator work is scoped to selected backend/device consistency, strict no-fallback evidence, retokenized token-ID source marking, dense-SLM-to-BitNet claim leakage, OpenVINO-GPU-to-native-OpenCL claim leakage, and NPU cache/warm evidence when NPU promotion is attempted.",
+  "No new inference, route promotion, runtime execution change, OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU execution, full BitNet accelerator inference, or QK256 accelerator decode claim is in scope.",
+]

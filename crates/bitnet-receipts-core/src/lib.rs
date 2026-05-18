@@ -8039,6 +8039,308 @@ pub fn validate_m4_run_identity_contract_json(receipt: &Value) -> Result<()> {
     Ok(())
 }
 
+/// Validate Lunar Lake OpenVINO route receipts against the shared proof boundary.
+///
+/// This is a claim-boundary validator, not a route promoter. It accepts the
+/// existing OpenVINO dense-SLM, route-profile, route-ledger, and diagnosis
+/// receipt families while rejecting hidden fallback, backend/device identity
+/// drift, retokenized-token ambiguity, dense-SLM-to-BitNet claim leakage,
+/// OpenVINO-GPU-to-native-OpenCL claim leakage, and premature NPU promotion
+/// without cache plus warm/resident evidence.
+pub fn validate_lunar_lake_openvino_receipt_json(receipt: &Value) -> Result<()> {
+    let artifact_kind = required_string(receipt, "artifact_kind")?;
+    if !is_lunar_lake_openvino_artifact_kind(artifact_kind) {
+        return Err(anyhow!("unsupported Lunar Lake OpenVINO artifact_kind `{artifact_kind}`"));
+    }
+
+    if let Some(machine_id) = receipt.get("machine_id").and_then(Value::as_str)
+        && machine_id != "intel-258v"
+    {
+        return Err(anyhow!(
+            "Lunar Lake OpenVINO receipts must target machine_id `intel-258v`, got `{machine_id}`"
+        ));
+    }
+
+    if receipt.get("fallback_used").is_some() {
+        require_bool_eq(receipt, "fallback_used", false)?;
+    }
+    if receipt.get("runtime_api").is_some() {
+        require_string_eq(receipt, "runtime_api", "openvino_genai")?;
+    }
+
+    validate_lunar_lake_openvino_value(receipt, "$")?;
+    Ok(())
+}
+
+/// Validate a Lunar Lake OpenVINO route receipt file.
+pub fn validate_lunar_lake_openvino_receipt_file(path: &Path) -> Result<()> {
+    let receipt = load_json_receipt(path)?;
+    validate_lunar_lake_openvino_receipt_json(&receipt)
+}
+
+fn is_lunar_lake_openvino_artifact_kind(artifact_kind: &str) -> bool {
+    matches!(
+        artifact_kind,
+        "intel_258v_dense_slm_openvino_corpus_v2"
+            | "intel_258v_dense_slm_openvino_generation_budget_sensitivity"
+            | "intel_258v_dense_slm_openvino_phase_comparison"
+            | "intel_258v_dense_slm_openvino_phase_runner"
+            | "lunar_lake_openvino_corpus_v2_diagnosis"
+            | "lunar_lake_openvino_npu_cold_start_diagnosis"
+            | "lunar_lake_openvino_operator_ask"
+            | "lunar_lake_route_profile_comparison"
+            | "lunar_lake_route_promotion_ledger"
+    )
+}
+
+fn validate_lunar_lake_openvino_value(value: &Value, path: &str) -> Result<()> {
+    match value {
+        Value::Object(object) => {
+            validate_lunar_lake_openvino_object(value, path)?;
+            for (key, child) in object {
+                let child_path = format!("{path}.{key}");
+                validate_lunar_lake_openvino_forbidden_claim(key, child, &child_path)?;
+                validate_lunar_lake_openvino_value(child, &child_path)?;
+            }
+        }
+        Value::Array(items) => {
+            for (index, child) in items.iter().enumerate() {
+                validate_lunar_lake_openvino_value(child, &format!("{path}[{index}]"))?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn validate_lunar_lake_openvino_object(object: &Value, path: &str) -> Result<()> {
+    validate_lunar_lake_openvino_backend_object(object, path)?;
+    validate_lunar_lake_openvino_generated_token_marking(object, path)?;
+    validate_lunar_lake_openvino_npu_promotion_evidence(object, path)
+}
+
+fn validate_lunar_lake_openvino_backend_object(object: &Value, path: &str) -> Result<()> {
+    let selected_backend = object.get("selected_backend").and_then(Value::as_str);
+    let route_id = object.get("route_id").and_then(Value::as_str);
+    let openvino_route = route_id.is_some_and(|route| route.contains("openvino"));
+    let Some(selected_backend) = selected_backend else {
+        return Ok(());
+    };
+
+    if !selected_backend.starts_with("openvino") && !openvino_route {
+        return Ok(());
+    }
+
+    if let Some(fallback_used) = object.get("fallback_used").and_then(Value::as_bool) {
+        if fallback_used {
+            return Err(anyhow!("{path} OpenVINO route must record fallback_used=false"));
+        }
+    } else if object.get("fallback_policy").and_then(Value::as_str) == Some("strict_no_fallback") {
+        // Policy/ledger entries do not execute a route themselves, but they must
+        // still fail closed by declaring strict no-fallback routing.
+    } else {
+        return Err(anyhow!(
+            "{path} OpenVINO route must record fallback_used=false or fallback_policy=strict_no_fallback"
+        ));
+    }
+
+    if selected_backend.starts_with("openvino") {
+        require_string_eq(object, "runtime_api", "openvino_genai")
+            .map_err(|err| anyhow!("{path}: {err}"))?;
+    }
+
+    if let Some(route_id) = route_id {
+        match route_id {
+            "dense_slm_openvino_gpu_candidate" if selected_backend != "openvino-gpu" => {
+                return Err(anyhow!(
+                    "{path} GPU OpenVINO route must select openvino-gpu, got `{selected_backend}`"
+                ));
+            }
+            "dense_slm_openvino_npu_candidate" if selected_backend != "openvino-npu" => {
+                return Err(anyhow!(
+                    "{path} NPU OpenVINO route must select openvino-npu, got `{selected_backend}`"
+                ));
+            }
+            route if route.contains("openvino_cpu") && selected_backend != "openvino-cpu" => {
+                return Err(anyhow!(
+                    "{path} CPU OpenVINO route must select openvino-cpu, got `{selected_backend}`"
+                ));
+            }
+            _ => {}
+        }
+    }
+
+    match selected_backend {
+        "openvino-cpu" => require_runtime_device_prefix(object, "CPU", path)?,
+        "openvino-gpu" => {
+            require_runtime_device_prefix(object, "GPU", path)?;
+            reject_openvino_gpu_opencl_claim(object, path)?;
+        }
+        "openvino-npu" => require_runtime_device_prefix(object, "NPU", path)?,
+        "openvino-cpu-gpu-npu" => {}
+        other if other.starts_with("openvino") => {
+            return Err(anyhow!("{path} has unsupported OpenVINO backend `{other}`"));
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn require_runtime_device_prefix(object: &Value, expected_prefix: &str, path: &str) -> Result<()> {
+    let Some(runtime_device) = object.get("runtime_device").and_then(Value::as_str) else {
+        return Ok(());
+    };
+    if !runtime_device.starts_with(expected_prefix) {
+        return Err(anyhow!(
+            "{path} runtime_device `{runtime_device}` must start with `{expected_prefix}`"
+        ));
+    }
+    Ok(())
+}
+
+fn reject_openvino_gpu_opencl_claim(object: &Value, path: &str) -> Result<()> {
+    for field in ["runtime_api", "backend_lane", "selected_kernel_or_runtime"] {
+        let Some(value) = object.get(field).and_then(Value::as_str) else {
+            continue;
+        };
+        let normalized = value.replace(['-', '_', ' '], "").to_ascii_lowercase();
+        if normalized.contains("opencl") {
+            return Err(anyhow!(
+                "{path}.{field} must not claim native OpenCL for an OpenVINO GPU route"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_lunar_lake_openvino_generated_token_marking(object: &Value, path: &str) -> Result<()> {
+    if !object.get("generated_token_ids").is_some_and(|value| value.as_array().is_some()) {
+        return Ok(());
+    }
+
+    let source = required_string(object, "generated_token_ids_source")
+        .map_err(|err| anyhow!("{path}: generated_token_ids require source marking: {err}"))?;
+    let available_from_pipeline = object
+        .get("generated_token_ids_available_from_pipeline")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    if !available_from_pipeline && !source.contains("retokenized") {
+        return Err(anyhow!(
+            "{path}.generated_token_ids_source must mark retokenized IDs when OpenVINO pipeline IDs are unavailable"
+        ));
+    }
+    if available_from_pipeline && source.contains("retokenized") {
+        return Err(anyhow!(
+            "{path}.generated_token_ids_source must not claim retokenized IDs when pipeline IDs are marked available"
+        ));
+    }
+
+    Ok(())
+}
+
+fn validate_lunar_lake_openvino_npu_promotion_evidence(object: &Value, path: &str) -> Result<()> {
+    let route_id = object.get("route_id").and_then(Value::as_str).unwrap_or_default();
+    let selected_backend =
+        object.get("selected_backend").and_then(Value::as_str).unwrap_or_default();
+    if !route_id.contains("openvino_npu") && selected_backend != "openvino-npu" {
+        return Ok(());
+    }
+
+    let promotion_attempted = object
+        .get("route_status")
+        .or_else(|| object.get("status"))
+        .or_else(|| object.get("promotion_status"))
+        .and_then(Value::as_str)
+        .is_some_and(|status| status == "promoted")
+        || object.get("promotion_eligible_for_profile").and_then(Value::as_bool).unwrap_or(false);
+    if !promotion_attempted {
+        return Ok(());
+    }
+
+    if !openvino_object_has_cache_evidence(object) {
+        return Err(anyhow!("{path} promoted OpenVINO NPU route must include cache evidence"));
+    }
+    if !openvino_object_has_warm_or_resident_evidence(object) {
+        return Err(anyhow!(
+            "{path} promoted OpenVINO NPU route must include warm or resident evidence"
+        ));
+    }
+
+    Ok(())
+}
+
+fn openvino_object_has_cache_evidence(object: &Value) -> bool {
+    object.get("npu_cache").is_some()
+        || object.get("cache").is_some()
+        || object.get("cache_identity").is_some()
+        || object.get("cache_hit").is_some()
+        || object
+            .get("phase_coverage")
+            .is_some_and(|value| value_contains_case_insensitive(value, "cache"))
+        || object.get("timing").is_some_and(|value| value_contains_case_insensitive(value, "cache"))
+}
+
+fn openvino_object_has_warm_or_resident_evidence(object: &Value) -> bool {
+    object.get("warm_session").is_some()
+        || object.get("resident_session").is_some()
+        || object
+            .get("phase_coverage")
+            .is_some_and(|value| value_contains_case_insensitive(value, "warm"))
+        || object
+            .get("phase_coverage")
+            .is_some_and(|value| value_contains_case_insensitive(value, "resident"))
+        || object.get("timing").is_some_and(|value| value_contains_case_insensitive(value, "warm"))
+        || object
+            .get("timing")
+            .is_some_and(|value| value_contains_case_insensitive(value, "resident"))
+}
+
+fn validate_lunar_lake_openvino_forbidden_claim(
+    key: &str,
+    value: &Value,
+    path: &str,
+) -> Result<()> {
+    let normalized_key = key.replace(['-', '_', ' '], "").to_ascii_lowercase();
+    if value.as_bool() == Some(true)
+        && (normalized_key.contains("qk256")
+            || normalized_key.contains("i2s")
+            || normalized_key.contains("bitnetpacked")
+            || normalized_key.contains("nativeopencl")
+            || normalized_key.contains("openclclaim"))
+    {
+        return Err(anyhow!("{path} must not be true for Lunar Lake OpenVINO receipts"));
+    }
+
+    if matches!(key, "claim" | "proof_family" | "claim_boundary" | "selected_kernel_or_runtime")
+        && let Some(text) = value.as_str()
+    {
+        reject_bitnet_packed_marker(text, path)?;
+        let normalized_text = text.replace(['-', '_', ' '], "").to_ascii_lowercase();
+        if normalized_text.contains("nativeopencl") {
+            return Err(anyhow!(
+                "{path} must not claim native OpenCL for Lunar Lake OpenVINO receipts"
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn value_contains_case_insensitive(value: &Value, needle: &str) -> bool {
+    match value {
+        Value::String(text) => text.to_ascii_lowercase().contains(needle),
+        Value::Array(items) => {
+            items.iter().any(|item| value_contains_case_insensitive(item, needle))
+        }
+        Value::Object(map) => {
+            map.values().any(|item| value_contains_case_insensitive(item, needle))
+        }
+        _ => false,
+    }
+}
+
 fn validate_m4_run_identity_os(os: &Value) -> Result<()> {
     require_string_non_empty_not_tbd(os, "name")?;
     require_string_non_empty_not_tbd(os, "version")?;
@@ -9161,6 +9463,129 @@ fn detect_gpu_info() -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    fn minimal_lunar_lake_openvino_gpu_receipt() -> Value {
+        json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "lunar_lake_openvino_operator_ask",
+            "machine_id": "intel-258v",
+            "proof_stage": "operator_candidate_route_executed",
+            "requested_backend": "openvino-gpu",
+            "selected_backend": "openvino-gpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "GPU.0",
+            "fallback_used": false,
+            "backend_lane": "dense_slm_openvino_gpu_arc140v",
+            "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "model_family": "qwen",
+            "model_architecture": "qwen2",
+            "quantization": "INT4_SYM",
+            "prompt_template": "qwen2.5",
+            "tokenizer_source": "hf_tokenizer_export",
+            "generation": {
+                "decoded_text": "2+2 equals 4.",
+                "generated_token_ids": [17, 488, 17],
+                "generated_token_ids_available_from_pipeline": false,
+                "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids"
+            }
+        })
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_accepts_candidate_gpu_receipt() {
+        validate_lunar_lake_openvino_receipt_json(&minimal_lunar_lake_openvino_gpu_receipt())
+            .unwrap();
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_rejects_hidden_fallback() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["fallback_used"] = json!(true);
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("fallback_used"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_rejects_backend_device_mismatch() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["runtime_device"] = json!("CPU");
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("runtime_device"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_rejects_route_backend_mismatch() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["selected_backend"] = json!("openvino-npu");
+        receipt["runtime_device"] = json!("NPU");
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("GPU OpenVINO route must select openvino-gpu"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_rejects_opencl_claim_leak() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["selected_kernel_or_runtime"] = json!("native-opencl-kernel");
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("native OpenCL"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_requires_retokenized_id_marking() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["generation"].as_object_mut().unwrap().remove("generated_token_ids_source");
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("generated_token_ids require source marking"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_rejects_dense_slm_to_bitnet_claim_leak() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["bitnet_packed_i2s_qk256_proof"] = json!(true);
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("qk256"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_requires_npu_cache_and_warm_evidence_for_promotion() {
+        let receipt = json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "lunar_lake_route_promotion_ledger",
+            "machine_id": "intel-258v",
+            "routes": [{
+                "route_id": "dense_slm_openvino_npu_candidate",
+                "status": "promoted",
+                "selected_backend": "openvino-npu",
+                "runtime_api": "openvino_genai",
+                "runtime_device": "NPU",
+                "fallback_policy": "strict_no_fallback"
+            }]
+        });
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("cache evidence"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_accepts_npu_promotion_with_cache_and_warm_evidence() {
+        let receipt = json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "lunar_lake_route_promotion_ledger",
+            "machine_id": "intel-258v",
+            "routes": [{
+                "route_id": "dense_slm_openvino_npu_candidate",
+                "status": "promoted",
+                "selected_backend": "openvino-npu",
+                "runtime_api": "openvino_genai",
+                "runtime_device": "NPU",
+                "fallback_policy": "strict_no_fallback",
+                "cache": {"mode": "openvino_model_cache", "cache_hit": true},
+                "warm_session": {"mode": "resident", "attempts": 10}
+            }]
+        });
+        validate_lunar_lake_openvino_receipt_json(&receipt).unwrap();
+    }
 
     #[test]
     fn test_receipt_generation_real_path() {

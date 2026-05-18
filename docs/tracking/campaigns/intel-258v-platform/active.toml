@@ -6642,3 +6642,54 @@ must_not_claim = [
   "OpenVINO GPU or NPU is promoted by this PR.",
   "Rust-native OpenVINO execution, server readiness, streaming readiness, concurrency readiness, OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, or QK256 accelerator decode is proven.",
 ]
+
+[[work_item]]
+id = "LNL258V-OPENVINO-VALIDATE-001"
+status = "pr_open"
+pr = 5614
+head_sha = "a08a19738c8f935dfd240fef3fdadb615f294b1f"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-VALIDATE-001-receipt-gates"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-DOCS-006"]
+acceptance = "Add fail-closed Lunar Lake OpenVINO receipt validators for selected backend/device consistency, fallback_used=false or strict no-fallback policy, retokenized token-ID marking, dense-SLM-to-BitNet claim leakage, OpenVINO-GPU-to-native-OpenCL claim leakage, and NPU cache/warm evidence when NPU route promotion is attempted, without changing inference, route promotion, runtime execution, or committed hardware artifacts."
+commands = [
+  "cargo test --locked -p bitnet-receipts-core lunar_lake_openvino_validator -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- validate open-vino-lunar-lake --receipt ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json --json-out target/lnl258v-openvino-validate/corpus-v2-validation.json",
+  "target/debug/bitnet validate open-vino-lunar-lake --receipt ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json --json-out target/lnl258v-openvino-validate/profile-comparison-validation.json",
+  "target/debug/bitnet validate open-vino-lunar-lake --receipt ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-runner.json --json-out target/lnl258v-openvino-validate/phase-runner-validation.json",
+  "target/debug/bitnet validate open-vino-lunar-lake --receipt ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json --json-out target/lnl258v-openvino-validate/npu-cold-validation.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-receipts-core/src/lib.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-tokenizers/**",
+  "scripts/**",
+]
+may_claim = [
+  "Lunar Lake OpenVINO receipt validation now rejects fallback, backend/device drift, retokenized-token ambiguity, BitNet/QK256 claim leakage, native OpenCL claim leakage, and NPU promotion attempts without cache plus warm/resident evidence.",
+  "The validator can be run through bitnet validate open-vino-lunar-lake against existing committed Lunar Lake OpenVINO receipts.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "Rust-native OpenVINO execution, server readiness, OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, or QK256 accelerator decode is proven.",
+]

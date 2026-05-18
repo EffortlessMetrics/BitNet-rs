@@ -1237,6 +1237,17 @@ enum ValidateAction {
         #[arg(long)]
         json_out: Option<std::path::PathBuf>,
     },
+
+    /// Validate a Lunar Lake OpenVINO receipt against strict route-boundary gates
+    OpenVinoLunarLake {
+        /// Receipt JSON to validate
+        #[arg(long)]
+        receipt: std::path::PathBuf,
+
+        /// Output JSON validation summary to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -2868,6 +2879,25 @@ async fn handle_validate_command(action: ValidateAction) -> Result<()> {
                 timestamp_utc,
             });
             write_json_output(json_out.as_ref(), &receipt)?;
+            Ok(())
+        }
+        ValidateAction::OpenVinoLunarLake { receipt, json_out } => {
+            bitnet_receipts_core::validate_lunar_lake_openvino_receipt_file(&receipt)?;
+            let summary = serde_json::json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_openvino_receipt_validation",
+                "source_receipt": receipt,
+                "valid": true,
+                "validated_contract": "lunar_lake_openvino_route_boundary",
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claimed": false,
+                    "power_advantage_claimed": false,
+                    "bitnet_qk256_or_i2s_claimed": false,
+                    "native_opencl_claimed": false
+                }
+            });
+            write_json_output(json_out.as_ref(), &summary)?;
             Ok(())
         }
     }
