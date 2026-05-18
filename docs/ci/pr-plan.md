@@ -18,8 +18,12 @@ The JSON artifact uses `schema_version = 1` and keeps these top-level fields:
     "posture": "pennies"
   },
   "classification": {
+    "no_rust_inputs": false,
     "docs_only": false,
     "tracker_only": false,
+    "tracker_or_campaign_only": false,
+    "hardware_receipt_only": false,
+    "policy_docs_only": false,
     "rust_inputs_changed": true,
     "manifest_or_toolchain_changed": false,
     "public_api_changed": false,
@@ -63,6 +67,8 @@ Schema fixture tests cover:
 
 - docs-only changes,
 - tracker-only changes,
+- hardware receipt-only changes,
+- policy docs-only changes,
 - ordinary Rust changes,
 - manifest/toolchain and public API changes,
 - GPU and macOS changes,

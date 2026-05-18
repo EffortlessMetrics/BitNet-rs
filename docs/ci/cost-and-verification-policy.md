@@ -485,10 +485,14 @@ Python stacks or fetch external models unless explicitly requested.
 A docs-only PR should run docs and tracking checks. It should not compile the
 Rust workspace.
 
-Tracker-only PRs are the strict version of that rule. When the diff is limited
-to `docs/tracking/**` or `.codex/campaigns/**`, CI Core keeps emitting the
-required `CI Core Success` check but routes it through campaign doctor and
-generated-dashboard freshness instead of Rust build, clippy, and rustdoc jobs.
+CI Core treats no-Rust-input PRs as a first-class fast path. When the diff is
+limited to docs, campaign/tracker metadata, hardware receipts, or policy docs,
+CI Core keeps emitting the required `CI Core Success` check without running Rust
+build, test, clippy, rustdoc, or `xtask` jobs. Tracker/campaign-only changes are
+delegated to the dedicated Campaign Tracker workflow for campaign doctor and
+generated-dashboard freshness. Hardware receipt-only changes run changed-receipt
+JSON syntax checks inside CI Core. Pure docs and policy-docs changes rely on the
+dedicated docs, markdown, link, policy, and PR Gate lanes.
 
 ## Operating metric
 
