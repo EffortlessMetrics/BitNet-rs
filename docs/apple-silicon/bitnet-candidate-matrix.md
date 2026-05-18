@@ -22,7 +22,7 @@ ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml
 |---:|---|---|---|
 | 1 | `microsoft/bitnet-b1.58-2B-4T-gguf` `ggml-model-i2_s.gguf` | ARM `I2_S`, then `TL1` | Shared answer gate says the official I2_S artifact is answer-ready when paired with external Microsoft tokenizer authority and `tokenizer.ggml.pre=llama-bpe`; MacBook must rerun before Apple claims. |
 | 2 | `1bitLLM/bitnet_b1_58-large` | ARM `I2_S` or `TL1` | Smaller 0.7B control candidate; currently blocked on artifact/conversion authority because the recorded official repo revision exposes safetensors/tokenizer files but no official GGUF. Follow [BITNET-PROP-0009](../proposals/BITNET-PROP-0009-bitnet-b158-large-control-model.md), the [source map](../bitnet/bitnet-b158-large/README.md), and the B158-large specs before any answer/backend claim. |
-| 3 | `1bitLLM/bitnet_b1_58-3B` | ARM `TL1`/`TL2` diagnostic only | Blocked at revision `af89e318d78a70802061246bf037199d2fb97020`: the official repository has safetensors shards and tokenizer files but no GGUF, and the current M3 Air free-space state cannot safely absorb the shards without cleanup or an approved conversion plan. |
+| 3 | `1bitLLM/bitnet_b1_58-3B` | ARM `TL1` diagnostic candidate; ARM `TL2` unsupported | Separate TL-model lane. Blocked at revision `af89e318d78a70802061246bf037199d2fb97020`: the official repository has safetensors shards and tokenizer files but no GGUF, and the current M3 Air free-space state cannot safely absorb the shards without cleanup or an approved conversion plan. Use only TL1 diagnostic routes until a verified runner path and coherent reference output exist; do not inherit Microsoft 2B `I2_S`/QK256 proof. |
 | 4 | `tiiuae/Falcon-E-1B-Instruct-GGUF` | Verify `I2_S` runner path | Secondary BitNet-like family after Microsoft and 1bitLLM behavior is understood. |
 | 5 | `tiiuae/Falcon-E-3B-Instruct-GGUF` | Verify `I2_S` runner path | Larger secondary family; use only if storage and smaller-candidate results justify it. |
 
@@ -80,3 +80,14 @@ binaries stay local-only.
 ## Claim Boundary
 
 This matrix is planning evidence. It does not prove Rust Apple BitNet local answers, full Apple Metal inference, QK256 on Apple Silicon, Neural Engine execution, MPSGraph model inference, or broad Apple Silicon performance.
+
+### 3B TL candidate boundary
+
+`1bitLLM/bitnet_b1_58-3B` is governed by
+[`BITNET-PROP-0010`](../proposals/BITNET-PROP-0010-bitnet-b158-3b-tl-model.md)
+and the 3B TL specs. For Apple, only ARM TL1 is a listed candidate route; ARM
+`I2_S` and ARM TL2 are unsupported unless the compatibility ledger changes. No
+Apple answer, benchmark, Metal, or server claim may be made until artifact
+inventory, TL1 conversion/runner authority, tokenizer/prompt authority,
+reference-good output, TL1 scalar/NEON fixtures, and strict Apple receipts pass
+with `fallback=false`.

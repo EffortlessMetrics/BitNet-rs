@@ -93,6 +93,41 @@ Do not proceed from upstream support, HF safetensors presence, or F16 structural
 conversion to answer, backend, or speed claims. Claims require exact artifact,
 tokenizer, prompt, reference, backend, fallback, and benchmark receipts.
 
+## BitNet b1.58 3B TL Candidate
+
+Use these specs before implementing or claiming support for
+`1bitLLM/bitnet_b1_58-3B`:
+
+1. [3B Artifact Contract](BITNET-SPEC-B158-3B-ARTIFACT-CONTRACT.md)
+   - Defines exact source revision, shard, tokenizer/config, hash, storage, and
+     claim-boundary requirements.
+2. [3B Conversion Contract](BITNET-SPEC-B158-3B-CONVERSION.md)
+   - Defines allowed safetensors, reference-runner, TL1/TL2 conversion, F16
+     structural, and third-party GGUF diagnostic lanes.
+3. [3B TL1/TL2 Layout](BITNET-SPEC-B158-3B-TL1-TL2-LAYOUT.md)
+   - Defines the route-specific TL layout fields and scalar-oracle prerequisite
+     before accelerator work.
+4. [3B Tokenizer and Prompt](BITNET-SPEC-B158-3B-TOKENIZER-PROMPT.md)
+   - Defines tokenizer hashes, special token IDs, prompt rendering, token IDs,
+     stop policy, and reference runner mode.
+5. [3B Reference Quality](BITNET-SPEC-B158-3B-REFERENCE-QUALITY.md)
+   - Defines tiny smoke, answer corpus, behavior, and long-decode reference
+     gates.
+6. [3B CPU](BITNET-SPEC-B158-3B-CPU.md)
+   - Defines x86 TL2 and ARM TL1 CPU proof paths and `I2_S` diagnostic
+     rejection boundaries.
+7. [3B CUDA](BITNET-SPEC-B158-3B-CUDA.md)
+   - Defines the CUDA TL2 path after x86 TL2 CPU answer proof.
+8. [3B Apple](BITNET-SPEC-B158-3B-APPLE.md)
+   - Defines the ARM TL1 Apple CPU/NEON path and MacBook/M4/Metal boundaries.
+9. [3B Performance](BITNET-SPEC-B158-3B-PERFORMANCE.md)
+   - Defines exact-profile benchmark metrics and promotion rules.
+
+Do not treat the 3B model as an `I2_S`/QK256 sibling of the official Microsoft
+2B artifact. x86 TL2 and ARM TL1 remain runner/conversion candidates until
+route-specific receipts prove them; all answer, backend, server, and speed
+claims remain false before the shared artifact gate and these specs pass.
+
 ## CPU AVX-512 Kernel Proof
 
 Use these specs before implementing or claiming AVX-512 CPU kernel support:
