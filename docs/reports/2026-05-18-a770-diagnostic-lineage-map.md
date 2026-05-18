@@ -18,7 +18,7 @@ Linked plan:
 - `plans/a770-bitnet-claim-boundary-implementation.md`
 
 Linked issues: n/a
-Linked PRs: #4744 through #5711 A770 diagnostic branch chain
+Linked PRs: #4744 through #5722 A770 diagnostic branch chain
 Support-tier impact: no promotion
 Policy impact: none
 
@@ -54,6 +54,12 @@ Observed snapshot on 2026-05-18:
 The direct `main` PR is the draft AVX2 performance PR #5092. The A770 PRs are
 stacked on other `a770/*` branches and should not be merged linearly.
 
+Post-refresh note on 2026-05-18: #5717 clean-ported #4744's non-claiming
+dispatch-status slice to `main`, #4741 through #4744 are closed/superseded, and
+PR #5722 merged only into the A770 diagnostic branch chain. A follow-up queue
+refresh showed 153 open scoped PRs: 152 `a770/*`, 0 `codex/*`, and 1
+`claude/*`.
+
 ## Disposition Rule
 
 Do not merge current A770 diagnostic probes directly into `main`.
@@ -81,7 +87,7 @@ Use them as source material for replacement PRs only when the replacement:
 
 ## Immediate Queue Decisions
 
-### #5711
+### #5711 and #5722
 
 `diag(bitnet): bind selected query boundary rows` is diagnostic-only and stacked
 on `a770/diag-rust-score-input-operand-drift`, not `main`.
@@ -95,6 +101,10 @@ The PR body reports:
 Disposition: do not merge as-is. If the selected-query boundary handling remains
 useful, port it into the durable reference trace/compare replacement PR after
 the branch-chain lineage is flattened.
+
+PR #5722 added selected-key score history decision evidence on the same branch
+chain. It merged there, not to `main`, and remains diagnostic lineage evidence
+only.
 
 ### #5092
 
