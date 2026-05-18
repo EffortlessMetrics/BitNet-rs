@@ -801,3 +801,48 @@ must_not_claim = [
   "GPU, NPU, or server inference is involved.",
   "A speedup or throughput claim is proven.",
 ]
+
+[[work_item]]
+id = "CPU-SCALAR-000"
+status = "ready"
+branch = "codex/cpu-scalar-000-docs"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "Scalar CPU productization specs, implementation plan, CPU path links, kernel matrix clarifications, and tracker rails exist before runtime scalar changes."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-KERNEL-CONTRACT.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-HOTPATH.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-PARITY.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-PERFORMANCE.md",
+  "plans/cpu-scalar/implementation-plan.md",
+  "docs/bitnet/BITNET_CPU_PATH_PLAN.md",
+  "docs/bitnet/BITNET_KERNEL_MATRIX.md",
+  "docs/tracking/campaigns/cpu-proof/active.toml",
+  "docs/tracking/campaigns/cpu-proof/generated/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The scalar CPU productization contract and PR sequence are documented after merge.",
+  "Precise scalar kernel IDs, hot-path counters, parity levels, and scalar-only performance receipt fields are specified after merge.",
+]
+must_not_claim = [
+  "Runtime scalar kernel identity is implemented.",
+  "Scaled scalar kernel selection metadata is implemented.",
+  "Scalar answer-corpus proof is complete.",
+  "Scalar performance is improved or proven.",
+  "AVX2, AVX-512, GPU, NPU, or server execution is involved.",
+]

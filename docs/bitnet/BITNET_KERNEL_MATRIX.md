@@ -43,12 +43,17 @@ Kernel family and kernel implementation are different fields. For example:
 
 | Kernel family | Example requested kernel | Meaning |
 |---|---|---|
-| `qk256` | `qk256-scalar-gemv` | Scalar packed decode truth kernel |
-| `qk256` | `qk256-scalar-gemm` | Scalar packed prefill truth kernel |
+| `qk256` | `qk256-scalar-f32-gemv` | Scalar F32/no-scale diagnostic decode kernel |
+| `qk256` | `qk256-scalar-i8s-scaled-gemv` | Production scalar BitNet I2_S × I8_S decode oracle |
+| `qk256` | `qk256-scalar-f32-gemm` | Scalar F32/no-scale diagnostic prefill kernel |
+| `qk256` | `qk256-scalar-i8s-scaled-gemm` | Production scalar BitNet I2_S × I8_S prefill oracle |
 | `qk256` | `qk256-avx2-gemv` | AVX2 decode-first packed GEMV |
 | `qk256` | `qk256-neon-gemv` | ARM64 NEON decode-first packed GEMV |
 
 Strict receipts must record both `kernel_family` and requested/selected kernel IDs.
+The older `qk256-scalar-gemv` and `qk256-scalar-gemm` names are compatibility
+aliases only and should not appear in new strict BitNet receipts when the exact
+F32/no-scale or scaled I8S scalar path is known.
 
 ### ARM / M4 Lane
 
