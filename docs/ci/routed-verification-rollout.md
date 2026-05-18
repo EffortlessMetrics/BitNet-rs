@@ -127,7 +127,10 @@ consuming it as an API:
   "packages": {
     "changed": [],
     "direct_dependents": [],
-    "canaries": []
+    "canaries": [],
+    "selected": [],
+    "broad_sweep_required": false,
+    "selection_reason": "changed packages plus direct dependents and canaries"
   },
   "risk_packs": [],
   "labels": []
@@ -431,9 +434,10 @@ unless a broad sweep is required.
 
 **Required behavior:**
 
-- Compute changed packages, direct dependents, canary packages, and
-  `broad_sweep_required`.
-- Run `cargo test` and `cargo clippy` on the selected package set.
+- Compute changed packages, direct dependents, canary packages, selected
+  packages, and `broad_sweep_required`.
+- Run CI Core build/test on the selected package set when a broad sweep is not
+  required.
 - Require broad sweep for manifest/toolchain/shared-foundation changes.
 - Summarize selected packages and reason.
 

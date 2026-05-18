@@ -38,7 +38,10 @@ The JSON artifact uses `schema_version = 1` and keeps these top-level fields:
   "packages": {
     "changed": [],
     "direct_dependents": [],
-    "canaries": []
+    "canaries": [],
+    "selected": [],
+    "broad_sweep_required": false,
+    "selection_reason": "changed packages plus direct dependents and canaries"
   },
   "risk_packs": [],
   "labels": []
@@ -48,6 +51,12 @@ The JSON artifact uses `schema_version = 1` and keeps these top-level fields:
 `selected_lanes` entries include `id`, `name`, `estimated_lem`, `reason`, and
 `blocking`. `skipped_lanes` entries include `id`, `name`, `reason`, and
 `blocking`.
+
+`packages` is the CI Core package-selection contract. `changed` comes from
+changed workspace package paths, `direct_dependents` comes from `cargo metadata`,
+`canaries` comes from risk packs, and `selected` is the union used by CI Core
+when a broad sweep is not required. `broad_sweep_required=true` preserves the
+full core sweep for manifest, toolchain, and shared-foundation changes.
 
 ## Boundaries
 

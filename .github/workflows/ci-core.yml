@@ -322,12 +322,104 @@ jobs:
           shared-key: ci-core-ubuntu
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      - name: Plan package selection
+        id: package-plan
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        env:
+          CHANGED_FILES: ${{ needs.classify-changes.outputs.changed_files }}
+          EVENT_NAME: ${{ github.event_name }}
+          LABELS_JSON: ${{ github.event_name == 'pull_request' && toJson(github.event.pull_request.labels.*.name) || '[]' }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/ci
+          printf '%s\n' "$CHANGED_FILES" > target/ci/changed-files.txt
+          cargo run --locked -p xtask --no-default-features -- ci plan \
+            --changed-file target/ci/changed-files.txt \
+            --labels-json "$LABELS_JSON" \
+            --json-out target/ci/ci-plan.json \
+            --print
+
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          from pathlib import Path
+
+          plan = json.loads(Path("target/ci/ci-plan.json").read_text(encoding="utf-8"))
+          packages = plan.get("packages", {})
+          selected = list(dict.fromkeys(packages.get("selected", [])))
+
+          cpu_feature_packages = {
+              "bitnet",
+              "bitnet-common",
+              "bitnet-models",
+              "bitnet-tokenizers",
+              "bitnet-quantization",
+              "bitnet-kernels",
+              "bitnet-inference",
+              "bitnet-bdd-grid-core",
+              "bitnet-bdd-grid",
+              "bitnet-feature-contract",
+              "bitnet-testing-policy-core",
+              "bitnet-testing-scenarios-core",
+              "bitnet-runtime-feature-flags-core",
+              "bitnet-runtime-feature-flags",
+              "bitnet-startup-contract-core",
+              "bitnet-startup-contract-diagnostics",
+              "bitnet-startup-contract-guard",
+              "bitnet-runtime-context-core",
+              "bitnet-testing-scenarios-profile-core",
+              "bitnet-runtime-profile-contract-core",
+              "bitnet-testing-policy-runtime",
+              "bitnet-testing-policy-tests",
+              "bitnet-testing-policy-kit",
+              "bitnet-testing-profile",
+              "bitnet-testing-policy-contract",
+              "bitnet-testing-policy-interop",
+          }
+          default_feature_packages = {
+              "bitnet-prompt-templates",
+              "bitnet-receipts",
+              "bitnet-sampling",
+          }
+          no_feature_packages = {
+              "bitnet-logits",
+              "bitnet-gguf",
+              "bitnet-generation",
+              "bitnet-device-probe",
+              "bitnet-engine-core",
+          }
+          supported = cpu_feature_packages | default_feature_packages | no_feature_packages
+          unsupported = [package for package in selected if package not in supported]
+          broad = bool(packages.get("broad_sweep_required")) or bool(unsupported)
+          if os.environ.get("EVENT_NAME") != "pull_request" and not selected:
+              broad = True
+
+          def args(names):
+              return " ".join(f"-p {name}" for name in names)
+
+          print(f"broad_sweep_required={str(broad).lower()}")
+          print(f"selection_reason={packages.get('selection_reason', '')}")
+          print(f"selected_packages_csv={','.join(selected)}")
+          print(f"unsupported_packages_csv={','.join(unsupported)}")
+          print(f"cpu_package_args={args([p for p in selected if p in cpu_feature_packages])}")
+          print(f"default_package_args={args([p for p in selected if p in default_feature_packages])}")
+          print(f"no_feature_package_args={args([p for p in selected if p in no_feature_packages])}")
+          print(f"run_inference_golden={str(broad or 'bitnet-inference' in selected).lower()}")
+          print(f"run_avx2_quantization={str(broad or 'bitnet-quantization' in selected).lower()}")
+          print(f"run_avx2_kernels={str(broad or 'bitnet-kernels' in selected).lower()}")
+          PY
+
+          echo "Package selection:"
+          echo "  broad: $(grep '^broad_sweep_required=' "$GITHUB_OUTPUT" | tail -n1 | cut -d= -f2-)"
+          echo "  selected: $(grep '^selected_packages_csv=' "$GITHUB_OUTPUT" | tail -n1 | cut -d= -f2-)"
+          echo "  unsupported: $(grep '^unsupported_packages_csv=' "$GITHUB_OUTPUT" | tail -n1 | cut -d= -f2-)"
+
       - name: Check formatting
         if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         run: cargo fmt --all -- --check
 
       - name: Build core libs (CPU features)
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo build --locked \
             -p bitnet-common \
@@ -338,15 +430,40 @@ jobs:
             --no-default-features --features cpu
 
       - name: Build SRP microcrates
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo build --locked \
             -p bitnet-prompt-templates \
             -p bitnet-receipts \
             -p bitnet-sampling
 
+      - name: Build selected packages
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required != 'true'
+        env:
+          CPU_PACKAGE_ARGS: ${{ steps.package-plan.outputs.cpu_package_args }}
+          DEFAULT_PACKAGE_ARGS: ${{ steps.package-plan.outputs.default_package_args }}
+          NO_FEATURE_PACKAGE_ARGS: ${{ steps.package-plan.outputs.no_feature_package_args }}
+        run: |
+          set -euo pipefail
+          ran=false
+          if [ -n "$CPU_PACKAGE_ARGS" ]; then
+            cargo build --locked $CPU_PACKAGE_ARGS --no-default-features --features cpu
+            ran=true
+          fi
+          if [ -n "$DEFAULT_PACKAGE_ARGS" ]; then
+            cargo build --locked $DEFAULT_PACKAGE_ARGS
+            ran=true
+          fi
+          if [ -n "$NO_FEATURE_PACKAGE_ARGS" ]; then
+            cargo build --locked $NO_FEATURE_PACKAGE_ARGS --no-default-features
+            ran=true
+          fi
+          if [ "$ran" != "true" ]; then
+            echo "No selected packages to build."
+          fi
+
       - name: "Run unit tests: core libs"
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo test --locked \
             -p bitnet-common \
@@ -359,7 +476,7 @@ jobs:
             -- --nocapture
 
       - name: "Run unit tests: SRP microcrates"
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo test --locked \
             -p bitnet-prompt-templates \
@@ -374,14 +491,14 @@ jobs:
             --no-default-features
 
       - name: "Run tests: inference golden path"
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo test --locked \
             -p bitnet-inference --test cpu_golden_path \
             --no-default-features --features cpu
 
       - name: "Run unit tests: policy / BDD crates"
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo test --locked \
             -p bitnet-bdd-grid-core \
@@ -405,8 +522,40 @@ jobs:
             -p bitnet-testing-policy-interop \
             --no-default-features --features cpu
 
+      - name: "Run unit tests: selected packages"
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required != 'true'
+        env:
+          CPU_PACKAGE_ARGS: ${{ steps.package-plan.outputs.cpu_package_args }}
+          DEFAULT_PACKAGE_ARGS: ${{ steps.package-plan.outputs.default_package_args }}
+          NO_FEATURE_PACKAGE_ARGS: ${{ steps.package-plan.outputs.no_feature_package_args }}
+        run: |
+          set -euo pipefail
+          ran=false
+          if [ -n "$CPU_PACKAGE_ARGS" ]; then
+            cargo test --locked $CPU_PACKAGE_ARGS --lib --no-default-features --features cpu -- --nocapture
+            ran=true
+          fi
+          if [ -n "$DEFAULT_PACKAGE_ARGS" ]; then
+            cargo test --locked $DEFAULT_PACKAGE_ARGS
+            ran=true
+          fi
+          if [ -n "$NO_FEATURE_PACKAGE_ARGS" ]; then
+            cargo test --locked $NO_FEATURE_PACKAGE_ARGS --no-default-features
+            ran=true
+          fi
+          if [ "$ran" != "true" ]; then
+            echo "No selected packages to test."
+          fi
+
+      - name: "Run tests: selected inference golden path"
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required != 'true' && steps.package-plan.outputs.run_inference_golden == 'true'
+        run: |
+          cargo test --locked \
+            -p bitnet-inference --test cpu_golden_path \
+            --no-default-features --features cpu
+
       - name: "Run unit tests: AVX2 quantization (x86_64 static +avx2)"
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && runner.os == 'Linux' && runner.arch == 'X64'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && runner.os == 'Linux' && runner.arch == 'X64' && steps.package-plan.outputs.run_avx2_quantization == 'true'
         env:
           RUSTFLAGS: "-D warnings -C target-feature=+avx2"
         run: |
@@ -417,7 +566,7 @@ jobs:
             -- --nocapture
 
       - name: "Run unit tests: AVX2 kernels (x86_64 static +avx2)"
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && runner.os == 'Linux' && runner.arch == 'X64'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && runner.os == 'Linux' && runner.arch == 'X64' && steps.package-plan.outputs.run_avx2_kernels == 'true'
         env:
           RUSTFLAGS: "-D warnings -C target-feature=+avx2"
         run: |
