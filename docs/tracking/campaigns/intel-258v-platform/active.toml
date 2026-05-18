@@ -6519,3 +6519,126 @@ must_not_claim = [
   "OpenVINO NPU is promoted by this PR.",
   "OpenVINO NPU cold one-off usability, speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, dynamic decode, native NPU kernel execution, or server readiness is proven.",
 ]
+
+[[work_item]]
+id = "LNL258V-OPENVINO-DOCS-004"
+status = "merged"
+pr = 5601
+head_sha = "91c2fc161973b7a75f27385f0d60a0a1434a5e88"
+merge_sha = "56d813a785fd4d81bb70bb80a5948ee148959f7c"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-004-quality-phase-specs"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-DOCS-003"]
+acceptance = "Add OpenVINO quality-corpus and phase-timing specs that define corpus-v2 profile gates, failure taxonomy, direct versus retokenized token-ID marking, prompt/template/stop evidence, generation config, profile token-bound timing applicability, phase timing fields, telemetry context, and promotion-blocking requirements without route promotion."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-OPENVINO-QUALITY-CORPUS.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-PHASE-TIMING.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "docs/tracking/campaigns/intel-258v-platform/generated/status.md",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO dense SLM quality-corpus and phase-timing receipt requirements are documented.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, or server readiness is proven.",
+]
+
+[[work_item]]
+id = "LNL258V-OPENVINO-DOCS-005"
+status = "merged"
+pr = 5605
+head_sha = "9248fb72eba4ff3fd825db87b55a8915a73f5cd7"
+merge_sha = "f1719a556657f3cec40a88ebe1ae7264c42eecd7"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-005-promotion-bitnet-boundary"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-DOCS-004"]
+acceptance = "Add OpenVINO route-promotion and BitNet-boundary specs that define candidate/promoted/blocked states, exact-profile promotion packages, CPU/GPU/NPU promotion gates, invalidation and auto-route behavior, and the separation between OpenVINO dense SLM proof, OpenVINO BitNet subgraphs, native OpenCL, NPU, server, and CPU BitNet reference proof families without route promotion."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-OPENVINO-ROUTE-PROMOTION.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-BITNET-BOUNDARY.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "docs/tracking/campaigns/intel-258v-platform/generated/status.md",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO route-promotion and BitNet proof-boundary requirements are documented.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, QK256 accelerator decode, or server readiness is proven.",
+]
+
+[[work_item]]
+id = "LNL258V-OPENVINO-DOCS-006"
+status = "merged"
+pr = 5608
+head_sha = "45c0530e6b217b95107b7c83ef35df4c3a5dbafd"
+merge_sha = "fd5e612b21a93acdd9516ffe662b8356512c3042"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-006-rust-bridge-server"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-OPENVINO-DOCS-005"]
+acceptance = "Add OpenVINO Rust bridge and exact-profile server specs that define Python proof harness, Rust wrapper, Rust receipt validator, subprocess bridge, Rust binding, product-surface stages, receipt equivalence, exact-profile server route identity, underlying-route linkage, cold/warm server timing, fallback behavior, exposure fields, and streaming/concurrency boundaries without route promotion or server-readiness claims."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-OPENVINO-RUST-BRIDGE.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-SERVER.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+  "docs/tracking/campaigns/intel-258v-platform/active.toml",
+  "docs/tracking/campaigns/intel-258v-platform/generated/status.md",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "README.md",
+]
+may_claim = [
+  "OpenVINO Rust bridge and exact-profile server receipt requirements are documented.",
+]
+must_not_claim = [
+  "OpenVINO GPU or NPU is promoted by this PR.",
+  "Rust-native OpenVINO execution, server readiness, streaming readiness, concurrency readiness, OpenVINO speedup, power advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, or QK256 accelerator decode is proven.",
+]

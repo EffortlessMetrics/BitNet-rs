@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T04:32:52Z"
+event = "in_progress"
+item = "SLM-CPU-033"
+branch = "codex/slm-cpu-033-forward-allocation-boundary"
+actor = "codex"
+summary = "Started the Qwen3 Q8_0 Kaby warm-session aggregate allocation boundary slice."
+
+notes = [
+  "SLM-CPU-032 left prompt token caching merged with generated IDs, strict provenance, and fallback=false preserved.",
+  "The next slice records the dominant measured aggregate allocation hotspot and next evidence-scoped optimization target in warm-session receipts.",
+  "This is diagnostic prioritization only; it does not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU/NPU/OpenVINO/UHD 620 execution, Qwen3.5 support, or BitNet QK256 changes.",
+]

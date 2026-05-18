@@ -1,0 +1,23 @@
+timestamp = "2026-05-18T16:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-006"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5608
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-006-rust-bridge-server"
+head_sha = "f054d6bef605ad00daa908e096473b5ef8167268"
+summary = "Opened PR #5608 for the OpenVINO Rust bridge and exact-profile server contract specs."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5608",
+  "docs/specs/BITNET-SPEC-OPENVINO-RUST-BRIDGE.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-SERVER.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The PR defines staged Python-to-Rust bridge requirements, receipt equivalence, fail-closed behavior, exact-profile server route identity, underlying-route linkage, cold/warm server timing, fallback behavior, exposure fields, and streaming/concurrency boundaries.",
+  "No route promotion, Rust-native OpenVINO execution, server readiness, speedup, power-advantage, broad dense SLM quality, BitNet QK256/I2_S, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, or QK256 accelerator decode claim is made.",
+]

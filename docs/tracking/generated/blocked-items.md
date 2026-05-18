@@ -342,6 +342,9 @@
 | intel-258v-platform | LNL258V-OV-QUAL-005 | LNL258V-OV-QUAL-004 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-DOCS-002 | LNL258V-OPENVINO-DOCS-001 | merged |
 | intel-258v-platform | LNL258V-OPENVINO-DOCS-003 | LNL258V-OPENVINO-DOCS-002 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-DOCS-004 | LNL258V-OPENVINO-DOCS-003 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-DOCS-005 | LNL258V-OPENVINO-DOCS-004 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-DOCS-006 | LNL258V-OPENVINO-DOCS-005 | merged |
 | intel-a770 | A770-003 | A770-OPENCL-TRUTH-000 | proposed |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
@@ -523,6 +526,8 @@
 | slm-cpu | SLM-CPU-018 | SLM-CPU-017 | merged |
 | slm-cpu | SLM-CPU-019 | SLM-CPU-018 | merged |
 | slm-cpu | SLM-CPU-020 | SLM-CPU-019 | merged |
+| slm-cpu | SLM-CPU-033 | SLM-CPU-032 | merged |
+| slm-cpu | SLM-CPU-034 | SLM-CPU-033 | ready |
 | slm-cpu | SLM-CPU-024 | SLM-CPU-023 | merged |
 | slm-cpu | SLM-CPU-025 | SLM-CPU-024 | merged |
 | slm-cpu | SLM-CPU-026 | SLM-CPU-025 | merged |

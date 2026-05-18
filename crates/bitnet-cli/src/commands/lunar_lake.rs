@@ -8430,6 +8430,7 @@ fn diagnose_corpus_v2_failed_case(case: &Value) -> CorpusV2FailedCaseDiagnosis {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn classify_corpus_v2_failure(
     answer: &str,
     gate_kind: Option<&str>,
