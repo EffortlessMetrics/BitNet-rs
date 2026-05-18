@@ -326,7 +326,7 @@ fn pick_lanes(
             false,
         ));
     }
-    if touched_get("rust_core") || touched_get("manifest") {
+    if feature_matrix_changed(changed) {
         if has("feature-matrix") || has("full-ci") {
             lanes.push(lane(
                 "feature-matrix-full",
@@ -494,6 +494,15 @@ fn model_validation_changed(files: &[String]) -> bool {
             || path.starts_with("docs/model-contracts/")
             || path.starts_with("tests/fixtures/models/")
             || path.starts_with("models/")
+    })
+}
+
+fn feature_matrix_changed(files: &[String]) -> bool {
+    files.iter().any(|path| {
+        path.starts_with("crates/")
+            || path == "Cargo.toml"
+            || path == "Cargo.lock"
+            || path == "rust-toolchain.toml"
     })
 }
 
@@ -958,6 +967,17 @@ mod tests {
         assert!(names.iter().any(|n| n.contains("Compatibility (MSRV)")));
         assert!(plan.classification.manifest_or_toolchain_changed);
         assert!(plan.classification.public_api_changed);
+    }
+
+    #[test]
+    fn xtask_changes_do_not_select_feature_matrix_without_matching_workflow_paths() {
+        let plan = build_plan(&s(&["xtask/src/ci/plan.rs"]), &[]);
+        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "ci-core-build-test"));
+        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "policy"));
+        assert!(
+            !plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-pr"),
+            "Feature Matrix does not trigger for xtask-only changes"
+        );
     }
 
     #[test]
