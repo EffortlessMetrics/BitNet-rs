@@ -363,9 +363,37 @@ Acceptance additions:
 - Route promotion remains blocked until CPU/OpenVINO corpus-v2 receipts are
   rerun under the updated fixture and exact-profile timing/power gates are met.
 
+### Work item: LNL258V-OPENVINO-QUAL-RERUN-001
+
+Status: in progress
+Blocked by: `LNL258V-OPENVINO-QUAL-FIX-001`
+
+Rerun the dense Qwen2.5 CPU and OpenVINO CPU/GPU/NPU corpus-v2 evidence after
+the accepted exact-answer fixture-policy update. Align the Rust Qwen2.5 ChatML
+generation marker with the exported tokenizer template, preserve exact
+one-token answer scoring, refresh CPU/GPU/NPU diagnoses, and refresh the route
+profile and regression-v2 indexes.
+
+Production delta: dense Qwen prompt/scoring correction plus receipt rerun. Do
+not promote GPU/NPU routes, claim speedup or power advantage, claim native
+Arc/NPU acceleration, alter BitNet QK256/I2_S behavior, or treat dense SLM
+evidence as BitNet proof.
+
+Acceptance additions:
+
+- Rust Qwen2.5 prompt rendering preserves the exported tokenizer template's
+  assistant generation newline.
+- Exact-scored one-token answers can pass without failing the generic generated
+  token variation gate.
+- `yes_no_clear_sky` passes after rerun on CPU, OpenVINO CPU, GPU.0, and NPU.
+- Remaining OpenVINO candidate blockers are reclassified under the updated
+  fixture, with GPU/NPU still unpromoted.
+- Regression v2 indexes the updated corpus and route-profile evidence.
+
 ### Remaining Phase C Items
 
-1. Rerun corpus-v2 after the exact-answer fixture-policy update.
+1. Close the remaining exact-answer and long/decode answer-content blockers, or
+   explicitly re-gate them by spec before any route promotion.
 
 No route can promote until profile cases pass or an explicit spec marks a case
 diagnostic-only.
