@@ -553,6 +553,11 @@ struct ModelStatusRow {
     warm_session: String,
     benchmark: String,
     server: String,
+    server_scope: Option<String>,
+    server_endpoint: Option<String>,
+    server_streaming: Option<bool>,
+    server_smoke: bool,
+    server_reason: Option<String>,
     claim_boundary: String,
     next_proof: String,
 }
@@ -1332,6 +1337,7 @@ fn model_status_row(device: &str, entry: &ModelCoverageEntry) -> ModelStatusRow 
     let ask = ask_status(entry);
     let one_token = dense_receipt_status(entry, "one_token");
     let short_decode = dense_receipt_status(entry, "short_decode");
+    let server = server_status(entry);
 
     ModelStatusRow {
         id: entry.id.clone(),
@@ -1359,9 +1365,67 @@ fn model_status_row(device: &str, entry: &ModelCoverageEntry) -> ModelStatusRow 
         short_decode,
         warm_session,
         benchmark,
-        server: if entry.claims.server_ready { "ready" } else { "not ready" }.to_string(),
+        server: server.label,
+        server_scope: server.scope,
+        server_endpoint: server.endpoint,
+        server_streaming: server.streaming,
+        server_smoke: server.smoke,
+        server_reason: server.reason,
         claim_boundary: entry.claim_boundary.clone(),
         next_proof: entry.next_proof.clone(),
+    }
+}
+
+struct ServerStatus {
+    label: String,
+    scope: Option<String>,
+    endpoint: Option<String>,
+    streaming: Option<bool>,
+    smoke: bool,
+    reason: Option<String>,
+}
+
+fn server_status(entry: &ModelCoverageEntry) -> ServerStatus {
+    let has_shared_engine_receipt = entry
+        .required_receipts
+        .iter()
+        .any(|receipt| receipt == "server_shared_engine_chat_completion");
+    let exact_profile_ready = entry.claims.server_ready
+        && has_shared_engine_receipt
+        && entry.claim_boundary.contains("exact-profile");
+    let server_smoke_only = !entry.claims.server_ready
+        && has_shared_engine_receipt
+        && entry.claim_boundary.contains("server-smoke evidence");
+
+    if exact_profile_ready {
+        return ServerStatus {
+            label: "exact-profile ready (/v1/chat/completions, streaming=false)".to_string(),
+            scope: Some("exact_profile".to_string()),
+            endpoint: Some("/v1/chat/completions".to_string()),
+            streaming: Some(false),
+            smoke: true,
+            reason: None,
+        };
+    }
+
+    if server_smoke_only {
+        return ServerStatus {
+            label: "smoke only, not broad-ready".to_string(),
+            scope: None,
+            endpoint: Some("/v1/chat/completions".to_string()),
+            streaming: Some(false),
+            smoke: true,
+            reason: Some("broad production readiness not qualified".to_string()),
+        };
+    }
+
+    ServerStatus {
+        label: if entry.claims.server_ready { "ready" } else { "not ready" }.to_string(),
+        scope: entry.claims.server_ready.then(|| "unspecified".to_string()),
+        endpoint: None,
+        streaming: None,
+        smoke: false,
+        reason: None,
     }
 }
 
@@ -3059,6 +3123,15 @@ mod tests {
         assert!(!bitnet.benchmark_qualified);
         assert!(!bitnet.speedup_claim);
         assert!(!bitnet.server_ready);
+        assert_eq!(bitnet.server, "smoke only, not broad-ready");
+        assert_eq!(bitnet.server_scope, None);
+        assert_eq!(bitnet.server_endpoint.as_deref(), Some("/v1/chat/completions"));
+        assert_eq!(bitnet.server_streaming, Some(false));
+        assert!(bitnet.server_smoke);
+        assert_eq!(
+            bitnet.server_reason.as_deref(),
+            Some("broad production readiness not qualified")
+        );
         assert!(!bitnet.full_residency_claim);
         assert_eq!(bitnet.ask, "ready");
         assert_eq!(bitnet.one_token, "ready");
@@ -3084,6 +3157,12 @@ mod tests {
         assert!(!dense.benchmark_qualified);
         assert!(!dense.speedup_claim);
         assert!(dense.server_ready);
+        assert_eq!(dense.server, "exact-profile ready (/v1/chat/completions, streaming=false)");
+        assert_eq!(dense.server_scope.as_deref(), Some("exact_profile"));
+        assert_eq!(dense.server_endpoint.as_deref(), Some("/v1/chat/completions"));
+        assert_eq!(dense.server_streaming, Some(false));
+        assert!(dense.server_smoke);
+        assert_eq!(dense.server_reason, None);
         assert!(!dense.full_residency_claim);
         assert_eq!(dense.one_token, "ready");
         assert_eq!(dense.short_decode, "ready");
@@ -3153,6 +3232,11 @@ mod tests {
                     && model["route"] == "dense_regular_llm_cuda"
                     && model["speedup_claim"] == false
                     && model["server_ready"] == true
+                    && model["server_scope"] == "exact_profile"
+                    && model["server_endpoint"] == "/v1/chat/completions"
+                    && model["server_streaming"] == false
+                    && model["server_smoke"] == true
+                    && model["server_reason"].is_null()
                     && model["bitnet_packed_i2s_qk256_proof"] == false
                     && model["dense_regular_llm_cuda_proof"] == true
             })
@@ -3171,8 +3255,21 @@ mod tests {
                     && model["accelerator_answer_ready"] == true
                     && model["speedup_claim"] == false
                     && model["server_ready"] == false
+                    && model["server_smoke"] == false
                     && model["bitnet_packed_i2s_qk256_proof"] == false
                     && model["dense_regular_llm_cuda_proof"] == true
+            })
+        }));
+        assert!(value["models"].as_array().is_some_and(|models| {
+            models.iter().any(|model| {
+                model["id"] == "bitnet_official_2b_i2s_qk256"
+                    && model["selected_route"] == "bitnet_qk256_cuda"
+                    && model["server_ready"] == false
+                    && model["server_scope"].is_null()
+                    && model["server_endpoint"] == "/v1/chat/completions"
+                    && model["server_streaming"] == false
+                    && model["server_smoke"] == true
+                    && model["server_reason"] == "broad production readiness not qualified"
             })
         }));
         Ok(())

@@ -55,9 +55,10 @@ bitnet model status --device nvidia-rtx-5070-ti-cuda --format json
 ```
 
 The dense Qwen row should show `product_cli_ready`, route
-`dense_regular_llm_cuda`, `speedup_claim=false`, and `server_ready=true` scoped
-only to the exact shared-engine `/v1/chat/completions` profile named by the
-model coverage matrix.
+`dense_regular_llm_cuda`, `speedup_claim=false`, `server_ready=true`,
+`server_scope=exact_profile`, endpoint `/v1/chat/completions`, and
+`server_streaming=false`. That readiness is scoped only to the exact
+shared-engine profile named by the model coverage matrix.
 
 ## Verify The Model Artifact
 
