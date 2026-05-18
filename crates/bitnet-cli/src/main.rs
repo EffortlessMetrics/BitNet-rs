@@ -13476,7 +13476,7 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
-    fn lunar_lake_operator_ask_receipt_accepts_openvino_source_shape() -> Result<()> {
+    fn lunar_lake_operator_ask_receipt_accepts_openvino_source_shape() -> anyhow::Result<()> {
         let route = commands::lunar_lake::OperatorRoute {
             route_id: "dense_slm_openvino_gpu_candidate".to_string(),
             workload: "ask".to_string(),

@@ -371,6 +371,8 @@
 | intel-258v-platform | LNL258V-OPENVINO-QUAL-RERUN-002 | LNL258V-QUAL-008 | merged |
 | intel-258v-platform | LNL258V-OV-TOKEN-001 | LNL258V-NPU-CACHE-002 | merged |
 | intel-258v-platform | LNL258V-ROUTE-015 | LNL258V-OV-TOKEN-001 | merged |
+| intel-258v-platform | LNL258V-ROUTE-017 | LNL258V-ROUTE-016 | merged |
+| intel-258v-platform | LNL258V-ROUTE-016 | LNL258V-OP-007 | merged |
 | intel-258v-platform | LNL258V-OP-007 | LNL258V-OP-006 | merged |
 | intel-258v-platform | LNL258V-OP-006 | LNL258V-ROUTE-015 | merged |
 | intel-a770 | A770-003 | A770-000 | proposed |
@@ -574,7 +576,8 @@
 | slm-cpu | SLM-CPU-038 | SLM-CPU-037 | merged |
 | slm-cpu | SLM-CPU-039 | SLM-CPU-038 | merged |
 | slm-cpu | SLM-CPU-040 | SLM-CPU-039 | merged |
-| slm-cpu | SLM-CPU-041 | SLM-CPU-040 | pr_open |
+| slm-cpu | SLM-CPU-041 | SLM-CPU-040 | merged |
+| slm-cpu | SLM-CPU-042 | SLM-CPU-041 | ready |
 | slm-cpu | SLM-CPU-024 | SLM-CPU-023 | merged |
 | slm-cpu | SLM-CPU-025 | SLM-CPU-024 | merged |
 | slm-cpu | SLM-CPU-026 | SLM-CPU-025 | merged |

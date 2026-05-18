@@ -1,0 +1,576 @@
+{
+  "acceleration_claim": false,
+  "answer": {
+    "gate": {
+      "broad_quality_claim": false,
+      "expected_contains": "4",
+      "failed_rules": [],
+      "name": "contains_bounded_operator_answer",
+      "passed": true
+    },
+    "normalized_text": "2 + 2 equals 4.",
+    "text": "2 + 2 equals 4."
+  },
+  "answer_gate_passed": true,
+  "arc_or_npu_execution_claim": false,
+  "artifact_kind": "lunar_lake_operator_ask",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "backend": {
+    "backend_lane": "dense_slm_openvino_gpu_arc140v",
+    "fallback_reason": null,
+    "fallback_used": false,
+    "requested_backend": "openvino-gpu",
+    "runtime_api": "openvino_genai",
+    "selected_backend": "openvino-gpu",
+    "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0"
+  },
+  "backend_lane": "dense_slm_openvino_gpu_arc140v",
+  "bitnet_qk256_i2s_claim": false,
+  "broad_quality_claim": false,
+  "claim_boundary": {
+    "acceleration_claim": false,
+    "arc_or_npu_acceleration_claim": false,
+    "bitnet_qk256_i2s_claim": false,
+    "broad_dense_slm_quality_claim": false,
+    "cpu_default_route_only": false,
+    "default_route_changed": false,
+    "fallback_used": false,
+    "openvino_candidate_route_executed": true
+  },
+  "created_utc": "2026-05-18T20:36:22Z",
+  "dense_slm": null,
+  "execution_coverage": null,
+  "fallback_reason": null,
+  "fallback_used": false,
+  "machine_id": "intel-258v",
+  "model": {
+    "architecture": "qwen2",
+    "fallback_loader_used": null,
+    "family": "qwen",
+    "loader_mode": null,
+    "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "quant_format": "INT4_SYM",
+    "sha256": null,
+    "source": {
+      "files": {
+        "chat_template.jinja": {
+          "bytes": 2561,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/chat_template.jinja",
+          "sha256": "8aa40ce145adb73cb3a75194dc0224702a95850ec5275cabb728496bbd749fc6"
+        },
+        "generation_config.json": {
+          "bytes": 256,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/generation_config.json",
+          "sha256": "b017173db4a82cfc6dc6e4368aee7f8f4eceeb380cdae840528833be24ac45c8"
+        },
+        "openvino_detokenizer.bin": {
+          "bytes": 2189639,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.bin",
+          "sha256": "3ca47601554a3b871c1e45e8f31aa6e17d726365c075fb430d1a2089484ae8d6"
+        },
+        "openvino_detokenizer.xml": {
+          "bytes": 10030,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.xml",
+          "sha256": "a1d28ba5b537fd7a07771e2b019fbdbd29f8d3e57f3b928e6827dd5a1aff813d"
+        },
+        "openvino_model.bin": {
+          "bytes": 321326157,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
+          "sha256": "a15e9535aaf4c8286b7b45f0490dca593cc751450c3b832416ad377bb190b2a9"
+        },
+        "openvino_model.xml": {
+          "bytes": 2167169,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
+          "sha256": "92079df4e311238df5a3cd94848fc84730eefbce08e59f053d8a0aeaa7fb39f4"
+        },
+        "openvino_tokenizer.bin": {
+          "bytes": 5588603,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.bin",
+          "sha256": "651d8b86c94c40710919f6089189a748ebf4ad1b0f0da728440454d14379b078"
+        },
+        "openvino_tokenizer.xml": {
+          "bytes": 27536,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.xml",
+          "sha256": "779af8438ed2689107ba0bacc939e81734085d3e1a3dbf403402d2ccc982fe1b"
+        },
+        "tokenizer.json": {
+          "bytes": 11421896,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer.json",
+          "sha256": "9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa"
+        },
+        "tokenizer_config.json": {
+          "bytes": 4893,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer_config.json",
+          "sha256": "5fd4cea2574beb6b70ba31582179880d331b723f5b5119ee67c29d45b983f7be"
+        }
+      },
+      "local_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+      "model_binary_committed": false,
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct"
+    },
+    "tokenizer": "hf_tokenizer_export",
+    "vocab_size": null
+  },
+  "model_architecture": "qwen2",
+  "model_family": "qwen",
+  "openvino_candidate_route_executed": true,
+  "operator_receipt": "ci/hardware/intel-258v/2026-05-08\\lunar-lake-operator-readiness.json",
+  "profile": null,
+  "profile_id": "ask_short",
+  "promotion_status": "promoted",
+  "prompt": {
+    "render": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+    "template": "qwen2.5",
+    "token_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      1207,
+      16948,
+      11,
+      3465,
+      553,
+      54364,
+      14817,
+      13,
+      1446,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      3838,
+      374,
+      220,
+      17,
+      10,
+      17,
+      30,
+      21806,
+      26753,
+      13,
+      151645,
+      198,
+      151644,
+      77091,
+      198
+    ]
+  },
+  "prompt_template": "qwen2.5",
+  "proof_stage": "operator_candidate_route_executed_through_lunar_lake_ask",
+  "quantization": "INT4_SYM",
+  "question": "What is 2+2? Answer briefly.",
+  "requested_backend": "openvino-gpu",
+  "requested_device": "auto",
+  "requested_route": "auto",
+  "route": {
+    "acceleration_claim": false,
+    "answer_gate_evidence": "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+    "fallback_policy": "strict_no_fallback",
+    "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
+    "route_id": "dense_slm_openvino_gpu_candidate",
+    "route_reason": "Candidate route because Arc 140V OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false, but no benchmark-qualified speedup claim is recorded.",
+    "runtime_api": "openvino_genai",
+    "selected_backend": "openvino-gpu",
+    "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu",
+    "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+    "workload": "dense_slm_acceleration_candidate"
+  },
+  "route_id": "dense_slm_openvino_gpu_candidate",
+  "route_profile_blockers": [],
+  "route_profile_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "route_profile_status": "promoted_route_ready",
+  "route_reason": "OpenVINO GPU is promoted only for benchmark-qualified dense Qwen profiles [ask_normal,ask_short] with fallback=false, passing corpus-v2 evidence, direct token visibility, profile-matched timing, and lower total response than the CPU baseline.",
+  "route_selection": {
+    "candidate_routes": [
+      "dense_slm_default_cpu",
+      "dense_slm_openvino_npu_candidate"
+    ],
+    "profile_id": "ask_short",
+    "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+    "promotion_status": "promoted",
+    "requested_device": "auto",
+    "requested_route": "auto",
+    "route_profile_blockers": [],
+    "route_profile_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+    "route_profile_status": "promoted_route_ready",
+    "route_reason": "OpenVINO GPU is promoted only for benchmark-qualified dense Qwen profiles [ask_normal,ask_short] with fallback=false, passing corpus-v2 evidence, direct token visibility, profile-matched timing, and lower total response than the CPU baseline.",
+    "runtime_api": "openvino_genai",
+    "selected_backend": "openvino-gpu",
+    "selected_route": "dense_slm_openvino_gpu_candidate",
+    "selection_source": "promotion_ledger_auto",
+    "why_not_cpu": [
+      "route is not promoted for profile `ask_short`"
+    ],
+    "why_not_gpu": [
+      "dense_slm_openvino_gpu_candidate is promoted for profile ask_short by benchmark-qualified route evidence"
+    ],
+    "why_not_npu": [
+      "missing evidence: benchmark_qualified_speedup_or_power_advantage",
+      "missing evidence: profile_regression_bundle",
+      "route is not promoted for profile `ask_short`",
+      "route status is `candidate`"
+    ]
+  },
+  "runtime_api": "openvino_genai",
+  "schema_version": "1.0.0",
+  "selected_backend": "openvino-gpu",
+  "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+  "selected_route": "dense_slm_openvino_gpu_candidate",
+  "source_receipt": {
+    "answer_gate": {
+      "expected": "4",
+      "failed_rules": [],
+      "kind": "contains",
+      "passed": true
+    },
+    "artifact_kind": "lunar_lake_openvino_operator_ask",
+    "backend_lane": "dense_slm_openvino_gpu_arc140v",
+    "campaign": "intel-258v-platform",
+    "claim_boundary": {
+      "may_claim": [
+        "An explicit Lunar Lake dense SLM OpenVINO candidate route generated a bounded answer with fallback_used=false.",
+        "The receipt records selected OpenVINO GenAI backend/runtime/device identity, route reason, answer gate result, and timing fields."
+      ],
+      "must_not_claim": [
+        "OpenVINO CPU/GPU/NPU speedup or sustained phase performance is proven.",
+        "The default Lunar Lake ask route changed away from CPU.",
+        "OpenVINO GPU evidence proves native OpenCL execution.",
+        "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+        "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+        "Broad dense SLM quality is proven beyond bounded answer gates.",
+        "Full BitNet inference works on Arc or NPU."
+      ]
+    },
+    "created_utc": "2026-05-18T20:36:21Z",
+    "environment": {
+      "openvino": {
+        "available_devices": [
+          "CPU",
+          "GPU",
+          "NPU"
+        ],
+        "version": "2026.1.0-21367-63e31528c62-releases/2026/1"
+      },
+      "openvino_genai": {
+        "version": "2026.1.0.0-2957-1dabb8c2255"
+      },
+      "platform": "Windows-11-10.0.26200-SP0",
+      "python": "3.12.10"
+    },
+    "fallback_policy": "strict_no_fallback",
+    "fallback_used": false,
+    "inputs": {
+      "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+      "model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+      "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json"
+    },
+    "item": "LNL258V-ASK-004",
+    "machine_id": "intel-258v",
+    "model": {
+      "files": {
+        "chat_template.jinja": {
+          "bytes": 2561,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/chat_template.jinja",
+          "sha256": "8aa40ce145adb73cb3a75194dc0224702a95850ec5275cabb728496bbd749fc6"
+        },
+        "generation_config.json": {
+          "bytes": 256,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/generation_config.json",
+          "sha256": "b017173db4a82cfc6dc6e4368aee7f8f4eceeb380cdae840528833be24ac45c8"
+        },
+        "openvino_detokenizer.bin": {
+          "bytes": 2189639,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.bin",
+          "sha256": "3ca47601554a3b871c1e45e8f31aa6e17d726365c075fb430d1a2089484ae8d6"
+        },
+        "openvino_detokenizer.xml": {
+          "bytes": 10030,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.xml",
+          "sha256": "a1d28ba5b537fd7a07771e2b019fbdbd29f8d3e57f3b928e6827dd5a1aff813d"
+        },
+        "openvino_model.bin": {
+          "bytes": 321326157,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
+          "sha256": "a15e9535aaf4c8286b7b45f0490dca593cc751450c3b832416ad377bb190b2a9"
+        },
+        "openvino_model.xml": {
+          "bytes": 2167169,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
+          "sha256": "92079df4e311238df5a3cd94848fc84730eefbce08e59f053d8a0aeaa7fb39f4"
+        },
+        "openvino_tokenizer.bin": {
+          "bytes": 5588603,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.bin",
+          "sha256": "651d8b86c94c40710919f6089189a748ebf4ad1b0f0da728440454d14379b078"
+        },
+        "openvino_tokenizer.xml": {
+          "bytes": 27536,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.xml",
+          "sha256": "779af8438ed2689107ba0bacc939e81734085d3e1a3dbf403402d2ccc982fe1b"
+        },
+        "tokenizer.json": {
+          "bytes": 11421896,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer.json",
+          "sha256": "9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa"
+        },
+        "tokenizer_config.json": {
+          "bytes": 4893,
+          "exists": true,
+          "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer_config.json",
+          "sha256": "5fd4cea2574beb6b70ba31582179880d331b723f5b5119ee67c29d45b983f7be"
+        }
+      },
+      "local_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+      "model_binary_committed": false,
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct"
+    },
+    "model_architecture": "qwen2",
+    "model_family": "qwen",
+    "output": {
+      "first_streamed_text_chunk": "2",
+      "first_streamed_text_chunk_ms": 247.7460000081919,
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_count": 9,
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "normalized_answer": "2 + 2 equals 4.",
+      "streamed_chunks_count": 8,
+      "streamed_text": "2 + 2 equals 4."
+    },
+    "prompt_policy": {
+      "generation_config": {
+        "apply_chat_template": true,
+        "do_sample": false,
+        "max_new_tokens": 16,
+        "num_beams": 1
+      },
+      "greedy": true,
+      "prompt_template": "qwen2.5",
+      "prompt_token_count": 39,
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "question": "What is 2+2? Answer briefly.",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a"
+    },
+    "prompt_template": "qwen2.5",
+    "proof_stage": "operator_candidate_route_executed",
+    "quantization": "INT4_SYM",
+    "requested_backend": "openvino-gpu",
+    "resolved_device": "Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)",
+    "route": {
+      "acceleration_claim": false,
+      "answer_gate_evidence": "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+      "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
+      "route_id": "dense_slm_openvino_gpu_candidate",
+      "route_reason": "Candidate route because Arc 140V OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false, but no benchmark-qualified speedup claim is recorded."
+    },
+    "route_id": "dense_slm_openvino_gpu_candidate",
+    "runtime_api": "openvino_genai",
+    "runtime_device": "GPU.0",
+    "schema_version": "1.0.0",
+    "selected_backend": "openvino-gpu",
+    "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+    "timing": {
+      "generation_wall_ms": 328.1204999948386,
+      "openvino_perf_metrics": {
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 322.71600341796875,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 318.65899658203125,
+          "std_ms": 0.0
+        },
+        "inter_token_latency": {
+          "mean_ms": 35.72022247314453,
+          "std_ms": 48.53548812866211
+        },
+        "load_time_ms": 1819.0,
+        "num_generated_tokens": 9,
+        "num_input_tokens": 39,
+        "throughput": {
+          "mean_ms": 49.45121383666992,
+          "std_ms": 53.29451751708984
+        },
+        "time_per_output_token": {
+          "mean_ms": 20.22195053100586,
+          "std_ms": 21.79358291625977
+        },
+        "time_to_first_token": {
+          "mean_ms": 160.20199584960938,
+          "std_ms": 0.0
+        },
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        }
+      },
+      "pipeline_construct_wall_ms": 1839.5443999907
+    },
+    "tokenizer_source": "hf_tokenizer_export",
+    "verification": {
+      "acceleration_claim": false,
+      "answer_gate_passed": true,
+      "fallback_used": false,
+      "generated_token_ids_available_from_pipeline": true,
+      "generation_ran": true,
+      "llmpipeline_constructed": true,
+      "openvino_perf_metrics_recorded": true,
+      "operator_ready": true,
+      "operator_route_validated": true
+    }
+  },
+  "source_run_receipt": "ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-auto-gpu-ask-short-math-brief-source-run.json",
+  "speedup_claim": false,
+  "timing": {
+    "generation_wall_ms": 328.1204999948386,
+    "openvino_perf_metrics": {
+      "detokenization": {
+        "mean_ms": -1.0,
+        "std_ms": -1.0
+      },
+      "generate": {
+        "mean_ms": 322.71600341796875,
+        "std_ms": 0.0
+      },
+      "inference": {
+        "mean_ms": 318.65899658203125,
+        "std_ms": 0.0
+      },
+      "inter_token_latency": {
+        "mean_ms": 35.72022247314453,
+        "std_ms": 48.53548812866211
+      },
+      "load_time_ms": 1819.0,
+      "num_generated_tokens": 9,
+      "num_input_tokens": 39,
+      "throughput": {
+        "mean_ms": 49.45121383666992,
+        "std_ms": 53.29451751708984
+      },
+      "time_per_output_token": {
+        "mean_ms": 20.22195053100586,
+        "std_ms": 21.79358291625977
+      },
+      "time_to_first_token": {
+        "mean_ms": 160.20199584960938,
+        "std_ms": 0.0
+      },
+      "tokenization": {
+        "mean_ms": -1.0,
+        "std_ms": -1.0
+      }
+    },
+    "pipeline_construct_wall_ms": 1839.5443999907
+  },
+  "tokenizer_source": "hf_tokenizer_export",
+  "tokens": {
+    "generated_count": 9,
+    "generated_ids": [
+      17,
+      488,
+      220,
+      17,
+      16819,
+      220,
+      19,
+      13,
+      151645
+    ],
+    "prompt_count": 39
+  },
+  "why_not_cpu": [
+    "route is not promoted for profile `ask_short`"
+  ],
+  "why_not_gpu": [
+    "dense_slm_openvino_gpu_candidate is promoted for profile ask_short by benchmark-qualified route evidence"
+  ],
+  "why_not_npu": [
+    "missing evidence: benchmark_qualified_speedup_or_power_advantage",
+    "missing evidence: profile_regression_bundle",
+    "route is not promoted for profile `ask_short`",
+    "route status is `candidate`"
+  ]
+}
