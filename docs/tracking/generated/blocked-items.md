@@ -325,6 +325,7 @@
 | intel-258v-platform | LNL258V-ASK-003 | LNL258V-ASK-002 | merged |
 | intel-258v-platform | LNL258V-OV-QUAL-003 | LNL258V-OV-QUAL-002 | merged |
 | intel-258v-platform | LNL258V-OV-QUAL-004 | LNL258V-OV-QUAL-003 | merged |
+| intel-258v-platform | LNL258V-OV-QUAL-005 | LNL258V-OV-QUAL-004 | in_progress |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |

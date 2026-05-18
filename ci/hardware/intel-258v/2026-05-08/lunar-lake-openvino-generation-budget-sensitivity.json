@@ -1,0 +1,3575 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "intel_258v_dense_slm_openvino_generation_budget_sensitivity",
+  "campaign": "intel-258v-platform",
+  "item": "LNL258V-OV-QUAL-005",
+  "created_utc": "2026-05-18T07:00:00Z",
+  "machine_id": "intel-258v",
+  "proof_stage": "candidate_route_generation_budget_diagnostic_no_promotion_change",
+  "comparison_scope": "same_machine_qwen2_5_openvino_candidate_route_exact_answer_budget_sensitivity",
+  "requested_backend": "openvino-cpu-gpu-npu",
+  "selected_backend": "openvino-cpu-gpu-npu",
+  "runtime_api": "openvino_genai",
+  "fallback_used": false,
+  "backend_lane": "dense_slm_openvino_candidate_routes",
+  "model_family": "qwen",
+  "model_architecture": "qwen2",
+  "quantization": "INT4_SYM",
+  "prompt_template": "qwen2.5",
+  "tokenizer_source": "hf_tokenizer_export",
+  "promotion_status": "candidate_only_not_promoted",
+  "route_promotion_changed": false,
+  "diagnostic_policy": {
+    "selected_cases": "explicit case ids or normalized_match corpus cases",
+    "fixture_budget": "case max_new_tokens from answer-corpus-v2",
+    "budget_variants": [
+      1,
+      2,
+      4
+    ],
+    "pass_interpretation": "smaller-budget pass after fixture failure indicates overgeneration sensitivity, not route promotion"
+  },
+  "paths": {
+    "answer_corpus_v2": "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+    "openvino_ir_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym"
+  },
+  "cases_selected": [
+    "stop_token_one_word_done",
+    "yes_no_clear_sky"
+  ],
+  "devices": [
+    {
+      "requested_backend": "openvino-cpu",
+      "selected_backend": "openvino-cpu",
+      "runtime_api": "openvino_genai",
+      "runtime_device": "CPU",
+      "resolved_device": "Intel(R) Core(TM) Ultra 7 258V",
+      "backend_lane": "dense_slm_openvino_cpu",
+      "fallback_used": false,
+      "selected_kernel_or_runtime": "openvino-genai-llmpipeline-cpu",
+      "pipeline_construct_wall_ms": 2463.899099995615,
+      "promotion_status": "candidate_only_not_promoted",
+      "route_promotion_changed": false,
+      "summary": {
+        "cases_total": 2,
+        "fixture_budget_passed": 0,
+        "any_budget_passed": 1,
+        "blocker_classes": {
+          "fixture_budget_overgenerates_but_smaller_budget_passes": 1,
+          "no_budget_variant_passes": 1
+        }
+      },
+      "cases": [
+        {
+          "id": "stop_token_one_word_done",
+          "profile": "regression_tiny",
+          "category": "stop_and_eos",
+          "question": "Answer with exactly one word: done",
+          "prompt_template": "qwen2.5",
+          "prompt": {
+            "template_family": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nAnswer with exactly one word: done<|im_end|>\n<|im_start|>assistant\n",
+            "rendered_sha256": "5ccf2c36652a4e193f13136dc8679aeb33fabc31cf25edc5c0ea5291fa0701df",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              16141,
+              448,
+              6896,
+              825,
+              3409,
+              25,
+              2814,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 36
+          },
+          "fixture_max_new_tokens": 8,
+          "budget_variants_tested": [
+            1,
+            2,
+            4,
+            8
+          ],
+          "fixture_budget_passed": false,
+          "any_budget_passed": false,
+          "first_passing_budget": null,
+          "blocker_class": "no_budget_variant_passes",
+          "variants": [
+            {
+              "max_new_tokens": 1,
+              "is_fixture_budget": false,
+              "generated_text": "Okay",
+              "decoded_preview": "Okay",
+              "normalized_output": "okay",
+              "generated_token_ids": [
+                32313
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 1,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 928.1161999970209,
+                "first_streamed_text_chunk_ms": 927.8207000170369,
+                "first_streamed_text_chunk": "Okay",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 2427.0,
+                  "tokenization": {
+                    "mean_ms": 16.93400001525879,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 927.760009765625,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 907.4609985351562,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 925.983154296875,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": -1.0,
+                    "std_ms": -1.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 908.656005859375,
+                    "std_ms": 0.0
+                  },
+                  "throughput": {
+                    "mean_ms": -1000.0,
+                    "std_ms": -1000.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.14350000023841858,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 1
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 2,
+              "is_fixture_budget": false,
+              "generated_text": "Okay,",
+              "decoded_preview": "Okay,",
+              "normalized_output": "okay",
+              "generated_token_ids": [
+                32313,
+                11
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 2,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay,",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay,"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay,",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay,"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 46.074200014118105,
+                "first_streamed_text_chunk_ms": 45.72640001424588,
+                "first_streamed_text_chunk": "Okay,",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 2427.0,
+                  "tokenization": {
+                    "mean_ms": 13.402000427246094,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 45.994998931884766,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 30.31399917602539,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 33.33580017089844,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 11.132499694824219,
+                    "std_ms": 0.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 15.468500137329102,
+                    "std_ms": 4.3495001792907715
+                  },
+                  "throughput": {
+                    "mean_ms": 89.82708740234375,
+                    "std_ms": 0.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.1680999994277954,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 2
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 4,
+              "is_fixture_budget": false,
+              "generated_text": "Okay, understood.",
+              "decoded_preview": "Okay, understood.",
+              "normalized_output": "okay, understood",
+              "generated_token_ids": [
+                32313,
+                11,
+                15985,
+                13
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 4,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay, understood.",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay, understood"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay, understood.",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay, understood"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 76.41249999869615,
+                "first_streamed_text_chunk_ms": 63.374699995620176,
+                "first_streamed_text_chunk": "Okay",
+                "streamed_chunks_count": 3,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 2427.0,
+                  "tokenization": {
+                    "mean_ms": 12.819000244140625,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 76.33000183105469,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 60.58399963378906,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 41.29349899291992,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 11.107666969299316,
+                    "std_ms": 2.009324073791504
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 15.406000137329102,
+                    "std_ms": 7.669101715087891
+                  },
+                  "throughput": {
+                    "mean_ms": 90.02790832519531,
+                    "std_ms": 16.285619735717773
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.2628999948501587,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 4
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 8,
+              "is_fixture_budget": true,
+              "generated_text": "Okay, understood.",
+              "decoded_preview": "Okay, understood.",
+              "normalized_output": "okay, understood",
+              "generated_token_ids": [
+                32313,
+                11,
+                15985,
+                13
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 4,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay, understood.",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay, understood"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay, understood.",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay, understood"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 94.82850000495091,
+                "first_streamed_text_chunk_ms": 67.24709999980405,
+                "first_streamed_text_chunk": "Okay",
+                "streamed_chunks_count": 4,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 2427.0,
+                  "tokenization": {
+                    "mean_ms": 12.871000289916992,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 94.74099731445312,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 79.00199890136719,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 37.42150115966797,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 14.008524894714355,
+                    "std_ms": 5.215481281280518
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 16.082399368286133,
+                    "std_ms": 6.261856555938721
+                  },
+                  "throughput": {
+                    "mean_ms": 71.38510131835938,
+                    "std_ms": 26.57722282409668
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.14270000159740448,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 5
+                }
+              },
+              "status": "quality_failed"
+            }
+          ]
+        },
+        {
+          "id": "yes_no_clear_sky",
+          "profile": "ask_short",
+          "category": "yes_no",
+          "question": "Reply with exactly one word, yes or no: is the sky usually blue on a clear day?",
+          "prompt_template": "qwen2.5",
+          "prompt": {
+            "template_family": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nReply with exactly one word, yes or no: is the sky usually blue on a clear day?<|im_end|>\n<|im_start|>assistant\n",
+            "rendered_sha256": "2972656907307c327ebd1f70ed815fb23d387535fb89c984bde23dd03e5017d2",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              20841,
+              448,
+              6896,
+              825,
+              3409,
+              11,
+              9834,
+              476,
+              902,
+              25,
+              374,
+              279,
+              12884,
+              5990,
+              6303,
+              389,
+              264,
+              2797,
+              1899,
+              30,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 49
+          },
+          "fixture_max_new_tokens": 8,
+          "budget_variants_tested": [
+            1,
+            2,
+            4,
+            8
+          ],
+          "fixture_budget_passed": false,
+          "any_budget_passed": true,
+          "first_passing_budget": 1,
+          "blocker_class": "fixture_budget_overgenerates_but_smaller_budget_passes",
+          "variants": [
+            {
+              "max_new_tokens": 1,
+              "is_fixture_budget": false,
+              "generated_text": "Yes",
+              "decoded_preview": "Yes",
+              "normalized_output": "yes",
+              "generated_token_ids": [
+                9454
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 1,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes"
+                }
+              },
+              "quality": {
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": true,
+                  "failed_rules": [],
+                  "failure_taxonomy": [],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 145.06290000281297,
+                "first_streamed_text_chunk_ms": 144.78470000904053,
+                "first_streamed_text_chunk": "Yes",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 2427.0,
+                  "tokenization": {
+                    "mean_ms": 9.263999938964844,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 144.98300170898438,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 133.66099548339844,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 143.52549743652344,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": -1.0,
+                    "std_ms": -1.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 134.00799560546875,
+                    "std_ms": 0.0
+                  },
+                  "throughput": {
+                    "mean_ms": -1000.0,
+                    "std_ms": -1000.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.13279999792575836,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 1
+                }
+              },
+              "status": "passed"
+            },
+            {
+              "max_new_tokens": 2,
+              "is_fixture_budget": false,
+              "generated_text": "Yes,",
+              "decoded_preview": "Yes,",
+              "normalized_output": "yes",
+              "generated_token_ids": [
+                9454,
+                11
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 2,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes,",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes,"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes,",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes,"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 37.86060001584701,
+                "first_streamed_text_chunk_ms": 37.57830001995899,
+                "first_streamed_text_chunk": "Yes,",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 2427.0,
+                  "tokenization": {
+                    "mean_ms": 11.788999557495117,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 37.7859992980957,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 24.024999618530273,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 25.020401000976562,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 11.519599914550781,
+                    "std_ms": 0.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 12.306500434875488,
+                    "std_ms": 0.7985000014305115
+                  },
+                  "throughput": {
+                    "mean_ms": 86.8085708618164,
+                    "std_ms": 0.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.1386999934911728,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 2
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 4,
+              "is_fixture_budget": false,
+              "generated_text": "Yes, it's",
+              "decoded_preview": "Yes, it's",
+              "normalized_output": "yes, it's",
+              "generated_token_ids": [
+                9454,
+                11,
+                432,
+                594
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 4,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes, it's",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes, it's"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes, it's",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes, it's"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 95.89309999137186,
+                "first_streamed_text_chunk_ms": 84.00309999706224,
+                "first_streamed_text_chunk": "Yes",
+                "streamed_chunks_count": 3,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 2427.0,
+                  "tokenization": {
+                    "mean_ms": 13.175000190734863,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 95.81400299072266,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 79.92500305175781,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 61.65910339355469,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 10.92983341217041,
+                    "std_ms": 2.147146463394165
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 20.263500213623047,
+                    "std_ms": 16.289142608642578
+                  },
+                  "throughput": {
+                    "mean_ms": 91.49270629882812,
+                    "std_ms": 17.97357940673828
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.14060001075267792,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 4
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 8,
+              "is_fixture_budget": true,
+              "generated_text": "Yes, it's usually clear and blue",
+              "decoded_preview": "Yes, it's usually clear and blue",
+              "normalized_output": "yes, it's usually clear and blue",
+              "generated_token_ids": [
+                9454,
+                11,
+                432,
+                594,
+                5990,
+                2797,
+                323,
+                6303
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 8,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes, it's usually clear and blue",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes, it's usually clear and blue"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes, it's usually clear and blue",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes, it's usually clear and blue"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 128.51550002233125,
+                "first_streamed_text_chunk_ms": 78.14060000237077,
+                "first_streamed_text_chunk": "Yes",
+                "streamed_chunks_count": 7,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 2427.0,
+                  "tokenization": {
+                    "mean_ms": 14.314000129699707,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 128.4409942626953,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 110.01100158691406,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 54.93819808959961,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 10.289328575134277,
+                    "std_ms": 2.08040189743042
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 14.010749816894531,
+                    "std_ms": 10.060401916503906
+                  },
+                  "throughput": {
+                    "mean_ms": 97.18807220458984,
+                    "std_ms": 19.650480270385742
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.18569999933242798,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 8
+                }
+              },
+              "status": "quality_failed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "requested_backend": "openvino-gpu",
+      "selected_backend": "openvino-gpu",
+      "runtime_api": "openvino_genai",
+      "runtime_device": "GPU.0",
+      "resolved_device": "Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)",
+      "backend_lane": "dense_slm_openvino_gpu_arc140v",
+      "fallback_used": false,
+      "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+      "pipeline_construct_wall_ms": 3701.6491999966092,
+      "promotion_status": "candidate_only_not_promoted",
+      "route_promotion_changed": false,
+      "summary": {
+        "cases_total": 2,
+        "fixture_budget_passed": 0,
+        "any_budget_passed": 1,
+        "blocker_classes": {
+          "fixture_budget_overgenerates_but_smaller_budget_passes": 1,
+          "no_budget_variant_passes": 1
+        }
+      },
+      "cases": [
+        {
+          "id": "stop_token_one_word_done",
+          "profile": "regression_tiny",
+          "category": "stop_and_eos",
+          "question": "Answer with exactly one word: done",
+          "prompt_template": "qwen2.5",
+          "prompt": {
+            "template_family": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nAnswer with exactly one word: done<|im_end|>\n<|im_start|>assistant\n",
+            "rendered_sha256": "5ccf2c36652a4e193f13136dc8679aeb33fabc31cf25edc5c0ea5291fa0701df",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              16141,
+              448,
+              6896,
+              825,
+              3409,
+              25,
+              2814,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 36
+          },
+          "fixture_max_new_tokens": 8,
+          "budget_variants_tested": [
+            1,
+            2,
+            4,
+            8
+          ],
+          "fixture_budget_passed": false,
+          "any_budget_passed": false,
+          "first_passing_budget": null,
+          "blocker_class": "no_budget_variant_passes",
+          "variants": [
+            {
+              "max_new_tokens": 1,
+              "is_fixture_budget": false,
+              "generated_text": "Okay",
+              "decoded_preview": "Okay",
+              "normalized_output": "okay",
+              "generated_token_ids": [
+                32313
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 1,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 313.58760001603514,
+                "first_streamed_text_chunk_ms": 313.3320000197273,
+                "first_streamed_text_chunk": "Okay",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 3701.0,
+                  "tokenization": {
+                    "mean_ms": 12.73799991607666,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 313.4880065917969,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 297.34100341796875,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 311.9662170410156,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": -1.0,
+                    "std_ms": -1.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 298.8970031738281,
+                    "std_ms": 0.0
+                  },
+                  "throughput": {
+                    "mean_ms": -1000.0,
+                    "std_ms": -1000.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.11780000478029251,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 1
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 2,
+              "is_fixture_budget": false,
+              "generated_text": "Okay,",
+              "decoded_preview": "Okay,",
+              "normalized_output": "okay",
+              "generated_token_ids": [
+                32313,
+                11
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 2,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay,",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay,"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay,",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay,"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 179.4965000008233,
+                "first_streamed_text_chunk_ms": 179.2315999919083,
+                "first_streamed_text_chunk": "Okay,",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 3701.0,
+                  "tokenization": {
+                    "mean_ms": 13.151000022888184,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 179.42300415039062,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 163.93899536132812,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 164.7078094482422,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 13.138099670410156,
+                    "std_ms": 0.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 82.21700286865234,
+                    "std_ms": 69.22799682617188
+                  },
+                  "throughput": {
+                    "mean_ms": 76.11450958251953,
+                    "std_ms": 0.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.12810000777244568,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 2
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 4,
+              "is_fixture_budget": false,
+              "generated_text": "Okay, understood.",
+              "decoded_preview": "Okay, understood.",
+              "normalized_output": "okay, understood",
+              "generated_token_ids": [
+                32313,
+                11,
+                15985,
+                13
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 4,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay, understood.",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay, understood"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay, understood.",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay, understood"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 188.83130000904202,
+                "first_streamed_text_chunk_ms": 174.74180000135675,
+                "first_streamed_text_chunk": "Okay",
+                "streamed_chunks_count": 3,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 3701.0,
+                  "tokenization": {
+                    "mean_ms": 7.571000099182129,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 188.7480010986328,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 178.24400329589844,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 118.11289978027344,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 23.06523323059082,
+                    "std_ms": 14.000299453735352
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 44.8067512512207,
+                    "std_ms": 39.749168395996094
+                  },
+                  "throughput": {
+                    "mean_ms": 43.35529708862305,
+                    "std_ms": 26.316104888916016
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.2070000022649765,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 4
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 8,
+              "is_fixture_budget": true,
+              "generated_text": "Okay, understood.",
+              "decoded_preview": "Okay, understood.",
+              "normalized_output": "okay, understood",
+              "generated_token_ids": [
+                32313,
+                11,
+                15985,
+                13
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 4,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay, understood.",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay, understood"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay, understood.",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay, understood"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 144.9844999879133,
+                "first_streamed_text_chunk_ms": 119.25009998958558,
+                "first_streamed_text_chunk": "Okay",
+                "streamed_chunks_count": 4,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 3701.0,
+                  "tokenization": {
+                    "mean_ms": 14.840999603271484,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 144.87100219726562,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 126.13099670410156,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 61.56549835205078,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 20.46802520751953,
+                    "std_ms": 12.691198348999023
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 25.495399475097656,
+                    "std_ms": 15.31029987335205
+                  },
+                  "throughput": {
+                    "mean_ms": 48.856693267822266,
+                    "std_ms": 30.293588638305664
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.1558999866247177,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 5
+                }
+              },
+              "status": "quality_failed"
+            }
+          ]
+        },
+        {
+          "id": "yes_no_clear_sky",
+          "profile": "ask_short",
+          "category": "yes_no",
+          "question": "Reply with exactly one word, yes or no: is the sky usually blue on a clear day?",
+          "prompt_template": "qwen2.5",
+          "prompt": {
+            "template_family": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nReply with exactly one word, yes or no: is the sky usually blue on a clear day?<|im_end|>\n<|im_start|>assistant\n",
+            "rendered_sha256": "2972656907307c327ebd1f70ed815fb23d387535fb89c984bde23dd03e5017d2",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              20841,
+              448,
+              6896,
+              825,
+              3409,
+              11,
+              9834,
+              476,
+              902,
+              25,
+              374,
+              279,
+              12884,
+              5990,
+              6303,
+              389,
+              264,
+              2797,
+              1899,
+              30,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 49
+          },
+          "fixture_max_new_tokens": 8,
+          "budget_variants_tested": [
+            1,
+            2,
+            4,
+            8
+          ],
+          "fixture_budget_passed": false,
+          "any_budget_passed": true,
+          "first_passing_budget": 1,
+          "blocker_class": "fixture_budget_overgenerates_but_smaller_budget_passes",
+          "variants": [
+            {
+              "max_new_tokens": 1,
+              "is_fixture_budget": false,
+              "generated_text": "Yes",
+              "decoded_preview": "Yes",
+              "normalized_output": "yes",
+              "generated_token_ids": [
+                9454
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 1,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes"
+                }
+              },
+              "quality": {
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": true,
+                  "failed_rules": [],
+                  "failure_taxonomy": [],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 72.13010001578368,
+                "first_streamed_text_chunk_ms": 71.65620001615025,
+                "first_streamed_text_chunk": "Yes",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 3701.0,
+                  "tokenization": {
+                    "mean_ms": 8.644000053405762,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 72.0459976196289,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 54.77799987792969,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 70.38760375976562,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": -1.0,
+                    "std_ms": -1.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 61.53499984741211,
+                    "std_ms": 0.0
+                  },
+                  "throughput": {
+                    "mean_ms": -1000.0,
+                    "std_ms": -1000.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.27060002088546753,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 1
+                }
+              },
+              "status": "passed"
+            },
+            {
+              "max_new_tokens": 2,
+              "is_fixture_budget": false,
+              "generated_text": "Yes,",
+              "decoded_preview": "Yes,",
+              "normalized_output": "yes",
+              "generated_token_ids": [
+                9454,
+                11
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 2,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes,",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes,"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes,",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes,"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 87.2551999927964,
+                "first_streamed_text_chunk_ms": 86.93289998336695,
+                "first_streamed_text_chunk": "Yes,",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 3701.0,
+                  "tokenization": {
+                    "mean_ms": 15.725000381469727,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 87.14399719238281,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 68.7969970703125,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 70.96150970458984,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 14.698299407958984,
+                    "std_ms": 0.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 34.756500244140625,
+                    "std_ms": 20.195499420166016
+                  },
+                  "throughput": {
+                    "mean_ms": 68.03507995605469,
+                    "std_ms": 0.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.2003999948501587,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 2
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 4,
+              "is_fixture_budget": false,
+              "generated_text": "Yes, it's",
+              "decoded_preview": "Yes, it's",
+              "normalized_output": "yes, it's",
+              "generated_token_ids": [
+                9454,
+                11,
+                432,
+                594
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 4,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes, it's",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes, it's"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes, it's",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes, it's"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 77.05980000901036,
+                "first_streamed_text_chunk_ms": 63.82300000404939,
+                "first_streamed_text_chunk": "Yes",
+                "streamed_chunks_count": 3,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 3701.0,
+                  "tokenization": {
+                    "mean_ms": 13.147000312805176,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 76.98799896240234,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 60.44300079345703,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 31.016199111938477,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 14.692500114440918,
+                    "std_ms": 1.5438599586486816
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 15.369250297546387,
+                    "std_ms": 1.815605878829956
+                  },
+                  "throughput": {
+                    "mean_ms": 68.06193542480469,
+                    "std_ms": 7.151819229125977
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.11219999939203262,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 4
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 8,
+              "is_fixture_budget": true,
+              "generated_text": "Yes, it's usually clear and blue",
+              "decoded_preview": "Yes, it's usually clear and blue",
+              "normalized_output": "yes, it's usually clear and blue",
+              "generated_token_ids": [
+                9454,
+                11,
+                432,
+                594,
+                5990,
+                2797,
+                323,
+                6303
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 8,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes, it's usually clear and blue",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes, it's usually clear and blue"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes, it's usually clear and blue",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes, it's usually clear and blue"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 128.6192000261508,
+                "first_streamed_text_chunk_ms": 57.1823000209406,
+                "first_streamed_text_chunk": "Yes",
+                "streamed_chunks_count": 7,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 3701.0,
+                  "tokenization": {
+                    "mean_ms": 14.532999992370605,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 128.4980010986328,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 109.55500030517578,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 31.351200103759766,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 13.632157325744629,
+                    "std_ms": 1.7460181713104248
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 13.931500434875488,
+                    "std_ms": 1.9067869186401367
+                  },
+                  "throughput": {
+                    "mean_ms": 73.35596466064453,
+                    "std_ms": 9.395493507385254
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.2087000012397766,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 8
+                }
+              },
+              "status": "quality_failed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "requested_backend": "openvino-npu",
+      "selected_backend": "openvino-npu",
+      "runtime_api": "openvino_genai",
+      "runtime_device": "NPU",
+      "resolved_device": "Intel(R) AI Boost",
+      "backend_lane": "dense_slm_openvino_npu",
+      "fallback_used": false,
+      "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+      "pipeline_construct_wall_ms": 31137.412000010954,
+      "promotion_status": "candidate_only_not_promoted",
+      "route_promotion_changed": false,
+      "summary": {
+        "cases_total": 2,
+        "fixture_budget_passed": 0,
+        "any_budget_passed": 1,
+        "blocker_classes": {
+          "fixture_budget_overgenerates_but_smaller_budget_passes": 1,
+          "no_budget_variant_passes": 1
+        }
+      },
+      "cases": [
+        {
+          "id": "stop_token_one_word_done",
+          "profile": "regression_tiny",
+          "category": "stop_and_eos",
+          "question": "Answer with exactly one word: done",
+          "prompt_template": "qwen2.5",
+          "prompt": {
+            "template_family": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nAnswer with exactly one word: done<|im_end|>\n<|im_start|>assistant\n",
+            "rendered_sha256": "5ccf2c36652a4e193f13136dc8679aeb33fabc31cf25edc5c0ea5291fa0701df",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              16141,
+              448,
+              6896,
+              825,
+              3409,
+              25,
+              2814,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 36
+          },
+          "fixture_max_new_tokens": 8,
+          "budget_variants_tested": [
+            1,
+            2,
+            4,
+            8
+          ],
+          "fixture_budget_passed": false,
+          "any_budget_passed": false,
+          "first_passing_budget": null,
+          "blocker_class": "no_budget_variant_passes",
+          "variants": [
+            {
+              "max_new_tokens": 1,
+              "is_fixture_budget": false,
+              "generated_text": "Okay",
+              "decoded_preview": "Okay",
+              "normalized_output": "okay",
+              "generated_token_ids": [
+                32313
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 1,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 260.65140002174303,
+                "first_streamed_text_chunk_ms": 260.3401000087615,
+                "first_streamed_text_chunk": "Okay",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 31137.0,
+                  "tokenization": {
+                    "mean_ms": 13.168999671936035,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 260.5530090332031,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 246.22900390625,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 259.767822265625,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": -1.0,
+                    "std_ms": -1.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 246.22900390625,
+                    "std_ms": 0.0
+                  },
+                  "throughput": {
+                    "mean_ms": -1000.0,
+                    "std_ms": -1000.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.1509999930858612,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 1
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 2,
+              "is_fixture_budget": false,
+              "generated_text": "Okay,",
+              "decoded_preview": "Okay,",
+              "normalized_output": "okay",
+              "generated_token_ids": [
+                32313,
+                11
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 2,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay,",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay,"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay,",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay,"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 214.9797000165563,
+                "first_streamed_text_chunk_ms": 214.7294000023976,
+                "first_streamed_text_chunk": "Okay,",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 31137.0,
+                  "tokenization": {
+                    "mean_ms": 9.467000007629395,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 214.89300537109375,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 204.31500244140625,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 164.22760009765625,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 49.953800201416016,
+                    "std_ms": 0.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 102.15750122070312,
+                    "std_ms": 52.3754997253418
+                  },
+                  "throughput": {
+                    "mean_ms": 20.018497467041016,
+                    "std_ms": 0.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.11699999868869781,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 2
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 4,
+              "is_fixture_budget": false,
+              "generated_text": "Okay, understood.",
+              "decoded_preview": "Okay, understood.",
+              "normalized_output": "okay, understood",
+              "generated_token_ids": [
+                32313,
+                11,
+                15985,
+                13
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 4,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay, understood.",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay, understood"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay, understood.",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay, understood"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 301.81740000261925,
+                "first_streamed_text_chunk_ms": 260.0148000055924,
+                "first_streamed_text_chunk": "Okay",
+                "streamed_chunks_count": 3,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 31137.0,
+                  "tokenization": {
+                    "mean_ms": 7.2769999504089355,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 301.7359924316406,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 292.10699462890625,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 154.44781494140625,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 48.690433502197266,
+                    "std_ms": 11.138082504272461
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 73.02674865722656,
+                    "std_ms": 43.75128173828125
+                  },
+                  "throughput": {
+                    "mean_ms": 20.53791618347168,
+                    "std_ms": 4.6981096267700195
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.1899999976158142,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 4
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 8,
+              "is_fixture_budget": true,
+              "generated_text": "Okay, understood.",
+              "decoded_preview": "Okay, understood.",
+              "normalized_output": "okay, understood",
+              "generated_token_ids": [
+                32313,
+                11,
+                15985,
+                13
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 4,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "done",
+                  "Done"
+                ],
+                "matched": [],
+                "passed": false
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Okay, understood.",
+                  "expected_normalized": "done",
+                  "observed_normalized": "okay, understood"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "answer_gate",
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "answer_gate_failed",
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "done",
+                    "Done"
+                  ],
+                  "matched": [],
+                  "passed": false
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Okay, understood.",
+                    "expected_normalized": "done",
+                    "observed_normalized": "okay, understood"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 353.694399993401,
+                "first_streamed_text_chunk_ms": 266.5493999957107,
+                "first_streamed_text_chunk": "Okay",
+                "streamed_chunks_count": 4,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 31137.0,
+                  "tokenization": {
+                    "mean_ms": 16.097000122070312,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 353.5199890136719,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 334.864013671875,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 174.57769775390625,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 44.539573669433594,
+                    "std_ms": 1.1467636823654175
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 66.9728012084961,
+                    "std_ms": 45.448177337646484
+                  },
+                  "throughput": {
+                    "mean_ms": 22.45194435119629,
+                    "std_ms": 0.5780718326568604
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.0729999989271164,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 36,
+                  "num_generated_tokens": 5
+                }
+              },
+              "status": "quality_failed"
+            }
+          ]
+        },
+        {
+          "id": "yes_no_clear_sky",
+          "profile": "ask_short",
+          "category": "yes_no",
+          "question": "Reply with exactly one word, yes or no: is the sky usually blue on a clear day?",
+          "prompt_template": "qwen2.5",
+          "prompt": {
+            "template_family": "qwen2.5",
+            "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nReply with exactly one word, yes or no: is the sky usually blue on a clear day?<|im_end|>\n<|im_start|>assistant\n",
+            "rendered_sha256": "2972656907307c327ebd1f70ed815fb23d387535fb89c984bde23dd03e5017d2",
+            "prompt_token_ids": [
+              151644,
+              8948,
+              198,
+              2610,
+              525,
+              1207,
+              16948,
+              11,
+              3465,
+              553,
+              54364,
+              14817,
+              13,
+              1446,
+              525,
+              264,
+              10950,
+              17847,
+              13,
+              151645,
+              198,
+              151644,
+              872,
+              198,
+              20841,
+              448,
+              6896,
+              825,
+              3409,
+              11,
+              9834,
+              476,
+              902,
+              25,
+              374,
+              279,
+              12884,
+              5990,
+              6303,
+              389,
+              264,
+              2797,
+              1899,
+              30,
+              151645,
+              198,
+              151644,
+              77091,
+              198
+            ],
+            "prompt_token_count": 49
+          },
+          "fixture_max_new_tokens": 8,
+          "budget_variants_tested": [
+            1,
+            2,
+            4,
+            8
+          ],
+          "fixture_budget_passed": false,
+          "any_budget_passed": true,
+          "first_passing_budget": 1,
+          "blocker_class": "fixture_budget_overgenerates_but_smaller_budget_passes",
+          "variants": [
+            {
+              "max_new_tokens": 1,
+              "is_fixture_budget": false,
+              "generated_text": "Yes",
+              "decoded_preview": "Yes",
+              "normalized_output": "yes",
+              "generated_token_ids": [
+                9454
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 1,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes"
+                }
+              },
+              "quality": {
+                "passed": true,
+                "failed_rules": [],
+                "failure_taxonomy": [],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": true,
+                  "failed_rules": [],
+                  "failure_taxonomy": [],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 175.9252999909222,
+                "first_streamed_text_chunk_ms": 175.55399998673238,
+                "first_streamed_text_chunk": "Yes",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 31137.0,
+                  "tokenization": {
+                    "mean_ms": 13.550000190734863,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 175.822998046875,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 160.94400024414062,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 174.86358642578125,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": -1.0,
+                    "std_ms": -1.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 160.94400024414062,
+                    "std_ms": 0.0
+                  },
+                  "throughput": {
+                    "mean_ms": -1000.0,
+                    "std_ms": -1000.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.19200000166893005,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 1
+                }
+              },
+              "status": "passed"
+            },
+            {
+              "max_new_tokens": 2,
+              "is_fixture_budget": false,
+              "generated_text": "Yes,",
+              "decoded_preview": "Yes,",
+              "normalized_output": "yes",
+              "generated_token_ids": [
+                9454,
+                11
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 2,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes,",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes,"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes,",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes,"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 221.9727000046987,
+                "first_streamed_text_chunk_ms": 221.6852999990806,
+                "first_streamed_text_chunk": "Yes,",
+                "streamed_chunks_count": 1,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 31137.0,
+                  "tokenization": {
+                    "mean_ms": 14.116999626159668,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 221.86099243164062,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 206.1199951171875,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 176.2441864013672,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 44.692501068115234,
+                    "std_ms": 0.0
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 103.05999755859375,
+                    "std_ms": 58.667999267578125
+                  },
+                  "throughput": {
+                    "mean_ms": 22.375118255615234,
+                    "std_ms": 0.0
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.12999999523162842,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 2
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 4,
+              "is_fixture_budget": false,
+              "generated_text": "Yes, it's",
+              "decoded_preview": "Yes, it's",
+              "normalized_output": "yes, it's",
+              "generated_token_ids": [
+                9454,
+                11,
+                432,
+                594
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 4,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes, it's",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes, it's"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes, it's",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes, it's"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 310.3133999975398,
+                "first_streamed_text_chunk_ms": 264.8833999992348,
+                "first_streamed_text_chunk": "Yes",
+                "streamed_chunks_count": 3,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 31137.0,
+                  "tokenization": {
+                    "mean_ms": 13.875,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 310.197998046875,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 294.24200439453125,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 173.84719848632812,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 45.15999984741211,
+                    "std_ms": 0.16486194729804993
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 73.56050109863281,
+                    "std_ms": 49.68146514892578
+                  },
+                  "throughput": {
+                    "mean_ms": 22.143489837646484,
+                    "std_ms": 0.0808374434709549
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.14000000059604645,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 4
+                }
+              },
+              "status": "quality_failed"
+            },
+            {
+              "max_new_tokens": 8,
+              "is_fixture_budget": true,
+              "generated_text": "Yes, it's usually clear and blue",
+              "decoded_preview": "Yes, it's usually clear and blue",
+              "normalized_output": "yes, it's usually clear and blue",
+              "generated_token_ids": [
+                9454,
+                11,
+                432,
+                594,
+                5990,
+                2797,
+                323,
+                6303
+              ],
+              "generated_token_ids_available_from_pipeline": false,
+              "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
+              "generated_token_count": 8,
+              "answer_gate": {
+                "kind": "starts_with_any",
+                "starts_with_any": [
+                  "yes",
+                  "Yes"
+                ],
+                "matched": [
+                  "Yes"
+                ],
+                "passed": true
+              },
+              "scoring": {
+                "kind": "normalized_match",
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "details": {
+                  "kind": "normalized_match",
+                  "normalized_answer": "Yes, it's usually clear and blue",
+                  "expected_normalized": "yes",
+                  "observed_normalized": "yes, it's usually clear and blue"
+                }
+              },
+              "quality": {
+                "passed": false,
+                "failed_rules": [
+                  "normalized_match_failed"
+                ],
+                "failure_taxonomy": [
+                  "normalized_match_failed"
+                ],
+                "non_empty_answer": true,
+                "printable_utf8": true,
+                "no_replacement_chars": true,
+                "no_raw_special_tokens": true,
+                "mostly_text": true,
+                "gate_kind": "starts_with_any",
+                "answer_gate": {
+                  "kind": "starts_with_any",
+                  "starts_with_any": [
+                    "yes",
+                    "Yes"
+                  ],
+                  "matched": [
+                    "Yes"
+                  ],
+                  "passed": true
+                },
+                "scoring": {
+                  "kind": "normalized_match",
+                  "passed": false,
+                  "failed_rules": [
+                    "normalized_match_failed"
+                  ],
+                  "failure_taxonomy": [
+                    "normalized_match_failed"
+                  ],
+                  "details": {
+                    "kind": "normalized_match",
+                    "normalized_answer": "Yes, it's usually clear and blue",
+                    "expected_normalized": "yes",
+                    "observed_normalized": "yes, it's usually clear and blue"
+                  }
+                }
+              },
+              "timing": {
+                "generation_wall_ms": 512.0739999983925,
+                "first_streamed_text_chunk_ms": 271.8035999860149,
+                "first_streamed_text_chunk": "Yes",
+                "streamed_chunks_count": 7,
+                "openvino_perf_metrics": {
+                  "load_time_ms": 31137.0,
+                  "tokenization": {
+                    "mean_ms": 14.152000427246094,
+                    "std_ms": 0.0
+                  },
+                  "generate": {
+                    "mean_ms": 511.93701171875,
+                    "std_ms": 0.0
+                  },
+                  "inference": {
+                    "mean_ms": 493.8080139160156,
+                    "std_ms": 0.0
+                  },
+                  "time_to_first_token": {
+                    "mean_ms": 175.10540771484375,
+                    "std_ms": 0.0
+                  },
+                  "time_per_output_token": {
+                    "mean_ms": 47.90005874633789,
+                    "std_ms": 0.7819018363952637
+                  },
+                  "inter_token_latency": {
+                    "mean_ms": 61.72600173950195,
+                    "std_ms": 37.363162994384766
+                  },
+                  "throughput": {
+                    "mean_ms": 20.876800537109375,
+                    "std_ms": 0.3407847583293915
+                  },
+                  "detokenization": {
+                    "mean_ms": 0.25099998712539673,
+                    "std_ms": 0.0
+                  },
+                  "num_input_tokens": 49,
+                  "num_generated_tokens": 8
+                }
+              },
+              "status": "quality_failed"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "devices_total": 3,
+    "cases_per_device": 2,
+    "aggregate_blocker_classes": {
+      "fixture_budget_overgenerates_but_smaller_budget_passes": 3,
+      "no_budget_variant_passes": 3
+    },
+    "fallback_used": false,
+    "route_promotion_changed": false
+  },
+  "claim_boundary": {
+    "new_inference_executed": true,
+    "route_promotion": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "arc_acceleration_claim": false,
+    "npu_acceleration_claim": false,
+    "full_bitnet_accelerator_inference_claim": false,
+    "bitnet_qk256_i2s_behavior_change": false
+  }
+}
