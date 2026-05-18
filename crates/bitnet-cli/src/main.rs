@@ -13814,7 +13814,7 @@ mod tests {
         assert_eq!(audit["prompt_prefill_breakdown"]["forward"]["alloc_bytes_total"], 320);
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["first_reusable_allocation_surface"],
-            "feed_forward.output"
+            "feed_forward.down_proj.output"
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["claim_scope"],
@@ -13822,7 +13822,7 @@ mod tests {
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["reuse_status"],
-            "feed_forward_output_workspace_owned_reuse_not_enabled"
+            "feed_forward_down_proj_output_storage_reuse_blocked_by_candle_linear"
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["workspace_storage_owner"],
@@ -13830,7 +13830,7 @@ mod tests {
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["workspace_owned_output_surface"],
-            "feed_forward.output"
+            "feed_forward.down_proj.output"
         );
         assert_eq!(
             audit["prompt_prefill_breakdown"]["forward_boundary"]["required_api_boundary"],
@@ -13882,10 +13882,13 @@ mod tests {
 
         assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill");
         assert_eq!(audit["dominant_hotspot"]["alloc_bytes"], 1_500);
-        assert_eq!(audit["next_optimization_target"]["target"], "prefill_forward_buffer_boundary");
+        assert_eq!(
+            audit["next_optimization_target"]["target"],
+            "feed_forward_down_proj_output_storage_boundary"
+        );
         assert_eq!(
             audit["next_optimization_target"]["status"],
-            "workspace_owned_output_reuse_deferred"
+            "down_proj_output_storage_reuse_blocked"
         );
         assert_eq!(audit["optimization_deferred"], true);
         assert_eq!(
@@ -13919,12 +13922,12 @@ mod tests {
         assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill.forward");
         assert_eq!(
             audit["next_optimization_target"]["target"],
-            "feed_forward_output_workspace_owned_boundary"
+            "feed_forward_down_proj_output_storage_boundary"
         );
         assert_eq!(audit["next_optimization_target"]["component"], "prompt_prefill.forward");
         assert_eq!(
             audit["next_optimization_target"]["status"],
-            "workspace_owned_output_reuse_deferred"
+            "down_proj_output_storage_reuse_blocked"
         );
         assert_eq!(audit["optimization_deferred"], true);
     }

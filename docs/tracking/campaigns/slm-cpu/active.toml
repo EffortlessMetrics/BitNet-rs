@@ -2415,7 +2415,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-040"
-status = "ready"
+status = "pr_open"
+pr = 5715
 branch = "codex/slm-cpu-040-workspace-down-proj-storage"
 stackable = false
 review_mode = "codex_premerge"
