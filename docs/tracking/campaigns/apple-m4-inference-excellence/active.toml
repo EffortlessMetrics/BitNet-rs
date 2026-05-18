@@ -511,7 +511,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CANARY-001"
-status = "in_progress"
+status = "pr_open"
+pr = 5584
+head_sha = "c686c58f8b2d03b07ea6e5fdf4ed5e03793befc2"
 branch = "codex/apple-m4-inference-excellence/M4-CANARY-001-golden-token-traces"
 stackable = false
 review_mode = "codex_premerge"
