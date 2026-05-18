@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "intel-a770"
+timestamp = "2026-05-18T09:33:00Z"
+event = "in_progress"
+item = "A770-000"
+branch = "codex/a770-truth-reconciliation-consolidated"
+actor = "codex"
+summary = "Started the consolidated A770 committed-truth reconciliation slice."
+
+notes = [
+  "This slice reconciles committed tracker, campaign, report, and model-contract state to diagnostic until claim-grade A770 OpenCL receipts land.",
+  "Uncommitted transcript evidence, generic OpenCL proof, Arc 140V proof, and OpenVINO GPU proof do not promote A770 native OpenCL claims.",
+  "No OpenCL kernels, QK256 dispatch, server code, or runtime acceleration claims are changed.",
+]
