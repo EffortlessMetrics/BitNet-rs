@@ -1,6 +1,35 @@
 # Specs Index
 
 
+## Intel GPU Productization
+
+Use this source-of-truth map before implementing, validating, or claiming Intel
+GPU support across A770, Lunar Lake Arc 140V, OpenVINO GPU, native OpenCL, NPU,
+CPU, CUDA, BitNet QK256, or dense SLM lanes:
+
+1. [Intel GPU Source-of-Truth Map](../intel-gpu/README.md)
+   - Defines the shared lane boundaries, non-conflation rules, claim ladder,
+     and receipt identity minimum for Intel GPU routes.
+2. [Intel GPU Implementation Plan](../../plans/intel-gpu/implementation-plan.md)
+   - Defines the PR-by-PR rollout from documentation alignment through specs,
+     A770 proof reconciliation, A770 OpenCL productization, Arc 140V OpenVINO
+     GPU profile promotion, Arc 140V OpenCL parity, and shared UX surfaces.
+3. [A770 BitNet Claim Boundary](a770-bitnet-claim-boundary.md)
+   - Defines the existing A770 trusted-partial BitNet claim boundary and
+     not-claims.
+4. [Intel Arc A770 GPU Roadmap](intel-arc-a770-gpu-roadmap.md)
+   - Defines the discrete A770 OpenCL-first lane and OpenVINO GPU reference
+     path.
+5. [Intel Lunar Lake GPU Roadmap](intel-lunar-lake-gpu-roadmap.md)
+   - Defines the integrated Arc 140V GPU lane and separates OpenVINO GPU from
+     native OpenCL evidence.
+
+Do not claim generic Intel GPU support. A770 OpenCL proof is not Arc 140V proof;
+Arc 140V OpenCL proof is not A770 proof; OpenVINO GPU proof is not native OpenCL
+proof or NPU proof; dense SLM proof is not BitNet QK256 proof; CPU fallback is
+not Intel GPU execution.
+
+
 ## CPU AVX-512 Kernel Proof
 
 Use these specs before implementing or claiming AVX-512 CPU kernel support:

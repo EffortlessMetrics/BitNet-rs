@@ -31,8 +31,8 @@
 | cpu-proof | CPU-AVX512-000 | TBD | in_progress | CPU-SCALAR-000 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-004 | #3839 | merged | none | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
-| intel-258v-platform | LNL258V-OV-QUAL-005 | #5526 | merged | none | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
-| intel-a770 | A770-003 | TBD | ready | none | OpenCL-first for native A770 proof. |
+| intel-258v-platform | LNL258V-OV-QUAL-005 | #5526 | merged | none | Shared Intel GPU docs/spec work must not promote Arc 140V OpenVINO GPU or native OpenCL routes without exact-profile quality, timing, fallback, and receipt gates. |
+| intel-a770 | A770-003 | TBD | ready | none | Shared Intel GPU docs/spec work must not promote A770 routes without committed claim-grade receipts. |
 | intel-npu | NPU-011 | #4097 | merged | none | Device-node detection is not inference. |
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |

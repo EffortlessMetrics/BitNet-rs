@@ -124,6 +124,7 @@
 
 ## Hard Constraints
 
+- Shared Intel GPU docs/spec work must not promote Arc 140V OpenVINO GPU or native OpenCL routes without exact-profile quality, timing, fallback, and receipt gates.
 - 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims.
 - Arc 140V OpenCL proof is not NPU proof.
 - OpenVINO GPU smoke is not packed BitNet kernel proof.

@@ -5,6 +5,7 @@ status = "active"
 objective = "Validate Intel Arc A770 as an OpenCL-first BitNet acceleration lane with selected-device receipts and no CPU, NPU, CUDA, or OpenVINO GPU conflation."
 
 end_state = [
+  "Shared Intel GPU source-of-truth keeps A770 native OpenCL separate from Arc 140V OpenCL, OpenVINO GPU, NPU, CPU, CUDA, dense SLM, and generic GPU proof.",
   "A770 backend identity is distinct from generic OpenCL and Intel NPU.",
   "Runtime probe records OpenCL, Level Zero, OpenVINO GPU, PCI, VRAM, ReBAR, and render-node facts.",
   "Tiny OpenCL smoke executes with fallback_used=false.",
@@ -13,6 +14,7 @@ end_state = [
 ]
 
 hard_constraints = [
+  "Shared Intel GPU docs/spec work must not promote A770 routes without committed claim-grade receipts.",
   "OpenCL-first for native A770 proof.",
   "OpenVINO GPU is reference only.",
   "CPU fallback cannot count as A770 execution.",

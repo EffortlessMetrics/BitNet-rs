@@ -5,6 +5,7 @@ status = "active"
 objective = "Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while keeping CPU AVX2, Arc 140V GPU, and Intel AI Boost NPU proof labels separate."
 
 end_state = [
+  "Shared Intel GPU source-of-truth keeps Arc 140V OpenVINO GPU, Arc 140V native OpenCL, A770 OpenCL, NPU, CPU, CUDA, dense SLM, and BitNet QK256 proof labels separate.",
   "Same-machine CPU, GPU, and NPU facts are captured.",
   "258V CPU strict real-GGUF validation, scalar/AVX2 answer parity, and phase receipts provide the CPU reference plate.",
   "Arc 140V OpenCL, OpenVINO GPU, and OpenVINO NPU evidence are not conflated.",
@@ -12,6 +13,7 @@ end_state = [
 ]
 
 hard_constraints = [
+  "Shared Intel GPU docs/spec work must not promote Arc 140V OpenVINO GPU or native OpenCL routes without exact-profile quality, timing, fallback, and receipt gates.",
   "258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims.",
   "Arc 140V OpenCL proof is not NPU proof.",
   "OpenVINO GPU smoke is not packed BitNet kernel proof.",

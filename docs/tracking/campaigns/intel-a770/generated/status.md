@@ -13,6 +13,7 @@
 
 ## Hard Constraints
 
+- Shared Intel GPU docs/spec work must not promote A770 routes without committed claim-grade receipts.
 - OpenCL-first for native A770 proof.
 - OpenVINO GPU is reference only.
 - CPU fallback cannot count as A770 execution.
