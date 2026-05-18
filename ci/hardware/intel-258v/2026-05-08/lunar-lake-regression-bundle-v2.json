@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-18T06:00:00Z",
+  "created_utc": "2026-05-18T08:15:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -68,6 +68,8 @@
       "NPU cache or resident warm-route proof is missing",
       "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
       "NPU corpus-v2 context has 5 failed cases",
+      "OpenVINO budget sensitivity reports 1 exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates",
+      "OpenVINO budget sensitivity reports 1 exact-answer case(s) with no passing tested generation budget",
       "OpenVINO corpus-v2 diagnosis keeps route blocked",
       "OpenVINO diagnosis reports 3 corpus-v2 quality failures",
       "OpenVINO diagnosis reports 4 corpus-v2 quality failures",
@@ -86,7 +88,9 @@
       "route not promoted for profile decode_heavy",
       "route not promoted for profile low_power",
       "route not promoted for profile prefill_heavy",
-      "timing coverage has missing profile fields"
+      "stop_token_one_word_done has no passing tested generation budget",
+      "timing coverage has missing profile fields",
+      "yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
     ],
     "regression_ready": true,
     "gaps": []

@@ -58,6 +58,8 @@ const CPU_SLM_RESIDENT_SESSION: &str = "lunar-lake-cpu-slm-resident-session.json
 const CPU_SLM_RUNTIME_COMPARISON: &str = "lunar-lake-cpu-slm-runtime-comparison.json";
 const OPENVINO_GPU_CORPUS_V2_DIAGNOSIS: &str = "lunar-lake-openvino-gpu-corpus-v2-diagnosis.json";
 const OPENVINO_NPU_COLD_START_DIAGNOSIS: &str = "lunar-lake-openvino-npu-cold-start-diagnosis.json";
+const OPENVINO_GENERATION_BUDGET_SENSITIVITY: &str =
+    "lunar-lake-openvino-generation-budget-sensitivity.json";
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -264,6 +266,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = OPENVINO_NPU_COLD_START_DIAGNOSIS)]
         npu_cold_start_diagnosis: Option<PathBuf>,
+
+        /// Optional OpenVINO generation-budget sensitivity receipt to attach exact-answer blockers.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = OPENVINO_GENERATION_BUDGET_SENSITIVITY)]
+        openvino_budget_sensitivity: Option<PathBuf>,
 
         /// Output JSON profile comparison to file.
         #[arg(long)]
@@ -1875,6 +1882,7 @@ impl LunarLakeCommand {
                 gpu_quality_diagnosis,
                 npu_quality_diagnosis,
                 npu_cold_start_diagnosis,
+                openvino_budget_sensitivity,
                 json_out,
                 created_utc,
                 strict,
@@ -1883,19 +1891,21 @@ impl LunarLakeCommand {
                     Some(created_utc) => normalize_created_utc(created_utc)?,
                     None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 };
-                let receipt = build_route_profile_comparison_with_created_utc_and_diagnostics(
-                    artifact_root,
-                    promotion_ledger,
-                    phase_comparison,
-                    answer_corpus_v2.as_deref(),
-                    cpu_corpus_v2.as_deref(),
-                    openvino_corpus_v2.as_deref(),
-                    telemetry_context.as_deref(),
-                    gpu_quality_diagnosis.as_deref(),
-                    npu_quality_diagnosis.as_deref(),
-                    npu_cold_start_diagnosis.as_deref(),
-                    created_utc,
-                )?;
+                let receipt =
+                    build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
+                        artifact_root,
+                        promotion_ledger,
+                        phase_comparison,
+                        answer_corpus_v2.as_deref(),
+                        cpu_corpus_v2.as_deref(),
+                        openvino_corpus_v2.as_deref(),
+                        telemetry_context.as_deref(),
+                        gpu_quality_diagnosis.as_deref(),
+                        npu_quality_diagnosis.as_deref(),
+                        npu_cold_start_diagnosis.as_deref(),
+                        openvino_budget_sensitivity.as_deref(),
+                        created_utc,
+                    )?;
                 write_or_print_route_profile_comparison(&receipt, json_out.as_deref())?;
                 if *strict && !receipt.profile_comparison_ready {
                     bail!(
@@ -3377,6 +3387,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_inputs(
     )
 }
 
+#[cfg(test)]
 #[allow(clippy::too_many_arguments)]
 pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
     root: &Path,
@@ -3389,6 +3400,37 @@ pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
     gpu_quality_diagnosis: Option<&Path>,
     npu_quality_diagnosis: Option<&Path>,
     npu_cold_start_diagnosis: Option<&Path>,
+    created_utc: String,
+) -> Result<LunarLakeRouteProfileComparison> {
+    build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
+        root,
+        promotion_ledger,
+        phase_comparison,
+        answer_corpus_v2,
+        cpu_corpus_v2,
+        openvino_corpus_v2,
+        telemetry_context,
+        gpu_quality_diagnosis,
+        npu_quality_diagnosis,
+        npu_cold_start_diagnosis,
+        None,
+        created_utc,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
+    root: &Path,
+    promotion_ledger: &Path,
+    phase_comparison: &Path,
+    answer_corpus_v2: Option<&Path>,
+    cpu_corpus_v2: Option<&Path>,
+    openvino_corpus_v2: Option<&Path>,
+    telemetry_context: Option<&Path>,
+    gpu_quality_diagnosis: Option<&Path>,
+    npu_quality_diagnosis: Option<&Path>,
+    npu_cold_start_diagnosis: Option<&Path>,
+    openvino_budget_sensitivity: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRouteProfileComparison> {
     let promotion_ledger_path = resolve_receipt_path(root, promotion_ledger);
@@ -3406,6 +3448,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
         gpu_quality_diagnosis,
         npu_quality_diagnosis,
         npu_cold_start_diagnosis,
+        openvino_budget_sensitivity,
         &mut gaps,
     )?;
     if !ledger.promotion_ready {
@@ -7587,6 +7630,7 @@ fn load_route_diagnostics_index(
     gpu_quality_diagnosis: Option<&Path>,
     npu_quality_diagnosis: Option<&Path>,
     npu_cold_start_diagnosis: Option<&Path>,
+    openvino_budget_sensitivity: Option<&Path>,
     gaps: &mut Vec<String>,
 ) -> Result<RouteDiagnosticsIndex> {
     let mut index = RouteDiagnosticsIndex::default();
@@ -7610,6 +7654,9 @@ fn load_route_diagnostics_index(
     }
     if let Some(path) = npu_cold_start_diagnosis {
         load_npu_cold_start_diagnostic(root, path, &mut index, gaps)?;
+    }
+    if let Some(path) = openvino_budget_sensitivity {
+        load_openvino_generation_budget_sensitivity(root, path, &mut index, gaps)?;
     }
     Ok(index)
 }
@@ -7713,6 +7760,124 @@ fn load_npu_cold_start_diagnostic(
     blockers.sort();
     blockers.dedup();
     index.add("dense_slm_openvino_npu_candidate", path_string(&path), blockers);
+    Ok(())
+}
+
+fn load_openvino_generation_budget_sensitivity(
+    root: &Path,
+    path: &Path,
+    index: &mut RouteDiagnosticsIndex,
+    gaps: &mut Vec<String>,
+) -> Result<()> {
+    let path = resolve_receipt_path(root, path);
+    if !path.exists() {
+        gaps.push(format!(
+            "OpenVINO generation-budget sensitivity receipt missing: {}",
+            path_string(&path)
+        ));
+        return Ok(());
+    }
+    let json: Value = read_json_receipt(&path)?;
+    if string_at(&json, "artifact_kind").as_deref()
+        != Some("intel_258v_dense_slm_openvino_generation_budget_sensitivity")
+    {
+        gaps.push(format!(
+            "OpenVINO generation-budget sensitivity receipt has unexpected artifact_kind: {}",
+            path_string(&path)
+        ));
+    }
+    if bool_at_any(&json, &["fallback_used"]) == Some(true) {
+        gaps.push(format!(
+            "OpenVINO generation-budget sensitivity receipt observed fallback_used=true: {}",
+            path_string(&path)
+        ));
+    }
+    if bool_at_any(
+        &json,
+        &[
+            "route_promotion_changed",
+            "claim_boundary.route_promotion_changed",
+            "speedup_claim",
+            "claim_boundary.speedup_claim",
+            "power_advantage_claim",
+            "claim_boundary.power_advantage_claim",
+            "acceleration_claim",
+            "claim_boundary.acceleration_claim",
+        ],
+    ) == Some(true)
+    {
+        gaps.push(format!(
+            "OpenVINO generation-budget sensitivity receipt violates claim boundary: {}",
+            path_string(&path)
+        ));
+    }
+
+    let Some(devices) = value_at(&json, "devices").and_then(Value::as_array) else {
+        gaps.push(format!(
+            "OpenVINO generation-budget sensitivity receipt has no device entries: {}",
+            path_string(&path)
+        ));
+        return Ok(());
+    };
+    for device in devices {
+        if bool_at_any(device, &["fallback_used"]) == Some(true) {
+            gaps.push(format!(
+                "OpenVINO generation-budget sensitivity device observed fallback_used=true: {}",
+                path_string(&path)
+            ));
+        }
+        let Some(route_id) = openvino_device_route_id(device) else {
+            continue;
+        };
+        let mut blockers = Vec::new();
+        if let Some(summary) = value_at(device, "summary") {
+            let overgeneration_count = u64_at(
+                summary,
+                "blocker_classes.fixture_budget_overgenerates_but_smaller_budget_passes",
+            )
+            .unwrap_or(0);
+            if overgeneration_count > 0 {
+                blockers.push(format!(
+                    "OpenVINO budget sensitivity reports {overgeneration_count} exact-answer case(s) where a smaller max_new_tokens budget passes but the fixture budget overgenerates"
+                ));
+            }
+            let no_budget_count =
+                u64_at(summary, "blocker_classes.no_budget_variant_passes").unwrap_or(0);
+            if no_budget_count > 0 {
+                blockers.push(format!(
+                    "OpenVINO budget sensitivity reports {no_budget_count} exact-answer case(s) with no passing tested generation budget"
+                ));
+            }
+        }
+        if let Some(cases) = value_at(device, "cases").and_then(Value::as_array) {
+            for case in cases {
+                let case_id = string_at(case, "id").unwrap_or_else(|| "unknown_case".to_string());
+                match string_at(case, "blocker_class").as_deref() {
+                    Some("fixture_budget_overgenerates_but_smaller_budget_passes") => {
+                        if let Some(budget) = u64_at(case, "first_passing_budget") {
+                            blockers.push(format!(
+                                "{case_id} overgenerates at the fixture budget but passes with max_new_tokens={budget}"
+                            ));
+                        } else {
+                            blockers.push(format!(
+                                "{case_id} overgenerates at the fixture budget and needs a tighter generation budget rerun"
+                            ));
+                        }
+                    }
+                    Some("no_budget_variant_passes") => {
+                        blockers.push(format!("{case_id} has no passing tested generation budget"));
+                    }
+                    Some(classification) => blockers.push(format!(
+                        "{case_id} has generation-budget sensitivity class {classification}"
+                    )),
+                    None => {}
+                }
+            }
+        }
+        blockers.sort();
+        blockers.dedup();
+        index.add(route_id, path_string(&path), blockers);
+    }
     Ok(())
 }
 
@@ -9786,6 +9951,75 @@ mod tests {
                 }
             }),
         )?;
+        write_json(
+            temp.path(),
+            OPENVINO_GENERATION_BUDGET_SENSITIVITY,
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_generation_budget_sensitivity",
+                "fallback_used": false,
+                "route_promotion_changed": false,
+                "devices": [
+                    {
+                        "runtime_device": "GPU.0",
+                        "fallback_used": false,
+                        "summary": {
+                            "cases_total": 2,
+                            "fixture_budget_passed": 0,
+                            "any_budget_passed": 1,
+                            "blocker_classes": {
+                                "fixture_budget_overgenerates_but_smaller_budget_passes": 1,
+                                "no_budget_variant_passes": 1
+                            }
+                        },
+                        "cases": [
+                            {
+                                "id": "yes_no_clear_sky",
+                                "fixture_budget_passed": false,
+                                "any_budget_passed": true,
+                                "first_passing_budget": 1,
+                                "blocker_class": "fixture_budget_overgenerates_but_smaller_budget_passes"
+                            },
+                            {
+                                "id": "stop_token_one_word_done",
+                                "fixture_budget_passed": false,
+                                "any_budget_passed": false,
+                                "first_passing_budget": null,
+                                "blocker_class": "no_budget_variant_passes"
+                            }
+                        ]
+                    },
+                    {
+                        "runtime_device": "NPU",
+                        "fallback_used": false,
+                        "summary": {
+                            "cases_total": 2,
+                            "fixture_budget_passed": 0,
+                            "any_budget_passed": 1,
+                            "blocker_classes": {
+                                "fixture_budget_overgenerates_but_smaller_budget_passes": 1,
+                                "no_budget_variant_passes": 1
+                            }
+                        },
+                        "cases": [
+                            {
+                                "id": "yes_no_clear_sky",
+                                "fixture_budget_passed": false,
+                                "any_budget_passed": true,
+                                "first_passing_budget": 1,
+                                "blocker_class": "fixture_budget_overgenerates_but_smaller_budget_passes"
+                            },
+                            {
+                                "id": "stop_token_one_word_done",
+                                "fixture_budget_passed": false,
+                                "any_budget_passed": false,
+                                "first_passing_budget": null,
+                                "blocker_class": "no_budget_variant_passes"
+                            }
+                        ]
+                    }
+                ]
+            }),
+        )?;
 
         let operator = build_operator_readiness_receipt_with_created_utc(
             temp.path(),
@@ -9813,7 +10047,7 @@ mod tests {
         )?;
         fs::write(temp.path().join(ROUTE_PROMOTION_LEDGER), serde_json::to_vec_pretty(&ledger)?)?;
 
-        let profiles = build_route_profile_comparison_with_created_utc_and_diagnostics(
+        let profiles = build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
             temp.path(),
             Path::new(ROUTE_PROMOTION_LEDGER),
             Path::new(DENSE_PHASE_COMPARISON),
@@ -9824,6 +10058,7 @@ mod tests {
             Some(Path::new(OPENVINO_GPU_CORPUS_V2_DIAGNOSIS)),
             Some(Path::new("lunar-lake-openvino-npu-corpus-v2-diagnosis.json")),
             Some(Path::new(OPENVINO_NPU_COLD_START_DIAGNOSIS)),
+            Some(Path::new(OPENVINO_GENERATION_BUDGET_SENSITIVITY)),
             "2026-05-16T07:30:00Z".to_string(),
         )?;
 
@@ -9832,7 +10067,7 @@ mod tests {
             profiles.answer_corpus_v2_fixture.as_deref(),
             Some(path_string(&temp.path().join("corpus-v2.yaml")).as_str())
         );
-        assert_eq!(profiles.route_diagnosis_receipts.len(), 3);
+        assert_eq!(profiles.route_diagnosis_receipts.len(), 4);
         let cpu_corpus_path = path_string(&temp.path().join(DENSE_CPU_CORPUS_V2));
         assert_eq!(profiles.cpu_corpus_v2_receipt.as_deref(), Some(cpu_corpus_path.as_str()));
         let Some(ask_short) =
@@ -9873,6 +10108,13 @@ mod tests {
                     .to_string()
             )
         );
+        assert!(gpu_route.blockers.contains(
+            &"yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+                .to_string()
+        ));
+        assert!(gpu_route.blockers.contains(
+            &"stop_token_one_word_done has no passing tested generation budget".to_string()
+        ));
         assert!(
             gpu_route.blockers.iter().any(|blocker| blocker.contains(
                 "dense_slm_openvino_gpu_candidate corpus-v2 receipt is missing active fixture cases [arithmetic_add_7_8, short_reasoning_apples_left]"
@@ -9903,6 +10145,13 @@ mod tests {
                 .blockers
                 .contains(&"NPU cache or resident warm-route proof is missing".to_string())
         );
+        assert!(npu_route.blockers.contains(
+            &"yes_no_clear_sky overgenerates at the fixture budget but passes with max_new_tokens=1"
+                .to_string()
+        ));
+        assert!(npu_route.blockers.contains(
+            &"stop_token_one_word_done has no passing tested generation budget".to_string()
+        ));
         Ok(())
     }
 
