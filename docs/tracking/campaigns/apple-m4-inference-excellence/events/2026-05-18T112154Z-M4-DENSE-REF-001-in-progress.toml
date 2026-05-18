@@ -1,0 +1,15 @@
+timestamp = "2026-05-18T11:21:54Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-DENSE-REF-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-001-reference-vs-rust"
+
+notes = [
+  "Started bounded dense SLM reference-vs-Rust comparison evidence for all supported Qwen model identities.",
+  "Evidence path: ci/hardware/apple-m4-mac-mini/2026-05-18T1115Z/slm-reference-vs-rust.",
+  "Scope is 7-case deterministic apple-m4-slm-quality-determinism-v2 comparison receipts plus Rust mac validate receipts; reference token IDs are marked unavailable because the reference runner does not expose them.",
+  "No BitNet proof, broad quality benchmark, broad performance benchmark, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, or speedup claim.",
+]

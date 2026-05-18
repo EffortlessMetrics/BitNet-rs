@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T11:24:28Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-DENSE-REF-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-001-reference-vs-rust"
+pr = 5653
+head_sha = "330379518cb6d77c34882ba8d92bd6c42d672fbb"
+
+notes = [
+  "Opened PR #5653 for bounded dense SLM reference-vs-Rust comparison evidence.",
+  "The PR records 7-case reference-control comparison receipts for qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m.",
+  "Reference token IDs remain marked unavailable; Rust generated token IDs, generated text, prompt/template identity, mechanical scoring, summary counts, backend, fallback, and claim boundaries are recorded.",
+  "No BitNet proof, broad quality benchmark, broad performance benchmark, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, or speedup claim.",
+]
