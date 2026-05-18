@@ -3039,11 +3039,11 @@ mod tests {
     fn model_status_json_row_for<'a>(
         value: &'a serde_json::Value,
         id: &str,
-    ) -> &'a serde_json::Value {
+    ) -> Result<&'a serde_json::Value> {
         value["models"]
             .as_array()
             .and_then(|models| models.iter().find(|model| model["id"] == id))
-            .unwrap_or_else(|| panic!("missing model status JSON row {id}"))
+            .with_context(|| format!("missing model status JSON row {id}"))
     }
 
     #[test]
@@ -3731,7 +3731,7 @@ mod tests {
         assert_eq!(value["schema_version"], 1);
         assert_eq!(value["device"], "nvidia-rtx-5070-ti-cuda");
 
-        let bitnet = model_status_json_row_for(&value, "bitnet_official_2b_i2s_qk256");
+        let bitnet = model_status_json_row_for(&value, "bitnet_official_2b_i2s_qk256")?;
         assert_eq!(bitnet["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
         assert_eq!(bitnet["current_tier"], "product_cli_ready");
         assert_eq!(bitnet["selected_backend"], "nvidia-rtx-5070-ti-cuda");
@@ -3751,7 +3751,7 @@ mod tests {
         assert_eq!(bitnet["bitnet_packed_i2s_qk256_proof"], true);
         assert_eq!(bitnet["dense_regular_llm_cuda_proof"], false);
 
-        let qwen25 = model_status_json_row_for(&value, "dense_qwen25_05b_q8_cuda");
+        let qwen25 = model_status_json_row_for(&value, "dense_qwen25_05b_q8_cuda")?;
         assert_eq!(qwen25["model_coverage_row"], "dense_qwen25_05b_q8_cuda");
         assert_eq!(qwen25["current_tier"], "product_cli_ready");
         assert_eq!(qwen25["selected_backend"], "nvidia-rtx-5070-ti-cuda");
@@ -3771,7 +3771,7 @@ mod tests {
         assert_eq!(qwen25["bitnet_packed_i2s_qk256_proof"], false);
         assert_eq!(qwen25["dense_regular_llm_cuda_proof"], true);
 
-        let qwen3 = model_status_json_row_for(&value, "dense_qwen3_06b_q8_candidate");
+        let qwen3 = model_status_json_row_for(&value, "dense_qwen3_06b_q8_candidate")?;
         assert_eq!(qwen3["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
         assert_eq!(qwen3["category"], "supported");
         assert_eq!(qwen3["current_tier"], "product_cli_ready");
@@ -3790,7 +3790,7 @@ mod tests {
         assert_eq!(qwen3["bitnet_packed_i2s_qk256_proof"], false);
         assert_eq!(qwen3["dense_regular_llm_cuda_proof"], true);
 
-        let smollm2 = model_status_json_row_for(&value, "dense_smollm2_360m_candidate");
+        let smollm2 = model_status_json_row_for(&value, "dense_smollm2_360m_candidate")?;
         assert_eq!(smollm2["model_coverage_row"], "dense_smollm2_360m_candidate");
         assert_eq!(smollm2["category"], "candidate");
         assert_eq!(smollm2["current_tier"], "structurally_valid");
