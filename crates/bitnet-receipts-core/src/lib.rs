@@ -9494,9 +9494,10 @@ mod tests {
     }
 
     #[test]
-    fn lunar_lake_openvino_validator_accepts_candidate_gpu_receipt() {
-        validate_lunar_lake_openvino_receipt_json(&minimal_lunar_lake_openvino_gpu_receipt())
-            .unwrap();
+    fn lunar_lake_openvino_validator_accepts_candidate_gpu_receipt()
+    -> Result<(), Box<dyn std::error::Error>> {
+        validate_lunar_lake_openvino_receipt_json(&minimal_lunar_lake_openvino_gpu_receipt())?;
+        Ok(())
     }
 
     #[test]
@@ -9535,7 +9536,11 @@ mod tests {
     #[test]
     fn lunar_lake_openvino_validator_requires_retokenized_id_marking() {
         let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
-        receipt["generation"].as_object_mut().unwrap().remove("generated_token_ids_source");
+        let removed = receipt
+            .get_mut("generation")
+            .and_then(Value::as_object_mut)
+            .and_then(|generation| generation.remove("generated_token_ids_source"));
+        assert!(removed.is_some());
         let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
         assert!(err.contains("generated_token_ids require source marking"), "got: {err}");
     }
@@ -9568,7 +9573,8 @@ mod tests {
     }
 
     #[test]
-    fn lunar_lake_openvino_validator_accepts_npu_promotion_with_cache_and_warm_evidence() {
+    fn lunar_lake_openvino_validator_accepts_npu_promotion_with_cache_and_warm_evidence()
+    -> Result<(), Box<dyn std::error::Error>> {
         let receipt = json!({
             "schema_version": "1.0.0",
             "artifact_kind": "lunar_lake_route_promotion_ledger",
@@ -9584,7 +9590,8 @@ mod tests {
                 "warm_session": {"mode": "resident", "attempts": 10}
             }]
         });
-        validate_lunar_lake_openvino_receipt_json(&receipt).unwrap();
+        validate_lunar_lake_openvino_receipt_json(&receipt)?;
+        Ok(())
     }
 
     #[test]
