@@ -554,9 +554,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DENSE-REF-000"
-status = "pr_open"
+status = "merged"
 pr = 5640
-head_sha = "02931951a8b460a14eb39610c1ed7f7a7bf1e9fc"
+head_sha = "7f3736afb8b435dfba7d124704fc505b6a0f4149"
+merge_sha = "8938b70f6e4a20c7164de7acbd2e21a46360021a"
 branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-000-reference-receipt-contract"
 stackable = false
 review_mode = "codex_premerge"

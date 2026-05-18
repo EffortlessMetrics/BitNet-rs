@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T21:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-QUAL-FIX-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-FIX-001-exact-answer-fixture"
+pr = 5644
+head_sha = "7e182402101fb9cf4fc25cdd9f8c65f2d78d1ca7"
+merge_sha = "785e47b94ac86263c737ab1254e21c6cd90f3fb1"
+summary = "Merged PR #5644 for the exact-answer fixture-policy update."
+
+artifacts = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "PR #5644 tightened only yes_no_clear_sky to the tested passing one-token budget and left stop_token_one_word_done unchanged as a true exact-answer instruction-miss blocker.",
+  "The merge does not run model inference, rerun OpenVINO corpus evidence, promote routes, claim quality or speed, claim native OpenCL/NPU execution, or change BitNet QK256/I2_S behavior.",
+]

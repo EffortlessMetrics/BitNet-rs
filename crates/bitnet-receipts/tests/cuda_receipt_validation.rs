@@ -272,20 +272,19 @@ fn committed_dense_regular_llm_cuda_persistent_residency_receipt_validates() {
 }
 
 #[test]
-fn committed_qwen3_chat_user_path_receipts_validate() {
+fn committed_qwen3_chat_user_path_receipts_validate() -> Result<(), Box<dyn std::error::Error>> {
     let receipt: Value = serde_json::from_str(include_str!(
         "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-chat-user-path-cuda.json"
-    ))
-    .unwrap();
+    ))?;
     let source_receipt: Value = serde_json::from_str(include_str!(
         "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-chat-user-path-cuda.source-warm-session.json"
-    ))
-    .unwrap();
+    ))?;
 
-    validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(&receipt).unwrap();
-    validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&source_receipt).unwrap();
-    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
-    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+    validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(&receipt)?;
+    validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&source_receipt)?;
+    assert!(validate_dense_regular_llm_cuda_receipt_json(&receipt).is_err());
+    assert!(reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).is_err());
+    Ok(())
 }
 
 #[test]
