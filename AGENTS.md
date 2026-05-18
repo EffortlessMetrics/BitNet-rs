@@ -5,6 +5,35 @@ repository. `CLAUDE.md` remains the broader repository guide; this file records
 the campaign authority model that Codex should apply while operating work-item
 branches.
 
+
+## Repo source-of-truth stack
+
+BitNet-rs uses a linked source-of-truth stack:
+
+```text
+Roadmap -> Proposal -> Spec -> ADR -> Plan -> Active goal -> PR -> Proof
+```
+
+Before changing files, read:
+
+1. `docs/reference/SPEC_SYSTEM.md`
+2. `.bitnet-rs/goals/active.toml` when it exists
+3. the linked implementation plan
+4. the linked spec for the selected work item
+5. linked ADRs
+
+Work on exactly one work item per PR. Docs-only artifacts should stay separate
+unless the selected plan item says otherwise: proposals explain why, specs define
+behavior, ADRs record durable decisions, plans define sequencing, and active
+goals define current execution.
+
+Run the proof commands listed in the plan item. If proof cannot run, record the
+command, why it is unavailable, substitute evidence if any, and whether the
+missing proof blocks merge. Do not hand-edit generated status; run the named
+generator/checker. If adding a policy exception, update the relevant
+`policy/*.toml` ledger with owner, reason, `covered_by`, `created`, and
+`review_after`.
+
 ## Campaign Work Item Authority
 
 Campaign work items are the source of truth for review, PR, and merge flow.

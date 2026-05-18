@@ -23,8 +23,16 @@ and proof receipts.
 
 ## BitNet Rule
 
-Do not create `.adze/goals`, `.bitnet/goals`, or another hidden global goals
-file. BitNet-rs already uses campaign-local tracking:
+Use proposals to frame a lane, then link implementation to the active execution
+source rather than reconstructing current state from chat logs or README prose.
+The cross-lane active goal path is:
+
+```text
+.bitnet-rs/goals/active.toml
+```
+
+Existing campaign-local trackers remain valid when linked by a plan or active
+goal:
 
 ```text
 docs/tracking/campaigns/<campaign>/CAMPAIGN.md
@@ -32,9 +40,6 @@ docs/tracking/campaigns/<campaign>/active.toml
 docs/tracking/campaigns/<campaign>/events/
 docs/tracking/campaigns/<campaign>/generated/
 ```
-
-Use proposals to frame a lane, then connect implementation to the campaign
-tracker instead of reconstructing active state from chat logs or README prose.
 
 ## Proposal Shape
 

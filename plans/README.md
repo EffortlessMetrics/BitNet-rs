@@ -4,15 +4,11 @@ Plans translate proposals, specs, and ADRs into PR-sized implementation work.
 They should tell a maintainer or agent what to do next, what not to touch, and
 which commands prove or disprove the claim.
 
-Plans are not active global goals. The active source of truth for executable
-work is still the campaign tracker:
-
-```text
-docs/tracking/campaigns/<campaign>/active.toml
-```
-
-Use plans for sequencing and proof commands. Use campaign manifests for live
-state, ownership, branch names, allowed paths, and merge policy.
+Plans are not active global goals. Use plans for sequencing and proof commands.
+Use `.bitnet-rs/goals/active.toml` for the cross-lane active objective when a
+lane is selected, and link to campaign manifests for live state, ownership,
+branch names, allowed paths, and merge policy when a campaign-local tracker is
+the execution authority.
 
 ## Source-Of-Truth Role
 
@@ -59,7 +55,7 @@ Blocks:
 Plans must not:
 
 - duplicate generated dashboards,
-- create `.adze/goals` or `.bitnet/goals`,
+- create ad-hoc hidden goal directories outside `.bitnet-rs/goals`,
 - claim model answer readiness without the answer artifact gate,
 - claim hardware validation without lane-specific receipts,
 - claim CI budget enforcement unless policy TOMLs and workflow gates enforce it.

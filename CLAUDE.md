@@ -2,6 +2,25 @@
 
 Essential guidance for working with the bitnet-rs codebase.
 
+
+## Source-of-truth first read
+
+Before making changes, read:
+
+1. `docs/reference/SPEC_SYSTEM.md`
+2. `.bitnet-rs/goals/active.toml` when it exists
+3. The linked implementation plan
+4. The linked spec for the selected work item
+5. Any linked ADRs
+
+Work on exactly one work item at a time. Do not create a new lane unless asked;
+do not mix proposal, spec, ADR, plan, active-goal, and runtime changes unless
+the selected work item says to; do not broaden support claims without proof;
+and do not hand-edit generated status. A PR is ready only when the intended
+artifact or code change exists, linked docs are updated as required, proof
+commands have run or are explicitly marked unavailable, claim boundaries are
+respected, and `git diff --check` passes.
+
 ## Project Identity
 
 - **Name:** bitnet-rs — 1-bit LLM inference engine in Rust
