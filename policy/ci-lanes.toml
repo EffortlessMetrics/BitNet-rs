@@ -153,11 +153,23 @@ runner = "gpu_docker"
 default_pr = false
 blocking = false
 
+[lane.compatibility-msrv-route]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
 [lane.compatibility-msrv]
 base_lem = 12
 runner = "ubuntu_22_04"
-default_pr = true
+default_pr = false
 blocking = true
+
+[lane.compatibility-msrv-workspace-informational]
+base_lem = 20
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = false
 
 [lane.compatibility-ffi-abi]
 base_lem = 8

@@ -523,12 +523,33 @@ review_after = "2026-06-07"
 expires = "2026-11-07"
 
 [[lane]]
+id = "compatibility-msrv-route"
+workflow = ".github/workflows/compatibility.yml"
+job = "Route MSRV Compatibility"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "release/compat"
+intent = "Select MSRV compatibility only for global compatibility risk, main/manual, or explicit labels."
+failure_mode = "Leaf implementation PRs spend MSRV minutes despite not changing compatibility surfaces."
+proof_obligation = "Evaluate event, labels, and compatibility-risk paths and emit selected=true/false with a route reason."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
+labels = ["msrv", "compatibility", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
 id = "compatibility-msrv"
 workflow = ".github/workflows/compatibility.yml"
 job = "MSRV"
 kind = "compatibility"
 tier = "risk-gated"
-default_pr = true
+default_pr = false
 blocking = true
 runner = "ubuntu_22_04"
 base_lem = 12
@@ -537,10 +558,32 @@ intent = "Validate declared Rust compatibility for manifest/public crate changes
 failure_mode = "MSRV drifts silently after dependency or public crate changes."
 proof_obligation = "Run MSRV check when manifest/toolchain/public API changes."
 evidence = ["job logs"]
-allowed_triggers = ["pull_request:path-gated", "push", "workflow_dispatch"]
+allowed_triggers = ["pull_request:path-gated", "pull_request:labeled", "push", "workflow_dispatch"]
+labels = ["msrv", "compatibility", "full-ci"]
 duplicate_of = []
-review_after = "2026-06-07"
-expires = "2026-11-07"
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "compatibility-msrv-workspace-informational"
+workflow = ".github/workflows/compatibility.yml"
+job = "MSRV Workspace Coverage (informational)"
+kind = "compatibility"
+tier = "risk-gated-advisory"
+default_pr = false
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 20
+owner = "release/compat"
+intent = "Show broader workspace MSRV coverage when MSRV compatibility is selected."
+failure_mode = "Selected MSRV proof lacks visibility into workspace-wide compatibility drift."
+proof_obligation = "Run cargo check --workspace --all-targets --locked --no-default-features --features cpu as advisory evidence."
+evidence = ["job logs"]
+allowed_triggers = ["pull_request:path-gated", "pull_request:labeled", "push", "workflow_dispatch"]
+labels = ["msrv", "compatibility", "full-ci"]
+duplicate_of = ["compatibility-msrv"]
+review_after = "2026-06-18"
+expires = "2026-11-18"
 
 [[lane]]
 id = "compatibility-ffi-abi"
