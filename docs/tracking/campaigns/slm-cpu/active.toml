@@ -2460,7 +2460,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-030"
-status = "ready"
+status = "pr_open"
+pr = 5457
+head_sha = "PENDING"
 branch = "codex/slm-cpu-030-prompt-setup-attribution"
 stackable = false
 review_mode = "codex_premerge"
