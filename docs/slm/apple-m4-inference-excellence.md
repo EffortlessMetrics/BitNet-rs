@@ -282,6 +282,22 @@ outlier handling
 threshold derivation
 ```
 
+`M4-BENCH-004` adds `bitnet mac benchmark-preflight`, a preflight receipt that
+does not run model inference and does not record timing results. The receipt
+captures the environment fields needed before timing drift can be interpreted:
+git commit, crate/build profile, macOS product/build version, expected M4 SoC
+and observed hardware probe, memory pressure snapshot, thermal pressure snapshot
+when available, power state, supported model cache state, disk headroom, model
+cache root, operator background-load notes, and explicit
+`invalid_comparison_reasons`.
+
+The preflight is a comparison gate, not a speed claim. A release benchmark can
+only interpret timing drift when the benchmark receipt and preflight identity
+match and `comparison_readiness.can_compare_timing=true`. Missing cache,
+low-disk headroom, missing macOS build evidence, or missing git identity turn
+the preflight into `invalid_for_comparison`; unavailable thermal/power/memory
+pressure probes and missing background-load notes remain advisory warnings.
+
 `M4-BENCH-006` keeps BitNet timing variance explicit instead of relying on the
 shared benchmark envelope alone. It records one-shot and warm-session run
 counts, sample counts, timeout-stage accounting, variance bands, outlier

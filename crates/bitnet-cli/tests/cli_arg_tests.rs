@@ -4037,6 +4037,83 @@ fn mac_benchmark_accepts_resident_100_profile_before_release_gate() {
 }
 
 #[test]
+fn mac_benchmark_preflight_writes_receipt() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("benchmark-preflight.json");
+    let cache_dir = dir.path().join("cache");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let cache_str = cache_dir.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "benchmark-preflight",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--background-load-note",
+            "test harness idle",
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"artifact_kind\": \"apple_m4_benchmark_preflight\""))
+        .stdout(predicate::str::contains("\"timing_result_recorded\": false"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_benchmark_preflight");
+    assert_eq!(receipt_json["run_identity"]["contract_version"], "m4-run-identity-v1");
+    assert_eq!(receipt_json["run_identity"]["command"]["live_model_run"], false);
+    assert_eq!(receipt_json["benchmark_preflight"]["live_model_run"], false);
+    assert_eq!(receipt_json["claim_boundary"]["broad_performance_claim"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_benchmark_preflight"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_preflight_receipt_rejects_missing_invalid_reasons()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("benchmark-preflight.json");
+    let cache_dir = dir.path().join("cache");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let cache_str = cache_dir.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "benchmark-preflight",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let mut receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    receipt_json["comparison_readiness"]
+        .as_object_mut()
+        .ok_or_else(|| std::io::Error::other("missing comparison_readiness"))?
+        .remove("invalid_comparison_reasons");
+    std::fs::write(&receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid_comparison_reasons"));
+    Ok(())
+}
+
+#[test]
 fn mac_receipts_check_accepts_slm_benchmark_v2_summary() {
     let dir = tempfile::tempdir().expect("tempdir");
     let receipt_path = dir.path().join("slm-benchmark-v2.json");
