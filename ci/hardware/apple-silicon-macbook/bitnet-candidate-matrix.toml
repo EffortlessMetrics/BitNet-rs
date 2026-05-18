@@ -76,6 +76,7 @@ cleanup_required = true
 next_item = "M3MBA-006"
 notes = [
   "The official 1bitLLM/bitnet_b1_58-large repository at revision 85d047191dcb224f0e04f20d26110caaf8dc1a47 contains model.safetensors and tokenizer/config files, but no .gguf artifact.",
+  "BITNET-PROP-0009 and the B158-large specs make this an artifact-authority and conversion-lane control model before any CPU, CUDA, Apple, server, or speed claim.",
   "Do not substitute a third-party GGUF for M3MBA-006 without a separate artifact-authority decision; prior third-party large-family GGUF candidates are already rejected in the shared artifact ledger.",
   "Use as a smaller Apple BitNet control only if an official GGUF, reproducible conversion path, or explicitly approved third-party artifact produces coherent output and records tokenizer authority.",
 ]

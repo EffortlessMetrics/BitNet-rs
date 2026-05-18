@@ -22,7 +22,6 @@ static BitNet-shaped subgraph parity to full inference, QK256 decode, speedup,
 full residency, or generic NPU claims. CPU fallback, OpenVINO GPU, and Arc 140V
 OpenCL evidence do not count as selected NPU proof.
 
-
 ## AMD ROCm Productization
 
 Use these specs before implementing or claiming AMD ROCm support:
@@ -62,6 +61,37 @@ The ROCm lane is currently registered/scaffold only. Do not proceed from source
 text checks, ROCm installation paths, HIP visibility, or generic AMD GPU labels
 to compile, execution, model, quality, speed, residency, or server claims.
 
+## bitnet_b1_58-large Control Model
+
+Use these specs before implementing or claiming `1bitLLM/bitnet_b1_58-large`
+artifact, conversion, tokenizer, reference, CPU, CUDA, Apple, performance, CLI,
+or server support:
+
+1. [B158 Large Artifact Contract](BITNET-SPEC-B158-LARGE-ARTIFACT-CONTRACT.md)
+   - Defines source files, hashes, receipts, and claim boundaries.
+2. [B158 Large Conversion](BITNET-SPEC-B158-LARGE-CONVERSION.md)
+   - Defines safetensors inspection, F16 structural/reference GGUF, and future
+     upstream-compatible `I2_S`/`TL1`/`TL2` conversion lanes.
+3. [B158 Large Tokenizer and Prompt](BITNET-SPEC-B158-LARGE-TOKENIZER-PROMPT.md)
+   - Defines tokenizer, pre-tokenizer, prompt-template, rendered prompt, and
+     prompt token authority.
+4. [B158 Large Reference Quality](BITNET-SPEC-B158-LARGE-REFERENCE-QUALITY.md)
+   - Defines reference-runner corpus promotion and failure boundaries.
+5. [B158 Large CPU](BITNET-SPEC-B158-LARGE-CPU.md)
+   - Defines scalar, AVX2, AVX-512, Apple CPU/NEON, and optional Kaby CPU
+     receipts after reference-good output.
+6. [B158 Large CUDA](BITNET-SPEC-B158-LARGE-CUDA.md)
+   - Defines CUDA route planning, one-token, short-decode, warm-session, parity,
+     and no-speedup boundaries.
+7. [B158 Large Apple](BITNET-SPEC-B158-LARGE-APPLE.md)
+   - Defines MacBook artifact probes, M4 CPU/NEON proof, and no-Metal claim
+     boundaries.
+8. [B158 Large Performance](BITNET-SPEC-B158-LARGE-PERFORMANCE.md)
+   - Defines exact-profile benchmark fields and speedup promotion gates.
+
+Do not proceed from upstream support, HF safetensors presence, or F16 structural
+conversion to answer, backend, or speed claims. Claims require exact artifact,
+tokenizer, prompt, reference, backend, fallback, and benchmark receipts.
 
 ## CPU AVX-512 Kernel Proof
 
@@ -477,7 +507,6 @@ All items should be checked before implementation is complete:
 
 **Last Updated**: October 25, 2025
 **Next Update**: After Phase 1 implementation complete
-
 
 ## C++ Wrapper KV Position Tracking
 
