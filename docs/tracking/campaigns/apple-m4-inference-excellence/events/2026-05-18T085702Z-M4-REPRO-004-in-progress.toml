@@ -1,0 +1,14 @@
+timestamp = "2026-05-18T08:57:02Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-REPRO-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-REPRO-004-template-alias-validation"
+
+notes = [
+  "Started M4-REPRO-004 after `bitnet mac validate` rejected its own dense Qwen receipt because prompt_generation_identity.template_family was `qwen25-chat` while the receipt generation prompt_template was `qwen2.5`.",
+  "Scope is canonical prompt-template alias validation for the same Qwen2.5 ChatML template, with negative coverage that genuinely different template families still fail.",
+  "No runtime quality, benchmark speedup, BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, or broad performance claim.",
+]

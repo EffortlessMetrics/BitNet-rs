@@ -388,6 +388,10 @@ hash, plus an overall identity hash. Receipt validation treats those hashes as
 comparison hygiene only: they make mismatched templates, stop rules, or sampling
 parameters visible before regression comparison, but they do not prove improved
 quality, speed, chat enablement, serve readiness, or acceleration.
+`M4-REPRO-004` tightens that validation by comparing canonical prompt-template
+families instead of raw labels, so aliases for the same Qwen2.5 ChatML template
+such as `qwen2.5` and `qwen25-chat` do not block otherwise valid dense M4
+receipts while genuinely different template families still fail.
 
 Dense SLMs also get a bounded reference-vs-Rust control so reference runner,
 template, tokenizer, and Rust behavior can be distinguished without using that

@@ -560,7 +560,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-ACCURACY-001", "M4-CANARY-001"]
+blocked_by = ["M4-ACCURACY-001", "M4-CANARY-001", "M4-REPRO-004"]
 acceptance = "Add a bounded dense SLM reference-runner vs Rust M4 comparison for supported Qwen model identities, recording prompt template, token IDs where available, generated text, mechanical scores, and deltas so Rust/template/tokenizer regressions can be separated from model behavior."
 commands = [
   "Reference runner prompt-suite command for each supported dense Qwen identity",
@@ -1901,6 +1901,49 @@ may_claim = [
 ]
 must_not_claim = [
   "Template identity alone proves answer quality.",
+  "Dense and BitNet templates are interchangeable.",
+]
+
+[[work_item]]
+id = "M4-REPRO-004"
+status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-REPRO-004-template-alias-validation"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-REPRO-003"]
+acceptance = "Repair prompt-generation identity validation so canonical template aliases such as qwen2.5 and qwen25-chat compare as the same Qwen2.5 ChatML template while still rejecting genuinely different template families, unblocking M4 dense validation receipts that record prompt-generation identity."
+commands = [
+  "cargo fmt --check",
+  "cargo test --locked -p bitnet-cli prompt_generation_identity -- --nocapture",
+  "cargo build --locked -p bitnet-cli --release",
+  "target/release/bitnet --device apple-m4-cpu-neon mac validate --model-id qwen2.5-0.5b-instruct-q8_0 --quiet --json-out target/apple-m4-inference-excellence/M4-REPRO-004-template-alias-validation/qwen25-template-alias.json",
+  "target/release/bitnet mac receipts-check target/apple-m4-inference-excellence/M4-REPRO-004-template-alias-validation/qwen25-template-alias.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- check-no-panic-family --report-dir target/bitnet/reports",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "M4 prompt-generation identity validation accepts canonical aliases for the same Qwen2.5 ChatML template.",
+]
+must_not_claim = [
+  "Template alias validation proves answer quality.",
   "Dense and BitNet templates are interchangeable.",
 ]
 
