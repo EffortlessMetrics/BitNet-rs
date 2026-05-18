@@ -34,6 +34,11 @@ path = "plans/"
 owns = ["pr_sequence", "proof_commands", "rollback"]
 hand_editable = true
 
+[source.handoffs]
+path = "docs/handoffs/"
+owns = ["operator_transfer", "closeout_summary", "remaining_work", "validation_gaps"]
+hand_editable = true
+
 [source.status_docs]
 path = "docs/status/"
 owns = ["user_facing_claim_map", "claim_tiers", "proof_commands", "claim_boundaries"]
@@ -113,4 +118,6 @@ active_execution_state = "docs/tracking/campaigns/<campaign>/active.toml"
 no_hidden_goal_files = [".adze/goals", ".bitnet/goals"]
 readme_role = "summary_not_final_proof_map"
 receipts_role = "evidence_for_what_happened"
+handoffs_role = "operator_transfer_not_claim_authority"
+closeouts_role = "what_landed_what_remains"
 generated_dashboards_hand_editable = false

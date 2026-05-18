@@ -25,6 +25,7 @@ state, ownership, branch names, allowed paths, and merge policy.
 | Campaign `active.toml` | Active work state |
 | Campaign events | Append-only lifecycle history |
 | Closeout | What landed and what remains |
+| Handoff | Operator transfer context for follow-on work |
 
 ## Work Item Shape
 
