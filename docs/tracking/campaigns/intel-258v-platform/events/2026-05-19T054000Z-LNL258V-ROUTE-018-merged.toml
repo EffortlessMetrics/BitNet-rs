@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T05:40:00Z"
+event = "merged"
+item = "LNL258V-ROUTE-018"
+branch = "codex/lunar-lake/LNL258V-ROUTE-018-claim-boundary-clarity"
+pr = 5780
+head_sha = "e63ccf21285bdaf356bf3905b87619a2b64ab6ac"
+merge_sha = "c3261fa814d20408b8027ed86db7f9252b7f6325"
+actor = "codex"
+summary = "Merged LNL258V-ROUTE-018 after making route-promotion scope explicit in Lunar Lake receipts."
+
+notes = [
+  "The merged receipts list OpenVINO GPU profile promotions as ask_normal and ask_short.",
+  "OpenVINO NPU remains candidate-only and unexpected OpenVINO profile promotions fail closed.",
+  "The merge does not claim new inference, NPU promotion, power advantage, native OpenCL/NPU execution, broad accelerator acceleration, full BitNet accelerator inference, or BitNet QK256/I2_S behavior changes.",
+]

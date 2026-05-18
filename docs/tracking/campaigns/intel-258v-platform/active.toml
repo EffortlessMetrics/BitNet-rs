@@ -8138,9 +8138,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-018"
-status = "in_progress"
+status = "merged"
 pr = 5780
-head_sha = "cb945509704d6864f9e6f96d4c2d3bdebd9a48b8"
+head_sha = "e63ccf21285bdaf356bf3905b87619a2b64ab6ac"
+merge_sha = "c3261fa814d20408b8027ed86db7f9252b7f6325"
 branch = "codex/lunar-lake/LNL258V-ROUTE-018-claim-boundary-clarity"
 stackable = false
 review_mode = "codex_premerge"
