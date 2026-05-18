@@ -718,18 +718,16 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
             .as_str()
             .is_some_and(|guidance| guidance.contains("bitnet model fetch"))
     );
-    assert_eq!(
+    assert!(
         receipt_json["readiness"]["dense_slm"]["last_matching_receipts"]["eval"]
             .as_str()
-            .is_some_and(|path| path.contains("slm-eval-v2")),
-        true
+            .is_some_and(|path| path.contains("slm-eval-v2"))
     );
-    assert_eq!(
+    assert!(
         receipt_json["readiness"]["bitnet"]["disabled_surfaces"]
             .as_array()
             .is_some_and(|surfaces| surfaces.iter().any(|surface| surface == "chat")
-                && surfaces.iter().any(|surface| surface == "serve")),
-        true
+                && surfaces.iter().any(|surface| surface == "serve"))
     );
     assert_eq!(receipt_json["readiness"]["bitnet"]["chat_enabled"], false);
     assert_eq!(receipt_json["readiness"]["bitnet"]["serve_enabled"], false);
@@ -738,7 +736,7 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
             .as_str()
             .is_some_and(|path| path.contains("bitnet-productization"))
     );
-    assert_eq!(receipt_json["readiness"]["disk_pressure"]["low_disk"].as_bool().is_some(), true);
+    assert!(receipt_json["readiness"]["disk_pressure"]["low_disk"].as_bool().is_some());
     assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
     assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
     assert_eq!(receipt_json["claim_boundary"]["full_metal_inference_claimed"], false);
@@ -855,22 +853,17 @@ fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::er
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_report_refresh_manifest");
     assert_eq!(receipt_json["operator_command"], "mac report-refresh");
-    assert_eq!(
+    assert!(
         receipt_json["operator_affordances"]["explain_command"]
             .as_str()
-            .is_some_and(|command| command.contains("--explain")),
-        true
+            .is_some_and(|command| command.contains("--explain"))
     );
-    assert_eq!(
+    assert!(
         receipt_json["operator_affordances"]["open_targets_command"]
             .as_str()
-            .is_some_and(|command| command.contains("--open-targets")),
-        true
+            .is_some_and(|command| command.contains("--open-targets"))
     );
-    assert_eq!(
-        receipt_json["status_explanations"]["comparable"]["meaning"].as_str().is_some(),
-        true
-    );
+    assert!(receipt_json["status_explanations"]["comparable"]["meaning"].as_str().is_some());
     assert_eq!(receipt_json["fallback_used"], false);
     assert_eq!(receipt_json["refresh_modes"]["generic_pr_ci_model_free"], true);
     assert_eq!(receipt_json["refresh_modes"]["generic_pr_ci_live_model_run"], false);
@@ -947,23 +940,20 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_regression_dashboard");
     assert_eq!(receipt_json["operator_command"], "mac regression-dashboard");
-    assert_eq!(
+    assert!(
         receipt_json["operator_affordances"]["explain_command"]
             .as_str()
-            .is_some_and(|command| command.contains("--explain")),
-        true
+            .is_some_and(|command| command.contains("--explain"))
     );
-    assert_eq!(
+    assert!(
         receipt_json["operator_affordances"]["open_markdown_hint"]
             .as_str()
-            .is_some_and(|hint| hint.contains("open ")),
-        true
+            .is_some_and(|hint| hint.contains("open "))
     );
-    assert_eq!(
+    assert!(
         receipt_json["status_explanations"]["insufficient_history"]["next_action"]
             .as_str()
-            .is_some_and(|action| action.contains("second matching report")),
-        true
+            .is_some_and(|action| action.contains("second matching report"))
     );
     assert_eq!(receipt_json["fallback_used"], false);
     assert_eq!(receipt_json["dashboard_contract"]["model_free"], true);

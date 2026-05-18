@@ -13637,6 +13637,53 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_aggregate_allocation_audit_names_next_target() {
+        let prompt_summaries = [
+            serde_json::json!({
+                "allocation_audit": {
+                    "ranked_hotspots": [
+                        {
+                            "component": "prompt_prefill",
+                            "alloc_count": 10,
+                            "alloc_bytes": 1_000,
+                        },
+                        {
+                            "component": "model.forward",
+                            "alloc_count": 5,
+                            "alloc_bytes": 400,
+                        }
+                    ]
+                }
+            }),
+            serde_json::json!({
+                "allocation_audit": {
+                    "ranked_hotspots": [
+                        {
+                            "component": "prompt_prefill",
+                            "alloc_count": 3,
+                            "alloc_bytes": 500,
+                        }
+                    ]
+                }
+            }),
+        ];
+
+        let audit = warm_session_aggregate_allocation_audit_json(true, "cpu", &prompt_summaries);
+
+        assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill");
+        assert_eq!(audit["dominant_hotspot"]["alloc_bytes"], 1_500);
+        assert_eq!(
+            audit["next_optimization_target"]["target"],
+            "prefill_model_forward_allocation_attribution"
+        );
+        assert_eq!(
+            audit["next_optimization_target"]["claim_scope"],
+            "diagnostic prioritization only; no runtime optimization or sustained-throughput claim is made"
+        );
+    }
+
+    #[test]
     fn allocation_delta_helpers_record_per_token_means() {
         let samples = [
             AllocationAuditSnapshot {

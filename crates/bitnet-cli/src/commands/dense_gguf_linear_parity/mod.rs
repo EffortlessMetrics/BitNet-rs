@@ -1665,7 +1665,7 @@ pub async fn run_dense_qwen_cuda_chat(
     let (source_warm_session_receipt, source_warm_session_sha256) =
         read_and_validate_receipt_for_qwen_model(
             &source_warm_session_path,
-            |receipt| validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(receipt),
+            validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json,
             proof_context.proof_model,
         )?;
 
@@ -1894,6 +1894,7 @@ fn dense_qwen_cuda_ask_source_receipt_path(receipt_path: &Path) -> PathBuf {
     parent.join(format!("{stem}.source-short-decode.json"))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn dense_qwen_cuda_ask_receipt_json(
     source_short_decode_receipt: &Value,
     source_short_decode_sha256: &str,
@@ -13347,7 +13348,7 @@ mod tests {
             receipt["descriptor_coverage"]["missing_model_boundary_roles"]
                 .as_array()
                 .ok_or_else(|| anyhow!("missing_model_boundary_roles must be an array"))?;
-        assert_eq!(missing_model_boundary_roles.iter().any(|role| role == "output"), true);
+        assert!(missing_model_boundary_roles.iter().any(|role| role == "output"));
         let boundary_gaps = receipt["model_boundary_gaps"]["gaps"]
             .as_array()
             .ok_or_else(|| anyhow!("model_boundary_gaps.gaps must be an array"))?;

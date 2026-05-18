@@ -344,6 +344,8 @@ pub(crate) fn warm_session_aggregate_allocation_audit_json(
                     .cmp(right["component"].as_str().unwrap_or_default())
             })
     });
+    let dominant_hotspot = ranked.first().cloned().unwrap_or(serde_json::Value::Null);
+    let next_optimization_target = warm_session_next_optimization_target(&ranked);
 
     serde_json::json!({
         "enabled": true,
@@ -352,7 +354,55 @@ pub(crate) fn warm_session_aggregate_allocation_audit_json(
         "claim_scope": "aggregate of prompt-level allocation counter deltas; sampling scratch cleanup is scoped and no broad performance improvement is claimed",
         "prompt_count": prompt_summaries.len(),
         "ranked_hotspots": ranked,
+        "dominant_hotspot": dominant_hotspot,
+        "next_optimization_target": next_optimization_target,
         "optimization_deferred": false,
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_next_optimization_target(
+    ranked_hotspots: &[serde_json::Value],
+) -> serde_json::Value {
+    let component =
+        ranked_hotspots.first().and_then(|hotspot| hotspot["component"].as_str()).unwrap_or("none");
+    let (target, rationale) = match component {
+        "prompt_prefill" => (
+            "prefill_model_forward_allocation_attribution",
+            "prompt prefill dominates aggregate allocation counters; split model.forward tensor allocation before optimizing math",
+        ),
+        "decode_total" | "model.forward" => (
+            "decode_model_forward_allocation_attribution",
+            "decode/model.forward dominates aggregate allocation counters; attribute dense tensor outputs before changing kernels",
+        ),
+        "model.logits_and_extract" => (
+            "logits_extraction_boundary",
+            "logits extraction remains the dominant allocation counter source after sampler and logits scratch reuse",
+        ),
+        "prompt_tokenize" => (
+            "prompt_token_cache_or_tokenizer_boundary",
+            "prompt tokenization dominates aggregate allocation counters; keep prompt-cache behavior receipt-visible",
+        ),
+        "prompt_setup"
+        | "prompt_setup.buffer_reset"
+        | "prompt_setup.token_seed"
+        | "prompt_setup.kv_cache"
+        | "prompt_setup.sampler_setup" => (
+            "prompt_setup_boundary",
+            "prompt setup dominates aggregate allocation counters; preserve prompt isolation while narrowing setup work",
+        ),
+        "none" => ("none", "no allocation hotspots were recorded by the aggregate audit"),
+        _ => (
+            "measured_hotspot_followup",
+            "the next target follows the dominant measured allocation hotspot and must preserve generated IDs",
+        ),
+    };
+
+    serde_json::json!({
+        "component": component,
+        "target": target,
+        "rationale": rationale,
+        "claim_scope": "diagnostic prioritization only; no runtime optimization or sustained-throughput claim is made",
     })
 }
 
