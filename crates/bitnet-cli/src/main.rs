@@ -8217,6 +8217,8 @@ async fn run_slm_warm_session(
         let sample_step_ms = &mut session_buffers.sample_step_ms;
         let token_decode_step_ms = &mut session_buffers.token_decode_step_ms;
         let prefill_step_allocs = &mut session_buffers.prefill_step_allocs;
+        let prefill_embed_step_allocs = &mut session_buffers.prefill_embed_step_allocs;
+        let prefill_forward_step_allocs = &mut session_buffers.prefill_forward_step_allocs;
         let decode_step_allocs = &mut session_buffers.decode_step_allocs;
         let embed_step_allocs = &mut session_buffers.embed_step_allocs;
         let forward_step_allocs = &mut session_buffers.forward_step_allocs;
@@ -8260,9 +8262,17 @@ async fn run_slm_warm_session(
         if tokens.len() > 1 {
             for token in &tokens[..tokens.len() - 1] {
                 let prefill_alloc_start = AllocationAuditSnapshot::current();
+                let prefill_embed_alloc_start = AllocationAuditSnapshot::current();
                 let x = model.embed(&[*token])?;
+                if allocation_audit_enabled {
+                    prefill_embed_step_allocs
+                        .push(AllocationAuditSnapshot::delta_since(prefill_embed_alloc_start));
+                }
+                let prefill_forward_alloc_start = AllocationAuditSnapshot::current();
                 let _ = model.forward(&x, &mut session_kv_cache as &mut dyn std::any::Any)?;
                 if allocation_audit_enabled {
+                    prefill_forward_step_allocs
+                        .push(AllocationAuditSnapshot::delta_since(prefill_forward_alloc_start));
                     prefill_step_allocs
                         .push(AllocationAuditSnapshot::delta_since(prefill_alloc_start));
                 }
@@ -8648,6 +8658,8 @@ async fn run_slm_warm_session(
                     sampler_setup: prompt_setup_sampler_alloc,
                 },
                 prompt_prefill: prefill_step_allocs,
+                prompt_prefill_embed: prefill_embed_step_allocs,
+                prompt_prefill_forward: prefill_forward_step_allocs,
                 decode_total: decode_step_allocs,
                 embed: embed_step_allocs,
                 forward: forward_step_allocs,
@@ -9275,6 +9287,8 @@ struct WarmSessionPromptBuffers {
     sample_step_ms: Vec<f64>,
     token_decode_step_ms: Vec<f64>,
     prefill_step_allocs: Vec<AllocationAuditSnapshot>,
+    prefill_embed_step_allocs: Vec<AllocationAuditSnapshot>,
+    prefill_forward_step_allocs: Vec<AllocationAuditSnapshot>,
     decode_step_allocs: Vec<AllocationAuditSnapshot>,
     embed_step_allocs: Vec<AllocationAuditSnapshot>,
     forward_step_allocs: Vec<AllocationAuditSnapshot>,
@@ -9316,6 +9330,14 @@ impl WarmSessionPromptBuffers {
             &mut self.prefill_step_allocs,
             prompt_token_capacity.saturating_sub(1),
         );
+        reserve_total_capacity(
+            &mut self.prefill_embed_step_allocs,
+            prompt_token_capacity.saturating_sub(1),
+        );
+        reserve_total_capacity(
+            &mut self.prefill_forward_step_allocs,
+            prompt_token_capacity.saturating_sub(1),
+        );
         reserve_total_capacity(&mut self.decode_step_allocs, max_new_tokens);
         reserve_total_capacity(&mut self.embed_step_allocs, max_new_tokens);
         reserve_total_capacity(&mut self.forward_step_allocs, max_new_tokens);
@@ -9336,6 +9358,8 @@ impl WarmSessionPromptBuffers {
         self.sample_step_ms.clear();
         self.token_decode_step_ms.clear();
         self.prefill_step_allocs.clear();
+        self.prefill_embed_step_allocs.clear();
+        self.prefill_forward_step_allocs.clear();
         self.decode_step_allocs.clear();
         self.embed_step_allocs.clear();
         self.forward_step_allocs.clear();
@@ -13615,6 +13639,8 @@ mod tests {
                 sampler_setup,
             },
             prompt_prefill: &[],
+            prompt_prefill_embed: &[],
+            prompt_prefill_forward: &[],
             decode_total: &[],
             embed: &[],
             forward: &[],
@@ -13633,6 +13659,61 @@ mod tests {
         assert_eq!(audit["prompt_setup_breakdown"]["sampler_setup"]["alloc_bytes_total"], 50);
         assert!(audit["ranked_hotspots"].as_array().is_some_and(|hotspots| {
             hotspots.iter().any(|hotspot| hotspot["component"] == "prompt_setup.kv_cache")
+        }));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_allocation_audit_reports_prefill_breakdown() {
+        let prefill_total = [AllocationAuditSnapshot {
+            alloc_count: 4,
+            alloc_bytes: 400,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        }];
+        let prefill_embed = [AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 80,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        }];
+        let prefill_forward = [AllocationAuditSnapshot {
+            alloc_count: 3,
+            alloc_bytes: 320,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        }];
+
+        let audit = warm_session_prompt_allocation_audit_json(WarmSessionPromptAllocationAudit {
+            enabled: true,
+            requested_backend: "cpu",
+            prompt_tokenize: AllocationAuditSnapshot::default(),
+            prompt_setup: AllocationAuditSnapshot::default(),
+            prompt_setup_breakdown: WarmSessionPromptSetupAllocationAudit {
+                buffer_reset: AllocationAuditSnapshot::default(),
+                token_seed: AllocationAuditSnapshot::default(),
+                kv_cache: AllocationAuditSnapshot::default(),
+                sampler_setup: AllocationAuditSnapshot::default(),
+            },
+            prompt_prefill: &prefill_total,
+            prompt_prefill_embed: &prefill_embed,
+            prompt_prefill_forward: &prefill_forward,
+            decode_total: &[],
+            embed: &[],
+            forward: &[],
+            logits: &[],
+            sample: &[],
+            token_vector_update: &[],
+            token_decode: &[],
+            stop_tail_update: &[],
+            receipt_construction: AllocationAuditSnapshot::default(),
+        });
+
+        assert_eq!(audit["prompt_prefill"]["alloc_bytes_total"], 400);
+        assert_eq!(audit["prompt_prefill_breakdown"]["embed"]["alloc_bytes_total"], 80);
+        assert_eq!(audit["prompt_prefill_breakdown"]["forward"]["alloc_bytes_total"], 320);
+        assert!(audit["ranked_hotspots"].as_array().is_some_and(|hotspots| {
+            hotspots.iter().any(|hotspot| hotspot["component"] == "prompt_prefill.forward")
         }));
     }
 

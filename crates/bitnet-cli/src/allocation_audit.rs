@@ -158,6 +158,8 @@ pub(crate) struct WarmSessionPromptAllocationAudit<'a> {
     pub(crate) prompt_setup: AllocationAuditSnapshot,
     pub(crate) prompt_setup_breakdown: WarmSessionPromptSetupAllocationAudit,
     pub(crate) prompt_prefill: &'a [AllocationAuditSnapshot],
+    pub(crate) prompt_prefill_embed: &'a [AllocationAuditSnapshot],
+    pub(crate) prompt_prefill_forward: &'a [AllocationAuditSnapshot],
     pub(crate) decode_total: &'a [AllocationAuditSnapshot],
     pub(crate) embed: &'a [AllocationAuditSnapshot],
     pub(crate) forward: &'a [AllocationAuditSnapshot],
@@ -206,6 +208,8 @@ pub(crate) fn warm_session_prompt_allocation_audit_json(
         allocation_hotspot("prompt_setup.kv_cache", prompt_setup_kv_cache),
         allocation_hotspot("prompt_setup.sampler_setup", prompt_setup_sampler_setup),
         allocation_hotspot("prompt_prefill", audit.prompt_prefill),
+        allocation_hotspot("prompt_prefill.embed", audit.prompt_prefill_embed),
+        allocation_hotspot("prompt_prefill.forward", audit.prompt_prefill_forward),
         allocation_hotspot("decode_total", audit.decode_total),
         allocation_hotspot("model.embed", audit.embed),
         allocation_hotspot("model.forward", audit.forward),
@@ -247,6 +251,8 @@ pub(crate) fn warm_session_prompt_allocation_audit_json(
             "prompt_setup.kv_cache",
             "prompt_setup.sampler_setup",
             "prompt_prefill_step",
+            "prompt_prefill.embed",
+            "prompt_prefill.forward",
             "decode_step_total",
             "model.embed",
             "model.forward",
@@ -273,6 +279,11 @@ pub(crate) fn warm_session_prompt_allocation_audit_json(
             "sampler_setup": allocation_samples_json(prompt_setup_sampler_setup),
         },
         "prompt_prefill": allocation_samples_json(audit.prompt_prefill),
+        "prompt_prefill_breakdown_scope": "subcomponent counter deltas nested inside prompt_prefill; these are attribution evidence and do not change generation behavior",
+        "prompt_prefill_breakdown": {
+            "embed": allocation_samples_json(audit.prompt_prefill_embed),
+            "forward": allocation_samples_json(audit.prompt_prefill_forward),
+        },
         "decode": {
             "total": allocation_samples_json(audit.decode_total),
             "steady_state": allocation_samples_json(audit.decode_total.get(1..).unwrap_or(&[])),
@@ -367,9 +378,13 @@ fn warm_session_next_optimization_target(
     let component =
         ranked_hotspots.first().and_then(|hotspot| hotspot["component"].as_str()).unwrap_or("none");
     let (target, rationale) = match component {
-        "prompt_prefill" => (
+        "prompt_prefill" | "prompt_prefill.forward" => (
             "prefill_model_forward_allocation_attribution",
             "prompt prefill dominates aggregate allocation counters; split model.forward tensor allocation before optimizing math",
+        ),
+        "prompt_prefill.embed" => (
+            "prefill_embedding_allocation_attribution",
+            "prompt embedding allocation dominates aggregate allocation counters; preserve prompt IDs before changing embedding layout",
         ),
         "decode_total" | "model.forward" => (
             "decode_model_forward_allocation_attribution",
