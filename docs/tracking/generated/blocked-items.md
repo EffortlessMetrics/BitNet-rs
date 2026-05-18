@@ -339,7 +339,7 @@
 | intel-258v-platform | LNL258V-QUAL-009 | LNL258V-OPENVINO-QUAL-RERUN-002 | merged |
 | intel-258v-platform | LNL258V-ROUTE-011 | LNL258V-ROUTE-010, LNL258V-QUAL-010 | merged |
 | intel-258v-platform | LNL258V-ROUTE-012 | LNL258V-ROUTE-011 | merged |
-| intel-258v-platform | LNL258V-ROUTE-013 | LNL258V-ROUTE-012 | in_progress |
+| intel-258v-platform | LNL258V-ROUTE-013 | LNL258V-ROUTE-012 | merged |
 | intel-258v-platform | LNL258V-QUAL-010 | LNL258V-QUAL-009 | merged |
 | intel-258v-platform | LNL258V-BENCH-005 | LNL258V-ROUTE-009 | merged |
 | intel-258v-platform | LNL258V-ROUTE-007 | LNL258V-OV-QUAL-005, LNL258V-ROUTE-006 | merged |

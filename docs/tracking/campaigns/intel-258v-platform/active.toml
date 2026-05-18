@@ -6150,7 +6150,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-013"
-status = "in_progress"
+status = "merged"
+pr = 5707
+head_sha = "606831f7b6d025da3ac874bbbda2f569993faa00"
+merge_sha = "eda2153b37c8f2342b3cf9982b6b1cea0e942025"
 branch = "codex/lunar-lake/LNL258V-ROUTE-013-profile-regression-blocker"
 stackable = false
 review_mode = "codex_premerge"
