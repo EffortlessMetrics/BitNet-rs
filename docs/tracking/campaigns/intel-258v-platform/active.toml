@@ -6250,9 +6250,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-010"
-status = "pr_open"
+status = "merged"
 pr = 5580
-head_sha = "6c498bdfce563468a41d3e718b61765ba0fd7f7b"
+head_sha = "1e0ab335b3e7423bc8584d19670a2c8a34f097a1"
+merge_sha = "f19f2d5d12989d41cad432ce86f4023d5dd97d7c"
 branch = "codex/lunar-lake/LNL258V-ROUTE-010-openvino-token-context"
 stackable = false
 review_mode = "codex_premerge"
