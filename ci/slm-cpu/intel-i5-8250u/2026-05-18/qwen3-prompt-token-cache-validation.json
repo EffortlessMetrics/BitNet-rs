@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_cpu_prompt_token_cache_validation",
+  "work_item": "SLM-CPU-032",
+  "baseline_artifact": "ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-kv-cache-session-reuse.json",
+  "after_artifact": "ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache.json",
+  "generated_outputs_match_baseline": true,
+  "mismatched_prompt_indices": [],
+  "strict_provenance_preserved": true,
+  "quality_passed": true,
+  "determinism_passed": true,
+  "prompt_token_cache": {
+    "policy": "rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts",
+    "hits": 3,
+    "misses": 3,
+    "entry_count": 3,
+    "reused_rendered_prompts": true
+  },
+  "allocation_delta": {
+    "before_prompt_tokenize_alloc_bytes": 1063162466,
+    "after_prompt_tokenize_alloc_bytes": 531586554,
+    "before_prompt_tokenize_alloc_count": 12766714,
+    "after_prompt_tokenize_alloc_count": 6383367
+  },
+  "claim_boundary": {
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "q4_q5_runtime_support": false,
+    "accelerator_claim": false,
+    "qwen35_claim": false,
+    "bitnet_qk256_claim": false
+  }
+}

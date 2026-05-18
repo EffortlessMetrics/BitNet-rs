@@ -16,6 +16,7 @@ OpenVINO, UHD 620, Qwen3.5, or BitNet QK256.
 | Logits extraction isolation | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse-validation.json` | Validates that direct tensor argmax bypasses full logits Vec extraction only where the sampler fast path is exact, while preserving generated IDs/text |
 | Repetition-penalty logits reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse-validation.json` | Validates that default repetition-penalty decode steps reuse a host logits scratch buffer instead of allocating fresh logits vectors, while preserving generated IDs/text |
 | Warm-session sampler reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json` | Validates that the temperature-zero warm-session profile reuses one sampler across prompts while preserving generated IDs/text and strict provenance |
+| Prompt token cache | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache-validation.json` | Validates that repeated rendered prompts reuse token IDs while preserving generated IDs/text and strict provenance |
 
 All rows use:
 
@@ -253,6 +254,35 @@ sustained_throughput_claim = false
 This does not claim sustained throughput or a portable performance result. It
 only narrows the resident-session allocation boundary for the existing Qwen3
 Q8_0 4-thread Kaby appliance profile.
+
+## Prompt Token Cache
+
+SLM-CPU-032 reuses rendered prompt token IDs inside the resident warm session.
+The reuse is scoped to repeated prompts with the same rendered prompt, BOS
+policy, and special-token parse policy. It keeps the generated-ID oracle intact
+while avoiding redundant `tokenizer.encode` work for repeated corpus cases.
+
+```text
+prompt_token_cache_policy = rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts
+prompt_token_cache_enabled = true
+evidence = ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache.json
+validation = ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache-validation.json
+prompt_token_cache_hits = 3
+prompt_token_cache_misses = 3
+prompt_token_cache_entry_count = 3
+generated_outputs_match_baseline = true
+quality_passed = true
+determinism_passed = true
+fallback_used = false
+before_prompt_tokenize_alloc_bytes = 1063162466
+after_prompt_tokenize_alloc_bytes = 531586554
+speedup_claim = false
+sustained_throughput_claim = false
+```
+
+This is a tokenizer-boundary optimization only. It does not change dense math,
+does not claim Q4/Q5 support, and does not turn the bounded Kaby appliance
+profile into a sustained-throughput result.
 
 ## Claim Boundary
 

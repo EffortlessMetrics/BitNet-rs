@@ -2562,6 +2562,56 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-032"
+status = "pr_open"
+pr = 5514
+head_sha = "da6630419a055cac9f8c7d6ddcc499e07617b95a"
+branch = "codex/slm-cpu-032-prompt-token-cache"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-031"]
+acceptance = "Reuse rendered prompt token IDs across repeated Qwen3 Q8_0 Kaby warm-session prompts so repeated corpus cases avoid redundant tokenizer.encode work while preserving generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false when real artifacts are regenerated. Receipts must record prompt token cache policy, hit/miss counts, and cache entry count, and must not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli warm_session_prompt_token_cache_reuses_rendered_prompt_ids",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "The Qwen3 Q8_0 Kaby warm session reuses rendered prompt token IDs for repeated prompts in the same resident session.",
+  "Receipts record prompt token cache hit/miss counts and cache entry count.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-021"
 status = "merged"
 pr = 5133
