@@ -365,6 +365,17 @@ redistribution boundary, file size, SHA256, tokenizer authority, prompt
 template identity, local cache path, symlink target when used, and repair
 command.
 
+`M4-REPRO-002` publishes that manifest through `bitnet model verify <model-id>
+--json` and the local `bitnet-model-cache.json` written after successful cache
+verification. The manifest artifact kind is `m4_supported_model_provenance`;
+it records upstream repo/revision/URL, license or redistribution boundary,
+artifact size and SHA256, tokenizer authority and SHA status, prompt-template
+identity, cache path, explicit verify path, symlink target when present, and
+structured fetch/verify/prune repair commands. Dense Qwen tokenizer SHA is
+recorded as embedded GGUF metadata bound to the model SHA; the accepted BitNet
+artifact records the external tokenizer JSON SHA from the artifact authority
+lane.
+
 Dense SLMs also get a bounded reference-vs-Rust control so reference runner,
 template, tokenizer, and Rust behavior can be distinguished without using that
 control as broad model-quality evidence.
