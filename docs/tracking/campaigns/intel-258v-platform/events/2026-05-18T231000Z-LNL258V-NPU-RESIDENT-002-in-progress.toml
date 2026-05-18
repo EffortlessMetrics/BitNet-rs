@@ -1,0 +1,14 @@
+timestamp = "2026-05-18T23:10:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-NPU-RESIDENT-002"
+event = "in_progress"
+branch = "codex/lunar-lake/LNL258V-NPU-RESIDENT-002-stability"
+actor = "codex"
+summary = "Started LNL258V-NPU-RESIDENT-002 to extend NPU resident-session stability evidence."
+
+notes = [
+  "The work extends the OpenVINO GenAI NPU resident-session proof to 30 same-process warm dense Qwen asks.",
+  "The receipt records answer/token/fallback/route drift checks and process-memory growth context for the resident session.",
+  "Warm_resident route-profile blockers consume the stability evidence while NPU remains candidate-only and unpromoted.",
+  "The claim boundary remains no route promotion, no speedup or power-advantage claim, no NPU acceleration claim, no native NPU inference outside OpenVINO GenAI, and no BitNet QK256/I2_S behavior change.",
+]

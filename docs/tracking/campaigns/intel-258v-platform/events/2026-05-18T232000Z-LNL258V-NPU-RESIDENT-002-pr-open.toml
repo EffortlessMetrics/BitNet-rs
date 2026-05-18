@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T23:20:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-NPU-RESIDENT-002"
+event = "pr_open"
+pr = 5796
+branch = "codex/lunar-lake/LNL258V-NPU-RESIDENT-002-stability"
+head_sha = "eb41702cb756f05da68e72cd7f2e07d2e7de98d0"
+actor = "codex"
+summary = "Opened PR #5796 for LNL258V-NPU-RESIDENT-002 NPU resident stability evidence."
+
+notes = [
+  "The PR extends OpenVINO GenAI NPU resident-session evidence to 30 warm dense Qwen asks with zero answer-gate failures.",
+  "The receipt records answer/token/fallback/route drift checks and resident process-memory growth context.",
+  "Warm_resident route-profile comparison indexes the stability evidence while preserving candidate-only NPU status.",
+  "The PR does not promote NPU, claim speedup or power advantage, claim NPU acceleration or native NPU inference outside OpenVINO GenAI, or change BitNet QK256/I2_S behavior.",
+]

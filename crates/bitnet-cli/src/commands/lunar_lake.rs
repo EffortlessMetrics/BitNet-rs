@@ -9061,6 +9061,35 @@ fn load_npu_resident_session(
         && bool_at_any(&json, &["fallback_used"]) == Some(false)
         && bool_at_any(&json, &["resident_session.warm_resident_asks.fallback_used"]) != Some(true);
     index.add("dense_slm_openvino_npu_candidate", source_receipt, blockers);
+    let mut warm_resident_blockers = Vec::new();
+    if warm_ask_count < 30 {
+        warm_resident_blockers
+            .push(format!("NPU resident stability proof has only {warm_ask_count}/30 warm ask(s)"));
+    }
+    if bool_at_any(&json, &["stability.answer_drift_detected"]) == Some(true) {
+        warm_resident_blockers
+            .push("NPU resident stability proof observed answer drift".to_string());
+    }
+    if bool_at_any(&json, &["stability.fallback_drift_detected"]) == Some(true) {
+        warm_resident_blockers
+            .push("NPU resident stability proof observed fallback drift".to_string());
+    }
+    if bool_at_any(&json, &["stability.route_drift_detected"]) == Some(true) {
+        warm_resident_blockers
+            .push("NPU resident stability proof observed route drift".to_string());
+    }
+    if value_at(&json, "stability.resident_memory_growth_bytes").is_none() {
+        warm_resident_blockers
+            .push("NPU resident stability proof lacks memory-growth context".to_string());
+    }
+    warm_resident_blockers.sort();
+    warm_resident_blockers.dedup();
+    index.add_for_profile(
+        "dense_slm_openvino_npu_candidate",
+        "warm_resident",
+        path_string(&path),
+        warm_resident_blockers,
+    );
     Ok(resident_session_ready)
 }
 
