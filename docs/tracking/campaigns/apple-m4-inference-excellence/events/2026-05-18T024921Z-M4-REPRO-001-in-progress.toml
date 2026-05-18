@@ -1,0 +1,14 @@
+timestamp = "2026-05-18T02:49:21Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-REPRO-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-REPRO-001-run-identity"
+
+notes = [
+  "Started M4-REPRO-001 to define the shared Apple M4 run-identity contract and enforce it through receipt validation.",
+  "Scope is schema and receipt-validation infrastructure for reproducible M4 comparisons; legacy committed receipts remain accepted until later refresh items rewrite their identity shape.",
+  "No new live inference proof, model download, BitNet chat or serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim.",
+]

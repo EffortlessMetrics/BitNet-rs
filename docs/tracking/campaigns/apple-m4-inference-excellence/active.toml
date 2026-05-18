@@ -1663,13 +1663,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-REPRO-001"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-REPRO-001-run-identity"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+pr = 5502
 acceptance = "Define and enforce a reusable M4 run-identity contract for eval, benchmark, warm-session, chat-gate, serve-gate, and dashboard receipts: machine_id, SoC, OS version, git commit, binary hash or build profile, command class, model ID, model SHA, tokenizer authority/SHA, prompt template hash, backend, fallback state, seed/corpus/profile identity, and timing source."
 commands = [
   "cargo test --locked -p bitnet-receipts -- --nocapture",
@@ -1681,6 +1682,7 @@ commands = [
 allowed_paths = [
   "crates/bitnet-cli/**",
   "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
   "docs/slm/**",
   "docs/tracking/campaigns/apple-m4-inference-excellence/**",
   "docs/tracking/generated/**",

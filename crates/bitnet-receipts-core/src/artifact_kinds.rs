@@ -8,6 +8,11 @@ pub const RECEIPT_SCHEMA_VERSION: &str = "1.0.0";
 /// Alias for schema version (for consistency)
 pub const RECEIPT_SCHEMA: &str = RECEIPT_SCHEMA_VERSION;
 
+/// Reusable Apple M4 run identity contract for receipt families that need
+/// matching-history comparison across eval, benchmark, warm, chat, serve, and
+/// dashboard evidence.
+pub const M4_RUN_IDENTITY_CONTRACT_VERSION: &str = "m4-run-identity-v1";
+
 /// Artifact kind for the dense regular-LLM CUDA reference lane.
 ///
 /// This is deliberately separate from BitNet packed I2_S/QK256 CUDA receipt

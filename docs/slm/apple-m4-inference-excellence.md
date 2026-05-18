@@ -204,6 +204,39 @@ prompt text, template identity, input token IDs, generated token IDs and text,
 stop reason, sampler config, backend, fallback state, and artifact/tokenizer
 identity so drift can be localized before running hundreds of cases.
 
+## Reproducible Run Identity
+
+`M4-REPRO-001` introduces the shared `m4-run-identity-v1` contract in
+`bitnet-receipts-core`. Receipts that opt into the contract carry a
+top-level `run_identity` object and a matching `run_identity_sha256` digest.
+The validator checks the reproducibility fields needed before dashboard,
+regression, and release comparisons can trust that two reports are the same
+kind of run:
+
+| Field group | Requirement |
+|---|---|
+| Machine | M4 machine ID, SoC, OS name, OS version, and OS-version source. |
+| Source and binary | Git commit plus source, crate version, and either build profile or binary SHA256. |
+| Command | Command class and whether the receipt came from a live model run. |
+| Model and tokenizer | Model ID/SHA or explicit model-free scope, tokenizer authority/SHA or explicit model-free scope. |
+| Prompt template | Template ID and SHA256, even when the command is model-free. |
+| Backend | Requested backend, selected backend, runtime API, and `fallback_used=false`; selected must match requested. |
+| Evidence identity | Scope, seed, corpus ID, and profile ID. |
+| Timing | Timing source used by the receipt family. |
+
+The first schema-`1.2.0` model-free operator receipts using the contract are
+`apple_m4_inference_status`, `apple_m4_operator_evidence_summary`,
+`apple_m4_report_refresh_manifest`, and `apple_m4_regression_dashboard`.
+`bitnet mac receipts-check` validates `run_identity` for schema `1.2.0`
+receipts and for any receipt that includes `run_identity_sha256`.
+
+Older committed M4 receipts remain valid with their existing schemas while
+the excellence campaign refreshes eval, benchmark, warm-session, chat-gate,
+serve-gate, and dashboard artifacts through later items. This is identity
+infrastructure and operator receipt hardening only: it does not create a new
+live model run, BitNet chat or serve proof, Metal route, QK256 route, broad
+quality claim, broad performance claim, or speedup claim.
+
 ## Benchmark Depth
 
 The benchmark envelope should cover:

@@ -210,3 +210,109 @@ pub struct StrictInferenceProvenance {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub decode_tps: Option<f64>,
 }
+
+/// Reusable Apple M4 run identity carried by receipts that participate in
+/// matching-history comparison.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentity {
+    pub contract_version: String,
+    pub machine_id: String,
+    pub soc: String,
+    pub artifact_kind: String,
+    pub evidence_family: String,
+    pub os: M4RunIdentityOs,
+    pub git: M4RunIdentityGit,
+    pub binary: M4RunIdentityBinary,
+    pub command: M4RunIdentityCommand,
+    pub model: M4RunIdentityModel,
+    pub tokenizer: M4RunIdentityTokenizer,
+    pub prompt_template: M4RunIdentityPromptTemplate,
+    pub backend: M4RunIdentityBackend,
+    pub evidence_identity: M4RunIdentityEvidence,
+    pub timing: M4RunIdentityTiming,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentityOs {
+    pub name: String,
+    pub version: String,
+    pub version_source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentityGit {
+    pub commit: String,
+    pub commit_source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentityBinary {
+    pub crate_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build_profile: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binary_sha256: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentityCommand {
+    pub class: String,
+    pub live_model_run: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentityModel {
+    pub id: String,
+    pub sha256: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub family: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub quantization: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loader_mode: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub identity_scope: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentityTokenizer {
+    pub authority: String,
+    pub sha256: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pretokenizer_authority: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strict: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub identity_scope: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentityPromptTemplate {
+    pub id: String,
+    pub sha256: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub identity_scope: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentityBackend {
+    pub requested_backend: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub fallback_used: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentityEvidence {
+    pub scope: String,
+    pub seed: String,
+    pub corpus_id: String,
+    pub profile_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct M4RunIdentityTiming {
+    pub source: String,
+}
