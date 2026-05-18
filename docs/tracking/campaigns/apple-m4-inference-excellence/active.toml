@@ -598,9 +598,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-DENSE-REF-001"
-status = "pr_open"
+status = "merged"
 pr = 5653
-head_sha = "330379518cb6d77c34882ba8d92bd6c42d672fbb"
+head_sha = "4d2ae8b071ddb6b3cc966f76bdb5326a518ad96c"
+merge_sha = "e0f16fc8e47ffac7fa7858f604b892bb43b1e088"
 branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-001-reference-vs-rust"
 stackable = false
 review_mode = "codex_premerge"

@@ -1,0 +1,19 @@
+timestamp = "2026-05-18T13:10:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-005"
+event = "merged"
+actor = "codex"
+pr = 5662
+head_sha = "86892791b42fa8366cbf0ec4530b3f3e982efec2"
+merge_sha = "7de0f0a0f11261e524e4e4fad88a061cb1baa073"
+branch = "codex/lunar-lake/LNL258V-OP-005-auto-route-profile-guard"
+summary = "Merged PR #5662 for LNL258V-OP-005 to make lunar-lake ask routing fail closed against route-profile comparison evidence."
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/main.rs",
+]
+notes = [
+  "ask_normal dense Qwen CPU route selection remains valid when route-profile evidence is promoted_route_ready.",
+  "Blocked profiles such as the current regression_tiny stop-token blocker now fail closed before generation for auto and explicit CPU route selection.",
+  "The merge did not run inference, promote OpenVINO GPU/NPU, claim quality or speedup, or change BitNet QK256/I2_S behavior.",
+]

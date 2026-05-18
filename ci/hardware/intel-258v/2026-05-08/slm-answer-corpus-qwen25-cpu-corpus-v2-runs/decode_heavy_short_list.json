@@ -72,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 11999,
-    "decode_first_ms": 11999,
-    "total_ms": 32716
+    "cmd_to_first_ms": 11944,
+    "decode_first_ms": 11944,
+    "total_ms": 32976
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -270,82 +270,82 @@
     "decode": {
       "embed_ms": {
         "count": 64,
-        "max_ms": 0.053,
-        "mean_ms": 0.029,
+        "max_ms": 0.881,
+        "mean_ms": 0.042,
         "min_ms": 0.017,
-        "p50_ms": 0.025,
+        "p50_ms": 0.026,
         "p95_ms": 0.048,
-        "total_ms": 1.836
+        "total_ms": 2.68
       },
-      "first_token_decode_ms": 329.946,
+      "first_token_decode_ms": 343.583,
       "forward_ms": {
         "count": 64,
-        "max_ms": 276.53,
-        "mean_ms": 234.906,
-        "min_ms": 219.369,
-        "p50_ms": 233.135,
-        "p95_ms": 252.711,
-        "total_ms": 15034.001
+        "max_ms": 268.566,
+        "mean_ms": 237.143,
+        "min_ms": 224.543,
+        "p50_ms": 236.461,
+        "p95_ms": 251.772,
+        "total_ms": 15177.159
       },
       "generated_tokens": 64,
       "logits_ms": {
         "count": 64,
-        "max_ms": 105.227,
-        "mean_ms": 84.819,
-        "min_ms": 79.961,
-        "p50_ms": 83.804,
-        "p95_ms": 90.751,
-        "total_ms": 5428.435
+        "max_ms": 91.348,
+        "mean_ms": 87.656,
+        "min_ms": 82.772,
+        "p50_ms": 87.914,
+        "p95_ms": 90.853,
+        "total_ms": 5610.003
       },
       "per_token_ms": {
         "count": 64,
-        "max_ms": 368.411,
-        "mean_ms": 328.8,
-        "min_ms": 308.486,
-        "p50_ms": 326.287,
-        "p95_ms": 349.749,
-        "total_ms": 21043.183
+        "max_ms": 365.003,
+        "mean_ms": 333.933,
+        "min_ms": 319.079,
+        "p50_ms": 332.32,
+        "p95_ms": 352.236,
+        "total_ms": 21371.686
       },
       "sample_ms": {
         "count": 64,
-        "max_ms": 5.432,
-        "mean_ms": 2.244,
-        "min_ms": 1.834,
-        "p50_ms": 2.128,
-        "p95_ms": 2.778,
-        "total_ms": 143.62
+        "max_ms": 4.148,
+        "mean_ms": 2.308,
+        "min_ms": 1.808,
+        "p50_ms": 2.171,
+        "p95_ms": 3.466,
+        "total_ms": 147.74
       },
       "steady_per_token_ms": {
         "count": 63,
-        "max_ms": 368.411,
-        "mean_ms": 328.782,
-        "min_ms": 308.486,
-        "p50_ms": 326.287,
-        "p95_ms": 349.749,
-        "total_ms": 20713.238
+        "max_ms": 365.003,
+        "mean_ms": 333.779,
+        "min_ms": 319.079,
+        "p50_ms": 332.32,
+        "p95_ms": 352.236,
+        "total_ms": 21028.103
       },
-      "steady_state_tok_s": 3.042,
+      "steady_state_tok_s": 2.996,
       "steady_state_tokens": 63,
       "token_decode_ms": {
         "count": 64,
-        "max_ms": 0.134,
-        "mean_ms": 0.035,
-        "min_ms": 0.019,
-        "p50_ms": 0.029,
-        "p95_ms": 0.059,
-        "total_ms": 2.254
+        "max_ms": 0.085,
+        "mean_ms": 0.033,
+        "min_ms": 0.018,
+        "p50_ms": 0.028,
+        "p95_ms": 0.062,
+        "total_ms": 2.129
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13546.547,
+    "model_load_ms": 13671.681,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 11669.089,
+      "ms": 11600.05,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -357,9 +357,9 @@
       },
       "tokens": 50
     },
-    "prompt_tokenize_ms": 448.256,
+    "prompt_tokenize_ms": 399.936,
     "requested": false,
-    "tokenizer_load_ms": 625.404
+    "tokenizer_load_ms": 553.035
   },
   "prompt": "List six local inference route checks and include the words fallback and model. Use short comma-separated phrases.",
   "prompt_generation_identity": {
@@ -480,7 +480,7 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 64,
-    "decode_tps": 1.9562293678933855,
+    "decode_tps": 1.940805434255216,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
@@ -500,22 +500,22 @@
   "text": "1. Check for local inference route fallbacks\n2. Verify model compatibility with local environment\n3. Ensure reliable data sources are available locally\n4. Confirm that the model is trained on a compatible dataset \n5. Validate the accuracy of predictions in your application's context \n6. Test the performance of your inference process",
   "throughput": {
     "decoded_tokens": 64,
-    "tokens_per_second": 1.9562293678933855
+    "tokens_per_second": 1.940805434255216
   },
-  "timestamp": "2026-05-18T11:33:45.042905900+00:00",
+  "timestamp": "2026-05-18T12:20:12.887751200+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.042,
-    "decode_total_ms": 21043.183,
+    "decode_steady_state_tok_s": 2.996,
+    "decode_total_ms": 21371.686,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 329.946,
-    "first_token_ms": 11999,
+    "first_token_decode_ms": 343.583,
+    "first_token_ms": 11944,
     "host_to_device_bytes": null,
-    "model_load_ms": 13546.547,
-    "prefill_ms": 11669.089,
-    "sampling_ms_per_token": 2.244,
-    "tokenize_ms": 448.256,
-    "tokenizer_load_ms": 625.404
+    "model_load_ms": 13671.681,
+    "prefill_ms": 11600.05,
+    "sampling_ms_per_token": 2.308,
+    "tokenize_ms": 399.936,
+    "tokenizer_load_ms": 553.035
   },
   "tokenizer": {
     "bos": 151643,

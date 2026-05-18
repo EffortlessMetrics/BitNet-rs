@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_qwen_cpu_corpus_v2_diagnosis",
   "proof_stage": "corpus_v2_failures_classified_no_inference",
-  "created_utc": "2026-05-18T12:55:00Z",
+  "created_utc": "2026-05-18T22:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "cpu_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
@@ -17,19 +17,13 @@
   "fallback_used": false,
   "quality_summary": {
     "total": 12,
-    "passed": 11,
-    "failed": 1,
+    "passed": 12,
+    "failed": 0,
     "timeout": 0,
     "not_run": 0,
-    "failed_profiles": [
-      "regression_tiny"
-    ],
-    "failed_categories": [
-      "stop_and_eos"
-    ],
-    "failure_classes": {
-      "answer_gate_mismatch": 1
-    }
+    "failed_profiles": [],
+    "failed_categories": [],
+    "failure_classes": {}
   },
   "profile_diagnoses": [
     {
@@ -102,16 +96,13 @@
     {
       "profile_id": "regression_tiny",
       "total": 4,
-      "passed": 3,
-      "failed": 1,
+      "passed": 4,
+      "failed": 0,
       "blocked": true,
-      "failed_case_ids": [
-        "stop_token_one_word_done"
-      ],
-      "route_profile_status": "promoted_route_blocked",
+      "failed_case_ids": [],
+      "route_profile_status": "promoted_route_ready",
       "route_blockers": [
-        "corpus_v2 profile regression_tiny has 1 quality failures",
-        "dense_slm_default_cpu is listed as promoted for regression_tiny, but profile evidence is incomplete"
+        "dense_slm_default_cpu remains promoted for regression_tiny"
       ]
     },
     {
@@ -128,42 +119,11 @@
       ]
     }
   ],
-  "failed_cases": [
-    {
-      "id": "stop_token_one_word_done",
-      "profile": "regression_tiny",
-      "category": "stop_and_eos",
-      "task_family": "stop_and_eos",
-      "status": "quality_failed",
-      "gate_kind": "starts_with_any",
-      "scoring_kind": "normalized_match",
-      "failed_rules": [
-        "gate_starts_with_any",
-        "scoring_normalized_match"
-      ],
-      "failure_taxonomy": [
-        "answer_content"
-      ],
-      "missing_required_keywords": [],
-      "forbidden_tokens_observed": [],
-      "expected_normalized": "done",
-      "observed_normalized": "completed",
-      "answer_preview": "Completed<|im_end|>",
-      "generated_tokens": 2,
-      "prompt_tokens": 36,
-      "run_receipt_path": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/stop_token_one_word_done.json",
-      "fallback_used": false,
-      "classification": "answer_gate_mismatch",
-      "recommended_fix": "Keep this profile blocked until the case has a clean rerun or the corpus gate is intentionally revised."
-    }
-  ],
-  "route_blocked": true,
-  "blocker_summary": [
-    "1 of 12 corpus-v2 cases failed across profiles [regression_tiny]",
-    "1 failed case(s) classified as answer_gate_mismatch"
-  ],
+  "failed_cases": [],
+  "route_blocked": false,
+  "blocker_summary": [],
   "recommended_next_actions": [
-    "Keep dense_slm_default_cpu blocked for affected corpus-v2 profiles until failed cases rerun cleanly."
+    "No corpus-v2 failures were found; keep regression v2 as the guardrail."
   ],
   "diagnosis_ready": true,
   "gaps": [],
