@@ -59,3 +59,9 @@ New proposals should include:
 Every proposal that affects user-visible capability claims should link to the
 status, model-artifact, hardware, CI, and campaign surfaces that will carry the
 actual proof.
+
+## Current proposals
+
+- [BITNET-PROP-0009 bitnet_b1_58-large control model](BITNET-PROP-0009-bitnet-b158-large-control-model.md)
+  defines why `1bitLLM/bitnet_b1_58-large` starts as an artifact authority and
+  conversion-lane project before any CPU, CUDA, Apple, server, or speed claim.

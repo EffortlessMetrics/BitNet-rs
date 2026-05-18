@@ -21,10 +21,19 @@ ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml
 | Priority | Candidate | First Apple route | Status |
 |---:|---|---|---|
 | 1 | `microsoft/bitnet-b1.58-2B-4T-gguf` `ggml-model-i2_s.gguf` | ARM `I2_S`, then `TL1` | Shared answer gate says the official I2_S artifact is answer-ready when paired with external Microsoft tokenizer authority and `tokenizer.ggml.pre=llama-bpe`; MacBook must rerun before Apple claims. |
-| 2 | `1bitLLM/bitnet_b1_58-large` | ARM `I2_S` or `TL1` | Smaller 0.7B control candidate; must record GGUF file, tokenizer authority, and coherent reference output. |
+| 2 | `1bitLLM/bitnet_b1_58-large` | ARM `I2_S` or `TL1` | Smaller 0.7B control candidate; currently blocked on artifact/conversion authority because the recorded official repo revision exposes safetensors/tokenizer files but no official GGUF. Follow [BITNET-PROP-0009](../proposals/BITNET-PROP-0009-bitnet-b158-large-control-model.md), the [source map](../bitnet/bitnet-b158-large/README.md), and the B158-large specs before any answer/backend claim. |
 | 3 | `1bitLLM/bitnet_b1_58-3B` | ARM `TL1`/`TL2` diagnostic only | Blocked at revision `af89e318d78a70802061246bf037199d2fb97020`: the official repository has safetensors shards and tokenizer files but no GGUF, and the current M3 Air free-space state cannot safely absorb the shards without cleanup or an approved conversion plan. |
 | 4 | `tiiuae/Falcon-E-1B-Instruct-GGUF` | Verify `I2_S` runner path | Secondary BitNet-like family after Microsoft and 1bitLLM behavior is understood. |
 | 5 | `tiiuae/Falcon-E-3B-Instruct-GGUF` | Verify `I2_S` runner path | Larger secondary family; use only if storage and smaller-candidate results justify it. |
+
+## bitnet_b1_58-large control-model lane
+
+`1bitLLM/bitnet_b1_58-large` must start as an artifact authority and conversion
+lane, not as an Apple performance lane. The first accepted evidence is exact
+source inventory, tokenizer authority, conversion or official-GGUF authority,
+and reference-runner output. MacBook diagnostics may inspect the candidate, but
+M4 CPU/NEON, Metal, and speed claims remain blocked until the shared answer gate
+and the B158-large Apple contract pass.
 
 ## Required Record For Each Probe
 
