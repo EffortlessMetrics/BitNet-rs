@@ -316,66 +316,10 @@ mod tests {
         LoggingConfig, PerformanceConfig, SUPPORTED_DEVICE_LABELS, invalid_device_message,
         is_supported_device_label, unsupported_legacy_command_device_message,
     };
-    use std::{
-        path::PathBuf,
-        sync::{Mutex, MutexGuard, OnceLock},
-    };
-
-    fn env_lock() -> MutexGuard<'static, ()> {
-        static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        ENV_LOCK.get_or_init(|| Mutex::new(())).lock().expect("environment lock poisoned")
-    }
-
-    fn set_env_var(key: &str, value: &str) {
-        // SAFETY: Tests hold `env_lock` while mutating process environment and
-        // while building configs that read these variables.
-        unsafe { std::env::set_var(key, value) };
-    }
-
-    fn remove_env_var(key: &str) {
-        // SAFETY: Tests hold `env_lock` while mutating process environment and
-        // while building configs that read these variables.
-        unsafe { std::env::remove_var(key) };
-    }
-
-    struct EnvVarGuard {
-        saved: Vec<(&'static str, Option<String>)>,
-    }
-
-    impl EnvVarGuard {
-        fn capture(keys: &[&'static str]) -> Self {
-            let saved = keys.iter().map(|key| (*key, std::env::var(key).ok())).collect();
-            Self { saved }
-        }
-    }
-
-    impl Drop for EnvVarGuard {
-        fn drop(&mut self) {
-            for (key, value) in &self.saved {
-                match value {
-                    Some(value) => set_env_var(key, value),
-                    None => remove_env_var(key),
-                }
-            }
-        }
-    }
-
-    fn capture_and_clear_builder_env() -> EnvVarGuard {
-        let guard = EnvVarGuard::capture(&[
-            "BITNET_DEVICE",
-            "BITNET_BACKEND",
-            "BITNET_LOG_LEVEL",
-            "BITNET_CPU_THREADS",
-        ]);
-        remove_env_var("BITNET_DEVICE");
-        remove_env_var("BITNET_BACKEND");
-        remove_env_var("BITNET_LOG_LEVEL");
-        remove_env_var("BITNET_CPU_THREADS");
-        guard
-    }
+    use std::path::PathBuf;
 
     #[test]
-    fn default_config_uses_stable_safe_values() {
+    fn default_config_uses_stable_safe_values() -> anyhow::Result<()> {
         let config = CliConfig::default();
 
         assert_eq!(config.default_model, None);
@@ -388,24 +332,26 @@ mod tests {
         assert_eq!(config.performance.cpu_threads, None);
         assert_eq!(config.performance.batch_size, 1);
         assert!(config.performance.memory_optimization);
-        config.validate().unwrap();
+        config.validate()?;
+        Ok(())
     }
 
     #[test]
-    fn load_from_missing_file_returns_defaults() {
-        let temp_dir = tempfile::tempdir().unwrap();
+    fn load_from_missing_file_returns_defaults() -> anyhow::Result<()> {
+        let temp_dir = tempfile::tempdir()?;
         let missing_path = temp_dir.path().join("missing").join("config.toml");
 
-        let config = CliConfig::load_from_file(&missing_path).unwrap();
+        let config = CliConfig::load_from_file(&missing_path)?;
 
         assert_eq!(config.default_device, CliConfig::default().default_device);
         assert_eq!(config.logging.level, CliConfig::default().logging.level);
         assert_eq!(config.performance.batch_size, CliConfig::default().performance.batch_size);
+        Ok(())
     }
 
     #[test]
-    fn save_to_file_creates_parent_directories_and_roundtrips() {
-        let temp_dir = tempfile::tempdir().unwrap();
+    fn save_to_file_creates_parent_directories_and_roundtrips() -> anyhow::Result<()> {
+        let temp_dir = tempfile::tempdir()?;
         let config_path = temp_dir.path().join("nested").join("bitnet").join("config.toml");
         let config = CliConfig {
             default_model: Some(PathBuf::from("models/test.gguf")),
@@ -424,8 +370,8 @@ mod tests {
             model_cache_dir: Some(PathBuf::from("cache/models")),
         };
 
-        config.save_to_file(&config_path).unwrap();
-        let loaded = CliConfig::load_from_file(&config_path).unwrap();
+        config.save_to_file(&config_path)?;
+        let loaded = CliConfig::load_from_file(&config_path)?;
 
         assert_eq!(loaded.default_model, config.default_model);
         assert_eq!(loaded.default_device, config.default_device);
@@ -437,105 +383,129 @@ mod tests {
         assert_eq!(loaded.performance.batch_size, config.performance.batch_size);
         assert_eq!(loaded.performance.memory_optimization, config.performance.memory_optimization);
         assert_eq!(loaded.model_cache_dir, config.model_cache_dir);
+        Ok(())
     }
 
     #[test]
-    fn load_from_invalid_toml_includes_path_context() {
-        let temp_dir = tempfile::tempdir().unwrap();
+    fn load_from_invalid_toml_includes_path_context() -> anyhow::Result<()> {
+        let temp_dir = tempfile::tempdir()?;
         let config_path = temp_dir.path().join("config.toml");
-        std::fs::write(&config_path, "default_device = [not valid toml").unwrap();
+        std::fs::write(&config_path, "default_device = [not valid toml")?;
 
-        let err = CliConfig::load_from_file(&config_path).unwrap_err().to_string();
+        let err = match CliConfig::load_from_file(&config_path) {
+            Ok(_) => anyhow::bail!("invalid TOML should fail to load"),
+            Err(err) => err.to_string(),
+        };
 
         assert!(err.contains("Failed to parse config file"), "got: {err}");
         assert!(err.contains(&config_path.display().to_string()), "got: {err}");
+        Ok(())
     }
 
     #[test]
-    fn validate_rejects_invalid_log_level_format_and_batch_size() {
+    fn validate_rejects_invalid_log_level_format_and_batch_size() -> anyhow::Result<()> {
         let invalid_level = CliConfig {
             logging: LoggingConfig { level: "verbose".to_string(), ..LoggingConfig::default() },
             ..CliConfig::default()
         };
-        assert!(invalid_level.validate().unwrap_err().to_string().contains("Invalid log level"));
+        let invalid_level_err = match invalid_level.validate() {
+            Ok(()) => anyhow::bail!("invalid log level should fail validation"),
+            Err(err) => err.to_string(),
+        };
+        assert!(invalid_level_err.contains("Invalid log level"));
 
         let invalid_format = CliConfig {
             logging: LoggingConfig { format: "yaml".to_string(), ..LoggingConfig::default() },
             ..CliConfig::default()
         };
-        assert!(invalid_format.validate().unwrap_err().to_string().contains("Invalid log format"));
+        let invalid_format_err = match invalid_format.validate() {
+            Ok(()) => anyhow::bail!("invalid log format should fail validation"),
+            Err(err) => err.to_string(),
+        };
+        assert!(invalid_format_err.contains("Invalid log format"));
 
         let invalid_batch = CliConfig {
             performance: PerformanceConfig { batch_size: 0, ..PerformanceConfig::default() },
             ..CliConfig::default()
         };
-        assert!(invalid_batch.validate().unwrap_err().to_string().contains("Batch size"));
+        let invalid_batch_err = match invalid_batch.validate() {
+            Ok(()) => anyhow::bail!("invalid batch size should fail validation"),
+            Err(err) => err.to_string(),
+        };
+        assert!(invalid_batch_err.contains("Batch size"));
+        Ok(())
     }
 
     #[test]
-    fn builder_applies_explicit_overrides_before_validation() {
-        let _env_lock = env_lock();
-        let _guard = capture_and_clear_builder_env();
-        let config = ConfigBuilder::new()
-            .device(Some("cpu".to_string()))
-            .log_level(Some("warn".to_string()))
-            .cpu_threads(Some(4))
-            .batch_size(Some(32))
-            .build()
-            .unwrap();
+    fn builder_applies_explicit_overrides_before_validation() -> anyhow::Result<()> {
+        let config = temp_env::with_vars(
+            vec![
+                ("BITNET_DEVICE", Option::<&str>::None),
+                ("BITNET_BACKEND", Option::<&str>::None),
+                ("BITNET_LOG_LEVEL", Option::<&str>::None),
+                ("BITNET_CPU_THREADS", Option::<&str>::None),
+            ],
+            || -> anyhow::Result<CliConfig> {
+                ConfigBuilder::new()
+                    .device(Some("cpu".to_string()))
+                    .log_level(Some("warn".to_string()))
+                    .cpu_threads(Some(4))
+                    .batch_size(Some(32))
+                    .build()
+            },
+        )?;
 
         assert_eq!(config.default_device, "cpu");
         assert_eq!(config.logging.level, "warn");
         assert_eq!(config.performance.cpu_threads, Some(4));
         assert_eq!(config.performance.batch_size, 32);
+        Ok(())
     }
 
     #[test]
-    fn builder_applies_environment_overrides_with_device_precedence() {
-        let _env_lock = env_lock();
-        let _guard = EnvVarGuard::capture(&[
-            "BITNET_DEVICE",
-            "BITNET_BACKEND",
-            "BITNET_LOG_LEVEL",
-            "BITNET_CPU_THREADS",
-        ]);
-        set_env_var("BITNET_DEVICE", "cuda");
-        set_env_var("BITNET_BACKEND", "cpu");
-        set_env_var("BITNET_LOG_LEVEL", "error");
-        set_env_var("BITNET_CPU_THREADS", "12");
-
-        let config = ConfigBuilder::new()
-            .device(Some("auto".to_string()))
-            .log_level(Some("info".to_string()))
-            .cpu_threads(Some(2))
-            .build()
-            .unwrap();
+    fn builder_applies_environment_overrides_with_device_precedence() -> anyhow::Result<()> {
+        let config = temp_env::with_vars(
+            vec![
+                ("BITNET_DEVICE", Some("cuda")),
+                ("BITNET_BACKEND", Some("cpu")),
+                ("BITNET_LOG_LEVEL", Some("error")),
+                ("BITNET_CPU_THREADS", Some("12")),
+            ],
+            || -> anyhow::Result<CliConfig> {
+                ConfigBuilder::new()
+                    .device(Some("auto".to_string()))
+                    .log_level(Some("info".to_string()))
+                    .cpu_threads(Some(2))
+                    .build()
+            },
+        )?;
 
         assert_eq!(config.default_device, "cuda");
         assert_eq!(config.logging.level, "error");
         assert_eq!(config.performance.cpu_threads, Some(12));
+        Ok(())
     }
 
     #[test]
-    fn builder_uses_backend_when_device_env_is_absent_and_ignores_invalid_threads() {
-        let _env_lock = env_lock();
-        let _guard =
-            EnvVarGuard::capture(&["BITNET_DEVICE", "BITNET_BACKEND", "BITNET_CPU_THREADS"]);
-        remove_env_var("BITNET_DEVICE");
-        set_env_var("BITNET_BACKEND", "opencl");
-        set_env_var("BITNET_CPU_THREADS", "many");
-
-        let config = ConfigBuilder::new().cpu_threads(Some(3)).build().unwrap();
+    fn builder_uses_backend_when_device_env_is_absent_and_ignores_invalid_threads()
+    -> anyhow::Result<()> {
+        let config = temp_env::with_vars(
+            vec![
+                ("BITNET_DEVICE", Option::<&str>::None),
+                ("BITNET_BACKEND", Some("opencl")),
+                ("BITNET_CPU_THREADS", Some("many")),
+            ],
+            || -> anyhow::Result<CliConfig> { ConfigBuilder::new().cpu_threads(Some(3)).build() },
+        )?;
 
         assert_eq!(config.default_device, "opencl");
         assert_eq!(config.performance.cpu_threads, Some(3));
+        Ok(())
     }
 
     #[test]
-    fn builder_from_file_merges_file_values_with_overrides() {
-        let _env_lock = env_lock();
-        let _guard = capture_and_clear_builder_env();
-        let temp_dir = tempfile::tempdir().unwrap();
+    fn builder_from_file_merges_file_values_with_overrides() -> anyhow::Result<()> {
+        let temp_dir = tempfile::tempdir()?;
         let config_path = temp_dir.path().join("config.toml");
         std::fs::write(
             &config_path,
@@ -552,15 +522,22 @@ cpu_threads = 6
 batch_size = 4
 memory_optimization = true
 "#,
-        )
-        .unwrap();
+        )?;
 
-        let config = ConfigBuilder::from_file(&config_path)
-            .unwrap()
-            .device(Some("metal".to_string()))
-            .batch_size(Some(9))
-            .build()
-            .unwrap();
+        let config = temp_env::with_vars(
+            vec![
+                ("BITNET_DEVICE", Option::<&str>::None),
+                ("BITNET_BACKEND", Option::<&str>::None),
+                ("BITNET_LOG_LEVEL", Option::<&str>::None),
+                ("BITNET_CPU_THREADS", Option::<&str>::None),
+            ],
+            || -> anyhow::Result<CliConfig> {
+                ConfigBuilder::from_file(&config_path)?
+                    .device(Some("metal".to_string()))
+                    .batch_size(Some(9))
+                    .build()
+            },
+        )?;
 
         assert_eq!(config.default_device, "metal");
         assert_eq!(config.logging.level, "debug");
@@ -569,6 +546,7 @@ memory_optimization = true
         assert_eq!(config.performance.cpu_threads, Some(6));
         assert_eq!(config.performance.batch_size, 9);
         assert!(config.performance.memory_optimization);
+        Ok(())
     }
 
     #[test]
@@ -614,9 +592,17 @@ memory_optimization = true
 
     #[test]
     fn builder_preserves_intel_npu_device_label() -> anyhow::Result<()> {
-        let _env_lock = env_lock();
-        let _guard = capture_and_clear_builder_env();
-        let config = ConfigBuilder::new().device(Some("intel-npu:2".to_string())).build()?;
+        let config = temp_env::with_vars(
+            vec![
+                ("BITNET_DEVICE", Option::<&str>::None),
+                ("BITNET_BACKEND", Option::<&str>::None),
+                ("BITNET_LOG_LEVEL", Option::<&str>::None),
+                ("BITNET_CPU_THREADS", Option::<&str>::None),
+            ],
+            || -> anyhow::Result<CliConfig> {
+                ConfigBuilder::new().device(Some("intel-npu:2".to_string())).build()
+            },
+        )?;
         assert_eq!(config.default_device, "intel-npu:2");
         Ok(())
     }
@@ -919,12 +905,21 @@ memory_optimization = true
     }
 
     #[test]
-    fn builder_fails_validation_for_invalid_device() {
-        let err = ConfigBuilder::new()
-            .device(Some("nope".to_string()))
-            .build()
-            .expect_err("validate should reject");
+    fn builder_fails_validation_for_invalid_device() -> anyhow::Result<()> {
+        let err = temp_env::with_vars(
+            vec![
+                ("BITNET_DEVICE", Option::<&str>::None),
+                ("BITNET_BACKEND", Option::<&str>::None),
+                ("BITNET_LOG_LEVEL", Option::<&str>::None),
+                ("BITNET_CPU_THREADS", Option::<&str>::None),
+            ],
+            || match ConfigBuilder::new().device(Some("nope".to_string())).build() {
+                Ok(_) => anyhow::bail!("validate should reject invalid device"),
+                Err(err) => Ok(err),
+            },
+        )?;
         assert!(format!("{err}").contains("Invalid device"));
+        Ok(())
     }
 
     #[test]

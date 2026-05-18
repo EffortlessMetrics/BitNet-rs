@@ -327,6 +327,7 @@
 | intel-258v-platform | LNL258V-OV-QUAL-004 | LNL258V-OV-QUAL-003 | merged |
 | intel-258v-platform | LNL258V-ROUTE-007 | LNL258V-OV-QUAL-005, LNL258V-ROUTE-006 | merged |
 | intel-258v-platform | LNL258V-ROUTE-008 | LNL258V-ROUTE-007 | merged |
+| intel-258v-platform | LNL258V-ROUTE-009 | LNL258V-ROUTE-008 | merged |
 | intel-258v-platform | LNL258V-OV-QUAL-005 | LNL258V-OV-QUAL-004 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
