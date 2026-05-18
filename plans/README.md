@@ -60,3 +60,10 @@ Plans must not:
 - claim model answer readiness without the answer artifact gate,
 - claim hardware validation without lane-specific receipts,
 - claim CI budget enforcement unless policy TOMLs and workflow gates enforce it.
+
+
+## bitnet_b1_58-large control model
+
+- [bitnet-b158-large](bitnet-b158-large/README.md) sequences
+  `1bitLLM/bitnet_b1_58-large` as an artifact-authority and conversion-lane
+  control model before any backend or performance claim.

@@ -77,7 +77,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["ABAS-001"]
-acceptance = "Evaluate 1bitLLM/bitnet_b1_58-large as the smaller Apple BitNet control candidate, recording exact file, size, SHA256, I2_S/TL1 route evidence, tokenizer authority, coherent reference output or rejection evidence, and cleanup status."
+acceptance = "Evaluate 1bitLLM/bitnet_b1_58-large as the smaller Apple BitNet control candidate under BITNET-PROP-0009 and B158-large artifact/conversion/tokenizer/reference contracts, recording exact file, size, SHA256, I2_S/TL1 route evidence, tokenizer authority, coherent reference output or rejection evidence, and cleanup status without promoting CPU, CUDA, Apple, server, or speed claims."
 commands = [
   "Reference runner prompt-suite command on MacBook",
   "cargo fmt --all -- --check",
@@ -90,11 +90,18 @@ allowed_paths = [
   "ci/hardware/apple-silicon-macbook/**",
   "ci/model-artifacts/**",
   "docs/apple-silicon/**",
+  "docs/bitnet/bitnet-b158-large/**",
   "docs/model-artifacts/**",
+  "docs/proposals/BITNET-PROP-0009-bitnet-b158-large-control-model.md",
+  "docs/proposals/README.md",
   "docs/reports/**",
+  "docs/specs/BITNET-SPEC-B158-LARGE-*.md",
+  "docs/specs/INDEX.md",
   "docs/tracking/campaigns/apple-bitnet-artifact-sweep/**",
   "docs/tracking/campaigns/apple-silicon-macbook/**",
   "docs/tracking/generated/**",
+  "plans/bitnet-b158-large/**",
+  "plans/README.md",
 ]
 forbidden_paths = [
   "crates/bitnet-kernels/**",
