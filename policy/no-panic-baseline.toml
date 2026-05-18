@@ -204338,6 +204338,18 @@ receiver_fingerprint = "let json = serde_json::to_string(&rec).unwrap();"
 
 [[baseline]]
 path = "crates/bitnet-transformer/src/lib.rs"
+family = "expect"
+snippet = "self.feed_forward_output_slot.take().expect("
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = "self.feed_forward_output_slot.take().expect("
+
+[[baseline]]
+path = "crates/bitnet-transformer/src/lib.rs"
 family = "unwrap"
 snippet = "&& let Ok(ref_std) = ref_logits.broadcast_sub(&ref_logits.mean_all().unwrap())"
 count = 1
@@ -205271,6 +205283,18 @@ kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = "pos0.sub(&pos1).unwrap().abs().unwrap().sum_all().unwrap().to_scalar::<f32>().unwrap();"
+
+[[baseline]]
+path = "crates/bitnet-transformer/tests/transformer_model_tests.rs"
+family = "expect"
+snippet = 'workspace.first_output_surface().expect("workspace should classify one output surface");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'workspace.first_output_surface().expect("workspace should classify one output surface");'
 
 [[baseline]]
 path = "crates/bitnet-transformer/tests/transformer_model_tests.rs"
