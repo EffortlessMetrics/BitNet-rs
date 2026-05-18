@@ -34799,6 +34799,121 @@ fn classify_selected_query_projection_epsilon_source(
     }
 }
 
+fn selected_query_projection_input_history_capture_next_diagnostic(
+    classification: &str,
+) -> &'static str {
+    match classification {
+        "selected_query_projection_input_history_capture_incomplete" => {
+            "rerun reference and Rust trace capture with first_values_limit at least recommended_first_values_limit before replaying selected query projection source"
+        }
+        "selected_query_projection_input_history_capture_clean" => {
+            "selected query projection input histories are fully sampled; follow projection replay source classification before changing runtime math"
+        }
+        "selected_query_projection_input_history_capture_missing_context" => {
+            "capture reference and Rust attention-norm history records before replaying selected query projection source"
+        }
+        "selected_query_projection_input_history_capture_not_active" => {
+            "pin selected query RoPE expression and projection materiality before projection input-history capture"
+        }
+        _ => "keep selected query projection input-history capture diagnostic-only",
+    }
+}
+
+fn selected_query_projection_input_history_capture_frontier_from_rows(
+    rows: &[Value],
+    selected_count: usize,
+) -> Value {
+    let mut incomplete_count = 0_u64;
+    let mut missing_context_count = 0_u64;
+    let mut recommended_first_values_limit = 0_u64;
+    let mut first_incomplete_row = Value::Null;
+    let mut first_missing_context_row = Value::Null;
+
+    for row in rows {
+        let reference_len = value_u64(row, "/reference_input_first_values_len");
+        let reference_required = value_u64(row, "/reference_input_required_values");
+        let rust_len = value_u64(row, "/rust_input_first_values_len");
+        let rust_required = value_u64(row, "/rust_input_required_values");
+        let reference_incomplete =
+            reference_len.zip(reference_required).is_some_and(|(len, required)| len < required);
+        let rust_incomplete =
+            rust_len.zip(rust_required).is_some_and(|(len, required)| len < required);
+        let row_missing_context = reference_len.is_none()
+            || reference_required.is_none()
+            || rust_len.is_none()
+            || rust_required.is_none();
+
+        recommended_first_values_limit = recommended_first_values_limit
+            .max(reference_required.unwrap_or(0))
+            .max(rust_required.unwrap_or(0));
+
+        if reference_incomplete || rust_incomplete {
+            incomplete_count += 1;
+            if first_incomplete_row.is_null() {
+                first_incomplete_row = json!({
+                    "input_pair_component": row.pointer("/input_pair_component").cloned().unwrap_or(Value::Null),
+                    "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+                    "selected_token": row.pointer("/selected_token").cloned().unwrap_or(Value::Null),
+                    "projection_dim": row.pointer("/projection_dim").cloned().unwrap_or(Value::Null),
+                    "overall_projection_dim": row.pointer("/overall_projection_dim").cloned().unwrap_or(Value::Null),
+                    "reference_input_stage": row.pointer("/reference_input_stage").cloned().unwrap_or(Value::Null),
+                    "reference_input_first_values_len": reference_len,
+                    "reference_input_required_values": reference_required,
+                    "reference_input_capture_incomplete": reference_incomplete,
+                    "rust_input_stage": row.pointer("/rust_input_stage").cloned().unwrap_or(Value::Null),
+                    "rust_input_first_values_len": rust_len,
+                    "rust_input_required_values": rust_required,
+                    "rust_input_capture_incomplete": rust_incomplete,
+                    "blocked_reasons": row.pointer("/blocked_reasons").cloned().unwrap_or_else(|| json!([])),
+                });
+            }
+        } else if row_missing_context {
+            missing_context_count += 1;
+            if first_missing_context_row.is_null() {
+                first_missing_context_row = json!({
+                    "input_pair_component": row.pointer("/input_pair_component").cloned().unwrap_or(Value::Null),
+                    "head": row.pointer("/head").cloned().unwrap_or(Value::Null),
+                    "selected_token": row.pointer("/selected_token").cloned().unwrap_or(Value::Null),
+                    "projection_dim": row.pointer("/projection_dim").cloned().unwrap_or(Value::Null),
+                    "blocked_reasons": row.pointer("/blocked_reasons").cloned().unwrap_or_else(|| json!([])),
+                });
+            }
+        }
+    }
+
+    let classification = if selected_count == 0 {
+        "selected_query_projection_input_history_capture_not_active"
+    } else if incomplete_count > 0 {
+        "selected_query_projection_input_history_capture_incomplete"
+    } else if missing_context_count > 0 || rows.is_empty() {
+        "selected_query_projection_input_history_capture_missing_context"
+    } else {
+        "selected_query_projection_input_history_capture_clean"
+    };
+
+    json!({
+        "diagnostic_only": true,
+        "claim_allowed": false,
+        "policy": "Selected query projection input-history capture frontier is diagnostic-only evidence for whether Q projection replay is blocked by truncated attention-norm history first_values; it does not change RMSNorm, QK256, RoPE, score-input conversion, score accumulation, softmax, value-mix, or runtime math and does not promote reference parity, A770 semantic quality, attention score residency, selected attention, resident KV, full residency, performance, or completion",
+        "classification": classification,
+        "selected_count": selected_count,
+        "row_count": rows.len(),
+        "incomplete_count": incomplete_count,
+        "missing_context_count": missing_context_count,
+        "recommended_first_values_limit": if recommended_first_values_limit == 0 { Value::Null } else { json!(recommended_first_values_limit) },
+        "first_incomplete_row": first_incomplete_row,
+        "first_missing_context_row": first_missing_context_row,
+        "blocked_reasons": if classification == "selected_query_projection_input_history_capture_incomplete" {
+            json!(["selected_query_projection_input_history_first_values_truncated"])
+        } else if classification == "selected_query_projection_input_history_capture_missing_context" {
+            json!(["selected_query_projection_input_history_capture_missing_context"])
+        } else {
+            json!([])
+        },
+        "next_diagnostic": selected_query_projection_input_history_capture_next_diagnostic(classification),
+    })
+}
+
 fn selected_query_projection_input_history_delta_summary(
     reference_input: Option<&ReferenceTraceRecord>,
     rust_input: Option<&RustTraceRecord>,
@@ -35228,6 +35343,12 @@ fn attention_selected_query_projection_epsilon_source(
                 "weight": DEFAULT_QUERY_PROJECTION_WEIGHT,
                 "reference_replay_error": reference_replay_error,
                 "rust_replay_error": rust_replay_error,
+                "reference_input_first_values_len": reference_input.map(|record| record.first_values.len() as u64),
+                "reference_input_required_values": reference_input.map(|record| record.nelements),
+                "reference_input_capture_incomplete": reference_input.is_some_and(|record| (record.first_values.len() as u64) < record.nelements),
+                "rust_input_first_values_len": rust_input.map(|record| record.first_values.len() as u64),
+                "rust_input_required_values": rust_input.map(|record| record.num_elements as u64),
+                "rust_input_capture_incomplete": rust_input.is_some_and(|record| record.first_values.len() < record.num_elements),
                 "reference_replay_value": reference_replay_value,
                 "reference_target_value": reference_target_value,
                 "rust_replay_value": rust_replay_value,
@@ -35291,6 +35412,7 @@ fn attention_selected_query_projection_epsilon_source(
         "weight": weight_report,
         "weight_load_error": weight_load_error,
         "input_history_delta": input_history_delta,
+        "input_history_capture_frontier": selected_query_projection_input_history_capture_frontier_from_rows(&rows, selected_count),
         "rows": rows,
         "next_diagnostic": selected_query_projection_epsilon_source_next_diagnostic(classification),
     })
@@ -54469,6 +54591,79 @@ mod tests {
         assert_eq!(
             classify_selected_query_projection_epsilon_source(2, 0, 0, 0, 1, 2),
             "selected_query_projection_epsilon_source_replay_delta_unpinned"
+        );
+    }
+
+    #[test]
+    fn selected_query_projection_input_history_capture_reports_truncation() {
+        let rows = vec![json!({
+            "input_pair_component": "x0",
+            "head": 5,
+            "selected_token": 17,
+            "projection_dim": 5,
+            "overall_projection_dim": 645,
+            "reference_input_stage": "attn_norm_history_ref_layout",
+            "reference_input_first_values_len": 2304,
+            "reference_input_required_values": 46080,
+            "rust_input_stage": "attention_v_input_history_ref_layout",
+            "rust_input_first_values_len": 2304,
+            "rust_input_required_values": 46080,
+            "blocked_reasons": ["reference_query_projection_replay_missing"]
+        })];
+
+        let report = selected_query_projection_input_history_capture_frontier_from_rows(&rows, 2);
+
+        assert_eq!(report.pointer("/diagnostic_only"), Some(&json!(true)));
+        assert_eq!(report.pointer("/claim_allowed"), Some(&json!(false)));
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_projection_input_history_capture_incomplete"))
+        );
+        assert_eq!(report.pointer("/recommended_first_values_limit"), Some(&json!(46080)));
+        assert_eq!(
+            report.pointer("/first_incomplete_row/reference_input_capture_incomplete"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_query_projection_input_history_first_values_truncated"))
+        );
+    }
+
+    #[test]
+    fn selected_query_projection_input_history_capture_reports_clean() {
+        let rows = vec![json!({
+            "reference_input_first_values_len": 46080,
+            "reference_input_required_values": 46080,
+            "rust_input_first_values_len": 46080,
+            "rust_input_required_values": 46080
+        })];
+
+        let report = selected_query_projection_input_history_capture_frontier_from_rows(&rows, 1);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_projection_input_history_capture_clean"))
+        );
+        assert_eq!(report.pointer("/blocked_reasons"), Some(&json!([])));
+    }
+
+    #[test]
+    fn selected_query_projection_input_history_capture_reports_missing_context() {
+        let rows = vec![json!({
+            "reference_input_first_values_len": 46080,
+            "reference_input_required_values": 46080
+        })];
+
+        let report = selected_query_projection_input_history_capture_frontier_from_rows(&rows, 1);
+
+        assert_eq!(
+            report.pointer("/classification"),
+            Some(&json!("selected_query_projection_input_history_capture_missing_context"))
+        );
+        assert_eq!(
+            report.pointer("/blocked_reasons/0"),
+            Some(&json!("selected_query_projection_input_history_capture_missing_context"))
         );
     }
 
