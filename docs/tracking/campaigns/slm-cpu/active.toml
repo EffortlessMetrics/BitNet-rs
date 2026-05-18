@@ -2414,6 +2414,59 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-040"
+status = "ready"
+branch = "codex/slm-cpu-040-workspace-down-proj-storage"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-039"]
+acceptance = "Use the SLM-CPU-039 `feed_forward.output` workspace-owned boundary to attempt one reusable workspace-backed `FeedForward::down_proj` output storage hook, or explicitly prove why Candle's current linear/output API still prevents safe reuse at that exact boundary. The slice must preserve generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false when behavior artifacts are regenerated; it must update allocation-boundary evidence and must not claim speedup or sustained throughput."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli warm_session_aggregate_allocation_audit",
+  "cargo clippy --locked -p bitnet-cli --no-default-features --features cpu,full-cli --all-targets -- -D warnings",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "The next Qwen3 Q8_0 Kaby allocation slice is scoped to the exact FeedForward::down_proj output storage hook behind the existing workspace-owned feed_forward.output boundary.",
+  "A valid implementation may either enable one reusable workspace-backed output slot or record a narrower no-reuse proof for this API boundary.",
+]
+must_not_claim = [
+  "Sustained 8250U throughput is proven.",
+  "A runtime speedup is proven without before/after behavior-preserving receipts.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-024"
 status = "merged"
 pr = 5342
