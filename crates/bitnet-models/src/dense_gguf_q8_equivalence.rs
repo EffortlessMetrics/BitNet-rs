@@ -20,6 +20,8 @@ pub const DENSE_GGUF_Q8_GENERATED_ID_TEXT_EQUIVALENCE_ARTIFACT_KIND: &str =
     "dense_gguf_q8_generated_id_text_equivalence";
 pub const DENSE_GGUF_Q8_PRODUCTION_COMPUTE_HOOK_ARTIFACT_KIND: &str =
     "dense_gguf_q8_production_compute_hook";
+pub const DENSE_GGUF_Q8_SELECTOR_READINESS_GATE_ARTIFACT_KIND: &str =
+    "dense_gguf_q8_selector_readiness_gate";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -64,6 +66,13 @@ pub enum DenseQ8GeneratedIdTextMismatch {
 pub enum DenseQ8ProductionComputeHookStatus {
     Missing,
     AvailableButSelectorStillEagerF32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DenseQ8SelectorReadinessStatus {
+    Blocked,
+    ReadyForSeparateSelectorUpdate,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -158,6 +167,24 @@ pub struct DenseQ8ProductionComputeHookAvailability {
     pub speedup_claim: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DenseQ8SelectorReadinessGate {
+    pub schema: u64,
+    pub artifact_kind: String,
+    pub selected_path: DenseQ8RuntimePath,
+    pub selected_kernel: String,
+    pub readiness_status: DenseQ8SelectorReadinessStatus,
+    pub generated_id_receipt_equivalence_passed: bool,
+    pub production_compute_hook_available: bool,
+    pub selector_update_ready: bool,
+    pub selector_update_required_before_runtime_use: bool,
+    pub sidecar_runtime_compute_allowed: bool,
+    pub runtime_blockers: Vec<DenseQ8RuntimePreflightBlocker>,
+    pub eager_f32_runtime_preserved: bool,
+    pub dense_runtime_replaced: bool,
+    pub speedup_claim: bool,
+}
+
 impl DenseQ8SidecarEquivalenceGate {
     pub fn runtime_still_blocked(&self) -> bool {
         !self.sidecar_runtime_compute_allowed
@@ -187,6 +214,16 @@ impl DenseQ8GeneratedIdTextEquivalenceGate {
 }
 
 impl DenseQ8ProductionComputeHookAvailability {
+    pub fn runtime_still_blocked(&self) -> bool {
+        !self.sidecar_runtime_compute_allowed
+            && self.eager_f32_runtime_preserved
+            && !self.dense_runtime_replaced
+            && !self.speedup_claim
+            && self.selector_update_required_before_runtime_use
+    }
+}
+
+impl DenseQ8SelectorReadinessGate {
     pub fn runtime_still_blocked(&self) -> bool {
         !self.sidecar_runtime_compute_allowed
             && self.eager_f32_runtime_preserved
@@ -356,6 +393,43 @@ pub fn build_dense_q8_production_compute_hook_availability(
         selector_update_required_before_runtime_use: true,
         sidecar_runtime_compute_allowed: false,
         runtime_blockers,
+        eager_f32_runtime_preserved: true,
+        dense_runtime_replaced: false,
+        speedup_claim: false,
+    }
+}
+
+pub fn build_dense_q8_selector_readiness_gate(
+    availability: &DenseQ8ProductionComputeHookAvailability,
+) -> DenseQ8SelectorReadinessGate {
+    let evidence_ready = availability.generated_id_receipt_equivalence_passed
+        && availability.production_compute_hook_available
+        && availability.eager_f32_runtime_preserved
+        && !availability.dense_runtime_replaced
+        && !availability.speedup_claim
+        && !availability.sidecar_runtime_compute_allowed;
+    let selector_update_ready = evidence_ready
+        && availability.runtime_blockers
+            == vec![DenseQ8RuntimePreflightBlocker::ProductionSelectorStillEagerF32];
+    let readiness_status = if selector_update_ready {
+        DenseQ8SelectorReadinessStatus::ReadyForSeparateSelectorUpdate
+    } else {
+        DenseQ8SelectorReadinessStatus::Blocked
+    };
+
+    DenseQ8SelectorReadinessGate {
+        schema: 1,
+        artifact_kind: DENSE_GGUF_Q8_SELECTOR_READINESS_GATE_ARTIFACT_KIND.to_string(),
+        selected_path: availability.selected_path,
+        selected_kernel: availability.selected_kernel.clone(),
+        readiness_status,
+        generated_id_receipt_equivalence_passed: availability
+            .generated_id_receipt_equivalence_passed,
+        production_compute_hook_available: availability.production_compute_hook_available,
+        selector_update_ready,
+        selector_update_required_before_runtime_use: true,
+        sidecar_runtime_compute_allowed: false,
+        runtime_blockers: availability.runtime_blockers.clone(),
         eager_f32_runtime_preserved: true,
         dense_runtime_replaced: false,
         speedup_claim: false,
@@ -727,6 +801,109 @@ mod tests {
         assert!(!availability.sidecar_runtime_compute_allowed);
         assert!(!availability.dense_runtime_replaced);
         assert!(!availability.speedup_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn q8_selector_readiness_gate_blocks_when_hook_or_behavior_evidence_is_missing() -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let mut candidate = behavior_receipt("q8-sidecar-candidate");
+        candidate.generated_ids = vec![84644];
+
+        let gate =
+            build_dense_q8_generated_id_text_equivalence_gate(&preflight, baseline, candidate);
+        let availability = build_dense_q8_production_compute_hook_availability(&gate, None);
+        let readiness = build_dense_q8_selector_readiness_gate(&availability);
+
+        assert_eq!(readiness.artifact_kind, DENSE_GGUF_Q8_SELECTOR_READINESS_GATE_ARTIFACT_KIND);
+        assert_eq!(readiness.readiness_status, DenseQ8SelectorReadinessStatus::Blocked);
+        assert!(!readiness.generated_id_receipt_equivalence_passed);
+        assert!(!readiness.production_compute_hook_available);
+        assert!(!readiness.selector_update_ready);
+        assert!(readiness.runtime_still_blocked());
+        assert_eq!(readiness.selected_path, DenseQ8RuntimePath::EagerF32Candle);
+        assert_eq!(
+            readiness.runtime_blockers,
+            vec![
+                DenseQ8RuntimePreflightBlocker::GeneratedIdReceiptEquivalenceMissing,
+                DenseQ8RuntimePreflightBlocker::ProductionComputeHookMissing,
+                DenseQ8RuntimePreflightBlocker::ProductionSelectorStillEagerF32
+            ]
+        );
+        assert!(!readiness.sidecar_runtime_compute_allowed);
+        assert!(readiness.eager_f32_runtime_preserved);
+        assert!(!readiness.dense_runtime_replaced);
+        assert!(!readiness.speedup_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn q8_selector_readiness_gate_is_ready_only_for_a_separate_selector_update() -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let candidate = behavior_receipt("q8-sidecar-candidate");
+
+        let gate =
+            build_dense_q8_generated_id_text_equivalence_gate(&preflight, baseline, candidate);
+        let availability = build_dense_q8_production_compute_hook_availability(
+            &gate,
+            Some("dense-q8-sidecar-linear-hook"),
+        );
+        let readiness = build_dense_q8_selector_readiness_gate(&availability);
+
+        assert_eq!(
+            readiness.readiness_status,
+            DenseQ8SelectorReadinessStatus::ReadyForSeparateSelectorUpdate
+        );
+        assert!(readiness.generated_id_receipt_equivalence_passed);
+        assert!(readiness.production_compute_hook_available);
+        assert!(readiness.selector_update_ready);
+        assert!(readiness.runtime_still_blocked());
+        assert!(!readiness.sidecar_runtime_compute_allowed);
+        assert_eq!(
+            readiness.runtime_blockers,
+            vec![DenseQ8RuntimePreflightBlocker::ProductionSelectorStillEagerF32]
+        );
+        assert_eq!(readiness.selected_path, DenseQ8RuntimePath::EagerF32Candle);
+        assert_eq!(readiness.selected_kernel, "dense-f32-candle-linear");
+        assert!(readiness.selector_update_required_before_runtime_use);
+        assert!(readiness.eager_f32_runtime_preserved);
+        assert!(!readiness.dense_runtime_replaced);
+        assert!(!readiness.speedup_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn q8_selector_readiness_gate_blocks_when_hook_exists_but_behavior_differs() -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let mut candidate = behavior_receipt("q8-sidecar-candidate");
+        candidate.decoded_text = "wrong".to_string();
+
+        let gate =
+            build_dense_q8_generated_id_text_equivalence_gate(&preflight, baseline, candidate);
+        let availability = build_dense_q8_production_compute_hook_availability(
+            &gate,
+            Some("dense-q8-sidecar-linear-hook"),
+        );
+        let readiness = build_dense_q8_selector_readiness_gate(&availability);
+
+        assert_eq!(readiness.readiness_status, DenseQ8SelectorReadinessStatus::Blocked);
+        assert!(!readiness.generated_id_receipt_equivalence_passed);
+        assert!(readiness.production_compute_hook_available);
+        assert!(!readiness.selector_update_ready);
+        assert!(readiness.runtime_still_blocked());
+        assert_eq!(
+            readiness.runtime_blockers,
+            vec![
+                DenseQ8RuntimePreflightBlocker::GeneratedIdReceiptEquivalenceMissing,
+                DenseQ8RuntimePreflightBlocker::ProductionSelectorStillEagerF32
+            ]
+        );
+        assert!(!readiness.sidecar_runtime_compute_allowed);
+        assert!(!readiness.dense_runtime_replaced);
+        assert!(!readiness.speedup_claim);
         Ok(())
     }
 }

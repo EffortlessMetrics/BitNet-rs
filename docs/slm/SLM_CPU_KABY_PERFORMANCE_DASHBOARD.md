@@ -246,6 +246,30 @@ The availability surface does not execute packed Q8_0 sidecar compute, replace
 the dense runtime, change generated IDs/text, or claim speedup. It only makes
 the next runtime blocker machine-checkable.
 
+SLM-CPU-051 adds the selector-readiness gate after the hook availability
+surface. It is still non-executing: the report can state that generated-ID/text
+equivalence and a production compute hook are both present, but it does not
+change the runtime selector itself. A later selector-update PR must carry the
+actual runtime behavior change and its before/after receipts.
+
+```text
+artifact_kind = dense_gguf_q8_selector_readiness_gate
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+readiness_status = blocked | ready_for_separate_selector_update
+selector_update_ready = true | false
+selector_update_required_before_runtime_use = true
+sidecar_runtime_compute_allowed = false
+runtime_blockers = production_selector_still_eager_f32 | ...
+eager_f32_runtime_preserved = true
+dense_runtime_replaced = false
+speedup_claim = false
+```
+
+Readiness here means only that the next selector PR has the required proof
+inputs. It is not packed Q8_0 production execution and it is not a speedup
+claim.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
