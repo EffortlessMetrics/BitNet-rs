@@ -96,6 +96,25 @@ fn apple_m3_air_host_profile_contract_rejects_accelerator_execution_claims()
 }
 
 #[test]
+fn apple_m3_air_host_profile_contract_rejects_mislabelled_runtime_api() -> Result<(), Box<dyn Error>>
+{
+    let mut contract = AppleM3AirHostProfileContract::current();
+    let metal = contract
+        .proof_lane_labels
+        .iter_mut()
+        .find(|label| label.backend_label == APPLE_M3_AIR_METAL_BACKEND)
+        .ok_or_else(|| io::Error::other("missing Metal label"))?;
+    metal.runtime_api = "cpu-neon".to_owned();
+
+    ensure(
+        contract.validate()
+            == Err(AppleReceiptError::InvalidProfileField("proof_lane_labels.runtime_api")),
+        "Metal label accepted a CPU runtime API",
+    )?;
+    Ok(())
+}
+
+#[test]
 fn apple_metal_smoke_receipt_preserves_backend_identity() {
     let receipt = AppleBackendReceipt::new(
         "apple-m4-mac-mini",

@@ -133,19 +133,32 @@ impl AppleM3AirHostProfileContract {
                 return Err(AppleReceiptError::InvalidProfileField("proof_lane_labels"));
             }
         }
-        for accelerator_label in [APPLE_M3_AIR_METAL_BACKEND, APPLE_M3_AIR_MPSGRAPH_BACKEND] {
-            if self
+        for label in &self.proof_lane_labels {
+            require_nonempty("proof_lane_labels.backend_label", &label.backend_label)?;
+            require_nonempty("proof_lane_labels.runtime_api", &label.runtime_api)?;
+            require_nonempty("proof_lane_labels.claim_scope", &label.claim_scope)?;
+        }
+        for (backend_label, runtime_api, execution_available) in [
+            (APPLE_M3_AIR_CPU_NEON_BACKEND, "cpu-neon", true),
+            (APPLE_M3_AIR_METAL_BACKEND, "metal", false),
+            (APPLE_M3_AIR_MPSGRAPH_BACKEND, "mpsgraph", false),
+        ] {
+            let label = self
                 .proof_lane_labels
                 .iter()
-                .any(|label| label.backend_label == accelerator_label && label.execution_available)
-            {
+                .find(|label| label.backend_label == backend_label)
+                .ok_or(AppleReceiptError::InvalidProfileField("proof_lane_labels"))?;
+            if label.runtime_api != runtime_api {
+                return Err(AppleReceiptError::InvalidProfileField(
+                    "proof_lane_labels.runtime_api",
+                ));
+            }
+            if label.execution_available != execution_available {
+                if backend_label == APPLE_M3_AIR_CPU_NEON_BACKEND {
+                    return Err(AppleReceiptError::InvalidProfileField("apple-m3-air-cpu-neon"));
+                }
                 return Err(AppleReceiptError::ClaimBoundaryViolation("accelerator_execution"));
             }
-        }
-        if !self.proof_lane_labels.iter().any(|label| {
-            label.backend_label == APPLE_M3_AIR_CPU_NEON_BACKEND && label.execution_available
-        }) {
-            return Err(AppleReceiptError::InvalidProfileField("apple-m3-air-cpu-neon"));
         }
         for claim in [
             AppleM3AirUnsupportedClaim::MetalModelInference,
