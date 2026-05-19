@@ -8347,8 +8347,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-COMPARE-008"
-status = "in_progress"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-COMPARE-008-route-policy"
+pr = 5850
+head_sha = "3b4b5cdbb6c31ba236e015441e9a89614c234bd0"
+merge_sha = "b89c3c3ad2daefbdc95c79f0e914a8ad9c151aaa"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
