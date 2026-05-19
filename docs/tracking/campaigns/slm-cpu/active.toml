@@ -3204,9 +3204,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-054"
-status = "pr_open"
+status = "merged"
 pr = 5992
 head_sha = "db81e20444019f253b612f6e53bb6291201f5524"
+merge_sha = "8157d160c4a66d3982f90589debef9406c3ace19"
 branch = "codex/slm-cpu-054-sidecar-runtime-hook"
 stackable = false
 review_mode = "codex_premerge"
