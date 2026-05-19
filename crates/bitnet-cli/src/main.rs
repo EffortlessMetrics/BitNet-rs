@@ -109,6 +109,72 @@ fn critical_not_claims() -> Vec<&'static str> {
     ]
 }
 
+fn qk256_trailer_scale_from_simple_loader_bytes(
+    name: &str,
+    packed: &[u8],
+    expected_bytes: usize,
+) -> Result<Option<f32>> {
+    let Some(trailing_bytes) = packed.len().checked_sub(expected_bytes) else {
+        return Ok(None);
+    };
+    if trailing_bytes == 0 {
+        return Ok(None);
+    }
+    if trailing_bytes < std::mem::size_of::<f32>() {
+        debug!(
+            "QK256 '{}' simple-loader trailer too short for inline scale: {} bytes",
+            name, trailing_bytes
+        );
+        return Ok(None);
+    }
+
+    let mut scale_bytes = [0u8; std::mem::size_of::<f32>()];
+    let scale_len = scale_bytes.len();
+    scale_bytes.copy_from_slice(&packed[expected_bytes..expected_bytes + scale_len]);
+    let scale = f32::from_le_bytes(scale_bytes);
+    if !scale.is_finite() {
+        anyhow::bail!("QK256 '{name}' simple-loader inline scale is not finite: {scale}");
+    }
+    Ok(Some(scale))
+}
+
+fn qk256_raw_tensors_from_simple_loader(
+    i2s_qk256: impl IntoIterator<Item = (String, bitnet_models::quant::i2s_qk256::I2SQk256NoScale)>,
+) -> Result<std::collections::HashMap<String, candle_core::Tensor>> {
+    let mut raw_tensors = std::collections::HashMap::new();
+    for (name, qk256) in i2s_qk256 {
+        let expected_bytes = qk256.rows * qk256.row_stride_bytes;
+        let scale = qk256_trailer_scale_from_simple_loader_bytes(&name, &qk256.qs, expected_bytes)?;
+        let mut packed = qk256.qs;
+        if packed.len() != expected_bytes {
+            tracing::warn!(
+                "QK256 '{}' byte length {} differs from expected {}; normalizing for runtime tensor",
+                name,
+                packed.len(),
+                expected_bytes
+            );
+            packed.resize(expected_bytes, 0);
+        }
+
+        let raw_tensor = candle_core::Tensor::from_raw_buffer(
+            &packed,
+            DType::U8,
+            &[qk256.rows, qk256.row_stride_bytes],
+            &candle_core::Device::Cpu,
+        )
+        .with_context(|| format!("Failed to build QK256 raw tensor for {name}"))?;
+
+        raw_tensors.insert(format!("{name}.qk256_qs"), raw_tensor);
+        if let Some(scale) = scale {
+            let scale_tensor =
+                candle_core::Tensor::from_slice(&[scale], &[1], &candle_core::Device::Cpu)
+                    .with_context(|| format!("Failed to build QK256 scale tensor for {name}"))?;
+            raw_tensors.insert(format!("{name}.qk256_scale"), scale_tensor);
+        }
+    }
+    Ok(raw_tensors)
+}
+
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
 #[cfg(feature = "full-cli")]
@@ -4187,30 +4253,7 @@ async fn run_simple_generation(
             .context("Mock loader also failed")?;
             loader_mode = load_result.loader_mode.as_str();
             warn!("GGUF loader mode: {}", loader_mode);
-            let mut raw_tensors = std::collections::HashMap::new();
-            for (name, qk256) in load_result.i2s_qk256 {
-                let expected_bytes = qk256.rows * qk256.row_stride_bytes;
-                let mut packed = qk256.qs;
-                if packed.len() != expected_bytes {
-                    tracing::warn!(
-                        "QK256 '{}' byte length {} differs from expected {}; normalizing for runtime tensor",
-                        name,
-                        packed.len(),
-                        expected_bytes
-                    );
-                    packed.resize(expected_bytes, 0);
-                }
-
-                let raw_tensor = candle_core::Tensor::from_raw_buffer(
-                    &packed,
-                    DType::U8,
-                    &[qk256.rows, qk256.row_stride_bytes],
-                    &candle_core::Device::Cpu,
-                )
-                .with_context(|| format!("Failed to build QK256 raw tensor for {name}"))?;
-
-                raw_tensors.insert(format!("{}.qk256_qs", name), raw_tensor);
-            }
+            let raw_tensors = qk256_raw_tensors_from_simple_loader(load_result.i2s_qk256)?;
             let m = bitnet_models::BitNetModel::from_gguf(
                 load_result.config.clone(),
                 load_result.tensors,
@@ -12284,6 +12327,27 @@ fn apple_machine_receipt_json_from_probe(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn simple_loader_qk256_raw_tensors_preserve_trailer_scale() -> Result<()> {
+        let mut packed = vec![0x55; 64];
+        packed.extend_from_slice(&1.25f32.to_le_bytes());
+        let qk256 = bitnet_models::quant::i2s_qk256::I2SQk256NoScale::new(1, 256, packed)?;
+
+        let raw_tensors =
+            qk256_raw_tensors_from_simple_loader([("blk.0.ffn_gate.weight".to_string(), qk256)])?;
+        let qs = raw_tensors
+            .get("blk.0.ffn_gate.weight.qk256_qs")
+            .ok_or_else(|| anyhow::anyhow!("missing qk256 raw tensor"))?;
+        let scale = raw_tensors
+            .get("blk.0.ffn_gate.weight.qk256_scale")
+            .ok_or_else(|| anyhow::anyhow!("missing qk256 scale tensor"))?;
+
+        assert_eq!(qs.dims(), &[1, 64]);
+        assert_eq!(qs.to_vec2::<u8>()?, vec![vec![0x55; 64]]);
+        assert_eq!(scale.to_vec1::<f32>()?, vec![1.25]);
+        Ok(())
+    }
 
     #[test]
     #[cfg(feature = "full-cli")]
