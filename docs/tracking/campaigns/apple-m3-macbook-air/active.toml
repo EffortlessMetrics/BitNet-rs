@@ -1041,9 +1041,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-021"
-status = "pr_open"
+status = "merged"
 pr = 5952
-head_sha = "47e27d6511093b669153ab270752eac7e1e49990"
+head_sha = "256c46491b1cffa69c2992fee8833f7cb5e2eda9"
+merge_sha = "16de92563ceffcbe2b9e13beb2d5dd5144330849"
 branch = "codex/apple-m3-macbook-air/M3MBA-021-device-profile-contract"
 stackable = false
 review_mode = "codex_premerge"
