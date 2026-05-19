@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T09:10:00Z"
+event = "pr_open"
+item = "LNL258V-REG-008"
+pr = 5808
+head_sha = "e80e87aaf59faeeae2bd2c4fc4a62765d0c458cc"
+branch = "codex/lunar-lake/LNL258V-REG-008-power-profile-regression"
+actor = "codex"
+summary = "Opened PR #5808 for strict Lunar Lake regression power-profile evidence wiring."
+
+notes = [
+  "The PR adds power-profile evidence to regression v2 so low_power blockers, promotion readiness, and power advantage status are machine-readable in strict regression.",
+  "The claim boundary remains regression wiring only: no new inference, route promotion, speedup, power-advantage, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]

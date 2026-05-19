@@ -165,6 +165,11 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = BITNET_SEMANTIC_INTAKE)]
         bitnet_semantic_intake: Option<PathBuf>,
 
+        /// Optional low-power route power-profile evidence receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = POWER_PROFILE_EVIDENCE_FILE)]
+        power_profile_evidence: Option<PathBuf>,
+
         /// Output JSON regression bundle to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -820,6 +825,8 @@ pub struct LunarLakeRegressionBundle {
     pub durability_bundle: Option<DurabilityRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bitnet_semantic_intake: Option<BitnetSemanticIntakeRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub power_profile_evidence: Option<PowerProfileRegressionSummary>,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
     pub regression_passed: bool,
@@ -839,6 +846,8 @@ pub struct RegressionSurfaceSummary {
     pub durability_bundle_indexed: bool,
     #[serde(default)]
     pub bitnet_semantic_intake_indexed: bool,
+    #[serde(default)]
+    pub power_profile_evidence_indexed: bool,
     pub required_answer_profiles: Vec<String>,
     pub required_answer_categories: Vec<String>,
     pub required_route_profiles: Vec<String>,
@@ -854,6 +863,10 @@ pub struct RegressionSurfaceSummary {
     pub durability_stability_proven: bool,
     #[serde(default)]
     pub route_promotion_scope: RoutePromotionScopeSummary,
+    #[serde(default)]
+    pub low_power_promotion_ready: bool,
+    #[serde(default)]
+    pub power_advantage_proven: bool,
     pub strict_ready: bool,
     pub gaps: Vec<String>,
 }
@@ -868,6 +881,7 @@ impl Default for RegressionSurfaceSummary {
             cold_warm_benchmark_indexed: false,
             durability_bundle_indexed: false,
             bitnet_semantic_intake_indexed: false,
+            power_profile_evidence_indexed: false,
             required_answer_profiles: REQUIRED_CORPUS_V2_PROFILES
                 .iter()
                 .map(|profile| (*profile).to_string())
@@ -888,6 +902,8 @@ impl Default for RegressionSurfaceSummary {
             timing_coverage: TimingApplicabilityCoverageSummary::default(),
             durability_stability_proven: false,
             route_promotion_scope: RoutePromotionScopeSummary::default(),
+            low_power_promotion_ready: false,
+            power_advantage_proven: false,
             strict_ready: false,
             gaps: vec![
                 "answer corpus v2 is not indexed".to_string(),
@@ -895,6 +911,7 @@ impl Default for RegressionSurfaceSummary {
                 "cold/warm benchmark qualification is not indexed".to_string(),
                 "durability bundle is not indexed".to_string(),
                 "BitNet semantic intake is not indexed".to_string(),
+                "low_power power-profile evidence is not indexed".to_string(),
             ],
         }
     }
@@ -1008,6 +1025,24 @@ pub struct BitnetSemanticIntakeRegressionSummary {
     pub claim_boundary_preserved: bool,
     pub regression_ready: bool,
     pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PowerProfileRegressionSummary {
+    pub path: String,
+    pub power_profile_index_ready: bool,
+    pub low_power_promotion_ready: bool,
+    pub power_advantage_proven: bool,
+    pub low_power_route_count: usize,
+    pub low_power_routes_remain_unpromoted: bool,
+    pub current_context_is_ac_only: bool,
+    pub battery_mode_sample_recorded: bool,
+    pub energy_proxy_recorded: bool,
+    pub thermal_context_recorded: bool,
+    pub claim_boundary_preserved: bool,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
+    pub blockers: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -2186,6 +2221,7 @@ impl LunarLakeCommand {
                 cold_warm_benchmark,
                 durability_bundle,
                 bitnet_semantic_intake,
+                power_profile_evidence,
                 json_out,
                 created_utc,
                 strict,
@@ -2194,16 +2230,18 @@ impl LunarLakeCommand {
                     Some(created_utc) => normalize_created_utc(created_utc)?,
                     None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 };
-                let receipt = build_regression_bundle_with_created_utc_and_inputs(
-                    artifact_root,
-                    operator_receipt,
-                    answer_corpus_v2.as_deref(),
-                    route_profile_comparison.as_deref(),
-                    cold_warm_benchmark.as_deref(),
-                    durability_bundle.as_deref(),
-                    bitnet_semantic_intake.as_deref(),
-                    created_utc,
-                )?;
+                let receipt =
+                    build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
+                        artifact_root,
+                        operator_receipt,
+                        answer_corpus_v2.as_deref(),
+                        route_profile_comparison.as_deref(),
+                        cold_warm_benchmark.as_deref(),
+                        durability_bundle.as_deref(),
+                        bitnet_semantic_intake.as_deref(),
+                        power_profile_evidence.as_deref(),
+                        created_utc,
+                    )?;
                 write_or_print_regression_bundle(&receipt, json_out.as_deref())?;
                 if *strict {
                     let strict_gaps = strict_regression_v2_gaps(&receipt);
@@ -2835,6 +2873,7 @@ pub fn build_regression_bundle_with_created_utc(
     )
 }
 
+#[cfg(test)]
 pub fn build_regression_bundle_with_created_utc_and_inputs(
     root: &Path,
     operator_receipt: &Path,
@@ -2843,6 +2882,30 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     cold_warm_benchmark: Option<&Path>,
     durability_bundle: Option<&Path>,
     bitnet_semantic_intake: Option<&Path>,
+    created_utc: String,
+) -> Result<LunarLakeRegressionBundle> {
+    build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
+        root,
+        operator_receipt,
+        answer_corpus_v2,
+        route_profile_comparison,
+        cold_warm_benchmark,
+        durability_bundle,
+        bitnet_semantic_intake,
+        None,
+        created_utc,
+    )
+}
+
+pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
+    root: &Path,
+    operator_receipt: &Path,
+    answer_corpus_v2: Option<&Path>,
+    route_profile_comparison: Option<&Path>,
+    cold_warm_benchmark: Option<&Path>,
+    durability_bundle: Option<&Path>,
+    bitnet_semantic_intake: Option<&Path>,
+    power_profile_evidence: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRegressionBundle> {
     let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
@@ -3010,6 +3073,19 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     } else {
         None
     };
+    let power_profile_evidence = if let Some(path) = power_profile_evidence {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_power_profile_regression(&path)?;
+        checks.push(regression_check_owned(
+            "low_power_profile_evidence_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            power_profile_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
     let gaps = checks
         .iter()
         .filter(|check| check.status != "passed")
@@ -3021,6 +3097,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         cold_warm_benchmark.as_ref(),
         durability_bundle.as_ref(),
         bitnet_semantic_intake.as_ref(),
+        power_profile_evidence.as_ref(),
     );
 
     Ok(LunarLakeRegressionBundle {
@@ -3036,6 +3113,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         cold_warm_benchmark,
         durability_bundle,
         bitnet_semantic_intake,
+        power_profile_evidence,
         regression_surface,
         regression_passed: gaps.is_empty(),
         checks,
@@ -3050,6 +3128,7 @@ fn build_regression_surface_summary(
     cold_warm_benchmark: Option<&ColdWarmRegressionSummary>,
     durability_bundle: Option<&DurabilityRegressionSummary>,
     bitnet_semantic_intake: Option<&BitnetSemanticIntakeRegressionSummary>,
+    power_profile_evidence: Option<&PowerProfileRegressionSummary>,
 ) -> RegressionSurfaceSummary {
     let mut summary = RegressionSurfaceSummary {
         answer_corpus_v2_indexed: answer_corpus_v2.is_some(),
@@ -3057,6 +3136,7 @@ fn build_regression_surface_summary(
         cold_warm_benchmark_indexed: cold_warm_benchmark.is_some(),
         durability_bundle_indexed: durability_bundle.is_some(),
         bitnet_semantic_intake_indexed: bitnet_semantic_intake.is_some(),
+        power_profile_evidence_indexed: power_profile_evidence.is_some(),
         candidate_routes_remain_unpromoted: route_profile_comparison
             .map(|summary| summary.candidate_routes_remain_unpromoted)
             .unwrap_or(false),
@@ -3079,6 +3159,12 @@ fn build_regression_surface_summary(
             .unwrap_or_default(),
         durability_stability_proven: durability_bundle
             .map(|summary| summary.stability_proven)
+            .unwrap_or(false),
+        low_power_promotion_ready: power_profile_evidence
+            .map(|summary| summary.low_power_promotion_ready)
+            .unwrap_or(false),
+        power_advantage_proven: power_profile_evidence
+            .map(|summary| summary.power_advantage_proven)
             .unwrap_or(false),
         route_promotion_scope: cold_warm_benchmark
             .map(|summary| summary.route_promotion_scope.clone())
@@ -3223,6 +3309,26 @@ fn build_regression_surface_summary(
         }
     } else {
         summary.gaps.push("BitNet semantic intake is not indexed".to_string());
+    }
+
+    if let Some(power) = power_profile_evidence {
+        if !power.regression_ready {
+            summary.gaps.push(format!(
+                "low_power power-profile evidence is not regression-ready: {}",
+                power.gaps.join("; ")
+            ));
+        }
+        if !power.low_power_routes_remain_unpromoted {
+            summary.gaps.push(
+                "low_power power-profile evidence shows route promotion without promotion-lane proof"
+                    .to_string(),
+            );
+        }
+        if !power.claim_boundary_preserved {
+            summary
+                .gaps
+                .push("low_power power-profile claim boundary is not preserved".to_string());
+        }
     }
 
     summary.gaps.sort();
@@ -3781,6 +3887,73 @@ fn inspect_bitnet_semantic_intake_regression(
     })
 }
 
+fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressionSummary> {
+    let power: LunarLakePowerProfileEvidence = read_json_receipt(path)?;
+    let mut gaps = Vec::new();
+    if power.artifact_kind != "lunar_lake_power_profile_evidence" {
+        gaps.push(format!("unexpected artifact_kind={}", power.artifact_kind));
+    }
+    if !power.power_profile_index_ready {
+        gaps.push(format!(
+            "low_power power-profile evidence is not index-ready: {}",
+            power.gaps.join("; ")
+        ));
+    }
+    let low_power_routes_remain_unpromoted = power
+        .low_power_routes
+        .iter()
+        .all(|route| route.route_status != "promoted" && !route.power_promotion_ready);
+    if !low_power_routes_remain_unpromoted {
+        gaps.push(
+            "low_power power-profile evidence promoted a route or marked a route promotion-ready"
+                .to_string(),
+        );
+    }
+    if power.low_power_routes.iter().any(|route| route.fallback_used == Some(true)) {
+        gaps.push("low_power power-profile evidence observed fallback_used=true".to_string());
+    }
+
+    let claim = &power.claim_boundary;
+    let claim_boundary_preserved = !claim.new_inference_executed
+        && !claim.route_promotion_changed
+        && !claim.speedup_claim
+        && !claim.power_advantage_claim
+        && !claim.acceleration_claim
+        && !claim.native_npu_inference_claim
+        && !claim.bitnet_qk256_i2s_behavior_changed
+        && !claim.hidden_fallback_allowed;
+    if !claim_boundary_preserved {
+        gaps.push(
+            "low_power power-profile evidence must preserve no-inference/no-promotion/no-speedup/no-power-advantage/no-acceleration/no-QK256-change claim boundary"
+                .to_string(),
+        );
+    }
+
+    let mut blockers = power.gaps.clone();
+    for route in &power.low_power_routes {
+        blockers.extend(route.power_related_blockers.iter().cloned());
+    }
+    blockers.sort();
+    blockers.dedup();
+
+    Ok(PowerProfileRegressionSummary {
+        path: path_string(path),
+        power_profile_index_ready: power.power_profile_index_ready,
+        low_power_promotion_ready: power.low_power_promotion_ready,
+        power_advantage_proven: power.power_advantage_proven,
+        low_power_route_count: power.low_power_routes.len(),
+        low_power_routes_remain_unpromoted,
+        current_context_is_ac_only: power.telemetry.current_context_is_ac_only,
+        battery_mode_sample_recorded: power.telemetry.battery_mode_sample_recorded,
+        energy_proxy_recorded: power.telemetry.energy_proxy_recorded,
+        thermal_context_recorded: power.telemetry.thermal_context_recorded,
+        claim_boundary_preserved,
+        regression_ready: gaps.is_empty(),
+        gaps,
+        blockers,
+    })
+}
+
 fn corpus_v2_notes(summary: &AnswerCorpusV2Summary) -> Vec<String> {
     let mut notes = vec![
         format!("case_count={}", summary.case_count),
@@ -3905,6 +4078,27 @@ fn bitnet_semantic_intake_regression_notes(
         format!("stale_after_merged_count={}", summary.stale_after_merged_count),
         format!("source_lanes={}", summary.source_lanes.join(",")),
         format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
+fn power_profile_regression_notes(summary: &PowerProfileRegressionSummary) -> Vec<String> {
+    let mut notes = vec![
+        format!("power_profile_index_ready={}", summary.power_profile_index_ready),
+        format!("low_power_promotion_ready={}", summary.low_power_promotion_ready),
+        format!("power_advantage_proven={}", summary.power_advantage_proven),
+        format!("low_power_route_count={}", summary.low_power_route_count),
+        format!(
+            "low_power_routes_remain_unpromoted={}",
+            summary.low_power_routes_remain_unpromoted
+        ),
+        format!("current_context_is_ac_only={}", summary.current_context_is_ac_only),
+        format!("battery_mode_sample_recorded={}", summary.battery_mode_sample_recorded),
+        format!("energy_proxy_recorded={}", summary.energy_proxy_recorded),
+        format!("thermal_context_recorded={}", summary.thermal_context_recorded),
+        format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
+        format!("blocker_count={}", summary.blockers.len()),
     ];
     notes.extend(summary.gaps.iter().cloned());
     notes
@@ -15592,8 +15786,41 @@ mod tests {
             }),
         )?;
         write_ready_bitnet_semantic_intake(temp.path(), BITNET_SEMANTIC_INTAKE)?;
+        write_json(
+            temp.path(),
+            POWER_THERMAL_CONTEXT_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "availability": {
+                    "memory_context_recorded": true,
+                    "power_context_recorded": true,
+                    "thermal_context_recorded": false
+                },
+                "power": {
+                    "active_scheme": "Balanced",
+                    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+                    "ac_power_inferred": true
+                },
+                "thermal": {
+                    "thermal_zones_visible": null,
+                    "temperatures_celsius": []
+                }
+            }),
+        )?;
+        let power_profile = build_power_profile_evidence_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new("cold-warm.json"),
+            Path::new(POWER_THERMAL_CONTEXT_FILE),
+            "2026-05-14T23:50:00Z".to_string(),
+        )?;
+        fs::write(
+            temp.path().join(POWER_PROFILE_EVIDENCE_FILE),
+            serde_json::to_vec_pretty(&power_profile)?,
+        )?;
 
-        let bundle = build_regression_bundle_with_created_utc_and_inputs(
+        let bundle = build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
             temp.path(),
             Path::new(OPERATOR_READINESS),
             Some(Path::new("corpus-v2.yaml")),
@@ -15601,6 +15828,7 @@ mod tests {
             Some(Path::new("cold-warm.json")),
             Some(Path::new("durability.json")),
             Some(Path::new(BITNET_SEMANTIC_INTAKE)),
+            Some(Path::new(POWER_PROFILE_EVIDENCE_FILE)),
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -15651,6 +15879,9 @@ mod tests {
         assert!(bundle.regression_surface.durability_bundle_indexed);
         assert!(bundle.regression_surface.durability_stability_proven);
         assert!(bundle.regression_surface.bitnet_semantic_intake_indexed);
+        assert!(bundle.regression_surface.power_profile_evidence_indexed);
+        assert!(!bundle.regression_surface.low_power_promotion_ready);
+        assert!(!bundle.regression_surface.power_advantage_proven);
         let Some(cold_warm) = bundle.cold_warm_benchmark.as_ref() else {
             bail!("missing cold_warm_benchmark summary");
         };
@@ -15670,6 +15901,22 @@ mod tests {
         assert!(intake.regression_ready, "{:?}", intake.gaps);
         assert!(!intake.rerun_required);
         assert_eq!(intake.pending_shared_change_count, 1);
+        let Some(power) = bundle.power_profile_evidence.as_ref() else {
+            bail!("missing power_profile_evidence summary");
+        };
+        assert!(power.regression_ready, "{:?}", power.gaps);
+        assert!(power.power_profile_index_ready);
+        assert!(power.low_power_routes_remain_unpromoted);
+        assert!(power.current_context_is_ac_only);
+        assert!(!power.battery_mode_sample_recorded);
+        assert!(!power.energy_proxy_recorded);
+        assert!(!power.thermal_context_recorded);
+        assert!(
+            power
+                .blockers
+                .iter()
+                .any(|blocker| blocker.contains("battery comparison evidence is missing"))
+        );
         assert!(strict_regression_v2_gaps(&bundle).is_empty());
         Ok(())
     }

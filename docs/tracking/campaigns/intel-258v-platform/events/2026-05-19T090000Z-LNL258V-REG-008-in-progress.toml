@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T09:00:00Z"
+event = "in_progress"
+item = "LNL258V-REG-008"
+branch = "codex/lunar-lake/LNL258V-REG-008-power-profile-regression"
+actor = "codex"
+summary = "Started strict regression wiring for Lunar Lake low-power power-profile evidence."
+
+notes = [
+  "The work indexes lunar-lake-power-profile-evidence.json inside regression v2 so low_power blockers and promotion readiness are visible in the strict regression bundle.",
+  "The scope keeps low_power unpromoted and preserves no new inference, speedup, power-advantage, route-promotion, native accelerator, or BitNet QK256/I2_S behavior-change claims.",
+]
