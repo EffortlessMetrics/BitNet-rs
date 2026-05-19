@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T05:38:22Z"
+event = "merged"
+item = "LNL258V-ROUTE-021"
+branch = "codex/lunar-lake/LNL258V-ROUTE-021-structured-cpu-route"
+pr = 5862
+head_sha = "ae563b01b7bc94fe288f84fc0386a3ffe69789b1"
+merge_sha = "75cb7d227fd09d8d78e301289bc2d042c7eca63b"
+actor = "codex"
+summary = "Merged LNL258V-ROUTE-021 to promote the dense Qwen CPU control route for the structured workload profile."
+
+notes = [
+  "The structured profile now resolves to dense_slm_default_cpu using existing fallback-free corpus-v2 quality, route-policy readiness, and profile-applicable timing evidence.",
+  "OpenVINO GPU remains promoted only for ask_short and ask_normal, OpenVINO NPU remains candidate-only, and prefill_heavy, decode_heavy, low_power, and warm_resident stay blocked.",
+  "No new inference, OpenVINO GPU/NPU promotion, speedup claim, power-advantage claim, Arc/NPU acceleration claim, native accelerator claim, full BitNet accelerator inference claim, packed QK256 accelerator decode claim, or BitNet QK256/I2_S behavior change was made.",
+]
