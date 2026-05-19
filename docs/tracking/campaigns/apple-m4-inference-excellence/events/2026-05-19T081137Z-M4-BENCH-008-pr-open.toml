@@ -1,0 +1,18 @@
+timestamp = "2026-05-19T08:11:37Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-008"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5902
+head_sha = "38125f838e9272bdbfa7af0ba602f5a62d3373de"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-008-repeat-harness"
+
+notes = [
+  "Opened PR #5902 for the M4-BENCH-008 benchmark repeat harness.",
+  "`bitnet mac benchmark --repeat <n>` writes `apple_m4_benchmark_variance_v1` aggregate receipts over dense SLM benchmark v2 child summaries.",
+  "The aggregate validator opens child summaries and checks child artifact kind, model/cache identity, tokenizer pre, backend/fallback state, profile set, prompt totals, and generated-token totals.",
+  "The PR includes a narrow `qwen2.5-0.5b-instruct-q8_0` short_prompt_16_out repeat=2 harness smoke receipt only; M4-BENCH-005 still owns final dense and BitNet variance envelopes.",
+  "No BitNet performance, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
