@@ -852,7 +852,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-SCALAR-000"
-status = "ready"
+status = "merged"
+pr = 5559
+head_sha = "3d33c2324e9474753cd0fd2b29344168528fb2ce"
+merge_sha = "2fa488420140fd80f532781c18340adda88cc116"
 branch = "codex/cpu-scalar-000-docs-contract"
 stackable = false
 review_mode = "codex_premerge"
