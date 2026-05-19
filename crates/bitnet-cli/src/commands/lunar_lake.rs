@@ -126,6 +126,16 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
         artifact_root: PathBuf,
 
+        /// Route promotion ledger to index for profile-aware operator readiness.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = ROUTE_PROMOTION_LEDGER)]
+        route_promotion_ledger: Option<PathBuf>,
+
+        /// Route profile comparison receipt to index for profile-aware operator readiness.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
+        route_profile_comparison: Option<PathBuf>,
+
         /// Output JSON readiness receipt to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -824,6 +834,8 @@ pub struct LunarLakeOperatorReceipt {
     pub operator_ready: bool,
     pub default_route: OperatorRoute,
     pub routes: Vec<OperatorRoute>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_policy: Option<OperatorRoutePolicySummary>,
     pub evidence: Vec<EvidenceStatus>,
     pub gaps: Vec<String>,
     pub claim_boundary: ClaimBoundary,
@@ -842,6 +854,33 @@ pub struct OperatorRoute {
     pub answer_gate_evidence: Option<String>,
     pub phase_evidence: Option<String>,
     pub acceleration_claim: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OperatorRoutePolicySummary {
+    pub route_promotion_ledger: String,
+    pub route_profile_comparison: String,
+    pub policy_ready: bool,
+    pub promotion_ready: bool,
+    pub profile_comparison_ready: bool,
+    pub default_route_id: String,
+    pub auto_route_policy_stage: String,
+    pub hidden_fallback_allowed: bool,
+    pub profile_scoped_promotion_only: bool,
+    pub openvino_gpu_promoted_profiles: Vec<String>,
+    pub openvino_npu_promoted_profiles: Vec<String>,
+    pub profile_promotions: Vec<OperatorProfilePromotionSummary>,
+    pub blocked_profiles: Vec<String>,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OperatorProfilePromotionSummary {
+    pub profile_id: String,
+    pub promoted_route: Option<String>,
+    pub profile_status: Option<String>,
+    pub promotion_decision: Option<String>,
+    pub route_blockers: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -2320,16 +2359,29 @@ pub struct BitnetSemanticIntakeClaimBoundary {
 impl LunarLakeCommand {
     pub async fn execute(&self) -> Result<()> {
         match &self.action {
-            LunarLakeAction::Validate { artifact_root, json_out, created_utc, strict } => {
+            LunarLakeAction::Validate {
+                artifact_root,
+                route_promotion_ledger,
+                route_profile_comparison,
+                json_out,
+                created_utc,
+                strict,
+            } => {
                 let receipt = match created_utc {
                     Some(created_utc) => {
                         let created_utc = normalize_created_utc(created_utc)?;
-                        build_operator_readiness_receipt_with_created_utc(
+                        build_operator_readiness_receipt_with_created_utc_and_route_policy(
                             artifact_root,
                             created_utc,
+                            route_promotion_ledger.as_deref(),
+                            route_profile_comparison.as_deref(),
                         )?
                     }
-                    None => build_operator_readiness_receipt(artifact_root)?,
+                    None => build_operator_readiness_receipt_with_route_policy(
+                        artifact_root,
+                        route_promotion_ledger.as_deref(),
+                        route_profile_comparison.as_deref(),
+                    )?,
                 };
                 write_or_print_receipt(&receipt, json_out.as_deref())?;
                 if *strict && !receipt.operator_ready {
@@ -2830,6 +2882,7 @@ impl LunarLakeCommand {
     }
 }
 
+#[cfg(test)]
 pub fn build_operator_readiness_receipt(root: &Path) -> Result<LunarLakeOperatorReceipt> {
     build_operator_readiness_receipt_with_created_utc(
         root,
@@ -2837,9 +2890,37 @@ pub fn build_operator_readiness_receipt(root: &Path) -> Result<LunarLakeOperator
     )
 }
 
+pub fn build_operator_readiness_receipt_with_route_policy(
+    root: &Path,
+    route_promotion_ledger: Option<&Path>,
+    route_profile_comparison: Option<&Path>,
+) -> Result<LunarLakeOperatorReceipt> {
+    build_operator_readiness_receipt_with_created_utc_and_route_policy(
+        root,
+        chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        route_promotion_ledger,
+        route_profile_comparison,
+    )
+}
+
+#[cfg(test)]
 pub fn build_operator_readiness_receipt_with_created_utc(
     root: &Path,
     created_utc: String,
+) -> Result<LunarLakeOperatorReceipt> {
+    build_operator_readiness_receipt_with_created_utc_and_route_policy(
+        root,
+        created_utc,
+        None,
+        None,
+    )
+}
+
+pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
+    root: &Path,
+    created_utc: String,
+    route_promotion_ledger: Option<&Path>,
+    route_profile_comparison: Option<&Path>,
 ) -> Result<LunarLakeOperatorReceipt> {
     let evidence = vec![
         inspect_receipt(
@@ -2983,6 +3064,26 @@ pub fn build_operator_readiness_receipt_with_created_utc(
     if !arc_npu_bounded_ready {
         gaps.push("Arc/NPU bounded parity evidence is incomplete".to_string());
     }
+    let route_policy = match (route_promotion_ledger, route_profile_comparison) {
+        (Some(ledger_path), Some(comparison_path)) => {
+            let summary = inspect_operator_route_policy(root, ledger_path, comparison_path)?;
+            if !summary.policy_ready {
+                gaps.push(format!(
+                    "route policy evidence is not operator-ready: {}",
+                    summary.gaps.join(", ")
+                ));
+            }
+            Some(summary)
+        }
+        (Some(_), None) | (None, Some(_)) => {
+            gaps.push(
+                "route policy evidence requires both route promotion ledger and route profile comparison"
+                    .to_string(),
+            );
+            None
+        }
+        (None, None) => None,
+    };
 
     let default_route = dense_slm_cpu_route();
     let routes = vec![
@@ -3002,6 +3103,7 @@ pub fn build_operator_readiness_receipt_with_created_utc(
         operator_ready: gaps.is_empty(),
         default_route,
         routes,
+        route_policy,
         evidence,
         gaps,
         claim_boundary: ClaimBoundary {
@@ -3014,6 +3116,194 @@ pub fn build_operator_readiness_receipt_with_created_utc(
             hidden_fallback_allowed: false,
         },
     })
+}
+
+fn inspect_operator_route_policy(
+    root: &Path,
+    ledger_path: &Path,
+    comparison_path: &Path,
+) -> Result<OperatorRoutePolicySummary> {
+    let ledger_path = resolve_receipt_path(root, ledger_path);
+    let comparison_path = resolve_receipt_path(root, comparison_path);
+    let ledger_path_string = path_string(&ledger_path);
+    let comparison_path_string = path_string(&comparison_path);
+    let mut gaps = Vec::new();
+
+    let ledger = if ledger_path.exists() {
+        Some(read_json_receipt::<LunarLakeRoutePromotionLedger>(&ledger_path)?)
+    } else {
+        gaps.push(format!("missing route promotion ledger: {}", ledger_path.display()));
+        None
+    };
+    let comparison = if comparison_path.exists() {
+        Some(read_json_receipt::<LunarLakeRouteProfileComparison>(&comparison_path)?)
+    } else {
+        gaps.push(format!("missing route profile comparison: {}", comparison_path.display()));
+        None
+    };
+
+    let promotion_ready = ledger.as_ref().is_some_and(|ledger| ledger.promotion_ready);
+    if let Some(ledger) = &ledger {
+        if !ledger.promotion_ready {
+            gaps.push("route promotion ledger is not promotion_ready".to_string());
+        }
+        if ledger.auto_route_policy.hidden_fallback_allowed {
+            gaps.push("route promotion ledger allows hidden fallback".to_string());
+        }
+        if !ledger.auto_route_policy.candidate_routes_require_profile_promotion {
+            gaps.push(
+                "route promotion ledger does not require profile promotion for candidates"
+                    .to_string(),
+            );
+        }
+        if !ledger.auto_route_policy.route_reason_required {
+            gaps.push("route promotion ledger does not require route reasons".to_string());
+        }
+    }
+
+    let profile_comparison_ready =
+        comparison.as_ref().is_some_and(|comparison| comparison.profile_comparison_ready);
+    if let Some(comparison) = &comparison {
+        if !comparison.profile_comparison_ready {
+            gaps.push("route profile comparison is not profile_comparison_ready".to_string());
+        }
+        if comparison.claim_boundary.hidden_fallback_allowed {
+            gaps.push("route profile comparison allows hidden fallback".to_string());
+        }
+        if !comparison.route_promotion_scope.profile_scoped_promotion_only {
+            gaps.push("route profile comparison is not profile-scoped".to_string());
+        }
+        if !comparison.route_promotion_scope.unexpected_openvino_profile_promotions.is_empty() {
+            gaps.push(format!(
+                "unexpected OpenVINO profile promotions: {}",
+                comparison.route_promotion_scope.unexpected_openvino_profile_promotions.join(", ")
+            ));
+        }
+        if !comparison.route_promotion_scope.openvino_npu_promoted_profiles.is_empty() {
+            gaps.push(format!(
+                "OpenVINO NPU unexpectedly promoted for profiles: {}",
+                comparison.route_promotion_scope.openvino_npu_promoted_profiles.join(", ")
+            ));
+        }
+    }
+
+    let default_route_id = ledger
+        .as_ref()
+        .map(|ledger| ledger.default_route_id.clone())
+        .or_else(|| comparison.as_ref().map(|comparison| comparison.default_route_id.clone()))
+        .unwrap_or_else(|| DEFAULT_ASK_ROUTE.to_string());
+    let auto_route_policy_stage = ledger
+        .as_ref()
+        .map(|ledger| ledger.auto_route_policy.policy_stage.clone())
+        .unwrap_or_else(|| "missing_route_promotion_ledger".to_string());
+    let hidden_fallback_allowed = ledger
+        .as_ref()
+        .map(|ledger| ledger.auto_route_policy.hidden_fallback_allowed)
+        .unwrap_or(true)
+        || comparison
+            .as_ref()
+            .map(|comparison| comparison.claim_boundary.hidden_fallback_allowed)
+            .unwrap_or(true);
+    let profile_scoped_promotion_only = comparison
+        .as_ref()
+        .map(|comparison| comparison.route_promotion_scope.profile_scoped_promotion_only)
+        .unwrap_or(false);
+    let openvino_gpu_promoted_profiles = comparison
+        .as_ref()
+        .map(|comparison| comparison.route_promotion_scope.openvino_gpu_promoted_profiles.clone())
+        .or_else(|| {
+            ledger.as_ref().map(|ledger| {
+                promoted_profiles_for_route(ledger, "dense_slm_openvino_gpu_candidate")
+            })
+        })
+        .unwrap_or_default();
+    let openvino_npu_promoted_profiles = comparison
+        .as_ref()
+        .map(|comparison| comparison.route_promotion_scope.openvino_npu_promoted_profiles.clone())
+        .or_else(|| {
+            ledger.as_ref().map(|ledger| {
+                promoted_profiles_for_route(ledger, "dense_slm_openvino_npu_candidate")
+            })
+        })
+        .unwrap_or_default();
+
+    let profile_promotions: Vec<OperatorProfilePromotionSummary> = comparison
+        .as_ref()
+        .map(|comparison| {
+            comparison
+                .profiles
+                .iter()
+                .map(|profile| {
+                    let route_blockers = profile
+                        .route_evidence
+                        .iter()
+                        .flat_map(|route| {
+                            route
+                                .blockers
+                                .iter()
+                                .map(move |blocker| format!("{}: {}", route.route_id, blocker))
+                        })
+                        .collect();
+                    OperatorProfilePromotionSummary {
+                        profile_id: profile.profile_id.clone(),
+                        promoted_route: profile.promoted_route.clone(),
+                        profile_status: Some(profile.profile_status.clone()),
+                        promotion_decision: Some(profile.promotion_decision.clone()),
+                        route_blockers,
+                    }
+                })
+                .collect()
+        })
+        .or_else(|| {
+            ledger.as_ref().map(|ledger| {
+                ledger
+                    .workload_profiles
+                    .iter()
+                    .map(|profile| OperatorProfilePromotionSummary {
+                        profile_id: profile.profile_id.clone(),
+                        promoted_route: profile.promoted_route.clone(),
+                        profile_status: None,
+                        promotion_decision: None,
+                        route_blockers: Vec::new(),
+                    })
+                    .collect()
+            })
+        })
+        .unwrap_or_default();
+    let blocked_profiles = profile_promotions
+        .iter()
+        .filter(|profile| profile.promoted_route.is_none())
+        .map(|profile| profile.profile_id.clone())
+        .collect();
+
+    Ok(OperatorRoutePolicySummary {
+        route_promotion_ledger: ledger_path_string,
+        route_profile_comparison: comparison_path_string,
+        policy_ready: gaps.is_empty() && promotion_ready && profile_comparison_ready,
+        promotion_ready,
+        profile_comparison_ready,
+        default_route_id,
+        auto_route_policy_stage,
+        hidden_fallback_allowed,
+        profile_scoped_promotion_only,
+        openvino_gpu_promoted_profiles,
+        openvino_npu_promoted_profiles,
+        profile_promotions,
+        blocked_profiles,
+        gaps,
+    })
+}
+
+fn promoted_profiles_for_route(
+    ledger: &LunarLakeRoutePromotionLedger,
+    route_id: &str,
+) -> Vec<String> {
+    ledger
+        .routes
+        .iter()
+        .find(|route| route.route_id == route_id)
+        .map(|route| route.promoted_for.clone())
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -13522,6 +13812,36 @@ mod tests {
     }
 
     #[test]
+    fn operator_readiness_indexes_profile_route_policy() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_minimal_route_policy(temp.path())?;
+
+        let receipt = build_operator_readiness_receipt_with_created_utc_and_route_policy(
+            temp.path(),
+            "2026-05-19T14:30:00Z".to_string(),
+            Some(Path::new(ROUTE_PROMOTION_LEDGER)),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+        )?;
+
+        assert!(receipt.operator_ready, "{:?}", receipt.gaps);
+        let policy = receipt.route_policy.as_ref().context("missing route policy")?;
+        assert!(policy.policy_ready, "{:?}", policy.gaps);
+        assert_eq!(policy.default_route_id, "dense_slm_default_cpu");
+        assert_eq!(
+            policy.openvino_gpu_promoted_profiles,
+            vec!["ask_normal".to_string(), "ask_short".to_string()]
+        );
+        assert!(policy.openvino_npu_promoted_profiles.is_empty());
+        assert!(policy.profile_scoped_promotion_only);
+        assert!(!policy.hidden_fallback_allowed);
+        assert!(policy.blocked_profiles.contains(&"low_power".to_string()));
+        assert!(policy.profile_promotions.iter().any(|profile| profile.profile_id == "ask_normal"
+            && profile.promoted_route.as_deref() == Some("dense_slm_openvino_gpu_candidate")));
+        Ok(())
+    }
+
+    #[test]
     fn regression_bundle_passes_with_operator_ready_receipt() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
@@ -17762,6 +18082,254 @@ mod tests {
         {
             write_json(root, file, no_speedup.clone())?;
         }
+        Ok(())
+    }
+
+    fn write_minimal_route_policy(root: &Path) -> Result<()> {
+        write_json(
+            root,
+            ROUTE_PROMOTION_LEDGER,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_route_promotion_ledger",
+                "proof_stage": "route_promotion_policy_recorded",
+                "created_utc": "2026-05-19T14:30:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(root),
+                "operator_receipt": "lunar-lake-operator-readiness.json",
+                "comparison_receipt": "lunar-lake-operator-comparison.json",
+                "promotion_ready": true,
+                "default_route_id": "dense_slm_default_cpu",
+                "auto_route_policy": {
+                    "policy_stage": "ledger_driven_auto_route_enabled",
+                    "default_route": "dense_slm_default_cpu",
+                    "hidden_fallback_allowed": false,
+                    "cpu_default_until_profile_promoted": true,
+                    "candidate_routes_require_profile_promotion": true,
+                    "route_reason_required": true,
+                    "notes": []
+                },
+                "workload_profiles": [
+                    {
+                        "profile_id": "ask_normal",
+                        "prompt_tokens": "<=512",
+                        "output_tokens": "<=128",
+                        "purpose": "normal ask",
+                        "promoted_route": "dense_slm_openvino_gpu_candidate",
+                        "candidate_routes": ["dense_slm_default_cpu"]
+                    },
+                    {
+                        "profile_id": "ask_short",
+                        "prompt_tokens": "<=64",
+                        "output_tokens": "<=32",
+                        "purpose": "short ask",
+                        "promoted_route": "dense_slm_openvino_gpu_candidate",
+                        "candidate_routes": ["dense_slm_default_cpu"]
+                    },
+                    {
+                        "profile_id": "low_power",
+                        "prompt_tokens": "<=512",
+                        "output_tokens": "<=128",
+                        "purpose": "low power",
+                        "promoted_route": null,
+                        "candidate_routes": [
+                            "dense_slm_default_cpu",
+                            "dense_slm_openvino_npu_candidate"
+                        ]
+                    }
+                ],
+                "routes": [
+                    {
+                        "route_id": "dense_slm_default_cpu",
+                        "status": "promoted",
+                        "promoted_for": ["regression_tiny"],
+                        "blocked_for": ["openvino_gpu_promoted_for_ask_normal"],
+                        "required_evidence": ["fallback_used=false"],
+                        "present_evidence": ["cpu"],
+                        "missing_evidence": [],
+                        "selected_backend": "cpu-rust",
+                        "runtime_api": "cpu",
+                        "fallback_policy": "strict_no_fallback",
+                        "answer_gate_evidence": "cpu.json",
+                        "phase_evidence": "phase.json",
+                        "fallback_used": false,
+                        "answer_gate_passed": true,
+                        "phase_timing_present": true,
+                        "speedup_claim": false,
+                        "acceleration_claim": false,
+                        "last_evidence_utc": "2026-05-19T14:30:00Z",
+                        "reason": "CPU baseline"
+                    },
+                    {
+                        "route_id": "dense_slm_openvino_gpu_candidate",
+                        "status": "promoted",
+                        "promoted_for": ["ask_normal", "ask_short"],
+                        "blocked_for": ["low_power_power_advantage_unproven"],
+                        "required_evidence": ["fallback_used=false"],
+                        "present_evidence": ["gpu"],
+                        "missing_evidence": [],
+                        "selected_backend": "openvino-gpu",
+                        "runtime_api": "openvino_genai",
+                        "fallback_policy": "strict_no_fallback",
+                        "answer_gate_evidence": "gpu.json",
+                        "phase_evidence": "phase.json",
+                        "fallback_used": false,
+                        "answer_gate_passed": true,
+                        "phase_timing_present": true,
+                        "speedup_claim": false,
+                        "acceleration_claim": false,
+                        "last_evidence_utc": "2026-05-19T14:30:00Z",
+                        "reason": "GPU profile promotion"
+                    },
+                    {
+                        "route_id": "dense_slm_openvino_npu_candidate",
+                        "status": "candidate",
+                        "promoted_for": [],
+                        "blocked_for": ["low_power_power_advantage_unproven"],
+                        "required_evidence": ["benchmark_qualified_speedup_or_power_advantage"],
+                        "present_evidence": ["npu"],
+                        "missing_evidence": ["benchmark_qualified_speedup_or_power_advantage"],
+                        "selected_backend": "openvino-npu",
+                        "runtime_api": "openvino_genai",
+                        "fallback_policy": "strict_no_fallback",
+                        "answer_gate_evidence": "npu.json",
+                        "phase_evidence": "phase.json",
+                        "fallback_used": false,
+                        "answer_gate_passed": true,
+                        "phase_timing_present": true,
+                        "speedup_claim": false,
+                        "acceleration_claim": false,
+                        "last_evidence_utc": "2026-05-19T14:30:00Z",
+                        "reason": "NPU candidate"
+                    }
+                ],
+                "gaps": [],
+                "claim_boundary": {
+                    "cpu_is_truth_path": true,
+                    "dense_slm_default_is_cpu_until_speedup_qualified": true,
+                    "openvino_gpu_npu_are_candidates_not_speedup_claims": true,
+                    "arc_bitnet_full_inference_claimed": false,
+                    "npu_bitnet_full_inference_claimed": false,
+                    "qk256_accelerator_decode_claimed": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        write_json(
+            root,
+            ROUTE_PROFILE_COMPARISON,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_route_profile_comparison",
+                "proof_stage": "route_profiles_indexed_no_promotion_change",
+                "created_utc": "2026-05-19T14:30:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(root),
+                "promotion_ledger": "lunar-lake-route-promotion.json",
+                "phase_comparison_receipt": "phase.json",
+                "profile_comparison_ready": true,
+                "default_route_id": "dense_slm_default_cpu",
+                "profiles": [
+                    {
+                        "profile_id": "ask_normal",
+                        "prompt_tokens": "<=512",
+                        "output_tokens": "<=128",
+                        "purpose": "normal ask",
+                        "promoted_route": "dense_slm_openvino_gpu_candidate",
+                        "candidate_routes": ["dense_slm_default_cpu"],
+                        "profile_status": "promoted_route_ready",
+                        "route_evidence": [],
+                        "promotion_decision": "promoted",
+                        "gaps": []
+                    },
+                    {
+                        "profile_id": "ask_short",
+                        "prompt_tokens": "<=64",
+                        "output_tokens": "<=32",
+                        "purpose": "short ask",
+                        "promoted_route": "dense_slm_openvino_gpu_candidate",
+                        "candidate_routes": ["dense_slm_default_cpu"],
+                        "profile_status": "promoted_route_ready",
+                        "route_evidence": [],
+                        "promotion_decision": "promoted",
+                        "gaps": []
+                    },
+                    {
+                        "profile_id": "low_power",
+                        "prompt_tokens": "<=512",
+                        "output_tokens": "<=128",
+                        "purpose": "low power",
+                        "promoted_route": null,
+                        "candidate_routes": [
+                            "dense_slm_default_cpu",
+                            "dense_slm_openvino_npu_candidate"
+                        ],
+                        "profile_status": "no_promoted_route",
+                        "route_evidence": [
+                            {
+                                "route_id": "dense_slm_openvino_npu_candidate",
+                                "route_status": "candidate",
+                                "ledger_route_status": "candidate",
+                                "selected_backend": "openvino-npu",
+                                "runtime_api": "openvino_genai",
+                                "fallback_used": false,
+                                "answer_gate_passed": true,
+                                "phase_timing_present": true,
+                                "timing": {
+                                    "timing_scope": "minimal",
+                                    "source_receipts": [],
+                                    "prompt_tokens": 12,
+                                    "cold_load_ms": null,
+                                    "tokenize_ms": null,
+                                    "prefill_ms": null,
+                                    "first_token_ms": null,
+                                    "decode_total_ms": null,
+                                    "generation_total_ms": null,
+                                    "total_response_ms": null,
+                                    "output_tokens": 4,
+                                    "throughput_tokens_per_s": null,
+                                    "phase_coverage": [],
+                                    "known_gaps": []
+                                },
+                                "timing_applicability": {
+                                    "profile_id": "low_power",
+                                    "required_prompt_tokens": "<=512",
+                                    "required_output_tokens": "<=128",
+                                    "measured_prompt_tokens": 12,
+                                    "measured_output_tokens": 4,
+                                    "timing_matches_profile": true,
+                                    "notes": []
+                                },
+                                "benchmark_qualified_advantage": false,
+                                "promotion_eligible_for_profile": false,
+                                "evidence": [],
+                                "blockers": ["benchmark_qualified_speedup_or_power_advantage"]
+                            }
+                        ],
+                        "promotion_decision": "blocked",
+                        "gaps": ["benchmark_qualified_speedup_or_power_advantage"]
+                    }
+                ],
+                "route_promotion_scope": {
+                    "openvino_gpu_promoted_profiles": ["ask_normal", "ask_short"],
+                    "openvino_npu_promoted_profiles": [],
+                    "profile_scoped_promotion_only": true,
+                    "openvino_npu_remains_candidate": true,
+                    "unexpected_openvino_profile_promotions": [],
+                    "notes": []
+                },
+                "gaps": [],
+                "claim_boundary": {
+                    "cpu_is_truth_path": true,
+                    "dense_slm_default_is_cpu_until_speedup_qualified": true,
+                    "openvino_gpu_npu_are_candidates_not_speedup_claims": true,
+                    "arc_bitnet_full_inference_claimed": false,
+                    "npu_bitnet_full_inference_claimed": false,
+                    "qk256_accelerator_decode_claimed": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
         Ok(())
     }
 
