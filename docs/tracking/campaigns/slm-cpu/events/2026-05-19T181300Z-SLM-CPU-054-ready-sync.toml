@@ -1,0 +1,12 @@
+timestamp = "2026-05-19T18:13:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-054"
+event = "in_progress"
+merge_sha = "f97a5b2aee583dd79384becb8b4361f7c55db64c"
+actor = "codex"
+summary = "Sync SLM-CPU-054 back to ready after the tracker-introduction PR merged."
+notes = [
+  "#5983 added the SLM-CPU-054 runtime-hook blocker burn-down item but did not implement or close the runtime hook acceptance.",
+  "The item remains the next ready implementation slice after SLM-CPU-053, not an open PR or completed runtime proof.",
+  "No runtime, performance, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
