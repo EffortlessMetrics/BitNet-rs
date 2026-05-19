@@ -3144,8 +3144,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-053"
-status = "ready"
-branch = "codex/slm-cpu-053-packed-q8-runtime-gate"
+status = "in_progress"
+branch = "codex/slm-cpu-053-runtime-proof-blocker"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
