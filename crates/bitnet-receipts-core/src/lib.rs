@@ -8727,17 +8727,18 @@ fn require_bool_alias_eq(
     expected: bool,
     label: &str,
 ) -> Result<()> {
+    let mut saw_field = false;
     for field in fields {
         if let Some(value) = object.get(*field) {
+            saw_field = true;
             let actual =
                 value.as_bool().ok_or_else(|| anyhow!("field `{field}` must be a bool"))?;
             if actual != expected {
                 return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
             }
-            return Ok(());
         }
     }
-    Err(anyhow!("field `{label}` must be `{expected}`"))
+    if saw_field { Ok(()) } else { Err(anyhow!("field `{label}` must be `{expected}`")) }
 }
 
 fn require_null(object: &Value, field: &str) -> Result<()> {
