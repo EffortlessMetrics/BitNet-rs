@@ -1,0 +1,14 @@
+timestamp = "2026-05-18T08:11:22Z"
+campaign = "cpu-proof"
+item = "CPU-AVX2-HOTPATH-000"
+event = "merged"
+pr = 5547
+head_sha = "c54e80f230fcf8acdb9f2631002a71c89dcc1161"
+merge_sha = "4be4bce6e9573a665de0bf2469bc2c7a2fdad053"
+actor = "codex"
+
+notes = [
+  "CPU AVX2 BitNet hot-path documentation merged in #5547.",
+  "The merged docs add the repo-local plan, implementation sequence, behavior spec, status page, and ready follow-on tracker item for QK256 hot-path counters.",
+  "No runtime AVX2 scaled I2S-I8S execution, speedup, server, GPU, NPU, OpenVINO, CUDA, dense SLM, Qwen, or broad chat-quality claim is made by this closeout.",
+]

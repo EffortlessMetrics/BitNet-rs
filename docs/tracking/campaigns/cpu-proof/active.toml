@@ -895,7 +895,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-AVX2-HOTPATH-000"
-status = "in_progress"
+status = "merged"
+pr = 5547
+head_sha = "c54e80f230fcf8acdb9f2631002a71c89dcc1161"
+merge_sha = "4be4bce6e9573a665de0bf2469bc2c7a2fdad053"
 branch = "codex/cpu-avx2-hotpath-000-docs-plan"
 stackable = false
 review_mode = "codex_premerge"
