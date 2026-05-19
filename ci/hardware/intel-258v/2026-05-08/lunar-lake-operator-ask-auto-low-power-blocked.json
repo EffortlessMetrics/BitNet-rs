@@ -2,7 +2,7 @@
   "acceleration_claim": false,
   "answer_gate_passed": null,
   "artifact_kind": "lunar_lake_operator_ask_blocked",
-  "artifact_root": "ci\\hardware\\intel-258v\\2026-05-08",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "bitnet_qk256_i2s_claim": false,
   "candidate_routes": [
     "dense_slm_default_cpu",
@@ -21,7 +21,7 @@
     "route_selection_blocked": true,
     "speedup_claim": false
   },
-  "created_utc": "2026-05-19T14:18:37Z",
+  "created_utc": "2026-05-19T17:57:46Z",
   "fallback_used": false,
   "machine_id": "intel-258v",
   "max_new_tokens": 4,
@@ -51,7 +51,7 @@
     "route_profile_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
     "route_reason": "no promoted Lunar Lake auto route for profile `low_power`",
     "route_selection_blocked": true,
-    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default | route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`",
+    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile) | route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`",
     "route_selection_status": "blocked",
     "runtime_api": null,
     "selected_backend": null,
@@ -61,17 +61,17 @@
       "route is not promoted for profile `low_power`"
     ],
     "why_not_gpu": [
-      "route blocker for profile `low_power`: low_power_power_advantage_unproven",
+      "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
       "route is not promoted for profile `low_power`"
     ],
     "why_not_npu": [
-      "route blocker for profile `low_power`: auto_default",
-      "route blocker for profile `low_power`: low_power_power_advantage_unproven",
+      "route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile)",
+      "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
       "route is not promoted for profile `low_power`"
     ]
   },
   "route_selection_blocked": true,
-  "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default | route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`",
+  "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile) | route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`",
   "route_selection_status": "blocked",
   "runtime_api": null,
   "schema_version": "1.0.0",
@@ -82,12 +82,12 @@
     "route is not promoted for profile `low_power`"
   ],
   "why_not_gpu": [
-    "route blocker for profile `low_power`: low_power_power_advantage_unproven",
+    "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
     "route is not promoted for profile `low_power`"
   ],
   "why_not_npu": [
-    "route blocker for profile `low_power`: auto_default",
-    "route blocker for profile `low_power`: low_power_power_advantage_unproven",
+    "route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile)",
+    "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
     "route is not promoted for profile `low_power`"
   ]
 }
