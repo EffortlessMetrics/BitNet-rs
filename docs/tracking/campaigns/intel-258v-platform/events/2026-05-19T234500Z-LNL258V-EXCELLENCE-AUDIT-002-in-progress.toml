@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T23:45:00Z"
+event = "in_progress"
+item = "LNL258V-EXCELLENCE-AUDIT-002"
+branch = "codex/lunar-lake/LNL258V-EXCELLENCE-AUDIT-002-current-audit"
+actor = "codex"
+summary = "Started a no-inference refresh of the Lunar Lake excellence audit after OP-012 route-reason alignment."
+
+notes = [
+  "The refresh records OP-012 merge and closeout evidence, the current profile-scoped operator-readiness route-reason surface, and the active POWER-006 battery-mode low_power blocker.",
+  "The audit keeps low_power unpromoted because battery-mode telemetry and benchmark-qualified power-advantage evidence are still missing.",
+  "The scope makes no new-inference, route-promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]
