@@ -1,0 +1,18 @@
+timestamp = "2026-05-19T21:45:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-056"
+event = "pr_open"
+actor = "codex"
+previous_status = "ready"
+new_status = "pr_open"
+pr = 6018
+head_sha = "82051a28846cb58cebf082201d6524a4164a502d"
+branch = "codex/slm-cpu-056-production-dense-linear-hook-impl"
+summary = "Opened the production dense-linear hook implementation slice."
+
+notes = [
+  "PR #6018 threads inert dense Q8_0 sidecar descriptors into transformer attention and MLP dense-linear calls as an explicit production hook boundary.",
+  "The implementation keeps selected_path=eager_f32_candle and selected_kernel=dense-f32-candle-linear because packed Q8_0 sidecar compute remains disabled until before/after behavior receipts exist.",
+  "The machine-checkable artifact qwen3-production-dense-linear-hook-boundary.json names the remaining packed runtime and receipt gaps.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
