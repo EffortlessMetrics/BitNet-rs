@@ -134,6 +134,12 @@ pub fn load_tokenizer_from_gguf(
 pub fn load_tokenizer_from_gguf_reader(
     reader: &bitnet_models::GgufReader,
 ) -> Result<Arc<dyn Tokenizer + Send + Sync>> {
+    if reader.get_string_metadata("tokenizer.ggml.model").is_some() {
+        let tokenizer = crate::gguf_loader::RustTokenizer::from_gguf(reader)
+            .context("Failed to load GGUF tokenizer metadata")?;
+        return Ok(Arc::new(tokenizer));
+    }
+
     if let Some(bytes) = reader.get_bin_or_u8_array("tokenizer.ggml.model") {
         let bos = reader.get_u32_metadata("tokenizer.ggml.bos_token_id");
         let eos = reader.get_u32_metadata("tokenizer.ggml.eos_token_id");
@@ -141,4 +147,105 @@ pub fn load_tokenizer_from_gguf_reader(
     }
 
     Err(anyhow::anyhow!("GGUF missing tokenizer.ggml.model"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bitnet_models::GgufReader;
+
+    fn write_string(buf: &mut Vec<u8>, value: &str) {
+        buf.extend(&(value.len() as u64).to_le_bytes());
+        buf.extend(value.as_bytes());
+    }
+
+    fn write_string_kv(buf: &mut Vec<u8>, key: &str, value: &str) {
+        write_string(buf, key);
+        buf.extend(&8u32.to_le_bytes());
+        write_string(buf, value);
+    }
+
+    fn write_u32_kv(buf: &mut Vec<u8>, key: &str, value: u32) {
+        write_string(buf, key);
+        buf.extend(&4u32.to_le_bytes());
+        buf.extend(&value.to_le_bytes());
+    }
+
+    fn write_string_array_kv(buf: &mut Vec<u8>, key: &str, values: &[&str]) {
+        write_string(buf, key);
+        buf.extend(&9u32.to_le_bytes());
+        buf.extend(&8u32.to_le_bytes());
+        buf.extend(&(values.len() as u64).to_le_bytes());
+        for value in values {
+            write_string(buf, value);
+        }
+    }
+
+    fn minimal_bpe_gguf() -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"GGUF");
+        buf.extend(&3u32.to_le_bytes());
+        buf.extend(&0u64.to_le_bytes());
+        buf.extend(&6u64.to_le_bytes());
+        buf.extend(&32u32.to_le_bytes());
+        buf.extend(&0u64.to_le_bytes());
+
+        write_string_kv(&mut buf, "tokenizer.ggml.model", "gpt2");
+        write_string_array_kv(
+            &mut buf,
+            "tokenizer.ggml.tokens",
+            &["a", "b", "ab", "<|eot_id|>", "\u{0120}", "\u{0120}a"],
+        );
+        write_string_array_kv(&mut buf, "tokenizer.ggml.merges", &["a b", "\u{0120} a"]);
+        write_u32_kv(&mut buf, "tokenizer.ggml.bos_token_id", 0);
+        write_u32_kv(&mut buf, "tokenizer.ggml.eos_token_id", 1);
+        write_u32_kv(&mut buf, "tokenizer.ggml.eot_token_id", 3);
+
+        let data_offset = buf.len().div_ceil(32) * 32;
+        buf.resize(data_offset, 0);
+        buf[28..36].copy_from_slice(&(data_offset as u64).to_le_bytes());
+        buf
+    }
+
+    #[test]
+    fn gguf_reader_loader_accepts_string_model_bpe_metadata() -> Result<()> {
+        let bytes = minimal_bpe_gguf();
+        let reader = GgufReader::new(&bytes).context("minimal BPE GGUF should parse")?;
+        let tokenizer = load_tokenizer_from_gguf_reader(&reader)
+            .context("GGUF BPE tokenizer metadata should load")?;
+
+        assert_eq!(tokenizer.vocab_size(), 6);
+        assert_eq!(tokenizer.bos_token_id(), Some(0));
+        assert_eq!(tokenizer.eos_token_id(), Some(1));
+        Ok(())
+    }
+
+    #[test]
+    fn gguf_reader_loader_parses_bpe_special_tokens_when_enabled() -> Result<()> {
+        let bytes = minimal_bpe_gguf();
+        let reader = GgufReader::new(&bytes).context("minimal BPE GGUF should parse")?;
+        let tokenizer = load_tokenizer_from_gguf_reader(&reader)
+            .context("GGUF BPE tokenizer metadata should load")?;
+
+        let ids = tokenizer
+            .encode("<|eot_id|>", false, true)
+            .context("parse_special should encode known GGUF special token")?;
+
+        assert_eq!(ids, vec![3]);
+        assert_eq!(tokenizer.token_to_id("<|eot_id|>"), Some(3));
+        Ok(())
+    }
+
+    #[test]
+    fn gguf_reader_loader_does_not_synthesize_prefix_space() -> Result<()> {
+        let bytes = minimal_bpe_gguf();
+        let reader = GgufReader::new(&bytes).context("minimal BPE GGUF should parse")?;
+        let tokenizer = load_tokenizer_from_gguf_reader(&reader)
+            .context("GGUF BPE tokenizer metadata should load")?;
+
+        let ids = tokenizer.encode("a", false, false).context("a should encode")?;
+
+        assert_eq!(ids, vec![0]);
+        Ok(())
+    }
 }

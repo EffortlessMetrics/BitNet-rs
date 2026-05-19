@@ -281,7 +281,8 @@ impl RustTokenizer {
     ) -> Result<(tokenizers::Tokenizer, ahash::AHashMap<String, u32>, usize)> {
         use ahash::AHashMap;
         use tokenizers::{
-            decoders::byte_level::ByteLevel, models::bpe::BPE, pre_tokenizers::byte_level,
+            AddedToken, decoders::byte_level::ByteLevel, models::bpe::BPE,
+            pre_tokenizers::byte_level,
         };
 
         // Load vocabulary array from metadata
@@ -297,6 +298,11 @@ impl RustTokenizer {
         // Build GGUF piece-to-ID mapping (authoritative token IDs from model)
         let piece_to_gguf_id: AHashMap<String, u32> =
             vocab_strings.iter().enumerate().map(|(i, tok)| (tok.clone(), i as u32)).collect();
+        let special_tokens = vocab_strings
+            .iter()
+            .filter(|tok| is_gguf_control_token(tok))
+            .map(|tok| AddedToken::from(tok.clone(), true).normalized(false))
+            .collect::<Vec<_>>();
 
         // Convert to AHashMap<String, u32> for HuggingFace BPE builder
         // NOTE: HuggingFace will assign its own IDs, we'll remap them in encode()
@@ -338,19 +344,21 @@ impl RustTokenizer {
             .context("BPE tokenizer construction failed - vocab or merges may be invalid")?;
 
         // Create tokenizer with ByteLevel pre-tokenizer and decoder (GPT-2 style)
-        // NOTE: add_prefix_space=true ensures first token is treated like subsequent tokens
-        // (llama.cpp GPT-2 behavior: pretend there is a space before the first token)
-        //
-        // CRITICAL: Both pre-tokenizer AND decoder need add_prefix_space(true) to match llama.cpp
+        // GGUF BPE vocabularies already carry explicit leading-space pieces (for example
+        // `ĠWhat`). Do not synthesize a prefix space; llama.cpp's default GGUF path maps
+        // initial text like `What` to the non-prefixed `What` token.
         let mut tokenizer = tokenizers::Tokenizer::new(bpe);
         tokenizer.with_pre_tokenizer(Some(
-            byte_level::ByteLevel::default().add_prefix_space(true).trim_offsets(false), // Preserve byte offsets for accurate decoding
+            byte_level::ByteLevel::default().add_prefix_space(false).trim_offsets(false), // Preserve byte offsets for accurate decoding
         ));
         tokenizer.with_decoder(Some(
             ByteLevel::default()
-                .add_prefix_space(true) // Match pre-tokenizer configuration
+                .add_prefix_space(false) // Match pre-tokenizer configuration
                 .trim_offsets(false),
         ));
+        if !special_tokens.is_empty() {
+            tokenizer.add_special_tokens(&special_tokens);
+        }
 
         Ok((tokenizer, piece_to_gguf_id, real_vocab_size))
     }
@@ -626,6 +634,11 @@ impl RustTokenizer {
     pub fn add_bos_hint(&self) -> Option<bool> {
         self.add_bos_hint
     }
+}
+
+fn is_gguf_control_token(token: &str) -> bool {
+    (token.starts_with("<|") && token.ends_with("|>"))
+        || (token.starts_with('<') && token.ends_with('>') && !token.contains(' '))
 }
 
 // Implement the Tokenizer trait for RustTokenizer
