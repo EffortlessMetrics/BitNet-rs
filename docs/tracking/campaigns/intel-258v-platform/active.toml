@@ -8281,8 +8281,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-THERMAL-001"
-status = "in_progress"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-THERMAL-001-thermal-zone-probe"
+pr = 5813
+head_sha = "65a2e600471d106aad5520617b62c6ab376c0ef3"
+merge_sha = "57aaa38634f279bed2e960f0dfa62a4250fd9d00"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
