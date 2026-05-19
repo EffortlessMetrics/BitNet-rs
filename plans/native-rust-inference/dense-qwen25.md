@@ -131,7 +131,7 @@ and exact-profile server readiness evidence remains unchanged.
 
 ## Work item: CUDA-DENSE-QWEN25-PERF-007
 
-Status: ready
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
@@ -145,7 +145,11 @@ Review Qwen2.5 speed/residency requalification after optimization.
 
 ### Production delta
 
-Accept or reject exact profiles; keep BitNet proof false.
+This slice records the post-OPS-002/OPS-003 requalification review. No speed,
+benchmark-qualified, full-residency, broad dense GGUF, or BitNet proof claim is
+promoted because the reviewed CUDA profiles remain slower than same-artifact CPU
+means, pure H2D timing is still unavailable, and logits-transfer accounting
+still records full-logits D2H until a device top-k sampler exists.
 
 ### Non-goals
 
@@ -153,7 +157,10 @@ No broad speedup or full residency without proof.
 
 ### Acceptance
 
-Model coverage and status docs agree with governed review decisions.
+Model coverage and status docs agree with the governed review decision:
+`benchmark_qualified=false`, `speedup_claim=false`,
+`full_residency_claim=false`, exact-profile `server_ready=true`, and
+`bitnet_packed_i2s_qk256_proof=false`.
 
 ### Proof commands
 
@@ -164,4 +171,5 @@ git diff --check
 
 ### Rollback
 
-Demote any accepted claims whose receipts do not satisfy the spec.
+Revert the review report and restore the previous next-proof text. No claim
+booleans were promoted by this work item.
