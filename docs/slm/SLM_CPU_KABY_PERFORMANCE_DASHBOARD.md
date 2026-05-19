@@ -17,6 +17,7 @@ OpenVINO, UHD 620, Qwen3.5, or BitNet QK256.
 | Repetition-penalty logits reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse-validation.json` | Validates that default repetition-penalty decode steps reuse a host logits scratch buffer instead of allocating fresh logits vectors, while preserving generated IDs/text |
 | Warm-session sampler reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json` | Validates that the temperature-zero warm-session profile reuses one sampler across prompts while preserving generated IDs/text and strict provenance |
 | Prompt token cache | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache-validation.json` | Validates that repeated rendered prompts reuse token IDs while preserving generated IDs/text and strict provenance |
+| Packed Q8_0 sidecar runtime proof gate | `ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-proof-validation.json` | Records that packed Q8_0 sidecar runtime execution remains blocked because production dispatch still preserves eager F32 and no after-execution receipts exist |
 
 All rows use:
 
@@ -302,6 +303,33 @@ cannot be produced, the runtime must stay on eager F32 Candle and record the
 specific blocker. This remains a behavior-preserving Kaby appliance slice, not
 a sustained-throughput, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256
 claim.
+
+The first SLM-CPU-053 runtime gate records the blocker instead of enabling
+packed sidecar compute:
+
+```text
+artifact_kind = dense_gguf_q8_runtime_execution_proof
+execution_status = blocked
+selector_update_status = applied_to_packed_sidecar_candidate
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+production_runtime_hook_invoked = false
+runtime_compute_enabled = false
+sidecar_runtime_compute_allowed = false
+runtime_blockers =
+  production_dispatch_still_eager_f32
+  packed_runtime_compute_disabled
+  production_runtime_hook_missing
+  before_after_receipts_missing
+eager_f32_runtime_preserved = true
+dense_runtime_replaced = false
+fallback_used = false
+speedup_claim = false
+```
+
+This closes only the runtime proof gate for the current state: packed Q8_0
+sidecar compute is still disabled until a later PR adds the production forward
+hook and after-execution receipts for the same Qwen3 Q8_0 behavior oracle.
 
 ## Greedy Sampler Fast Path
 
