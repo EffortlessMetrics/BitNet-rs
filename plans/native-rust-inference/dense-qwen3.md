@@ -257,7 +257,7 @@ runtime rollback is required.
 
 ## Work item: CUDA-MODEL-014B
 
-Status: in_progress
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
@@ -303,3 +303,74 @@ git diff --check
 
 Restore the previous Qwen3 model coverage `server_ready=false` state and remove
 the CUDA-MODEL-014B acceptance report. No runtime rollback is required.
+
+## Work item: CUDA-MODEL-015
+
+Status: in_progress
+Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
+Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
+Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
+Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
+Blocks: Qwen3 benchmark qualification review
+Blocked by: CUDA-MODEL-014B
+
+### Goal
+
+Collect a repeated same-artifact CPU/CUDA comparator baseline for Qwen3 0.6B
+Q8_0 on the Windows 9950X3D + RTX 5070 Ti lane.
+
+### Production delta
+
+Define the receipt bundle required before any Qwen3 benchmark-qualified or
+speedup review can happen. The baseline must compare the same verified Qwen3
+artifact on the CPU AVX-512 path and the selected
+`nvidia-rtx-5070-ti-cuda` `dense_regular_llm_cuda` path across the product
+profiles that matter for user-visible latency and decode.
+
+### Non-goals
+
+No model promotion, server promotion, speedup promotion, benchmark-qualified
+promotion, full-residency promotion, broad dense GGUF claim, Qwen2.5 proof
+inheritance, BitNet QK256 proof, runtime math change, tokenizer change, loader
+change, kernel change, or server behavior change.
+
+### Acceptance
+
+The baseline records repeated CPU and CUDA runs for these exact profiles:
+
+- `one_token`;
+- `short_decode_8`;
+- `short_decode_32`;
+- `warm_session_3_turns`;
+- `decode_128_from_warm_context`.
+
+Each profile records the same Qwen3 artifact SHA-256, tokenizer and prompt
+policy, generation policy, CPU AVX-512 comparator, RTX 5070 Ti CUDA comparator,
+selected backend, selected route, `fallback_used=false`, quality result, timing
+phase fields from the runtime performance contract, kernel launch counts,
+H2D/D2H byte and timing fields or an explicit unmeasured-source blocker,
+VRAM high-water, and power/thermal context.
+
+The current
+`ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json`
+receipt remains insufficient by itself because it records
+`runs_per_backend=1` and `repeated_evidence=false`. The new baseline preserves
+`speedup_claim=false`, `benchmark_qualified=false`,
+`full_residency_claim=false`, exact-profile-only server readiness, and
+`bitnet_packed_i2s_qk256_proof=false`.
+
+### Proof commands
+
+```bash
+cargo run --locked -p xtask --no-default-features -- check-model-coverage
+cargo test --locked -p bitnet-bench-receipts --no-default-features qwen3
+cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti
+cargo run --locked -p xtask --no-default-features -- campaign generate --check
+git diff --check
+```
+
+### Rollback
+
+Remove the CUDA-MODEL-015 baseline report, receipt pointers, and campaign
+tracker entries. Do not change the existing Qwen3 product CLI or exact-profile
+server-ready state.
