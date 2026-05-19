@@ -107,10 +107,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/intel-a770/A770-004-runtime-probe"
 pr = 5971
 head_sha = "7b0895e4b8a1900287f831b64ea6222e1ac52eb4"
+merge_sha = "0922f5ffd7f7e08e6f3c750cea453d8afc4dc920"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -141,7 +142,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-005"
-status = "proposed"
+status = "blocked"
 branch = "codex/intel-a770/A770-005-opencl-smoke"
 stackable = false
 review_mode = "codex_premerge"
@@ -150,6 +151,7 @@ human_gate = "on_blocker_only"
 blocked_by = ["A770-004"]
 acceptance = "Run a tiny selected-device OpenCL smoke with fallback_used=false and CPU parity, without BitNet inference claims."
 commands = [
+  "confirm host exposes Intel Arc A770 PCI DEV_56A0 before running the opt-in smoke",
   "BITNET_RUN_A770_OPENCL_SMOKE=1 cargo test --locked -p bitnet-device-probe --no-default-features --features opencl a770",
   "git diff --check",
 ]
@@ -157,6 +159,7 @@ allowed_paths = [
   "crates/bitnet-device-probe/**",
   "ci/hardware/amd-5700x-intel-a770/**",
   "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
 ]
 forbidden_paths = [
   "crates/bitnet-quantization/src/qk256/**",
@@ -170,6 +173,7 @@ must_not_claim = [
   "BitNet QK256 runs on A770.",
   "BitNet inference works on A770.",
   "A770 trusted partial acceleration is claim-grade.",
+  "Arc 140V DEV_64A0 can satisfy A770 DEV_56A0 selected-device smoke.",
 ]
 
 [[work_item]]

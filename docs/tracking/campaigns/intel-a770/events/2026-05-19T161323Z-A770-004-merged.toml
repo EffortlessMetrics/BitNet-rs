@@ -1,0 +1,16 @@
+timestamp = "2026-05-19T16:13:23Z"
+campaign = "intel-a770"
+item = "A770-004"
+event = "merged"
+pr = 5971
+head_sha = "7b0895e4b8a1900287f831b64ea6222e1ac52eb4"
+merge_sha = "0922f5ffd7f7e08e6f3c750cea453d8afc4dc920"
+branch = "codex/intel-a770/A770-004-runtime-probe"
+actor = "codex"
+
+notes = [
+  "Merged PR #5971, adding Intel Arc A770 runtime visibility probe evidence.",
+  "The merged probe preserves selected-device facts from OpenCL, Level Zero, and OpenVINO visibility and selects intel-a770-opencl only for exact native OpenCL A770 identity.",
+  "OpenVINO GPU evidence remains reference-only and no A770 OpenCL kernel execution, BitNet inference, packed QK256, speedup, route promotion, or trusted-partial acceleration claim is made.",
+  "A770-005 is now the next proposed item for opt-in tiny selected-device OpenCL smoke evidence.",
+]
