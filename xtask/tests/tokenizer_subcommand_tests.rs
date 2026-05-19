@@ -58,12 +58,7 @@ fn test_fetch_official_source_success() -> Result<()> {
         }
         Err(e) => {
             // Test scaffolding - implementation not yet complete
-            assert!(
-                e.to_string().contains("not implemented")
-                    || e.to_string().contains("unimplemented"),
-                "Expected unimplemented error, got: {}",
-                e
-            );
+            assert_unimplemented(&e, "Expected unimplemented error");
         }
     }
 
@@ -98,11 +93,7 @@ fn test_fetch_mirror_source_success() -> Result<()> {
         }
         Err(e) => {
             // Test scaffolding - implementation pending
-            assert!(
-                e.to_string().contains("not implemented"),
-                "Expected unimplemented error, got: {}",
-                e
-            );
+            assert_unimplemented(&e, "Expected unimplemented error");
         }
     }
 
@@ -141,10 +132,7 @@ fn test_fetch_skip_if_exists() -> Result<()> {
         }
         Err(e) => {
             // Test scaffolding
-            assert!(
-                e.to_string().contains("not implemented"),
-                "Expected unimplemented for idempotent download"
-            );
+            assert_unimplemented(&e, "Expected unimplemented for idempotent download");
         }
     }
 
@@ -176,11 +164,7 @@ fn test_fetch_force_redownload() -> Result<()> {
             assert!(tokenizer.vocab_size > 0, "Should have valid vocab after force download");
         }
         Err(e) => {
-            assert!(
-                e.to_string().contains("not implemented"),
-                "Force download not implemented: {}",
-                e
-            );
+            assert_unimplemented(&e, "Force download not implemented");
         }
     }
 
@@ -206,11 +190,7 @@ fn test_verify_vocab_size() -> Result<()> {
             // Should pass validation
         }
         Err(e) => {
-            assert!(
-                e.to_string().contains("not implemented"),
-                "Verification not implemented: {}",
-                e
-            );
+            assert_unimplemented(&e, "Verification not implemented");
         }
     }
 
@@ -226,11 +206,10 @@ fn test_verify_vocab_size() -> Result<()> {
         }
         Err(e) => {
             // Should fail validation or be unimplemented
-            assert!(
-                e.to_string().contains("Invalid vocab size")
-                    || e.to_string().contains("not implemented"),
-                "Expected validation error, got: {}",
-                e
+            assert_error_contains_any(
+                &e,
+                &["Invalid vocab size", "not implemented"],
+                "Expected validation error",
             );
         }
     }
@@ -254,15 +233,11 @@ fn test_fetch_network_error() -> Result<()> {
             panic!("Should fail with network error for invalid URL");
         }
         Err(e) => {
-            let error_msg = e.to_string();
-
-            // Should indicate network error with retry attempts
-            let is_network_error = error_msg.contains("Network error")
-                || error_msg.contains("connection")
-                || error_msg.contains("timeout")
-                || error_msg.contains("not implemented");
-
-            assert!(is_network_error, "Expected network error message, got: {}", error_msg);
+            assert_error_contains_any(
+                &e,
+                &["Network error", "connection", "timeout", "not implemented"],
+                "Expected network error message",
+            );
         }
     }
 
@@ -298,16 +273,11 @@ fn test_fetch_auth_error() -> Result<()> {
             panic!("Should fail with auth error when HF_TOKEN missing");
         }
         Err(e) => {
-            let error_msg = e.to_string();
-
-            // Should indicate authentication required
-            let is_auth_error = error_msg.contains("HF_TOKEN")
-                || error_msg.contains("Authentication")
-                || error_msg.contains("401")
-                || error_msg.contains("403")
-                || error_msg.contains("not implemented");
-
-            assert!(is_auth_error, "Expected auth error message, got: {}", error_msg);
+            assert_error_contains_any(
+                &e,
+                &["HF_TOKEN", "Authentication", "401", "403", "not implemented"],
+                "Expected auth error message",
+            );
         }
     }
 
@@ -348,14 +318,21 @@ fn test_fetch_invalid_tokenizer() -> Result<()> {
             panic!("Should reject non-BPE tokenizer");
         }
         Err(e) => {
-            assert!(
-                e.to_string().contains("BPE") || e.to_string().contains("not implemented"),
-                "Expected BPE type error"
-            );
+            assert_error_contains_any(&e, &["BPE", "not implemented"], "Expected BPE type error");
         }
     }
 
     Ok(())
+}
+
+fn assert_unimplemented(err: &anyhow::Error, context: &str) {
+    let msg = err.to_string();
+    assert!(msg.contains("not implemented") || msg.contains("unimplemented"), "{context}: {msg}");
+}
+
+fn assert_error_contains_any(err: &anyhow::Error, expected: &[&str], context: &str) {
+    let msg = err.to_string();
+    assert!(expected.iter().any(|needle| msg.contains(needle)), "{context}: {msg}");
 }
 
 // Helper functions for test scaffolding
