@@ -357,6 +357,15 @@ selected Q8_0 sidecar descriptor and emits before/after Qwen3 Q8_0 behavior
 receipts before enabling packed sidecar compute. SLM-CPU-054 does not replace
 the eager F32 Candle runtime path and does not claim speedup.
 
+SLM-CPU-055 is the next contract gate for that step. It should add the first
+production dense-linear hook boundary so transformer dense linear calls can
+receive either an explicit eager-F32 selection or a selected Q8_0 sidecar
+descriptor. The default runtime must remain eager F32 Candle unless before/after
+receipts prove identical model SHA, tokenizer authority, prompt IDs, generated
+IDs, decoded text, selected CPU backend/kernel identity, and `fallback=false`.
+If packed compute remains disabled, the slice must emit a machine-checkable
+hook-contract or blocker artifact instead of making a speedup claim.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
