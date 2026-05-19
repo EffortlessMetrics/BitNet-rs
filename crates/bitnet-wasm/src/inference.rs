@@ -161,6 +161,25 @@ impl Default for WasmGenerationConfig {
     }
 }
 
+impl WasmInference {
+    fn ensure_model_loaded(&self) -> Result<(), JsError> {
+        if !self.model.is_loaded() {
+            return Err(JsError::new("Model is not loaded"));
+        }
+        Ok(())
+    }
+
+    fn update_request_stats(&mut self, prompt: &str, config: &WasmGenerationConfig) {
+        self.generation_stats.insert("last_prompt_length".to_string(), prompt.len() as f64);
+        self.generation_stats.insert("last_temperature".to_string(), config.temperature as f64);
+    }
+
+    fn inference_not_implemented_error() -> JsError {
+        JsError::new(
+            "WASM inference runtime is not implemented yet; this feature currently compiles only",
+        )
+    }
+}
 /// WebAssembly inference wrapper
 #[wasm_bindgen]
 pub struct WasmInference {
@@ -189,25 +208,12 @@ impl WasmInference {
     ) -> Result<String, JsError> {
         let config = config.unwrap_or_default();
 
-        if !self.model.is_loaded() {
-            return Err(JsError::new("Model is not loaded"));
-        }
+        self.ensure_model_loaded()?;
 
         console::log_1(&format!("Generating text for prompt: {}", prompt).into());
+        self.update_request_stats(prompt, &config);
 
-        // For now, return a placeholder response
-        // In a full implementation, this would call the actual inference engine
-        let response = format!(
-            "Generated response for: {} (max_tokens: {}, temp: {})",
-            prompt, config.max_new_tokens, config.temperature
-        );
-
-        // Update generation stats
-        self.generation_stats.insert("last_prompt_length".to_string(), prompt.len() as f64);
-        self.generation_stats.insert("last_response_length".to_string(), response.len() as f64);
-        self.generation_stats.insert("last_temperature".to_string(), config.temperature as f64);
-
-        Ok(response)
+        Err(Self::inference_not_implemented_error())
     }
 
     /// Generate text asynchronously
@@ -227,11 +233,8 @@ impl WasmInference {
             }
 
             console::log_1(&format!("Async generating text for prompt: {}", prompt).into());
-
-            // Simulate async processing
-            let response = Self::generate_async_impl(prompt, config).await?;
-
-            Ok(JsValue::from_str(&response))
+            let _ = (prompt, config);
+            Err(to_js_error(Self::inference_not_implemented_error()))
         })
     }
 
