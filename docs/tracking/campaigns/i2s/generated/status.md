@@ -9,7 +9,7 @@
 
 | Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |
 |---|---|---:|---|---|---|---|---|
-| I2S-DOCS-000 | ready | TBD | `codex/document-i2_s-productization-plan` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add the I2_S source map, campaign manifest, implementation plan, proposal, and initial contract specs without changing runtime code or making kernel, backend, artifact, receipt, or performance claims. |
+| I2S-DOCS-000 | merged | #5880 | `codex/document-i2_s-productization-plan` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add the I2_S source map, campaign manifest, implementation plan, proposal, and initial contract specs without changing runtime code or making kernel, backend, artifact, receipt, or performance claims. |
 
 ## Hard Constraints
 
