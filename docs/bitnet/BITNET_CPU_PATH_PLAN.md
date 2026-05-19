@@ -458,6 +458,12 @@ This document is intentionally a planning contract, not a claim that every refer
 
 Those details can change the patch shape, but not the required direction: authoritative GGUF/tokenizer loading, canonical packed layout, scalar truth kernels, decode-first AVX2, then wider ISA lanes.
 
+## I2_S lane note (2026-05-19)
+
+The official Microsoft 2B I2_S/QK256 route remains product-CLI-ready but not globally speed-qualified. New CPU work must preserve explicit scaled-I2_S×I8_S kernel identity and fallback-explicit receipts.
+
+See `docs/bitnet/i2s/README.md` and `plans/i2s/implementation-plan.md` for current lane sequencing.
+
 ## Related Documents
 
 - `docs/bitnet/BITNET_MODEL_CONTRACT.md`

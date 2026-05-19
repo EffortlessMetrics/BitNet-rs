@@ -1,5 +1,22 @@
 # Specs Index
 
+## I2_S/QK256 Productization
+
+Use these artifacts before implementing or claiming new I2_S route capabilities:
+
+1. [I2_S Source Map](../bitnet/i2s/README.md)
+2. [I2_S Implementation Plan](../../plans/i2s/implementation-plan.md)
+3. [I2_S Productization Proposal](../proposals/BITNET-PROP-0015-i2s-productization.md)
+4. [I2_S Layout](BITNET-SPEC-I2S-QK256-LAYOUT.md)
+5. [I2_S Scaled Math](BITNET-SPEC-I2S-SCALED-I8S-MATH.md)
+6. [I2_S Kernel Identity](BITNET-SPEC-I2S-KERNEL-IDENTITY.md)
+7. [I2_S Model Compatibility](BITNET-SPEC-I2S-MODEL-COMPATIBILITY.md)
+8. [I2_S Artifact Gate](BITNET-SPEC-I2S-ARTIFACT-GATE.md)
+9. [I2_S CPU](BITNET-SPEC-I2S-CPU.md), [CUDA](BITNET-SPEC-I2S-CUDA.md), [A770/OpenCL](BITNET-SPEC-I2S-OPENCL-A770.md), [Apple](BITNET-SPEC-I2S-APPLE-NEON-METAL.md)
+10. [I2_S Performance](BITNET-SPEC-I2S-PERFORMANCE.md) and [Status Surface](BITNET-SPEC-I2S-STATUS-SURFACE.md)
+
+Do not claim TL1/TL2, dense SLM, global speedup, or full residency from I2_S proof.
+
 ## Official Microsoft BitNet 2B Productization
 
 Use these artifacts before implementing or claiming support for
