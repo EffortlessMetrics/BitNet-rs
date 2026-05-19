@@ -54,6 +54,8 @@ const COLD_WARM_PROFILE_BENCHMARK: &str =
 const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
 const POWER_THERMAL_CONTEXT_FILE: &str = "lunar-lake-power-thermal-context.json";
 const POWER_PROFILE_EVIDENCE_FILE: &str = "lunar-lake-power-profile-evidence.json";
+const THERMAL_TEMPERATURE_AVAILABILITY_FILE: &str =
+    "lunar-lake-thermal-temperature-availability.json";
 const LOW_POWER_ENERGY_PROXY_FILE: &str = "lunar-lake-low-power-energy-proxy.json";
 const DURABILITY_BUNDLE: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
@@ -195,6 +197,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = POWER_PROFILE_EVIDENCE_FILE)]
         power_profile_evidence: Option<PathBuf>,
+
+        /// Optional thermal temperature availability diagnosis receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = THERMAL_TEMPERATURE_AVAILABILITY_FILE)]
+        thermal_temperature_availability: Option<PathBuf>,
 
         /// Optional successful auto warm-resident ask receipt to index.
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
@@ -953,6 +960,8 @@ pub struct LunarLakeRegressionBundle {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub power_profile_evidence: Option<PowerProfileRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thermal_temperature_availability: Option<ThermalTemperatureAvailabilityRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub warm_resident_ask_receipt: Option<OperatorAskRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocked_ask_receipt: Option<BlockedAskRegressionSummary>,
@@ -977,6 +986,12 @@ pub struct RegressionSurfaceSummary {
     pub bitnet_semantic_intake_indexed: bool,
     #[serde(default)]
     pub power_profile_evidence_indexed: bool,
+    #[serde(default)]
+    pub thermal_temperature_availability_indexed: bool,
+    #[serde(default)]
+    pub thermal_temperature_available: bool,
+    #[serde(default)]
+    pub thermal_usable_temperature_reading_count: usize,
     #[serde(default)]
     pub warm_resident_ask_receipt_indexed: bool,
     #[serde(default)]
@@ -1017,6 +1032,9 @@ impl Default for RegressionSurfaceSummary {
             durability_bundle_indexed: false,
             bitnet_semantic_intake_indexed: false,
             power_profile_evidence_indexed: false,
+            thermal_temperature_availability_indexed: false,
+            thermal_temperature_available: false,
+            thermal_usable_temperature_reading_count: 0,
             warm_resident_ask_receipt_indexed: false,
             warm_resident_auto_ask_ready: false,
             blocked_ask_receipt_indexed: false,
@@ -1187,6 +1205,19 @@ pub struct PowerProfileRegressionSummary {
     pub regression_ready: bool,
     pub gaps: Vec<String>,
     pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ThermalTemperatureAvailabilityRegressionSummary {
+    pub path: String,
+    pub thermal_zone_visibility_available: bool,
+    pub thermal_temperature_available: bool,
+    pub usable_temperature_reading_count: usize,
+    pub measured_temperature_claim: bool,
+    pub telemetry_probe_executed: bool,
+    pub claim_boundary_preserved: bool,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -2480,6 +2511,7 @@ impl LunarLakeCommand {
                 durability_bundle,
                 bitnet_semantic_intake,
                 power_profile_evidence,
+                thermal_temperature_availability,
                 warm_resident_ask_receipt,
                 blocked_ask_receipt,
                 json_out,
@@ -2500,6 +2532,7 @@ impl LunarLakeCommand {
                         durability_bundle.as_deref(),
                         bitnet_semantic_intake.as_deref(),
                         power_profile_evidence.as_deref(),
+                        thermal_temperature_availability.as_deref(),
                         warm_resident_ask_receipt.as_deref(),
                         blocked_ask_receipt.as_deref(),
                         created_utc,
@@ -3484,6 +3517,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
         bitnet_semantic_intake,
         power_profile_evidence,
         None,
+        None,
         blocked_ask_receipt,
         created_utc,
     )
@@ -3498,6 +3532,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
     durability_bundle: Option<&Path>,
     bitnet_semantic_intake: Option<&Path>,
     power_profile_evidence: Option<&Path>,
+    thermal_temperature_availability: Option<&Path>,
     warm_resident_ask_receipt: Option<&Path>,
     blocked_ask_receipt: Option<&Path>,
     created_utc: String,
@@ -3680,6 +3715,19 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
     } else {
         None
     };
+    let thermal_temperature_availability = if let Some(path) = thermal_temperature_availability {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_thermal_temperature_availability_regression(&path)?;
+        checks.push(regression_check_owned(
+            "thermal_temperature_availability_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            thermal_temperature_availability_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
     let npu_warm_resident_promoted = npu_warm_resident_is_promoted(
         cold_warm_benchmark.as_ref(),
         route_profile_comparison.as_ref(),
@@ -3733,6 +3781,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         durability_bundle.as_ref(),
         bitnet_semantic_intake.as_ref(),
         power_profile_evidence.as_ref(),
+        thermal_temperature_availability.as_ref(),
         warm_resident_ask_receipt.as_ref(),
         blocked_ask_receipt.as_ref(),
     );
@@ -3751,6 +3800,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         durability_bundle,
         bitnet_semantic_intake,
         power_profile_evidence,
+        thermal_temperature_availability,
         warm_resident_ask_receipt,
         blocked_ask_receipt,
         regression_surface,
@@ -3768,6 +3818,7 @@ fn build_regression_surface_summary(
     durability_bundle: Option<&DurabilityRegressionSummary>,
     bitnet_semantic_intake: Option<&BitnetSemanticIntakeRegressionSummary>,
     power_profile_evidence: Option<&PowerProfileRegressionSummary>,
+    thermal_temperature_availability: Option<&ThermalTemperatureAvailabilityRegressionSummary>,
     warm_resident_ask_receipt: Option<&OperatorAskRegressionSummary>,
     blocked_ask_receipt: Option<&BlockedAskRegressionSummary>,
 ) -> RegressionSurfaceSummary {
@@ -3778,6 +3829,13 @@ fn build_regression_surface_summary(
         durability_bundle_indexed: durability_bundle.is_some(),
         bitnet_semantic_intake_indexed: bitnet_semantic_intake.is_some(),
         power_profile_evidence_indexed: power_profile_evidence.is_some(),
+        thermal_temperature_availability_indexed: thermal_temperature_availability.is_some(),
+        thermal_temperature_available: thermal_temperature_availability
+            .map(|summary| summary.thermal_temperature_available)
+            .unwrap_or(false),
+        thermal_usable_temperature_reading_count: thermal_temperature_availability
+            .map(|summary| summary.usable_temperature_reading_count)
+            .unwrap_or(0),
         warm_resident_ask_receipt_indexed: warm_resident_ask_receipt.is_some(),
         warm_resident_auto_ask_ready: warm_resident_ask_receipt
             .map(|summary| summary.regression_ready)
@@ -3974,6 +4032,26 @@ fn build_regression_surface_summary(
             summary
                 .gaps
                 .push("low_power power-profile claim boundary is not preserved".to_string());
+        }
+    }
+
+    if let Some(thermal) = thermal_temperature_availability {
+        if !thermal.regression_ready {
+            summary.gaps.push(format!(
+                "thermal temperature availability is not regression-ready: {}",
+                thermal.gaps.join("; ")
+            ));
+        }
+        if !thermal.claim_boundary_preserved {
+            summary.gaps.push(
+                "thermal temperature availability claim boundary is not preserved".to_string(),
+            );
+        }
+        if thermal.measured_temperature_claim && thermal.usable_temperature_reading_count == 0 {
+            summary.gaps.push(
+                "thermal temperature availability claims measured temperatures without usable readings"
+                    .to_string(),
+            );
         }
     }
 
@@ -4666,6 +4744,67 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
     })
 }
 
+fn inspect_thermal_temperature_availability_regression(
+    path: &Path,
+) -> Result<ThermalTemperatureAvailabilityRegressionSummary> {
+    let thermal: Value = read_json_receipt(path)?;
+    let mut gaps = Vec::new();
+
+    let artifact_kind = string_at(&thermal, "artifact_kind").unwrap_or_default();
+    if artifact_kind != "lunar_lake_thermal_temperature_availability" {
+        gaps.push(format!("unexpected artifact_kind={artifact_kind}"));
+    }
+
+    let thermal_zone_visibility_available =
+        bool_at_any(&thermal, &["decision.thermal_zone_visibility_available"]).unwrap_or(false);
+    let thermal_temperature_available =
+        bool_at_any(&thermal, &["decision.thermal_temperature_available"]).unwrap_or(false);
+    let usable_temperature_reading_count =
+        u64_at(&thermal, "decision.usable_temperature_reading_count").unwrap_or(0) as usize;
+
+    if thermal_temperature_available && usable_temperature_reading_count == 0 {
+        gaps.push(
+            "thermal temperature availability claims temperature availability without usable readings"
+                .to_string(),
+        );
+    }
+
+    let measured_temperature_claim =
+        bool_at_any(&thermal, &["claim_boundary.measured_temperature_claim"]).unwrap_or(false);
+    let telemetry_probe_executed =
+        bool_at_any(&thermal, &["claim_boundary.telemetry_probe_executed"]).unwrap_or(false);
+
+    let claim_boundary_preserved =
+        !bool_at_any(&thermal, &["claim_boundary.new_inference_executed"]).unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.route_promotion_changed"]).unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.speedup_claim"]).unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.power_advantage_claim"]).unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.acceleration_claim"]).unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.native_opencl_or_native_npu_claim"])
+                .unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.bitnet_qk256_or_i2s_behavior_changed"])
+                .unwrap_or(false)
+            && (!measured_temperature_claim || usable_temperature_reading_count > 0);
+    if !claim_boundary_preserved {
+        gaps.push(
+            "thermal temperature availability must preserve no-inference/no-promotion/no-speedup/no-power-advantage/no-acceleration/no-QK256-change claim boundary"
+                .to_string(),
+        );
+    }
+
+    Ok(ThermalTemperatureAvailabilityRegressionSummary {
+        path: path_string(path),
+        thermal_zone_visibility_available,
+        thermal_temperature_available,
+        usable_temperature_reading_count,
+        measured_temperature_claim,
+        telemetry_probe_executed,
+        claim_boundary_preserved,
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
 fn npu_warm_resident_is_promoted(
     cold_warm_benchmark: Option<&ColdWarmRegressionSummary>,
     route_profile_comparison: Option<&RouteProfileRegressionSummary>,
@@ -5137,6 +5276,21 @@ fn power_profile_regression_notes(summary: &PowerProfileRegressionSummary) -> Ve
         format!("thermal_context_recorded={}", summary.thermal_context_recorded),
         format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
         format!("blocker_count={}", summary.blockers.len()),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
+fn thermal_temperature_availability_regression_notes(
+    summary: &ThermalTemperatureAvailabilityRegressionSummary,
+) -> Vec<String> {
+    let mut notes = vec![
+        format!("thermal_zone_visibility_available={}", summary.thermal_zone_visibility_available),
+        format!("thermal_temperature_available={}", summary.thermal_temperature_available),
+        format!("usable_temperature_reading_count={}", summary.usable_temperature_reading_count),
+        format!("measured_temperature_claim={}", summary.measured_temperature_claim),
+        format!("telemetry_probe_executed={}", summary.telemetry_probe_executed),
+        format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
     ];
     notes.extend(summary.gaps.iter().cloned());
     notes
@@ -18587,6 +18741,95 @@ mod tests {
     }
 
     #[test]
+    fn thermal_temperature_availability_receipt_is_regression_ready_without_temperatures()
+    -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            THERMAL_TEMPERATURE_AVAILABILITY_FILE,
+            json!({
+                "schema_version": 1,
+                "artifact_kind": "lunar_lake_thermal_temperature_availability",
+                "proof_stage": "thermal_temperature_sources_probed_no_claim_change",
+                "machine_id": "intel-258v",
+                "decision": {
+                    "thermal_zone_visibility_available": true,
+                    "thermal_temperature_available": false,
+                    "usable_temperature_reading_count": 0
+                },
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "telemetry_probe_executed": true,
+                    "measured_temperature_claim": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_opencl_or_native_npu_claim": false,
+                    "bitnet_qk256_or_i2s_behavior_changed": false
+                }
+            }),
+        )?;
+
+        let summary = inspect_thermal_temperature_availability_regression(
+            &temp.path().join(THERMAL_TEMPERATURE_AVAILABILITY_FILE),
+        )?;
+
+        assert!(summary.regression_ready, "{:?}", summary.gaps);
+        assert!(summary.thermal_zone_visibility_available);
+        assert!(!summary.thermal_temperature_available);
+        assert_eq!(summary.usable_temperature_reading_count, 0);
+        assert!(!summary.measured_temperature_claim);
+        assert!(summary.telemetry_probe_executed);
+        assert!(summary.claim_boundary_preserved);
+        let notes = thermal_temperature_availability_regression_notes(&summary);
+        assert!(notes.iter().any(|note| note == "usable_temperature_reading_count=0"));
+        Ok(())
+    }
+
+    #[test]
+    fn thermal_temperature_availability_fails_false_measured_temperature_claim() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            THERMAL_TEMPERATURE_AVAILABILITY_FILE,
+            json!({
+                "schema_version": 1,
+                "artifact_kind": "lunar_lake_thermal_temperature_availability",
+                "proof_stage": "thermal_temperature_sources_probed_no_claim_change",
+                "machine_id": "intel-258v",
+                "decision": {
+                    "thermal_zone_visibility_available": true,
+                    "thermal_temperature_available": true,
+                    "usable_temperature_reading_count": 0
+                },
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "telemetry_probe_executed": true,
+                    "measured_temperature_claim": true,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_opencl_or_native_npu_claim": false,
+                    "bitnet_qk256_or_i2s_behavior_changed": false
+                }
+            }),
+        )?;
+
+        let summary = inspect_thermal_temperature_availability_regression(
+            &temp.path().join(THERMAL_TEMPERATURE_AVAILABILITY_FILE),
+        )?;
+
+        assert!(!summary.regression_ready);
+        assert!(summary.gaps.iter().any(|gap| {
+            gap.contains("claims temperature availability without usable readings")
+        }));
+        assert!(summary.gaps.iter().any(|gap| gap.contains("claim boundary")));
+        Ok(())
+    }
+
+    #[test]
     fn warm_resident_auto_ask_receipt_is_regression_ready() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_warm_resident_auto_npu_ask(temp.path(), AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT)?;
@@ -18627,6 +18870,7 @@ mod tests {
             Some(&power),
             None,
             None,
+            None,
         );
         assert!(!missing.strict_ready);
         assert!(missing.gaps.iter().any(|gap| {
@@ -18642,6 +18886,7 @@ mod tests {
             Some(&durability),
             Some(&intake),
             Some(&power),
+            None,
             Some(&ask),
             None,
         );
