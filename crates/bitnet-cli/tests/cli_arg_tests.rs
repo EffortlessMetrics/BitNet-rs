@@ -4475,6 +4475,24 @@ fn mac_benchmark_accepts_resident_100_profile_before_release_gate() {
 }
 
 #[test]
+fn mac_benchmark_accepts_repeat_flag_before_release_gate() {
+    bitnet()
+        .args(["mac", "benchmark", "--profile", "short_prompt_16_out", "--repeat", "2"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac benchmark must be run from a release build"));
+}
+
+#[test]
+fn mac_benchmark_rejects_zero_repeat_before_release_gate() {
+    bitnet()
+        .args(["mac", "benchmark", "--profile", "short_prompt_16_out", "--repeat", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac benchmark --repeat must be at least 1"));
+}
+
+#[test]
 fn mac_benchmark_calibrate_writes_synthetic_receipt() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let receipt = dir.path().join("benchmark-calibration.json");
@@ -4515,6 +4533,13 @@ fn mac_benchmark_calibrate_rejects_profile_combo() {
         .stderr(predicate::str::contains(
             "mac benchmark --calibrate cannot be combined with --profile",
         ));
+}
+
+#[test]
+fn mac_benchmark_calibrate_rejects_repeat_combo() {
+    bitnet().args(["mac", "benchmark", "--calibrate", "--repeat", "2"]).assert().failure().stderr(
+        predicate::str::contains("mac benchmark --calibrate cannot be combined with --repeat"),
+    );
 }
 
 #[test]
@@ -4772,6 +4797,134 @@ fn mac_benchmark_receipt_contract_rejects_profiles_required_mismatch()
         .assert()
         .failure()
         .stderr(predicate::str::contains("profiles_required must match profiles order"));
+    Ok(())
+}
+
+#[test]
+fn mac_receipts_check_accepts_benchmark_variance_v1() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("benchmark-variance.json");
+    let mut receipt = slm_benchmark_variance_v1_summary();
+    receipt["evidence"]["child_summary_receipts"] =
+        serde_json::json!(write_benchmark_variance_child_summaries(dir.path())?);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_benchmark_variance_v1"))
+        .stdout(predicate::str::contains("\"prompt_count\": 6"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_variance_receipt_rejects_missing_outlier_policy()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("benchmark-variance-missing-outlier.json");
+    let mut receipt = slm_benchmark_variance_v1_summary();
+    receipt["evidence"]["child_summary_receipts"] =
+        serde_json::json!(write_benchmark_variance_child_summaries(dir.path())?);
+    receipt
+        .as_object_mut()
+        .ok_or_else(|| std::io::Error::other("missing receipt object"))?
+        .remove("outlier_handling");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("outlier_handling"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_variance_receipt_rejects_profile_count_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("benchmark-variance-profile-count.json");
+    let mut receipt = slm_benchmark_variance_v1_summary();
+    receipt["evidence"]["child_summary_receipts"] =
+        serde_json::json!(write_benchmark_variance_child_summaries(dir.path())?);
+    receipt["repeat"]["profile_count"] = serde_json::json!(2);
+    receipt["repeat"]["sample_count"] = serde_json::json!(4);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("profile_count must match profiles_required length"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_variance_receipt_rejects_metric_count_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("benchmark-variance-metric-count.json");
+    let mut receipt = slm_benchmark_variance_v1_summary();
+    receipt["evidence"]["child_summary_receipts"] =
+        serde_json::json!(write_benchmark_variance_child_summaries(dir.path())?);
+    receipt["metrics"]["speed"]["ttft_ms_p50"]["count"] = serde_json::json!(1);
+    receipt["metrics"]["speed"]["ttft_ms_p50"]["samples"] = serde_json::json!([10.0]);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("count must equal completed repeats"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_variance_receipt_rejects_missing_child_summary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("benchmark-variance-missing-child.json");
+    let mut receipt = slm_benchmark_variance_v1_summary();
+    receipt["evidence"]["child_summary_receipts"] = serde_json::json!([
+        dir.path().join("missing-run-01.json").to_string_lossy(),
+        dir.path().join("missing-run-02.json").to_string_lossy(),
+    ]);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("failed to read child benchmark receipt"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_variance_receipt_rejects_child_model_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("benchmark-variance-child-model.json");
+    let child_paths = write_benchmark_variance_child_summaries(dir.path())?;
+    let mut child = slm_benchmark_v2_summary();
+    child["model_cache"]["sha256"] =
+        serde_json::json!("0000000000000000000000000000000000000000000000000000000000000000");
+    std::fs::write(dir.path().join("run-02.json"), serde_json::to_vec_pretty(&child)?)?;
+    let mut receipt = slm_benchmark_variance_v1_summary();
+    receipt["evidence"]["child_summary_receipts"] = serde_json::json!(child_paths);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("model_cache.sha256"));
     Ok(())
 }
 
@@ -5614,6 +5767,41 @@ fn benchmark_stat_v2_json(p50: f64, p90: f64, p99: f64) -> serde_json::Value {
     })
 }
 
+fn benchmark_variance_stat_json(first: f64, second: f64) -> serde_json::Value {
+    serde_json::json!({
+        "count": 2,
+        "p50": first,
+        "p90": second,
+        "p99": second,
+        "min": first,
+        "max": second,
+        "samples": [first, second]
+    })
+}
+
+fn benchmark_variance_metric_section(metrics: &[&str]) -> serde_json::Value {
+    let mut object = serde_json::Map::new();
+    for metric in metrics {
+        for percentile in ["p50", "p90", "p99"] {
+            object
+                .insert(format!("{metric}_{percentile}"), benchmark_variance_stat_json(10.0, 12.0));
+        }
+    }
+    serde_json::Value::Object(object)
+}
+
+fn write_benchmark_variance_child_summaries(
+    dir: &std::path::Path,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let mut paths = Vec::new();
+    for run_number in 1..=2 {
+        let path = dir.join(format!("run-{run_number:02}.json"));
+        std::fs::write(&path, serde_json::to_vec_pretty(&slm_benchmark_v2_summary())?)?;
+        paths.push(path.to_string_lossy().into_owned());
+    }
+    Ok(paths)
+}
+
 fn benchmark_speed_v2_json() -> serde_json::Value {
     serde_json::json!({
         "cold_load_ms_p50": 3200.0,
@@ -5962,6 +6150,93 @@ fn slm_benchmark_v2_summary() -> serde_json::Value {
             "broad_performance_claim": false,
             "speedup_claim": false,
             "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false
+        },
+        "speedup_claim": false
+    })
+}
+
+fn slm_benchmark_variance_v1_summary() -> serde_json::Value {
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_benchmark_variance_v1",
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "profile_set": "slm-benchmark-v2",
+        "profiles_required": ["short_prompt_16_out"],
+        "prompt_count": 6,
+        "generated_tokens": 96,
+        "repeat": {
+            "requested": 2,
+            "completed": 2,
+            "profile_count": 1,
+            "sample_count": 2
+        },
+        "metrics": {
+            "speed": benchmark_variance_metric_section(&[
+                "cold_load_ms",
+                "tokenizer_load_ms",
+                "prompt_tokenize_ms",
+                "prefill_ms",
+                "ttft_ms",
+                "sampling_ms_per_token",
+                "input_tok_s",
+                "output_tok_s",
+                "decode_tok_s",
+                "total_wall_ms",
+            ]),
+            "memory": benchmark_variance_metric_section(&[
+                "peak_memory_mb",
+                "memory_drift_mb",
+            ])
+        },
+        "variance_band": {
+            "method": "min/max and p50/p90/p99 over repeated child benchmark summary aggregate metrics",
+            "reported_stats": ["count", "p50", "p90", "p99", "min", "max", "samples"],
+            "threshold_derivation": "uses the M4 operator envelope drift thresholds",
+            "advisory_vs_failure": "timing and memory drift are advisory unless fail-on-drift is enabled"
+        },
+        "outlier_handling": {
+            "method": "none",
+            "reason": "raw repeat samples are preserved"
+        },
+        "invalid_comparison_reasons": [],
+        "build": {
+            "profile": "release",
+            "release_mode": true
+        },
+        "model_cache": {
+            "id": "qwen2.5-0.5b-instruct-q8_0",
+            "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "architecture": "qwen2",
+            "quantization": "Q8_0",
+            "tokenizer_pre": "qwen2"
+        },
+        "evidence": {
+            "child_summary_receipts": [
+                "ci/hardware/apple-m4-mac-mini/2026-05-19/benchmark-variance/run-01.json",
+                "ci/hardware/apple-m4-mac-mini/2026-05-19/benchmark-variance/run-02.json"
+            ],
+            "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "operator_command": "mac benchmark --repeat"
+        },
+        "mac_claim_boundary": {
+            "dense_slm_only": true,
+            "variance_harness_only": true,
+            "final_variance_envelope": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "bitnet_quality_claimed": false,
+            "bitnet_performance_claimed": false,
             "full_metal_inference_claimed": false,
             "mpsgraph_inference_claimed": false,
             "neural_engine_execution_claimed": false,

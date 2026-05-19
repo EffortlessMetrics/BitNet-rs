@@ -102,7 +102,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-BENCH-001 | merged | Ensure benchmark receipts include the full timing and memory metric contract. |
 | M4-BENCH-004 | merged | Add benchmark environment preflight fields and invalid-comparison reasons. |
 | M4-BENCH-002 | merged | Publish p50/p90/p99 and min/max summaries for the supported dense benchmark matrix. |
-| M4-BENCH-008 | proposed | Add the repeat-run benchmark variance harness before live variance envelopes. |
+| M4-BENCH-008 | pr_open | Add the repeat-run benchmark variance harness before live variance envelopes. |
 | M4-BENCH-005 | proposed | Publish repeatability and variance envelopes for dense and BitNet timing families. |
 | M4-BENCH-006 | proposed | Publish explicit BitNet one-shot and warm variance receipts. |
 | M4-BENCH-003 | proposed | Wire benchmark summaries into matching-identity regression comparisons. |
