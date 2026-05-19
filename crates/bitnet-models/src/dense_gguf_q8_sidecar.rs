@@ -128,7 +128,7 @@ impl DenseGgufQ8SidecarDescriptor {
             q8_block_size,
             q8_block_count,
             q8_payload_bytes,
-            packed_q8_bytes_sha256: bytes_sha256(data),
+            packed_q8_bytes_sha256: bytes_sha256(&data[..q8_payload_bytes]),
             shape_reshaped_without_transpose,
             eager_f32_runtime_preserved: true,
             runtime_compute_enabled: false,
@@ -204,7 +204,8 @@ mod tests {
     #[test]
     fn dense_gguf_q8_sidecar_descriptor_is_metadata_only_and_inert() {
         let info = q8_info("blk.0.attn_q.weight", vec![2, 64], 136);
-        let data = vec![0u8; 136];
+        let mut data = vec![0u8; 136];
+        data.extend_from_slice(&[1, 2, 3, 4]);
 
         let descriptor = match DenseGgufQ8SidecarDescriptor::from_tensor(&info, &data) {
             Ok(Some(descriptor)) => descriptor,
@@ -219,6 +220,8 @@ mod tests {
         assert_eq!(descriptor.q8_block_size, 32);
         assert_eq!(descriptor.q8_block_count, 4);
         assert_eq!(descriptor.q8_payload_bytes, 136);
+        assert_eq!(descriptor.packed_q8_bytes_sha256, bytes_sha256(&data[..136]));
+        assert_ne!(descriptor.packed_q8_bytes_sha256, bytes_sha256(&data));
         assert_eq!(descriptor.runtime_candle_shape, vec![64, 2]);
         assert!(descriptor.shape_reshaped_without_transpose);
         assert!(descriptor.eager_f32_runtime_preserved);
