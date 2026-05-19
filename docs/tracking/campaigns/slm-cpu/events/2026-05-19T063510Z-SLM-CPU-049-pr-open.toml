@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T06:35:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-049"
+event = "pr_open"
+pr = 5879
+head_sha = "363f24398a71b6e363fbf38a85a1cbd4507ff438"
+actor = "codex"
+
+notes = [
+  "Opened the generated-ID/text receipt equivalence gate PR for packed Q8_0 sidecar candidates.",
+  "Scope remains behavior/provenance equivalence only; the production selector still preserves eager F32 Candle and sidecar_runtime_compute_allowed=false.",
+  "No packed sidecar runtime compute, speedup, generated-ID/text change, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
