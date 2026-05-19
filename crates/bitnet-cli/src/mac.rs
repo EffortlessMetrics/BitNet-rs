@@ -149,6 +149,10 @@ const M4_SLM_BENCHMARK_V2_LEGACY_AGGREGATE_SPEED_METRICS: &[&str] = &[
     "decode_tok_s",
     "total_wall_ms",
 ];
+const M4_BENCHMARK_CALIBRATION_WARMUP_ITERATIONS: usize = 8;
+const M4_BENCHMARK_CALIBRATION_MEASURED_ITERATIONS: usize = 64;
+const M4_BENCHMARK_CALIBRATION_CLOCK_ATTEMPTS: usize = 10_000;
+const M4_BENCHMARK_CALIBRATION_FIXTURE_WORK_UNITS: u64 = 2_048;
 const M4_ROBUSTNESS_REQUIRED_CATEGORIES: &[&str] = &[
     "false_premise",
     "ambiguous",
@@ -1064,6 +1068,10 @@ enum MacAction {
 
     /// Run release-mode dense SLM benchmark profiles for v2 M4 receipts.
     Benchmark {
+        /// Calibrate synthetic benchmark harness timing without running model inference.
+        #[arg(long, default_value_t = false)]
+        calibrate: bool,
+
         /// Supported dense SLM model id. Defaults to the validated Apple M4 SLM runtime artifact.
         #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
         model_id: String,
@@ -1072,8 +1080,8 @@ enum MacAction {
         #[arg(long, value_name = "PATH")]
         cache_dir: Option<PathBuf>,
 
-        /// Benchmark profile to run. Repeat to build the v2 profile matrix.
-        #[arg(long, value_enum, required = true)]
+        /// Benchmark profile to run. Repeat to build the v2 profile matrix; required unless --calibrate is used.
+        #[arg(long, value_enum)]
         profile: Vec<MacBenchmarkProfile>,
 
         /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
@@ -1677,6 +1685,7 @@ impl MacCommand {
                 run_mac_eval(suite, corpus, dry_run, json_out, json)
             }
             MacAction::Benchmark {
+                calibrate,
                 model_id,
                 cache_dir,
                 profile,
@@ -1689,6 +1698,7 @@ impl MacCommand {
                 let requested_backend =
                     ensure_supported_mac_benchmark_device(explicit_device_label)?;
                 run_benchmark(MacBenchmarkRun {
+                    calibrate,
                     model_id: &model_id,
                     cache_dir,
                     requested_backend,
@@ -9774,6 +9784,7 @@ async fn run_performance_profiles(
 }
 
 struct MacBenchmarkRun<'a> {
+    calibrate: bool,
     model_id: &'a str,
     cache_dir: Option<PathBuf>,
     requested_backend: &'static str,
@@ -9863,12 +9874,8 @@ impl BenchmarkMetricSamples {
 }
 
 async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
-    if cfg!(debug_assertions) {
-        anyhow::bail!(
-            "mac benchmark must be run from a release build; use `cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet` and then `target/release/bitnet mac benchmark ...`"
-        );
-    }
     let MacBenchmarkRun {
+        calibrate,
         model_id,
         cache_dir,
         requested_backend,
@@ -9879,6 +9886,17 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
         quiet,
         json_out,
     } = request;
+    if calibrate {
+        if !profiles.is_empty() {
+            anyhow::bail!("mac benchmark --calibrate cannot be combined with --profile");
+        }
+        return run_benchmark_calibration(model_id, cache_dir, requested_backend, quiet, json_out);
+    }
+    if cfg!(debug_assertions) {
+        anyhow::bail!(
+            "mac benchmark must be run from a release build; use `cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet` and then `target/release/bitnet mac benchmark ...`"
+        );
+    }
     let profiles = dedupe_benchmark_profiles(profiles)?;
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     let receipt_dir =
@@ -10057,6 +10075,161 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
         json_out.display(),
         profile_ids_display
     );
+    Ok(())
+}
+
+fn run_benchmark_calibration(
+    model_id: &str,
+    _cache_dir: Option<PathBuf>,
+    requested_backend: &'static str,
+    quiet: bool,
+    json_out: PathBuf,
+) -> Result<()> {
+    let metadata = model_cache::apple_m4_slm_model_receipt_metadata(model_id)?;
+    let clock_resolution_samples = benchmark_calibration_clock_resolution_samples_ns();
+    let runner_overhead_samples = benchmark_calibration_runner_overhead_samples_ns();
+    let fixture_samples = benchmark_calibration_integer_fixture_samples_ns();
+    let invalid_reasons = benchmark_calibration_invalid_reasons(
+        &clock_resolution_samples,
+        &runner_overhead_samples,
+        &fixture_samples,
+    );
+    let readiness_status =
+        if invalid_reasons.is_empty() { "calibrated" } else { "invalid_for_comparison" };
+    let run_identity =
+        apple_m4_benchmark_calibration_run_identity_json(&metadata, requested_backend);
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_benchmark_calibration",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac benchmark --calibrate",
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": requested_backend,
+        "selected_backend": requested_backend,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "expected_soc": "apple-m4",
+        },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
+        "model": {
+            "id": metadata.id,
+            "repo": metadata.repo,
+            "revision": metadata.revision,
+            "file": metadata.file,
+            "sha256": metadata.sha256,
+            "bytes": metadata.bytes,
+            "family": metadata.family,
+            "architecture": metadata.architecture,
+            "quantization": metadata.quantization,
+        },
+        "tokenizer": {
+            "authority": metadata.tokenizer_authority,
+            "sha256": serde_json::Value::Null,
+            "sha256_status": "not_applicable_gguf_metadata_authority",
+        },
+        "calibration": {
+            "contract_version": "1.0.0",
+            "scope": "Apple M4 benchmark harness calibration",
+            "live_model_run": false,
+            "model_inference_timing": false,
+            "synthetic_timing_result_recorded": true,
+            "model_speed_claimed": false,
+            "clock": {
+                "source": "std::time::Instant",
+                "source_class": "monotonic_process_clock",
+                "monotonic": true,
+                "resolution_ns": benchmark_stat_json(&clock_resolution_samples),
+                "resolution_method": "observed non-zero consecutive Instant::now delta",
+                "attempts_limit": M4_BENCHMARK_CALIBRATION_CLOCK_ATTEMPTS,
+            },
+            "runner_overhead": {
+                "timer_pair_overhead_ns": benchmark_stat_json(&runner_overhead_samples),
+                "fixture_dispatch_overhead_ns": benchmark_stat_json(&fixture_samples),
+                "measured_iterations": M4_BENCHMARK_CALIBRATION_MEASURED_ITERATIONS,
+            },
+            "warm_up_policy": {
+                "synthetic_warmup_iterations": M4_BENCHMARK_CALIBRATION_WARMUP_ITERATIONS,
+                "applies_to": ["timer_pair_overhead", "integer_accumulator_fixture"],
+                "model_warmup": "not_applicable_no_model_loaded",
+            },
+            "sample_discard_policy": {
+                "discarded_warmup_iterations": M4_BENCHMARK_CALIBRATION_WARMUP_ITERATIONS,
+                "discard_min_max": false,
+                "outlier_trim": "none",
+                "reported_samples": "all post-warmup samples",
+                "reason": "calibration must expose raw harness spread before benchmark envelopes use p50/p90/p99",
+            },
+            "synthetic_timing_fixtures": [
+                {
+                    "id": "timer_pair_overhead",
+                    "kind": "empty_timed_region",
+                    "work_units": 0,
+                    "live_model_run": false,
+                    "timing_ns": benchmark_stat_json(&runner_overhead_samples),
+                },
+                {
+                    "id": "integer_accumulator_fixture",
+                    "kind": "deterministic_cpu_loop",
+                    "work_units": M4_BENCHMARK_CALIBRATION_FIXTURE_WORK_UNITS,
+                    "live_model_run": false,
+                    "timing_ns": benchmark_stat_json(&fixture_samples),
+                },
+            ],
+            "profile_timeout_rules": benchmark_calibration_profile_timeout_rules_json(),
+            "invalid_comparison_reasons": invalid_reasons.clone(),
+            "skipped_or_invalid_comparison_reasons": invalid_reasons.clone(),
+        },
+        "comparison_readiness": {
+            "status": readiness_status,
+            "can_compare_timing": invalid_reasons.is_empty(),
+            "invalid_comparison_reasons": invalid_reasons.clone(),
+            "skipped_or_invalid_comparison_reasons": invalid_reasons,
+            "advisory_warnings": ["synthetic_fixtures_are_not_model_inference"],
+            "next_step": if readiness_status == "calibrated" {
+                "Run benchmark-preflight and release benchmark profiles before interpreting model timing drift."
+            } else {
+                "Fix invalid_comparison_reasons before using benchmark timing envelopes for comparison."
+            },
+        },
+        "build": {
+            "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
+            "release_mode": !cfg!(debug_assertions),
+        },
+        "claim_boundary": {
+            "benchmark_calibration_only": true,
+            "synthetic_timing_only": true,
+            "live_model_run": false,
+            "model_inference_timing": false,
+            "model_speed_claimed": false,
+            "dense_slm_only": true,
+            "bitnet_evidence": false,
+            "bitnet_quality_claimed": false,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+    });
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if !quiet {
+        println!(
+            "Mac benchmark calibration written to {} ({readiness_status})",
+            json_out.display()
+        );
+    }
     Ok(())
 }
 
@@ -10262,6 +10435,189 @@ fn apple_m4_benchmark_preflight_run_identity_json(
             "source": "preflight_snapshot_wall_clock_utc",
         },
     })
+}
+
+fn apple_m4_benchmark_calibration_run_identity_json(
+    metadata: &model_cache::AppleM4SlmModelReceiptMetadata,
+    requested_backend: &str,
+) -> serde_json::Value {
+    let prompt_template = "benchmark-calibration-no-prompt";
+    serde_json::json!({
+        "contract_version": bitnet_receipts_core::M4_RUN_IDENTITY_CONTRACT_VERSION,
+        "machine_id": "apple-m4-mac-mini",
+        "soc": "apple-m4",
+        "artifact_kind": "apple_m4_benchmark_calibration",
+        "evidence_family": "dense_slm_benchmark_calibration",
+        "os": {
+            "name": std::env::consts::OS,
+            "version": apple_m4_host_os_version(),
+            "version_source": apple_m4_host_os_version_source(),
+        },
+        "git": {
+            "commit": apple_m4_git_commit(),
+            "commit_source": apple_m4_git_commit_source(),
+        },
+        "binary": {
+            "crate_version": env!("CARGO_PKG_VERSION"),
+            "build_profile": apple_m4_build_profile(),
+            "binary_sha256": serde_json::Value::Null,
+            "binary_sha256_status": "not_recorded_build_profile_used",
+        },
+        "command": {
+            "class": "mac benchmark --calibrate",
+            "live_model_run": false,
+        },
+        "model": {
+            "id": metadata.id,
+            "sha256": metadata.sha256,
+            "family": metadata.family,
+            "quantization": metadata.quantization,
+            "loader_mode": "not_loaded_calibration_only",
+            "supported_prompt_template": {
+                "id": metadata.prompt_template,
+                "sha256": metadata.prompt_template_sha256,
+                "source": metadata.prompt_template_source,
+            },
+        },
+        "tokenizer": {
+            "authority": metadata.tokenizer_authority,
+            "sha256": "not_applicable",
+            "source": "gguf_metadata",
+            "pretokenizer_authority": metadata.tokenizer_authority,
+            "strict": true,
+        },
+        "prompt_template": {
+            "id": prompt_template,
+            "sha256": sha256_hex(prompt_template.as_bytes()),
+            "identity_scope": "calibration_no_prompt",
+        },
+        "backend": {
+            "requested_backend": requested_backend,
+            "selected_backend": requested_backend,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+        },
+        "evidence_identity": {
+            "scope": "benchmark_harness_calibration",
+            "seed": "deterministic-synthetic-fixtures-v1",
+            "corpus_id": "not_applicable",
+            "profile_id": "benchmark-calibration",
+        },
+        "timing": {
+            "source": "std::time::Instant synthetic harness timing",
+        },
+    })
+}
+
+fn benchmark_calibration_clock_resolution_samples_ns() -> Vec<f64> {
+    let mut samples = Vec::with_capacity(M4_BENCHMARK_CALIBRATION_MEASURED_ITERATIONS);
+    let mut previous = std::time::Instant::now();
+    for _ in 0..M4_BENCHMARK_CALIBRATION_CLOCK_ATTEMPTS {
+        let now = std::time::Instant::now();
+        if now > previous {
+            let delta = now.duration_since(previous).as_nanos() as f64;
+            if delta.is_finite() && delta >= 0.0 {
+                samples.push(delta);
+            }
+            previous = now;
+        }
+        if samples.len() >= M4_BENCHMARK_CALIBRATION_MEASURED_ITERATIONS {
+            break;
+        }
+    }
+    samples
+}
+
+fn benchmark_calibration_runner_overhead_samples_ns() -> Vec<f64> {
+    let mut samples = Vec::with_capacity(M4_BENCHMARK_CALIBRATION_MEASURED_ITERATIONS);
+    let total =
+        M4_BENCHMARK_CALIBRATION_WARMUP_ITERATIONS + M4_BENCHMARK_CALIBRATION_MEASURED_ITERATIONS;
+    for index in 0..total {
+        let started = std::time::Instant::now();
+        std::hint::black_box(index);
+        let elapsed = started.elapsed().as_nanos() as f64;
+        if index >= M4_BENCHMARK_CALIBRATION_WARMUP_ITERATIONS {
+            samples.push(elapsed);
+        }
+    }
+    samples
+}
+
+fn benchmark_calibration_integer_fixture_samples_ns() -> Vec<f64> {
+    let mut samples = Vec::with_capacity(M4_BENCHMARK_CALIBRATION_MEASURED_ITERATIONS);
+    let total =
+        M4_BENCHMARK_CALIBRATION_WARMUP_ITERATIONS + M4_BENCHMARK_CALIBRATION_MEASURED_ITERATIONS;
+    let mut accumulator = 0_u64;
+    for index in 0..total {
+        let started = std::time::Instant::now();
+        for value in 0..M4_BENCHMARK_CALIBRATION_FIXTURE_WORK_UNITS {
+            accumulator = accumulator.wrapping_add(value ^ (index as u64));
+        }
+        std::hint::black_box(accumulator);
+        let elapsed = started.elapsed().as_nanos() as f64;
+        if index >= M4_BENCHMARK_CALIBRATION_WARMUP_ITERATIONS {
+            samples.push(elapsed);
+        }
+    }
+    samples
+}
+
+fn benchmark_calibration_invalid_reasons(
+    clock_resolution_samples: &[f64],
+    runner_overhead_samples: &[f64],
+    fixture_samples: &[f64],
+) -> Vec<&'static str> {
+    let mut reasons = Vec::new();
+    if clock_resolution_samples.is_empty() {
+        reasons.push("clock_resolution_unavailable");
+    }
+    if runner_overhead_samples.is_empty() {
+        reasons.push("runner_overhead_unavailable");
+    }
+    if fixture_samples.is_empty() {
+        reasons.push("synthetic_fixture_unavailable");
+    }
+    if benchmark_stats(clock_resolution_samples).p50.is_none() {
+        reasons.push("clock_resolution_stats_unavailable");
+    }
+    if benchmark_stats(runner_overhead_samples).p50.is_none() {
+        reasons.push("runner_overhead_stats_unavailable");
+    }
+    if benchmark_stats(fixture_samples).p50.is_none() {
+        reasons.push("synthetic_fixture_stats_unavailable");
+    }
+    reasons
+}
+
+fn benchmark_calibration_profile_timeout_rules_json() -> serde_json::Value {
+    serde_json::Value::Array(
+        M4_SLM_BENCHMARK_V2_PROFILES
+            .iter()
+            .map(|profile_id| {
+                serde_json::json!({
+                    "profile_id": profile_id,
+                    "timeout_seconds": benchmark_calibration_profile_timeout_seconds(profile_id),
+                    "timeout_behavior": "record timeout receipt and mark profile invalid for envelope comparison",
+                    "partial_receipt_required": true,
+                })
+            })
+            .collect(),
+    )
+}
+
+fn benchmark_calibration_profile_timeout_seconds(profile_id: &str) -> u64 {
+    match profile_id {
+        "short_prompt_16_out" => 120,
+        "short_prompt_64_out" => 180,
+        "long_prompt_16_out" => 240,
+        "long_prompt_128_out" => 420,
+        "context_1k" => 360,
+        "context_4k" => 720,
+        "resident_25" => 900,
+        "resident_50" => 1_500,
+        "resident_100" => 2_400,
+        _ => 600,
+    }
 }
 
 fn apple_m4_benchmark_preflight_os_json() -> serde_json::Value {
@@ -15142,6 +15498,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_larger_corpus_decision_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
         validate_slm_benchmark_v2_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_benchmark_calibration" {
+        validate_apple_m4_benchmark_calibration_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_benchmark_preflight" {
         validate_apple_m4_benchmark_preflight_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_benchmark_v1" {
@@ -18604,6 +18962,240 @@ fn validate_slm_benchmark_v2_receipt(
     }
 
     Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
+}
+
+fn validate_apple_m4_benchmark_calibration_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_benchmark_calibration")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac benchmark --calibrate")?;
+    require_exact_string_at(path, receipt, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+        .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_exact_string_at(path, receipt, &["machine", "expected_soc"], "apple-m4")?;
+    require_non_empty_string_at(path, receipt, &["model", "id"])?;
+    let model_sha = require_non_empty_string_at(path, receipt, &["model", "sha256"])?;
+    if !is_sha256_hex(model_sha) {
+        anyhow::bail!(
+            "{} benchmark calibration model.sha256 must be a SHA256 hex digest",
+            path.display()
+        );
+    }
+    require_non_empty_string_at(path, receipt, &["model", "architecture"])?;
+    require_non_empty_string_at(path, receipt, &["model", "quantization"])?;
+    require_non_empty_string_at(path, receipt, &["tokenizer", "authority"])?;
+
+    require_exact_string_at(path, receipt, &["calibration", "contract_version"], "1.0.0")?;
+    require_bool_at(path, receipt, &["calibration", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["calibration", "model_inference_timing"], false)?;
+    require_bool_at(path, receipt, &["calibration", "synthetic_timing_result_recorded"], true)?;
+    require_bool_at(path, receipt, &["calibration", "model_speed_claimed"], false)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["calibration", "clock", "source"],
+        "std::time::Instant",
+    )?;
+    require_bool_at(path, receipt, &["calibration", "clock", "monotonic"], true)?;
+    validate_benchmark_stat_object(
+        path,
+        receipt,
+        &["calibration", "clock", "resolution_ns"],
+        false,
+    )?;
+    validate_benchmark_stat_object(
+        path,
+        receipt,
+        &["calibration", "runner_overhead", "timer_pair_overhead_ns"],
+        false,
+    )?;
+    validate_benchmark_stat_object(
+        path,
+        receipt,
+        &["calibration", "runner_overhead", "fixture_dispatch_overhead_ns"],
+        false,
+    )?;
+    require_u64_at(
+        path,
+        receipt,
+        &["calibration", "warm_up_policy", "synthetic_warmup_iterations"],
+        true,
+    )?;
+    require_u64_at(
+        path,
+        receipt,
+        &["calibration", "sample_discard_policy", "discarded_warmup_iterations"],
+        true,
+    )?;
+    require_bool_value_at(
+        path,
+        receipt,
+        &["calibration", "sample_discard_policy", "discard_min_max"],
+    )?;
+    require_non_empty_string_at(
+        path,
+        receipt,
+        &["calibration", "sample_discard_policy", "outlier_trim"],
+    )?;
+
+    let fixtures = json_value_at(receipt, &["calibration", "synthetic_timing_fixtures"])
+        .as_array()
+        .ok_or_else(|| {
+            anyhow!(
+                "{} benchmark calibration synthetic_timing_fixtures must be an array",
+                path.display()
+            )
+        })?;
+    if fixtures.is_empty() {
+        anyhow::bail!(
+            "{} benchmark calibration must record at least one synthetic timing fixture",
+            path.display()
+        );
+    }
+    for fixture in fixtures {
+        require_non_empty_string_at(path, fixture, &["id"])?;
+        require_non_empty_string_at(path, fixture, &["kind"])?;
+        require_u64_at(path, fixture, &["work_units"], false)?;
+        require_bool_at(path, fixture, &["live_model_run"], false)?;
+        validate_benchmark_stat_object(path, fixture, &["timing_ns"], false)?;
+    }
+
+    let timeout_rules = json_value_at(receipt, &["calibration", "profile_timeout_rules"])
+        .as_array()
+        .ok_or_else(|| {
+            anyhow!(
+                "{} benchmark calibration profile_timeout_rules must be an array",
+                path.display()
+            )
+        })?;
+    if timeout_rules.len() != M4_SLM_BENCHMARK_V2_PROFILES.len() {
+        anyhow::bail!(
+            "{} benchmark calibration profile_timeout_rules must cover every benchmark profile",
+            path.display()
+        );
+    }
+    for (rule, expected_profile_id) in timeout_rules.iter().zip(M4_SLM_BENCHMARK_V2_PROFILES.iter())
+    {
+        require_exact_string_at(path, rule, &["profile_id"], expected_profile_id)?;
+        require_u64_at(path, rule, &["timeout_seconds"], true)?;
+        require_bool_at(path, rule, &["partial_receipt_required"], true)?;
+        require_non_empty_string_at(path, rule, &["timeout_behavior"])?;
+    }
+
+    let calibration_invalid =
+        json_value_at(receipt, &["calibration", "invalid_comparison_reasons"])
+            .as_array()
+            .ok_or_else(|| {
+                anyhow!(
+                    "{} benchmark calibration invalid_comparison_reasons must be an array",
+                    path.display()
+                )
+            })?;
+    let calibration_skipped = json_value_at(
+        receipt,
+        &["calibration", "skipped_or_invalid_comparison_reasons"],
+    )
+    .as_array()
+    .ok_or_else(|| {
+        anyhow!(
+            "{} benchmark calibration skipped_or_invalid_comparison_reasons must be an array",
+            path.display()
+        )
+    })?;
+    if calibration_invalid != calibration_skipped {
+        anyhow::bail!(
+            "{} benchmark calibration skipped_or_invalid_comparison_reasons must match invalid_comparison_reasons",
+            path.display()
+        );
+    }
+
+    let readiness =
+        require_non_empty_string_at(path, receipt, &["comparison_readiness", "status"])?;
+    if !matches!(readiness, "calibrated" | "invalid_for_comparison") {
+        anyhow::bail!(
+            "{} benchmark calibration comparison_readiness.status must be calibrated or invalid_for_comparison",
+            path.display()
+        );
+    }
+    let can_compare =
+        require_bool_value_at(path, receipt, &["comparison_readiness", "can_compare_timing"])?;
+    let invalid_reasons = json_value_at(
+        receipt,
+        &["comparison_readiness", "invalid_comparison_reasons"],
+    )
+    .as_array()
+    .ok_or_else(|| {
+        anyhow!(
+            "{} benchmark calibration comparison invalid_comparison_reasons must be an array",
+            path.display()
+        )
+    })?;
+    let skipped_reasons =
+        json_value_at(receipt, &["comparison_readiness", "skipped_or_invalid_comparison_reasons"])
+            .as_array()
+            .ok_or_else(|| {
+                anyhow!(
+                    "{} benchmark calibration comparison skipped_or_invalid_comparison_reasons must be an array",
+                    path.display()
+                )
+            })?;
+    if invalid_reasons != skipped_reasons || invalid_reasons != calibration_invalid {
+        anyhow::bail!(
+            "{} benchmark calibration comparison reasons must match calibration reasons",
+            path.display()
+        );
+    }
+    if can_compare != invalid_reasons.is_empty() {
+        anyhow::bail!(
+            "{} benchmark calibration can_compare_timing must be true only when invalid_comparison_reasons is empty",
+            path.display()
+        );
+    }
+    if readiness == "calibrated" && !invalid_reasons.is_empty() {
+        anyhow::bail!(
+            "{} calibrated benchmark calibration must not record invalid reasons",
+            path.display()
+        );
+    }
+    if readiness == "invalid_for_comparison" && invalid_reasons.is_empty() {
+        anyhow::bail!(
+            "{} invalid benchmark calibration must record at least one invalid reason",
+            path.display()
+        );
+    }
+    if json_value_at(receipt, &["comparison_readiness", "advisory_warnings"]).as_array().is_none() {
+        anyhow::bail!(
+            "{} benchmark calibration advisory_warnings must be an array",
+            path.display()
+        );
+    }
+
+    require_bool_at(path, receipt, &["claim_boundary", "benchmark_calibration_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "synthetic_timing_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "model_inference_timing"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "model_speed_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+
+    Ok((Some(0), Some(0)))
 }
 
 fn validate_apple_m4_benchmark_preflight_receipt(

@@ -372,6 +372,9 @@ memory_drift_mb
 The operator command is:
 
 ```bash
+bitnet mac benchmark --calibrate \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/benchmark/calibration.json
+
 target/release/bitnet --device apple-m4-cpu-neon mac benchmark \
   --model-id <model-id> \
   --profile short_prompt_16_out \
@@ -386,7 +389,10 @@ target/release/bitnet --device apple-m4-cpu-neon mac benchmark \
   --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-benchmark-v2/<model-id>/summary.json
 ```
 
-The receipt kind is `apple_m4_slm_benchmark_v2`. Each profile is one
+The calibration receipt kind is `apple_m4_benchmark_calibration`; it records
+synthetic harness timing only and does not load a model or claim model speed.
+
+The live benchmark receipt kind is `apple_m4_slm_benchmark_v2`. Each profile is one
 resident warm-session run with model/tokenizer reuse visible inside that
 profile. The memory drift field is based on `getrusage.ru_maxrss`, so it is a
 process peak delta and not a live RSS measurement.

@@ -84,6 +84,9 @@ explicit chat/serve-disabled boundaries.
 The live refresh sequence belongs only in advisory, scheduled, or release lanes:
 
 ```bash
+bitnet mac benchmark --calibrate \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/benchmark/calibration.json
+
 target/release/bitnet --device apple-m4-cpu-neon mac benchmark \
   --model-id <dense-model-id> \
   --profile short_prompt_16_out \

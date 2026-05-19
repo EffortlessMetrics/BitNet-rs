@@ -4475,6 +4475,76 @@ fn mac_benchmark_accepts_resident_100_profile_before_release_gate() {
 }
 
 #[test]
+fn mac_benchmark_calibrate_writes_synthetic_receipt() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("benchmark-calibration.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "benchmark", "--calibrate", "--json-out", receipt_str.as_str()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Mac benchmark calibration written"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_benchmark_calibration");
+    assert_eq!(receipt_json["operator_command"], "mac benchmark --calibrate");
+    assert_eq!(receipt_json["run_identity"]["contract_version"], "m4-run-identity-v1");
+    assert_eq!(receipt_json["run_identity"]["command"]["live_model_run"], false);
+    assert_eq!(receipt_json["calibration"]["live_model_run"], false);
+    assert_eq!(receipt_json["calibration"]["model_inference_timing"], false);
+    assert_eq!(receipt_json["calibration"]["clock"]["source"], "std::time::Instant");
+    assert_eq!(receipt_json["claim_boundary"]["benchmark_calibration_only"], true);
+    assert_eq!(receipt_json["claim_boundary"]["broad_performance_claim"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_benchmark_calibration"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_benchmark_calibrate_rejects_profile_combo() {
+    bitnet()
+        .args(["mac", "benchmark", "--calibrate", "--profile", "short_prompt_16_out"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "mac benchmark --calibrate cannot be combined with --profile",
+        ));
+}
+
+#[test]
+fn mac_benchmark_calibration_receipt_rejects_missing_clock()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("benchmark-calibration.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "benchmark", "--calibrate", "--json-out", receipt_str.as_str()])
+        .assert()
+        .success();
+
+    let mut receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    receipt_json["calibration"]
+        .as_object_mut()
+        .ok_or_else(|| std::io::Error::other("missing calibration"))?
+        .remove("clock");
+    std::fs::write(&receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("clock"));
+    Ok(())
+}
+
+#[test]
 fn mac_benchmark_preflight_writes_receipt() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let receipt = dir.path().join("benchmark-preflight.json");
