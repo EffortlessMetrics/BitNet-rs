@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T13:15:00Z"
+event = "merged"
+item = "LNL258V-OP-008"
+branch = "codex/lunar-lake/LNL258V-OP-008-auto-route-blockers"
+pr = 5833
+head_sha = "2849abe7cb12403e6200bc59819e9c34472b664c"
+merge_sha = "b5a257b3d84cbea295187cfe95697d01ca052702"
+actor = "codex"
+summary = "Merged LNL258V-OP-008 after improving fail-closed auto-route blocker diagnostics."
+
+notes = [
+  "PR #5833 makes auto-route failures for profiles with no promoted route report candidate routes and why-not-CPU/GPU/NPU blockers from the route-promotion ledger.",
+  "The low_power auto-route path remains fail-closed while surfacing low_power power-advantage and benchmark-qualified evidence gaps.",
+  "The merge makes no route promotion, speedup, power-advantage, new-inference, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]
