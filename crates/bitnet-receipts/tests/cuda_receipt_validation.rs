@@ -1979,6 +1979,38 @@ fn dense_gguf_qwen_short_decode_rejects_missing_transfer_timing_source_fields() 
 }
 
 #[test]
+fn dense_gguf_qwen_short_decode_accepts_legacy_receipt_without_transfer_reduction_section() {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt.as_object_mut().unwrap().remove("logits_transfer_reduction");
+
+    validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt).unwrap();
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_rejects_unearned_transfer_reduction_claim() {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["device_to_host_bytes_reduced"] = json!(true);
+
+    let err = validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("device_to_host_bytes_reduced"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_requires_reduction_blocker_when_full_logits_download_remains() {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["reduction_blocker"] = Value::Null;
+
+    let err = validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("reduction_blocker"), "unexpected error: {err}");
+}
+
+#[test]
 fn dense_gguf_qwen_short_decode_rejects_chat_speedup_full_residency_and_bitnet_claims() {
     let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
     receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(true);
@@ -2077,6 +2109,38 @@ fn dense_gguf_qwen_warm_session_rejects_missing_transfer_timing_source_fields() 
         .to_string();
 
     assert!(err.contains("transfer_timing_status"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_warm_session_accepts_legacy_receipt_without_transfer_reduction_section() {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt.as_object_mut().unwrap().remove("logits_transfer_reduction");
+
+    validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt).unwrap();
+}
+
+#[test]
+fn dense_gguf_qwen_warm_session_rejects_transfer_reduction_byte_mismatch() {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["actual_device_to_host_bytes"] = json!(128);
+
+    let err = validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("actual_device_to_host_bytes"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_warm_session_rejects_transfer_reduction_without_top_k_evidence() {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["top_k_evidence_preserved"] = json!(false);
+
+    let err = validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("top_k_evidence_preserved"), "unexpected error: {err}");
 }
 
 #[test]
@@ -4182,7 +4246,7 @@ fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
                 "cuda_logits_top_k_sha256": format!("{:064x}", 50 + index),
                 "cpu_logits_sha256": format!("{:064x}", 70 + index),
                 "cuda_logits_sha256": format!("{:064x}", 80 + index),
-                "logits_vector_length": 151936,
+                "logits_vector_length": 32,
                 "cpu_top_k": [
                     {"rank": 1, "token_id": *token, "value": 1.0},
                     {"rank": 2, "token_id": 3, "value": 0.5}
@@ -4286,6 +4350,28 @@ fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
             "kernel_time_ms": 0.0
         }
     ]);
+    receipt["logits_transfer_reduction"] = json!({
+        "schema": 1,
+        "scope": "dense_qwen_logits_top_k_transfer",
+        "transfer_mode": "full_logits_download_cpu_sampler",
+        "sampling_location": "cpu",
+        "requested_top_k": 2,
+        "generated_tokens_count": 8,
+        "logits_vector_length": 32,
+        "logits_element_bytes": 4,
+        "full_logits_bytes_per_step": 128,
+        "full_logits_download_bytes": 1024,
+        "actual_device_to_host_bytes": 1024,
+        "top_k_result_bytes_per_step_floor": 24,
+        "top_k_result_bytes_total_floor": 192,
+        "selected_token_bytes_total_floor": 32,
+        "device_to_host_bytes_reduced": false,
+        "bytes_saved_vs_full_logits": 0,
+        "selected_token_equality_preserved": true,
+        "top_k_evidence_preserved": true,
+        "quality_receipts_unchanged": true,
+        "reduction_blocker": "cpu_sampler_requires_full_logits_until_device_top_k_sampler"
+    });
     receipt["kernel_coverage"] = json!({
         "schema": 1,
         "route": "dense_regular_llm_cuda",
@@ -4440,7 +4526,7 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
                         "cuda_logits_top_k_sha256": format!("{:064x}", 130 + turn_index * 10 + index),
                         "cpu_logits_sha256": format!("{:064x}", 170 + turn_index * 10 + index),
                         "cuda_logits_sha256": format!("{:064x}", 200 + turn_index * 10 + index),
-                        "logits_vector_length": 151936,
+                        "logits_vector_length": 32,
                         "cpu_top_k": [
                             {"rank": 1, "token_id": *token, "value": 1.0},
                             {"rank": 2, "token_id": 3, "value": 0.5}
@@ -4574,6 +4660,28 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
             "kernel_time_ms": 0.0
         }
     ]);
+    receipt["logits_transfer_reduction"] = json!({
+        "schema": 1,
+        "scope": "dense_qwen_logits_top_k_transfer",
+        "transfer_mode": "full_logits_download_cpu_sampler",
+        "sampling_location": "cpu",
+        "requested_top_k": 2,
+        "generated_tokens_count": 24,
+        "logits_vector_length": 32,
+        "logits_element_bytes": 4,
+        "full_logits_bytes_per_step": 128,
+        "full_logits_download_bytes": 3072,
+        "actual_device_to_host_bytes": 3072,
+        "top_k_result_bytes_per_step_floor": 24,
+        "top_k_result_bytes_total_floor": 576,
+        "selected_token_bytes_total_floor": 96,
+        "device_to_host_bytes_reduced": false,
+        "bytes_saved_vs_full_logits": 0,
+        "selected_token_equality_preserved": true,
+        "top_k_evidence_preserved": true,
+        "quality_receipts_unchanged": true,
+        "reduction_blocker": "cpu_sampler_requires_full_logits_until_device_top_k_sampler"
+    });
     receipt["kernel_coverage"] = json!({
         "schema": 1,
         "route": "dense_regular_llm_cuda",

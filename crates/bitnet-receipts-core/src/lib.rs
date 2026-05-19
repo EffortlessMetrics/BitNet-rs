@@ -5393,6 +5393,85 @@ fn validate_dense_qwen_transfer_timing(timing: &Value, transfer: &Value) -> Resu
     Ok(())
 }
 
+fn validate_dense_qwen_logits_transfer_reduction(
+    receipt: &Value,
+    stats_d2h: u64,
+    generated_tokens: u64,
+) -> Result<()> {
+    let Some(reduction) = receipt.get("logits_transfer_reduction") else {
+        return Ok(());
+    };
+    if !reduction.is_object() {
+        return Err(anyhow!("logits_transfer_reduction must be an object when present"));
+    }
+
+    require_u64_eq(reduction, "schema", 1)?;
+    require_string_eq(reduction, "scope", "dense_qwen_logits_top_k_transfer")?;
+    require_string_non_empty(reduction, "transfer_mode")?;
+    require_string_non_empty(reduction, "sampling_location")?;
+    require_positive_u64(reduction, "requested_top_k")?;
+    require_u64_eq(reduction, "generated_tokens_count", generated_tokens)?;
+    require_positive_u64(reduction, "logits_vector_length")?;
+    require_positive_u64(reduction, "logits_element_bytes")?;
+    let full_logits_bytes_per_step = required_u64(reduction, "full_logits_bytes_per_step")?;
+    let full_logits_download_bytes = required_u64(reduction, "full_logits_download_bytes")?;
+    if full_logits_bytes_per_step == 0 || full_logits_download_bytes == 0 {
+        return Err(anyhow!("logits_transfer_reduction full logits byte counts must be positive"));
+    }
+    let expected_full_bytes = full_logits_bytes_per_step
+        .checked_mul(generated_tokens)
+        .ok_or_else(|| anyhow!("logits_transfer_reduction full logits byte count overflows"))?;
+    if full_logits_download_bytes != expected_full_bytes {
+        return Err(anyhow!(
+            "logits_transfer_reduction.full_logits_download_bytes must equal full_logits_bytes_per_step * generated_tokens_count"
+        ));
+    }
+    let actual_device_to_host_bytes = required_u64(reduction, "actual_device_to_host_bytes")?;
+    if actual_device_to_host_bytes != stats_d2h {
+        return Err(anyhow!(
+            "logits_transfer_reduction.actual_device_to_host_bytes must match measured device_to_host_bytes"
+        ));
+    }
+    require_positive_u64(reduction, "top_k_result_bytes_per_step_floor")?;
+    require_positive_u64(reduction, "top_k_result_bytes_total_floor")?;
+    require_positive_u64(reduction, "selected_token_bytes_total_floor")?;
+    require_bool_eq(reduction, "selected_token_equality_preserved", true)?;
+    require_bool_eq(reduction, "top_k_evidence_preserved", true)?;
+    require_bool_eq(reduction, "quality_receipts_unchanged", true)?;
+
+    let reduced = object_field(reduction, "device_to_host_bytes_reduced")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `device_to_host_bytes_reduced` must be a bool"))?;
+    let bytes_saved = required_u64(reduction, "bytes_saved_vs_full_logits")?;
+    if reduced {
+        if actual_device_to_host_bytes >= full_logits_download_bytes {
+            return Err(anyhow!(
+                "logits_transfer_reduction.device_to_host_bytes_reduced requires actual_device_to_host_bytes < full_logits_download_bytes"
+            ));
+        }
+        if bytes_saved != full_logits_download_bytes - actual_device_to_host_bytes {
+            return Err(anyhow!(
+                "logits_transfer_reduction.bytes_saved_vs_full_logits must equal the measured D2H reduction"
+            ));
+        }
+    } else {
+        require_string_eq(reduction, "transfer_mode", "full_logits_download_cpu_sampler")?;
+        require_string_non_empty(reduction, "reduction_blocker")?;
+        if actual_device_to_host_bytes != full_logits_download_bytes {
+            return Err(anyhow!(
+                "logits_transfer_reduction non-reduced receipts must account for full logits D2H bytes"
+            ));
+        }
+        if bytes_saved != 0 {
+            return Err(anyhow!(
+                "logits_transfer_reduction.bytes_saved_vs_full_logits must be 0 when device_to_host_bytes_reduced is false"
+            ));
+        }
+    }
+
+    Ok(())
+}
+
 /// Validate the exact dense Qwen model identities allowed in runtime CUDA proofs.
 fn require_verified_dense_qwen_runtime_model(model: &Value) -> Result<()> {
     let id = required_string(model, "id")?;
@@ -5957,6 +6036,7 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     require_u64_eq(transfer, "kernel_invocations", stats_invocations)?;
     require_u64_eq(transfer, "kernel_launches", stats_launches)?;
     validate_dense_qwen_transfer_timing(timing, transfer)?;
+    validate_dense_qwen_logits_transfer_reduction(receipt, stats_d2h, requested)?;
 
     let claim_boundary = object_field(receipt, "claim_boundary")?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
@@ -6365,6 +6445,7 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     require_u64_eq(transfer, "kernel_invocations", stats_invocations)?;
     require_u64_eq(transfer, "kernel_launches", stats_launches)?;
     validate_dense_qwen_transfer_timing(timing, transfer)?;
+    validate_dense_qwen_logits_transfer_reduction(receipt, stats_d2h, turns_count * requested)?;
 
     let claim_boundary = object_field(receipt, "claim_boundary")?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
