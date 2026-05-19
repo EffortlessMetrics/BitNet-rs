@@ -272,21 +272,24 @@ mod dense_q8_runtime_hook_tests {
     }
 
     #[test]
-    fn dense_gguf_q8_sidecar_hooks_map_vendor_tensor_names() {
+    fn dense_gguf_q8_sidecar_hooks_map_vendor_tensor_names() -> Result<()> {
         let mut registry = DenseGgufQ8SidecarRegistry::default();
         let tensor_info = q8_tensor_info("blk.0.attn_q.weight", vec![64, 32]);
         let data = vec![0_u8; tensor_info.size as usize];
-        registry.try_push_tensor(&tensor_info, &data).unwrap();
+        registry.try_push_tensor(&tensor_info, &data)?;
 
         let hooks = dense_q8_runtime_hooks_from_sidecars(&registry);
-        let hook = hooks
-            .get("layers.0.attention.q_proj.weight")
-            .expect("expected canonical attention q_proj hook");
+        let Some(hook) = hooks.get("layers.0.attention.q_proj.weight") else {
+            return Err(BitNetError::Validation(
+                "expected canonical attention q_proj hook".to_string(),
+            ));
+        };
 
         assert_eq!(hook.tensor_name, "blk.0.attn_q.weight");
         assert_eq!(hook.role, "AttentionQ");
         assert_eq!(hook.runtime_compute_enabled, false);
         assert!(hook.sidecar_payload_sha256.is_some());
+        Ok(())
     }
 }
 
