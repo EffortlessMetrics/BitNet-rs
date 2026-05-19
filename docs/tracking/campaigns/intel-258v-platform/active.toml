@@ -8349,9 +8349,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-010"
-status = "pr_open"
+status = "merged"
 pr = 5953
-head_sha = "01eb1789cd1bad42b5e955ab06541a4728cbdc5b"
+head_sha = "06ffbe5fa25df4fb3b1f99215434bbc8e727a31c"
+merge_sha = "24ccf6c6057d46564c81d607bbe696310b25a45a"
 branch = "codex/lunar-lake/LNL258V-OP-010-structured-blocked-ask"
 stackable = false
 review_mode = "codex_premerge"
