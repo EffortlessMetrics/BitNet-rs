@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T18:45:00Z"
+event = "merged"
+item = "LNL258V-PROFILE-RUN-004"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-004-cpu-heavy-profile-run"
+pr = 5898
+head_sha = "03294684cdf4f7163be4c77bb755ef7a5b391193"
+merge_sha = "7b3871635933b8df4763f72521d2c4f933671a1c"
+actor = "codex"
+summary = "Merged LNL258V-PROFILE-RUN-004 after adding explicit Rust GGUF CPU heavy-profile baseline timing."
+
+notes = [
+  "PR #5898 added a dense Qwen Rust GGUF CPU profile-run receipt for prefill_heavy and decode_heavy cases that satisfy the route-profile prompt/output token thresholds.",
+  "Route-profile, cold/warm benchmark, power-profile, regression-v2, readiness, comparison, and excellence-audit artifacts now index the explicit CPU profile-run baseline.",
+  "The merge does not promote any route and makes no speedup, power-advantage, OpenVINO GPU/NPU promotion, native accelerator, Arc/NPU acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]
