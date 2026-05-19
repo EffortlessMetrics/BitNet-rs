@@ -4636,19 +4636,22 @@ async fn run_simple_generation(
     // BITNET_TRACE_TIMING=1: Enable timing instrumentation
     let timing_enabled = std::env::var("BITNET_TRACE_TIMING").as_deref() == Ok("1");
 
-    // Generation loop: incremental decoding
+    // Generation loop: prompt prefill followed by incremental decoding.
     //
-    // Each step:
-    //   1. Embed ONLY the new token (last in sequence)
+    // Before this loop, prompt prefill embeds and forwards every prompt token
+    // except the last one. Step 0 embeds the last prompt token, so the first
+    // generated token sees the complete rendered prompt context.
+    //
+    // Each subsequent step:
+    //   1. Embed only the newly generated token
     //   2. Forward pass uses KV cache for historical context
-    //   3. No need to re-embed previous tokens (O(N) not O(N²))
     //
     // Historical context is maintained via:
     //   - KV cache: stores key/value tensors from previous steps
     //   - `tokens` vector: tracks full sequence for stop detection/logging
     //
-    // Performance impact: This changes embedding from O(N²) to O(N), providing
-    // ~50× speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
+    // Performance impact: this avoids O(N^2) full-context re-embedding while
+    // preserving complete prompt context for the first generated token.
     let mut decode_step_ms = Vec::with_capacity(max_new_tokens);
     let mut embed_step_ms = Vec::with_capacity(max_new_tokens);
     let mut forward_step_ms = Vec::with_capacity(max_new_tokens);
