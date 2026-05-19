@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T07:29:03Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-051"
+event = "pr_open"
+pr = 5889
+head_sha = "09df01aa5f85b55d35672e0bf93e23bdcebaa1b5"
+actor = "codex"
+
+notes = [
+  "Opened the selector-readiness tracker PR after SLM-CPU-050.",
+  "The PR queues the next non-executing gate before any packed Q8_0 selector update.",
+  "No speedup, Q4/Q5, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
