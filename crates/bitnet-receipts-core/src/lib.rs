@@ -5409,14 +5409,30 @@ fn validate_dense_qwen_logits_transfer_reduction(
     require_string_eq(reduction, "scope", "dense_qwen_logits_top_k_transfer")?;
     require_string_non_empty(reduction, "transfer_mode")?;
     require_string_non_empty(reduction, "sampling_location")?;
-    require_positive_u64(reduction, "requested_top_k")?;
+    let requested_top_k = required_u64(reduction, "requested_top_k")?;
+    if requested_top_k == 0 {
+        return Err(anyhow!("logits_transfer_reduction.requested_top_k must be positive"));
+    }
     require_u64_eq(reduction, "generated_tokens_count", generated_tokens)?;
-    require_positive_u64(reduction, "logits_vector_length")?;
-    require_positive_u64(reduction, "logits_element_bytes")?;
+    let logits_vector_length = required_u64(reduction, "logits_vector_length")?;
+    let logits_element_bytes = required_u64(reduction, "logits_element_bytes")?;
+    if logits_vector_length == 0 || logits_element_bytes == 0 {
+        return Err(anyhow!(
+            "logits_transfer_reduction logits vector length and element bytes must be positive"
+        ));
+    }
     let full_logits_bytes_per_step = required_u64(reduction, "full_logits_bytes_per_step")?;
     let full_logits_download_bytes = required_u64(reduction, "full_logits_download_bytes")?;
     if full_logits_bytes_per_step == 0 || full_logits_download_bytes == 0 {
         return Err(anyhow!("logits_transfer_reduction full logits byte counts must be positive"));
+    }
+    let expected_full_logits_bytes_per_step = logits_vector_length
+        .checked_mul(logits_element_bytes)
+        .ok_or_else(|| anyhow!("logits_transfer_reduction logits byte count overflows"))?;
+    if full_logits_bytes_per_step != expected_full_logits_bytes_per_step {
+        return Err(anyhow!(
+            "logits_transfer_reduction.full_logits_bytes_per_step must equal logits_vector_length * logits_element_bytes"
+        ));
     }
     let expected_full_bytes = full_logits_bytes_per_step
         .checked_mul(generated_tokens)
@@ -5432,9 +5448,43 @@ fn validate_dense_qwen_logits_transfer_reduction(
             "logits_transfer_reduction.actual_device_to_host_bytes must match measured device_to_host_bytes"
         ));
     }
-    require_positive_u64(reduction, "top_k_result_bytes_per_step_floor")?;
-    require_positive_u64(reduction, "top_k_result_bytes_total_floor")?;
-    require_positive_u64(reduction, "selected_token_bytes_total_floor")?;
+    let top_k_result_bytes_per_step_floor =
+        required_u64(reduction, "top_k_result_bytes_per_step_floor")?;
+    let top_k_result_bytes_total_floor = required_u64(reduction, "top_k_result_bytes_total_floor")?;
+    let selected_token_bytes_total_floor =
+        required_u64(reduction, "selected_token_bytes_total_floor")?;
+    if top_k_result_bytes_per_step_floor == 0
+        || top_k_result_bytes_total_floor == 0
+        || selected_token_bytes_total_floor == 0
+    {
+        return Err(anyhow!(
+            "logits_transfer_reduction preserved-evidence byte floors must be positive"
+        ));
+    }
+    let expected_top_k_bytes_per_step = requested_top_k
+        .checked_mul(12)
+        .ok_or_else(|| anyhow!("logits_transfer_reduction top-k byte floor overflows"))?;
+    if top_k_result_bytes_per_step_floor != expected_top_k_bytes_per_step {
+        return Err(anyhow!(
+            "logits_transfer_reduction.top_k_result_bytes_per_step_floor must equal requested_top_k * 12"
+        ));
+    }
+    let expected_top_k_bytes_total = top_k_result_bytes_per_step_floor
+        .checked_mul(generated_tokens)
+        .ok_or_else(|| anyhow!("logits_transfer_reduction top-k byte total overflows"))?;
+    if top_k_result_bytes_total_floor != expected_top_k_bytes_total {
+        return Err(anyhow!(
+            "logits_transfer_reduction.top_k_result_bytes_total_floor must equal top_k_result_bytes_per_step_floor * generated_tokens_count"
+        ));
+    }
+    let expected_selected_token_bytes_total = 4_u64
+        .checked_mul(generated_tokens)
+        .ok_or_else(|| anyhow!("logits_transfer_reduction selected-token byte floor overflows"))?;
+    if selected_token_bytes_total_floor != expected_selected_token_bytes_total {
+        return Err(anyhow!(
+            "logits_transfer_reduction.selected_token_bytes_total_floor must equal 4 * generated_tokens_count"
+        ));
+    }
     require_bool_eq(reduction, "selected_token_equality_preserved", true)?;
     require_bool_eq(reduction, "top_k_evidence_preserved", true)?;
     require_bool_eq(reduction, "quality_receipts_unchanged", true)?;

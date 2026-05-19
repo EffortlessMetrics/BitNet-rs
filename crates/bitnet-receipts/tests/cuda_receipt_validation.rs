@@ -2034,6 +2034,28 @@ fn dense_gguf_qwen_short_decode_requires_reduction_blocker_when_full_logits_down
 }
 
 #[test]
+fn dense_gguf_qwen_short_decode_rejects_malformed_full_logits_byte_accounting()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["full_logits_bytes_per_step"] = json!(64);
+    receipt["logits_transfer_reduction"]["full_logits_download_bytes"] = json!(512);
+
+    let err = match validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted inconsistent full-logits byte accounting",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
+
+    assert!(err.contains("full_logits_bytes_per_step"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
 fn dense_gguf_qwen_short_decode_rejects_chat_speedup_full_residency_and_bitnet_claims() {
     let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
     receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(true);
@@ -2186,6 +2208,27 @@ fn dense_gguf_qwen_warm_session_rejects_transfer_reduction_without_top_k_evidenc
     };
 
     assert!(err.contains("top_k_evidence_preserved"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_warm_session_rejects_malformed_top_k_floor_accounting()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["top_k_result_bytes_total_floor"] = json!(24);
+
+    let err = match validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted inconsistent top-k floor accounting",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
+
+    assert!(err.contains("top_k_result_bytes_total_floor"), "unexpected error: {err}");
     Ok(())
 }
 
