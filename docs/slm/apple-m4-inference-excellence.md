@@ -372,7 +372,23 @@ The committed harness smoke at
 `ci/hardware/apple-m4-mac-mini/2026-05-19T0746Z/benchmark-variance/harness-smoke.json`
 uses `qwen2.5-0.5b-instruct-q8_0`, `short_prompt_16_out`, and `--repeat 2`.
 It is harness evidence only. `M4-BENCH-005` remains responsible for publishing
-live dense and BitNet variance envelopes.
+live dense Qwen variance envelopes for the supported M4 dense SLM identities.
+BitNet one-shot and warm-session timing variance stays in `M4-BENCH-006`,
+using the accepted BitNet artifact and external tokenizer authority.
+
+`M4-BENCH-009` closes the timeout-policy gap found while starting the live
+dense variance run. The calibration receipt already declared per-profile
+timeout rules, including `context_4k=720s`, but `mac benchmark` did not enforce
+them. A local diagnostic run of the default dense model produced a first
+`context_4k` prompt at roughly 1,032.7s, so that attempt is non-comparable and
+must not be published as a variance envelope. The benchmark now runs each dense
+profile through a child `slm-warm-session` process, kills the child when the
+calibrated profile timeout is reached, writes an
+`apple_m4_slm_benchmark_profile_timeout` receipt, and keeps that profile
+invalid for envelope comparison. The committed enforcement smoke at
+`ci/hardware/apple-m4-mac-mini/2026-05-19T0939Z/benchmark-timeout-enforcement/harness-smoke.json`
+uses `qwen2.5-0.5b-instruct-q8_0`, `short_prompt_16_out`, and `--repeat 2` to
+prove the child-process benchmark path still validates for a bounded profile.
 
 ## Drift Thresholds
 

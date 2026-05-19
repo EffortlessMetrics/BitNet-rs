@@ -1,0 +1,16 @@
+timestamp = "2026-05-19T09:42:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-009"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-009-profile-timeout-enforcement"
+
+notes = [
+  "Started M4-BENCH-009 after a live M4-BENCH-005 dense variance attempt showed the calibrated benchmark timeout policy was recorded but not enforced.",
+  "The diagnostic default-model run reached a context_4k first-token time of about 1,032.7s, exceeding the calibrated context_4k 720s boundary; that partial run is non-comparable and not a variance-envelope claim.",
+  "Scope is dense SLM benchmark profile timeout enforcement: child-process profile execution, timeout kill, timeout receipt validation, and invalid-for-comparison boundaries before M4-BENCH-005 publishes live envelopes.",
+  "The committed smoke receipt uses qwen2.5-0.5b-instruct-q8_0 short_prompt_16_out repeat=2 only to prove the enforced child-process benchmark path still validates.",
+  "No final dense variance envelope, BitNet timing variance, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
