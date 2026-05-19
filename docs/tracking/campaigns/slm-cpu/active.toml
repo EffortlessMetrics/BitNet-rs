@@ -2807,9 +2807,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-047"
-status = "pr_open"
+status = "merged"
 pr = 5868
 head_sha = "632bd95ab5fc3ec1fae21129c6379d75723d42c7"
+merge_sha = "d0faced083c3ea119752a7f3a070c85469062ec4"
 branch = "codex/slm-cpu-047-q8-sidecar-equivalence-gate"
 stackable = false
 review_mode = "codex_premerge"
