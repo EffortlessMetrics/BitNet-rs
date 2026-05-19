@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T15:30:40Z"
+campaign = "cpu-proof"
+item = "CPU-AVX2-HOTPATH-001"
+event = "pr_open"
+pr = 5963
+head_sha = "2491ac26c2905ce2bab6edd2d04a2604d8a313e0"
+actor = "codex"
+
+notes = [
+  "Opened #5963 to expose QK256 hot-path counters in strict CPU BitNet run and answer-corpus receipts.",
+  "The PR carries execution_coverage and qk256_hot_path through answer-corpus case rows and makes strict CPU BitNet receipt checks require counter and materialization evidence.",
+  "No math change, AVX2 promotion, speedup claim, GPU/NPU/OpenVINO/CUDA/dense SLM claim, or broad chat-quality claim is made.",
+]

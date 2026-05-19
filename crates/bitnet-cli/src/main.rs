@@ -5471,6 +5471,7 @@ async fn run_simple_generation(
                 "unsupported_ops": bitnet_linear_coverage.unsupported_ops.clone(),
                 "execution_claim": bitnet_linear_coverage.execution_claim,
             },
+            "qk256_hot_path": qk256_cpu_hot_path_receipt(&qk256_cpu_hot_path),
             "kernel": {
                 "family": kernel_family,
                 "implementation": kernel_implementation,
@@ -5603,6 +5604,7 @@ async fn run_simple_generation(
                     "execution_claim": "dense_slm_cpu_reference_answer_smoke",
                 }),
             );
+            object.remove("qk256_hot_path");
             object.insert(
                 "kernel".to_string(),
                 serde_json::json!({
@@ -7636,6 +7638,40 @@ fn qk256_dispatch_coverage_receipt(
         "bitnet_linear_layers_cpu_fallback": coverage.bitnet_linear_layers_cpu_fallback,
         "unsupported_ops": coverage.unsupported_ops,
         "execution_claim": coverage.execution_claim,
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn qk256_cpu_hot_path_receipt(
+    counters: &bitnet_qk256_dispatch::Qk256CpuHotPathCounters,
+) -> serde_json::Value {
+    let no_scale_f32_gemv_invocations = counters
+        .qk256_f32_scalar_gemv_invocations
+        .saturating_add(counters.qk256_f32_avx2_gemv_invocations);
+    let scaled_i2s_i8s_gemv_invocations = counters
+        .qk256_i8s_scaled_scalar_invocations
+        .saturating_add(counters.qk256_i8s_scaled_avx2_invocations);
+
+    serde_json::json!({
+        "counter_source": "bitnet_qk256_dispatch::qk256_cpu_hot_path_counters",
+        "qk256_f32_scalar_gemv_invocations": counters.qk256_f32_scalar_gemv_invocations,
+        "qk256_f32_avx2_gemv_invocations": counters.qk256_f32_avx2_gemv_invocations,
+        "qk256_i8s_scaled_scalar_invocations": counters.qk256_i8s_scaled_scalar_invocations,
+        "qk256_i8s_scaled_avx2_invocations": counters.qk256_i8s_scaled_avx2_invocations,
+        "qk256_flat_bytes_extracted_count": counters.qk256_flat_bytes_extracted_count,
+        "input_rows_materialized_count": counters.input_rows_materialized_count,
+        "output_rows_allocated_count": counters.output_rows_allocated_count,
+        "no_scale_f32_gemv_invocations": no_scale_f32_gemv_invocations,
+        "scaled_i2s_i8s_gemv_invocations": scaled_i2s_i8s_gemv_invocations,
+        "audited_tensor_materialization_count": counters
+            .qk256_flat_bytes_extracted_count
+            .saturating_add(counters.input_rows_materialized_count)
+            .saturating_add(counters.output_rows_allocated_count),
+        "requested_kernel": counters.requested_kernel.as_deref(),
+        "selected_kernel": counters.selected_kernel.as_deref(),
+        "qk256_execution_path": counters.qk256_execution_path,
+        "math_changed": false,
+        "speedup_claim": false,
     })
 }
 
@@ -13273,6 +13309,31 @@ mod tests {
         assert_eq!(receipt[0]["device_to_host_bytes"], 2048);
         assert_eq!(receipt[0]["kernel_time_ms"], 1.235);
         assert_eq!(receipt[0]["kernel_time_samples"], 4);
+    }
+
+    #[test]
+    fn qk256_cpu_hot_path_receipt_distinguishes_scaled_and_materialized_paths() {
+        let counters = bitnet_qk256_dispatch::Qk256CpuHotPathCounters {
+            qk256_f32_scalar_gemv_invocations: 1,
+            qk256_f32_avx2_gemv_invocations: 0,
+            qk256_i8s_scaled_scalar_invocations: 2,
+            qk256_i8s_scaled_avx2_invocations: 0,
+            qk256_flat_bytes_extracted_count: 3,
+            input_rows_materialized_count: 4,
+            output_rows_allocated_count: 5,
+            requested_kernel: Some("scalar".to_string()),
+            selected_kernel: Some("mixed-qk256-cpu-hot-paths".to_string()),
+            qk256_execution_path: "mixed_scaled_and_no_scale",
+        };
+
+        let receipt = qk256_cpu_hot_path_receipt(&counters);
+
+        assert_eq!(receipt["no_scale_f32_gemv_invocations"], 1);
+        assert_eq!(receipt["scaled_i2s_i8s_gemv_invocations"], 2);
+        assert_eq!(receipt["audited_tensor_materialization_count"], 12);
+        assert_eq!(receipt["selected_kernel"], "mixed-qk256-cpu-hot-paths");
+        assert_eq!(receipt["math_changed"], false);
+        assert_eq!(receipt["speedup_claim"], false);
     }
 
     #[test]
