@@ -3773,6 +3773,34 @@ fn greedy_top1_token_id(logits: &[f32]) -> Option<u32> {
         .map(|(token_id, _)| token_id as u32)
 }
 
+fn greedy_effective_top1_token_id(
+    logits: &[f32],
+    context_tokens: &[u32],
+    repetition_penalty: f32,
+) -> Option<u32> {
+    if repetition_penalty <= 0.0
+        || !repetition_penalty.is_finite()
+        || repetition_penalty == 1.0
+        || context_tokens.is_empty()
+    {
+        return greedy_top1_token_id(logits);
+    }
+
+    let mut effective_logits = logits.to_vec();
+    let inv_penalty = 1.0 / repetition_penalty;
+    for &token in context_tokens {
+        if let Some(logit) = effective_logits.get_mut(token as usize) {
+            if *logit > 0.0 {
+                *logit *= inv_penalty;
+            } else {
+                *logit *= repetition_penalty;
+            }
+        }
+    }
+
+    greedy_top1_token_id(&effective_logits)
+}
+
 fn qwen_trace_path() -> Option<std::path::PathBuf> {
     std::env::var("BITNET_QWEN_TRACE_JSONL")
         .ok()
@@ -4871,12 +4899,17 @@ async fn run_simple_generation(
         // Assert greedy invariant if requested
         if assert_greedy && greedy && dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps)
         {
-            let Some(best_i) = greedy_top1_token else {
+            let Some(best_i) =
+                greedy_effective_top1_token_id(&logits_vec, &generated_tokens, repetition_penalty)
+            else {
                 anyhow::bail!("No finite logits found for --assert-greedy at step {step_idx}");
             };
             if next_token != best_i {
-                eprintln!("ERROR: Non-argmax token chosen in --greedy at step {}", step_idx);
-                eprintln!("  argmax={} but chosen={}", best_i, next_token);
+                eprintln!(
+                    "ERROR: Non-effective-argmax token chosen in --greedy at step {}",
+                    step_idx
+                );
+                eprintln!("  effective_argmax={} but chosen={}", best_i, next_token);
                 std::process::exit(EXIT_ARGMAX_MISMATCH);
             }
         }
@@ -12531,6 +12564,29 @@ mod tests {
         assert_eq!(qs.to_vec2::<u8>()?, vec![vec![0x55; 64]]);
         assert_eq!(scale.to_vec1::<f32>()?, vec![1.25]);
         Ok(())
+    }
+
+    #[test]
+    fn greedy_effective_top1_applies_repetition_penalty() {
+        let logits = [10.0, 9.0];
+
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[], 2.0), Some(0));
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[0], 2.0), Some(1));
+    }
+
+    #[test]
+    fn greedy_effective_top1_uses_count_aware_penalty() {
+        let logits = [10.0, 3.0];
+
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[0], 2.0), Some(0));
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[0, 0], 2.0), Some(1));
+    }
+
+    #[test]
+    fn greedy_effective_top1_keeps_lowest_token_id_tie_break() {
+        let logits = [1.0, 1.0, 0.0];
+
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[], 1.0), Some(0));
     }
 
     #[test]
