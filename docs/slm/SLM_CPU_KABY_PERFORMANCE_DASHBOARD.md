@@ -293,6 +293,16 @@ decoded text, strict tokenizer authority, selected CPU backend/kernel, model
 SHA, and `fallback=false`. It is a behavior-preserving selector update, not a
 sustained-throughput or portable CPU-performance claim.
 
+SLM-CPU-053 is the next runtime gate. It may enable packed Q8_0 sidecar compute
+only for the exact evidence-scoped tensor or minimal tensor set covered by the
+selector-update proof, and only with before/after receipts proving unchanged
+model SHA, tokenizer source and strictness, prompt IDs, generated IDs, decoded
+text, selected CPU backend/kernel identity, and `fallback=false`. If that proof
+cannot be produced, the runtime must stay on eager F32 Candle and record the
+specific blocker. This remains a behavior-preserving Kaby appliance slice, not
+a sustained-throughput, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256
+claim.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
