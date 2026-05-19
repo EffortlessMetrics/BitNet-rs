@@ -3039,10 +3039,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-016"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-model-016-qwen3-repeated-comparator-receipt"
 pr = 5941
-head_sha = "7fa254b90efd9727392a5bb82444f755c65511ec"
+head_sha = "b725aecde350a33e40235b81adec2bb9eec78fb8"
+merge_sha = "e602f3280b5d3b1109632568299e53ed2cd74407"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
