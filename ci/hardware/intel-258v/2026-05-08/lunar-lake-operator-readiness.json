@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_readiness",
   "proof_stage": "operator_routes_indexed",
-  "created_utc": "2026-05-19T15:46:00Z",
+  "created_utc": "2026-05-19T16:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_ready": true,
@@ -160,12 +160,10 @@
       },
       {
         "profile_id": "structured",
-        "promoted_route": null,
-        "profile_status": "candidate_only",
-        "promotion_decision": "structured has no promoted route; candidate evidence is indexed without promotion",
-        "route_blockers": [
-          "dense_slm_default_cpu: route not promoted for profile structured"
-        ]
+        "promoted_route": "dense_slm_default_cpu",
+        "profile_status": "promoted_route_ready",
+        "promotion_decision": "dense_slm_default_cpu remains promoted for structured",
+        "route_blockers": []
       },
       {
         "profile_id": "low_power",
@@ -206,7 +204,6 @@
     "blocked_profiles": [
       "prefill_heavy",
       "decode_heavy",
-      "structured",
       "low_power",
       "warm_resident"
     ],

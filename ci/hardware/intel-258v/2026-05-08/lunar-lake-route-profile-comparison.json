@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-19T15:46:00Z",
+  "created_utc": "2026-05-19T16:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -1623,15 +1623,13 @@
       "prompt_tokens": "<=512",
       "output_tokens": "<=256",
       "purpose": "bounded JSON or tool-style output with deterministic answer gates",
-      "promoted_route": null,
-      "candidate_routes": [
-        "dense_slm_default_cpu"
-      ],
-      "profile_status": "candidate_only",
+      "promoted_route": "dense_slm_default_cpu",
+      "candidate_routes": [],
+      "profile_status": "promoted_route_ready",
       "route_evidence": [
         {
           "route_id": "dense_slm_default_cpu",
-          "route_status": "candidate",
+          "route_status": "promoted",
           "ledger_route_status": "promoted",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
@@ -1679,7 +1677,7 @@
             ]
           },
           "benchmark_qualified_advantage": false,
-          "promotion_eligible_for_profile": false,
+          "promotion_eligible_for_profile": true,
           "profile_quality": {
             "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
             "route_id": "dense_slm_default_cpu",
@@ -1707,12 +1705,10 @@
             "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
-          "blockers": [
-            "route not promoted for profile structured"
-          ]
+          "blockers": []
         }
       ],
-      "promotion_decision": "structured has no promoted route; candidate evidence is indexed without promotion",
+      "promotion_decision": "dense_slm_default_cpu remains promoted for structured",
       "gaps": []
     },
     {
@@ -2417,8 +2413,8 @@
     "route_count": 23,
     "profile_specific_route_count": 21,
     "proxy_or_missing_route_count": 2,
-    "promotion_eligible_route_count": 4,
-    "promotion_eligible_profile_specific_route_count": 4,
+    "promotion_eligible_route_count": 5,
+    "promotion_eligible_profile_specific_route_count": 5,
     "candidate_route_count": 14,
     "candidate_proxy_or_missing_route_count": 0,
     "promotion_eligible_routes_have_profile_specific_timing": true,
@@ -2579,17 +2575,6 @@
       ],
       "profile_ids": [
         "regression_tiny"
-      ],
-      "next_action": "keep route candidate-only until all profile-specific promotion evidence clears"
-    },
-    {
-      "blocker": "route not promoted for profile structured",
-      "occurrence_count": 1,
-      "route_ids": [
-        "dense_slm_default_cpu"
-      ],
-      "profile_ids": [
-        "structured"
       ],
       "next_action": "keep route candidate-only until all profile-specific promotion evidence clears"
     },

@@ -11537,6 +11537,7 @@ fn promote_route(
                     "regression_tiny".to_string(),
                     "ask_short".to_string(),
                     "ask_normal".to_string(),
+                    "structured".to_string(),
                 ];
                 promoted_for.retain(|profile| !openvino_gpu_promoted_profiles.contains(profile));
                 let mut blocked_for =
@@ -13117,8 +13118,8 @@ fn workload_profiles_with_openvino_gpu_promotions(
             output_tokens: "<=256".to_string(),
             purpose: "bounded JSON or tool-style output with deterministic answer gates"
                 .to_string(),
-            promoted_route: None,
-            candidate_routes: vec![DEFAULT_ASK_ROUTE.to_string()],
+            promoted_route: Some(DEFAULT_ASK_ROUTE.to_string()),
+            candidate_routes: vec![],
         },
         WorkloadProfile {
             profile_id: "low_power".to_string(),
@@ -14184,6 +14185,7 @@ mod tests {
             .context("missing CPU route")?;
         assert_eq!(cpu.status, "promoted");
         assert!(cpu.promoted_for.contains(&"regression_tiny".to_string()));
+        assert!(cpu.promoted_for.contains(&"structured".to_string()));
         assert!(!cpu.promoted_for.contains(&"ask_short".to_string()));
         assert!(!cpu.promoted_for.contains(&"ask_normal".to_string()));
         let gpu = ledger
@@ -14399,6 +14401,21 @@ mod tests {
                 &"lunar-lake ask runtime does not execute OpenVINO routes yet".to_string()
             )
         );
+        let structured = profiles
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "structured")
+            .context("missing structured profile")?;
+        assert_eq!(structured.promoted_route.as_deref(), Some(DEFAULT_ASK_ROUTE));
+        assert_eq!(structured.profile_status, "promoted_route_ready");
+        let cpu_structured = structured
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
+            .context("missing structured CPU route")?;
+        assert!(cpu_structured.promotion_eligible_for_profile);
+        assert!(cpu_structured.timing_applicability.timing_matches_profile);
+        assert!(cpu_structured.blockers.is_empty(), "{:?}", cpu_structured.blockers);
         let prefill_heavy = profiles
             .profiles
             .iter()

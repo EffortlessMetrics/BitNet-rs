@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_promotion_ledger",
   "proof_stage": "route_promotion_policy_recorded",
-  "created_utc": "2026-05-19T15:45:00Z",
+  "created_utc": "2026-05-19T16:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -86,10 +86,8 @@
       "prompt_tokens": "<=512",
       "output_tokens": "<=256",
       "purpose": "bounded JSON or tool-style output with deterministic answer gates",
-      "promoted_route": null,
-      "candidate_routes": [
-        "dense_slm_default_cpu"
-      ]
+      "promoted_route": "dense_slm_default_cpu",
+      "candidate_routes": []
     },
     {
       "profile_id": "low_power",
@@ -129,7 +127,8 @@
       "route_id": "dense_slm_default_cpu",
       "status": "promoted",
       "promoted_for": [
-        "regression_tiny"
+        "regression_tiny",
+        "structured"
       ],
       "blocked_for": [
         "accelerator_required",
