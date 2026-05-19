@@ -1,0 +1,15 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T00:43:00Z"
+event = "pr_open"
+item = "SLM-CPU-044"
+pr = 5810
+head_sha = "9265ecf265f11035b0a7371844ad2809c0f0bc55"
+branch = "codex/slm-cpu-044-q8-sidecar-runtime-plan"
+actor = "codex"
+summary = "Opened the tracker-only SLM-CPU-044 PR for the next Q8_0 packed sidecar runtime-boundary slice."
+
+notes = [
+  "PR #5810 records SLM-CPU-044 as the next ready implementation boundary after the SLM-CPU-043 fixture-level packed Q8_0 sidecar prototype.",
+  "The PR is tracker-only and does not change runtime code or claim speedup, sustained throughput, Q4/Q5 support, accelerators, Qwen3.5, or BitNet QK256 behavior.",
+]

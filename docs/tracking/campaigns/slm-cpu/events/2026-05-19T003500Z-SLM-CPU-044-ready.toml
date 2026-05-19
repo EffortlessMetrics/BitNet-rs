@@ -1,0 +1,15 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T00:35:00Z"
+event = "in_progress"
+item = "SLM-CPU-044"
+branch = "codex/slm-cpu-044-q8-sidecar-runtime-plan"
+actor = "codex"
+summary = "Queued the next Kaby Qwen3 Q8_0 performance slice after the fixture-level packed sidecar prototype."
+
+notes = [
+  "SLM-CPU-043 proved a fixture-level packed Q8_0 sidecar can dequantize inside a narrow CPU matvec and match the eager F32 fixture output without replacing the production runtime.",
+  "SLM-CPU-044 is ready to define the first production-integration boundary for carrying packed Q8_0 sidecar metadata toward runtime dense-linear use while keeping the existing eager F32 Candle tensors as the behavior oracle.",
+  "The next implementation must preserve prompt IDs, generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false before any bounded improvement claim.",
+  "No runtime speedup, sustained 8250U throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
