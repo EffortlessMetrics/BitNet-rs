@@ -1,6 +1,6 @@
 schema = 1
 artifact_kind = "apple_silicon_macbook_bitnet_candidate_matrix"
-updated = "2026-05-12"
+updated = "2026-05-19"
 work_item = "MB-AS-003"
 machine_lane = "apple-m3-macbook-air"
 claim_boundary = "Candidate planning only. No candidate is accepted for Apple local-answer claims until the MacBook lane records source, size, SHA256, tokenizer authority, coherent reference-runner output, and cleanup status. Dense Qwen evidence does not prove BitNet quality."
@@ -16,6 +16,7 @@ storage_policy = [
 required_reference_prompt_suite = "ci/quality/bitnet-answer-corpus.yaml"
 shared_answer_gate = "docs/model-artifacts/ANSWER_ARTIFACT_GATE.md"
 compatibility_ledger = "ci/model-artifacts/model-kernel-compatibility.toml"
+tl1_campaign = "docs/tracking/campaigns/tl1/CAMPAIGN.md"
 
 [[candidate]]
 id = "microsoft_bitnet_b158_2b_4t_i2s"

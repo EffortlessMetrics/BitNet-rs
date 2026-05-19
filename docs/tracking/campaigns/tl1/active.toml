@@ -1,0 +1,41 @@
+schema = 1
+campaign = "tl1"
+status = "active"
+updated = "2026-05-19"
+owner = "bitnet-rs contributors"
+
+linked_plan = "plans/tl1/implementation-plan.md"
+linked_source_map = "docs/bitnet/tl1/README.md"
+linked_specs_index = "docs/specs/INDEX.md"
+compatibility_ledger = "ci/model-artifacts/model-kernel-compatibility.toml"
+
+[work_item]
+id = "TL1-PLAN-000"
+title = "docs(tl1): add TL1 source map and implementation plan"
+status = "ready"
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+scope = [
+  "docs/bitnet/tl1/README.md",
+  "plans/tl1/README.md",
+  "plans/tl1/implementation-plan.md",
+  "docs/tracking/campaigns/tl1/active.toml",
+  "docs/tracking/campaigns/tl1/CAMPAIGN.md",
+  "docs/specs/INDEX.md",
+  "ci/model-artifacts/model-kernel-compatibility.toml",
+  "docs/apple-silicon/bitnet-candidate-matrix.md",
+  "ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml",
+]
+proof = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check tl1",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+
+[boundaries]
+arm_first_tl1 = true
+x86_tl1_unsupported_upstream_for_tracked_families = true
+tl1_not_i2s_qk256 = true
+tl1_not_tl2 = true
+no_promotion_in_this_item = true

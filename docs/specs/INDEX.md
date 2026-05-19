@@ -1,5 +1,18 @@
 # Specs Index
 
+## TL1 ARM-First Table-Lookup Route
+
+Use these artifacts before implementing or claiming TL1 support:
+
+1. [TL1 Source Map](../bitnet/tl1/README.md)
+   - Defines TL1 as an ARM-first route with explicit non-inheritance boundaries from `I2_S`/QK256 and TL2.
+2. [TL1 Implementation Plan](../../plans/tl1/implementation-plan.md)
+   - Sequences docs/spec setup, layout/scalar proof, artifact authority, Apple CPU/NEON proof, and benchmark promotion.
+3. [TL1 Campaign](../tracking/campaigns/tl1/CAMPAIGN.md)
+   - Tracks the active work item and proof commands.
+
+Do not treat upstream listed ARM TL1 support as answer/backend/speed proof. x86 TL1 remains `unsupported_upstream` for currently tracked families unless the compatibility ledger changes with new upstream evidence.
+
 ## I2_S/QK256 Productization
 
 Use these artifacts before implementing or claiming new I2_S route capabilities:

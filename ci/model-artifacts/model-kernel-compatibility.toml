@@ -6,7 +6,7 @@ source = "microsoft/BitNet README supported model table"
 source_url = "https://github.com/microsoft/BitNet/blob/main/README.md"
 source_map = "docs/bitnet/official-2b/README.md"
 i2s_source_map = "docs/bitnet/i2s/README.md"
-claim_boundary = "Upstream model/kernel support is a precondition for answer_ready, reference_authority, backend_parity, and speedup claims. Unsupported combinations may only be used for diagnostic runs, artifact inspection, or unsupported-path receipts."
+claim_boundary = "Upstream model/kernel support is a precondition for answer_ready, reference_authority, backend_parity, and speedup claims. Unsupported combinations may only be used for diagnostic runs, artifact inspection, or unsupported-path receipts. TL1 is a distinct route family and must not inherit I2_S/QK256 or TL2 proof."
 tl2_boundary_note = "TL2 x86 route evidence is tracked separately from I2_S/QK256 and TL1; listed support is not automatic answer proof."
 
 proof_claims_rejected_when_unsupported = [
