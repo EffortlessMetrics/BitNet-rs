@@ -270,6 +270,15 @@ Readiness here means only that the next selector PR has the required proof
 inputs. It is not packed Q8_0 production execution and it is not a speedup
 claim.
 
+SLM-CPU-052 is that next selector-update gate. It must start from the
+SLM-CPU-051 readiness artifact and either keep the packed sidecar path blocked
+with a concrete blocker, or update the selector only where the eager F32 Candle
+oracle and the packed Q8_0 candidate preserve the same prompt IDs, generated
+IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel,
+model SHA, and `fallback=false`. Any timing statement remains bounded to the
+before/after receipts for the fixed Qwen3 Q8_0 appliance profile; it is not a
+sustained-throughput or portable CPU-performance claim.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
