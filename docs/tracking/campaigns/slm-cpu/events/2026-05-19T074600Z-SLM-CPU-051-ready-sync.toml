@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T07:46:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-051"
+event = "in_progress"
+from = "pr_open"
+to = "ready"
+actor = "codex"
+
+notes = [
+  "Synced SLM-CPU-051 back to ready after the tracker setup PR merged.",
+  "The selector-readiness implementation remains the next work item.",
+  "No packed Q8_0 runtime execution, speedup, Q4/Q5, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
