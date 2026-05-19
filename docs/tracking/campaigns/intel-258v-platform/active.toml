@@ -8281,7 +8281,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-004"
-status = "in_progress"
+status = "merged"
+pr = 5911
+head_sha = "fd1a0afa34f476ba64f843becb2c98776114684d"
+merge_sha = "408954e1dede6fc8f6302f5f883eff85db3254ec"
 branch = "codex/lunar-lake/LNL258V-POWER-004-energy-proxy-blocker"
 stackable = false
 review_mode = "codex_premerge"
