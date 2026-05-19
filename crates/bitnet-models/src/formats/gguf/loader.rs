@@ -4,6 +4,7 @@ mod tensor_loading;
 
 use super::{GgufReader, GgufTensorType, GgufTensors};
 use crate::architecture::{DenseQwenArchitecture, classify_dense_qwen_architecture};
+use crate::dense_gguf_q8_sidecar::DenseGgufQ8SidecarRegistry;
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
 use crate::names::{is_layernorm_weight, is_projection_weight};
 use crate::{BitNetModel, Model};
@@ -20,6 +21,8 @@ use tracing::{debug, info};
 type TensorLoadResult = Result<(Tensor, Vec<(String, Tensor)>, Option<CorrectionRecord>)>;
 type Qk256RawEntries = (Tensor, Vec<(String, Tensor)>, Option<f32>, usize);
 type Qk256RawEntriesResult = Result<Qk256RawEntries>;
+type DenseQ8SidecarLoadResult =
+    Result<(GgufTensors, std::collections::HashMap<String, Tensor>, DenseGgufQ8SidecarRegistry)>;
 
 pub(crate) const SMOLLM2_360M_CONTRACT_ID: &str = "smollm2_360m_instruct_q8_0";
 pub(crate) const SMOLLM2_360M_FINGERPRINT: &str =
@@ -1155,7 +1158,7 @@ impl FormatLoader for GgufLoader {
         }
 
         // Load tensors with fingerprint for policy matching (returns both regular and raw QK256 tensors)
-        let (tensors, raw_tensors) =
+        let (tensors, raw_tensors, dense_q8_sidecars) =
             self.load_tensors(&reader, device, config, &fingerprint, norm_validation_policy)?;
 
         if let Some(callback) = &config.progress_callback {
@@ -1163,7 +1166,13 @@ impl FormatLoader for GgufLoader {
         }
 
         // Create model instance (pass both tensors and raw_tensors for QK256 dispatch)
-        let model = BitNetModel::from_gguf(model_config, tensors, raw_tensors, *device)?;
+        let model = BitNetModel::from_gguf_with_dense_q8_sidecars(
+            model_config,
+            tensors,
+            raw_tensors,
+            dense_q8_sidecars,
+            *device,
+        )?;
 
         Ok(Box::new(model))
     }
@@ -2084,11 +2093,12 @@ impl GgufLoader {
         config: &LoadConfig,
         fingerprint: &str,
         norm_validation_policy: NormValidationPolicy,
-    ) -> Result<(GgufTensors, std::collections::HashMap<String, Tensor>)> {
+    ) -> DenseQ8SidecarLoadResult {
         let tensor_count = reader.tensor_count() as usize;
         let mut tensors = GgufTensors::new();
         let mut raw_tensors: std::collections::HashMap<String, Tensor> =
             std::collections::HashMap::new();
+        let mut dense_q8_sidecars = DenseGgufQ8SidecarRegistry::default();
 
         info!("Loading {} tensors", tensor_count);
 
@@ -2145,6 +2155,7 @@ impl GgufLoader {
                     norm_validation_policy,
                 )?;
             tensors.insert(tensor_info.name.clone(), candle_tensor);
+            dense_q8_sidecars.try_push_tensor(tensor_info, tensor_data)?;
 
             // Store raw QK256 tensors if present.
             for (key, raw_tensor) in raw_qk256_entries {
@@ -2190,7 +2201,13 @@ impl GgufLoader {
             raw_tensors.len(),
             fingerprint
         );
-        Ok((tensors, raw_tensors))
+        if !dense_q8_sidecars.is_empty() {
+            info!(
+                "Carried {} inert dense Q8_0 sidecar descriptors; eager F32 Candle tensors remain the runtime path",
+                dense_q8_sidecars.descriptor_count()
+            );
+        }
+        Ok((tensors, raw_tensors, dense_q8_sidecars))
     }
 
     /// Validate tensor data integrity

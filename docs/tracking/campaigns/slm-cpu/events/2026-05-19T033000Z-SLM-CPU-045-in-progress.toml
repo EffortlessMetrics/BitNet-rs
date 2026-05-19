@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T03:30:00Z"
+event = "in_progress"
+item = "SLM-CPU-045"
+branch = "codex/slm-cpu-045-q8-sidecar-carrier"
+actor = "codex"
+summary = "Started the Qwen3 Q8_0 packed sidecar carrier slice."
+
+notes = [
+  "The implementation is limited to bitnet-models, docs, and SLM tracker bookkeeping.",
+  "Packed Q8_0 sidecar descriptors are carried as inert metadata while eager F32 Candle tensors remain the only runtime compute path.",
+  "The slice must not claim speedup, sustained throughput, Q4/Q5 runtime support, server or accelerator execution, Qwen3.5 support, or BitNet QK256 changes.",
+]

@@ -1,0 +1,17 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T03:45:00Z"
+event = "pr_open"
+item = "SLM-CPU-045"
+pr = 5845
+head_sha = "b9e8be252341b3aa2c1af38d63c7a4e1bdc34ed0"
+branch = "codex/slm-cpu-045-q8-sidecar-carrier"
+actor = "codex"
+summary = "Opened the Qwen3 Q8_0 packed sidecar carrier slice."
+
+notes = [
+  "PR #5845 carries packed Q8_0 sidecar metadata from GGUF tensor loading onto BitNetModel as an inert registry.",
+  "The eager F32 Candle tensors remain the only runtime compute path; sidecar descriptors have runtime_compute_enabled=false and dense_runtime_replaced=false.",
+  "The next runtime API hook is a behavior-preserving dense-linear dispatch selector gated by generated IDs/text, strict tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

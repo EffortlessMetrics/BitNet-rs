@@ -121,6 +121,26 @@ The next safe optimization slices should start from these known remaining costs:
    identical prompt IDs, generated IDs, decoded text, backend identity,
    tokenizer authority, model SHA, and `fallback=false`.
 
+SLM-CPU-045 starts the production-facing sidecar carrier for that fourth
+boundary. The GGUF loader now carries inert Q8_0 sidecar descriptors alongside
+the existing eager F32 Candle tensors, recording packed block counts, payload
+byte counts, tensor roles, source/runtime shapes, offsets, and packed-byte
+hashes. The descriptors are metadata-only:
+
+```text
+eager_f32_runtime_preserved = true
+runtime_compute_enabled = false
+dense_runtime_replaced = false
+speedup_claim = false
+generated_id_preservation_required_before_runtime_use = true
+```
+
+The next runtime hook must be a behavior-preserving dense-linear dispatch
+selector. It cannot select packed Q8_0 sidecar compute until generated IDs,
+decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel,
+model SHA, and `fallback=false` match the established Qwen3 Q8_0 appliance
+oracle.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
