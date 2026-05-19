@@ -2837,6 +2837,101 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-MODEL-013"
+status = "in_progress"
+branch = "codex/cuda-model-013-qwen3-server-smoke-receipt"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-MODEL-012"]
+acceptance = "Record Qwen3 0.6B Q8_0 through the shared-engine non-streaming /v1/chat/completions server path with selected_backend=nvidia-rtx-5070-ti-cuda, runtime_api=cuda, selected_route=dense_regular_llm_cuda, fallback_used=false, non-empty UTF-8 quality gate evidence, server_smoke_response_claimed=true, server_ready_claimed=false, and no speedup, full-residency, broad dense GGUF, Qwen2.5-inheritance, or BitNet QK256 promotion."
+commands = [
+  "cargo build --release --locked -p bitnet-server --no-default-features --features cpu,cuda",
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\2026-05-19\\server-strict-dense-qwen3-q8-smoke.json",
+  "cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features qwen3_server_shared_engine",
+  "cargo test --locked -p bitnet-server --no-default-features --features cpu qwen3",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/model-artifacts/**",
+  "docs/reports/CUDA_MODEL_013_QWEN3_SERVER_SMOKE_RECEIPT.md",
+  "docs/reports/CUDA_MODEL_014_QWEN3_EXACT_PROFILE_SERVER_READINESS_REVIEW.md",
+  "docs/status/**",
+  "plans/native-rust-inference/dense-qwen3.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  ".github/workflows/**",
+]
+may_claim = [
+  "Qwen3 0.6B has bounded non-streaming shared-engine server-smoke evidence for the exact RTX 5070 Ti dense_regular_llm_cuda route after the receipt exists.",
+  "The Qwen3 server-smoke receipt rejects hidden fallback and preserves exact model SHA, endpoint profile, generation policy, quality gate, and claim booleans.",
+]
+must_not_claim = [
+  "Qwen3 server readiness exists.",
+  "Qwen3 speedup exists.",
+  "Qwen3 benchmark-qualified speed exists.",
+  "Qwen3 full CUDA residency exists.",
+  "Qwen3 broad dense GGUF readiness exists.",
+  "Qwen3 proof inherits Qwen2.5 evidence.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+]
+
+[[work_item]]
+id = "CUDA-MODEL-014"
+status = "merged"
+branch = "codex/cuda-model-014-qwen3-server-ready-review"
+pr = 5866
+head_sha = "dd0e5d35555620091939d705004c504d6b87ad09"
+merge_sha = "ecae13be5aecdbb2e865dc26e1beec7a8deac019"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Review Qwen3 0.6B Q8_0 exact-profile server readiness and preserve server_ready=false unless a current-source non-streaming /v1/chat/completions RTX 5070 Ti shared-engine receipt exists and is accepted. The merged review rejected readiness because the receipt was missing at review time."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/model-artifacts/**",
+  "docs/reports/CUDA_MODEL_014_QWEN3_EXACT_PROFILE_SERVER_READINESS_REVIEW.md",
+  "docs/status/**",
+  "plans/native-rust-inference/dense-qwen3.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  ".github/workflows/**",
+]
+may_claim = [
+  "CUDA-MODEL-014 preserved Qwen3 server_ready=false because no committed server-smoke receipt existed at review time.",
+]
+must_not_claim = [
+  "Qwen3 server readiness exists.",
+  "Qwen3 speedup exists.",
+  "Qwen3 benchmark-qualified speed exists.",
+  "Qwen3 full CUDA residency exists.",
+  "Qwen3 broad dense GGUF readiness exists.",
+  "Qwen3 proof inherits Qwen2.5 evidence.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+]
+
+[[work_item]]
 id = "CUDA-MODEL-SMOLLM2-001"
 status = "merged"
 branch = "model/cuda-smollm2-360m-artifact-contract"

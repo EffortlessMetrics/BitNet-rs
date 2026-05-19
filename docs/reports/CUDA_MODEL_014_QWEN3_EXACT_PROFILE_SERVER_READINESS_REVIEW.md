@@ -20,6 +20,12 @@ This review does not change runtime behavior. It records that the validation
 path can recognize exact Qwen3 dense server-smoke receipts, but validation
 support is not itself product evidence.
 
+Post-review note: CUDA-MODEL-013 later committed the missing server-smoke
+receipt at
+`ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json`.
+This report remains a rejected readiness review. A new exact-profile readiness
+review is still required before `server_ready=true` can be promoted.
+
 ## Evidence Reviewed
 
 | Requirement | Evidence | Result |
@@ -88,10 +94,9 @@ This review must not be cited as:
 
 ## Next Proof
 
-Run the exact Qwen3 server path on the RTX 5070 Ti box and commit the resulting
-non-streaming `/v1/chat/completions` shared-engine smoke receipt. Only then can
-a follow-up exact-profile server-readiness review decide whether to set
-`server_ready=true` for this Qwen3 profile.
+Run a follow-up exact-profile server-readiness review against the committed
+non-streaming `/v1/chat/completions` shared-engine smoke receipt. Only that
+review can decide whether to set `server_ready=true` for this Qwen3 profile.
 
 ## Validation
 

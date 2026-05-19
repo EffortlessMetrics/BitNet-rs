@@ -68,7 +68,7 @@ bitnet receipts explain --latest
 | --- | --- |
 | `bitnet_official_2b_i2s_qk256` | Profile-specific speedup qualification and deeper residency/transfer timing. |
 | `dense_qwen25_05b_q8_cuda` | Exact-profile server readiness is promoted by `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json`; later work still needs governed speedup/full-residency evidence and separate BitNet server proof. |
-| `dense_qwen3_06b_q8_candidate` | Current-source Qwen3 non-streaming `/v1/chat/completions` server-smoke receipt before any exact-profile server-readiness promotion; repeated same-artifact comparator evidence remains required before speed or benchmark-qualified claims. |
+| `dense_qwen3_06b_q8_candidate` | Exact-profile server-readiness review against `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json`; repeated same-artifact comparator evidence remains required before speed or benchmark-qualified claims. |
 | `dense_smollm2_360m_candidate` | Same-prompt SmolLM2 first-token/top-k or checkpoint comparator capture using the SLM-CPU-022 contract. |
 | Later dense SLM / small-LLM candidates | Artifact contract, tokenizer/prompt authority, CPU answer sanity, all-layer plan, boundary fixtures, strict CUDA proof, warm session, and benchmark review. |
 
