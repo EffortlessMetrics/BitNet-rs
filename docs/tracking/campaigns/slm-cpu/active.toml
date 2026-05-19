@@ -3032,8 +3032,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-051"
-status = "ready"
-branch = "codex/slm-cpu-051-selector-readiness-gate"
+status = "pr_open"
+pr = 5897
+head_sha = "da8d4bc91f7350d69d7770db95667e0b82ef5732"
+branch = "codex/slm-cpu-051-selector-readiness-impl"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
