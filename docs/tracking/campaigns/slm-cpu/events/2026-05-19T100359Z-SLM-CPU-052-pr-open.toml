@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T10:03:59Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-052"
+event = "pr_open"
+pr = 5921
+head_sha = "9252f366485c02233271d4cc841aca5adf53253a"
+branch = "codex/slm-cpu-052-selector-update-impl"
+actor = "codex"
+notes = [
+  "Opened the behavior-preserving packed Q8_0 sidecar selector-update implementation PR.",
+  "The default dense Q8_0 selector remains eager F32 unless the selector-update proof is supplied.",
+  "The PR makes no sustained-throughput, accelerator, Q4/Q5, Qwen3.5, server, or BitNet QK256 claim.",
+]
