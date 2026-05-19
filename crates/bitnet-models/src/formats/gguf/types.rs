@@ -1332,7 +1332,7 @@ mod tests {
     }
 
     #[test]
-    fn i2s_flavor_accepts_strict_gguf_alignment_padding() {
+    fn i2s_flavor_accepts_strict_gguf_alignment_padding() -> Result<()> {
         let nelems = 256 * 256;
         let logical = I2SFlavor::GgmlQk256NoScale.logical_size_bytes(nelems);
         let info = TensorInfo {
@@ -1343,10 +1343,11 @@ mod tests {
             size: (logical + 32) as u64,
         };
 
-        temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
-            let flavor = detect_i2s_flavor(&info, false, nelems).expect("alignment padding");
-            assert_eq!(flavor, I2SFlavor::GgmlQk256NoScale);
-        });
+        let flavor = temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+            detect_i2s_flavor(&info, false, nelems)
+        })?;
+        assert_eq!(flavor, I2SFlavor::GgmlQk256NoScale);
+        Ok(())
     }
 
     #[test]
