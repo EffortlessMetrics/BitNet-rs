@@ -8281,8 +8281,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ASK-005"
-status = "in_progress"
+status = "merged"
 pr = 5920
+head_sha = "69721b2430c42232cc4b4beaa35c3ad7e9f7075e"
+merge_sha = "6497a521986fc1f894246dfda91026e3b256f02d"
 branch = "codex/lunar-lake/LNL258V-ASK-005-auto-npu-warm-resident"
 stackable = false
 review_mode = "codex_premerge"
