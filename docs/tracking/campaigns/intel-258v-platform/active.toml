@@ -9374,9 +9374,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-PROFILE-RUN-004"
-status = "pr_open"
+status = "merged"
 pr = 5898
-head_sha = "d1d656720b34c8731ffc70d03b2381790f957458"
+head_sha = "03294684cdf4f7163be4c77bb755ef7a5b391193"
+merge_sha = "7b3871635933b8df4763f72521d2c4f933671a1c"
 branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-004-cpu-heavy-profile-run"
 stackable = false
 review_mode = "codex_premerge"
