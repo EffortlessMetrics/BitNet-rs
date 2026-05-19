@@ -2,7 +2,8 @@
 //!
 //! These commands do not run inference. They turn the existing 258V proof bundle
 //! into an operator-facing route/readiness artifact so users can see which path
-//! is the safe default and which accelerator paths remain bounded candidates.
+//! is the safe default, which profiles have earned accelerator routes, and
+//! which profiles remain blocked.
 
 use anyhow::{Context, Result, bail};
 use clap::{Args, Subcommand};
@@ -10338,7 +10339,7 @@ fn dense_slm_cpu_route() -> OperatorRoute {
         runtime_api: "cpu".to_string(),
         selected_kernel_or_runtime: "dense-qwen-cpu-reference".to_string(),
         fallback_policy: "strict_no_fallback".to_string(),
-        route_reason: "Default user-facing route because the dense Qwen CPU path has strict answer gates, generated-token evidence, phase receipts, and fallback_used=false; accelerator paths are candidates until speedup is benchmark-qualified.".to_string(),
+        route_reason: "Default route id and dense Qwen CPU regression baseline because strict answer gates, generated-token evidence, phase receipts, and fallback_used=false are present; profile-scoped auto routing may select promoted OpenVINO GPU/NPU routes for specific workload profiles, while low_power remains blocked until battery-mode or energy-proxy power evidence is benchmark-qualified.".to_string(),
         answer_gate_evidence: Some(DENSE_CPU_ANSWER.to_string()),
         phase_evidence: Some(DENSE_CPU_PHASE.to_string()),
         acceleration_claim: false,
@@ -10370,7 +10371,7 @@ fn openvino_gpu_candidate_route() -> OperatorRoute {
         runtime_api: "openvino_genai".to_string(),
         selected_kernel_or_runtime: "openvino-genai-llmpipeline-gpu".to_string(),
         fallback_policy: "strict_no_fallback".to_string(),
-        route_reason: "Candidate route because Arc 140V OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false, but no benchmark-qualified speedup claim is recorded.".to_string(),
+        route_reason: "OpenVINO GPU dense Qwen route is profile-scoped: it may be selected only for workload profiles promoted by the route ledger from fallback-free answer, token-visibility, profile timing, and benchmark-qualified latency evidence; low_power, structured, BitNet, and any unqualified profile remain blocked without separate evidence, and this receipt makes no native OpenCL or acceleration claim.".to_string(),
         answer_gate_evidence: Some(DENSE_OV_GPU_OPERATOR_ASK.to_string()),
         phase_evidence: Some(DENSE_OV_PHASE.to_string()),
         acceleration_claim: false,
@@ -10386,7 +10387,7 @@ fn openvino_npu_candidate_route() -> OperatorRoute {
         runtime_api: "openvino_genai".to_string(),
         selected_kernel_or_runtime: "openvino-genai-llmpipeline-npu".to_string(),
         fallback_policy: "strict_no_fallback".to_string(),
-        route_reason: "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.".to_string(),
+        route_reason: "OpenVINO NPU dense Qwen route is profile-scoped: warm_resident may be selected only when the route ledger promotes the resident-session path from fallback-free quality and timing evidence; cold one-off and low_power profiles remain blocked until separately qualified, with INT4 symmetric greedy constraints and no dynamic decode, beam, parallel sampling, packed QK256, native NPU, or acceleration claim.".to_string(),
         answer_gate_evidence: Some(DENSE_OV_NPU_OPERATOR_ASK.to_string()),
         phase_evidence: Some(DENSE_OV_PHASE.to_string()),
         acceleration_claim: false,
@@ -14782,6 +14783,31 @@ mod tests {
         assert!(receipt.routes.iter().all(|route| !route.acceleration_claim));
         assert!(receipt.claim_boundary.cpu_is_truth_path);
         assert!(!receipt.claim_boundary.hidden_fallback_allowed);
+        assert!(receipt.default_route.route_reason.contains("profile-scoped auto routing"));
+        assert!(receipt.default_route.route_reason.contains("low_power remains blocked"));
+        assert!(
+            !receipt
+                .default_route
+                .route_reason
+                .contains("accelerator paths are candidates until speedup")
+        );
+        let gpu_route = receipt
+            .routes
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
+            .context("missing OpenVINO GPU route")?;
+        assert!(gpu_route.route_reason.contains("profile-scoped"));
+        assert!(gpu_route.route_reason.contains("no native OpenCL or acceleration claim"));
+        let npu_route = receipt
+            .routes
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_npu_candidate")
+            .context("missing OpenVINO NPU route")?;
+        assert!(npu_route.route_reason.contains("warm_resident"));
+        assert!(
+            npu_route.route_reason.contains("cold one-off and low_power profiles remain blocked")
+        );
+        assert!(npu_route.route_reason.contains("no dynamic decode"));
         Ok(())
     }
 

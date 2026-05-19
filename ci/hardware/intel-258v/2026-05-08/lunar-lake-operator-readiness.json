@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_readiness",
   "proof_stage": "operator_routes_indexed",
-  "created_utc": "2026-05-19T21:05:00Z",
+  "created_utc": "2026-05-19T23:20:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_ready": true,
@@ -14,7 +14,7 @@
     "runtime_api": "cpu",
     "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
     "fallback_policy": "strict_no_fallback",
-    "route_reason": "Default user-facing route because the dense Qwen CPU path has strict answer gates, generated-token evidence, phase receipts, and fallback_used=false; accelerator paths are candidates until speedup is benchmark-qualified.",
+    "route_reason": "Default route id and dense Qwen CPU regression baseline because strict answer gates, generated-token evidence, phase receipts, and fallback_used=false are present; profile-scoped auto routing may select promoted OpenVINO GPU/NPU routes for specific workload profiles, while low_power remains blocked until battery-mode or energy-proxy power evidence is benchmark-qualified.",
     "answer_gate_evidence": "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
     "phase_evidence": "slm-phase-warm-session-qwen25-cpu.json",
     "acceleration_claim": false
@@ -28,7 +28,7 @@
       "runtime_api": "cpu",
       "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
       "fallback_policy": "strict_no_fallback",
-      "route_reason": "Default user-facing route because the dense Qwen CPU path has strict answer gates, generated-token evidence, phase receipts, and fallback_used=false; accelerator paths are candidates until speedup is benchmark-qualified.",
+      "route_reason": "Default route id and dense Qwen CPU regression baseline because strict answer gates, generated-token evidence, phase receipts, and fallback_used=false are present; profile-scoped auto routing may select promoted OpenVINO GPU/NPU routes for specific workload profiles, while low_power remains blocked until battery-mode or energy-proxy power evidence is benchmark-qualified.",
       "answer_gate_evidence": "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
       "phase_evidence": "slm-phase-warm-session-qwen25-cpu.json",
       "acceleration_claim": false
@@ -54,7 +54,7 @@
       "runtime_api": "openvino_genai",
       "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu",
       "fallback_policy": "strict_no_fallback",
-      "route_reason": "Candidate route because Arc 140V OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false, but no benchmark-qualified speedup claim is recorded.",
+      "route_reason": "OpenVINO GPU dense Qwen route is profile-scoped: it may be selected only for workload profiles promoted by the route ledger from fallback-free answer, token-visibility, profile timing, and benchmark-qualified latency evidence; low_power, structured, BitNet, and any unqualified profile remain blocked without separate evidence, and this receipt makes no native OpenCL or acceleration claim.",
       "answer_gate_evidence": "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "acceleration_claim": false
@@ -67,7 +67,7 @@
       "runtime_api": "openvino_genai",
       "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
       "fallback_policy": "strict_no_fallback",
-      "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.",
+      "route_reason": "OpenVINO NPU dense Qwen route is profile-scoped: warm_resident may be selected only when the route ledger promotes the resident-session path from fallback-free quality and timing evidence; cold one-off and low_power profiles remain blocked until separately qualified, with INT4 symmetric greedy constraints and no dynamic decode, beam, parallel sampling, packed QK256, native NPU, or acceleration claim.",
       "answer_gate_evidence": "lunar-lake-openvino-operator-ask-npu-math-brief.json",
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "acceleration_claim": false
