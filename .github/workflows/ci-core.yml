@@ -390,7 +390,7 @@ jobs:
           }
           supported = cpu_feature_packages | default_feature_packages | no_feature_packages
           unsupported = [package for package in selected if package not in supported]
-          broad = bool(packages.get("broad_sweep_required")) or bool(unsupported)
+          broad = bool(packages.get("broad_sweep_required")) or bool(unsupported) or not selected
           if os.environ.get("EVENT_NAME") != "pull_request" and not selected:
               broad = True
 
