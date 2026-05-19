@@ -8952,9 +8952,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-011"
-status = "pr_open"
+status = "merged"
 pr = 6027
-head_sha = "ce041c59e417be5761d63c1704d19a2a5f5b5685"
+head_sha = "82c1cdd0b3de069339b2af7d12e5fe3bbbf8345f"
+merge_sha = "6985f5846f8bf1236bda89b399d7d2d4313c0579"
 branch = "codex/lunar-lake/LNL258V-REG-011-route-model-identity-gate"
 stackable = false
 review_mode = "codex_premerge"
