@@ -2975,6 +2975,59 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-050"
+status = "ready"
+branch = "codex/slm-cpu-050-q8-production-compute-hook"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-049"]
+acceptance = "Add the first production-compute-hook availability surface for the packed Q8_0 sidecar lane after SLM-CPU-049. The slice must make the production hook explicit and machine-checkable so runtime preflight can distinguish generated-ID/text equivalence from compute-hook availability, while still keeping selected_path=eager_f32_candle and sidecar_runtime_compute_allowed=false until a later selector update proves behavior-preserving generated-ID/text receipts against the established Qwen3 Q8_0 oracle. It may add hook structs, eligibility reports, fixture tests, and dashboard/tracker documentation. It must not execute packed Q8_0 sidecar compute in production, claim speedup, alter generated IDs/text, change tokenizer/backend semantics, start Q4/Q5 runtime support, or touch server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 paths."
+commands = [
+  "cargo test --locked -p bitnet-models --lib dense_gguf_q8 --no-default-features",
+  "cargo test --locked -p bitnet-models --no-default-features",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "The packed Q8_0 sidecar runtime lane has an explicit production-compute-hook availability surface.",
+  "The production dense-linear selector still chooses the eager F32 Candle path until generated-ID/text equivalence and a later selector update both allow sidecar runtime compute.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecars execute in production runtime.",
+  "A runtime speedup is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Generated IDs or decoded text changed.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-024"
 status = "merged"
 pr = 5342

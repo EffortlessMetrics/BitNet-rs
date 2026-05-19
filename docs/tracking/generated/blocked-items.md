@@ -612,6 +612,7 @@
 | slm-cpu | SLM-CPU-047 | SLM-CPU-046 | merged |
 | slm-cpu | SLM-CPU-048 | SLM-CPU-047 | merged |
 | slm-cpu | SLM-CPU-049 | SLM-CPU-048 | merged |
+| slm-cpu | SLM-CPU-050 | SLM-CPU-049 | ready |
 | slm-cpu | SLM-CPU-024 | SLM-CPU-023 | merged |
 | slm-cpu | SLM-CPU-025 | SLM-CPU-024 | merged |
 | slm-cpu | SLM-CPU-026 | SLM-CPU-025 | merged |
