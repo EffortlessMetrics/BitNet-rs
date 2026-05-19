@@ -8759,9 +8759,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-VALIDATE-002"
-status = "in_progress"
+status = "merged"
 pr = 6014
 head_sha = "0d4bfc6051eb740cc0249f9535eabd319cda0c69"
+merge_sha = "7af45b27147cda88ec195f293d5d8062ce67955d"
 branch = "codex/lunar-lake/LNL258V-VALIDATE-002-power-thermal-context"
 stackable = false
 review_mode = "codex_premerge"
