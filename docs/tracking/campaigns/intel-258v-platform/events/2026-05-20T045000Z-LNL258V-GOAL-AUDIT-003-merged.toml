@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T04:50:00Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-003"
+pr = 6030
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-003-post-reg011"
+head_sha = "c6bd814cdbff2136a6692a815f6f999a614cceff"
+merge_sha = "966c7f7ec602995b090fd07e1ce19d2135d91b2f"
+actor = "codex"
+summary = "Merged LNL258V-GOAL-AUDIT-003, refreshing the Lunar Lake audit after REG-011."
+
+notes = [
+  "The audit records that readiness, strict regression, and operator comparison now index route/model identity readiness for route-profile and cold/warm benchmark evidence.",
+  "The audit continues to mark excellent support as not complete because LNL258V-POWER-006 is blocked on real battery-mode low_power telemetry and energy-proxy evidence.",
+  "The merge preserves no new-inference, route-promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]
