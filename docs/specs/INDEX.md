@@ -22,6 +22,22 @@ Do not remove or repurpose support JSON fields without a schema-version bump.
 Do not let status, receipt explanation, or support bundles infer speedup,
 residency, broad server readiness, or cross-family proof.
 
+## PR Queue And CI Operations
+
+Use these specs before closing, replacing, restacking, or otherwise writing to
+PR queue state:
+
+1. [PR Queue Disposition](BITNET-SPEC-PR-QUEUE-DISPOSITION.md)
+   - Defines valid close reasons, invalid close reasons, routing states,
+     successor requirements, and PR identity preservation.
+2. [PR Write-Action CI Economics](BITNET-SPEC-PR-CI-ECONOMICS.md)
+   - Defines queue write actions, no-CI-for-archaeology, bulk-write limits,
+     rerun rules, and allowed CI spend during burn-down.
+
+Wrong base, stale stack, closed parent, and needs-restack are routing states,
+not close reasons. Queue writes should follow content review and should spend
+CI only on current merge candidates, clean ports, or required proof.
+
 ## TL1 ARM-First Table-Lookup Route
 
 Use these artifacts before implementing or claiming TL1 support:
