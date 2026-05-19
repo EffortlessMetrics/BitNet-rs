@@ -957,6 +957,49 @@ claim_boundary = "1bitLLM large-family artifacts are diagnostic until artifact a
   dense_regular_llm_cuda_proof = false
 
 [[entry]]
+id = "bitnet_llama3_8b_158_diagnostic"
+model_class = "bitnet"
+family = "llama3_bitnet_b1_58"
+artifact_kind = "safetensors_candidate"
+contract_id = "hf1bitllm_llama3_8b_158_diagnostic"
+status = "diagnostic_only"
+current_tier = "registered"
+verifier_surface = "model coverage matrix only"
+tokenizer_authority = "pending_llama3_tokenizer_prompt_audit"
+prompt_authority = "pending_llama3_prompt_audit"
+cpu_reference = "reference_runner_and_layout_contract_required"
+accelerator_routes = []
+required_receipts = [
+  "artifact_inventory",
+  "tokenizer_prompt_authority",
+  "reference_runner_evidence",
+  "i2s_or_tl_layout_proof",
+]
+forbidden_claims = [
+  "official_microsoft_2b_proof_inheritance",
+  "cpu_answer_ready",
+  "accelerator_answer_ready",
+  "speedup",
+  "server_ready",
+]
+next_proof = "Exact artifact inventory, tokenizer/prompt audit, reference-runner evidence, and I2_S/TL layout proof before any CPU, accelerator, or answer-readiness claim."
+claim_boundary = "Llama3 8B 1.58-bit-family artifacts are diagnostic-only until artifact authority, tokenizer/prompt authority, reference behavior, and layout route contracts are pinned; no Microsoft 2B proof is inherited."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+[[entry]]
 id = "llama3_8b_158_100b_tokens_candidate"
 model_class = "bitnet"
 family = "llama3_bitnet_b1_58"
