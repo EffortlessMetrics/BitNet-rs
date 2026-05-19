@@ -164,7 +164,7 @@ accepted ask/chat user-path receipts.
 
 ## Work item: CUDA-MODEL-013
 
-Status: pr_open
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
