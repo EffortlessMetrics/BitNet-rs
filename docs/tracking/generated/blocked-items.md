@@ -87,7 +87,7 @@
 | apple-m4-inference-excellence | M4-BENCH-005 | M4-BENCH-002, M4-BENCH-008, M4-BENCH-009, M4-BENCH-010 | merged |
 | apple-m4-inference-excellence | M4-BENCH-010 | M4-BENCH-008, M4-BENCH-009 | merged |
 | apple-m4-inference-excellence | M4-BENCH-008 | M4-BENCH-002 | merged |
-| apple-m4-inference-excellence | M4-BENCH-006 | M4-BENCH-005, M4-BITNET-EX-003, M4-BITNET-EX-004 | in_progress |
+| apple-m4-inference-excellence | M4-BENCH-006 | M4-BENCH-005, M4-BITNET-EX-003, M4-BITNET-EX-004 | pr_open |
 | apple-m4-inference-excellence | M4-BENCH-003 | M4-BENCH-005, M4-BENCH-006, M4-EXCELLENCE-003 | proposed |
 | apple-m4-inference-excellence | M4-BITNET-REG-001 | M4-EXCELLENCE-002, M4-EXCELLENCE-004 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-002 | M4-BITNET-EX-001 | merged |

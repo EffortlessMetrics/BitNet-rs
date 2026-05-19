@@ -1,0 +1,18 @@
+timestamp = "2026-05-19T23:12:12Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-006"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6033
+head_sha = "2b94dfbb30f6b7c422cbbdc8253cbe2d6ad82d6d"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-006-bitnet-variance"
+
+notes = [
+  "Opened PR #6033 for explicit M4 BitNet one-shot and fixed warm-session repeatability and variance evidence.",
+  "The PR publishes release-mode repeat=2 aggregate and child receipts under ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/.",
+  "The aggregate records repeat requested/completed=2, path sample count=4, prompt_count=8, generated_tokens=16, fallback_used=false, and timeouts=0.",
+  "The evidence preserves the accepted Microsoft I2_S GGUF SHA and external tokenizer SHA and validates through mac receipts-check for the aggregate and full evidence directory.",
+  "No BitNet chat/serve enablement, dense SLM behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
