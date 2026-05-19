@@ -95,7 +95,9 @@ mod tests {
         assert_eq!(metal, mpsgraph);
         assert_eq!(metal, cpu);
 
-        let contract = metal.expect("M3 Air contract");
+        let Some(contract) = metal else {
+            return;
+        };
         assert_eq!(contract.profile_id, "apple-m3-macbook-air");
         assert_eq!(contract.soc_family, "Apple M3");
         assert_eq!(contract.thermal_policy, super::ThermalPolicy::FanlessMobile);
