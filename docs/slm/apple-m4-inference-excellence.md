@@ -324,6 +324,14 @@ low-disk headroom, missing macOS build evidence, or missing git identity turn
 the preflight into `invalid_for_comparison`; unavailable thermal/power/memory
 pressure probes and missing background-load notes remain advisory warnings.
 
+`M4-BENCH-007` adds `bitnet mac benchmark --calibrate`, a synthetic harness
+calibration receipt that does not load a model and does not claim model speed.
+The receipt records the `std::time::Instant` clock source and observed
+resolution, runner overhead, warm-up and sample-discard policy, synthetic timing
+fixtures, profile timeout rules, and invalid-comparison reasons. It is a
+precondition for interpreting later benchmark envelopes, not a benchmark
+envelope itself.
+
 `M4-BENCH-006` keeps BitNet timing variance explicit instead of relying on the
 shared benchmark envelope alone. It records one-shot and warm-session run
 counts, sample counts, timeout-stage accounting, variance bands, outlier
