@@ -8281,7 +8281,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-BITNET-INTAKE-002"
-status = "in_progress"
+status = "pr_open"
+pr = 5947
+head_sha = "bb737fd137f10651a3f8b729e594a9b8a2cf7080"
 branch = "codex/lunar-lake/bitnet-intake-closed-source-status"
 stackable = false
 review_mode = "codex_premerge"
