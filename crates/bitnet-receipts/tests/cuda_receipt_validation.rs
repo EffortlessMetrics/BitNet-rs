@@ -2006,6 +2006,15 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_validates() {
     validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt).unwrap();
     validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+
+    assert_eq!(receipt["session_lifecycle"]["model_loaded_once"], true);
+    assert_eq!(receipt["session_lifecycle"]["cuda_context_once"], true);
+    assert_eq!(receipt["session_lifecycle"]["weights_uploaded_once"], true);
+    assert_eq!(receipt["session_lifecycle"]["per_request_model_load"], false);
+    assert_eq!(receipt["session_lifecycle"]["workspace_reused"], true);
+    assert_eq!(receipt["session_lifecycle"]["fallback_used"], false);
+    assert_eq!(receipt["tensor_residency"]["per_request_model_load"], false);
+    assert_eq!(receipt["tensor_residency"]["workspace_reused"], true);
 }
 
 #[test]
@@ -2101,6 +2110,18 @@ fn dense_gguf_qwen_warm_session_rejects_broad_persistent_residency_claim() {
         .to_string();
 
     assert!(err.contains("persistent_session_residency_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_warm_session_rejects_incorrect_persistent_handle_aliases() {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt["session_lifecycle"]["per_request_model_load"] = json!(true);
+
+    let err = validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("per_request_model_load"), "unexpected error: {err}");
 }
 
 #[test]
@@ -4382,9 +4403,12 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
         "model_loaded_once": true,
         "tokenizer_loaded_once": true,
         "cuda_context_initialized_once": true,
+        "cuda_context_once": true,
         "weights_uploaded_once": true,
+        "per_request_model_load": false,
         "per_turn_weight_upload": false,
         "runtime_buffers_reused": true,
+        "workspace_reused": true,
         "kv_cache_policy_recorded": true,
         "kv_cache_reinitialized_per_turn": true,
         "sampling_policy_recorded": true,
@@ -4599,11 +4623,14 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
         "model_loaded_once": true,
         "tokenizer_loaded_once": true,
         "cuda_context_initialized_once": true,
+        "cuda_context_once": true,
         "weights_uploaded_once": true,
         "weights_resident_on_cuda": true,
+        "per_request_model_load": false,
         "per_turn_weight_upload": false,
         "per_token_weight_upload": false,
         "runtime_buffers_reused": true,
+        "workspace_reused": true,
         "kv_cache_policy_recorded": true,
         "kv_cache_reinitialized_per_turn": true,
         "sampling_policy_recorded": true,

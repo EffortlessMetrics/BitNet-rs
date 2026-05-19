@@ -6106,9 +6106,27 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     require_bool_eq(lifecycle, "model_loaded_once", true)?;
     require_bool_eq(lifecycle, "tokenizer_loaded_once", true)?;
     require_bool_eq(lifecycle, "cuda_context_initialized_once", true)?;
+    require_bool_alias_eq(
+        lifecycle,
+        &["cuda_context_once", "cuda_context_initialized_once"],
+        true,
+        "cuda_context_once",
+    )?;
     require_bool_eq(lifecycle, "weights_uploaded_once", true)?;
+    require_bool_alias_eq(
+        lifecycle,
+        &["per_request_model_load", "per_turn_weight_upload"],
+        false,
+        "per_request_model_load",
+    )?;
     require_bool_eq(lifecycle, "per_turn_weight_upload", false)?;
     require_bool_eq(lifecycle, "runtime_buffers_reused", true)?;
+    require_bool_alias_eq(
+        lifecycle,
+        &["workspace_reused", "runtime_buffers_reused"],
+        true,
+        "workspace_reused",
+    )?;
     require_bool_eq(lifecycle, "kv_cache_policy_recorded", true)?;
     require_bool_eq(lifecycle, "kv_cache_reinitialized_per_turn", true)?;
     require_bool_eq(lifecycle, "sampling_policy_recorded", true)?;
@@ -6308,11 +6326,29 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     require_bool_eq(residency, "model_loaded_once", true)?;
     require_bool_eq(residency, "tokenizer_loaded_once", true)?;
     require_bool_eq(residency, "cuda_context_initialized_once", true)?;
+    require_bool_alias_eq(
+        residency,
+        &["cuda_context_once", "cuda_context_initialized_once"],
+        true,
+        "cuda_context_once",
+    )?;
     require_bool_eq(residency, "weights_uploaded_once", true)?;
     require_bool_eq(residency, "weights_resident_on_cuda", true)?;
+    require_bool_alias_eq(
+        residency,
+        &["per_request_model_load", "per_turn_weight_upload"],
+        false,
+        "per_request_model_load",
+    )?;
     require_bool_eq(residency, "per_turn_weight_upload", false)?;
     require_bool_eq(residency, "per_token_weight_upload", false)?;
     require_bool_eq(residency, "runtime_buffers_reused", true)?;
+    require_bool_alias_eq(
+        residency,
+        &["workspace_reused", "runtime_buffers_reused"],
+        true,
+        "workspace_reused",
+    )?;
     require_bool_eq(residency, "kv_cache_policy_recorded", true)?;
     require_bool_eq(residency, "kv_cache_reinitialized_per_turn", true)?;
     require_bool_eq(residency, "sampling_policy_recorded", true)?;
@@ -8683,6 +8719,26 @@ fn require_bool_eq(object: &Value, field: &str, expected: bool) -> Result<()> {
         return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
     }
     Ok(())
+}
+
+fn require_bool_alias_eq(
+    object: &Value,
+    fields: &[&str],
+    expected: bool,
+    label: &str,
+) -> Result<()> {
+    let mut saw_field = false;
+    for field in fields {
+        if let Some(value) = object.get(*field) {
+            saw_field = true;
+            let actual =
+                value.as_bool().ok_or_else(|| anyhow!("field `{field}` must be a bool"))?;
+            if actual != expected {
+                return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
+            }
+        }
+    }
+    if saw_field { Ok(()) } else { Err(anyhow!("field `{label}` must be `{expected}`")) }
 }
 
 fn require_null(object: &Value, field: &str) -> Result<()> {

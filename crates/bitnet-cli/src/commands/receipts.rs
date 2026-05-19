@@ -143,8 +143,12 @@ pub struct TimingExplanation {
 #[derive(Debug, Clone, Default, Serialize, PartialEq)]
 pub struct ResidencyExplanation {
     pub qk256_cuda_residency_claimed: Option<bool>,
+    pub model_loaded_once: Option<bool>,
+    pub cuda_context_once: Option<bool>,
     pub weights_uploaded_once: Option<bool>,
+    pub per_request_model_load: Option<bool>,
     pub per_token_weight_upload: Option<bool>,
+    pub workspace_reused: Option<bool>,
     pub kv_cache_residency: Option<String>,
     pub full_cuda_residency_claimed: Option<bool>,
 }
@@ -504,6 +508,14 @@ fn residency_explanation(receipt: &Value) -> ResidencyExplanation {
             receipt,
             &["cuda_execution_residency", "claim_boundary", "qk256_cuda_residency_claimed"],
         ),
+        model_loaded_once: bool_at(receipt, &["session_lifecycle", "model_loaded_once"])
+            .or_else(|| bool_at(receipt, &["tensor_residency", "model_loaded_once"]))
+            .or_else(|| bool_at(receipt, &["residency", "model_loaded_once"])),
+        cuda_context_once: bool_at(receipt, &["session_lifecycle", "cuda_context_once"])
+            .or_else(|| bool_at(receipt, &["session_lifecycle", "cuda_context_initialized_once"]))
+            .or_else(|| bool_at(receipt, &["tensor_residency", "cuda_context_once"]))
+            .or_else(|| bool_at(receipt, &["tensor_residency", "cuda_context_initialized_once"]))
+            .or_else(|| bool_at(receipt, &["residency", "cuda_context_once"])),
         weights_uploaded_once: bool_at(
             receipt,
             &["cuda_execution_residency", "weights", "uploaded_once"],
@@ -515,8 +527,13 @@ fn residency_explanation(receipt: &Value) -> ResidencyExplanation {
             )
         })
         .or_else(|| bool_at(receipt, &["bitnet", "weights_uploaded_once"]))
+        .or_else(|| bool_at(receipt, &["session_lifecycle", "weights_uploaded_once"]))
+        .or_else(|| bool_at(receipt, &["tensor_residency", "weights_uploaded_once"]))
         .or_else(|| bool_at(receipt, &["residency", "weights_uploaded_once"]))
         .or_else(|| bool_at(receipt, &["proof", "weights_uploaded_once"])),
+        per_request_model_load: bool_at(receipt, &["session_lifecycle", "per_request_model_load"])
+            .or_else(|| bool_at(receipt, &["tensor_residency", "per_request_model_load"]))
+            .or_else(|| bool_at(receipt, &["residency", "per_request_model_load"])),
         per_token_weight_upload: bool_at(
             receipt,
             &["cuda_execution_residency", "weights", "per_token_weight_upload"],
@@ -528,8 +545,15 @@ fn residency_explanation(receipt: &Value) -> ResidencyExplanation {
             )
         })
         .or_else(|| bool_at(receipt, &["bitnet", "per_token_weight_upload"]))
+        .or_else(|| bool_at(receipt, &["tensor_residency", "per_token_weight_upload"]))
         .or_else(|| bool_at(receipt, &["residency", "per_token_weight_upload"]))
         .or_else(|| bool_at(receipt, &["proof", "per_token_weight_upload"])),
+        workspace_reused: bool_at(receipt, &["session_lifecycle", "workspace_reused"])
+            .or_else(|| bool_at(receipt, &["session_lifecycle", "runtime_buffers_reused"]))
+            .or_else(|| bool_at(receipt, &["tensor_residency", "workspace_reused"]))
+            .or_else(|| bool_at(receipt, &["tensor_residency", "runtime_buffers_reused"]))
+            .or_else(|| bool_at(receipt, &["residency", "workspace_reused"]))
+            .or_else(|| bool_at(receipt, &["residency", "runtime_buffers_reused"])),
         kv_cache_residency: string_at(
             receipt,
             &["cuda_execution_residency", "kv_cache", "residency"],
@@ -1386,10 +1410,14 @@ fn print_receipt_explanation(explanation: &ReceiptExplanation) {
             explanation.residency.qk256_cuda_residency_claimed,
         );
         print_bool_indented("weights_uploaded_once", explanation.residency.weights_uploaded_once);
+        print_bool_indented("model_loaded_once", explanation.residency.model_loaded_once);
+        print_bool_indented("cuda_context_once", explanation.residency.cuda_context_once);
+        print_bool_indented("per_request_model_load", explanation.residency.per_request_model_load);
         print_bool_indented(
             "per_token_weight_upload",
             explanation.residency.per_token_weight_upload,
         );
+        print_bool_indented("workspace_reused", explanation.residency.workspace_reused);
         print_option_indented("kv_cache", explanation.residency.kv_cache_residency.as_deref());
         print_bool_indented(
             "full_cuda_residency_claimed",
@@ -1611,8 +1639,12 @@ fn has_timing(timing: &TimingExplanation) -> bool {
 
 fn has_residency(residency: &ResidencyExplanation) -> bool {
     residency.qk256_cuda_residency_claimed.is_some()
+        || residency.model_loaded_once.is_some()
+        || residency.cuda_context_once.is_some()
         || residency.weights_uploaded_once.is_some()
+        || residency.per_request_model_load.is_some()
         || residency.per_token_weight_upload.is_some()
+        || residency.workspace_reused.is_some()
         || residency.kv_cache_residency.is_some()
         || residency.full_cuda_residency_claimed.is_some()
 }
@@ -2274,6 +2306,23 @@ mod tests {
                 "dense_regular_llm_cuda_claimed": true,
                 "server_ready_claimed": false,
                 "speedup_claim": false
+            },
+            "session_lifecycle": {
+                "model_loaded_once": true,
+                "cuda_context_once": true,
+                "weights_uploaded_once": true,
+                "per_request_model_load": false,
+                "workspace_reused": true,
+                "fallback_used": false
+            },
+            "tensor_residency": {
+                "model_loaded_once": true,
+                "cuda_context_once": true,
+                "weights_uploaded_once": true,
+                "per_request_model_load": false,
+                "per_token_weight_upload": false,
+                "workspace_reused": true,
+                "full_cuda_residency_claimed": false
             }
         });
 
@@ -2300,6 +2349,12 @@ mod tests {
         assert_eq!(explanation.full_residency_claim, Some(false));
         assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(false));
         assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(true));
+        assert_eq!(explanation.residency.model_loaded_once, Some(true));
+        assert_eq!(explanation.residency.cuda_context_once, Some(true));
+        assert_eq!(explanation.residency.weights_uploaded_once, Some(true));
+        assert_eq!(explanation.residency.per_request_model_load, Some(false));
+        assert_eq!(explanation.residency.per_token_weight_upload, Some(false));
+        assert_eq!(explanation.residency.workspace_reused, Some(true));
         assert!(
             explanation
                 .model_coverage
@@ -2321,6 +2376,12 @@ mod tests {
         assert_eq!(value["full_residency_claim"], false);
         assert_eq!(value["bitnet_packed_i2s_qk256_proof"], false);
         assert_eq!(value["dense_regular_llm_cuda_proof"], true);
+        assert_eq!(value["residency"]["model_loaded_once"], true);
+        assert_eq!(value["residency"]["cuda_context_once"], true);
+        assert_eq!(value["residency"]["weights_uploaded_once"], true);
+        assert_eq!(value["residency"]["per_request_model_load"], false);
+        assert_eq!(value["residency"]["per_token_weight_upload"], false);
+        assert_eq!(value["residency"]["workspace_reused"], true);
         Ok(())
     }
 
