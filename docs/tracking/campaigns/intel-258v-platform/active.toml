@@ -8644,8 +8644,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-THERMAL-002"
-status = "in_progress"
+status = "merged"
 pr = 6007
+head_sha = "d632550023d656f984e952c62ddafbfb6b968d78"
+merge_sha = "f57e33636626c9db5bda18d5868a8335736504db"
 branch = "codex/lunar-lake/LNL258V-THERMAL-002-temperature-availability"
 stackable = false
 review_mode = "codex_premerge"
