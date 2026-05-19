@@ -8834,9 +8834,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-008"
-status = "pr_open"
+status = "merged"
 pr = 5808
-head_sha = "e80e87aaf59faeeae2bd2c4fc4a62765d0c458cc"
+head_sha = "532e65cf36e2315431f7f42a9f4796061863841b"
+merge_sha = "49cbc3996391c996a927dabb4a0d9997565eed36"
 branch = "codex/lunar-lake/LNL258V-REG-008-power-profile-regression"
 stackable = false
 review_mode = "codex_premerge"
