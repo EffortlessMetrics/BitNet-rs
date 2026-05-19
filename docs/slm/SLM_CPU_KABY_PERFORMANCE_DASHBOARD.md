@@ -331,6 +331,32 @@ This closes only the runtime proof gate for the current state: packed Q8_0
 sidecar compute is still disabled until a later PR adds the production forward
 hook and after-execution receipts for the same Qwen3 Q8_0 behavior oracle.
 
+SLM-CPU-054 makes that remaining hook/API gap machine-checkable instead of
+treating it as an implicit prose blocker. It consumes the SLM-CPU-053 runtime
+proof shape and records the exact production gaps that still prevent packed
+Q8_0 sidecar compute from being selected:
+
+```text
+artifact_kind = dense_gguf_q8_runtime_hook_gap
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+production_runtime_hook_invoked = false
+runtime_compute_enabled = false
+sidecar_runtime_compute_allowed = false
+api_gaps =
+  production_dispatch_still_eager_f32
+  packed_runtime_compute_still_disabled
+  transformer_dense_linear_hook_missing
+  before_after_receipt_capture_missing
+fallback_used = false
+speedup_claim = false
+```
+
+The next safe step remains a production dense-linear hook that receives the
+selected Q8_0 sidecar descriptor and emits before/after Qwen3 Q8_0 behavior
+receipts before enabling packed sidecar compute. SLM-CPU-054 does not replace
+the eager F32 Candle runtime path and does not claim speedup.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when

@@ -1,0 +1,16 @@
+timestamp = "2026-05-19T18:33:44Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-054"
+event = "pr_open"
+actor = "codex"
+previous_status = "ready"
+new_status = "pr_open"
+pr = 5992
+head_sha = "db81e20444019f253b612f6e53bb6291201f5524"
+
+notes = [
+  "Opened PR #5992 for the packed Q8_0 sidecar runtime hook-gap burn-down.",
+  "The PR adds a dense_gguf_q8_runtime_hook_gap report and an i5-8250U Qwen3 Q8_0 artifact naming the remaining production dispatch, packed runtime compute, production dense-linear hook, and before/after receipt gaps.",
+  "The PR keeps selected_path=eager_f32_candle, sidecar_runtime_compute_allowed=false, fallback_used=false, and speedup_claim=false.",
+  "No generated ID, decoded text, tokenizer, backend, sustained throughput, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

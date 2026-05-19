@@ -27,6 +27,7 @@ pub const DENSE_GGUF_Q8_SELECTOR_READINESS_GATE_ARTIFACT_KIND: &str =
 pub const DENSE_GGUF_Q8_SELECTOR_UPDATE_ARTIFACT_KIND: &str = "dense_gguf_q8_selector_update";
 pub const DENSE_GGUF_Q8_RUNTIME_EXECUTION_PROOF_ARTIFACT_KIND: &str =
     "dense_gguf_q8_runtime_execution_proof";
+pub const DENSE_GGUF_Q8_RUNTIME_HOOK_GAP_ARTIFACT_KIND: &str = "dense_gguf_q8_runtime_hook_gap";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -106,6 +107,18 @@ pub enum DenseQ8RuntimeExecutionBlocker {
     BeforeAfterReceiptsMissing,
     BeforeAfterReceiptMismatch,
     FallbackUsed,
+    SpeedupClaimPresent,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DenseQ8RuntimeHookApiGap {
+    ProductionDispatchStillEagerF32,
+    PackedRuntimeComputeStillDisabled,
+    TransformerDenseLinearHookMissing,
+    BeforeAfterReceiptCaptureMissing,
+    BeforeAfterReceiptMismatch,
+    BehaviorOracleFallbackUsed,
     SpeedupClaimPresent,
 }
 
@@ -277,6 +290,25 @@ pub struct DenseQ8RuntimeExecutionProof {
     pub speedup_claim: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DenseQ8RuntimeHookGapReport {
+    pub schema: u64,
+    pub artifact_kind: String,
+    pub tensor_name: String,
+    pub selected_path: DenseQ8RuntimePath,
+    pub selected_kernel: String,
+    pub production_runtime_hook_invoked: bool,
+    pub runtime_compute_enabled: bool,
+    pub sidecar_runtime_compute_allowed: bool,
+    pub runtime_blockers: Vec<DenseQ8RuntimeExecutionBlocker>,
+    pub api_gaps: Vec<DenseQ8RuntimeHookApiGap>,
+    pub next_safe_step: String,
+    pub eager_f32_runtime_preserved: bool,
+    pub dense_runtime_replaced: bool,
+    pub fallback_used: bool,
+    pub speedup_claim: bool,
+}
+
 impl DenseQ8SidecarEquivalenceGate {
     pub fn runtime_still_blocked(&self) -> bool {
         !self.sidecar_runtime_compute_allowed
@@ -347,6 +379,16 @@ impl DenseQ8RuntimeExecutionProof {
     pub fn runtime_still_blocked(&self) -> bool {
         self.execution_status == DenseQ8RuntimeExecutionStatus::Blocked
             && !self.sidecar_runtime_compute_allowed
+            && !self.speedup_claim
+    }
+}
+
+impl DenseQ8RuntimeHookGapReport {
+    pub fn keeps_runtime_blocked_without_claims(&self) -> bool {
+        !self.sidecar_runtime_compute_allowed
+            && self.eager_f32_runtime_preserved
+            && !self.dense_runtime_replaced
+            && !self.fallback_used
             && !self.speedup_claim
     }
 }
@@ -732,6 +774,68 @@ pub fn build_dense_q8_runtime_execution_proof(
             && runtime_selection.dense_runtime_replaced,
         fallback_used,
         speedup_claim,
+    }
+}
+
+pub fn build_dense_q8_runtime_hook_gap_report(
+    proof: &DenseQ8RuntimeExecutionProof,
+) -> DenseQ8RuntimeHookGapReport {
+    let mut api_gaps = Vec::new();
+    if proof
+        .runtime_blockers
+        .contains(&DenseQ8RuntimeExecutionBlocker::ProductionDispatchStillEagerF32)
+    {
+        api_gaps.push(DenseQ8RuntimeHookApiGap::ProductionDispatchStillEagerF32);
+    }
+    if proof
+        .runtime_blockers
+        .contains(&DenseQ8RuntimeExecutionBlocker::PackedRuntimeComputeDisabled)
+    {
+        api_gaps.push(DenseQ8RuntimeHookApiGap::PackedRuntimeComputeStillDisabled);
+    }
+    if proof
+        .runtime_blockers
+        .contains(&DenseQ8RuntimeExecutionBlocker::ProductionRuntimeHookMissing)
+    {
+        api_gaps.push(DenseQ8RuntimeHookApiGap::TransformerDenseLinearHookMissing);
+    }
+    if proof.runtime_blockers.contains(&DenseQ8RuntimeExecutionBlocker::BeforeAfterReceiptsMissing)
+    {
+        api_gaps.push(DenseQ8RuntimeHookApiGap::BeforeAfterReceiptCaptureMissing);
+    }
+    if proof.runtime_blockers.contains(&DenseQ8RuntimeExecutionBlocker::BeforeAfterReceiptMismatch)
+    {
+        api_gaps.push(DenseQ8RuntimeHookApiGap::BeforeAfterReceiptMismatch);
+    }
+    if proof.runtime_blockers.contains(&DenseQ8RuntimeExecutionBlocker::FallbackUsed) {
+        api_gaps.push(DenseQ8RuntimeHookApiGap::BehaviorOracleFallbackUsed);
+    }
+    if proof.runtime_blockers.contains(&DenseQ8RuntimeExecutionBlocker::SpeedupClaimPresent) {
+        api_gaps.push(DenseQ8RuntimeHookApiGap::SpeedupClaimPresent);
+    }
+
+    let next_safe_step = if api_gaps.is_empty() {
+        "runtime proof has no hook/API gaps; a later performance slice may record bounded timing evidence without changing behavior receipts".to_string()
+    } else {
+        "add a production dense-linear hook that receives the selected Q8_0 sidecar descriptor and emits before/after Qwen3 Q8_0 behavior receipts before enabling packed sidecar compute".to_string()
+    };
+
+    DenseQ8RuntimeHookGapReport {
+        schema: 1,
+        artifact_kind: DENSE_GGUF_Q8_RUNTIME_HOOK_GAP_ARTIFACT_KIND.to_string(),
+        tensor_name: proof.tensor_name.clone(),
+        selected_path: proof.selected_path,
+        selected_kernel: proof.selected_kernel.clone(),
+        production_runtime_hook_invoked: proof.production_runtime_hook_invoked,
+        runtime_compute_enabled: proof.runtime_compute_enabled,
+        sidecar_runtime_compute_allowed: proof.sidecar_runtime_compute_allowed,
+        runtime_blockers: proof.runtime_blockers.clone(),
+        api_gaps,
+        next_safe_step,
+        eager_f32_runtime_preserved: proof.eager_f32_runtime_preserved,
+        dense_runtime_replaced: proof.dense_runtime_replaced,
+        fallback_used: proof.fallback_used,
+        speedup_claim: proof.speedup_claim,
     }
 }
 
@@ -1373,6 +1477,19 @@ mod tests {
                 DenseQ8RuntimeExecutionBlocker::ProductionRuntimeHookMissing
             ]
         );
+        let gap = build_dense_q8_runtime_hook_gap_report(&proof);
+        assert_eq!(gap.artifact_kind, DENSE_GGUF_Q8_RUNTIME_HOOK_GAP_ARTIFACT_KIND);
+        assert!(gap.keeps_runtime_blocked_without_claims());
+        assert_eq!(gap.selected_path, DenseQ8RuntimePath::EagerF32Candle);
+        assert_eq!(
+            gap.api_gaps,
+            vec![
+                DenseQ8RuntimeHookApiGap::ProductionDispatchStillEagerF32,
+                DenseQ8RuntimeHookApiGap::PackedRuntimeComputeStillDisabled,
+                DenseQ8RuntimeHookApiGap::TransformerDenseLinearHookMissing
+            ]
+        );
+        assert!(gap.next_safe_step.contains("production dense-linear hook"));
         Ok(())
     }
 
@@ -1406,6 +1523,9 @@ mod tests {
                 .runtime_blockers
                 .contains(&DenseQ8RuntimeExecutionBlocker::BeforeAfterReceiptMismatch)
         );
+        let gap = build_dense_q8_runtime_hook_gap_report(&proof);
+        assert_eq!(gap.api_gaps, vec![DenseQ8RuntimeHookApiGap::BeforeAfterReceiptMismatch]);
+        assert!(!gap.keeps_runtime_blocked_without_claims());
         assert!(!proof.fallback_used);
         assert!(!proof.speedup_claim);
         Ok(())
