@@ -2778,6 +2778,9 @@ fn mac_doctor_help_documents_health_verdict() {
         .assert()
         .success()
         .stdout(predicate::str::contains("health verdict"))
+        .stdout(predicate::str::contains("--json"))
+        .stdout(predicate::str::contains("--include-bitnet"))
+        .stdout(predicate::str::contains("--run-smoke"))
         .stdout(predicate::str::contains("--json-out <PATH>"))
         .stdout(predicate::str::contains("--max-new-tokens"));
 }
@@ -2799,9 +2802,13 @@ fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt()
             cache_str.as_str(),
             "--json-out",
             receipt_str.as_str(),
+            "--json",
+            "--include-bitnet",
         ])
         .assert()
         .failure()
+        .stdout(predicate::str::contains("\"artifact_kind\": \"apple_m4_slm_doctor\""))
+        .stdout(predicate::str::contains("\"repair_flows\""))
         .stderr(predicate::str::contains("Mac doctor cannot pass"))
         .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
 
@@ -2809,6 +2816,7 @@ fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt()
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_slm_doctor");
     assert_eq!(receipt_json["result"], "fail");
     assert_eq!(receipt_json["checks"]["cache"]["ready"], false);
+    assert_eq!(receipt_json["checks"]["cache"]["symlink_status"], "not_symlink");
     assert_eq!(receipt_json["checks"]["unsupported_backend"]["rejected"], true);
     assert_eq!(receipt_json["checks"]["bitnet_ask"]["checked"], true);
     assert_eq!(receipt_json["checks"]["bitnet_ask"]["advisory"], true);
@@ -2857,6 +2865,49 @@ fn mac_doctor_missing_cache_points_to_model_fetch_and_writes_receipt()
     Ok(())
 }
 
+#[cfg(unix)]
+#[test]
+fn mac_doctor_stale_symlink_reports_repair_guidance() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let model_dir = cache.join("qwen2.5-0.5b-instruct-q8_0");
+    std::fs::create_dir_all(&model_dir)?;
+    let cache_file = model_dir.join("qwen2.5-0.5b-instruct-q8_0.gguf");
+    std::os::unix::fs::symlink("missing-target.gguf", &cache_file)?;
+    let receipt = dir.path().join("doctor-stale-symlink.json");
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "doctor",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("stale symlink"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["checks"]["cache"]["state"], "stale-symlink");
+    assert_eq!(receipt_json["checks"]["cache"]["symlink_status"], "stale_symlink");
+    assert_eq!(receipt_json["checks"]["cache"]["stale_symlink"], true);
+    assert!(
+        receipt_json["readiness"]["repair_flows"]["stale_symlink"]
+            .as_str()
+            .is_some_and(|guidance| guidance.contains("prune and fetch"))
+    );
+    assert!(
+        receipt_json["readiness"]["dense_slm"]["cache_repair_guidance"]
+            .as_str()
+            .is_some_and(|guidance| guidance.contains("stale symlink"))
+    );
+    Ok(())
+}
+
 #[test]
 fn mac_doctor_rejects_full_metal_request_before_cache_lookup() {
     bitnet()
@@ -2865,6 +2916,46 @@ fn mac_doctor_rejects_full_metal_request_before_cache_lookup() {
         .failure()
         .stderr(predicate::str::contains("mac doctor routes the supported Mac local-answer path"))
         .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
+fn model_prune_dry_run_json_defaults_to_all_without_deleting()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let model_dir = cache.join("qwen2.5-0.5b-instruct-q8_0");
+    std::fs::create_dir_all(&model_dir)?;
+    let marker = model_dir.join("local-marker.txt");
+    std::fs::write(&marker, b"cached")?;
+    let cache_str = cache.to_string_lossy().into_owned();
+
+    let output = bitnet()
+        .args(["model", "prune", "--dry-run", "--json", "--cache-dir", cache_str.as_str()])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let receipt: serde_json::Value = serde_json::from_slice(&output)?;
+
+    assert_eq!(receipt["artifact_kind"], "bitnet_model_prune_dry_run");
+    assert_eq!(receipt["scope"], "all_supported_models");
+    assert_eq!(receipt["dry_run"], true);
+    assert_eq!(receipt["deletes_user_data"], false);
+    assert_eq!(receipt["would_remove_count"].as_u64(), Some(1));
+    assert!(marker.exists(), "dry-run prune must not delete cache files");
+    let qwen_row = receipt["results"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|row| row["id"] == "qwen2.5-0.5b-instruct-q8_0"))
+        .ok_or("missing qwen prune dry-run row")?;
+    assert_eq!(qwen_row["action"], "would_remove");
+    assert_eq!(qwen_row["removed"], false);
+    assert!(
+        qwen_row["repair_guidance"]
+            .as_str()
+            .is_some_and(|guidance| guidance.contains("without --dry-run"))
+    );
+    Ok(())
 }
 
 #[test]

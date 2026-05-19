@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T03:15:48Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-002"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5839
+head_sha = "34e739e696ef5ededdb66b0f4456b4001f9b4c83"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-002-cache-disk-repair"
+
+notes = [
+  "Opened PR #5839 for M4-STABILITY-002 cache and disk-pressure repair receipts.",
+  "`bitnet mac doctor --json --include-bitnet` now records dense cache state, BitNet readiness, stale-symlink state, disk pressure, and repair guidance without live generation by default; live dense smoke is explicit via `--run-smoke`.",
+  "`bitnet model prune --dry-run --json` records no-delete prune guidance and estimated reclaim before any cache deletion.",
+  "No model support, runtime quality proof, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

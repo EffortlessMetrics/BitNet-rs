@@ -207,12 +207,13 @@ bitnet mac doctor \
 ```
 
 `bitnet mac doctor` wraps the supported dense-SLM health checks into one local
-operator verdict. It verifies the model cache and hash, checks disk headroom,
-runs the compact smoke path when the cache is ready, validates the generated
-receipts, confirms `apple-m4-cpu-neon` with `fallback_used=false`, and verifies
-that full `apple-m4-metal` inference remains rejected for the dense Mac wrapper.
-It does not download models by default and does not make a BitNet, full Metal,
-Neural Engine, QK256, or broad performance claim.
+operator verdict. By default it verifies the model cache and hash, checks disk
+headroom, confirms `apple-m4-cpu-neon` with `fallback_used=false`, and verifies
+that full `apple-m4-metal` inference remains rejected for the dense Mac wrapper
+without running live generation. Pass `--run-smoke` when the operator explicitly
+wants the compact smoke path and generated receipt validation. It does not
+download models by default and does not make a BitNet, full Metal, Neural
+Engine, QK256, or broad performance claim.
 
 Run the deterministic warm-session validation corpus:
 

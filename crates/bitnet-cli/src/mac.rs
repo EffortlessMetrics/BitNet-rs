@@ -742,6 +742,18 @@ enum MacAction {
         /// Output aggregate Mac doctor receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_DOCTOR_DEFAULT_RECEIPT)]
         json_out: PathBuf,
+
+        /// Print the aggregate Mac doctor receipt as JSON in addition to writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+
+        /// Include BitNet ask/warm readiness in the doctor receipt.
+        #[arg(long, default_value_t = false)]
+        include_bitnet: bool,
+
+        /// Run the live dense SLM smoke after repair/readiness checks pass.
+        #[arg(long, default_value_t = false)]
+        run_smoke: bool,
     },
 
     /// Serve local M4 health and readiness endpoints plus completions.
@@ -1412,9 +1424,28 @@ impl MacCommand {
                 })
                 .await
             }
-            MacAction::Doctor { model_id, cache_dir, max_new_tokens, threads, json_out } => {
+            MacAction::Doctor {
+                model_id,
+                cache_dir,
+                max_new_tokens,
+                threads,
+                json_out,
+                json,
+                include_bitnet,
+                run_smoke: run_live_smoke,
+            } => {
                 ensure_supported_mac_device(explicit_device_label, "mac doctor")?;
-                run_doctor(&model_id, cache_dir, max_new_tokens, threads, json_out).await
+                run_doctor(
+                    &model_id,
+                    cache_dir,
+                    max_new_tokens,
+                    threads,
+                    json_out,
+                    json,
+                    include_bitnet,
+                    run_live_smoke,
+                )
+                .await
             }
             MacAction::Serve {
                 model_family,
@@ -7156,6 +7187,9 @@ async fn run_doctor(
     max_new_tokens: usize,
     threads: usize,
     json_out: PathBuf,
+    json: bool,
+    include_bitnet: bool,
+    run_live_smoke: bool,
 ) -> Result<()> {
     let bitnet_ask_readiness = bitnet_mac_ask_readiness_json(cache_dir.clone());
     let cache_status =
@@ -7174,9 +7208,43 @@ async fn run_doctor(
             bitnet_ask_readiness,
             unsupported_backend_rejected,
             max_new_tokens,
+            false,
         );
         write_json_receipt(&json_out, &failed)?;
+        if json {
+            println!("{}", serde_json::to_string_pretty(&failed)?);
+        }
         anyhow::bail!("Mac doctor cannot pass because the model cache is not ready: {next_step}");
+    }
+
+    if !unsupported_backend_rejected {
+        anyhow::bail!("Mac doctor failed: unsupported apple-m4-metal request was not rejected");
+    }
+
+    if !run_live_smoke {
+        let receipt = mac_doctor_base_receipt(
+            &json_out,
+            "pass",
+            cache_status,
+            bitnet_ask_readiness,
+            unsupported_backend_rejected,
+            max_new_tokens,
+            false,
+        );
+        validate_mac_receipt_value(&json_out, &receipt)?;
+        write_json_receipt(&json_out, &receipt)?;
+        if json {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        } else {
+            println!(
+                "Mac doctor passed: {} (live smoke skipped; rerun with --run-smoke for dense generation)",
+                json_out.display()
+            );
+        }
+        if include_bitnet && !json {
+            println!("BitNet readiness is included in the doctor receipt.");
+        }
+        return Ok(());
     }
 
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
@@ -7201,10 +7269,6 @@ async fn run_doctor(
             "Mac doctor smoke check did not find expected fragment `{MAC_SMOKE_EXPECTED_FRAGMENT}`"
         );
     }
-    if !unsupported_backend_rejected {
-        anyhow::bail!("Mac doctor failed: unsupported apple-m4-metal request was not rejected");
-    }
-
     let cache_status = verified_cache_status_json(&model);
     let mut receipt = mac_doctor_base_receipt(
         &json_out,
@@ -7213,6 +7277,7 @@ async fn run_doctor(
         bitnet_ask_readiness,
         unsupported_backend_rejected,
         max_new_tokens,
+        true,
     );
     let Some(object) = receipt.as_object_mut() else {
         anyhow::bail!("Mac doctor receipt is not an object");
@@ -7254,11 +7319,18 @@ async fn run_doctor(
     );
     validate_mac_receipt_value(&json_out, &receipt)?;
     write_json_receipt(&json_out, &receipt)?;
-    println!(
-        "Mac doctor passed: {} (smoke receipt: {})",
-        json_out.display(),
-        smoke_receipt_path.display()
-    );
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        println!(
+            "Mac doctor passed: {} (smoke receipt: {})",
+            json_out.display(),
+            smoke_receipt_path.display()
+        );
+    }
+    if include_bitnet && !json {
+        println!("BitNet readiness is included in the doctor receipt.");
+    }
     Ok(())
 }
 
@@ -8919,6 +8991,7 @@ fn mac_doctor_base_receipt(
     bitnet_ask_readiness: serde_json::Value,
     unsupported_backend_rejected: bool,
     max_new_tokens: usize,
+    live_smoke_checked: bool,
 ) -> serde_json::Value {
     let expected_bytes = cache_status["expected"]["bytes"].as_u64().unwrap_or_default();
     let cache_root = cache_status["cache_root"]
@@ -8939,6 +9012,7 @@ fn mac_doctor_base_receipt(
         "runtime_api": "cpu",
         "fallback_used": false,
         "fallback_reason": serde_json::Value::Null,
+        "live_inference_checked": live_smoke_checked,
         "prompt": MAC_SMOKE_PROMPT,
         "expected_text_fragment": MAC_SMOKE_EXPECTED_FRAGMENT,
         "checks": {
@@ -8949,6 +9023,9 @@ fn mac_doctor_base_receipt(
                 "cache_root": cache_status["cache_root"].clone(),
                 "cache_path": cache_status["cache_path"].clone(),
                 "metadata_path": cache_status["metadata_path"].clone(),
+                "symlink_target": cache_status["symlink_target"].clone(),
+                "symlink_status": cache_status["symlink_status"].clone(),
+                "stale_symlink": cache_status["stale_symlink"].clone(),
                 "present": cache_status["present"].clone(),
                 "size_matches": cache_status["size_matches"].clone(),
                 "metadata_present": cache_status["metadata_present"].clone(),
@@ -8957,12 +9034,20 @@ fn mac_doctor_base_receipt(
             },
             "disk": disk_health_json(&cache_root, expected_bytes),
             "smoke": {
-                "checked": result == "pass",
+                "checked": live_smoke_checked,
+                "skipped": !live_smoke_checked,
+                "skip_reason": if live_smoke_checked {
+                    serde_json::Value::Null
+                } else {
+                    serde_json::json!("live dense SLM smoke is explicit via --run-smoke")
+                },
                 "prompt": MAC_SMOKE_PROMPT,
                 "max_new_tokens": max_new_tokens,
             },
             "receipt_validation": {
                 "checked": result == "pass",
+                "doctor_receipt_checked": result == "pass",
+                "smoke_receipt_checked": live_smoke_checked,
             },
             "backend": {
                 "checked": true,
@@ -8981,7 +9066,9 @@ fn mac_doctor_base_receipt(
         },
         "readiness": readiness,
         "mac_claim_boundary": {
-            "slm_local_answer": true,
+            "slm_local_answer": live_smoke_checked,
+            "dense_slm_cache_readiness": true,
+            "live_inference_checked": live_smoke_checked,
             "doctor": true,
             "bitnet_one_shot_ask_readiness_checked": true,
             "bitnet_fixed_prompt_warm_readiness_checked": true,
@@ -9006,6 +9093,12 @@ fn apple_m4_doctor_readiness_json(
 ) -> serde_json::Value {
     let dense_ready = cache_status["ready"].as_bool().unwrap_or(false);
     let bitnet_ready = bitnet["ready"].as_bool().unwrap_or(false);
+    let expected_bytes = cache_status["expected"]["bytes"].as_u64().unwrap_or_default();
+    let cache_root = cache_status["cache_root"]
+        .as_str()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("."));
+    let disk = disk_health_json(&cache_root, expected_bytes);
     serde_json::json!({
         "dense_slm": {
             "status": if dense_ready { "ready" } else { "cache_repair_required" },
@@ -9056,7 +9149,20 @@ fn apple_m4_doctor_readiness_json(
         "disk_pressure": {
             "cache_root": cache_status["cache_root"].clone(),
             "cache_path": cache_status["cache_path"].clone(),
+            "checked": true,
+            "available_bytes": disk["available_bytes"].clone(),
+            "recommended_headroom_bytes": disk["recommended_headroom_bytes"].clone(),
+            "low_disk": disk["low_disk"].clone(),
+            "guidance": disk["guidance"].clone(),
             "repair_default": cache_status["next_step"].clone(),
+        },
+        "repair_flows": {
+            "missing_model": "run the dense SLM fetch command shown in readiness.dense_slm.cache_repair_guidance",
+            "bad_sha": "run the prune command then fetch the pinned model artifact again",
+            "missing_tokenizer": "restore the accepted external BitNet tokenizer path shown in checks.bitnet_ask.tokenizer.path",
+            "stale_symlink": "replace the symlink target with the verified artifact or prune and fetch again",
+            "low_disk": "run `bitnet model prune --dry-run --json` before deleting model-cache entries, or move cache_dir to a larger volume",
+            "prune_dry_run": "dry-run prune receipts do not delete files and can be reviewed before rerunning without --dry-run"
         },
     })
 }
@@ -9197,17 +9303,35 @@ fn verified_cache_status_json(model: &VerifiedCachedModel) -> serde_json::Value 
         .parent()
         .map(|parent| parent.join("bitnet-model-cache.json"))
         .unwrap_or_else(|| PathBuf::from("bitnet-model-cache.json"));
+    let symlink_target = std::fs::symlink_metadata(&model.path)
+        .ok()
+        .filter(|metadata| metadata.file_type().is_symlink())
+        .and_then(|_| std::fs::read_link(&model.path).ok());
+    let symlink_status = if symlink_target.is_some() { "symlink" } else { "not_symlink" };
     serde_json::json!({
         "state": "ready",
         "ready": true,
         "cache_root": model.cache_root.clone(),
         "cache_path": model.path.clone(),
         "metadata_path": metadata_path,
+        "symlink_target": symlink_target,
+        "symlink_status": symlink_status,
+        "stale_symlink": false,
         "present": true,
         "size_matches": true,
         "metadata_present": true,
         "verified": true,
         "verification_passes": 1,
+        "expected": {
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+        },
+        "next_step": serde_json::Value::Null,
         "note": "mac smoke performs one strict model-cache verification pass before generation and records the resulting ready state",
     })
 }
@@ -15042,6 +15166,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_local_server_check_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_inference_status" {
         validate_apple_m4_inference_status_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_slm_doctor" {
+        validate_apple_m4_slm_doctor_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_operator_evidence_summary" {
         validate_apple_m4_operator_evidence_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_report_refresh_manifest" {
@@ -19172,6 +19298,41 @@ fn validate_prefill_qkv_phase_receipt(
     Ok(())
 }
 
+fn validate_apple_m4_slm_doctor_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_slm_doctor")?;
+    let result = require_non_empty_string_at(path, receipt, &["result"])?;
+    if !matches!(result, "pass" | "fail") {
+        anyhow::bail!("{} Mac doctor result must be pass or fail, got {result:?}", path.display());
+    }
+    require_bool_at(path, receipt, &["checks", "cache", "checked"], true)?;
+    require_bool_at(path, receipt, &["checks", "disk", "checked"], true)?;
+    require_bool_at(path, receipt, &["checks", "unsupported_backend", "checked"], true)?;
+    require_bool_at(path, receipt, &["checks", "unsupported_backend", "rejected"], true)?;
+    require_bool_at(path, receipt, &["checks", "bitnet_ask", "checked"], true)?;
+
+    let smoke_checked = receipt["checks"]["smoke"]["checked"].as_bool().unwrap_or(false);
+    require_bool_at(path, receipt, &["live_inference_checked"], smoke_checked)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "live_inference_checked"],
+        smoke_checked,
+    )?;
+
+    if smoke_checked {
+        require_bool_at(path, receipt, &["checks", "smoke", "skipped"], false)?;
+        return validate_one_shot_receipt(path, receipt);
+    }
+
+    require_bool_at(path, receipt, &["checks", "smoke", "skipped"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "slm_local_answer"], false)?;
+    Ok((Some(0), Some(0)))
+}
+
 fn validate_one_shot_receipt(
     path: &Path,
     receipt: &serde_json::Value,
@@ -21508,6 +21669,54 @@ mod tests {
         assert!(joined.contains("bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s"));
         assert!(joined.contains("chat and serve disabled"));
         assert!(bitnet_mac_ask_failure_repair_text(&guidance).contains("Repair guidance:"));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_doctor_model_free_receipt_validates_without_generated_tokens()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let cache_root = temp.path().join("models");
+        let cache_path =
+            cache_root.join("qwen2.5-0.5b-instruct-q8_0").join("qwen2.5-0.5b-instruct-q8_0.gguf");
+        let metadata_path =
+            cache_path.parent().ok_or("missing cache parent")?.join("bitnet-model-cache.json");
+        let cache_status = serde_json::json!({
+            "ready": true,
+            "state": "ready",
+            "cache_root": cache_root,
+            "cache_path": cache_path,
+            "metadata_path": metadata_path,
+            "symlink_target": serde_json::Value::Null,
+            "symlink_status": "not_symlink",
+            "stale_symlink": false,
+            "present": true,
+            "size_matches": true,
+            "metadata_present": true,
+            "verified": true,
+            "next_step": serde_json::Value::Null,
+            "expected": {
+                "bytes": 675_710_816_u64
+            }
+        });
+        let receipt_path = temp.path().join("mac-doctor.json");
+        let receipt = mac_doctor_base_receipt(
+            &receipt_path,
+            "pass",
+            cache_status,
+            bitnet_mac_ask_readiness_json(Some(temp.path().join("models"))),
+            true,
+            4,
+            false,
+        );
+
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_slm_doctor");
+        assert_eq!(summary.generated_tokens, Some(0));
+        assert_eq!(receipt["live_inference_checked"], false);
+        assert_eq!(receipt["checks"]["smoke"]["skipped"], true);
+        assert_eq!(receipt["mac_claim_boundary"]["slm_local_answer"], false);
         Ok(())
     }
 

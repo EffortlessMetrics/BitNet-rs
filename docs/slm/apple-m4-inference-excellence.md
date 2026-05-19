@@ -1048,6 +1048,14 @@ unless the wording is tied to a matching accepted receipt gate.
 and release-gate items are treated as ready. This is gate hygiene only; it does
 not prove runtime quality, speed, BitNet behavior, or any Apple backend support.
 
+`M4-STABILITY-002` keeps operator repair flows explicit and non-destructive:
+`bitnet mac doctor --json --include-bitnet` records dense SLM cache state, BitNet
+ask/warm readiness, stale-symlink state, disk pressure, and repair guidance, and
+`bitnet model prune --dry-run --json` records what supported model-cache entries
+would be removed before any deletion is attempted. These are cache and disk
+repair receipts only; they do not run live inference by default or prove model
+quality, speed, BitNet chat/serve readiness, or any wider backend support.
+
 ## Metal Boundary
 
 Metal work is phase-scoped only:
