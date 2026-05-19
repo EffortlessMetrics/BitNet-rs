@@ -8336,7 +8336,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-009"
-status = "in_progress"
+status = "merged"
+pr = 5836
+head_sha = "ea6ae974dda22f5463352331351f21a71fda2b12"
+merge_sha = "7ec4d36a7511855d5cce11d58ac90ba94b659791"
 branch = "codex/lunar-lake/LNL258V-OP-009-blocked-ask-receipt"
 stackable = false
 review_mode = "codex_premerge"

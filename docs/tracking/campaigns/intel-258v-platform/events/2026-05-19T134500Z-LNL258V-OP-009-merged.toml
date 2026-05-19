@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T13:45:00Z"
+event = "merged"
+item = "LNL258V-OP-009"
+branch = "codex/lunar-lake/LNL258V-OP-009-blocked-ask-receipt"
+pr = 5836
+head_sha = "ea6ae974dda22f5463352331351f21a71fda2b12"
+merge_sha = "7ec4d36a7511855d5cce11d58ac90ba94b659791"
+actor = "codex"
+summary = "Merged LNL258V-OP-009 after adding no-inference blocked-route ask receipts."
+
+notes = [
+  "PR #5836 writes a lunar_lake_operator_ask_blocked receipt when auto-route selection fails before model execution and --json-out is supplied.",
+  "The blocked receipt records requested route/profile, evidence paths, route-selection error, fallback=false, new_inference_executed=false, and strict claim boundaries.",
+  "The merge makes no route promotion, speedup, power-advantage, new-inference, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]
