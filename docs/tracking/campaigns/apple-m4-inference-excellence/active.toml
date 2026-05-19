@@ -2518,8 +2518,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BENCH-007"
-status = "pr_open"
+status = "merged"
 pr = 5869
+merge_sha = "80995ff7fdb0365ab1d21bffb69d67192dc7a116"
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-007-harness-calibration"
 stackable = false
 review_mode = "codex_premerge"

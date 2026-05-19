@@ -1,0 +1,16 @@
+timestamp = "2026-05-19T06:49:09Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-007"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5869
+merge_sha = "80995ff7fdb0365ab1d21bffb69d67192dc7a116"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-007-harness-calibration"
+
+notes = [
+  "Merged PR #5869 with `bitnet mac benchmark --calibrate`, `apple_m4_benchmark_calibration` receipt validation, committed synthetic calibration evidence, and docs updates.",
+  "The calibration receipt records timing source, runner overhead, warm-up policy, sample-discard policy, synthetic timing fixtures, profile timeout rules, and invalid-comparison reasons before live envelope refreshes.",
+  "This closeout records tracker state only and does not claim live model benchmark speed, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance.",
+]
