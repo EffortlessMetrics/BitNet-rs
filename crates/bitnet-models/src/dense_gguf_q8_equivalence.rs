@@ -1,10 +1,10 @@
 //! Dense Q8_0 sidecar equivalence gate.
 //!
 //! This module connects the fixture-level packed Q8_0 sidecar prototype to the
-//! dense-linear dispatch selector. It deliberately does not enable packed Q8_0
-//! sidecar runtime compute; it records whether fixture math matches the eager
-//! F32 reference and keeps the production selector blocked until full
-//! generated-ID/text receipt equivalence exists.
+//! dense-linear dispatch selector. It records whether fixture math and
+//! generated-ID/text behavior match the eager F32 reference, then emits an
+//! explicit selector-update artifact that can unlock packed sidecar selection
+//! only after the proof chain is ready.
 
 use crate::dense_gguf_descriptors::DenseGgufTensorRole;
 use crate::dense_gguf_linear_fixture::DenseGgufQ8LinearSidecarSummary;

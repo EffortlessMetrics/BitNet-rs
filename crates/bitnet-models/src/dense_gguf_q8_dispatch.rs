@@ -1,8 +1,9 @@
 //! Dense Q8_0 sidecar dispatch selector contract.
 //!
-//! This module is deliberately a selector/reporting boundary only. It keeps
-//! the eager F32 Candle runtime selected while making packed Q8_0 sidecar
-//! candidates visible to later behavior-preserving runtime work.
+//! This module is deliberately a selector/reporting boundary. The default path
+//! keeps eager F32 Candle selected, while the explicit selector-update path can
+//! select a packed Q8_0 sidecar candidate only after behavior-preserving proof
+//! has been applied by the caller.
 
 use crate::dense_gguf_descriptors::DenseGgufTensorRole;
 use crate::dense_gguf_q8_sidecar::DenseGgufQ8SidecarRegistry;
