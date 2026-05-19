@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-19T18:00:00Z",
+  "created_utc": "2026-05-19T23:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -305,7 +305,7 @@
       "phase_evidence": "slm-phase-warm-session-qwen25-cpu.json",
       "evidence_ready": true,
       "acceleration_claim": false,
-      "route_reason": "Default user-facing route because the dense Qwen CPU path has strict answer gates, generated-token evidence, phase receipts, and fallback_used=false; accelerator paths are candidates until speedup is benchmark-qualified.",
+      "route_reason": "Default route id and dense Qwen CPU regression baseline because strict answer gates, generated-token evidence, phase receipts, and fallback_used=false are present; profile-scoped auto routing may select promoted OpenVINO GPU/NPU routes for specific workload profiles, while low_power remains blocked until battery-mode or energy-proxy power evidence is benchmark-qualified.",
       "notes": [
         "role=default_cpu_answer_path",
         "dense_slm_cpu_answer present=true fallback_used=Some(false) answer_gate=Some(true) phase_timing=None",
@@ -345,7 +345,7 @@
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "evidence_ready": true,
       "acceleration_claim": false,
-      "route_reason": "Candidate route because Arc 140V OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false, but no benchmark-qualified speedup claim is recorded.",
+      "route_reason": "OpenVINO GPU dense Qwen route is profile-scoped: it may be selected only for workload profiles promoted by the route ledger from fallback-free answer, token-visibility, profile timing, and benchmark-qualified latency evidence; low_power, structured, BitNet, and any unqualified profile remain blocked without separate evidence, and this receipt makes no native OpenCL or acceleration claim.",
       "notes": [
         "role=dense_slm_gpu_candidate",
         "dense_slm_openvino_gpu_operator_ask present=true fallback_used=Some(false) answer_gate=Some(true) phase_timing=None",
@@ -365,7 +365,7 @@
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "evidence_ready": true,
       "acceleration_claim": false,
-      "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.",
+      "route_reason": "OpenVINO NPU dense Qwen route is profile-scoped: warm_resident may be selected only when the route ledger promotes the resident-session path from fallback-free quality and timing evidence; cold one-off and low_power profiles remain blocked until separately qualified, with INT4 symmetric greedy constraints and no dynamic decode, beam, parallel sampling, packed QK256, native NPU, or acceleration claim.",
       "notes": [
         "role=dense_slm_npu_candidate",
         "dense_slm_openvino_npu_operator_ask present=true fallback_used=Some(false) answer_gate=Some(true) phase_timing=None",
