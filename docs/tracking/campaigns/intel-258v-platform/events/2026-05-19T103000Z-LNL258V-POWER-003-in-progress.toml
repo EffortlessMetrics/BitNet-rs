@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T10:30:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-003"
+branch = "codex/lunar-lake/LNL258V-POWER-003-energy-proxy-receipt"
+actor = "codex"
+summary = "Started LNL258V-POWER-003 to add a structured low_power energy-proxy receipt builder."
+
+notes = [
+  "The work adds a no-inference lunar-lake energy-proxy command that compares before/after battery-mode telemetry receipts.",
+  "The receipt records route/profile identity, sample count, battery status, charge delta, and claim boundaries.",
+  "This creates a validated input for lunar-lake power-profile without collecting a new battery run in this PR.",
+  "The claim boundary remains no new inference, no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]

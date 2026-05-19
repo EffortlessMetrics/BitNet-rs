@@ -53,6 +53,7 @@ const COLD_WARM_PROFILE_BENCHMARK: &str =
 const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
 const POWER_THERMAL_CONTEXT_FILE: &str = "lunar-lake-power-thermal-context.json";
 const POWER_PROFILE_EVIDENCE_FILE: &str = "lunar-lake-power-profile-evidence.json";
+const LOW_POWER_ENERGY_PROXY_FILE: &str = "lunar-lake-low-power-energy-proxy.json";
 const DURABILITY_BUNDLE: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
 const DURABLE_QWEN_CPU_WARM_SESSION: &str = "lunar-lake-durable-qwen25-cpu-warm-session.json";
@@ -613,6 +614,47 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when the power-profile evidence cannot be indexed.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Build a no-inference low-power battery-drain energy-proxy receipt.
+    EnergyProxy {
+        /// Artifact root for relative input and output paths.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Telemetry receipt captured before the repeated low_power run.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long)]
+        before_telemetry: PathBuf,
+
+        /// Telemetry receipt captured after the repeated low_power run.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long)]
+        after_telemetry: PathBuf,
+
+        /// Route ID sampled by the repeated low_power run.
+        #[arg(long, default_value = "dense_slm_openvino_npu_candidate")]
+        route_id: String,
+
+        /// Profile ID sampled by the repeated low_power run.
+        #[arg(long, default_value = "low_power")]
+        profile_id: String,
+
+        /// Number of repeated asks or iterations covered by the sample.
+        #[arg(long)]
+        sample_count: u64,
+
+        /// Output JSON low-power energy-proxy receipt to file.
+        #[arg(long, default_value = LOW_POWER_ENERGY_PROXY_FILE)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when battery-mode and energy-proxy evidence cannot be recorded.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -2055,6 +2097,32 @@ pub struct PowerProfileClaimBoundary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeLowPowerEnergyProxy {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub before_telemetry_context_receipt: String,
+    pub after_telemetry_context_receipt: String,
+    pub route_id: String,
+    pub profile_id: String,
+    pub sample_count: u64,
+    pub before_battery_status: Option<String>,
+    pub after_battery_status: Option<String>,
+    pub before_charge_percent: Option<i64>,
+    pub after_charge_percent: Option<i64>,
+    pub charge_delta_percent: Option<i64>,
+    pub before_ac_power_inferred: Option<bool>,
+    pub after_ac_power_inferred: Option<bool>,
+    pub battery_mode_sample_recorded: bool,
+    pub energy_proxy_recorded: bool,
+    pub gaps: Vec<String>,
+    pub claim_boundary: PowerProfileClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeDurabilityBundle {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -2620,6 +2688,37 @@ impl LunarLakeCommand {
                 write_or_print_power_profile_evidence(&receipt, Some(&json_out))?;
                 if *strict && !receipt.power_profile_index_ready {
                     bail!("Lunar Lake power-profile evidence failed: {}", receipt.gaps.join("; "));
+                }
+                Ok(())
+            }
+            LunarLakeAction::EnergyProxy {
+                artifact_root,
+                before_telemetry,
+                after_telemetry,
+                route_id,
+                profile_id,
+                sample_count,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_low_power_energy_proxy_with_created_utc(
+                    artifact_root,
+                    before_telemetry,
+                    after_telemetry,
+                    route_id.clone(),
+                    profile_id.clone(),
+                    *sample_count,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_low_power_energy_proxy(&receipt, Some(&json_out))?;
+                if *strict && !receipt.gaps.is_empty() {
+                    bail!("Lunar Lake low-power energy proxy failed: {}", receipt.gaps.join("; "));
                 }
                 Ok(())
             }
@@ -6694,6 +6793,99 @@ pub fn build_power_profile_evidence_with_created_utc(
     })
 }
 
+pub fn build_low_power_energy_proxy_with_created_utc(
+    root: &Path,
+    before_telemetry: &Path,
+    after_telemetry: &Path,
+    route_id: String,
+    profile_id: String,
+    sample_count: u64,
+    created_utc: String,
+) -> Result<LunarLakeLowPowerEnergyProxy> {
+    let before_path = resolve_receipt_path(root, before_telemetry);
+    let after_path = resolve_receipt_path(root, after_telemetry);
+    let before_json: Value = read_json_receipt(&before_path)?;
+    let after_json: Value = read_json_receipt(&after_path)?;
+
+    let before_battery_status = string_at(&before_json, "power.battery_status");
+    let after_battery_status = string_at(&after_json, "power.battery_status");
+    let before_charge_percent = before_battery_status.as_deref().and_then(battery_charge_percent);
+    let after_charge_percent = after_battery_status.as_deref().and_then(battery_charge_percent);
+    let charge_delta_percent =
+        before_charge_percent.zip(after_charge_percent).map(|(before, after)| after - before);
+    let before_ac_power_inferred =
+        value_at(&before_json, "power.ac_power_inferred").and_then(Value::as_bool);
+    let after_ac_power_inferred =
+        value_at(&after_json, "power.ac_power_inferred").and_then(Value::as_bool);
+    let battery_mode_sample_recorded =
+        before_ac_power_inferred == Some(false) && after_ac_power_inferred == Some(false);
+    let energy_proxy_recorded = sample_count > 0 && charge_delta_percent.is_some();
+
+    let mut gaps = Vec::new();
+    if route_id.trim().is_empty() {
+        gaps.push("route_id is empty".to_string());
+    }
+    if profile_id != "low_power" {
+        gaps.push(format!("energy proxy is for profile `{profile_id}`, expected low_power"));
+    }
+    if sample_count == 0 {
+        gaps.push("sample_count must be greater than zero".to_string());
+    }
+    if before_charge_percent.is_none() {
+        gaps.push("before telemetry is missing EstimatedChargeRemaining".to_string());
+    }
+    if after_charge_percent.is_none() {
+        gaps.push("after telemetry is missing EstimatedChargeRemaining".to_string());
+    }
+    if !battery_mode_sample_recorded {
+        gaps.push(
+            "before and after telemetry must both be battery-mode samples for low_power evidence"
+                .to_string(),
+        );
+    }
+
+    Ok(LunarLakeLowPowerEnergyProxy {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_low_power_energy_proxy".to_string(),
+        proof_stage: "battery_drain_proxy_indexed_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        before_telemetry_context_receipt: path_string(&before_path),
+        after_telemetry_context_receipt: path_string(&after_path),
+        route_id,
+        profile_id,
+        sample_count,
+        before_battery_status,
+        after_battery_status,
+        before_charge_percent,
+        after_charge_percent,
+        charge_delta_percent,
+        before_ac_power_inferred,
+        after_ac_power_inferred,
+        battery_mode_sample_recorded,
+        energy_proxy_recorded,
+        gaps,
+        claim_boundary: PowerProfileClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            native_npu_inference_claim: false,
+            bitnet_qk256_i2s_behavior_changed: false,
+            hidden_fallback_allowed: false,
+        },
+    })
+}
+
+fn battery_charge_percent(status: &str) -> Option<i64> {
+    status.split(';').find_map(|field| {
+        let (key, value) = field.split_once('=')?;
+        (key.trim() == "EstimatedChargeRemaining").then(|| value.trim().parse().ok()).flatten()
+    })
+}
+
 fn power_profile_telemetry_summary(
     telemetry_json: &Value,
     battery_telemetry_json: Option<&Value>,
@@ -9245,6 +9437,25 @@ fn write_or_print_power_profile_evidence(
         }
         fs::write(path, json)?;
         println!("Lunar Lake power-profile evidence written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_low_power_energy_proxy(
+    receipt: &LunarLakeLowPowerEnergyProxy,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake low-power energy proxy written to {}", path.display());
     } else {
         println!("{}", String::from_utf8_lossy(&json));
     }
@@ -15778,6 +15989,77 @@ mod tests {
                 |gap| gap.contains("no low_power route has benchmark-qualified power evidence")
             )
         );
+        Ok(())
+    }
+
+    #[test]
+    fn low_power_energy_proxy_indexes_battery_drain_without_claims() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            "before-telemetry.json",
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "availability": {
+                    "memory_context_recorded": true,
+                    "power_context_recorded": true,
+                    "thermal_context_recorded": true
+                },
+                "power": {
+                    "active_scheme": "Balanced",
+                    "battery_status": "BatteryStatus=1;EstimatedChargeRemaining=96",
+                    "ac_power_inferred": false
+                },
+                "thermal": {
+                    "thermal_zones_visible": 1,
+                    "temperatures_celsius": []
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "after-telemetry.json",
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "availability": {
+                    "memory_context_recorded": true,
+                    "power_context_recorded": true,
+                    "thermal_context_recorded": true
+                },
+                "power": {
+                    "active_scheme": "Balanced",
+                    "battery_status": "BatteryStatus=1;EstimatedChargeRemaining=94",
+                    "ac_power_inferred": false
+                },
+                "thermal": {
+                    "thermal_zones_visible": 1,
+                    "temperatures_celsius": []
+                }
+            }),
+        )?;
+
+        let receipt = build_low_power_energy_proxy_with_created_utc(
+            temp.path(),
+            Path::new("before-telemetry.json"),
+            Path::new("after-telemetry.json"),
+            "dense_slm_openvino_npu_candidate".to_string(),
+            "low_power".to_string(),
+            10,
+            "2026-05-19T10:30:00Z".to_string(),
+        )?;
+
+        assert!(receipt.battery_mode_sample_recorded, "{:?}", receipt.gaps);
+        assert!(receipt.energy_proxy_recorded, "{:?}", receipt.gaps);
+        assert_eq!(receipt.before_charge_percent, Some(96));
+        assert_eq!(receipt.after_charge_percent, Some(94));
+        assert_eq!(receipt.charge_delta_percent, Some(-2));
+        assert!(receipt.gaps.is_empty(), "{:?}", receipt.gaps);
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.power_advantage_claim);
+        assert!(!receipt.claim_boundary.acceleration_claim);
         Ok(())
     }
 
