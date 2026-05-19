@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T22:40:00Z",
+  "created_utc": "2026-05-19T13:52:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -355,13 +355,15 @@
     "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
     "intake_ready": true,
     "rerun_required": false,
-    "pending_shared_change_count": 1,
+    "pending_shared_change_count": 0,
+    "closed_shared_change_count": 1,
     "merged_to_main_count": 0,
     "stale_after_merged_count": 0,
     "source_lanes": [
       "a770"
     ],
-    "pending_changes": [
+    "pending_changes": [],
+    "closed_changes": [
       "a770#5020 fix(bitnet): preserve K precision for attention scores"
     ],
     "required_reruns": [],
@@ -695,7 +697,8 @@
       "notes": [
         "intake_ready=true",
         "rerun_required=false",
-        "pending_shared_change_count=1",
+        "pending_shared_change_count=0",
+        "closed_shared_change_count=1",
         "merged_to_main_count=0",
         "stale_after_merged_count=0",
         "source_lanes=a770",

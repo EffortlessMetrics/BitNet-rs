@@ -1154,10 +1154,14 @@ pub struct BitnetSemanticIntakeRegressionSummary {
     pub intake_ready: bool,
     pub rerun_required: bool,
     pub pending_shared_change_count: usize,
+    #[serde(default)]
+    pub closed_shared_change_count: usize,
     pub merged_to_main_count: usize,
     pub stale_after_merged_count: usize,
     pub source_lanes: Vec<String>,
     pub pending_changes: Vec<String>,
+    #[serde(default)]
+    pub closed_changes: Vec<String>,
     pub required_reruns: Vec<String>,
     pub claim_boundary_preserved: bool,
     pub regression_ready: bool,
@@ -2379,10 +2383,14 @@ pub struct LunarLakeBitnetSemanticIntake {
 pub struct BitnetSemanticSourceChangeSummary {
     pub total_change_count: usize,
     pub pending_shared_change_count: usize,
+    #[serde(default)]
+    pub closed_shared_change_count: usize,
     pub merged_to_main_count: usize,
     pub stale_after_merged_count: usize,
     pub source_lanes: Vec<String>,
     pub pending_changes: Vec<String>,
+    #[serde(default)]
+    pub closed_changes: Vec<String>,
     pub merged_changes: Vec<String>,
     pub notes: Vec<String>,
 }
@@ -4571,10 +4579,12 @@ fn inspect_bitnet_semantic_intake_regression(
         intake_ready: intake.intake_ready,
         rerun_required: intake.rerun_required,
         pending_shared_change_count: intake.source_change_summary.pending_shared_change_count,
+        closed_shared_change_count: intake.source_change_summary.closed_shared_change_count,
         merged_to_main_count: intake.source_change_summary.merged_to_main_count,
         stale_after_merged_count: intake.source_change_summary.stale_after_merged_count,
         source_lanes: intake.source_change_summary.source_lanes,
         pending_changes: intake.source_change_summary.pending_changes,
+        closed_changes: intake.source_change_summary.closed_changes,
         required_reruns: intake.required_reruns,
         claim_boundary_preserved,
         regression_ready: gaps.is_empty(),
@@ -5062,6 +5072,7 @@ fn bitnet_semantic_intake_regression_notes(
         format!("intake_ready={}", summary.intake_ready),
         format!("rerun_required={}", summary.rerun_required),
         format!("pending_shared_change_count={}", summary.pending_shared_change_count),
+        format!("closed_shared_change_count={}", summary.closed_shared_change_count),
         format!("merged_to_main_count={}", summary.merged_to_main_count),
         format!("stale_after_merged_count={}", summary.stale_after_merged_count),
         format!("source_lanes={}", summary.source_lanes.join(",")),
@@ -8928,6 +8939,7 @@ pub fn build_bitnet_semantic_intake_with_created_utc(
 
     let mut source_lanes = BTreeSet::new();
     let mut pending_changes = Vec::new();
+    let mut closed_changes = Vec::new();
     let mut merged_changes = Vec::new();
     let mut changes = Vec::new();
     let mut stale_after_merged_count = 0usize;
@@ -8936,9 +8948,13 @@ pub fn build_bitnet_semantic_intake_with_created_utc(
         source_lanes.insert(change.source_lane.clone());
         let change_label = bitnet_semantic_change_label(change);
         let status = change.status.to_ascii_lowercase();
-        let merged_to_main = matches!(status.as_str(), "merged" | "merged_to_main" | "main_merged");
+        let merged_to_main = bitnet_semantic_status_is_merged_to_main(&status);
+        let closed_without_main_merge =
+            bitnet_semantic_status_is_closed_without_main_merge(&status);
         if merged_to_main {
             merged_changes.push(change_label.clone());
+        } else if closed_without_main_merge {
+            closed_changes.push(change_label.clone());
         } else {
             pending_changes.push(change_label.clone());
         }
@@ -8986,6 +9002,11 @@ pub fn build_bitnet_semantic_intake_with_created_utc(
                 "merged shared semantic change is covered by current Lunar Lake evidence timestamps"
                     .to_string(),
             );
+        } else if closed_without_main_merge {
+            notes.push(
+                "shared semantic change is closed or superseded without main merge; no Lunar Lake rerun is required"
+                    .to_string(),
+            );
         } else if change.requires_lunar_lake_rerun_when_merged_to_main {
             notes.push(
                 "pending shared semantic change will require Lunar Lake reruns after main merge"
@@ -9014,6 +9035,7 @@ pub fn build_bitnet_semantic_intake_with_created_utc(
     }
 
     pending_changes.sort();
+    closed_changes.sort();
     merged_changes.sort();
     let mut source_lanes = source_lanes.into_iter().collect::<Vec<_>>();
     source_lanes.sort();
@@ -9046,6 +9068,12 @@ pub fn build_bitnet_semantic_intake_with_created_utc(
                 .to_string(),
         );
     }
+    if !closed_changes.is_empty() {
+        notes.push(
+            "closed or superseded shared changes are indexed for audit but do not require Lunar Lake reruns"
+                .to_string(),
+        );
+    }
     if stale_after_merged_count == 0 {
         notes.push(
             "no merged-to-main shared semantic change currently stales Lunar Lake evidence"
@@ -9066,10 +9094,12 @@ pub fn build_bitnet_semantic_intake_with_created_utc(
         source_change_summary: BitnetSemanticSourceChangeSummary {
             total_change_count: source_changes_receipt.changes.len(),
             pending_shared_change_count: pending_changes.len(),
+            closed_shared_change_count: closed_changes.len(),
             merged_to_main_count: merged_changes.len(),
             stale_after_merged_count,
             source_lanes,
             pending_changes,
+            closed_changes,
             merged_changes,
             notes,
         },
@@ -9112,6 +9142,14 @@ fn bitnet_semantic_change_label(change: &BitnetSemanticSourceChange) -> String {
         Some(source_pr) => format!("{}#{} {}", change.source_lane, source_pr, change.title),
         None => format!("{} {}", change.source_lane, change.title),
     }
+}
+
+fn bitnet_semantic_status_is_merged_to_main(status: &str) -> bool {
+    matches!(status, "merged" | "merged_to_main" | "main_merged")
+}
+
+fn bitnet_semantic_status_is_closed_without_main_merge(status: &str) -> bool {
+    matches!(status, "closed" | "closed_unmerged" | "abandoned" | "superseded" | "withdrawn")
 }
 
 fn parse_utc_timestamp(timestamp: &str) -> Result<chrono::DateTime<chrono::Utc>> {
@@ -14496,6 +14534,37 @@ mod tests {
     }
 
     #[test]
+    fn bitnet_semantic_intake_records_closed_unmerged_without_pending_or_rerun() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_bitnet_semantic_intake_inputs(
+            temp.path(),
+            "closed_unmerged",
+            None,
+            "2026-05-12T18:43:14Z",
+            "2026-05-19T05:30:00Z",
+        )?;
+
+        let receipt = build_bitnet_semantic_intake_with_created_utc(
+            temp.path(),
+            Path::new(BITNET_SEMANTIC_SOURCE_CHANGES),
+            Path::new(BITNET_CPU_BUNDLE),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-19T06:58:20Z".to_string(),
+        )?;
+
+        assert!(receipt.intake_ready, "{:?}", receipt.gaps);
+        assert!(!receipt.rerun_required);
+        assert_eq!(receipt.source_change_summary.pending_shared_change_count, 0);
+        assert_eq!(receipt.source_change_summary.closed_shared_change_count, 1);
+        assert_eq!(receipt.source_change_summary.merged_to_main_count, 0);
+        assert!(receipt.source_change_summary.pending_changes.is_empty());
+        assert_eq!(receipt.source_change_summary.closed_changes.len(), 1);
+        assert!(receipt.required_reruns.is_empty());
+        assert!(receipt.changes[0].notes.iter().any(|note| note.contains("closed")));
+        Ok(())
+    }
+
+    #[test]
     fn bitnet_semantic_intake_requires_rerun_for_newer_merged_shared_fix() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_bitnet_semantic_intake_inputs(
@@ -19415,10 +19484,12 @@ mod tests {
             intake_ready: true,
             rerun_required: false,
             pending_shared_change_count: 1,
+            closed_shared_change_count: 0,
             merged_to_main_count: 0,
             stale_after_merged_count: 0,
             source_lanes: vec!["a770".to_string()],
             pending_changes: vec!["shared BitNet semantic fix pending".to_string()],
+            closed_changes: vec![],
             required_reruns: vec![],
             claim_boundary_preserved: true,
             regression_ready: true,
