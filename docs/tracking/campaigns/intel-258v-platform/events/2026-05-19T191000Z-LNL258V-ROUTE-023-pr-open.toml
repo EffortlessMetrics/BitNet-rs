@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T19:10:00Z"
+event = "pr_open"
+item = "LNL258V-ROUTE-023"
+pr = 5908
+branch = "codex/lunar-lake/LNL258V-ROUTE-023-heavy-gpu-promotion"
+head_sha = "e9f09ea468b19c047c29cc01ef8364e29183156c"
+actor = "codex"
+summary = "Opened LNL258V-ROUTE-023 to promote OpenVINO GPU for prefill_heavy and decode_heavy profile routes."
+
+notes = [
+  "PR #5908 adds prefill_heavy and decode_heavy to the OpenVINO GPU promotion target set and refreshes route artifacts from existing evidence.",
+  "The refreshed route-policy artifacts promote GPU for ask_short, ask_normal, warm_resident, prefill_heavy, and decode_heavy only.",
+  "OpenVINO NPU and low_power remain unpromoted; the PR runs no new inference and makes no broad speedup, power-advantage, native accelerator, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]
