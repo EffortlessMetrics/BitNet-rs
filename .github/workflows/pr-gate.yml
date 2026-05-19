@@ -110,10 +110,20 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           HEAD_SHA: ${{ steps.head.outputs.sha }}
+          LABELS: ${{ github.event_name == 'pull_request' && toJson(github.event.pull_request.labels.*.name) || '[]' }}
         run: |
           set -euo pipefail
 
           test -f ci-plan.json
+
+          labels="${LABELS:-[]}"
+          if [ "$labels" = "null" ]; then
+            labels="[]"
+          fi
+          pr_size_acknowledged=false
+          if printf '%s' "$labels" | jq -e 'index("mechanical-change") or index("ai-native")' >/dev/null; then
+            pr_size_acknowledged=true
+          fi
 
           echo "Selected blocking lanes from ci-plan.json:"
           jq -r '.selected_lanes[] | select(.blocking == true) | "  - \(.id): \(.name)"' ci-plan.json
@@ -127,7 +137,12 @@ jobs:
             [ -n "$lane_id" ] || continue
             case "$lane_id" in
               always-on-guards)
-                required_jobs+=("Guards" "Check PR Size")
+                required_jobs+=("Guards")
+                if [ "$pr_size_acknowledged" = "true" ]; then
+                  echo "Check PR Size is intentionally skipped by PR label; not adding it as a required upstream lane."
+                else
+                  required_jobs+=("Check PR Size")
+                fi
                 ;;
               bdd-grid-check)
                 required_jobs+=("BDD Grid Check")
