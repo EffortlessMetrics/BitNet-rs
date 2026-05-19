@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-19T12:20:00Z",
+  "created_utc": "2026-05-19T13:50:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -19,6 +19,7 @@
     "durability_bundle_indexed": true,
     "bitnet_semantic_intake_indexed": true,
     "power_profile_evidence_indexed": true,
+    "blocked_ask_receipt_indexed": true,
     "required_answer_profiles": [
       "regression_tiny",
       "ask_short",
@@ -649,6 +650,22 @@
         "thermal_context_recorded=true",
         "claim_boundary_preserved=true",
         "blocker_count=8"
+      ]
+    },
+    {
+      "check_id": "blocked_auto_ask_receipt_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-low-power-blocked.json"
+      ],
+      "notes": [
+        "profile_id=low_power",
+        "requested_device=auto",
+        "requested_route=auto",
+        "route_selection_blocked=true",
+        "new_inference_executed=false",
+        "fallback_used=false",
+        "blocked_receipt_ready=true"
       ]
     }
   ],

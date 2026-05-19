@@ -374,6 +374,7 @@
 | intel-258v-platform | LNL258V-OV-TOKEN-001 | LNL258V-NPU-CACHE-002 | merged |
 | intel-258v-platform | LNL258V-ROUTE-015 | LNL258V-OV-TOKEN-001 | merged |
 | intel-258v-platform | LNL258V-OP-008 | LNL258V-ROUTE-020, LNL258V-OP-007 | merged |
+| intel-258v-platform | LNL258V-REG-009 | LNL258V-OP-009, LNL258V-REG-008 | in_progress |
 | intel-258v-platform | LNL258V-OP-009 | LNL258V-OP-008 | merged |
 | intel-258v-platform | LNL258V-ROUTE-020 | LNL258V-ROUTE-019, LNL258V-LOWPOWER-QUAL-001, LNL258V-OP-004 | merged |
 | intel-258v-platform | LNL258V-LOWPOWER-QUAL-001 | LNL258V-QUAL-011, LNL258V-POWER-003 | merged |
