@@ -2125,7 +2125,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-STABILITY-002"
-status = "in_progress"
+status = "pr_open"
+pr = 5839
 branch = "codex/apple-m4-inference-excellence/M4-STABILITY-002-cache-disk-repair"
 stackable = false
 review_mode = "codex_premerge"
