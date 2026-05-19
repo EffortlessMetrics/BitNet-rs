@@ -102,6 +102,22 @@ fn server_shared_engine_chat_completion_receipt() -> Value {
     })
 }
 
+fn qwen3_server_shared_engine_chat_completion_receipt() -> Value {
+    let mut receipt = server_shared_engine_chat_completion_receipt();
+    receipt["model_identity"]["model_id"] = json!("qwen3-0.6b-instruct-q8_0");
+    receipt["model_identity"]["requested_model"] = json!("qwen3-0.6b-instruct-q8_0");
+    receipt["model_identity"]["active_model_path"] =
+        json!("models/qwen3-0.6b-instruct-q8_0/Qwen3-0.6B-Q8_0.gguf");
+    receipt["model_identity"]["model_sha256"] =
+        json!("9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031");
+    receipt["requested_model"] = json!("qwen3-0.6b-instruct-q8_0");
+    receipt["active_model_path"] = json!("models/qwen3-0.6b-instruct-q8_0/Qwen3-0.6B-Q8_0.gguf");
+    receipt["model_sha256"] =
+        json!("9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031");
+    receipt["model_coverage_row"] = json!("dense_qwen3_06b_q8_candidate");
+    receipt
+}
+
 fn bitnet_qk256_server_smoke_receipt() -> Value {
     json!({
         "receipt_kind": "server_shared_engine_chat_completion",
@@ -295,6 +311,19 @@ fn server_shared_engine_chat_completion_receipt_validates() {
 }
 
 #[test]
+fn qwen3_server_shared_engine_chat_completion_receipt_validates_without_readiness_claim() {
+    let receipt = qwen3_server_shared_engine_chat_completion_receipt();
+
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&receipt).is_ok());
+    assert_eq!(receipt["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+    assert_eq!(receipt["server_ready_claimed"], false);
+    assert_eq!(receipt["speedup_claim"], false);
+    assert_eq!(receipt["full_cuda_residency_claimed"], false);
+    assert_eq!(receipt["dense_regular_llm_cuda_inference_claimed"], true);
+    assert_eq!(receipt["bitnet_packed_i2s_qk256_proof"], false);
+}
+
+#[test]
 fn bitnet_qk256_server_smoke_receipt_validates() {
     let receipt = bitnet_qk256_server_smoke_receipt();
 
@@ -446,14 +475,18 @@ fn server_shared_engine_chat_completion_receipt_rejects_inconsistent_model_ident
 
 #[test]
 fn server_shared_engine_chat_completion_receipt_rejects_wrong_dense_model_scope() {
+    let mut receipt = qwen3_server_shared_engine_chat_completion_receipt();
+    receipt["model_coverage_row"] = json!("dense_qwen25_05b_q8_cuda");
+
+    assert!(validate_server_shared_engine_chat_completion_receipt_json(&receipt).is_err());
+}
+
+#[test]
+fn server_shared_engine_chat_completion_receipt_rejects_unknown_dense_model_scope() {
     let mut receipt = server_shared_engine_chat_completion_receipt();
-    receipt["model_identity"]["model_id"] = json!("qwen3-0.6b-instruct-q8_0");
-    receipt["model_identity"]["requested_model"] = json!("qwen3-0.6b-instruct-q8_0");
-    receipt["requested_model"] = json!("qwen3-0.6b-instruct-q8_0");
-    receipt["model_identity"]["model_sha256"] =
-        json!("9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031");
-    receipt["model_sha256"] =
-        json!("9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031");
+    receipt["model_identity"]["model_id"] = json!("smollm2-360m-instruct");
+    receipt["model_identity"]["requested_model"] = json!("smollm2-360m-instruct");
+    receipt["requested_model"] = json!("smollm2-360m-instruct");
     receipt["model_coverage_row"] = json!("dense_qwen3_06b_q8_candidate");
 
     assert!(validate_server_shared_engine_chat_completion_receipt_json(&receipt).is_err());
