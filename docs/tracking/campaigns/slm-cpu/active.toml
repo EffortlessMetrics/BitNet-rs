@@ -2864,7 +2864,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-048"
-status = "ready"
+status = "pr_open"
+pr = 5873
+head_sha = "4b1f335ec95ff23a5fd457711e21249ea6750546"
 branch = "codex/slm-cpu-048-q8-sidecar-runtime-preflight"
 stackable = false
 review_mode = "codex_premerge"

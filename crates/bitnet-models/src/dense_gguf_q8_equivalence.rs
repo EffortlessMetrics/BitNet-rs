@@ -25,6 +25,15 @@ pub enum DenseQ8RuntimeBlocker {
     GeneratedIdReceiptEquivalenceMissing,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DenseQ8RuntimePreflightBlocker {
+    FixtureEquivalenceMissing,
+    GeneratedIdReceiptEquivalenceMissing,
+    ProductionComputeHookMissing,
+    ProductionSelectorStillEagerF32,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DenseQ8SidecarEquivalenceGate {
     pub schema: u64,
@@ -48,9 +57,37 @@ pub struct DenseQ8SidecarEquivalenceGate {
     pub speedup_claim: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DenseQ8SidecarRuntimePreflight {
+    pub schema: u64,
+    pub artifact_kind: String,
+    pub tensor_name: String,
+    pub role: DenseGgufTensorRole,
+    pub selected_path: DenseQ8RuntimePath,
+    pub selected_kernel: String,
+    pub fixture_equivalence_passed: bool,
+    pub generated_id_receipt_equivalence_passed: bool,
+    pub production_compute_hook_available: bool,
+    pub sidecar_runtime_compute_allowed: bool,
+    pub runtime_blockers: Vec<DenseQ8RuntimePreflightBlocker>,
+    pub eager_f32_runtime_preserved: bool,
+    pub dense_runtime_replaced: bool,
+    pub speedup_claim: bool,
+}
+
 impl DenseQ8SidecarEquivalenceGate {
     pub fn runtime_still_blocked(&self) -> bool {
         !self.sidecar_runtime_compute_allowed
+            && self.eager_f32_runtime_preserved
+            && !self.dense_runtime_replaced
+            && !self.speedup_claim
+    }
+}
+
+impl DenseQ8SidecarRuntimePreflight {
+    pub fn selects_eager_f32(&self) -> bool {
+        self.selected_path == DenseQ8RuntimePath::EagerF32Candle
+            && self.selected_kernel == "dense-f32-candle-linear"
             && self.eager_f32_runtime_preserved
             && !self.dense_runtime_replaced
             && !self.speedup_claim
@@ -111,6 +148,42 @@ pub fn build_dense_q8_sidecar_equivalence_gate(
         dense_runtime_replaced: false,
         speedup_claim: false,
     })
+}
+
+pub fn build_dense_q8_sidecar_runtime_preflight(
+    gate: &DenseQ8SidecarEquivalenceGate,
+    production_compute_hook_available: bool,
+) -> DenseQ8SidecarRuntimePreflight {
+    let mut runtime_blockers = Vec::new();
+    if !gate.fixture_equivalence_passed {
+        runtime_blockers.push(DenseQ8RuntimePreflightBlocker::FixtureEquivalenceMissing);
+    }
+    if !gate.generated_id_receipt_equivalence_passed {
+        runtime_blockers.push(DenseQ8RuntimePreflightBlocker::GeneratedIdReceiptEquivalenceMissing);
+    }
+    if !production_compute_hook_available {
+        runtime_blockers.push(DenseQ8RuntimePreflightBlocker::ProductionComputeHookMissing);
+    }
+
+    runtime_blockers.push(DenseQ8RuntimePreflightBlocker::ProductionSelectorStillEagerF32);
+    let sidecar_runtime_compute_allowed = false;
+
+    DenseQ8SidecarRuntimePreflight {
+        schema: 1,
+        artifact_kind: "dense_gguf_q8_sidecar_runtime_preflight".to_string(),
+        tensor_name: gate.tensor_name.clone(),
+        role: gate.role,
+        selected_path: gate.selected_path,
+        selected_kernel: gate.selected_kernel.clone(),
+        fixture_equivalence_passed: gate.fixture_equivalence_passed,
+        generated_id_receipt_equivalence_passed: gate.generated_id_receipt_equivalence_passed,
+        production_compute_hook_available,
+        sidecar_runtime_compute_allowed,
+        runtime_blockers,
+        eager_f32_runtime_preserved: true,
+        dense_runtime_replaced: false,
+        speedup_claim: false,
+    }
 }
 
 #[cfg(test)]
@@ -209,5 +282,49 @@ mod tests {
             .expect_err("tensor mismatch should fail closed");
 
         assert!(err.to_string().contains("tensor mismatch"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn q8_sidecar_runtime_preflight_names_generated_id_and_compute_hook_blockers() -> Result<()> {
+        let registry = registry_with_q_proj();
+        let selection = select_dense_q8_runtime("blk.0.attn_q.weight", &registry);
+        let gate =
+            build_dense_q8_sidecar_equivalence_gate(&sidecar_summary(0.0), &selection, 1e-6)?;
+
+        let preflight = build_dense_q8_sidecar_runtime_preflight(&gate, false);
+
+        assert!(preflight.fixture_equivalence_passed);
+        assert!(!preflight.generated_id_receipt_equivalence_passed);
+        assert!(!preflight.production_compute_hook_available);
+        assert!(!preflight.sidecar_runtime_compute_allowed);
+        assert!(preflight.selects_eager_f32());
+        assert_eq!(
+            preflight.runtime_blockers,
+            vec![
+                DenseQ8RuntimePreflightBlocker::GeneratedIdReceiptEquivalenceMissing,
+                DenseQ8RuntimePreflightBlocker::ProductionComputeHookMissing,
+                DenseQ8RuntimePreflightBlocker::ProductionSelectorStillEagerF32
+            ]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn q8_sidecar_runtime_preflight_blocks_fixture_mismatch() -> Result<()> {
+        let registry = registry_with_q_proj();
+        let selection = select_dense_q8_runtime("blk.0.attn_q.weight", &registry);
+        let gate =
+            build_dense_q8_sidecar_equivalence_gate(&sidecar_summary(0.25), &selection, 1e-6)?;
+
+        let preflight = build_dense_q8_sidecar_runtime_preflight(&gate, false);
+
+        assert!(!preflight.fixture_equivalence_passed);
+        assert!(!preflight.sidecar_runtime_compute_allowed);
+        assert!(
+            preflight
+                .runtime_blockers
+                .contains(&DenseQ8RuntimePreflightBlocker::FixtureEquivalenceMissing)
+        );
+        Ok(())
     }
 }

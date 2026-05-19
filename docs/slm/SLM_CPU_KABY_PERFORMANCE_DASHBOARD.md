@@ -178,6 +178,24 @@ This narrows the remaining runtime blocker without changing generated IDs,
 decoded text, tokenizer authority, backend/kernel identity, model SHA, or
 `fallback=false`.
 
+SLM-CPU-048 keeps the next step non-executing as well: it consumes the
+equivalence gate and emits a runtime preflight report that names the remaining
+blockers before packed Q8_0 sidecar compute can be selected:
+
+```text
+artifact_kind = dense_gguf_q8_sidecar_runtime_preflight
+selected_path = eager_f32_candle
+fixture_equivalence_passed = true | false
+generated_id_receipt_equivalence_passed = false
+production_compute_hook_available = false
+sidecar_runtime_compute_allowed = false
+runtime_blockers = generated_id_receipt_equivalence_missing, production_compute_hook_missing, production_selector_still_eager_f32
+```
+
+The preflight is the final eligibility surface before a later production
+compute hook can be attached. It still does not execute packed sidecar compute
+or claim speedup.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
