@@ -2920,9 +2920,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-049"
-status = "pr_open"
+status = "merged"
 pr = 5879
 head_sha = "363f24398a71b6e363fbf38a85a1cbd4507ff438"
+merge_sha = "f76c93862c5feb94d7688061f571f6704d9b01e1"
 branch = "codex/slm-cpu-049-generated-id-equivalence-gate"
 stackable = false
 review_mode = "codex_premerge"
