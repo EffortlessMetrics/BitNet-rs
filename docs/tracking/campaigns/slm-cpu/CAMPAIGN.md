@@ -100,7 +100,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-047 | merged | #5868 added the packed Q8_0 sidecar equivalence gate that records fixture parity and keeps runtime compute disabled until generated-ID/text receipt equivalence exists. |
 | SLM-CPU-048 | merged | #5873 added the non-executing packed Q8_0 sidecar runtime preflight that names generated-ID receipt, production compute hook, and eager-selector blockers. |
 | SLM-CPU-049 | merged | Added the generated-ID/text receipt equivalence gate before any packed Q8_0 sidecar runtime selection or speedup claim. |
-| SLM-CPU-050 | ready | Add the production-compute-hook availability surface while keeping eager F32 Candle selected until later behavior-preserving selector evidence exists. |
+| SLM-CPU-050 | merged | Added the production-compute-hook availability surface while keeping eager F32 Candle selected until later behavior-preserving selector evidence exists. |
 
 ## Review Policy
 

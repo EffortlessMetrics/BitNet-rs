@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T07:16:38Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-050"
+event = "merged"
+pr = 5885
+head_sha = "c11508411e022dbd5809239d3f0f1adb47d0ae02"
+merge_sha = "29ffb758ba57d78c21968f07b74d4563611ef4b6"
+actor = "codex"
+
+notes = [
+  "Merged the production-compute-hook availability surface for the packed Q8_0 sidecar runtime lane.",
+  "The report distinguishes missing hooks from hooks that exist while the selector still chooses eager F32 Candle.",
+  "No packed Q8_0 sidecar production execution, speedup, Q4/Q5, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
