@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
   "proof_stage": "openvino_candidate_quality_diagnosis_no_promotion_change",
-  "created_utc": "2026-05-19T11:37:00Z",
+  "created_utc": "2026-05-19T15:42:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
@@ -16,8 +16,8 @@
   "fallback_used": false,
   "promotion_status": "candidate_only_not_promoted",
   "quality_summary": {
-    "total": 13,
-    "passed": 13,
+    "total": 14,
+    "passed": 14,
     "failed": 0,
     "timeout": 0,
     "not_run": 0,
@@ -95,13 +95,23 @@
       "failed_case_ids": [],
       "route_profile_status": "candidate_blocked_by_quality",
       "route_blockers": []
+    },
+    {
+      "profile_id": "warm_resident",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
+      "route_profile_status": "candidate_blocked_by_quality",
+      "route_blockers": []
     }
   ],
   "failed_cases": [],
   "case_alignment": {
     "fixture_verified": true,
-    "expected_case_count": 13,
-    "observed_case_count": 13,
+    "expected_case_count": 14,
+    "observed_case_count": 14,
     "missing_case_ids": [],
     "stale_or_unexpected_case_ids": [],
     "aligned_with_active_fixture": true,

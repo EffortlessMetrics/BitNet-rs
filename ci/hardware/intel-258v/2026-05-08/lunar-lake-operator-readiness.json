@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_readiness",
   "proof_stage": "operator_routes_indexed",
-  "created_utc": "2026-05-19T14:30:00Z",
+  "created_utc": "2026-05-19T15:46:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_ready": true,
@@ -190,15 +190,9 @@
         "profile_status": "candidate_only",
         "promotion_decision": "warm_resident has no promoted route; candidate evidence is indexed without promotion",
         "route_blockers": [
-          "dense_slm_default_cpu: corpus_v2 profile quality evidence missing",
           "dense_slm_default_cpu: route not promoted for profile warm_resident",
-          "dense_slm_openvino_npu_candidate: benchmark_qualified_speedup_or_power_advantage",
-          "dense_slm_openvino_npu_candidate: candidate route requires benchmark-qualified profile evidence",
-          "dense_slm_openvino_npu_candidate: corpus_v2 profile quality evidence missing",
           "dense_slm_openvino_npu_candidate: route not promoted for profile warm_resident",
-          "dense_slm_openvino_gpu_candidate: corpus_v2 profile quality evidence missing",
-          "dense_slm_openvino_gpu_candidate: route not promoted for profile warm_resident",
-          "dense_slm_openvino_gpu_candidate: timing coverage has missing profile fields"
+          "dense_slm_openvino_gpu_candidate: route not promoted for profile warm_resident"
         ]
       },
       {
