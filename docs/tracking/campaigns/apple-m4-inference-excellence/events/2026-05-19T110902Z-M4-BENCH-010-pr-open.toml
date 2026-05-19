@@ -1,0 +1,18 @@
+timestamp = "2026-05-19T11:09:02Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-010"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5929
+head_sha = "1cc62997f63f503b9e87dfe466e3a28cc61ff23c"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-010-timeout-aware-variance"
+
+notes = [
+  "Opened PR #5929 for timeout-aware M4 dense benchmark variance aggregation.",
+  "`bitnet mac benchmark --repeat` now preserves calibrated profile timeouts as invalid-for-comparison profile entries instead of aborting the aggregate.",
+  "Timed-out profiles are skipped from timing and throughput samples while invalid-comparison reasons propagate into child and parent benchmark receipts.",
+  "The PR includes synthetic timeout-aware receipt tests and a bounded `qwen2.5-0.5b-instruct-q8_0` short_prompt_16_out repeat=2 release smoke receipt only.",
+  "No final dense variance envelope, BitNet timing variance, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
