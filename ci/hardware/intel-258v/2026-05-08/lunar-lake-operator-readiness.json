@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_readiness",
   "proof_stage": "operator_routes_indexed",
-  "created_utc": "2026-05-19T18:25:00Z",
+  "created_utc": "2026-05-19T19:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_ready": true,
@@ -86,6 +86,8 @@
     "openvino_gpu_promoted_profiles": [
       "ask_normal",
       "ask_short",
+      "decode_heavy",
+      "prefill_heavy",
       "warm_resident"
     ],
     "openvino_npu_promoted_profiles": [],
@@ -131,12 +133,11 @@
       },
       {
         "profile_id": "prefill_heavy",
-        "promoted_route": null,
-        "profile_status": "candidate_only",
-        "promotion_decision": "prefill_heavy has no promoted route; candidate evidence is indexed without promotion",
+        "promoted_route": "dense_slm_openvino_gpu_candidate",
+        "profile_status": "promoted_route_ready",
+        "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for prefill_heavy",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile prefill_heavy",
-          "dense_slm_openvino_gpu_candidate: route not promoted for profile prefill_heavy",
           "dense_slm_openvino_npu_candidate: NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "dense_slm_openvino_npu_candidate: benchmark_qualified_speedup_or_power_advantage",
           "dense_slm_openvino_npu_candidate: candidate route requires benchmark-qualified profile evidence",
@@ -145,12 +146,11 @@
       },
       {
         "profile_id": "decode_heavy",
-        "promoted_route": null,
-        "profile_status": "candidate_only",
-        "promotion_decision": "decode_heavy has no promoted route; candidate evidence is indexed without promotion",
+        "promoted_route": "dense_slm_openvino_gpu_candidate",
+        "profile_status": "promoted_route_ready",
+        "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for decode_heavy",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile decode_heavy",
-          "dense_slm_openvino_gpu_candidate: route not promoted for profile decode_heavy",
           "dense_slm_openvino_npu_candidate: NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "dense_slm_openvino_npu_candidate: benchmark_qualified_speedup_or_power_advantage",
           "dense_slm_openvino_npu_candidate: candidate route requires benchmark-qualified profile evidence",
@@ -200,8 +200,6 @@
       }
     ],
     "blocked_profiles": [
-      "prefill_heavy",
-      "decode_heavy",
       "low_power"
     ],
     "gaps": []

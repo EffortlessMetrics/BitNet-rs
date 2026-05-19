@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T18:30:00Z",
+  "created_utc": "2026-05-19T19:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -63,8 +63,8 @@
       "route_count": 23,
       "profile_specific_route_count": 23,
       "proxy_or_missing_route_count": 0,
-      "promotion_eligible_route_count": 6,
-      "promotion_eligible_profile_specific_route_count": 6,
+      "promotion_eligible_route_count": 8,
+      "promotion_eligible_profile_specific_route_count": 8,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
@@ -177,10 +177,9 @@
       },
       {
         "blocker": "route not promoted for profile decode_heavy",
-        "occurrence_count": 3,
+        "occurrence_count": 2,
         "route_ids": [
           "dense_slm_default_cpu",
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -203,10 +202,9 @@
       },
       {
         "blocker": "route not promoted for profile prefill_heavy",
-        "occurrence_count": 3,
+        "occurrence_count": 2,
         "route_ids": [
           "dense_slm_default_cpu",
-          "dense_slm_openvino_gpu_candidate",
           "dense_slm_openvino_npu_candidate"
         ],
         "profile_ids": [
@@ -243,6 +241,8 @@
       "openvino_gpu_promoted_profiles": [
         "ask_normal",
         "ask_short",
+        "decode_heavy",
+        "prefill_heavy",
         "warm_resident"
       ],
       "openvino_npu_promoted_profiles": [],
@@ -250,7 +250,7 @@
       "openvino_npu_remains_candidate": true,
       "unexpected_openvino_profile_promotions": [],
       "notes": [
-        "OpenVINO GPU is profile-promoted only for ask_normal,ask_short,warm_resident",
+        "OpenVINO GPU is profile-promoted only for ask_normal,ask_short,decode_heavy,prefill_heavy,warm_resident",
         "OpenVINO NPU remains candidate-only",
         "Profile promotion is not a broad acceleration, power-advantage, or all-profile claim"
       ]
@@ -276,8 +276,8 @@
       "route_count": 23,
       "profile_specific_route_count": 23,
       "proxy_or_missing_route_count": 0,
-      "promotion_eligible_route_count": 6,
-      "promotion_eligible_profile_specific_route_count": 6,
+      "promotion_eligible_route_count": 8,
+      "promotion_eligible_profile_specific_route_count": 8,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
@@ -342,6 +342,8 @@
       "openvino_gpu_promoted_profiles": [
         "ask_normal",
         "ask_short",
+        "decode_heavy",
+        "prefill_heavy",
         "warm_resident"
       ],
       "openvino_npu_promoted_profiles": [],
@@ -349,7 +351,7 @@
       "openvino_npu_remains_candidate": true,
       "unexpected_openvino_profile_promotions": [],
       "notes": [
-        "OpenVINO GPU is profile-promoted only for ask_normal,ask_short,warm_resident",
+        "OpenVINO GPU is profile-promoted only for ask_normal,ask_short,decode_heavy,prefill_heavy,warm_resident",
         "OpenVINO NPU remains candidate-only",
         "Profile promotion is not a broad acceleration, power-advantage, or all-profile claim"
       ]
@@ -497,8 +499,8 @@
       "route_count": 23,
       "profile_specific_route_count": 23,
       "proxy_or_missing_route_count": 0,
-      "promotion_eligible_route_count": 6,
-      "promotion_eligible_profile_specific_route_count": 6,
+      "promotion_eligible_route_count": 8,
+      "promotion_eligible_profile_specific_route_count": 8,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
@@ -512,6 +514,8 @@
       "openvino_gpu_promoted_profiles": [
         "ask_normal",
         "ask_short",
+        "decode_heavy",
+        "prefill_heavy",
         "warm_resident"
       ],
       "openvino_npu_promoted_profiles": [],
@@ -519,7 +523,7 @@
       "openvino_npu_remains_candidate": true,
       "unexpected_openvino_profile_promotions": [],
       "notes": [
-        "OpenVINO GPU is profile-promoted only for ask_normal,ask_short,warm_resident",
+        "OpenVINO GPU is profile-promoted only for ask_normal,ask_short,decode_heavy,prefill_heavy,warm_resident",
         "OpenVINO NPU remains candidate-only",
         "Profile promotion is not a broad acceleration, power-advantage, or all-profile claim"
       ]
@@ -635,7 +639,7 @@
         "profile_specific_timing=23/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "promotion_blocker_summary_count=11",
-        "openvino_gpu_promoted_profiles=ask_normal,ask_short,warm_resident",
+        "openvino_gpu_promoted_profiles=ask_normal,ask_short,decode_heavy,prefill_heavy,warm_resident",
         "openvino_npu_promoted_profiles=",
         "profile_scoped_promotion_only=true"
       ]
@@ -656,7 +660,7 @@
         "telemetry_gap_count=46",
         "profile_specific_timing=23/23",
         "proxy_or_missing_timing_routes_blocked=true",
-        "openvino_gpu_promoted_profiles=ask_normal,ask_short,warm_resident",
+        "openvino_gpu_promoted_profiles=ask_normal,ask_short,decode_heavy,prefill_heavy,warm_resident",
         "openvino_npu_promoted_profiles=",
         "profile_scoped_promotion_only=true"
       ]

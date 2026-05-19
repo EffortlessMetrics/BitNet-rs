@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-19T18:25:00Z",
+  "created_utc": "2026-05-19T19:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -988,14 +988,113 @@
       "prompt_tokens": ">=2048",
       "output_tokens": "<=64",
       "purpose": "long prompt with short answer where GPU/NPU prefill may earn promotion",
-      "promoted_route": null,
+      "promoted_route": "dense_slm_openvino_gpu_candidate",
       "candidate_routes": [
         "dense_slm_default_cpu",
-        "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
       ],
-      "profile_status": "candidate_only",
+      "profile_status": "promoted_route_ready",
       "route_evidence": [
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_status": "promoted",
+          "ledger_route_status": "promoted",
+          "selected_backend": "openvino-gpu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_gpu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-profile-run.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
+            ],
+            "prompt_tokens": 2731,
+            "cold_load_ms": 4672.0,
+            "tokenize_ms": -1.0,
+            "prefill_ms": null,
+            "first_token_ms": 425.4515075683594,
+            "decode_total_ms": 1489.3841000157408,
+            "generation_total_ms": 1489.3841000157408,
+            "total_response_ms": 6161.384100015741,
+            "output_tokens": 64,
+            "throughput_tokens_per_s": 60.371463775634766,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time",
+              "direct_openvino_generated_token_ids",
+              "profile_timing_from_openvino_profile_run_case_prefill_heavy_route_policy_long_context",
+              "corpus_v2_profile_regression_evidence_indexed",
+              "benchmark_qualified_latency_advantage"
+            ],
+            "known_gaps": [
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "prefill_heavy",
+            "required_prompt_tokens": ">=2048",
+            "required_output_tokens": "<=64",
+            "measured_prompt_tokens": 2731,
+            "measured_output_tokens": 64,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 2731 satisfies `>=2048`",
+              "output timing count 64 satisfies `<=64`"
+            ]
+          },
+          "benchmark_qualified_advantage": true,
+          "promotion_eligible_for_profile": true,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "profile_id": "prefill_heavy",
+            "profile_present": true,
+            "cases_total": 1,
+            "passed": 1,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
+            "telemetry_gaps": [
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "candidate",
+            "baseline_total_response_ms": 1373681.117,
+            "route_total_response_ms": 6161.384100015741,
+            "route_to_baseline_total_response_ratio": 0.004485308871007608,
+            "observed_total_response_lower_than_baseline": true,
+            "benchmark_qualified": true,
+            "qualification_status": "benchmark_qualified",
+            "qualification_blockers": [],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy",
+              "lower observed total response still requires route-promotion evidence before use"
+            ]
+          },
+          "evidence": [
+            "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
+          ],
+          "blockers": []
+        },
         {
           "route_id": "dense_slm_default_cpu",
           "route_status": "candidate",
@@ -1068,113 +1167,28 @@
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
-          "evidence": [
-            "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
-            "slm-phase-warm-session-qwen25-cpu.json",
-            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
-            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
-          ],
-          "blockers": [
-            "route not promoted for profile prefill_heavy"
-          ]
-        },
-        {
-          "route_id": "dense_slm_openvino_gpu_candidate",
-          "route_status": "candidate",
-          "ledger_route_status": "promoted",
-          "selected_backend": "openvino-gpu",
-          "runtime_api": "openvino_genai",
-          "fallback_used": false,
-          "answer_gate_passed": true,
-          "phase_timing_present": true,
-          "timing": {
-            "timing_scope": "openvino_gpu_operator_ask",
-            "source_receipts": [
-              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json",
-              "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-profile-run.json",
-              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
-            ],
-            "prompt_tokens": 2731,
-            "cold_load_ms": 4672.0,
-            "tokenize_ms": -1.0,
-            "prefill_ms": null,
-            "first_token_ms": 425.4515075683594,
-            "decode_total_ms": 1489.3841000157408,
-            "generation_total_ms": 1489.3841000157408,
-            "total_response_ms": 6161.384100015741,
-            "output_tokens": 64,
-            "throughput_tokens_per_s": 60.371463775634766,
-            "phase_coverage": [
-              "bounded_operator_ask_math_brief",
-              "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time",
-              "direct_openvino_generated_token_ids",
-              "profile_timing_from_openvino_profile_run_case_prefill_heavy_route_policy_long_context",
-              "corpus_v2_profile_regression_evidence_indexed",
-              "benchmark_qualified_latency_advantage"
-            ],
-            "known_gaps": [
-              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
-            ]
-          },
-          "timing_applicability": {
-            "profile_id": "prefill_heavy",
-            "required_prompt_tokens": ">=2048",
-            "required_output_tokens": "<=64",
-            "measured_prompt_tokens": 2731,
-            "measured_output_tokens": 64,
-            "timing_matches_profile": true,
-            "notes": [
-              "prompt timing count 2731 satisfies `>=2048`",
-              "output timing count 64 satisfies `<=64`"
-            ]
-          },
-          "benchmark_qualified_advantage": true,
-          "promotion_eligible_for_profile": false,
-          "profile_quality": {
-            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
-            "route_id": "dense_slm_openvino_gpu_candidate",
-            "profile_id": "prefill_heavy",
-            "profile_present": true,
-            "cases_total": 1,
-            "passed": 1,
-            "failed": 0,
-            "fallback_used": false,
-            "status": "passed",
-            "notes": []
-          },
-          "telemetry": {
-            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
-            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
-            "telemetry_gaps": [
-              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
-            ]
-          },
           "route_advantage_context": {
-            "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 1373681.117,
-            "route_total_response_ms": 6161.384100015741,
-            "route_to_baseline_total_response_ratio": 0.004485308871007608,
-            "observed_total_response_lower_than_baseline": true,
-            "benchmark_qualified": true,
-            "qualification_status": "benchmark_qualified",
-            "qualification_blockers": [],
+            "baseline_route_id": "dense_slm_openvino_gpu_candidate",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 6161.384100015741,
+            "route_total_response_ms": 1373681.117,
+            "route_to_baseline_total_response_ratio": 222.95008632824735,
+            "observed_total_response_lower_than_baseline": false,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
+            ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy",
-              "lower observed total response still requires route-promotion evidence before use",
+              "baseline route dense_slm_openvino_gpu_candidate remains the comparison reference for profile prefill_heavy",
               "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
-            "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
-            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+            "slm-phase-warm-session-qwen25-cpu.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
@@ -1295,7 +1309,7 @@
           ]
         }
       ],
-      "promotion_decision": "prefill_heavy has no promoted route; candidate evidence is indexed without promotion",
+      "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for prefill_heavy",
       "gaps": []
     },
     {
@@ -1303,14 +1317,113 @@
       "prompt_tokens": "<=256",
       "output_tokens": ">=512",
       "purpose": "long answer where steady decode throughput must be measured",
-      "promoted_route": null,
+      "promoted_route": "dense_slm_openvino_gpu_candidate",
       "candidate_routes": [
         "dense_slm_default_cpu",
-        "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
       ],
-      "profile_status": "candidate_only",
+      "profile_status": "promoted_route_ready",
       "route_evidence": [
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_status": "promoted",
+          "ledger_route_status": "promoted",
+          "selected_backend": "openvino-gpu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_gpu_operator_ask",
+            "source_receipts": [
+              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+              "slm-openvino-cpu-gpu-npu-phase-runner.json",
+              "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-profile-run.json",
+              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
+            ],
+            "prompt_tokens": 66,
+            "cold_load_ms": 4672.0,
+            "tokenize_ms": -1.0,
+            "prefill_ms": null,
+            "first_token_ms": 1231.860595703125,
+            "decode_total_ms": 8751.639300026,
+            "generation_total_ms": 8751.639300026,
+            "total_response_ms": 13423.639300026,
+            "output_tokens": 512,
+            "throughput_tokens_per_s": 68.1025161743164,
+            "phase_coverage": [
+              "bounded_operator_ask_math_brief",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_and_generation_wall_time",
+              "direct_openvino_generated_token_ids",
+              "profile_timing_from_openvino_profile_run_case_decode_heavy_route_policy_long_generation",
+              "corpus_v2_profile_regression_evidence_indexed",
+              "benchmark_qualified_latency_advantage"
+            ],
+            "known_gaps": [
+              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "decode_heavy",
+            "required_prompt_tokens": "<=256",
+            "required_output_tokens": ">=512",
+            "measured_prompt_tokens": 66,
+            "measured_output_tokens": 512,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 66 satisfies `<=256`",
+              "output timing count 512 satisfies `>=512`"
+            ]
+          },
+          "benchmark_qualified_advantage": true,
+          "promotion_eligible_for_profile": true,
+          "profile_quality": {
+            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "profile_id": "decode_heavy",
+            "profile_present": true,
+            "cases_total": 1,
+            "passed": 1,
+            "failed": 0,
+            "fallback_used": false,
+            "status": "passed",
+            "notes": []
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
+            "telemetry_gaps": [
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "candidate",
+            "baseline_total_response_ms": 123115.592,
+            "route_total_response_ms": 13423.639300026,
+            "route_to_baseline_total_response_ratio": 0.10903281283840961,
+            "observed_total_response_lower_than_baseline": true,
+            "benchmark_qualified": true,
+            "qualification_status": "benchmark_qualified",
+            "qualification_blockers": [],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy",
+              "lower observed total response still requires route-promotion evidence before use"
+            ]
+          },
+          "evidence": [
+            "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
+            "slm-openvino-cpu-gpu-npu-phase-runner.json",
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
+          ],
+          "blockers": []
+        },
         {
           "route_id": "dense_slm_default_cpu",
           "route_status": "candidate",
@@ -1383,113 +1496,28 @@
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
-          "evidence": [
-            "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
-            "slm-phase-warm-session-qwen25-cpu.json",
-            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
-            "ci/quality/lunar-lake-answer-corpus-v2.yaml"
-          ],
-          "blockers": [
-            "route not promoted for profile decode_heavy"
-          ]
-        },
-        {
-          "route_id": "dense_slm_openvino_gpu_candidate",
-          "route_status": "candidate",
-          "ledger_route_status": "promoted",
-          "selected_backend": "openvino-gpu",
-          "runtime_api": "openvino_genai",
-          "fallback_used": false,
-          "answer_gate_passed": true,
-          "phase_timing_present": true,
-          "timing": {
-            "timing_scope": "openvino_gpu_operator_ask",
-            "source_receipts": [
-              "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-              "slm-openvino-cpu-gpu-npu-phase-runner.json",
-              "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-profile-run.json",
-              "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json"
-            ],
-            "prompt_tokens": 66,
-            "cold_load_ms": 4672.0,
-            "tokenize_ms": -1.0,
-            "prefill_ms": null,
-            "first_token_ms": 1231.860595703125,
-            "decode_total_ms": 8751.639300026,
-            "generation_total_ms": 8751.639300026,
-            "total_response_ms": 13423.639300026,
-            "output_tokens": 512,
-            "throughput_tokens_per_s": 68.1025161743164,
-            "phase_coverage": [
-              "bounded_operator_ask_math_brief",
-              "openvino_genai_perf_metrics",
-              "pipeline_construct_and_generation_wall_time",
-              "direct_openvino_generated_token_ids",
-              "profile_timing_from_openvino_profile_run_case_decode_heavy_route_policy_long_generation",
-              "corpus_v2_profile_regression_evidence_indexed",
-              "benchmark_qualified_latency_advantage"
-            ],
-            "known_gaps": [
-              "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
-            ]
-          },
-          "timing_applicability": {
-            "profile_id": "decode_heavy",
-            "required_prompt_tokens": "<=256",
-            "required_output_tokens": ">=512",
-            "measured_prompt_tokens": 66,
-            "measured_output_tokens": 512,
-            "timing_matches_profile": true,
-            "notes": [
-              "prompt timing count 66 satisfies `<=256`",
-              "output timing count 512 satisfies `>=512`"
-            ]
-          },
-          "benchmark_qualified_advantage": true,
-          "promotion_eligible_for_profile": false,
-          "profile_quality": {
-            "source_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
-            "route_id": "dense_slm_openvino_gpu_candidate",
-            "profile_id": "decode_heavy",
-            "profile_present": true,
-            "cases_total": 1,
-            "passed": 1,
-            "failed": 0,
-            "fallback_used": false,
-            "status": "passed",
-            "notes": []
-          },
-          "telemetry": {
-            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
-            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
-            "telemetry_gaps": [
-              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
-            ]
-          },
           "route_advantage_context": {
-            "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 123115.592,
-            "route_total_response_ms": 13423.639300026,
-            "route_to_baseline_total_response_ratio": 0.10903281283840961,
-            "observed_total_response_lower_than_baseline": true,
-            "benchmark_qualified": true,
-            "qualification_status": "benchmark_qualified",
-            "qualification_blockers": [],
+            "baseline_route_id": "dense_slm_openvino_gpu_candidate",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 13423.639300026,
+            "route_total_response_ms": 123115.592,
+            "route_to_baseline_total_response_ratio": 9.17155096679047,
+            "observed_total_response_lower_than_baseline": false,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
+            ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy",
-              "lower observed total response still requires route-promotion evidence before use",
+              "baseline route dense_slm_openvino_gpu_candidate remains the comparison reference for profile decode_heavy",
               "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
           "evidence": [
-            "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-            "slm-openvino-cpu-gpu-npu-phase-runner.json",
-            "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
-            "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+            "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+            "slm-phase-warm-session-qwen25-cpu.json",
+            "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
             "ci/quality/lunar-lake-answer-corpus-v2.yaml"
           ],
           "blockers": [
@@ -1610,7 +1638,7 @@
           ]
         }
       ],
-      "promotion_decision": "decode_heavy has no promoted route; candidate evidence is indexed without promotion",
+      "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for decode_heavy",
       "gaps": []
     },
     {
@@ -2425,8 +2453,8 @@
     "route_count": 23,
     "profile_specific_route_count": 23,
     "proxy_or_missing_route_count": 0,
-    "promotion_eligible_route_count": 6,
-    "promotion_eligible_profile_specific_route_count": 6,
+    "promotion_eligible_route_count": 8,
+    "promotion_eligible_profile_specific_route_count": 8,
     "candidate_route_count": 14,
     "candidate_proxy_or_missing_route_count": 0,
     "promotion_eligible_routes_have_profile_specific_timing": true,
@@ -2439,6 +2467,8 @@
     "openvino_gpu_promoted_profiles": [
       "ask_normal",
       "ask_short",
+      "decode_heavy",
+      "prefill_heavy",
       "warm_resident"
     ],
     "openvino_npu_promoted_profiles": [],
@@ -2446,7 +2476,7 @@
     "openvino_npu_remains_candidate": true,
     "unexpected_openvino_profile_promotions": [],
     "notes": [
-      "OpenVINO GPU is profile-promoted only for ask_normal,ask_short,warm_resident",
+      "OpenVINO GPU is profile-promoted only for ask_normal,ask_short,decode_heavy,prefill_heavy,warm_resident",
       "OpenVINO NPU remains candidate-only",
       "Profile promotion is not a broad acceleration, power-advantage, or all-profile claim"
     ]
@@ -2539,10 +2569,9 @@
     },
     {
       "blocker": "route not promoted for profile decode_heavy",
-      "occurrence_count": 3,
+      "occurrence_count": 2,
       "route_ids": [
         "dense_slm_default_cpu",
-        "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
       ],
       "profile_ids": [
@@ -2565,10 +2594,9 @@
     },
     {
       "blocker": "route not promoted for profile prefill_heavy",
-      "occurrence_count": 3,
+      "occurrence_count": 2,
       "route_ids": [
         "dense_slm_default_cpu",
-        "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
       ],
       "profile_ids": [

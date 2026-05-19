@@ -68,7 +68,7 @@ const OPENVINO_GENERATION_BUDGET_SENSITIVITY: &str =
     "lunar-lake-openvino-generation-budget-sensitivity.json";
 const OPENVINO_PROFILE_RUN: &str = "lunar-lake-openvino-profile-run.json";
 const OPENVINO_GPU_PROFILE_PROMOTION_TARGETS: &[&str] =
-    &["ask_short", "ask_normal", "warm_resident"];
+    &["ask_short", "ask_normal", "prefill_heavy", "decode_heavy", "warm_resident"];
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const BLOCKED_AUTO_ASK_RECEIPT: &str = "lunar-lake-operator-ask-auto-low-power-blocked.json";
@@ -11639,17 +11639,22 @@ fn promote_route(
                     {
                         present_evidence.push(path.to_string());
                     }
+                    let mut blocked_for = vec![
+                        "regression_tiny_cpu_baseline".to_string(),
+                        "low_power_power_advantage_unproven".to_string(),
+                        "structured_profile_unqualified".to_string(),
+                        "bitnet_strict_reference".to_string(),
+                    ];
+                    if !openvino_gpu_promoted_profiles.contains("prefill_heavy") {
+                        blocked_for.push("prefill_heavy_profile_unqualified".to_string());
+                    }
+                    if !openvino_gpu_promoted_profiles.contains("decode_heavy") {
+                        blocked_for.push("decode_heavy_profile_unqualified".to_string());
+                    }
                     (
                         "promoted".to_string(),
                         openvino_gpu_promoted_profiles.iter().cloned().collect(),
-                        vec![
-                            "regression_tiny_cpu_baseline".to_string(),
-                            "low_power_power_advantage_unproven".to_string(),
-                            "prefill_heavy_profile_unqualified".to_string(),
-                            "decode_heavy_profile_unqualified".to_string(),
-                            "structured_profile_unqualified".to_string(),
-                            "bitnet_strict_reference".to_string(),
-                        ],
+                        blocked_for,
                         format!(
                             "OpenVINO GPU is promoted only for benchmark-qualified dense Qwen profiles [{}] with fallback=false, passing corpus-v2 evidence, direct token visibility, profile-matched timing, and lower total response than the CPU baseline.",
                             openvino_gpu_promoted_profiles
@@ -13239,6 +13244,8 @@ fn workload_profiles_with_openvino_gpu_promotions(
 ) -> Vec<WorkloadProfile> {
     let ask_short_gpu_promoted = openvino_gpu_promoted_profiles.contains("ask_short");
     let ask_normal_gpu_promoted = openvino_gpu_promoted_profiles.contains("ask_normal");
+    let prefill_heavy_gpu_promoted = openvino_gpu_promoted_profiles.contains("prefill_heavy");
+    let decode_heavy_gpu_promoted = openvino_gpu_promoted_profiles.contains("decode_heavy");
     let warm_resident_gpu_promoted = openvino_gpu_promoted_profiles.contains("warm_resident");
     vec![
         WorkloadProfile {
@@ -13296,24 +13303,34 @@ fn workload_profiles_with_openvino_gpu_promotions(
             output_tokens: "<=64".to_string(),
             purpose: "long prompt with short answer where GPU/NPU prefill may earn promotion"
                 .to_string(),
-            promoted_route: None,
-            candidate_routes: vec![
-                DEFAULT_ASK_ROUTE.to_string(),
-                "dense_slm_openvino_gpu_candidate".to_string(),
-                "dense_slm_openvino_npu_candidate".to_string(),
-            ],
+            promoted_route: prefill_heavy_gpu_promoted
+                .then(|| "dense_slm_openvino_gpu_candidate".to_string()),
+            candidate_routes: if prefill_heavy_gpu_promoted {
+                vec![DEFAULT_ASK_ROUTE.to_string(), "dense_slm_openvino_npu_candidate".to_string()]
+            } else {
+                vec![
+                    DEFAULT_ASK_ROUTE.to_string(),
+                    "dense_slm_openvino_gpu_candidate".to_string(),
+                    "dense_slm_openvino_npu_candidate".to_string(),
+                ]
+            },
         },
         WorkloadProfile {
             profile_id: "decode_heavy".to_string(),
             prompt_tokens: "<=256".to_string(),
             output_tokens: ">=512".to_string(),
             purpose: "long answer where steady decode throughput must be measured".to_string(),
-            promoted_route: None,
-            candidate_routes: vec![
-                DEFAULT_ASK_ROUTE.to_string(),
-                "dense_slm_openvino_gpu_candidate".to_string(),
-                "dense_slm_openvino_npu_candidate".to_string(),
-            ],
+            promoted_route: decode_heavy_gpu_promoted
+                .then(|| "dense_slm_openvino_gpu_candidate".to_string()),
+            candidate_routes: if decode_heavy_gpu_promoted {
+                vec![DEFAULT_ASK_ROUTE.to_string(), "dense_slm_openvino_npu_candidate".to_string()]
+            } else {
+                vec![
+                    DEFAULT_ASK_ROUTE.to_string(),
+                    "dense_slm_openvino_gpu_candidate".to_string(),
+                    "dense_slm_openvino_npu_candidate".to_string(),
+                ]
+            },
         },
         WorkloadProfile {
             profile_id: "structured".to_string(),
@@ -14373,6 +14390,8 @@ mod tests {
                 "profiles": [
                     benchmark_qualified_gpu_profile("ask_short"),
                     benchmark_qualified_gpu_profile("ask_normal"),
+                    benchmark_qualified_gpu_profile("prefill_heavy"),
+                    benchmark_qualified_gpu_profile("decode_heavy"),
                     benchmark_qualified_gpu_profile("warm_resident")
                 ]
             }),
@@ -14405,7 +14424,13 @@ mod tests {
         assert_eq!(gpu.status, "promoted");
         assert_eq!(
             gpu.promoted_for,
-            vec!["ask_normal".to_string(), "ask_short".to_string(), "warm_resident".to_string()]
+            vec![
+                "ask_normal".to_string(),
+                "ask_short".to_string(),
+                "decode_heavy".to_string(),
+                "prefill_heavy".to_string(),
+                "warm_resident".to_string()
+            ]
         );
         assert!(gpu.missing_evidence.is_empty(), "{:?}", gpu.missing_evidence);
         assert!(
