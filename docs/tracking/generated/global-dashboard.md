@@ -46,5 +46,6 @@
 | qwen36 | QWEN36-DOCS-000 | TBD | ready | none | Qwen3.6 registration is not native BitNet-rs inference support. |
 | server-real-inference | SERVER-005 | #4490 | merged | none | Do not reintroduce simulated inference. |
 | slm-cpu | SLM-CPU-021 | #5133 | merged | none | Do not edit BitNet QK256/I2_S kernels. |
+| tl2 | TL2-DOCS-000 | TBD | ready | none | TL2 registration is not native BitNet-rs inference support. |
 | tracker-infra | TRACKER-003 | #3724 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM-002 | TBD | ready | WASM-003 | WASM detection is not inference. |
