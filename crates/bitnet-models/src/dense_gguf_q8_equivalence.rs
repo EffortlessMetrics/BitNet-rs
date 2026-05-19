@@ -114,6 +114,7 @@ pub struct DenseQ8SidecarRuntimePreflight {
     pub artifact_kind: String,
     pub tensor_name: String,
     pub role: DenseGgufTensorRole,
+    pub sidecar_payload_sha256: Option<String>,
     pub selected_path: DenseQ8RuntimePath,
     pub selected_kernel: String,
     pub fixture_equivalence_passed: bool,
@@ -147,6 +148,9 @@ pub struct DenseQ8BehaviorReceiptSummary {
 pub struct DenseQ8GeneratedIdTextEquivalenceGate {
     pub schema: u64,
     pub artifact_kind: String,
+    pub tensor_name: String,
+    pub role: DenseGgufTensorRole,
+    pub sidecar_payload_sha256: Option<String>,
     pub selected_path: DenseQ8RuntimePath,
     pub selected_kernel: String,
     pub baseline_receipt: DenseQ8BehaviorReceiptSummary,
@@ -163,6 +167,9 @@ pub struct DenseQ8GeneratedIdTextEquivalenceGate {
 pub struct DenseQ8ProductionComputeHookAvailability {
     pub schema: u64,
     pub artifact_kind: String,
+    pub tensor_name: String,
+    pub role: DenseGgufTensorRole,
+    pub sidecar_payload_sha256: Option<String>,
     pub selected_path: DenseQ8RuntimePath,
     pub selected_kernel: String,
     pub hook_status: DenseQ8ProductionComputeHookStatus,
@@ -181,6 +188,9 @@ pub struct DenseQ8ProductionComputeHookAvailability {
 pub struct DenseQ8SelectorReadinessGate {
     pub schema: u64,
     pub artifact_kind: String,
+    pub tensor_name: String,
+    pub role: DenseGgufTensorRole,
+    pub sidecar_payload_sha256: Option<String>,
     pub selected_path: DenseQ8RuntimePath,
     pub selected_kernel: String,
     pub readiness_status: DenseQ8SelectorReadinessStatus,
@@ -199,6 +209,9 @@ pub struct DenseQ8SelectorReadinessGate {
 pub struct DenseQ8SelectorUpdate {
     pub schema: u64,
     pub artifact_kind: String,
+    pub tensor_name: String,
+    pub role: DenseGgufTensorRole,
+    pub sidecar_payload_sha256: Option<String>,
     pub previous_selected_path: DenseQ8RuntimePath,
     pub selected_path: DenseQ8RuntimePath,
     pub selected_kernel: String,
@@ -395,6 +408,9 @@ pub fn build_dense_q8_generated_id_text_equivalence_gate(
     DenseQ8GeneratedIdTextEquivalenceGate {
         schema: 1,
         artifact_kind: DENSE_GGUF_Q8_GENERATED_ID_TEXT_EQUIVALENCE_ARTIFACT_KIND.to_string(),
+        tensor_name: preflight.tensor_name.clone(),
+        role: preflight.role,
+        sidecar_payload_sha256: preflight.sidecar_payload_sha256.clone(),
         selected_path: preflight.selected_path,
         selected_kernel: preflight.selected_kernel.clone(),
         baseline_receipt,
@@ -431,6 +447,9 @@ pub fn build_dense_q8_production_compute_hook_availability(
     DenseQ8ProductionComputeHookAvailability {
         schema: 1,
         artifact_kind: DENSE_GGUF_Q8_PRODUCTION_COMPUTE_HOOK_ARTIFACT_KIND.to_string(),
+        tensor_name: gate.tensor_name.clone(),
+        role: gate.role,
+        sidecar_payload_sha256: gate.sidecar_payload_sha256.clone(),
         selected_path: gate.selected_path,
         selected_kernel: gate.selected_kernel.clone(),
         hook_status,
@@ -467,6 +486,9 @@ pub fn build_dense_q8_selector_readiness_gate(
     DenseQ8SelectorReadinessGate {
         schema: 1,
         artifact_kind: DENSE_GGUF_Q8_SELECTOR_READINESS_GATE_ARTIFACT_KIND.to_string(),
+        tensor_name: availability.tensor_name.clone(),
+        role: availability.role,
+        sidecar_payload_sha256: availability.sidecar_payload_sha256.clone(),
         selected_path: availability.selected_path,
         selected_kernel: availability.selected_kernel.clone(),
         readiness_status,
@@ -502,6 +524,9 @@ pub fn build_dense_q8_selector_update(
         DenseQ8SelectorUpdate {
             schema: 1,
             artifact_kind: DENSE_GGUF_Q8_SELECTOR_UPDATE_ARTIFACT_KIND.to_string(),
+            tensor_name: readiness.tensor_name.clone(),
+            role: readiness.role,
+            sidecar_payload_sha256: readiness.sidecar_payload_sha256.clone(),
             previous_selected_path: DenseQ8RuntimePath::EagerF32Candle,
             selected_path: DenseQ8RuntimePath::PackedQ8Sidecar,
             selected_kernel: "dense-q8-sidecar-linear".to_string(),
@@ -520,6 +545,9 @@ pub fn build_dense_q8_selector_update(
         DenseQ8SelectorUpdate {
             schema: 1,
             artifact_kind: DENSE_GGUF_Q8_SELECTOR_UPDATE_ARTIFACT_KIND.to_string(),
+            tensor_name: readiness.tensor_name.clone(),
+            role: readiness.role,
+            sidecar_payload_sha256: readiness.sidecar_payload_sha256.clone(),
             previous_selected_path: readiness.selected_path,
             selected_path: readiness.selected_path,
             selected_kernel: readiness.selected_kernel.clone(),
@@ -543,10 +571,18 @@ pub fn select_dense_q8_runtime_after_selector_update(
     registry: &DenseGgufQ8SidecarRegistry,
     update: &DenseQ8SelectorUpdate,
 ) -> DenseQ8DispatchSelection {
+    let selector_update_applies_to_tensor = update.selects_packed_sidecar_without_speed_claim()
+        && update.tensor_name == tensor_name
+        && registry.descriptor_for_tensor(tensor_name).is_some_and(|descriptor| {
+            update.role == descriptor.role
+                && update.sidecar_payload_sha256.as_deref()
+                    == Some(descriptor.packed_q8_bytes_sha256.as_str())
+        });
+
     select_dense_q8_runtime_with_selector_update(
         tensor_name,
         registry,
-        update.selects_packed_sidecar_without_speed_claim(),
+        selector_update_applies_to_tensor,
     )
 }
 
@@ -573,6 +609,7 @@ pub fn build_dense_q8_sidecar_runtime_preflight(
         artifact_kind: "dense_gguf_q8_sidecar_runtime_preflight".to_string(),
         tensor_name: gate.tensor_name.clone(),
         role: gate.role,
+        sidecar_payload_sha256: gate.sidecar_payload_sha256.clone(),
         selected_path: gate.selected_path,
         selected_kernel: gate.selected_kernel.clone(),
         fixture_equivalence_passed: gate.fixture_equivalence_passed,
@@ -635,6 +672,14 @@ mod tests {
         let mut registry = DenseGgufQ8SidecarRegistry::default();
         let info = q8_info("blk.0.attn_q.weight", vec![2, 64], 136);
         let data = vec![0u8; 136];
+        assert!(registry.try_push_tensor(&info, &data).is_ok());
+        registry
+    }
+
+    fn registry_with_q_and_k_proj() -> DenseGgufQ8SidecarRegistry {
+        let mut registry = registry_with_q_proj();
+        let info = q8_info("blk.0.attn_k.weight", vec![2, 64], 136);
+        let data = vec![1u8; 136];
         assert!(registry.try_push_tensor(&info, &data).is_ok());
         registry
     }
@@ -1004,6 +1049,9 @@ mod tests {
         let update = build_dense_q8_selector_update(&readiness);
 
         assert_eq!(update.artifact_kind, DENSE_GGUF_Q8_SELECTOR_UPDATE_ARTIFACT_KIND);
+        assert_eq!(update.tensor_name, "blk.0.attn_q.weight");
+        assert_eq!(update.role, DenseGgufTensorRole::AttentionQ);
+        assert!(update.sidecar_payload_sha256.is_some());
         assert_eq!(
             update.update_status,
             DenseQ8SelectorUpdateStatus::AppliedToPackedSidecarCandidate
@@ -1022,7 +1070,7 @@ mod tests {
         assert!(update.dense_runtime_replaced);
         assert!(!update.speedup_claim);
 
-        let registry = registry_with_q_proj();
+        let registry = registry_with_q_and_k_proj();
         let selection = select_dense_q8_runtime_after_selector_update(
             "blk.0.attn_q.weight",
             &registry,
@@ -1033,6 +1081,26 @@ mod tests {
         assert!(selection.runtime_compute_enabled);
         assert!(selection.dense_runtime_replaced);
         assert!(!selection.speedup_claim);
+
+        let unproven_tensor = select_dense_q8_runtime_after_selector_update(
+            "blk.0.attn_k.weight",
+            &registry,
+            &update,
+        );
+        assert!(unproven_tensor.selects_eager_f32());
+        assert_eq!(
+            unproven_tensor.sidecar_candidate_status,
+            DenseQ8SidecarCandidateStatus::PresentButUnavailable
+        );
+
+        let mut tampered_update = update.clone();
+        tampered_update.sidecar_payload_sha256 = Some("different-payload".to_string());
+        let tampered_payload = select_dense_q8_runtime_after_selector_update(
+            "blk.0.attn_q.weight",
+            &registry,
+            &tampered_update,
+        );
+        assert!(tampered_payload.selects_eager_f32());
         Ok(())
     }
 
@@ -1053,6 +1121,9 @@ mod tests {
         let update = build_dense_q8_selector_update(&readiness);
 
         assert_eq!(update.update_status, DenseQ8SelectorUpdateStatus::Blocked);
+        assert_eq!(update.tensor_name, "blk.0.attn_q.weight");
+        assert_eq!(update.role, DenseGgufTensorRole::AttentionQ);
+        assert!(update.sidecar_payload_sha256.is_some());
         assert_eq!(update.selected_path, DenseQ8RuntimePath::EagerF32Candle);
         assert_eq!(update.selected_kernel, "dense-f32-candle-linear");
         assert!(!update.generated_id_receipt_equivalence_passed);
