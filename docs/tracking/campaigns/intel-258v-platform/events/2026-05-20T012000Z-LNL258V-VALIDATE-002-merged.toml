@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T01:20:00Z"
+event = "merged"
+item = "LNL258V-VALIDATE-002"
+pr = 6014
+branch = "codex/lunar-lake/LNL258V-VALIDATE-002-power-thermal-context"
+head_sha = "0d4bfc6051eb740cc0249f9535eabd319cda0c69"
+merge_sha = "7af45b27147cda88ec195f293d5d8062ce67955d"
+actor = "codex"
+summary = "Merged validate-surface indexing for Lunar Lake power-profile and thermal availability context."
+
+notes = [
+  "`bitnet lunar-lake validate --strict` now carries low_power power-profile and thermal temperature availability summaries into operator readiness.",
+  "The readiness receipt records AC-only battery context, energy-proxy status, thermal-zone visibility, and no usable measured temperature readings.",
+  "The merge preserves no new-inference, route-promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, measured-temperature, or BitNet QK256/I2_S behavior-change claims.",
+]
