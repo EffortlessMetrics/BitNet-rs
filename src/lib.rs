@@ -48,8 +48,10 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
-mod build_info;
+/// Build metadata captured at compile time.
+pub mod build_info;
 mod constants;
+/// Convenient prelude for common imports.
 pub mod prelude;
 
 pub use build_info::*;
@@ -94,6 +96,10 @@ mod tests {
     #[test]
     fn test_build_info() {
         // These should not panic
+        let _ = build_info::GIT_HASH;
+        let _ = build_info::BUILD_TIMESTAMP;
+        let _ = build_info::TARGET;
+        let _ = build_info::RUSTC_VERSION;
         let _ = GIT_HASH;
         let _ = BUILD_TIMESTAMP;
         let _ = TARGET;
