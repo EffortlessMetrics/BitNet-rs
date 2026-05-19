@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T03:20:11Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-002"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5839
+merge_sha = "818446f0fb7eb7d4e1f92102a2718ed3fb104583"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-002-cache-disk-repair"
+
+notes = [
+  "Merged PR #5839 with M4 cache and disk-pressure repair receipts.",
+  "`bitnet mac doctor --json --include-bitnet` records repair/readiness state without live inference by default; `--run-smoke` remains the explicit live dense smoke path.",
+  "`bitnet model prune --dry-run --json` records no-delete prune guidance and estimated reclaim before any cache deletion.",
+  "This closeout records tracker state only and adds no runtime, model, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim.",
+]
