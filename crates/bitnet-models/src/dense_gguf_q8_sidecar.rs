@@ -206,7 +206,13 @@ mod tests {
         let info = q8_info("blk.0.attn_q.weight", vec![2, 64], 136);
         let data = vec![0u8; 136];
 
-        let descriptor = DenseGgufQ8SidecarDescriptor::from_tensor(&info, &data).unwrap().unwrap();
+        let descriptor = match DenseGgufQ8SidecarDescriptor::from_tensor(&info, &data) {
+            Ok(Some(descriptor)) => descriptor,
+            result => {
+                assert!(false, "expected sidecar descriptor, got {result:?}");
+                return;
+            }
+        };
 
         assert_eq!(descriptor.role, DenseGgufTensorRole::AttentionQ);
         assert_eq!(descriptor.value_count, 128);
@@ -228,7 +234,7 @@ mod tests {
         let info = q8_info("blk.0.attn_norm.weight", vec![64], 68);
         let data = vec![0u8; 68];
 
-        registry.try_push_tensor(&info, &data).unwrap();
+        assert!(registry.try_push_tensor(&info, &data).is_ok());
 
         assert!(registry.is_empty());
         assert!(registry.eager_f32_runtime_preserved);
@@ -244,9 +250,21 @@ mod tests {
         let data = vec![0u8; 2_228_224];
 
         let transposed_descriptor =
-            DenseGgufQ8SidecarDescriptor::from_tensor(&transposed, &data).unwrap().unwrap();
+            match DenseGgufQ8SidecarDescriptor::from_tensor(&transposed, &data) {
+                Ok(Some(descriptor)) => descriptor,
+                result => {
+                    assert!(false, "expected transposed descriptor, got {result:?}");
+                    return;
+                }
+            };
         let token_major_descriptor =
-            DenseGgufQ8SidecarDescriptor::from_tensor(&token_major, &data).unwrap().unwrap();
+            match DenseGgufQ8SidecarDescriptor::from_tensor(&token_major, &data) {
+                Ok(Some(descriptor)) => descriptor,
+                result => {
+                    assert!(false, "expected token-major descriptor, got {result:?}");
+                    return;
+                }
+            };
 
         assert_eq!(transposed_descriptor.runtime_candle_shape, vec![32768, 64]);
         assert!(transposed_descriptor.shape_reshaped_without_transpose);
@@ -259,7 +277,13 @@ mod tests {
         let info = q8_info("blk.0.ffn_down.weight", vec![4, 32], 135);
         let data = vec![0u8; 135];
 
-        let err = DenseGgufQ8SidecarDescriptor::from_tensor(&info, &data).unwrap_err();
+        let err = match DenseGgufQ8SidecarDescriptor::from_tensor(&info, &data) {
+            Err(err) => err,
+            result => {
+                assert!(false, "expected truncated payload error, got {result:?}");
+                return;
+            }
+        };
 
         assert!(err.to_string().contains("expected at least 136"));
     }
