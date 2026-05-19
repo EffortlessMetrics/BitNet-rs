@@ -24,6 +24,8 @@ const DENSE_OV_PHASE: &str = "slm-openvino-cpu-gpu-npu-phase-runner.json";
 const DENSE_OV_CPU: &str = "slm-openvino-cpu-llmpipeline-smoke.json";
 const DENSE_OV_GPU: &str = "slm-openvino-gpu-arc140v-llmpipeline-smoke.json";
 const DENSE_OV_NPU: &str = "slm-openvino-npu-llmpipeline-smoke.json";
+const DENSE_SLM_ARTIFACT_MANIFEST: &str = "slm-artifact-manifest.json";
+const DENSE_SLM_OPENVINO_IR_MANIFEST: &str = "slm-openvino-ir-qwen25-int4-sym-manifest.json";
 const DENSE_OV_GPU_OPERATOR_ASK: &str = "lunar-lake-openvino-operator-ask-gpu-math-brief.json";
 const DENSE_OV_NPU_OPERATOR_ASK: &str = "lunar-lake-openvino-operator-ask-npu-math-brief.json";
 const DENSE_CPU_CORPUS_V2: &str = "slm-answer-corpus-qwen25-cpu-corpus-v2.json";
@@ -1395,6 +1397,51 @@ pub struct RoutePromotion {
     pub reason: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct RouteModelIdentityCoverage {
+    pub route_row_count: usize,
+    pub route_rows_with_identity: usize,
+    pub route_rows_with_model_hash: usize,
+    pub route_rows_with_tokenizer_template: usize,
+    pub all_route_rows_have_identity: bool,
+    pub routes_without_model_hash: Vec<String>,
+    pub routes_without_tokenizer_template: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct RouteModelIdentity {
+    pub identity_source: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub manifest_receipt: Option<String>,
+    pub selected_model: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_format: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_artifact: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo_revision: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quantization: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tokenizer_source: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tokenizer_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_template: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stop_token_policy: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub known_gaps: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeRouteProfileComparison {
     pub schema_version: String,
@@ -1420,6 +1467,8 @@ pub struct LunarLakeRouteProfileComparison {
     pub profiles: Vec<WorkloadProfileEvaluation>,
     #[serde(default)]
     pub timing_coverage: TimingApplicabilityCoverageSummary,
+    #[serde(default)]
+    pub route_model_identity_coverage: RouteModelIdentityCoverage,
     #[serde(default)]
     pub route_promotion_scope: RoutePromotionScopeSummary,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1457,8 +1506,12 @@ pub struct ProfileRouteEvidence {
     pub route_status: String,
     #[serde(default)]
     pub ledger_route_status: String,
+    #[serde(default)]
+    pub selected_model: String,
     pub selected_backend: String,
     pub runtime_api: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_identity: Option<RouteModelIdentity>,
     pub fallback_used: Option<bool>,
     pub answer_gate_passed: Option<bool>,
     pub phase_timing_present: Option<bool>,
@@ -1676,8 +1729,12 @@ pub struct ColdWarmRouteBenchmark {
     pub route_status: String,
     #[serde(default)]
     pub ledger_route_status: String,
+    #[serde(default)]
+    pub selected_model: String,
     pub selected_backend: String,
     pub runtime_api: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_identity: Option<RouteModelIdentity>,
     pub fallback_used: Option<bool>,
     pub answer_gate_passed: Option<bool>,
     pub phase_timing_present: Option<bool>,
@@ -5740,6 +5797,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
     let ledger: LunarLakeRoutePromotionLedger = read_json_receipt(&promotion_ledger_path)?;
     let phase_comparison_json: Value = read_json_receipt(&phase_comparison_path)?;
     let quality_index = load_profile_quality_index(root, cpu_corpus_v2, openvino_corpus_v2)?;
+    let route_identity_index = load_route_model_identity_index(root)?;
 
     let mut gaps = Vec::new();
     let corpus_alignment =
@@ -5784,6 +5842,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
                 &corpus_alignment,
                 telemetry_context.as_ref(),
                 &route_diagnostics,
+                &route_identity_index,
                 cpu_profile_run,
             )
         })
@@ -5808,6 +5867,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
     }
 
     let timing_coverage = timing_applicability_coverage(&profiles);
+    let route_model_identity_coverage = route_model_identity_coverage(&profiles);
     if !timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
         gaps.push(format!(
             "promotion-eligible routes lack profile-specific timing: {}",
@@ -5844,6 +5904,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
         default_route_id: ledger.default_route_id,
         profiles,
         timing_coverage,
+        route_model_identity_coverage,
         route_promotion_scope,
         promotion_blocker_summary,
         gaps,
@@ -8777,8 +8838,10 @@ fn cold_warm_route_benchmark(
         route_id: route.route_id.clone(),
         route_status: route.route_status.clone(),
         ledger_route_status: route.ledger_route_status.clone(),
+        selected_model: route.selected_model.clone(),
         selected_backend: route.selected_backend.clone(),
         runtime_api: route.runtime_api.clone(),
+        model_identity: route.model_identity.clone(),
         fallback_used: route.fallback_used,
         answer_gate_passed: route.answer_gate_passed,
         phase_timing_present: route.phase_timing_present,
@@ -11160,6 +11223,234 @@ fn corpus_case_alignment_blockers(
 }
 
 #[derive(Debug, Clone, Default)]
+struct RouteModelIdentityIndex {
+    dense_gguf_cpu: RouteModelIdentity,
+    dense_openvino_ir: RouteModelIdentity,
+    bitnet_cpu: RouteModelIdentity,
+}
+
+impl RouteModelIdentityIndex {
+    fn identity_for(&self, route: &RoutePromotion) -> RouteModelIdentity {
+        match route.route_id.as_str() {
+            DEFAULT_ASK_ROUTE => self.with_selected_model(&self.dense_gguf_cpu, route),
+            "dense_slm_openvino_gpu_candidate" | "dense_slm_openvino_npu_candidate" => {
+                self.with_selected_model(&self.dense_openvino_ir, route)
+            }
+            "bitnet_reference_cpu" => self.with_selected_model(&self.bitnet_cpu, route),
+            _ => fallback_route_model_identity(route),
+        }
+    }
+
+    fn with_selected_model(
+        &self,
+        identity: &RouteModelIdentity,
+        route: &RoutePromotion,
+    ) -> RouteModelIdentity {
+        let mut identity = identity.clone();
+        if identity.selected_model.is_empty() {
+            identity.selected_model = route_model_label(route);
+        }
+        identity
+    }
+}
+
+fn load_route_model_identity_index(root: &Path) -> Result<RouteModelIdentityIndex> {
+    Ok(RouteModelIdentityIndex {
+        dense_gguf_cpu: load_dense_gguf_route_identity(root)?,
+        dense_openvino_ir: load_dense_openvino_route_identity(root)?,
+        bitnet_cpu: load_bitnet_cpu_route_identity(root)?,
+    })
+}
+
+fn load_dense_gguf_route_identity(root: &Path) -> Result<RouteModelIdentity> {
+    let manifest_path = resolve_receipt_path(root, Path::new(DENSE_SLM_ARTIFACT_MANIFEST));
+    if !manifest_path.exists() {
+        return Ok(fallback_manifest_missing_identity(
+            "dense_slm_gguf_manifest_missing",
+            "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+            &manifest_path,
+        ));
+    }
+    let manifest: Value = read_json_receipt(&manifest_path)?;
+    Ok(RouteModelIdentity {
+        identity_source: "dense_slm_gguf_manifest".to_string(),
+        manifest_receipt: Some(path_string(&manifest_path)),
+        selected_model: "Qwen2.5-0.5B-Instruct Q8_0 GGUF".to_string(),
+        model_name: string_at(&manifest, "selected_candidate.model_name"),
+        model_family: string_at(&manifest, "selected_candidate.family"),
+        model_format: string_at(&manifest, "selected_candidate.format"),
+        model_artifact: string_at(&manifest, "selected_candidate.file"),
+        model_sha256: string_at(&manifest, "selected_candidate.sha256"),
+        repo: string_at(&manifest, "selected_candidate.repo"),
+        repo_revision: string_at(&manifest, "selected_candidate.repo_revision"),
+        quantization: string_at(&manifest, "selected_candidate.quantization"),
+        tokenizer_source: string_at(&manifest, "tokenizer.source"),
+        tokenizer_family: string_at(&manifest, "tokenizer.pretokenizer")
+            .or_else(|| string_at(&manifest, "tokenizer.tokenizer_model")),
+        prompt_template: string_at(&manifest, "tokenizer.prompt_template"),
+        stop_token_policy: string_at(&manifest, "tokenizer.stop_token_policy"),
+        known_gaps: Vec::new(),
+    })
+}
+
+fn load_dense_openvino_route_identity(root: &Path) -> Result<RouteModelIdentity> {
+    let manifest_path = resolve_receipt_path(root, Path::new(DENSE_SLM_OPENVINO_IR_MANIFEST));
+    if !manifest_path.exists() {
+        return Ok(fallback_manifest_missing_identity(
+            "dense_slm_openvino_manifest_missing",
+            "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            &manifest_path,
+        ));
+    }
+    let manifest: Value = read_json_receipt(&manifest_path)?;
+    Ok(RouteModelIdentity {
+        identity_source: "dense_slm_openvino_ir_manifest".to_string(),
+        manifest_receipt: Some(path_string(&manifest_path)),
+        selected_model: "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM".to_string(),
+        model_name: string_at(&manifest, "source_model.model_name"),
+        model_family: string_at(&manifest, "source_model.model_family"),
+        model_format: string_at(&manifest, "export_contract.format"),
+        model_artifact: string_at(&manifest, "export_contract.expected_output_dir"),
+        model_sha256: None,
+        repo: string_at(&manifest, "source_model.repo"),
+        repo_revision: string_at(&manifest, "source_model.revision"),
+        quantization: string_at(&manifest, "export_contract.weight_format").map(|format| {
+            if bool_at_any(&manifest, &["export_contract.symmetric"]).unwrap_or(false) {
+                format!("{format}_symmetric")
+            } else {
+                format
+            }
+        }),
+        tokenizer_source: string_at(&manifest, "tokenizer.source"),
+        tokenizer_family: string_at(&manifest, "tokenizer.tokenizer_family"),
+        prompt_template: string_at(&manifest, "tokenizer.prompt_template"),
+        stop_token_policy: string_at(&manifest, "tokenizer.stop_token_policy"),
+        known_gaps: vec![
+            "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256".to_string(),
+        ],
+    })
+}
+
+fn load_bitnet_cpu_route_identity(root: &Path) -> Result<RouteModelIdentity> {
+    let manifest_path = resolve_receipt_path(root, Path::new(BITNET_CPU_BUNDLE));
+    if !manifest_path.exists() {
+        return Ok(fallback_manifest_missing_identity(
+            "bitnet_cpu_reference_bundle_missing",
+            "microsoft/bitnet-b1.58-2B-4T GGUF I2_S",
+            &manifest_path,
+        ));
+    }
+    let manifest: Value = read_json_receipt(&manifest_path)?;
+    Ok(RouteModelIdentity {
+        identity_source: "bitnet_cpu_reference_bundle".to_string(),
+        manifest_receipt: Some(path_string(&manifest_path)),
+        selected_model: "microsoft/bitnet-b1.58-2B-4T GGUF I2_S".to_string(),
+        model_name: string_at(&manifest, "model.file"),
+        model_family: string_at(&manifest, "model.architecture"),
+        model_format: string_at(&manifest, "model.format"),
+        model_artifact: string_at(&manifest, "model.file"),
+        model_sha256: string_at(&manifest, "model.sha256"),
+        repo: string_at(&manifest, "model.repo"),
+        repo_revision: None,
+        quantization: Some("I2_S".to_string()),
+        tokenizer_source: string_at(&manifest, "tokenizer.source"),
+        tokenizer_family: string_at(&manifest, "tokenizer.type")
+            .or_else(|| string_at(&manifest, "tokenizer.pretokenizer_authority")),
+        prompt_template: string_at(&manifest, "cpu_reference.prompt_policy"),
+        stop_token_policy: None,
+        known_gaps: Vec::new(),
+    })
+}
+
+fn fallback_manifest_missing_identity(
+    identity_source: &str,
+    selected_model: &str,
+    manifest_path: &Path,
+) -> RouteModelIdentity {
+    RouteModelIdentity {
+        identity_source: identity_source.to_string(),
+        manifest_receipt: Some(path_string(manifest_path)),
+        selected_model: selected_model.to_string(),
+        known_gaps: vec![format!(
+            "route model identity manifest missing: {}",
+            manifest_path.display()
+        )],
+        ..RouteModelIdentity::default()
+    }
+}
+
+fn fallback_route_model_identity(route: &RoutePromotion) -> RouteModelIdentity {
+    RouteModelIdentity {
+        identity_source: "route_promotion_ledger".to_string(),
+        selected_model: route_model_label(route),
+        known_gaps: vec![
+            "route has no specialized model manifest mapping; identity is limited to route ledger fields"
+                .to_string(),
+        ],
+        ..RouteModelIdentity::default()
+    }
+}
+
+fn route_model_label(route: &RoutePromotion) -> String {
+    match route.route_id.as_str() {
+        DEFAULT_ASK_ROUTE => "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+        "dense_slm_openvino_gpu_candidate" | "dense_slm_openvino_npu_candidate" => {
+            "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM"
+        }
+        "bitnet_reference_cpu" => "microsoft/bitnet-b1.58-2B-4T GGUF I2_S",
+        _ => route.route_id.as_str(),
+    }
+    .to_string()
+}
+
+fn route_model_identity_coverage(
+    profiles: &[WorkloadProfileEvaluation],
+) -> RouteModelIdentityCoverage {
+    let mut route_row_count = 0usize;
+    let mut route_rows_with_identity = 0usize;
+    let mut route_rows_with_model_hash = 0usize;
+    let mut route_rows_with_tokenizer_template = 0usize;
+    let mut routes_without_model_hash = BTreeSet::new();
+    let mut routes_without_tokenizer_template = BTreeSet::new();
+
+    for profile in profiles {
+        for route in &profile.route_evidence {
+            route_row_count += 1;
+            if let Some(identity) = &route.model_identity {
+                route_rows_with_identity += 1;
+                if identity.model_sha256.is_some() {
+                    route_rows_with_model_hash += 1;
+                } else {
+                    routes_without_model_hash
+                        .insert(format!("{}:{}", profile.profile_id, route.route_id));
+                }
+                if identity.tokenizer_source.is_some() && identity.prompt_template.is_some() {
+                    route_rows_with_tokenizer_template += 1;
+                } else {
+                    routes_without_tokenizer_template
+                        .insert(format!("{}:{}", profile.profile_id, route.route_id));
+                }
+            } else {
+                routes_without_model_hash
+                    .insert(format!("{}:{}", profile.profile_id, route.route_id));
+                routes_without_tokenizer_template
+                    .insert(format!("{}:{}", profile.profile_id, route.route_id));
+            }
+        }
+    }
+
+    RouteModelIdentityCoverage {
+        route_row_count,
+        route_rows_with_identity,
+        route_rows_with_model_hash,
+        route_rows_with_tokenizer_template,
+        all_route_rows_have_identity: route_row_count == route_rows_with_identity,
+        routes_without_model_hash: routes_without_model_hash.into_iter().collect(),
+        routes_without_tokenizer_template: routes_without_tokenizer_template.into_iter().collect(),
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 struct RouteDiagnosticsIndex {
     by_route: BTreeMap<String, RouteDiagnosticEvidence>,
     by_route_profile: BTreeMap<(String, String), RouteDiagnosticEvidence>,
@@ -12719,6 +13010,7 @@ fn evaluate_workload_profile(
     corpus_alignment: &CorpusCaseAlignmentIndex,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
     route_diagnostics: &RouteDiagnosticsIndex,
+    route_identity_index: &RouteModelIdentityIndex,
     cpu_profile_run: Option<&Path>,
 ) -> Result<WorkloadProfileEvaluation> {
     let mut route_ids = Vec::new();
@@ -12744,6 +13036,7 @@ fn evaluate_workload_profile(
                 corpus_alignment,
                 telemetry_context,
                 route_diagnostics,
+                route_identity_index,
                 cpu_profile_run,
             )
         })
@@ -12815,6 +13108,7 @@ fn evaluate_profile_route(
     corpus_alignment: &CorpusCaseAlignmentIndex,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
     route_diagnostics: &RouteDiagnosticsIndex,
+    route_identity_index: &RouteModelIdentityIndex,
     cpu_profile_run: Option<&Path>,
 ) -> Result<ProfileRouteEvidence> {
     let route = ledger
@@ -12915,12 +13209,16 @@ fn evaluate_profile_route(
         }
     }
 
+    let model_identity = route_identity_index.identity_for(route);
+
     Ok(ProfileRouteEvidence {
         route_id: route.route_id.clone(),
         route_status,
         ledger_route_status: route.status.clone(),
+        selected_model: model_identity.selected_model.clone(),
         selected_backend: route.selected_backend.clone(),
         runtime_api: route.runtime_api.clone(),
+        model_identity: Some(model_identity),
         fallback_used: route.fallback_used,
         answer_gate_passed: route.answer_gate_passed,
         phase_timing_present: route.phase_timing_present,
@@ -14811,8 +15109,10 @@ mod tests {
             route_id: "dense_slm_openvino_gpu_candidate".to_string(),
             route_status: "promoted".to_string(),
             ledger_route_status: "promoted".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM".to_string(),
             selected_backend: "openvino-gpu".to_string(),
             runtime_api: "openvino_genai".to_string(),
+            model_identity: None,
             fallback_used: Some(false),
             answer_gate_passed: Some(true),
             phase_timing_present: Some(true),
@@ -14838,8 +15138,10 @@ mod tests {
             route_id: "dense_slm_openvino_npu_candidate".to_string(),
             route_status: "candidate".to_string(),
             ledger_route_status: "candidate".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM".to_string(),
             selected_backend: "openvino-npu".to_string(),
             runtime_api: "openvino_genai".to_string(),
+            model_identity: None,
             fallback_used: Some(false),
             answer_gate_passed: Some(true),
             phase_timing_present: Some(true),
@@ -15786,6 +16088,76 @@ mod tests {
                 }
             }),
         )?;
+        write_json(
+            temp.path(),
+            DENSE_SLM_ARTIFACT_MANIFEST,
+            json!({
+                "selected_candidate": {
+                    "model_name": "Qwen2.5-0.5B-Instruct",
+                    "family": "qwen2.5",
+                    "format": "GGUF",
+                    "file": "Qwen2.5-0.5B-Instruct-Q8_0.gguf",
+                    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+                    "repo_revision": "main",
+                    "quantization": "Q8_0"
+                },
+                "tokenizer": {
+                    "source": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "pretokenizer": "qwen2",
+                    "prompt_template": "qwen2.5-instruct-chatml",
+                    "stop_token_policy": "eos_or_stop_sequence"
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_SLM_OPENVINO_IR_MANIFEST,
+            json!({
+                "source_model": {
+                    "model_name": "Qwen2.5-0.5B-Instruct",
+                    "model_family": "qwen2.5",
+                    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "revision": "main"
+                },
+                "export_contract": {
+                    "format": "OpenVINO IR",
+                    "expected_output_dir": "openvino/qwen25-0.5b-int4-sym",
+                    "weight_format": "INT4",
+                    "symmetric": true
+                },
+                "tokenizer": {
+                    "source": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "tokenizer_family": "qwen2",
+                    "prompt_template": "qwen2.5-instruct-chatml",
+                    "stop_token_policy": "eos_or_stop_sequence"
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            BITNET_CPU_BUNDLE,
+            json!({
+                "artifact_kind": "intel_258v_cpu_reference_bundle",
+                "captured_at_utc": "2026-05-12T18:43:14Z",
+                "fallback_used": false,
+                "model": {
+                    "file": "bitnet-b1.58-2B-4T.I2_S.gguf",
+                    "architecture": "bitnet",
+                    "format": "GGUF",
+                    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                    "repo": "microsoft/bitnet-b1.58-2B-4T"
+                },
+                "tokenizer": {
+                    "source": "microsoft/bitnet-b1.58-2B-4T",
+                    "type": "sentencepiece"
+                },
+                "cpu_reference": {
+                    "fallback_used": false,
+                    "prompt_policy": "bitnet_strict_reference_prompt"
+                }
+            }),
+        )?;
 
         let operator = build_operator_readiness_receipt_with_created_utc(
             temp.path(),
@@ -15822,6 +16194,15 @@ mod tests {
 
         assert!(profiles.profile_comparison_ready, "{:?}", profiles.gaps);
         assert_eq!(profiles.artifact_kind, "lunar_lake_route_profile_comparison");
+        assert!(profiles.route_model_identity_coverage.all_route_rows_have_identity);
+        assert!(profiles.route_model_identity_coverage.route_rows_with_model_hash > 0);
+        assert!(
+            profiles
+                .route_model_identity_coverage
+                .routes_without_model_hash
+                .iter()
+                .any(|route| route.contains("dense_slm_openvino_gpu_candidate"))
+        );
         assert!(profiles.timing_coverage.route_count > 0);
         assert!(profiles.timing_coverage.promotion_eligible_routes_have_profile_specific_timing);
         assert!(profiles.timing_coverage.proxy_or_missing_timing_routes_blocked);
@@ -15839,6 +16220,15 @@ mod tests {
             .iter()
             .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
             .context("missing ask_normal CPU route")?;
+        assert_eq!(cpu_ask_normal.selected_model, "Qwen2.5-0.5B-Instruct Q8_0 GGUF");
+        let cpu_identity =
+            cpu_ask_normal.model_identity.as_ref().context("missing CPU model identity")?;
+        assert_eq!(cpu_identity.identity_source, "dense_slm_gguf_manifest");
+        assert_eq!(
+            cpu_identity.model_sha256.as_deref(),
+            Some("ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e")
+        );
+        assert_eq!(cpu_identity.prompt_template.as_deref(), Some("qwen2.5-instruct-chatml"));
         assert_eq!(cpu_ask_normal.timing_applicability.measured_prompt_tokens, Some(38));
         assert!(cpu_ask_normal.timing_applicability.timing_matches_profile);
         assert!(ask_normal.route_evidence.iter().any(|route| {
@@ -15851,6 +16241,16 @@ mod tests {
             .iter()
             .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
             .context("missing ask_normal GPU route")?;
+        let gpu_identity =
+            gpu_ask_normal.model_identity.as_ref().context("missing GPU model identity")?;
+        assert_eq!(gpu_identity.identity_source, "dense_slm_openvino_ir_manifest");
+        assert_eq!(gpu_identity.model_sha256, None);
+        assert!(
+            gpu_identity
+                .known_gaps
+                .iter()
+                .any(|gap| gap.contains("OpenVINO IR model binaries are not committed"))
+        );
         assert_eq!(gpu_ask_normal.timing_applicability.measured_output_tokens, None);
         assert!(!gpu_ask_normal.timing_applicability.timing_matches_profile);
         assert!(gpu_ask_normal.blockers.contains(
@@ -15905,6 +16305,23 @@ mod tests {
                     &"power telemetry receipt missing for low_power promotion".to_string(),
                 )
         }));
+        let bitnet_profile = profiles
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "bitnet_strict_reference")
+            .context("missing bitnet_strict_reference profile")?;
+        let bitnet_route = bitnet_profile
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "bitnet_reference_cpu")
+            .context("missing BitNet CPU route")?;
+        assert_eq!(
+            bitnet_route
+                .model_identity
+                .as_ref()
+                .and_then(|identity| identity.model_sha256.as_deref()),
+            Some("4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162")
+        );
 
         write_json(
             temp.path(),
