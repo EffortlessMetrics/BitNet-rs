@@ -1376,6 +1376,12 @@ pub fn validate_qwen3_cuda_repeated_comparator_receipt_json(
     }
 
     let profiles = require_array(receipt, "profiles")?;
+    let expected_profile_count = QWEN3_REPEATED_COMPARATOR_PROFILES.len();
+    if profiles.len() != expected_profile_count {
+        return Err(validation_error(format!(
+            "profiles must contain exactly {expected_profile_count} Qwen3 repeated comparator profiles"
+        )));
+    }
     for expected in QWEN3_REPEATED_COMPARATOR_PROFILES {
         let profile = profiles
             .iter()
@@ -1388,7 +1394,7 @@ pub fn validate_qwen3_cuda_repeated_comparator_receipt_json(
 
     let comparator_summary = require_object(receipt, "comparator_summary")?;
     require_string_eq(comparator_summary, "status", "repeated_comparator_only")?;
-    require_u64_at_least(comparator_summary, "profiles_recorded", 5)?;
+    require_u64_eq(comparator_summary, "profiles_recorded", expected_profile_count as u64)?;
     require_u64_at_least(comparator_summary, "min_runs_per_backend", 3)?;
     require_u64_at_least(comparator_summary, "total_cpu_runs", 15)?;
     require_u64_at_least(comparator_summary, "total_cuda_runs", 15)?;

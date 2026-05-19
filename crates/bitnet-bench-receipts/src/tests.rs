@@ -892,12 +892,36 @@ fn qwen3_cuda_repeated_comparator_rejects_bitnet_packed_proof() {
 #[test]
 fn qwen3_cuda_repeated_comparator_rejects_missing_decode_128_profile() -> Result<(), String> {
     let mut receipt = sample_qwen3_cuda_repeated_comparator_receipt();
+    let duplicate_profile = receipt["profiles"][0].clone();
     json_array_mut(&mut receipt, "/profiles")?.pop();
+    json_array_mut(&mut receipt, "/profiles")?.push(duplicate_profile);
 
     let err =
         expect_validation_error(validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt))?;
     assert!(err.contains("decode_128_from_warm_context"), "unexpected error: {err}");
     Ok(())
+}
+
+#[test]
+fn qwen3_cuda_repeated_comparator_rejects_extra_profile() -> Result<(), String> {
+    let mut receipt = sample_qwen3_cuda_repeated_comparator_receipt();
+    let extra_profile = receipt["profiles"][0].clone();
+    json_array_mut(&mut receipt, "/profiles")?.push(extra_profile);
+
+    let err =
+        expect_validation_error(validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt))?;
+    assert!(err.contains("exactly 5"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
+fn qwen3_cuda_repeated_comparator_rejects_profile_count_drift() {
+    let mut receipt = sample_qwen3_cuda_repeated_comparator_receipt();
+    receipt["comparator_summary"]["profiles_recorded"] = json!(6);
+
+    let err =
+        validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt).unwrap_err().to_string();
+    assert!(err.contains("profiles_recorded"), "unexpected error: {err}");
 }
 
 #[test]
