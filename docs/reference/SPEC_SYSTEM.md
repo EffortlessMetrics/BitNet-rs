@@ -47,6 +47,11 @@ Roadmap
 - Public support claims belong in `docs/status/`, hardware matrices, model
   artifact gates, and receipts.
 - Policy exceptions and CI routing belong in `policy/*.toml`.
+- PR queue disposition rules belong in
+  `docs/specs/BITNET-SPEC-PR-QUEUE-DISPOSITION.md`,
+  `docs/adr/BITNET-ADR-0006-pr-closure-creates-backlog.md`,
+  `docs/tracking/PR_QUEUE_DISPOSITION.md`, and
+  `policy/pr-dispositions.toml`.
 
 ## Rules
 
@@ -58,6 +63,8 @@ Roadmap
 6. Generated status is updated by tools, not by hand.
 7. Public claims require support-tier, hardware, model-artifact, or receipt proof.
 8. Policy exceptions require owner, reason, coverage, and review date.
+9. Closing a PR is a disposition event, not backlog reduction, unless the close
+   reason is valid under the PR queue disposition spec and policy ledger.
 
 ## Required headers
 
