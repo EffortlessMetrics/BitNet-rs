@@ -7,6 +7,8 @@ branch = "codex/lunar-lake/LNL258V-OP-012-readiness-route-reasons"
 head_sha = "035bbc7e3154bb097e079514a565be11253749fc"
 merge_sha = "5aedf1d241e4953c7b78f079f400097d320297da"
 actor = "codex"
+previous_status = "ready"
+new_status = "merged"
 summary = "Merged LNL258V-OP-012, aligning Lunar Lake operator-readiness route reasons with profile-scoped route policy."
 
 notes = [
