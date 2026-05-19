@@ -35,7 +35,7 @@ bitnet receipts explain --latest
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Microsoft BitNet 2B I2_S/QK256 | BitNet | `product_cli_ready` | `bitnet_qk256_cuda` | yes | yes | reviewed | no | no | Official packed I2_S/QK256 only. |
 | Qwen2.5 0.5B Q8_0 | dense SLM | `product_cli_ready` | `dense_regular_llm_cuda` | yes | yes | reviewed | no | exact profile only | Dense regular-LLM CUDA only; not BitNet proof. |
-| Qwen3 0.6B Q8_0 | dense SLM candidate | `accelerator_answer_ready` | `dense_regular_llm_cuda` | proof receipt only | proof receipt only | reviewed | no | no | Own Qwen3 receipts only; not Qwen2.5 or BitNet proof. |
+| Qwen3 0.6B Q8_0 | dense SLM | `product_cli_ready` | `dense_regular_llm_cuda` | yes | yes | reviewed | no | exact profile only | Own Qwen3 receipts only; not Qwen2.5 or BitNet proof. |
 | SmolLM2 360M Q8_0 | dense SLM candidate | `structurally_valid` | none | no | no | no | no | no | CPU quality is blocked pending same-prompt reference comparator capture. |
 | Llama 3.2 1B | dense SLM candidate | `registered` | none | no | no | no | no | no | Artifact, tokenizer, prompt, CPU sanity, and route plan still required. |
 | Llama 3.2 3B | dense SLM candidate | `registered` | none | no | no | no | no | no | Memory envelope plus full proof ladder still required. |
@@ -47,7 +47,8 @@ bitnet receipts explain --latest
   It does not imply speedup, full residency, or server readiness.
 - `accelerator_answer_ready` means strict accelerator receipts exist for the
   scoped model and route. It does not imply broad product UX readiness.
-- Qwen3 proof receipts are not yet a product CLI readiness claim.
+- Qwen3 product CLI and server-readiness claims are scoped to Qwen3 receipts
+  only; they do not inherit Qwen2.5 or BitNet proof.
 - Dense SLM CUDA proof is first-class CUDA product evidence, but it never proves
   BitNet packed I2_S/QK256 behavior.
 - BitNet QK256 CUDA proof never proves dense regular-LLM CUDA behavior.
