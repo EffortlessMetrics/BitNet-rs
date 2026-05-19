@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T22:05:00Z"
+event = "merged"
+item = "LNL258V-ASK-005"
+pr = 5920
+branch = "codex/lunar-lake/LNL258V-ASK-005-auto-npu-warm-resident"
+head_sha = "69721b2430c42232cc4b4beaa35c3ad7e9f7075e"
+merge_sha = "6497a521986fc1f894246dfda91026e3b256f02d"
+actor = "codex"
+summary = "Merged LNL258V-ASK-005, adding a live auto warm_resident OpenVINO NPU ask receipt and regression-v2 indexing."
+
+notes = [
+  "PR #5920 records requested_device=auto and requested_route=auto selecting dense_slm_openvino_npu_candidate for warm_resident with selected_backend=openvino-npu and runtime_api=openvino_genai.",
+  "The merged regression-v2 bundle indexes the warm_resident ask receipt as a passed check with fallback_used=false, answer_gate_passed=true, and generated token IDs available.",
+  "No speedup, power-advantage, native NPU, acceleration, broad quality, full BitNet accelerator, or BitNet QK256/I2_S behavior claim was added.",
+]
