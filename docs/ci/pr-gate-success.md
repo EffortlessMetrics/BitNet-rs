@@ -14,8 +14,10 @@ GitHub Checks API for the check runs mapped from lanes with `blocking = true`.
 Common selected blocking lanes map to these upstream checks:
 
 * **`ci-core-build-test`** -> **CI Core Success**.
-* **`feature-matrix-pr`** -> **`pr-check (no-features)`**,
-  **`pr-check (cpu)`**, and **`pr-check (cpu+full-cli)`**.
+* **`feature-matrix-pr`** -> **`pr-check (no-features)`** and
+  **`pr-check (cpu)`**.
+* **`feature-matrix-full-cli`** -> **`pr-check (cpu+full-cli)`** when
+  CLI/server/validation/model-cache paths or the `full-cli` label select it.
 * **`policy`** -> **Policy**.
 * **`compatibility-msrv`** -> **Route MSRV Compatibility** and
   **Minimum Supported Rust Version**.

@@ -254,6 +254,8 @@ title = "feature-matrix: reduce ordinary PR feature smoke"
 phase = 3
 files = [
   ".github/workflows/feature-matrix.yml",
+  ".github/workflows/pr-gate.yml",
+  "policy/ci-lane-whitelist.toml",
   "policy/ci-risk-packs.toml",
   "policy/ci-lanes.toml",
   "docs/ci/cost-and-verification-policy.md",

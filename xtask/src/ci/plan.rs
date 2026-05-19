@@ -241,6 +241,7 @@ fn lane_catalog() -> Vec<SkippedLane> {
         skipped_lane("pr-plan", "PR Plan", false),
         skipped_lane("ci-core-build-test", "CI (Core) - build/test/clippy/docs", true),
         skipped_lane("feature-matrix-pr", "Feature Matrix (PR smoke)", true),
+        skipped_lane("feature-matrix-full-cli", "Feature Matrix (full-cli PR smoke)", true),
         skipped_lane("feature-matrix-full", "Feature Matrix (full)", false),
         skipped_lane("bdd-grid-check", "BDD Grid Check", true),
         skipped_lane("policy", "Policy", true),
@@ -331,8 +332,9 @@ fn pick_lanes(
             false,
         ));
     }
+    let full_feature_matrix_requested = has("feature-matrix") || has("full-ci");
     if feature_matrix_changed(changed) {
-        if has("feature-matrix") || has("full-ci") {
+        if full_feature_matrix_requested {
             lanes.push(lane(
                 "feature-matrix-full",
                 "Feature Matrix (full ~21 jobs)",
@@ -344,11 +346,22 @@ fn pick_lanes(
             lanes.push(lane(
                 "feature-matrix-pr",
                 "Feature Matrix (PR smoke)",
-                12,
+                8,
                 "rust/manifest changed",
                 true,
             ));
         }
+    }
+    if !full_feature_matrix_requested
+        && (full_cli_feature_matrix_changed(changed) || has("full-cli"))
+    {
+        lanes.push(lane(
+            "feature-matrix-full-cli",
+            "Feature Matrix (full-cli PR smoke)",
+            5,
+            "CLI/server/validation/full-cli path or label",
+            true,
+        ));
     }
     if touched_get("gpu") {
         lanes.push(lane(
@@ -529,6 +542,33 @@ fn feature_matrix_changed(files: &[String]) -> bool {
             || path == "Cargo.toml"
             || path == "Cargo.lock"
             || path == "rust-toolchain.toml"
+            || path.starts_with(".cargo/")
+            || path == ".github/workflows/feature-matrix.yml"
+    })
+}
+
+fn full_cli_feature_matrix_changed(files: &[String]) -> bool {
+    files.iter().any(|path| {
+        path == "Cargo.toml"
+            || path == "Cargo.lock"
+            || path == "rust-toolchain.toml"
+            || path.starts_with(".cargo/")
+            || path == ".github/workflows/feature-matrix.yml"
+            || (path.starts_with("crates/") && path.ends_with("/Cargo.toml"))
+            || path.starts_with("crates/bitnet-api-")
+            || path.starts_with("crates/bitnet-cli/")
+            || path.starts_with("crates/bitnet-cli-config-core/")
+            || path.starts_with("crates/bitnet-cli-sampling-core/")
+            || path.starts_with("crates/bitnet-client-ip-core/")
+            || path.starts_with("crates/bitnet-download")
+            || path.starts_with("crates/bitnet-endpoint-registry-core/")
+            || path.starts_with("crates/bitnet-eval-core/")
+            || path.starts_with("crates/bitnet-http-auth-core/")
+            || path.starts_with("crates/bitnet-model-cache")
+            || path.starts_with("crates/bitnet-request")
+            || path.starts_with("crates/bitnet-server/")
+            || path.starts_with("crates/bitnet-server-health-types-core/")
+            || path.starts_with("crates/bitnet-validation/")
     })
 }
 
@@ -1226,11 +1266,45 @@ mod tests {
     }
 
     #[test]
+    fn ordinary_rust_feature_matrix_skips_full_cli_smoke() {
+        let plan = build_plan(&s(&["crates/bitnet-quantization/src/qk256.rs"]), &[]);
+        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-pr"));
+        assert!(
+            !plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
+            "ordinary Rust PRs should not pay the full-cli feature smoke"
+        );
+    }
+
+    #[test]
+    fn cli_paths_select_full_cli_feature_smoke() {
+        let plan = build_plan(&s(&["crates/bitnet-cli/src/model_status.rs"]), &[]);
+        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-pr"));
+        assert!(
+            plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
+            "CLI paths should keep the cpu+full-cli smoke"
+        );
+    }
+
+    #[test]
+    fn full_cli_label_selects_full_cli_feature_smoke() {
+        let plan = build_plan(&s(&["crates/bitnet-quantization/src/qk256.rs"]), &s(&["full-cli"]));
+        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-pr"));
+        assert!(
+            plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
+            "full-cli label should opt back into the cpu+full-cli smoke"
+        );
+    }
+
+    #[test]
     fn full_ci_label_picks_expensive_lanes() {
         let plan = build_plan(&s(&["crates/bitnet-kernels/src/lib.rs"]), &s(&["full-ci"]));
         let names: Vec<&str> = plan.lanes.iter().map(|l| l.name.as_str()).collect();
         assert!(names.iter().any(|n| n.contains("GPU CI Matrix (Docker")));
         assert!(names.iter().any(|n| n.contains("Clippy (macOS ARM64)")));
+        assert!(
+            !plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
+            "full matrix label supersedes the targeted full-cli smoke"
+        );
     }
 
     #[test]

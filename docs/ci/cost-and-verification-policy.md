@@ -501,6 +501,13 @@ canaries. Manifest, toolchain, and shared-foundation changes still force the
 full core sweep because their blast radius is intentionally broader than a
 single package edge.
 
+Feature Matrix follows the same routing rule. Ordinary Rust PRs run the
+canonical `no-features` and `cpu` workspace compile checks. The heavier
+`cpu+full-cli` compile smoke runs only for CLI, server, validation,
+model-cache, manifest, lockfile, toolchain, or `.cargo` changes, or when a PR
+is explicitly labeled `full-cli`. The exhaustive feature matrix remains a deep
+lane for `feature-matrix`, `full-ci`, `main`, and manual dispatch.
+
 ## Operating metric
 
 We optimize for:
