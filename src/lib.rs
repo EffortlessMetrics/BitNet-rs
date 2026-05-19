@@ -48,6 +48,13 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
+mod build_info;
+mod constants;
+pub mod prelude;
+
+pub use build_info::*;
+pub use constants::{MSRV, VERSION};
+
 // Re-export core functionality
 pub use bitnet_common as common;
 pub use bitnet_models as models;
@@ -64,53 +71,6 @@ pub use bitnet_tokenizers as tokenizers;
 #[cfg(feature = "kernels")]
 #[cfg_attr(docsrs, doc(cfg(feature = "kernels")))]
 pub use bitnet_kernels as kernels;
-
-/// Convenient prelude for common imports
-pub mod prelude {
-    pub use crate::common::{
-        BitNetConfig, BitNetError, Device, GenerationConfig, QuantizationType,
-    };
-    pub use crate::models::{BitNetModel, ModelLoader};
-    pub use crate::quantization::Quantize;
-
-    #[cfg(feature = "inference")]
-    pub use crate::inference::InferenceEngine;
-
-    #[cfg(feature = "tokenizers")]
-    pub use crate::tokenizers::Tokenizer;
-}
-
-/// Library version information
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// Minimum supported Rust version
-pub const MSRV: &str = "1.92.0";
-
-/// Build information
-pub mod build_info {
-    use bitnet_build_info_core::BuildMetadata;
-
-    const METADATA: BuildMetadata = BuildMetadata::from_env(
-        option_env!("VERGEN_GIT_SHA"),
-        None,
-        option_env!("VERGEN_BUILD_TIMESTAMP"),
-        option_env!("VERGEN_RUSTC_SEMVER"),
-        option_env!("VERGEN_CARGO_TARGET_TRIPLE"),
-        None,
-    );
-
-    /// Git commit hash at build time
-    pub const GIT_HASH: &str = METADATA.git_sha;
-
-    /// Build timestamp
-    pub const BUILD_TIMESTAMP: &str = METADATA.build_timestamp;
-
-    /// Target triple
-    pub const TARGET: &str = METADATA.cargo_target_triple;
-
-    /// Rust version used for build
-    pub const RUSTC_VERSION: &str = METADATA.rustc_semver;
-}
 
 #[cfg(test)]
 mod tests {
@@ -134,10 +94,10 @@ mod tests {
     #[test]
     fn test_build_info() {
         // These should not panic
-        let _ = build_info::GIT_HASH;
-        let _ = build_info::BUILD_TIMESTAMP;
-        let _ = build_info::TARGET;
-        let _ = build_info::RUSTC_VERSION;
+        let _ = GIT_HASH;
+        let _ = BUILD_TIMESTAMP;
+        let _ = TARGET;
+        let _ = RUSTC_VERSION;
     }
 
     #[test]
