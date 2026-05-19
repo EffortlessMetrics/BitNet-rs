@@ -159,6 +159,25 @@ unavailable for runtime compute until a later slice proves generated-ID/text and
 strict-receipt equivalence. This is an API/receipt boundary, not a performance
 claim.
 
+SLM-CPU-047 adds the next gate between the fixture-level Q8_0 sidecar prototype
+and the production selector. The gate can record that a packed sidecar fixture
+matches the eager F32 fixture output within a bounded tolerance, but it still
+keeps production sidecar runtime compute disabled until generated-ID/text and
+strict-receipt equivalence exist:
+
+```text
+artifact_kind = dense_gguf_q8_sidecar_equivalence_gate
+fixture_equivalence_passed = true | false
+generated_id_receipt_equivalence_passed = false
+sidecar_runtime_compute_allowed = false
+selected_kernel = dense-f32-candle-linear
+speedup_claim = false
+```
+
+This narrows the remaining runtime blocker without changing generated IDs,
+decoded text, tokenizer authority, backend/kernel identity, model SHA, or
+`fallback=false`.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when

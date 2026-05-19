@@ -1,0 +1,17 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T06:15:00Z"
+event = "pr_open"
+item = "SLM-CPU-047"
+pr = 5868
+head_sha = "632bd95ab5fc3ec1fae21129c6379d75723d42c7"
+branch = "codex/slm-cpu-047-q8-sidecar-equivalence-gate"
+actor = "codex"
+summary = "Opened the Q8_0 sidecar fixture equivalence gate PR."
+
+notes = [
+  "PR #5868 adds a Q8_0 sidecar equivalence gate that links the fixture prototype to the dense-linear selector.",
+  "The gate records fixture-vs-eager-F32 parity and keeps generated-ID/text receipt equivalence as the remaining runtime blocker.",
+  "Production runtime compute remains on the existing eager F32 Candle path.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
