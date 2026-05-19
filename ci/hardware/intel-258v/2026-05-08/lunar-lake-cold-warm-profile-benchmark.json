@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-19T19:00:00Z",
+  "created_utc": "2026-05-19T20:55:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -172,7 +172,7 @@
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
-          "ledger_route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -231,8 +231,7 @@
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-              "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage"
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -256,15 +255,13 @@
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
-            "benchmark_qualified_speedup_or_power_advantage",
-            "candidate route requires benchmark-qualified profile evidence",
             "route not promoted for profile regression_tiny"
           ]
         }
       ],
       "profile_gaps": [
         "regression_tiny route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; route not promoted for profile regression_tiny",
-        "regression_tiny route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile regression_tiny"
+        "regression_tiny route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; route not promoted for profile regression_tiny"
       ]
     },
     {
@@ -447,7 +444,7 @@
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
-          "ledger_route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -506,8 +503,7 @@
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-              "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage"
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -531,15 +527,13 @@
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
-            "benchmark_qualified_speedup_or_power_advantage",
-            "candidate route requires benchmark-qualified profile evidence",
             "route not promoted for profile ask_short"
           ]
         }
       ],
       "profile_gaps": [
         "ask_short route dense_slm_default_cpu remains blocked: Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile ask_short; bounded math ask only; not expanded profile regression corpus; route not promoted for profile ask_short",
-        "ask_short route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile ask_short"
+        "ask_short route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; route not promoted for profile ask_short"
       ]
     },
     {
@@ -722,7 +716,7 @@
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
-          "ledger_route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -781,8 +775,7 @@
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-              "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage"
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -806,15 +799,13 @@
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
-            "benchmark_qualified_speedup_or_power_advantage",
-            "candidate route requires benchmark-qualified profile evidence",
             "route not promoted for profile ask_normal"
           ]
         }
       ],
       "profile_gaps": [
         "ask_normal route dense_slm_default_cpu remains blocked: Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile ask_normal; bounded math ask only; not expanded profile regression corpus; route not promoted for profile ask_normal",
-        "ask_normal route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile ask_normal"
+        "ask_normal route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; route not promoted for profile ask_normal"
       ]
     },
     {
@@ -858,10 +849,10 @@
               "pipeline_construct_and_generation_wall_time",
               "direct_openvino_generated_token_ids",
               "profile_timing_from_openvino_profile_run_case_prefill_heavy_route_policy_long_context",
-              "corpus_v2_profile_regression_evidence_indexed",
-              "benchmark_qualified_latency_advantage"
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
+              "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
             ]
           },
@@ -880,13 +871,16 @@
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
             "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 1373681.117,
+            "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 6161.384100015741,
-            "route_to_baseline_total_response_ratio": 0.004485308871007608,
+            "route_to_baseline_total_response_ratio": 0.2201552717903325,
             "observed_total_response_lower_than_baseline": true,
-            "benchmark_qualified": true,
-            "qualification_status": "benchmark_qualified",
-            "qualification_blockers": [],
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "baseline route dense_slm_default_cpu is not benchmark-reference-ready for profile prefill_heavy",
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
+            ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy",
@@ -903,10 +897,11 @@
             ]
           },
           "critical_timing_present": true,
-          "benchmark_qualified_advantage": true,
+          "benchmark_qualified_advantage": false,
           "promotion_blocked": false,
           "blockers": [
-            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing"
           ]
         },
         {
@@ -923,52 +918,55 @@
             "source_receipts": [
               "lunar-lake-operator-ask-math-brief.json",
               "slm-phase-warm-session-qwen25-cpu.json",
-              "slm-openvino-cpu-gpu-npu-phase-comparison.json",
-              "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-profile-run.json"
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
-            "prompt_tokens": 2734,
-            "cold_load_ms": 3988.648,
-            "tokenize_ms": 357.075,
+            "prompt_tokens": 38,
+            "cold_load_ms": 14250.931,
+            "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
-            "first_token_ms": 1356488.0,
-            "decode_total_ms": 1369402.851,
-            "generation_total_ms": 1369402.851,
-            "total_response_ms": 1373681.117,
-            "output_tokens": 16,
-            "throughput_tokens_per_s": 1.162,
+            "first_token_ms": 9726.0,
+            "decode_total_ms": 3242.064,
+            "generation_total_ms": 3242.064,
+            "total_response_ms": 27986.539,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
               "warm_decode_128",
-              "profile_timing_from_rust_gguf_cpu_profile_run_case_prefill_heavy_route_policy_long_context",
               "telemetry_context_indexed"
             ],
-            "known_gaps": []
+            "known_gaps": [
+              "bounded math ask only; not expanded profile regression corpus",
+              "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile prefill_heavy"
+            ]
           },
           "timing_applicability": {
             "profile_id": "prefill_heavy",
             "required_prompt_tokens": ">=2048",
             "required_output_tokens": "<=64",
-            "measured_prompt_tokens": 2734,
-            "measured_output_tokens": 16,
-            "timing_matches_profile": true,
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
             "notes": [
-              "prompt timing count 2734 satisfies `>=2048`",
-              "output timing count 16 satisfies `<=64`"
+              "prompt timing count 38 does not satisfy `>=2048`",
+              "output timing count 9 satisfies `<=64`"
             ]
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_openvino_gpu_candidate",
             "baseline_route_status": "promoted",
             "baseline_total_response_ms": 6161.384100015741,
-            "route_total_response_ms": 1373681.117,
-            "route_to_baseline_total_response_ratio": 222.95008632824735,
+            "route_total_response_ms": 27986.539,
+            "route_to_baseline_total_response_ratio": 4.542248713228007,
             "observed_total_response_lower_than_baseline": false,
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
-              "benchmark-qualified advantage is false; comparison is diagnostic only"
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "route timing is not profile-specific for profile prefill_heavy",
+              "timing evidence is not profile-specific for profile prefill_heavy"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -989,13 +987,16 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "route not promoted for profile prefill_heavy"
+            "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile prefill_heavy",
+            "bounded math ask only; not expanded profile regression corpus",
+            "route not promoted for profile prefill_heavy",
+            "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         },
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
-          "ledger_route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -1047,21 +1048,20 @@
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
             "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 1373681.117,
+            "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 73652.33009997616,
-            "route_to_baseline_total_response_ratio": 0.05361675951462915,
-            "observed_total_response_lower_than_baseline": true,
+            "route_to_baseline_total_response_ratio": 2.631705553158115,
+            "observed_total_response_lower_than_baseline": false,
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-              "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage"
+              "baseline route dense_slm_default_cpu is not benchmark-reference-ready for profile prefill_heavy",
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy",
-              "lower observed total response still requires route-promotion evidence before use",
               "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
@@ -1081,15 +1081,13 @@
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
-            "benchmark_qualified_speedup_or_power_advantage",
-            "candidate route requires benchmark-qualified profile evidence",
             "route not promoted for profile prefill_heavy"
           ]
         }
       ],
       "profile_gaps": [
-        "prefill_heavy route dense_slm_default_cpu remains blocked: route not promoted for profile prefill_heavy",
-        "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile prefill_heavy"
+        "prefill_heavy route dense_slm_default_cpu remains blocked: Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile prefill_heavy; bounded math ask only; not expanded profile regression corpus; route not promoted for profile prefill_heavy; timing evidence is not profile-specific for profile prefill_heavy",
+        "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; route not promoted for profile prefill_heavy"
       ]
     },
     {
@@ -1133,10 +1131,10 @@
               "pipeline_construct_and_generation_wall_time",
               "direct_openvino_generated_token_ids",
               "profile_timing_from_openvino_profile_run_case_decode_heavy_route_policy_long_generation",
-              "corpus_v2_profile_regression_evidence_indexed",
-              "benchmark_qualified_latency_advantage"
+              "corpus_v2_profile_regression_evidence_indexed"
             ],
             "known_gaps": [
+              "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
             ]
           },
@@ -1155,13 +1153,16 @@
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
             "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 123115.592,
+            "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 13423.639300026,
-            "route_to_baseline_total_response_ratio": 0.1090328128384096,
+            "route_to_baseline_total_response_ratio": 0.4796462792353852,
             "observed_total_response_lower_than_baseline": true,
-            "benchmark_qualified": true,
-            "qualification_status": "benchmark_qualified",
-            "qualification_blockers": [],
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "baseline route dense_slm_default_cpu is not benchmark-reference-ready for profile decode_heavy",
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
+            ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy",
@@ -1178,10 +1179,11 @@
             ]
           },
           "critical_timing_present": true,
-          "benchmark_qualified_advantage": true,
+          "benchmark_qualified_advantage": false,
           "promotion_blocked": false,
           "blockers": [
-            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "benchmark-qualified speedup or power advantage missing"
           ]
         },
         {
@@ -1198,52 +1200,55 @@
             "source_receipts": [
               "lunar-lake-operator-ask-math-brief.json",
               "slm-phase-warm-session-qwen25-cpu.json",
-              "slm-openvino-cpu-gpu-npu-phase-comparison.json",
-              "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-profile-run.json"
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
             ],
-            "prompt_tokens": 67,
-            "cold_load_ms": 3748.651,
-            "tokenize_ms": 342.633,
+            "prompt_tokens": 38,
+            "cold_load_ms": 14250.931,
+            "tokenize_ms": 482.325,
             "prefill_ms": 9361.503,
-            "first_token_ms": 7443.0,
-            "decode_total_ms": 119077.073,
-            "generation_total_ms": 119077.073,
-            "total_response_ms": 123115.592,
-            "output_tokens": 512,
-            "throughput_tokens_per_s": 4.578,
+            "first_token_ms": 9726.0,
+            "decode_total_ms": 3242.064,
+            "generation_total_ms": 3242.064,
+            "total_response_ms": 27986.539,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 2.78,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
               "warm_decode_128",
-              "profile_timing_from_rust_gguf_cpu_profile_run_case_decode_heavy_route_policy_long_generation",
               "telemetry_context_indexed"
             ],
-            "known_gaps": []
+            "known_gaps": [
+              "bounded math ask only; not expanded profile regression corpus",
+              "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile decode_heavy"
+            ]
           },
           "timing_applicability": {
             "profile_id": "decode_heavy",
             "required_prompt_tokens": "<=256",
             "required_output_tokens": ">=512",
-            "measured_prompt_tokens": 67,
-            "measured_output_tokens": 512,
-            "timing_matches_profile": true,
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": false,
             "notes": [
-              "prompt timing count 67 satisfies `<=256`",
-              "output timing count 512 satisfies `>=512`"
+              "prompt timing count 38 satisfies `<=256`",
+              "output timing count 9 does not satisfy `>=512`"
             ]
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_openvino_gpu_candidate",
             "baseline_route_status": "promoted",
             "baseline_total_response_ms": 13423.639300026,
-            "route_total_response_ms": 123115.592,
-            "route_to_baseline_total_response_ratio": 9.17155096679047,
+            "route_total_response_ms": 27986.539,
+            "route_to_baseline_total_response_ratio": 2.0848697118929436,
             "observed_total_response_lower_than_baseline": false,
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
-              "benchmark-qualified advantage is false; comparison is diagnostic only"
+              "benchmark-qualified advantage is false; comparison is diagnostic only",
+              "route timing is not profile-specific for profile decode_heavy",
+              "timing evidence is not profile-specific for profile decode_heavy"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -1264,13 +1269,16 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "route not promoted for profile decode_heavy"
+            "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile decode_heavy",
+            "bounded math ask only; not expanded profile regression corpus",
+            "route not promoted for profile decode_heavy",
+            "timing evidence is not profile-specific for profile decode_heavy"
           ]
         },
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
-          "ledger_route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -1322,21 +1330,20 @@
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
             "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 123115.592,
+            "baseline_total_response_ms": 27986.539,
             "route_total_response_ms": 94153.83029999072,
-            "route_to_baseline_total_response_ratio": 0.7647595951940085,
-            "observed_total_response_lower_than_baseline": true,
+            "route_to_baseline_total_response_ratio": 3.364254161616437,
+            "observed_total_response_lower_than_baseline": false,
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-              "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage"
+              "baseline route dense_slm_default_cpu is not benchmark-reference-ready for profile decode_heavy",
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy",
-              "lower observed total response still requires route-promotion evidence before use",
               "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
@@ -1356,15 +1363,13 @@
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
-            "benchmark_qualified_speedup_or_power_advantage",
-            "candidate route requires benchmark-qualified profile evidence",
             "route not promoted for profile decode_heavy"
           ]
         }
       ],
       "profile_gaps": [
-        "decode_heavy route dense_slm_default_cpu remains blocked: route not promoted for profile decode_heavy",
-        "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile decode_heavy"
+        "decode_heavy route dense_slm_default_cpu remains blocked: Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile decode_heavy; bounded math ask only; not expanded profile regression corpus; route not promoted for profile decode_heavy; timing evidence is not profile-specific for profile decode_heavy",
+        "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; route not promoted for profile decode_heavy"
       ]
     },
     {
@@ -1523,7 +1528,7 @@
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
-          "ledger_route_status": "candidate",
+          "ledger_route_status": "promoted",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
           "fallback_used": false,
@@ -1583,7 +1588,6 @@
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "benchmark_qualified_speedup_or_power_advantage",
               "power advantage evidence missing for low_power promotion"
             ],
             "notes": [
@@ -1608,8 +1612,6 @@
             "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
             "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
             "benchmark-qualified speedup or power advantage missing",
-            "benchmark_qualified_speedup_or_power_advantage",
-            "candidate route requires benchmark-qualified profile evidence",
             "power advantage evidence missing for low_power promotion",
             "route not promoted for profile low_power"
           ]
@@ -1707,22 +1709,189 @@
       ],
       "profile_gaps": [
         "low_power route dense_slm_default_cpu remains blocked: Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile low_power; bounded math ask only; not expanded profile regression corpus; power advantage evidence missing for low_power promotion; route not promoted for profile low_power",
-        "low_power route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; power advantage evidence missing for low_power promotion; route not promoted for profile low_power",
+        "low_power route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; power advantage evidence missing for low_power promotion; route not promoted for profile low_power",
         "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; power advantage evidence missing for low_power promotion; route not promoted for profile low_power",
         "low_power has no benchmark-qualified promoted route; candidate evidence remains indexed only"
       ]
     },
     {
       "profile_id": "warm_resident",
-      "promoted_route": "dense_slm_openvino_gpu_candidate",
+      "promoted_route": "dense_slm_openvino_npu_candidate",
       "candidate_routes": [
         "dense_slm_default_cpu",
-        "dense_slm_openvino_npu_candidate"
+        "dense_slm_openvino_gpu_candidate"
       ],
       "routes": [
         {
-          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "promoted",
+          "ledger_route_status": "promoted",
+          "selected_backend": "openvino-npu",
+          "runtime_api": "openvino_genai",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "openvino_npu_resident_warm_session",
+            "source_receipts": [
+              "lunar-lake-openvino-npu-resident-session.json"
+            ],
+            "prompt_tokens": 39,
+            "cold_load_ms": null,
+            "tokenize_ms": null,
+            "prefill_ms": null,
+            "first_token_ms": 220.5839635213216,
+            "decode_total_ms": 764.1479400044773,
+            "generation_total_ms": 764.1479400044773,
+            "total_response_ms": 764.1479400044773,
+            "output_tokens": 16,
+            "throughput_tokens_per_s": 18.510822296142575,
+            "phase_coverage": [
+              "npu_resident_same_process_warm_asks",
+              "openvino_genai_perf_metrics",
+              "pipeline_construct_excluded_from_warm_resident_timing",
+              "direct_openvino_generated_token_ids",
+              "benchmark_qualified_latency_advantage"
+            ],
+            "known_gaps": [
+              "warm_resident timing excludes one-off NPU pipeline construction",
+              "resident evidence is not a power-advantage claim"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "warm_resident",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": 39,
+            "measured_output_tokens": 16,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 39 satisfies `<=512`",
+              "output timing count 16 satisfies `<=128`"
+            ]
+          },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_default_cpu",
+            "baseline_route_status": "candidate",
+            "baseline_total_response_ms": 27986.539,
+            "route_total_response_ms": 764.1479400044773,
+            "route_to_baseline_total_response_ratio": 0.02730412431506723,
+            "observed_total_response_lower_than_baseline": true,
+            "benchmark_qualified": true,
+            "qualification_status": "benchmark_qualified",
+            "qualification_blockers": [],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_default_cpu remains the comparison reference for profile warm_resident",
+              "lower observed total response still requires route-promotion evidence before use"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
+            "telemetry_gaps": [
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": true,
+          "promotion_blocked": false,
+          "blockers": [
+            "resident evidence is not a power-advantage claim",
+            "warm_resident timing excludes one-off NPU pipeline construction"
+          ]
+        },
+        {
+          "route_id": "dense_slm_default_cpu",
+          "route_status": "candidate",
+          "ledger_route_status": "promoted",
+          "selected_backend": "cpu-rust",
+          "runtime_api": "cpu",
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "phase_timing_present": true,
+          "timing": {
+            "timing_scope": "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts",
+            "source_receipts": [
+              "lunar-lake-operator-ask-math-brief.json",
+              "slm-phase-warm-session-qwen25-cpu.json",
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+            ],
+            "prompt_tokens": 38,
+            "cold_load_ms": 14250.931,
+            "tokenize_ms": 482.325,
+            "prefill_ms": 9361.503,
+            "first_token_ms": 9726.0,
+            "decode_total_ms": 3242.064,
+            "generation_total_ms": 3242.064,
+            "total_response_ms": 27986.539,
+            "output_tokens": 9,
+            "throughput_tokens_per_s": 2.78,
+            "phase_coverage": [
+              "operator_ask_math_brief",
+              "cpu_timing_model_load_tokenize_prefill_first_token_decode",
+              "warm_prefill_512",
+              "warm_decode_128",
+              "telemetry_context_indexed"
+            ],
+            "known_gaps": [
+              "bounded math ask only; not expanded profile regression corpus",
+              "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile warm_resident"
+            ]
+          },
+          "timing_applicability": {
+            "profile_id": "warm_resident",
+            "required_prompt_tokens": "<=512",
+            "required_output_tokens": "<=128",
+            "measured_prompt_tokens": 38,
+            "measured_output_tokens": 9,
+            "timing_matches_profile": true,
+            "notes": [
+              "prompt timing count 38 satisfies `<=512`",
+              "output timing count 9 satisfies `<=128`"
+            ]
+          },
+          "route_advantage_context": {
+            "baseline_route_id": "dense_slm_openvino_npu_candidate",
+            "baseline_route_status": "promoted",
+            "baseline_total_response_ms": 764.1479400044773,
+            "route_total_response_ms": 27986.539,
+            "route_to_baseline_total_response_ratio": 36.62450362666164,
+            "observed_total_response_lower_than_baseline": false,
+            "benchmark_qualified": false,
+            "qualification_status": "diagnostic_only_not_benchmark_qualified",
+            "qualification_blockers": [
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
+            ],
+            "notes": [
+              "observed total response comparison is route-policy evidence, not a speedup claim",
+              "baseline route dense_slm_openvino_npu_candidate remains the comparison reference for profile warm_resident",
+              "route remains unpromoted; benchmark qualification does not change route selection"
+            ]
+          },
+          "telemetry": {
+            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
+            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
+            "telemetry_gaps": [
+              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+            ]
+          },
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": false,
+          "promotion_blocked": true,
+          "blockers": [
+            "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile warm_resident",
+            "bounded math ask only; not expanded profile regression corpus",
+            "route not promoted for profile warm_resident"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "route_status": "candidate",
           "ledger_route_status": "promoted",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
@@ -1784,172 +1953,6 @@
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile warm_resident",
-              "lower observed total response still requires route-promotion evidence before use"
-            ]
-          },
-          "telemetry": {
-            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
-            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
-            "telemetry_gaps": [
-              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
-            ]
-          },
-          "critical_timing_present": true,
-          "benchmark_qualified_advantage": true,
-          "promotion_blocked": false,
-          "blockers": [
-            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
-          ]
-        },
-        {
-          "route_id": "dense_slm_default_cpu",
-          "route_status": "candidate",
-          "ledger_route_status": "promoted",
-          "selected_backend": "cpu-rust",
-          "runtime_api": "cpu",
-          "fallback_used": false,
-          "answer_gate_passed": true,
-          "phase_timing_present": true,
-          "timing": {
-            "timing_scope": "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts",
-            "source_receipts": [
-              "lunar-lake-operator-ask-math-brief.json",
-              "slm-phase-warm-session-qwen25-cpu.json",
-              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
-            ],
-            "prompt_tokens": 38,
-            "cold_load_ms": 14250.931,
-            "tokenize_ms": 482.325,
-            "prefill_ms": 9361.503,
-            "first_token_ms": 9726.0,
-            "decode_total_ms": 3242.064,
-            "generation_total_ms": 3242.064,
-            "total_response_ms": 27986.539,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 2.78,
-            "phase_coverage": [
-              "operator_ask_math_brief",
-              "cpu_timing_model_load_tokenize_prefill_first_token_decode",
-              "warm_prefill_512",
-              "warm_decode_128",
-              "telemetry_context_indexed"
-            ],
-            "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile warm_resident"
-            ]
-          },
-          "timing_applicability": {
-            "profile_id": "warm_resident",
-            "required_prompt_tokens": "<=512",
-            "required_output_tokens": "<=128",
-            "measured_prompt_tokens": 38,
-            "measured_output_tokens": 9,
-            "timing_matches_profile": true,
-            "notes": [
-              "prompt timing count 38 satisfies `<=512`",
-              "output timing count 9 satisfies `<=128`"
-            ]
-          },
-          "route_advantage_context": {
-            "baseline_route_id": "dense_slm_openvino_gpu_candidate",
-            "baseline_route_status": "promoted",
-            "baseline_total_response_ms": 3803.649499983061,
-            "route_total_response_ms": 27986.539,
-            "route_to_baseline_total_response_ratio": 7.357812280054888,
-            "observed_total_response_lower_than_baseline": false,
-            "benchmark_qualified": false,
-            "qualification_status": "diagnostic_only_not_benchmark_qualified",
-            "qualification_blockers": [
-              "benchmark-qualified advantage is false; comparison is diagnostic only"
-            ],
-            "notes": [
-              "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_openvino_gpu_candidate remains the comparison reference for profile warm_resident",
-              "route remains unpromoted; benchmark qualification does not change route selection"
-            ]
-          },
-          "telemetry": {
-            "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
-            "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
-            "telemetry_gaps": [
-              "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
-            ]
-          },
-          "critical_timing_present": true,
-          "benchmark_qualified_advantage": false,
-          "promotion_blocked": true,
-          "blockers": [
-            "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile warm_resident",
-            "bounded math ask only; not expanded profile regression corpus",
-            "route not promoted for profile warm_resident"
-          ]
-        },
-        {
-          "route_id": "dense_slm_openvino_npu_candidate",
-          "route_status": "candidate",
-          "ledger_route_status": "candidate",
-          "selected_backend": "openvino-npu",
-          "runtime_api": "openvino_genai",
-          "fallback_used": false,
-          "answer_gate_passed": true,
-          "phase_timing_present": true,
-          "timing": {
-            "timing_scope": "openvino_npu_resident_warm_session",
-            "source_receipts": [
-              "lunar-lake-openvino-npu-resident-session.json"
-            ],
-            "prompt_tokens": 39,
-            "cold_load_ms": null,
-            "tokenize_ms": null,
-            "prefill_ms": null,
-            "first_token_ms": 220.5839635213216,
-            "decode_total_ms": 764.1479400044773,
-            "generation_total_ms": 764.1479400044773,
-            "total_response_ms": 764.1479400044773,
-            "output_tokens": 16,
-            "throughput_tokens_per_s": 18.510822296142575,
-            "phase_coverage": [
-              "npu_resident_same_process_warm_asks",
-              "openvino_genai_perf_metrics",
-              "pipeline_construct_excluded_from_warm_resident_timing",
-              "direct_openvino_generated_token_ids",
-              "benchmark_qualified_latency_advantage"
-            ],
-            "known_gaps": [
-              "warm_resident timing excludes one-off NPU pipeline construction",
-              "resident evidence is not a route promotion or power-advantage claim"
-            ]
-          },
-          "timing_applicability": {
-            "profile_id": "warm_resident",
-            "required_prompt_tokens": "<=512",
-            "required_output_tokens": "<=128",
-            "measured_prompt_tokens": 39,
-            "measured_output_tokens": 16,
-            "timing_matches_profile": true,
-            "notes": [
-              "prompt timing count 39 satisfies `<=512`",
-              "output timing count 16 satisfies `<=128`"
-            ]
-          },
-          "route_advantage_context": {
-            "baseline_route_id": "dense_slm_default_cpu",
-            "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 27986.539,
-            "route_total_response_ms": 764.1479400044773,
-            "route_to_baseline_total_response_ratio": 0.02730412431506723,
-            "observed_total_response_lower_than_baseline": true,
-            "benchmark_qualified": true,
-            "qualification_status": "benchmark_qualified",
-            "qualification_blockers": [],
-            "notes": [
-              "observed total response comparison is route-policy evidence, not a speedup claim",
-              "baseline route dense_slm_default_cpu remains the comparison reference for profile warm_resident",
               "lower observed total response still requires route-promotion evidence before use",
               "route remains unpromoted; benchmark qualification does not change route selection"
             ]
@@ -1963,20 +1966,18 @@
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
-          "critical_timing_present": false,
-          "benchmark_qualified_advantage": false,
+          "critical_timing_present": true,
+          "benchmark_qualified_advantage": true,
           "promotion_blocked": true,
           "blockers": [
-            "cold/warm critical timing is incomplete",
-            "resident evidence is not a route promotion or power-advantage claim",
-            "route not promoted for profile warm_resident",
-            "warm_resident timing excludes one-off NPU pipeline construction"
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+            "route not promoted for profile warm_resident"
           ]
         }
       ],
       "profile_gaps": [
         "warm_resident route dense_slm_default_cpu remains blocked: Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile warm_resident; bounded math ask only; not expanded profile regression corpus; route not promoted for profile warm_resident",
-        "warm_resident route dense_slm_openvino_npu_candidate remains blocked: cold/warm critical timing is incomplete; resident evidence is not a route promotion or power-advantage claim; route not promoted for profile warm_resident; warm_resident timing excludes one-off NPU pipeline construction"
+        "warm_resident route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; route not promoted for profile warm_resident"
       ]
     },
     {
@@ -2053,15 +2054,18 @@
   ],
   "timing_coverage": {
     "route_count": 23,
-    "profile_specific_route_count": 23,
-    "proxy_or_missing_route_count": 0,
+    "profile_specific_route_count": 21,
+    "proxy_or_missing_route_count": 2,
     "promotion_eligible_route_count": 8,
     "promotion_eligible_profile_specific_route_count": 8,
     "candidate_route_count": 14,
     "candidate_proxy_or_missing_route_count": 0,
     "promotion_eligible_routes_have_profile_specific_timing": true,
     "proxy_or_missing_timing_routes_blocked": true,
-    "proxy_or_missing_routes": [],
+    "proxy_or_missing_routes": [
+      "decode_heavy:dense_slm_default_cpu",
+      "prefill_heavy:dense_slm_default_cpu"
+    ],
     "promotion_eligible_proxy_or_missing_routes": [],
     "unblocked_proxy_or_missing_routes": []
   },
@@ -2070,16 +2074,17 @@
       "ask_normal",
       "ask_short",
       "decode_heavy",
-      "prefill_heavy",
+      "prefill_heavy"
+    ],
+    "openvino_npu_promoted_profiles": [
       "warm_resident"
     ],
-    "openvino_npu_promoted_profiles": [],
     "profile_scoped_promotion_only": true,
-    "openvino_npu_remains_candidate": true,
+    "openvino_npu_remains_candidate": false,
     "unexpected_openvino_profile_promotions": [],
     "notes": [
-      "OpenVINO GPU is profile-promoted only for ask_normal,ask_short,decode_heavy,prefill_heavy,warm_resident",
-      "OpenVINO NPU remains candidate-only",
+      "OpenVINO GPU is profile-promoted only for ask_normal,ask_short,decode_heavy,prefill_heavy",
+      "OpenVINO NPU is profile-promoted only for warm_resident",
       "Profile promotion is not a broad acceleration, power-advantage, or all-profile claim"
     ]
   },
