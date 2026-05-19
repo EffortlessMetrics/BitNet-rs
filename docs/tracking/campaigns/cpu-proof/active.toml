@@ -938,7 +938,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-AVX2-HOTPATH-001"
-status = "in_progress"
+status = "pr_open"
+pr = 5963
+head_sha = "2491ac26c2905ce2bab6edd2d04a2604d8a313e0"
 branch = "codex/cpu-avx2-hotpath-001-counters"
 stackable = false
 review_mode = "codex_premerge"
