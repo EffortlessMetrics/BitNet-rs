@@ -1979,35 +1979,58 @@ fn dense_gguf_qwen_short_decode_rejects_missing_transfer_timing_source_fields() 
 }
 
 #[test]
-fn dense_gguf_qwen_short_decode_accepts_legacy_receipt_without_transfer_reduction_section() {
+fn dense_gguf_qwen_short_decode_accepts_legacy_receipt_without_transfer_reduction_section()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
-    receipt.as_object_mut().unwrap().remove("logits_transfer_reduction");
+    let receipt_object = receipt.as_object_mut().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "receipt must be an object")
+    })?;
+    receipt_object.remove("logits_transfer_reduction");
 
-    validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt).unwrap();
+    validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)?;
+    Ok(())
 }
 
 #[test]
-fn dense_gguf_qwen_short_decode_rejects_unearned_transfer_reduction_claim() {
+fn dense_gguf_qwen_short_decode_rejects_unearned_transfer_reduction_claim()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
     receipt["logits_transfer_reduction"]["device_to_host_bytes_reduced"] = json!(true);
 
-    let err = validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)
-        .unwrap_err()
-        .to_string();
+    let err = match validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted an unearned transfer-reduction claim",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
 
     assert!(err.contains("device_to_host_bytes_reduced"), "unexpected error: {err}");
+    Ok(())
 }
 
 #[test]
-fn dense_gguf_qwen_short_decode_requires_reduction_blocker_when_full_logits_download_remains() {
+fn dense_gguf_qwen_short_decode_requires_reduction_blocker_when_full_logits_download_remains()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
     receipt["logits_transfer_reduction"]["reduction_blocker"] = Value::Null;
 
-    let err = validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)
-        .unwrap_err()
-        .to_string();
+    let err = match validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted a full-logits receipt without a reduction blocker",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
 
     assert!(err.contains("reduction_blocker"), "unexpected error: {err}");
+    Ok(())
 }
 
 #[test]
@@ -2112,35 +2135,58 @@ fn dense_gguf_qwen_warm_session_rejects_missing_transfer_timing_source_fields() 
 }
 
 #[test]
-fn dense_gguf_qwen_warm_session_accepts_legacy_receipt_without_transfer_reduction_section() {
+fn dense_gguf_qwen_warm_session_accepts_legacy_receipt_without_transfer_reduction_section()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
-    receipt.as_object_mut().unwrap().remove("logits_transfer_reduction");
+    let receipt_object = receipt.as_object_mut().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "receipt must be an object")
+    })?;
+    receipt_object.remove("logits_transfer_reduction");
 
-    validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt).unwrap();
+    validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt)?;
+    Ok(())
 }
 
 #[test]
-fn dense_gguf_qwen_warm_session_rejects_transfer_reduction_byte_mismatch() {
+fn dense_gguf_qwen_warm_session_rejects_transfer_reduction_byte_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
     receipt["logits_transfer_reduction"]["actual_device_to_host_bytes"] = json!(128);
 
-    let err = validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt)
-        .unwrap_err()
-        .to_string();
+    let err = match validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted mismatched transfer byte accounting",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
 
     assert!(err.contains("actual_device_to_host_bytes"), "unexpected error: {err}");
+    Ok(())
 }
 
 #[test]
-fn dense_gguf_qwen_warm_session_rejects_transfer_reduction_without_top_k_evidence() {
+fn dense_gguf_qwen_warm_session_rejects_transfer_reduction_without_top_k_evidence()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
     receipt["logits_transfer_reduction"]["top_k_evidence_preserved"] = json!(false);
 
-    let err = validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt)
-        .unwrap_err()
-        .to_string();
+    let err = match validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted transfer reduction without top-k evidence",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
 
     assert!(err.contains("top_k_evidence_preserved"), "unexpected error: {err}");
+    Ok(())
 }
 
 #[test]
