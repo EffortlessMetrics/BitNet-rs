@@ -348,6 +348,20 @@ truth, invocation counters, parity, and profile/sustained receipts.
 
 ## A770 BitNet Productization
 
+Use these artifacts before processing the A770 diagnostic branch chain or
+closing/replacing A770 diagnostic PRs:
+
+1. [A770 Diagnostic Lineage](BITNET-SPEC-A770-DIAGNOSTIC-LINEAGE.md)
+   - Defines durable versus transient diagnostic content, lineage frontiers,
+     successor rules, forbidden batch actions, and the no-claim boundary for
+     diagnostic evidence.
+2. [A770 Diagnostic Lineage Plan](../../plans/a770-diagnostic-lineage/implementation-plan.md)
+   - Sequences lineage policy/checker work before narrow runtime salvage slices.
+
+Do not bulk-close, bulk-reopen, bulk-recreate, or treat diagnostic-only as
+disposable. Diagnostic lineage can route runtime salvage, but it does not prove
+A770 support, quality, speed, residency, or selected execution.
+
 Use these specs before implementing or claiming A770 BitNet product support:
 
 1. [A770 BitNet Claim Boundary](a770-bitnet-claim-boundary.md)
