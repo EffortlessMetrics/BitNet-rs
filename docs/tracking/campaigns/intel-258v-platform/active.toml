@@ -9373,6 +9373,77 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-PROFILE-RUN-004"
+status = "pr_open"
+pr = 5898
+head_sha = "dd6e71750a925c6315327a01e8d8194f9f558af0"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-004-cpu-heavy-profile-run"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-PROFILE-RUN-003", "LNL258V-ROUTE-022"]
+acceptance = "Run explicit dense Qwen Rust GGUF CPU prefill_heavy and decode_heavy profile cases on the 258V, record same-machine CPU baseline timing with prompt/output token counts that satisfy the route-profile thresholds, feed that timing into route-profile/benchmark/regression/readiness/comparison/excellence artifacts, and keep route promotion, speedup, power advantage, OpenVINO GPU/NPU promotion, native accelerator, and BitNet QK256/I2_S claims unchanged."
+commands = [
+  "python -m py_compile scripts/gguf_cpu_profile_run.py",
+  "python scripts/gguf_cpu_profile_run.py --bitnet-bin target/release/bitnet.exe --model C:/Users/szim9/AppData/Local/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf --threads 8 --work-dir target/lunar-lake-cpu-profile-run-release --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-profile-run.json --created-utc 2026-05-19T18:15:00Z",
+  "target/debug/bitnet.exe lunar-lake profile-compare --artifact-root ci/hardware/intel-258v/2026-05-08 --promotion-ledger lunar-lake-route-promotion.json --phase-comparison slm-openvino-cpu-gpu-npu-phase-comparison.json --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --cpu-corpus-v2 slm-answer-corpus-qwen25-cpu-corpus-v2.json --openvino-corpus-v2 slm-openvino-cpu-gpu-npu-corpus-v2.json --telemetry-context lunar-lake-power-thermal-context.json --gpu-quality-diagnosis lunar-lake-openvino-gpu-corpus-v2-diagnosis.json --npu-quality-diagnosis lunar-lake-openvino-npu-corpus-v2-diagnosis.json --npu-cold-start-diagnosis lunar-lake-openvino-npu-cold-start-diagnosis.json --npu-resident-session lunar-lake-openvino-npu-resident-session.json --npu-cache-experiment lunar-lake-openvino-npu-cache-experiment.json --openvino-budget-sensitivity lunar-lake-openvino-generation-budget-sensitivity.json --cpu-profile-run lunar-lake-cpu-profile-run.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json --created-utc 2026-05-19T18:25:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake benchmark --artifact-root ci/hardware/intel-258v/2026-05-08 --route-profile-comparison lunar-lake-route-profile-comparison.json --phase-comparison slm-openvino-cpu-gpu-npu-phase-comparison.json --telemetry-context lunar-lake-power-thermal-context.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json --created-utc 2026-05-19T18:25:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake power-profile --artifact-root ci/hardware/intel-258v/2026-05-08 --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --telemetry-context lunar-lake-power-thermal-context.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json --created-utc 2026-05-19T18:25:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-19T18:30:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake validate --artifact-root ci/hardware/intel-258v/2026-05-08 --route-promotion-ledger lunar-lake-route-promotion.json --route-profile-comparison lunar-lake-route-profile-comparison.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json --created-utc 2026-05-19T18:25:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-19T18:30:00Z --strict",
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "scripts/gguf_cpu_profile_run.py",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-profile-run.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Rust GGUF CPU dense Qwen timing for prefill_heavy and decode_heavy now comes from explicit profile-run cases that satisfy the route-profile prompt/output token thresholds.",
+  "Route-profile, cold/warm benchmark, power-profile, regression-v2, readiness, comparison, and excellence-audit artifacts index the new CPU profile-run receipt.",
+  "OpenVINO GPU now has benchmark-qualified latency advantage evidence for prefill_heavy and decode_heavy, while route promotion remains unchanged until a route-policy PR decides promotion.",
+]
+must_not_claim = [
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU or NPU is newly promoted by this PR.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM profile-run receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-PROFILE-RUN-003"
 status = "merged"
 pr = 5874

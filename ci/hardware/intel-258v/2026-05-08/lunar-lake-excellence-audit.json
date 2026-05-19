@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-19T06:05:00Z",
+  "created_utc": "2026-05-19T18:30:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "da7dd263163019056e1cd4fd6583708cb209c5aa",
+  "source_revision": "25aed2eb8d3ebc9f14234ecbcd14ed6cbfe9d2d9",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_explicit_unpromoted_profiles",
   "excellent_support_ready": false,
-  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route and warm_resident promoted on the OpenVINO GPU route, but excellent all-profile support is not complete while prefill_heavy, decode_heavy, and low_power have no promoted route and low_power lacks battery/energy power-advantage proof.",
+  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route and warm_resident promoted on the OpenVINO GPU route. CPU profile-specific heavy-run evidence now clears the prefill_heavy/decode_heavy timing gap and shows OpenVINO GPU benchmark-qualified latency advantage for those profiles, but excellent all-profile support is not complete while prefill_heavy, decode_heavy, and low_power still have no promoted route and low_power lacks battery/energy power-advantage proof.",
   "command_surface": {
     "ask": {
       "status": "ready_profile_scoped",
@@ -116,7 +116,7 @@
         ],
         "blockers": [
           "route not promoted for profile prefill_heavy",
-          "timing evidence is not profile-specific for profile prefill_heavy",
+          "gpu_benchmark_qualified_but_not_promoted_for_profile",
           "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "benchmark_qualified_speedup_or_power_advantage",
           "candidate route requires benchmark-qualified profile evidence"
@@ -134,7 +134,7 @@
         ],
         "blockers": [
           "route not promoted for profile decode_heavy",
-          "timing evidence is not profile-specific for profile decode_heavy",
+          "gpu_benchmark_qualified_but_not_promoted_for_profile",
           "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "benchmark_qualified_speedup_or_power_advantage",
           "candidate route requires benchmark-qualified profile evidence"
@@ -290,14 +290,14 @@
   },
   "remaining_gaps": [
     "No promoted route for prefill_heavy, decode_heavy, or low_power.",
+    "prefill_heavy and decode_heavy now have profile-specific CPU baseline timing and OpenVINO GPU benchmark-qualified latency advantage, but no route-promotion PR has promoted them yet.",
     "OpenVINO NPU remains candidate-only; cold-start blockers are preserved for cold profiles.",
     "low_power lacks battery-mode sample, energy-proxy receipt, and benchmark-qualified power advantage.",
     "Thermal zone visibility is recorded, but temperature readings remain unavailable.",
-    "OpenVINO profile receipts still do not expose prefill_512/decode_128 splits for every profile.",
     "BitNet accelerator inference and packed QK256 accelerator decode remain unclaimed."
   ],
   "next_recommended_work": [
-    "LNL258V-PROFILE-RUN follow-up for benchmark-qualified prefill_heavy/decode_heavy promotion evidence.",
+    "LNL258V-ROUTE follow-up to decide prefill_heavy/decode_heavy GPU promotion from benchmark-qualified CPU/OpenVINO profile evidence.",
     "LNL258V-POWER follow-up for battery and energy-proxy low_power evidence.",
     "Continue NPU resident and low-power follow-up before any NPU profile promotion.",
     "Continue BitNet semantic-intake reruns after shared A770/CUDA/CPU semantic fixes."
@@ -322,17 +322,19 @@
     "arc_opencl_parity": "ci\\hardware\\intel-258v\\2026-05-08/arc-140v-opencl-parity.json",
     "npu_rmsnorm_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
     "npu_linear_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
-    "npu_ffn_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-ffn-subgraph-parity.json"
+    "npu_ffn_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-ffn-subgraph-parity.json",
+    "cpu_profile_run": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-cpu-profile-run.json"
   },
   "claim_boundary": {
-    "new_inference_run": false,
-    "route_promotion_changed": true,
-    "route_promotion_scope": "openvino_gpu_warm_resident_only",
+    "new_inference_run": true,
+    "route_promotion_changed": false,
+    "route_promotion_scope": "unchanged; profile-run evidence only",
     "speedup_claim": false,
     "power_advantage_claim": false,
     "arc_npu_acceleration_claim": false,
     "native_opencl_or_native_npu_claim": false,
     "full_bitnet_accelerator_inference_claim": false,
-    "bitnet_qk256_i2s_behavior_change": false
+    "bitnet_qk256_i2s_behavior_change": false,
+    "new_inference_scope": "Rust GGUF CPU dense Qwen prefill_heavy/decode_heavy profile-run timing only"
   }
 }

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T06:05:00Z",
+  "created_utc": "2026-05-19T18:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -61,18 +61,15 @@
     ],
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 21,
-      "proxy_or_missing_route_count": 2,
+      "profile_specific_route_count": 23,
+      "proxy_or_missing_route_count": 0,
       "promotion_eligible_route_count": 6,
       "promotion_eligible_profile_specific_route_count": 6,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
-      "proxy_or_missing_routes": [
-        "decode_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_default_cpu"
-      ],
+      "proxy_or_missing_routes": [],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
     },
@@ -277,18 +274,15 @@
     ],
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 21,
-      "proxy_or_missing_route_count": 2,
+      "profile_specific_route_count": 23,
+      "proxy_or_missing_route_count": 0,
       "promotion_eligible_route_count": 6,
       "promotion_eligible_profile_specific_route_count": 6,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
-      "proxy_or_missing_routes": [
-        "decode_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_default_cpu"
-      ],
+      "proxy_or_missing_routes": [],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
     },
@@ -416,6 +410,7 @@
     "regression_ready": true,
     "gaps": [],
     "blockers": [
+      "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile low_power",
       "battery-mode sample is missing for low_power promotion",
       "benchmark-qualified speedup or power advantage missing",
       "benchmark_qualified_speedup_or_power_advantage",
@@ -500,18 +495,15 @@
     "cold_warm_benchmark_ready": true,
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 21,
-      "proxy_or_missing_route_count": 2,
+      "profile_specific_route_count": 23,
+      "proxy_or_missing_route_count": 0,
       "promotion_eligible_route_count": 6,
       "promotion_eligible_profile_specific_route_count": 6,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
-      "proxy_or_missing_routes": [
-        "decode_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_default_cpu"
-      ],
+      "proxy_or_missing_routes": [],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
     },
@@ -640,7 +632,7 @@
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
-        "profile_specific_timing=21/23",
+        "profile_specific_timing=23/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "promotion_blocker_summary_count=11",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short,warm_resident",
@@ -662,7 +654,7 @@
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
         "telemetry_gap_count=46",
-        "profile_specific_timing=21/23",
+        "profile_specific_timing=23/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short,warm_resident",
         "openvino_npu_promoted_profiles=",
@@ -722,7 +714,7 @@
         "energy_proxy_source=none",
         "thermal_context_recorded=true",
         "claim_boundary_preserved=true",
-        "blocker_count=8"
+        "blocker_count=9"
       ]
     },
     {
