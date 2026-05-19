@@ -76,6 +76,7 @@ struct SupportBundleSummary {
     bitnet_packed_i2s_qk256_proof: Option<bool>,
     dense_regular_llm_cuda_proof: Option<bool>,
     next_proof: Option<String>,
+    claim_boundary: Option<String>,
     receipt_path: String,
 }
 
@@ -176,6 +177,7 @@ fn support_summary(
         bitnet_packed_i2s_qk256_proof: receipt.bitnet_packed_i2s_qk256_proof,
         dense_regular_llm_cuda_proof: receipt.dense_regular_llm_cuda_proof,
         next_proof,
+        claim_boundary: receipt.model_coverage.claim_boundary.clone(),
         receipt_path: receipt.path.clone(),
     }
 }
@@ -422,6 +424,12 @@ mod tests {
                 .context("support summary next_proof must be a string")?
                 .contains("exact-profile dense Qwen server readiness")
         );
+        assert!(
+            value["summary"]["claim_boundary"]
+                .as_str()
+                .context("support summary claim_boundary must be a string")?
+                .contains("do not satisfy BitNet packed I2_S/QK256 proof")
+        );
         assert_eq!(value["runtime"]["runtime_api"], "cuda");
         assert_eq!(value["runtime"]["driver_version"], "test-driver");
         assert_eq!(value["runtime"]["cuda_runtime_version"], "test-cuda-runtime");
@@ -442,6 +450,97 @@ mod tests {
                 && model["dense_regular_llm_cuda_proof"] == true
                 && model["bitnet_packed_i2s_qk256_proof"] == false
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn cuda_support_issue_template_requires_bundle_json_and_claim_boundaries() -> Result<()> {
+        let template_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join(".github")
+            .join("ISSUE_TEMPLATE")
+            .join("cuda-support.yml");
+        let template: serde_yaml::Value = serde_yaml::from_slice(
+            &fs::read(&template_path)
+                .with_context(|| format!("read {}", template_path.display()))?,
+        )?;
+
+        assert_eq!(template["name"].as_str(), Some("CUDA Support"));
+        let labels = template["labels"]
+            .as_sequence()
+            .context("cuda support issue labels must be a sequence")?;
+        assert!(labels.iter().any(|label| label.as_str() == Some("support")));
+        assert!(labels.iter().any(|label| label.as_str() == Some("cuda")));
+
+        let body =
+            template["body"].as_sequence().context("cuda support issue body must be a sequence")?;
+        let support_bundle_index = body
+            .iter()
+            .position(|item| item["id"].as_str() == Some("support-bundle"))
+            .context("cuda support issue template must include support-bundle field")?;
+        let issue_index = body
+            .iter()
+            .position(|item| item["id"].as_str() == Some("issue"))
+            .context("cuda support issue template must include issue field")?;
+        assert!(
+            support_bundle_index < issue_index,
+            "support bundle must be requested before free-form issue prose"
+        );
+
+        let support_bundle = &body[support_bundle_index];
+        assert_eq!(support_bundle["type"].as_str(), Some("textarea"));
+        assert_eq!(support_bundle["attributes"]["render"].as_str(), Some("json"));
+        assert_eq!(support_bundle["validations"]["required"].as_bool(), Some(true));
+        let description = support_bundle["attributes"]["description"]
+            .as_str()
+            .context("support-bundle description must be a string")?;
+        assert!(description.contains(
+            "bitnet support bundle --latest --device nvidia-rtx-5070-ti-cuda --format json"
+        ));
+        let placeholder = support_bundle["attributes"]["placeholder"]
+            .as_str()
+            .context("support-bundle placeholder must be a string")?;
+        for required_fragment in [
+            "\"kind\": \"bitnet_support_bundle\"",
+            "\"selected_backend\": \"nvidia-rtx-5070-ti-cuda\"",
+            "\"selected_route\":",
+            "\"fallback_used\": false",
+            "\"speedup_claim\": false",
+            "\"claim_boundary\":",
+        ] {
+            assert!(
+                placeholder.contains(required_fragment),
+                "support-bundle placeholder missing {required_fragment}"
+            );
+        }
+
+        let claim_boundaries = body
+            .iter()
+            .find(|item| item["id"].as_str() == Some("claim-boundaries"))
+            .context("cuda support issue template must include claim-boundaries")?;
+        let options = claim_boundaries["attributes"]["options"]
+            .as_sequence()
+            .context("claim boundary options must be a sequence")?;
+        let option_labels = options
+            .iter()
+            .filter_map(|option| option["label"].as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        for required_boundary in [
+            "selected backend is `nvidia-rtx-5070-ti-cuda`, not generic `cuda`",
+            "`fallback_used=false`",
+            "`speedup_claim=false`",
+            "Qwen2.5 exact-profile server readiness is not being treated as broad dense GGUF server readiness",
+            "Dense CUDA proof is not being treated as BitNet I2_S/QK256 proof",
+            "Qwen2.5 evidence is not being treated as Qwen3 evidence",
+        ] {
+            assert!(
+                option_labels.contains(required_boundary),
+                "claim boundary checklist missing {required_boundary}"
+            );
+        }
+
         Ok(())
     }
 }
