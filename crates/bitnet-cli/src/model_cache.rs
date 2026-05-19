@@ -3788,7 +3788,7 @@ mod tests {
         assert_eq!(qwen3.warm_session, "ready");
         assert_eq!(qwen3.benchmark, "reviewed, speedup not accepted");
         assert_eq!(qwen3.tier, "product_cli_ready");
-        assert!(qwen3.next_proof.contains("server smoke/readiness review"));
+        assert!(qwen3.next_proof.contains("current-source Qwen3 non-streaming"));
         assert!(qwen3.claim_boundary.contains("dense_regular_llm_cuda RTX 5070 Ti route"));
         assert!(qwen3.claim_boundary.contains("does not inherit Qwen2.5 CUDA receipts"));
         Ok(())
