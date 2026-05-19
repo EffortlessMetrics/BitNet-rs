@@ -107,7 +107,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-004"
-status = "proposed"
+status = "in_progress"
 branch = "codex/intel-a770/A770-004-runtime-probe"
 stackable = false
 review_mode = "codex_premerge"
@@ -122,6 +122,7 @@ commands = [
 allowed_paths = [
   "crates/bitnet-device-probe/**",
   "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
 ]
 forbidden_paths = [
   "crates/bitnet-quantization/src/qk256/**",
