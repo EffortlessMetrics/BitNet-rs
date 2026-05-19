@@ -541,8 +541,8 @@ forbidden_claims = [
   "full_residency",
   "qwen2_5_proof_inheritance",
 ]
-next_proof = "Separate Qwen3 server smoke/readiness review or exact-profile performance comparator evidence before any server, speed, benchmark-qualified, or full-residency promotion."
-claim_boundary = "Qwen3 0.6B Q8_0 is product CLI-ready for the bounded ask/chat user paths on the dense_regular_llm_cuda RTX 5070 Ti route after exact artifact, CPU answer sanity, all-layer plan, one-token, short-decode, warm-session, benchmark review, ask user-path, chat user-path, and product promotion review receipts. It does not inherit Qwen2.5 CUDA receipts, prove speed, server readiness, full residency, broad dense GGUF support, benchmark-qualified speed, or BitNet QK256 behavior."
+next_proof = "Generate and commit a current-source Qwen3 non-streaming /v1/chat/completions RTX 5070 Ti shared-engine server-smoke receipt before any exact-profile server-readiness review can promote server_ready. Separate exact-profile performance comparator evidence is still required before any speed, benchmark-qualified, or full-residency promotion."
+claim_boundary = "Qwen3 0.6B Q8_0 is product CLI-ready for the bounded ask/chat user paths on the dense_regular_llm_cuda RTX 5070 Ti route after exact artifact, CPU answer sanity, all-layer plan, one-token, short-decode, warm-session, benchmark review, ask user-path, chat user-path, and product promotion review receipts. CUDA-MODEL-014 reviewed server readiness and rejected promotion because no current-source Qwen3 server-smoke receipt is committed. Qwen3 does not inherit Qwen2.5 CUDA receipts, prove speed, server readiness, full residency, broad dense GGUF support, benchmark-qualified speed, or BitNet QK256 behavior."
 
   [entry.claims]
   registered = true

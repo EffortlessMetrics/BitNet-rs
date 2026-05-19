@@ -1,7 +1,8 @@
 # Dense Qwen3 Product Promotion
 
-Qwen3 0.6B Q8_0 is accelerator-answer-ready candidate evidence. It is not yet
-product CLI-ready, server-ready, speed-qualified, or full-residency-proven.
+Qwen3 0.6B Q8_0 is product CLI-ready for bounded normal `ask` and `chat`
+user paths on the RTX 5070 Ti dense CUDA route. It is not server-ready,
+speed-qualified, benchmark-qualified, or full-residency-proven.
 
 ## Work item: CUDA-MODEL-009
 
@@ -122,12 +123,12 @@ Revert Qwen3 warm-session changes.
 
 ## Work item: CUDA-MODEL-012
 
-Status: in_progress
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0013-model-onboarding-proof-ladder.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
-Blocks: Qwen3 server readiness review
+Blocks: Qwen3 server smoke/readiness review
 Blocked by: none
 
 ### Goal
@@ -160,3 +161,92 @@ git diff --check
 
 Demote the row and revert status docs if future evidence invalidates the
 accepted ask/chat user-path receipts.
+
+## Work item: CUDA-MODEL-013
+
+Status: merged
+Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
+Linked specs: `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md`
+Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
+Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
+Blocks: CUDA-MODEL-014
+Blocked by: CUDA-MODEL-012
+
+### Goal
+
+Teach the shared-engine server receipt validator to recognize exact Qwen3
+dense CUDA server-smoke receipts.
+
+### Production delta
+
+The server receipt path can bind exact Qwen3 model identity to
+`dense_qwen3_06b_q8_candidate` and `dense_regular_llm_cuda` for the RTX 5070 Ti
+backend. This is validator and routing support only; it is not a committed
+hardware receipt.
+
+### Non-goals
+
+No Qwen3 server-ready, speedup, benchmark-qualified, full-residency, broad
+dense GGUF, Qwen2.5-inheritance, or BitNet QK256 promotion.
+
+### Acceptance
+
+Qwen3 dense server-smoke receipt fixtures validate when they use the exact
+model ID/SHA, route, backend, fallback, and claim booleans. Unknown dense model
+identities and wrong coverage rows are rejected.
+
+### Proof commands
+
+```bash
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features qwen3_server_shared_engine
+cargo test --locked -p bitnet-server --no-default-features --features cpu qwen3
+```
+
+### Rollback
+
+Revert Qwen3 server receipt routing/validation support. Keep Qwen3 product CLI
+coverage unchanged unless user-path evidence is invalidated separately.
+
+## Work item: CUDA-MODEL-014
+
+Status: in_progress
+Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
+Linked specs: `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md`
+Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
+Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
+Blocks: Qwen3 server-ready promotion
+Blocked by: CUDA-MODEL-013
+
+### Goal
+
+Review whether Qwen3 has enough evidence for exact-profile server readiness.
+
+### Production delta
+
+Rejected for now. Qwen3 remains `product_cli_ready` for bounded CLI ask/chat
+paths, but `server_ready=false` because no current-source Qwen3 non-streaming
+`/v1/chat/completions` server-smoke receipt is committed.
+
+### Non-goals
+
+No runtime change, model promotion, server-ready promotion, speedup,
+benchmark-qualified, full-residency, broad dense GGUF, Qwen2.5-inheritance, or
+BitNet QK256 claim.
+
+### Acceptance
+
+The review names the missing receipt, preserves all current false claim
+booleans, and updates the Qwen3 next proof to require a committed current-source
+server-smoke receipt before another readiness review.
+
+### Proof commands
+
+```bash
+cargo run --locked -p xtask --no-default-features -- check-model-coverage
+git diff --check
+```
+
+### Rollback
+
+Revert the review report and restore the previous Qwen3 next-proof text. No
+runtime rollback is required.
