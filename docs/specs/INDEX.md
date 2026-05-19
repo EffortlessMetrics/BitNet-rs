@@ -696,7 +696,6 @@ Technical specification for implementing manual KV cache position tracking in th
 - `dual-backend-crossval.md` - Cross-validation patterns
 - `cpp-setup.md` - C++ reference setup guide
 
-
 ## Qwen3.6 Modern Dense/Multimodal Family
 
 Use these artifacts before implementing or claiming Qwen3.6 support:
@@ -713,3 +712,21 @@ Use these artifacts before implementing or claiming Qwen3.6 support:
 10. [Multimodal](BITNET-SPEC-QWEN36-MULTIMODAL.md), [Memory Envelope](BITNET-SPEC-QWEN36-MEMORY-ENVELOPE.md), [Quality](BITNET-SPEC-QWEN36-QUALITY.md), [Performance](BITNET-SPEC-QWEN36-PERFORMANCE.md), [Server](BITNET-SPEC-QWEN36-SERVER.md), [Status Surface](BITNET-SPEC-QWEN36-STATUS-SURFACE.md)
 
 Qwen3.6 is a separate governed family lane: not BitNet proof, not inherited Qwen2.5/Qwen3 0.6B proof, and external sidecar/API evidence is not native Rust proof.
+
+## TL2 Productization
+
+Use these artifacts before implementing or claiming TL2 route support:
+
+1. [TL2 Source Map](../bitnet/tl2/README.md)
+2. [TL2 Implementation Plan](../../plans/tl2/implementation-plan.md)
+3. [TL2 Productization Proposal](../proposals/BITNET-PROP-0018-tl2-productization.md)
+4. [TL2 Route Contract](BITNET-SPEC-TL2-ROUTE-CONTRACT.md)
+5. [TL2 Layout](BITNET-SPEC-TL2-LAYOUT.md)
+6. [TL2 Scalar Oracle](BITNET-SPEC-TL2-SCALAR-ORACLE.md)
+7. [TL2 X86 AVX](BITNET-SPEC-TL2-X86-AVX.md)
+8. [TL2 Artifact Gate](BITNET-SPEC-TL2-ARTIFACT-GATE.md)
+9. [TL2 Model Compatibility](BITNET-SPEC-TL2-MODEL-COMPATIBILITY.md)
+10. [TL2 Reference Quality](BITNET-SPEC-TL2-REFERENCE-QUALITY.md)
+11. [TL2 CPU](BITNET-SPEC-TL2-CPU.md), [CUDA](BITNET-SPEC-TL2-CUDA.md), [Performance](BITNET-SPEC-TL2-PERFORMANCE.md), and [Status Surface](BITNET-SPEC-TL2-STATUS-SURFACE.md)
+
+TL2 is x86-first and separate from I2_S/QK256 and TL1 proof families.

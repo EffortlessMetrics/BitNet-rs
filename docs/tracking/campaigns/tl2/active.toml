@@ -1,0 +1,5 @@
+schema = 1
+campaign = "tl2"
+status = "active"
+updated = "2026-05-19"
+linked_plan = "plans/tl2/implementation-plan.md"
