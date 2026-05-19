@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:26:00Z"
+event = "merged"
+item = "LNL258V-OP-010"
+branch = "codex/lunar-lake/LNL258V-OP-010-structured-blocked-ask"
+pr = 5953
+head_sha = "06ffbe5fa25df4fb3b1f99215434bbc8e727a31c"
+merge_sha = "24ccf6c6057d46564c81d607bbe696310b25a45a"
+actor = "codex"
+summary = "Merged LNL258V-OP-010 after structuring fail-closed blocked auto-route ask receipts."
+
+notes = [
+  "PR #5953 added candidate_routes and why_not_cpu/why_not_gpu/why_not_npu fields to the low_power blocked auto-route ask receipt.",
+  "Strict regression and operator comparison now carry structured blocked auto-route evidence while low_power remains unpromoted.",
+  "The merge preserved no inference, no route promotion, no speedup, no power-advantage, no native accelerator, no acceleration, and no BitNet QK256/I2_S behavior-change claims.",
+]
