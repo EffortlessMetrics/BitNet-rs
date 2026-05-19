@@ -929,8 +929,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BENCH-010"
-status = "pr_open"
+status = "merged"
 pr = 5929
+merge_sha = "86068afee5e279eea06c4e7b879ef6fb3ece8a7a"
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-010-timeout-aware-variance"
 stackable = false
 review_mode = "codex_premerge"
