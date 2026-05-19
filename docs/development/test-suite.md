@@ -17,7 +17,7 @@ This document covers the comprehensive test suite for BitNet-rs, including runni
 - ✅ **GGUF Fixtures**: 12/12 tests passing (QK256 dual-flavor detection)
 - ✅ **Snapshot Tests**: 42 test files across the workspace (insta)
 - ✅ **Property Tests**: 38 test files across all 38 proptest crates (proptest)
-- ✅ **Fuzz Targets**: 13 targets, nightly scheduled (cargo-fuzz)
+- ✅ **Fuzz Targets**: 100+ registered targets, 37-target nightly scheduled matrix (cargo-fuzz)
 - ✅ **CPU Golden Path E2E**: deterministic end-to-end inference test
 
 ## Running Tests
@@ -630,7 +630,7 @@ cargo test --no-default-features -p bitnet-kernels --no-default-features --featu
 - **Integration tests**: Cross-crate tests in `tests/`
 - **Snapshot tests**: Struct/output stability assertions (insta, 42 test files, ~160 assertions, 192 snapshot files)
 - **Property-based tests**: Randomised invariant checks (proptest, 38 test files, 230+ properties)
-- **Fuzz Targets**: Parser and kernel robustness (cargo-fuzz, 13 targets, nightly scheduled)
+- **Fuzz Targets**: Parser and kernel robustness (cargo-fuzz, 100+ registered targets, 37-target nightly scheduled matrix)
 - **Cross-validation**: Automated testing against C++ implementation
 - **CI gates**: Compatibility tests block on every PR
 - **SIMD Kernel Tests** ✅: Real quantization computation validation (Issue #260 resolved)
@@ -686,10 +686,9 @@ cargo nextest run -p bitnet-sampling --no-default-features --features cpu prop
 
 ### Fuzz Testing (cargo-fuzz)
 
-BitNet-rs has 13 fuzz targets covering parsers, kernels, and tokenizers. Two CI workflows handle fuzz testing:
+BitNet-rs has 100+ registered fuzz targets covering parsers, kernels, tokenizers, runtime validation, and cache structures. A single CI workflow handles scheduled fuzz testing:
 
-- **`.github/workflows/fuzz-ci.yml`** — runs on every push/PR (build check) and nightly (short run, all 13 targets).
-- **`.github/workflows/nightly-fuzz.yml`** — dedicated nightly scheduled run (02:00 UTC daily) or manual trigger via `workflow_dispatch`. Runs 7 core targets for 60 seconds each with `-rss_limit_mb=4096`, **caches the corpus** between runs (`fuzz-corpus-<target>` cache key), and uploads crash artifacts on failure.
+- **`.github/workflows/fuzz-ci.yml`** — runs a representative subset build on every push/PR (compile regression guard), and a selected 37-target matrix on the nightly schedule (02:00 UTC) and manual `workflow_dispatch`. The nightly matrix runs each selected target for 60 seconds with `-rss_limit_mb` and `-timeout` limits, caches both the `cargo-fuzz` binary (keyed on `fuzz/Cargo.lock`) and the discovered corpus (`fuzz-corpus-<target>`), and uploads crash artifacts on failure.
 
 **Running fuzz tests manually:**
 
@@ -709,7 +708,7 @@ for target in $(cargo fuzz list); do
 done
 ```
 
-**Available fuzz targets:**
+**Representative fuzz targets:**
 | Target | Tests |
 |--------|-------|
 | `quantization_i2s` | I2_S dequantization with arbitrary inputs |
@@ -719,14 +718,18 @@ done
 | `safetensors_parser` | SafeTensors format parsing |
 | `kernel_matmul` | Matrix multiply kernel correctness |
 | `tokenizer_discovery` | Tokenizer file auto-discovery |
-| `i2s_quantize_roundtrip` | I2_S quantize-dequantize round-trip |
-| `sampling_temperature` | Temperature sampling with extreme values |
-| `prompt_template` | Prompt template formatting |
-| `receipt_json` | Receipt JSON deserialisation |
+| `tokenizer_encode` | Tokenizer encode paths |
+| `tokenizer_encode_decode` | Tokenizer encode/decode round-trips |
+| `generation_stop_check` | Generation stop-check behavior |
+| `sampling_no_panic` | Sampling no-panic coverage |
+| `receipt_json_roundtrip` | Receipt JSON round-trips |
+| `batch_norm_params` | Batch norm parameter edge cases |
+| `prefix_cache_ops` | Prefix-cache operation coverage |
+| `broadcast_shape_fuzz` | Broadcast shape compatibility |
 
-**Corpus:** Seed corpora live in `fuzz/corpus/<target>/`. The nightly fuzz workflow (`.github/workflows/nightly-fuzz.yml`) caches the corpus between runs so each nightly session builds on prior coverage. CI uploads crash artifacts to GitHub Actions on failure.
+**Corpus:** Seed corpora live in `fuzz/corpus/<target>/`. The nightly fuzz workflow (`.github/workflows/fuzz-ci.yml`) caches the corpus between runs so each nightly session builds on prior coverage. CI uploads crash artifacts to GitHub Actions on failure.
 
-**Manual nightly fuzz run:** Trigger `.github/workflows/nightly-fuzz.yml` via `workflow_dispatch` on GitHub Actions to run the 7 core targets outside the normal schedule.
+**Manual nightly fuzz run:** Trigger `.github/workflows/fuzz-ci.yml` via `workflow_dispatch` on GitHub Actions to run the selected scheduled target matrix outside the normal schedule.
 
 ### Enhanced Mock Infrastructure and Tokenizer Testing
 
