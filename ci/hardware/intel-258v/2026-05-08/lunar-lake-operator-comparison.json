@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-19T11:55:00Z",
+  "created_utc": "2026-05-19T12:20:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -568,7 +568,7 @@
         "fallback_observed=false",
         "profile_specific_timing=21/23",
         "proxy_or_missing_timing_routes_blocked=true",
-        "promotion_blocker_summary_count=14",
+        "promotion_blocker_summary_count=13",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short",
         "openvino_npu_promoted_profiles=",
         "profile_scoped_promotion_only=true"

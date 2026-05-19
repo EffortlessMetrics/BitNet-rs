@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T12:15:00Z"
+event = "in_progress"
+item = "LNL258V-ROUTE-020"
+branch = "codex/lunar-lake/LNL258V-ROUTE-020-low-power-ledger"
+actor = "codex"
+summary = "Started hardening Lunar Lake route-promotion ledger blockers for low_power and warm_resident NPU routing."
+
+notes = [
+  "The route-promotion ledger should preserve attached route-profile comparison evidence for OpenVINO NPU instead of reporting profile-regression evidence missing.",
+  "Auto-route why-not-NPU explanations should surface low_power power-advantage, warm_resident, and cold-start blockers.",
+  "The scope preserves profile-scoped GPU promotion only for ask_short and ask_normal, keeps NPU and low_power unpromoted, and makes no speedup, power-advantage, native accelerator, acceleration, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]

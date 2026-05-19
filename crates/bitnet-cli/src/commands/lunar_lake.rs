@@ -9008,12 +9008,37 @@ fn route_not_selected_reasons(
     for item in &route.missing_evidence {
         reasons.push(format!("missing evidence: {item}"));
     }
+    for blocker in &route.blocked_for {
+        if route_blocker_applies_to_profile(blocker, profile_id) {
+            reasons.push(format!("route blocker for profile `{profile_id}`: {blocker}"));
+        }
+    }
     if reasons.is_empty() {
         reasons.push(format!("route was not selected for profile `{profile_id}`"));
     }
     reasons.sort();
     reasons.dedup();
     reasons
+}
+
+fn route_blocker_applies_to_profile(blocker: &str, profile_id: &str) -> bool {
+    if blocker == "all_profiles" || blocker == "auto_default" || blocker.contains(profile_id) {
+        return true;
+    }
+    match profile_id {
+        "low_power" => blocker.contains("power") || blocker.contains("low_power"),
+        "warm_resident" => {
+            blocker.contains("warm_resident")
+                || blocker.contains("resident")
+                || blocker.contains("cold_start")
+        }
+        "ask_short" | "ask_normal" => {
+            blocker.contains("dynamic_decode")
+                || blocker.contains("beam_search")
+                || blocker.contains("parallel_sampling")
+        }
+        _ => false,
+    }
 }
 
 fn normalize_created_utc(created_utc: &str) -> Result<String> {
@@ -11139,15 +11164,24 @@ fn promote_route(
                 && !speedup_claim
             {
                 missing_evidence.push("benchmark_qualified_speedup_or_power_advantage".to_string());
-                missing_evidence.push("profile_regression_bundle".to_string());
+                if let Some(path) = profile_promotion_evidence_path {
+                    if !present_evidence.iter().any(|item| item == path) {
+                        present_evidence.push(path.to_string());
+                    }
+                } else {
+                    missing_evidence.push("profile_regression_bundle".to_string());
+                }
                 (
                     "candidate".to_string(),
                     vec![],
                     vec![
                         "auto_default".to_string(),
+                        "cold_start_compile_load_blocker".to_string(),
                         "dynamic_decode".to_string(),
                         "beam_search".to_string(),
                         "parallel_sampling".to_string(),
+                        "low_power_power_advantage_unproven".to_string(),
+                        "warm_resident_profile_unqualified".to_string(),
                     ],
                     "OpenVINO NPU has bounded INT4 dense SLM answer and phase evidence with fallback=false, but remains a candidate until profile-specific advantage and constraints are recorded.".to_string(),
                 )
@@ -13557,6 +13591,33 @@ mod tests {
         assert!(gpu.missing_evidence.is_empty(), "{:?}", gpu.missing_evidence);
         assert!(
             gpu.present_evidence.iter().any(|item| item.ends_with("gpu-route-profile-ready.json"))
+        );
+        let npu = ledger
+            .routes
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_npu_candidate")
+            .context("missing NPU route")?;
+        assert_eq!(npu.status, "candidate");
+        assert!(
+            npu.present_evidence.iter().any(|item| item.ends_with("gpu-route-profile-ready.json"))
+        );
+        assert!(
+            !npu.missing_evidence.contains(&"profile_regression_bundle".to_string()),
+            "{:?}",
+            npu.missing_evidence
+        );
+        assert!(
+            npu.missing_evidence
+                .contains(&"benchmark_qualified_speedup_or_power_advantage".to_string())
+        );
+        let why_not_npu =
+            route_not_selected_reasons(&ledger, "dense_slm_openvino_npu_candidate", "low_power");
+        assert!(
+            why_not_npu.iter().any(|reason| {
+                reason.contains("low_power_power_advantage_unproven")
+                    || reason.contains("benchmark_qualified_speedup_or_power_advantage")
+            }),
+            "{why_not_npu:?}"
         );
         let ask_short = ledger
             .workload_profiles

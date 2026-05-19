@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-19T11:45:00Z",
+  "created_utc": "2026-05-19T12:20:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -1830,8 +1830,7 @@
               "baseline route dense_slm_default_cpu is not benchmark-reference-ready for profile warm_resident",
               "benchmark-qualified advantage is false; comparison is diagnostic only",
               "benchmark_qualified_speedup_or_power_advantage",
-              "corpus_v2 profile quality evidence missing",
-              "profile_regression_bundle"
+              "corpus_v2 profile quality evidence missing"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -1857,7 +1856,6 @@
             "candidate route requires benchmark-qualified profile evidence",
             "cold/warm critical timing is incomplete",
             "corpus_v2 profile quality evidence missing",
-            "profile_regression_bundle",
             "resident evidence is not a route promotion or power-advantage claim",
             "route not promoted for profile warm_resident",
             "warm_resident timing excludes one-off NPU pipeline construction"
@@ -1961,7 +1959,7 @@
       ],
       "profile_gaps": [
         "warm_resident route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; corpus_v2 profile quality evidence missing; route not promoted for profile warm_resident",
-        "warm_resident route dense_slm_openvino_npu_candidate remains blocked: benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; cold/warm critical timing is incomplete; corpus_v2 profile quality evidence missing; profile_regression_bundle; resident evidence is not a route promotion or power-advantage claim; route not promoted for profile warm_resident; warm_resident timing excludes one-off NPU pipeline construction",
+        "warm_resident route dense_slm_openvino_npu_candidate remains blocked: benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; cold/warm critical timing is incomplete; corpus_v2 profile quality evidence missing; resident evidence is not a route promotion or power-advantage claim; route not promoted for profile warm_resident; warm_resident timing excludes one-off NPU pipeline construction",
         "warm_resident route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; corpus_v2 profile quality evidence missing; profile timing borrowed from corpus_v2 profile regression_tiny for profile warm_resident; route not promoted for profile warm_resident; timing coverage has missing profile fields",
         "warm_resident has no benchmark-qualified promoted route; candidate evidence remains indexed only"
       ]
