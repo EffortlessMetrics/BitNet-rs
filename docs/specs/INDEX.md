@@ -1,5 +1,27 @@
 # Specs Index
 
+## Common Local Inference Status Contracts
+
+Use these specs before changing the machine-readable support surfaces for
+model readiness, receipt explanation, or support bundles:
+
+1. [Model Readiness Status Surface](BITNET-SPEC-MODEL-READINESS-STATUS-SURFACE.md)
+   - Defines the stable `bitnet model status --format json` dashboard fields,
+     tier semantics, readiness booleans, backend/route/fallback provenance, and
+     proof-family booleans.
+2. [Receipt Explain Schema](BITNET-SPEC-RECEIPT-EXPLAIN-SCHEMA.md)
+   - Defines the normalized `bitnet receipts explain --format json` shape,
+     flat support aliases, nested diagnostic objects, unknown-vs-false
+     semantics, and promotion warnings.
+3. [Support Bundle Schema](BITNET-SPEC-SUPPORT-BUNDLE-SCHEMA.md)
+   - Defines `bitnet support bundle --latest --device <device> --format json`
+     as a read-only issue artifact that embeds model status and receipt
+     explanation without promoting claims.
+
+Do not remove or repurpose support JSON fields without a schema-version bump.
+Do not let status, receipt explanation, or support bundles infer speedup,
+residency, broad server readiness, or cross-family proof.
+
 ## TL1 ARM-First Table-Lookup Route
 
 Use these artifacts before implementing or claiming TL1 support:
