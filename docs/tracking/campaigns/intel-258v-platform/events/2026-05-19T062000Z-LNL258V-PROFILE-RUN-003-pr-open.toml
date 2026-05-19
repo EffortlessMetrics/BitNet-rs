@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T06:20:00Z"
+event = "pr_open"
+item = "LNL258V-PROFILE-RUN-003"
+pr = 5874
+head_sha = "c3a6d17b794907420b2b23d1bfbde2333d8f1465"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-003-cpu-baseline-input"
+actor = "codex"
+summary = "Opened PR #5874 for optional Rust GGUF CPU profile-run baseline input."
+
+notes = [
+  "The PR adds --cpu-profile-run to lunar-lake profile-compare and uses matching fallback-free CPU profile cases as profile-specific dense CPU default-route timing.",
+  "Existing route decisions are preserved when no CPU profile-run receipt is supplied.",
+  "The PR makes no new-inference, route-promotion, speedup, power-advantage, OpenVINO GPU/NPU promotion, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]

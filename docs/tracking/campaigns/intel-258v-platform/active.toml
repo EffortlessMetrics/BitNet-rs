@@ -9374,7 +9374,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-PROFILE-RUN-003"
-status = "in_progress"
+status = "pr_open"
+pr = 5874
+head_sha = "c3a6d17b794907420b2b23d1bfbde2333d8f1465"
 branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-003-cpu-baseline-input"
 stackable = false
 review_mode = "codex_premerge"
