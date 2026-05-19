@@ -8280,6 +8280,52 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-EXCELLENCE-AUDIT-001"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-EXCELLENCE-AUDIT-001"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-QUAL-013"]
+acceptance = "Add a no-inference Lunar Lake excellence audit artifact that maps the profile-aware operator goal to committed evidence, records operator-ready command surfaces, Qwen CPU control-route proof, OpenVINO GPU profile-scoped promotion, OpenVINO NPU candidate-only status, BitNet CPU semantic-intake protection, Arc/NPU BitNet claim boundaries, and explicit remaining blockers for unpromoted profiles, low_power telemetry, and accelerator BitNet."
+commands = [
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+]
+may_claim = [
+  "The committed Lunar Lake evidence now has a machine-readable excellence audit that maps command surfaces, route policy, quality/regression, telemetry, BitNet, Arc, and NPU evidence to the current operating-platform objective.",
+  "The audit records that Lunar Lake is operator-ready and profile-aware while still having explicit unpromoted profiles and low_power/NPU/accelerator-BitNet gaps.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-QUAL-013"
 status = "merged"
 branch = "codex/lunar-lake/LNL258V-QUAL-013-warm-resident-cpu-corpus"
