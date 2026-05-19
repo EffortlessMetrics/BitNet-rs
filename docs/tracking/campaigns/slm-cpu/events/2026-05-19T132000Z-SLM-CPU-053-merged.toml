@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T13:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-053"
+event = "merged"
+pr = 5943
+head_sha = "2ee3ddd8932af8d12054ddfcc6772e81549ee833"
+merge_sha = "570ae6c50cbd76d01469d9f136b46583df1c59b8"
+actor = "codex"
+
+notes = [
+  "Merged the SLM-CPU-053 runtime proof gate implementation.",
+  "The merged proof records that packed Q8_0 sidecar runtime execution remains blocked by production dispatch and missing before/after execution receipts.",
+  "No packed sidecar runtime execution, speedup, sustained throughput, broad answer-quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim was added.",
+]
