@@ -18,6 +18,8 @@ pub const DENSE_GGUF_Q8_SIDECAR_EQUIVALENCE_GATE_ARTIFACT_KIND: &str =
     "dense_gguf_q8_sidecar_equivalence_gate";
 pub const DENSE_GGUF_Q8_GENERATED_ID_TEXT_EQUIVALENCE_ARTIFACT_KIND: &str =
     "dense_gguf_q8_generated_id_text_equivalence";
+pub const DENSE_GGUF_Q8_PRODUCTION_COMPUTE_HOOK_ARTIFACT_KIND: &str =
+    "dense_gguf_q8_production_compute_hook";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -55,6 +57,13 @@ pub enum DenseQ8GeneratedIdTextMismatch {
     CandidateSpeedupClaim,
     RuntimePreflightNotEagerF32,
     RuntimePreflightAllowsSidecarCompute,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DenseQ8ProductionComputeHookStatus {
+    Missing,
+    AvailableButSelectorStillEagerF32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -131,6 +140,24 @@ pub struct DenseQ8GeneratedIdTextEquivalenceGate {
     pub speedup_claim: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DenseQ8ProductionComputeHookAvailability {
+    pub schema: u64,
+    pub artifact_kind: String,
+    pub selected_path: DenseQ8RuntimePath,
+    pub selected_kernel: String,
+    pub hook_status: DenseQ8ProductionComputeHookStatus,
+    pub hook_name: Option<String>,
+    pub generated_id_receipt_equivalence_passed: bool,
+    pub production_compute_hook_available: bool,
+    pub selector_update_required_before_runtime_use: bool,
+    pub sidecar_runtime_compute_allowed: bool,
+    pub runtime_blockers: Vec<DenseQ8RuntimePreflightBlocker>,
+    pub eager_f32_runtime_preserved: bool,
+    pub dense_runtime_replaced: bool,
+    pub speedup_claim: bool,
+}
+
 impl DenseQ8SidecarEquivalenceGate {
     pub fn runtime_still_blocked(&self) -> bool {
         !self.sidecar_runtime_compute_allowed
@@ -156,6 +183,16 @@ impl DenseQ8GeneratedIdTextEquivalenceGate {
             && self.eager_f32_runtime_preserved
             && !self.dense_runtime_replaced
             && !self.speedup_claim
+    }
+}
+
+impl DenseQ8ProductionComputeHookAvailability {
+    pub fn runtime_still_blocked(&self) -> bool {
+        !self.sidecar_runtime_compute_allowed
+            && self.eager_f32_runtime_preserved
+            && !self.dense_runtime_replaced
+            && !self.speedup_claim
+            && self.selector_update_required_before_runtime_use
     }
 }
 
@@ -281,6 +318,44 @@ pub fn build_dense_q8_generated_id_text_equivalence_gate(
         generated_id_receipt_equivalence_passed: mismatches.is_empty(),
         sidecar_runtime_compute_allowed: false,
         mismatches,
+        eager_f32_runtime_preserved: true,
+        dense_runtime_replaced: false,
+        speedup_claim: false,
+    }
+}
+
+pub fn build_dense_q8_production_compute_hook_availability(
+    gate: &DenseQ8GeneratedIdTextEquivalenceGate,
+    hook_name: Option<&str>,
+) -> DenseQ8ProductionComputeHookAvailability {
+    let production_compute_hook_available = hook_name.is_some();
+    let hook_status = if production_compute_hook_available {
+        DenseQ8ProductionComputeHookStatus::AvailableButSelectorStillEagerF32
+    } else {
+        DenseQ8ProductionComputeHookStatus::Missing
+    };
+
+    let mut runtime_blockers = Vec::new();
+    if !gate.generated_id_receipt_equivalence_passed {
+        runtime_blockers.push(DenseQ8RuntimePreflightBlocker::GeneratedIdReceiptEquivalenceMissing);
+    }
+    if !production_compute_hook_available {
+        runtime_blockers.push(DenseQ8RuntimePreflightBlocker::ProductionComputeHookMissing);
+    }
+    runtime_blockers.push(DenseQ8RuntimePreflightBlocker::ProductionSelectorStillEagerF32);
+
+    DenseQ8ProductionComputeHookAvailability {
+        schema: 1,
+        artifact_kind: DENSE_GGUF_Q8_PRODUCTION_COMPUTE_HOOK_ARTIFACT_KIND.to_string(),
+        selected_path: gate.selected_path,
+        selected_kernel: gate.selected_kernel.clone(),
+        hook_status,
+        hook_name: hook_name.map(ToOwned::to_owned),
+        generated_id_receipt_equivalence_passed: gate.generated_id_receipt_equivalence_passed,
+        production_compute_hook_available,
+        selector_update_required_before_runtime_use: true,
+        sidecar_runtime_compute_allowed: false,
+        runtime_blockers,
         eager_f32_runtime_preserved: true,
         dense_runtime_replaced: false,
         speedup_claim: false,
@@ -551,6 +626,107 @@ mod tests {
         assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::TokenizerSource));
         assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::TokenizerStrict));
         assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::SelectedKernel));
+        Ok(())
+    }
+
+    #[test]
+    fn q8_production_compute_hook_availability_names_missing_hook_and_generated_gate_blockers()
+    -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let mut candidate = behavior_receipt("q8-sidecar-candidate");
+        candidate.generated_ids = vec![84644];
+
+        let gate =
+            build_dense_q8_generated_id_text_equivalence_gate(&preflight, baseline, candidate);
+        let availability = build_dense_q8_production_compute_hook_availability(&gate, None);
+
+        assert_eq!(availability.artifact_kind, DENSE_GGUF_Q8_PRODUCTION_COMPUTE_HOOK_ARTIFACT_KIND);
+        assert_eq!(availability.hook_status, DenseQ8ProductionComputeHookStatus::Missing);
+        assert!(availability.hook_name.is_none());
+        assert!(!availability.generated_id_receipt_equivalence_passed);
+        assert!(!availability.production_compute_hook_available);
+        assert!(availability.runtime_still_blocked());
+        assert_eq!(availability.selected_path, DenseQ8RuntimePath::EagerF32Candle);
+        assert_eq!(availability.selected_kernel, "dense-f32-candle-linear");
+        assert_eq!(
+            availability.runtime_blockers,
+            vec![
+                DenseQ8RuntimePreflightBlocker::GeneratedIdReceiptEquivalenceMissing,
+                DenseQ8RuntimePreflightBlocker::ProductionComputeHookMissing,
+                DenseQ8RuntimePreflightBlocker::ProductionSelectorStillEagerF32
+            ]
+        );
+        assert!(availability.eager_f32_runtime_preserved);
+        assert!(!availability.dense_runtime_replaced);
+        assert!(!availability.speedup_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn q8_production_compute_hook_availability_keeps_selector_blocked_after_behavior_equivalence()
+    -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let candidate = behavior_receipt("q8-sidecar-candidate");
+
+        let gate =
+            build_dense_q8_generated_id_text_equivalence_gate(&preflight, baseline, candidate);
+        let availability = build_dense_q8_production_compute_hook_availability(
+            &gate,
+            Some("dense-q8-sidecar-linear-hook"),
+        );
+
+        assert!(availability.generated_id_receipt_equivalence_passed);
+        assert!(availability.production_compute_hook_available);
+        assert_eq!(
+            availability.hook_status,
+            DenseQ8ProductionComputeHookStatus::AvailableButSelectorStillEagerF32
+        );
+        assert_eq!(availability.hook_name.as_deref(), Some("dense-q8-sidecar-linear-hook"));
+        assert!(availability.runtime_still_blocked());
+        assert!(!availability.sidecar_runtime_compute_allowed);
+        assert_eq!(
+            availability.runtime_blockers,
+            vec![DenseQ8RuntimePreflightBlocker::ProductionSelectorStillEagerF32]
+        );
+        assert_eq!(availability.selected_path, DenseQ8RuntimePath::EagerF32Candle);
+        assert_eq!(availability.selected_kernel, "dense-f32-candle-linear");
+        assert!(availability.selector_update_required_before_runtime_use);
+        assert!(availability.eager_f32_runtime_preserved);
+        assert!(!availability.dense_runtime_replaced);
+        assert!(!availability.speedup_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn q8_production_compute_hook_availability_keeps_generated_equivalence_blocker_when_hook_exists()
+    -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let mut candidate = behavior_receipt("q8-sidecar-candidate");
+        candidate.decoded_text = "wrong".to_string();
+
+        let gate =
+            build_dense_q8_generated_id_text_equivalence_gate(&preflight, baseline, candidate);
+        let availability = build_dense_q8_production_compute_hook_availability(
+            &gate,
+            Some("dense-q8-sidecar-linear-hook"),
+        );
+
+        assert!(!availability.generated_id_receipt_equivalence_passed);
+        assert!(availability.production_compute_hook_available);
+        assert!(availability.runtime_still_blocked());
+        assert_eq!(
+            availability.runtime_blockers,
+            vec![
+                DenseQ8RuntimePreflightBlocker::GeneratedIdReceiptEquivalenceMissing,
+                DenseQ8RuntimePreflightBlocker::ProductionSelectorStillEagerF32
+            ]
+        );
+        assert!(!availability.sidecar_runtime_compute_allowed);
+        assert!(!availability.dense_runtime_replaced);
+        assert!(!availability.speedup_claim);
         Ok(())
     }
 }
