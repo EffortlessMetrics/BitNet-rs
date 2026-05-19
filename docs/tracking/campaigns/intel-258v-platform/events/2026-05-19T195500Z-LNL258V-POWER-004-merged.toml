@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T19:55:00Z"
+event = "merged"
+item = "LNL258V-POWER-004"
+pr = 5911
+branch = "codex/lunar-lake/LNL258V-POWER-004-energy-proxy-blocker"
+head_sha = "fd1a0afa34f476ba64f843becb2c98776114684d"
+merge_sha = "408954e1dede6fc8f6302f5f883eff85db3254ec"
+actor = "codex"
+summary = "Merged LNL258V-POWER-004 low-power energy proxy blocker evidence."
+
+notes = [
+  "PR #5911 committed an explicit no-inference low_power energy-proxy receipt and wired it into power-profile, regression-v2, operator-comparison, and excellence-audit evidence.",
+  "The energy-proxy receipt is AC-only and therefore does not qualify low_power promotion.",
+  "low_power remains unpromoted until battery-mode and benchmark-qualified power-advantage evidence exists; no inference, route promotion, speedup, power-advantage, native accelerator, acceleration, or BitNet QK256/I2_S behavior claim was added.",
+]
