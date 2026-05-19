@@ -332,12 +332,12 @@ fn validate_claim_boundaries(entry: &Entry) -> Result<()> {
 }
 
 fn validate_server_ready_claim(entry: &Entry) -> Result<()> {
-    const ACCEPTED_SERVER_READY_ENTRY: &str = "dense_qwen25_05b_q8_cuda";
-    if entry.id != ACCEPTED_SERVER_READY_ENTRY {
+    const ACCEPTED_SERVER_READY_ENTRIES: &[&str] =
+        &["dense_qwen25_05b_q8_cuda", "dense_qwen3_06b_q8_candidate"];
+    if !ACCEPTED_SERVER_READY_ENTRIES.contains(&entry.id.as_str()) {
         bail!(
-            "entry `{}` claims server readiness; only `{}` has an accepted exact-profile server receipt",
+            "entry `{}` claims server readiness without an accepted exact-profile server receipt",
             entry.id,
-            ACCEPTED_SERVER_READY_ENTRY
         );
     }
     if !entry
@@ -493,7 +493,7 @@ mod tests {
             Ok(()) => bail!("unaccepted server-ready row must fail"),
             Err(err) => err,
         };
-        assert!(err.to_string().contains("only `dense_qwen25_05b_q8_cuda`"), "{err}");
+        assert!(err.to_string().contains("accepted exact-profile server receipt"), "{err}");
         Ok(())
     }
 

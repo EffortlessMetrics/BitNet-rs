@@ -1904,8 +1904,8 @@ mod tests {
                 selected_route: Some("dense_regular_llm_cuda"),
                 fallback_used: false,
                 product_cli_ready: true,
-                server_ready: false,
-                server_ready_scope: None,
+                server_ready: true,
+                server_ready_scope: Some("exact_profile"),
                 speedup_claim: false,
                 full_residency_claim: false,
                 bitnet_packed_i2s_qk256_proof: false,
@@ -2358,8 +2358,8 @@ mod tests {
         assert_eq!(explanation.model_coverage.current_tier.as_deref(), Some("product_cli_ready"));
         assert_eq!(explanation.model_coverage.route.as_deref(), Some("dense_regular_llm_cuda"));
         assert_eq!(explanation.model_coverage.product_cli_ready, Some(true));
-        assert_eq!(explanation.model_coverage.server_ready, Some(false));
-        assert_eq!(explanation.model_coverage.server_ready_scope, None);
+        assert_eq!(explanation.model_coverage.server_ready, Some(true));
+        assert_eq!(explanation.model_coverage.server_ready_scope.as_deref(), Some("exact_profile"));
         assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
         assert_eq!(explanation.model_coverage.full_residency_claim, Some(false));
         assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
@@ -2370,8 +2370,8 @@ mod tests {
         assert_eq!(explanation.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
         assert_eq!(explanation.fallback_used, Some(false));
         assert_eq!(explanation.product_cli_ready, Some(true));
-        assert_eq!(explanation.server_ready, Some(false));
-        assert_eq!(explanation.server_ready_scope, None);
+        assert_eq!(explanation.server_ready, Some(true));
+        assert_eq!(explanation.server_ready_scope.as_deref(), Some("exact_profile"));
         assert_eq!(explanation.speedup_claim, Some(false));
         assert_eq!(explanation.full_residency_claim, Some(false));
         assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(false));
@@ -2384,8 +2384,8 @@ mod tests {
         assert_eq!(value["selected_route"], "dense_regular_llm_cuda");
         assert_eq!(value["fallback_used"], false);
         assert_eq!(value["product_cli_ready"], true);
-        assert_eq!(value["server_ready"], false);
-        assert!(value["server_ready_scope"].is_null());
+        assert_eq!(value["server_ready"], true);
+        assert_eq!(value["server_ready_scope"], "exact_profile");
         assert_eq!(value["speedup_claim"], false);
         assert_eq!(value["full_residency_claim"], false);
         assert_eq!(value["bitnet_packed_i2s_qk256_proof"], false);
