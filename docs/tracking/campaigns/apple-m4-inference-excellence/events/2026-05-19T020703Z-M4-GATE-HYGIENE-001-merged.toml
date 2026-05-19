@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T02:07:03Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-GATE-HYGIENE-001"
+event = "merged"
+actor = "codex"
+previous_status = "proposed"
+new_status = "merged"
+pr = 5815
+merge_sha = "5be7106f1e43ead538f23f57aa792737dd325603"
+branch = "codex/apple-m4-inference-excellence/M4-GATE-HYGIENE-001-no-panic-family"
+
+notes = [
+  "Closed M4-GATE-HYGIENE-001 after PR #5815 landed the receipt fixture no-panic-family cleanup on main.",
+  "Current main passes check-no-panic-family with zero unallowlisted findings and no new allowlist or baseline entries.",
+  "A duplicate follow-up PR #5822 was closed as superseded by #5815.",
+  "No live runtime proof, model support, backend support, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was added.",
+]
