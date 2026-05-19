@@ -225,3 +225,21 @@ cases:
     gate:
       kind: readable
       min_words: 8
+
+  - id: low_power_route_evidence_copy
+    category: copy_exact
+    profile: low_power
+    question: "Copy exactly these two words and nothing else: route evidence"
+    max_new_tokens: 6
+    scoring:
+      kind: required_forbidden_tokens
+      required_keywords:
+        - "route"
+        - "evidence"
+      forbidden_tokens:
+        - "<|"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "route evidence"
+        - "Route evidence"

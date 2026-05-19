@@ -8280,6 +8280,62 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-QUAL-011"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-QUAL-011-low-power-corpus-fixture"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-POWER-003", "LNL258V-REG-008"]
+acceptance = "Extend the bounded Lunar Lake dense Qwen answer-corpus-v2 fixture with a low_power profile lens and make strict corpus-v2 inspection require that profile, so low_power route quality evidence has an explicit fixture target before any battery, energy, or route-promotion work. Validate the fixture with dry-run/inspection only and preserve no new inference, no broad quality claim, no speedup or power-advantage claim, no route promotion, no Arc/NPU acceleration claim, and no BitNet QK256/I2_S behavior change."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::regression_bundle_v2_indexes_corpus_fixture_and_profile_comparison -- --exact --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- answer-corpus --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml --model C:/does-not-exist/qwen2.5-0.5b-instruct-q8_0.gguf --device cpu --dry-run --json-out target/bitnet/receipts/lunar-lake-answer-corpus-v2-dry-run.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The Lunar Lake answer-corpus-v2 fixture now includes an explicit low_power profile case.",
+  "Strict corpus-v2 inspection requires low_power as a profile lens for future route-quality evidence.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-002"
 status = "merged"
 pr = 5818

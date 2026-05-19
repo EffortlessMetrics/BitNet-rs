@@ -74,8 +74,15 @@ const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
 const REGRESSION_V2_SURFACE_ID: &str = "lunar_lake_regression_v2";
 pub const DEFAULT_ASK_ROUTE: &str = "dense_slm_default_cpu";
 
-const REQUIRED_CORPUS_V2_PROFILES: &[&str] =
-    &["regression_tiny", "ask_short", "ask_normal", "structured", "prefill_heavy", "decode_heavy"];
+const REQUIRED_CORPUS_V2_PROFILES: &[&str] = &[
+    "regression_tiny",
+    "ask_short",
+    "ask_normal",
+    "structured",
+    "prefill_heavy",
+    "decode_heavy",
+    "low_power",
+];
 const REQUIRED_CORPUS_V2_CATEGORIES: &[&str] = &[
     "math",
     "copy_exact",
@@ -15595,7 +15602,7 @@ mod tests {
         );
         assert!(receipt.case_alignment.fixture_verified);
         assert_eq!(receipt.case_alignment.observed_case_count, 2);
-        assert_eq!(receipt.case_alignment.expected_case_count, Some(12));
+        assert_eq!(receipt.case_alignment.expected_case_count, Some(13));
         assert_eq!(receipt.case_alignment.aligned_with_active_fixture, Some(false));
         assert!(
             receipt
@@ -16481,7 +16488,7 @@ mod tests {
         let Some(corpus) = bundle.answer_corpus_v2.as_ref() else {
             bail!("missing answer_corpus_v2 summary");
         };
-        assert_eq!(corpus.case_count, 12);
+        assert_eq!(corpus.case_count, 13);
         assert!(corpus.profiles.contains(&"prefill_heavy".to_string()));
         let Some(route_profiles) = bundle.route_profile_comparison.as_ref() else {
             bail!("missing route_profile_comparison summary");
@@ -17787,6 +17794,10 @@ cases:
     category: decode_heavy
     profile: decode_heavy
     gate: {kind: readable}
+  - id: low_power_route_evidence_copy
+    category: copy_exact
+    profile: low_power
+    gate: {kind: contains_any}
 "#,
         )?;
         Ok(())
@@ -17805,7 +17816,8 @@ cases:
             {"id": "structured_json_city_country"},
             {"id": "long_prompt_summary_route_policy"},
             {"id": "short_reasoning_apples_left"},
-            {"id": "decode_heavy_short_list"}
+            {"id": "decode_heavy_short_list"},
+            {"id": "low_power_route_evidence_copy"}
         ]);
         let stale_openvino_case_ids = json!([
             {
@@ -17856,7 +17868,8 @@ cases:
             {"id": "structured_json_city_country", "profile": "structured", "prompt_token_count": 44, "generated_token_count": 16, "timing": {"generation_wall_ms": 350.2}},
             {"id": "long_prompt_summary_route_policy", "profile": "prefill_heavy", "prompt_token_count": 97, "generated_token_count": 22, "timing": {"generation_wall_ms": 699.9}},
             {"id": "short_reasoning_heavier_object", "profile": "ask_normal", "prompt_token_count": 57, "generated_token_count": 19, "timing": {"generation_wall_ms": 369.7}},
-            {"id": "decode_heavy_short_list", "profile": "decode_heavy", "prompt_token_count": 57, "generated_token_count": 19, "timing": {"generation_wall_ms": 369.7}}
+            {"id": "decode_heavy_short_list", "profile": "decode_heavy", "prompt_token_count": 57, "generated_token_count": 19, "timing": {"generation_wall_ms": 369.7}},
+            {"id": "low_power_route_evidence_copy", "profile": "low_power", "prompt_token_count": 39, "generated_token_count": 2, "timing": {"generation_wall_ms": 120.0}}
         ]);
         write_json(
             root,
