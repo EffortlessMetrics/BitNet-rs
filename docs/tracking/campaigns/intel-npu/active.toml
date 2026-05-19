@@ -554,8 +554,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "NPU-013"
-status = "ready"
+status = "merged"
 branch = "codex/npu-013-productization-specs"
+pr = 5903
+head_sha = "6f1a73fef54eab9e199cede86e6a0816a6ebb35a"
+merge_sha = "1576cf1d8f4f68d58561d2cdff39f9045d2a0a46"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

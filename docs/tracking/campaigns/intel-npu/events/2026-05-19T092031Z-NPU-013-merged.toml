@@ -1,0 +1,15 @@
+campaign = "intel-npu"
+timestamp = "2026-05-19T09:20:31Z"
+event = "merged"
+item = "NPU-013"
+pr = 5903
+branch = "codex/add-npu-productization-proposal"
+head_sha = "6f1a73fef54eab9e199cede86e6a0816a6ebb35a"
+merge_sha = "1576cf1d8f4f68d58561d2cdff39f9045d2a0a46"
+actor = "codex"
+summary = "Merged NPU-013 after adding the docs-only NPU productization proposal and spec contracts."
+notes = [
+  "PR #5903 added BITNET-PROP-0007 plus NPU route, proof ladder, cold/cache/warm, dense SLM, BitNet subgraph, quality, performance, residency, and status-surface spec contracts.",
+  "The slice is docs-only and keeps Intel NPU proof separate from OpenVINO GPU, Arc OpenCL, CPU fallback, Apple Neural Engine, Qualcomm Hexagon, and AMD Ryzen AI.",
+  "No runtime code, model binary, full BitNet inference, packed QK256 decode, native NPU inference, acceleration, speedup, route-promotion, or warm/resident promotion claim was added.",
+]
