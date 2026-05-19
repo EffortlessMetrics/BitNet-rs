@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_power_thermal_context",
+  "proof_stage": "battery_mode_telemetry_context_blocked_no_promotion_change",
+  "created_utc": "2026-05-19T22:30:00Z",
+  "machine_id": "intel-258v",
+  "telemetry_scope": "low_power_battery_mode_telemetry",
+  "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10529366016;used_bytes=23344414720",
+  "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+  "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
+  "availability": {
+    "memory_context_recorded": true,
+    "power_context_recorded": true,
+    "thermal_context_recorded": true
+  },
+  "memory": {
+    "source": "sysinfo",
+    "total_bytes": 33873780736,
+    "available_bytes": 10529366016,
+    "used_bytes": 23344414720
+  },
+  "power": {
+    "source": "os_power_probe",
+    "active_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)",
+    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+    "ac_power_inferred": true
+  },
+  "thermal": {
+    "source": "windows_perf_thermal_zone",
+    "thermal_zones_visible": 1,
+    "temperatures_celsius": []
+  },
+  "capture_requirements": {
+    "battery_mode_required": true,
+    "battery_mode_sample_recorded": false,
+    "requirement_satisfied": false,
+    "status": "blocked",
+    "gaps": [
+      "battery-mode telemetry sample required but current power context indicates AC power"
+    ]
+  },
+  "sources": [
+    {
+      "source": "sysinfo",
+      "available": true,
+      "status": "captured"
+    },
+    {
+      "source": "os_power_probe",
+      "available": true,
+      "status": "captured"
+    },
+    {
+      "source": "windows_perf_thermal_zone",
+      "available": true,
+      "status": "captured"
+    }
+  ],
+  "gaps": [
+    "power context is recorded for routing evidence, but no speedup or power-advantage claim is made",
+    "battery-mode telemetry sample required but current power context indicates AC power"
+  ],
+  "claim_boundary": {
+    "new_inference_executed": false,
+    "telemetry_measurement_executed": true,
+    "route_promotion_changed": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "hidden_fallback_allowed": false
+  }
+}
