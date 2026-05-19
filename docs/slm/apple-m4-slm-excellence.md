@@ -83,8 +83,10 @@ bitnet mac doctor
 ```
 
 It should answer whether the M4 dense SLM path is healthy by checking cache
-presence, model hash, disk space, smoke answer behavior, receipt validation,
-backend/fallback identity, and unsupported-backend rejection.
+presence, model hash, disk space, backend/fallback identity, and
+unsupported-backend rejection. Live smoke answer behavior and generated receipt
+validation should be explicit through `--run-smoke`, not part of the default
+repair/readiness path.
 
 The command must not download a model unless a later item explicitly adds an
 opt-in repair flag. It should tell the operator which existing command to run

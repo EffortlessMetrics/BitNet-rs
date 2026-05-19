@@ -259,12 +259,15 @@ Use `doctor` for one local health verdict:
 bitnet mac doctor
 ```
 
-The doctor receipt includes an advisory `checks.bitnet_ask` section for the
-BitNet one-shot and fixed-prompt warm routes. It reports the `supported-ask`
-catalog row, cached-model fetch/verify commands, accepted tokenizer path and
-SHA, example cached-model ask and warm commands, and explicit
+The doctor receipt is model-free by default: it checks cache/hash readiness,
+disk pressure, backend boundaries, and an advisory `checks.bitnet_ask` section
+for the BitNet one-shot and fixed-prompt warm routes. It reports the
+`supported-ask` catalog row, cached-model fetch/verify commands, accepted
+tokenizer path and SHA, example cached-model ask and warm commands, and explicit
 chat/serve/Metal-disabled claim boundaries. This readiness check does not make
-dense SLM doctor fail when optional BitNet artifacts are absent.
+dense SLM doctor fail when optional BitNet artifacts are absent. Use
+`bitnet mac doctor --run-smoke` when the operator explicitly wants a live dense
+SLM smoke receipt as part of the doctor flow.
 
 Use `smoke` for a compact answer/cache receipt:
 

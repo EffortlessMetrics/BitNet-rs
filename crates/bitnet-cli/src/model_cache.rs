@@ -188,6 +188,8 @@ struct CacheStatus {
     model: SupportedModel,
     cache_path: PathBuf,
     metadata_path: PathBuf,
+    symlink_target: Option<PathBuf>,
+    symlink_status: String,
     present: bool,
     cached: bool,
     size_matches: bool,
@@ -530,6 +532,10 @@ struct PruneResult {
     existed: bool,
     removed: bool,
     dry_run: bool,
+    action: String,
+    expected_bytes: u64,
+    estimated_reclaim_bytes: u64,
+    repair_guidance: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -864,6 +870,9 @@ pub(crate) fn apple_m4_slm_cache_status_json(
         "cache_root": cache_root,
         "cache_path": status.cache_path,
         "metadata_path": status.metadata_path,
+        "symlink_target": status.symlink_target.clone(),
+        "symlink_status": status.symlink_status.clone(),
+        "stale_symlink": status.symlink_status == "stale_symlink",
         "state": cache_state,
         "ready": ready,
         "present": status.present,
@@ -2207,21 +2216,25 @@ fn prune_models(
     if all && id.is_some() {
         anyhow::bail!("pass either a model id or --all, not both");
     }
-    if !all && id.is_none() {
+    if !all && id.is_none() && !dry_run {
         anyhow::bail!("pass a model id or --all");
     }
 
     let cache_root = resolve_cache_root(cache_dir)?;
-    let models: Vec<_> = if all {
+    let scope =
+        if all || (dry_run && id.is_none()) { "all_supported_models" } else { "single_model" };
+    let models: Vec<_> = if all || (dry_run && id.is_none()) {
         SUPPORTED_MODELS.iter().collect()
     } else {
-        vec![supported_model(id.as_deref().unwrap())?]
+        vec![supported_model(id.as_deref().ok_or_else(|| anyhow!("pass a model id or --all"))?)?]
     };
     let mut results = Vec::new();
 
     for model in models {
         let path = model_dir(&cache_root, model);
         let existed = path.exists();
+        let estimated_reclaim_bytes =
+            if existed { directory_size_bytes(&path).unwrap_or(model.bytes) } else { 0 };
         let removed = if existed && !dry_run {
             fs::remove_dir_all(&path)
                 .with_context(|| format!("failed to remove {}", path.display()))?;
@@ -2229,11 +2242,69 @@ fn prune_models(
         } else {
             false
         };
-        results.push(PruneResult { id: model.id.to_string(), path, existed, removed, dry_run });
+        let action = if dry_run {
+            if existed { "would_remove" } else { "not_cached" }
+        } else if removed {
+            "removed"
+        } else if existed {
+            "kept"
+        } else {
+            "not_cached"
+        };
+        let repair_guidance = if existed && dry_run {
+            format!(
+                "dry run only; rerun `{}` without --dry-run to remove this cached artifact",
+                model_command("prune", model, Some(&cache_root))
+            )
+        } else if existed {
+            "cache entry was removed; fetch again before running inference".to_string()
+        } else {
+            format!(
+                "cache entry is absent; fetch with `{}`",
+                model_command("fetch", model, Some(&cache_root))
+            )
+        };
+        results.push(PruneResult {
+            id: model.id.to_string(),
+            path,
+            existed,
+            removed,
+            dry_run,
+            action: action.to_string(),
+            expected_bytes: model.bytes,
+            estimated_reclaim_bytes,
+            repair_guidance,
+        });
     }
 
     if json {
-        println!("{}", serde_json::to_string_pretty(&results)?);
+        let estimated_reclaim_bytes =
+            results.iter().map(|result| result.estimated_reclaim_bytes).sum::<u64>();
+        let would_remove_count =
+            results.iter().filter(|result| result.action == "would_remove").count();
+        let removed_count = results.iter().filter(|result| result.removed).count();
+        let artifact_kind =
+            if dry_run { "bitnet_model_prune_dry_run" } else { "bitnet_model_prune" };
+        let payload = serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": artifact_kind,
+            "cache_root": cache_root,
+            "scope": scope,
+            "dry_run": dry_run,
+            "deletes_user_data": false,
+            "removed_count": removed_count,
+            "would_remove_count": would_remove_count,
+            "estimated_reclaim_bytes": estimated_reclaim_bytes,
+            "estimated_reclaim": format_size(estimated_reclaim_bytes, DECIMAL),
+            "guidance": if dry_run {
+                "dry run only; no files were deleted. Review results before rerunning prune without --dry-run."
+            } else {
+                "Only supported BitNet-rs model cache entries under cache_root were considered."
+            },
+            "claim_boundary": "Model cache prune receipt only; does not run inference, delete user data outside the BitNet-rs model cache, or prove model quality/performance.",
+            "results": results,
+        });
+        println!("{}", serde_json::to_string_pretty(&payload)?);
     } else {
         for result in &results {
             let action = if result.dry_run {
@@ -2357,6 +2428,8 @@ fn metadata_path(cache_root: &Path, model: &SupportedModel) -> PathBuf {
 fn cache_status(cache_root: &Path, model: SupportedModel, verify: bool) -> Result<CacheStatus> {
     let path = model_path(cache_root, &model);
     let metadata = metadata_path(cache_root, &model);
+    let symlink_target = symlink_target(&path);
+    let symlink_status = symlink_status(&path, symlink_target.as_ref());
     let present = path.exists();
     let size_matches = present
         && fs::metadata(&path).map(|metadata| metadata.len() == model.bytes).unwrap_or(false);
@@ -2371,6 +2444,8 @@ fn cache_status(cache_root: &Path, model: SupportedModel, verify: bool) -> Resul
         model,
         cache_path: path,
         metadata_path: metadata.clone(),
+        symlink_target,
+        symlink_status,
         present,
         cached,
         size_matches,
@@ -2388,7 +2463,9 @@ fn cache_ready(status: &CacheStatus) -> bool {
 }
 
 fn cache_state_label(status: &CacheStatus) -> &'static str {
-    if !status.present {
+    if status.symlink_status == "stale_symlink" {
+        "stale-symlink"
+    } else if !status.present {
         "missing"
     } else if !status.size_matches {
         "invalid-size"
@@ -2422,6 +2499,10 @@ fn cache_repair_guidance(cache_root: &Path, status: &CacheStatus) -> String {
         ),
         "unverified" => format!(
             "Cache repair: {} is present but missing BitNet-rs model-cache metadata. Run `{verify}`; if verification fails, run `{prune}` then `{fetch}`.",
+            status.cache_path.display()
+        ),
+        "stale-symlink" => format!(
+            "Cache repair: {} is a stale symlink. Run `{prune}`, then `{fetch}`, or replace the symlink target with the verified artifact.",
             status.cache_path.display()
         ),
         _ => format!("Cache is ready. Optional check: `{verify}`."),
@@ -2678,7 +2759,7 @@ fn provenance_repair_command(
     }
     match cache_state {
         "missing" => fetch_command.to_string(),
-        "invalid-size" | "invalid-sha" | "invalid-artifact" => {
+        "invalid-size" | "invalid-sha" | "invalid-artifact" | "stale-symlink" => {
             format!("{prune_command} && {fetch_command}")
         }
         "unverified" => verify_command.to_string(),
@@ -2701,6 +2782,34 @@ fn symlink_target(path: &Path) -> Option<PathBuf> {
         .ok()
         .filter(|metadata| metadata.file_type().is_symlink())
         .and_then(|_| fs::read_link(path).ok())
+}
+
+fn symlink_status(path: &Path, target: Option<&PathBuf>) -> String {
+    let Some(target) = target else {
+        return "not_symlink".to_string();
+    };
+    let resolved = if target.is_absolute() {
+        target.clone()
+    } else {
+        path.parent().unwrap_or_else(|| Path::new(".")).join(target)
+    };
+    if resolved.exists() { "symlink".to_string() } else { "stale_symlink".to_string() }
+}
+
+fn directory_size_bytes(path: &Path) -> Result<u64> {
+    let metadata = fs::symlink_metadata(path)?;
+    if metadata.is_file() {
+        return Ok(metadata.len());
+    }
+    if metadata.file_type().is_symlink() {
+        return Ok(0);
+    }
+    let mut total = 0;
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        total += directory_size_bytes(&entry.path()).unwrap_or(0);
+    }
+    Ok(total)
 }
 
 fn stable_sha256_hex(bytes: &[u8]) -> String {
@@ -3320,6 +3429,8 @@ mod tests {
             model: *default,
             cache_path: model_path(&cache_root, default),
             metadata_path: metadata_path(&cache_root, default),
+            symlink_target: None,
+            symlink_status: "not_symlink".to_string(),
             present: false,
             cached: false,
             size_matches: false,
@@ -3830,6 +3941,8 @@ mod tests {
             model,
             cache_path: model_path(&root, &model),
             metadata_path: metadata_path(&root, &model),
+            symlink_target: None,
+            symlink_status: "not_symlink".to_string(),
             present: true,
             cached: true,
             size_matches: true,
@@ -3853,6 +3966,8 @@ mod tests {
             model,
             cache_path: model_path(&root, &model),
             metadata_path: metadata_path(&root, &model),
+            symlink_target: None,
+            symlink_status: "not_symlink".to_string(),
             present: true,
             cached: false,
             size_matches: true,
@@ -3877,6 +3992,8 @@ mod tests {
             model,
             cache_path: model_path(&root, &model),
             metadata_path: metadata_path(&root, &model),
+            symlink_target: None,
+            symlink_status: "not_symlink".to_string(),
             present: false,
             cached: false,
             size_matches: false,

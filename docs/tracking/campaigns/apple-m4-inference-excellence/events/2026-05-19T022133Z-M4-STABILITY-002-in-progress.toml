@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T02:21:33Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-002-cache-disk-repair"
+
+notes = [
+  "Started M4-STABILITY-002 after M4-GATE-HYGIENE-001 closeout advanced the M4 excellence campaign to cache and disk-pressure repair receipts.",
+  "Scope is limited to doctor/prune operator repair receipts: missing model, bad SHA guidance, missing BitNet tokenizer readiness, stale symlink state, low disk guidance, and prune dry-run behavior.",
+  "No live inference, model support, backend support, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
