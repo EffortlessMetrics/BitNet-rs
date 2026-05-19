@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-20T01:10:00Z",
+  "created_utc": "2026-05-20T02:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -71,18 +71,15 @@
     "cold_warm_benchmark_ready": true,
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 21,
-      "proxy_or_missing_route_count": 2,
+      "profile_specific_route_count": 23,
+      "proxy_or_missing_route_count": 0,
       "promotion_eligible_route_count": 8,
       "promotion_eligible_profile_specific_route_count": 8,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
-      "proxy_or_missing_routes": [
-        "decode_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_default_cpu"
-      ],
+      "proxy_or_missing_routes": [],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
     },
@@ -231,7 +228,6 @@
         "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for prefill_heavy",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile prefill_heavy",
-          "dense_slm_default_cpu: timing evidence is not profile-specific for profile prefill_heavy",
           "dense_slm_openvino_npu_candidate: NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "dense_slm_openvino_npu_candidate: route not promoted for profile prefill_heavy"
         ]
@@ -243,7 +239,6 @@
         "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for decode_heavy",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile decode_heavy",
-          "dense_slm_default_cpu: timing evidence is not profile-specific for profile decode_heavy",
           "dense_slm_openvino_npu_candidate: NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "dense_slm_openvino_npu_candidate: route not promoted for profile decode_heavy"
         ]
@@ -760,7 +755,7 @@
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
-        "profile_specific_timing=21/23",
+        "profile_specific_timing=23/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "promotion_blocker_summary_count=9",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short,decode_heavy,prefill_heavy",
@@ -782,7 +777,7 @@
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
         "telemetry_gap_count=46",
-        "profile_specific_timing=21/23",
+        "profile_specific_timing=23/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short,decode_heavy,prefill_heavy",
         "openvino_npu_promoted_profiles=warm_resident",

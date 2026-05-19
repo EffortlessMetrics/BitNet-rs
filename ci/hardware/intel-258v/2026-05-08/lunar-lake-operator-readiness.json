@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_readiness",
   "proof_stage": "operator_routes_indexed",
-  "created_utc": "2026-05-20T01:05:00Z",
+  "created_utc": "2026-05-20T02:20:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_ready": true,
@@ -133,7 +133,6 @@
         "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for prefill_heavy",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile prefill_heavy",
-          "dense_slm_default_cpu: timing evidence is not profile-specific for profile prefill_heavy",
           "dense_slm_openvino_npu_candidate: NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "dense_slm_openvino_npu_candidate: route not promoted for profile prefill_heavy"
         ]
@@ -145,7 +144,6 @@
         "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for decode_heavy",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile decode_heavy",
-          "dense_slm_default_cpu: timing evidence is not profile-specific for profile decode_heavy",
           "dense_slm_openvino_npu_candidate: NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "dense_slm_openvino_npu_candidate: route not promoted for profile decode_heavy"
         ]
