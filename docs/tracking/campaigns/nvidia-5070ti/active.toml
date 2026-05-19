@@ -2936,8 +2936,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-014B"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/cuda-model-014-qwen3-server-ready-accept"
+pr = 5918
+head_sha = "1c1b93f27f7c9fe688398fc982b1f66429f4df9d"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
