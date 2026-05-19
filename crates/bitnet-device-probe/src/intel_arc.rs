@@ -697,7 +697,11 @@ mod tests {
         assert!(!probe.fallback_used);
         assert!(probe.identity_evidence.iter().any(|entry| entry.starts_with("opencl:")));
 
-        let value = serde_json::to_value(&probe).expect("probe serializes");
+        let value = serde_json::to_value(&probe);
+        assert!(value.is_ok());
+        let Ok(value) = value else {
+            return;
+        };
         assert_eq!(value["proof_stage"], "runtime_detected");
         assert_eq!(value["requested_backend"], INTEL_ARC_A770_REQUESTED_BACKEND);
         assert_eq!(value["selected_backend"], INTEL_ARC_A770_OPENCL_BACKEND);
