@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T18:44:03Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-054"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5992
+head_sha = "db81e20444019f253b612f6e53bb6291201f5524"
+merge_sha = "8157d160c4a66d3982f90589debef9406c3ace19"
+
+notes = [
+  "Merged PR #5992 as 8157d160c4a66d3982f90589debef9406c3ace19.",
+  "SLM-CPU-054 records the exact packed Q8_0 sidecar runtime hook/API gap and keeps selected_path=eager_f32_candle with sidecar_runtime_compute_allowed=false.",
+  "The merged artifact preserves fallback_used=false and speedup_claim=false and does not enable packed Q8_0 sidecar runtime execution.",
+  "No sustained throughput, broad answer quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
