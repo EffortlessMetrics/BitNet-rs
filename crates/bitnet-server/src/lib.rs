@@ -1198,6 +1198,7 @@ fn qk256_cuda_runtime_stats_delta(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_server_shared_engine_receipt(
     request_id: &str,
     request: &ChatCompletionRequest,
@@ -1239,7 +1240,7 @@ fn build_server_shared_engine_receipt(
     });
     let execution_coverage =
         qk256_evidence.map(|evidence| server_receipt_qk256_execution_coverage(&evidence.coverage));
-    let kernel_stats = qk256_evidence.map(|evidence| server_receipt_qk256_kernel_stats(evidence));
+    let kernel_stats = qk256_evidence.map(server_receipt_qk256_kernel_stats);
 
     ServerSharedEngineReceipt {
         receipt_kind: "server_shared_engine_chat_completion".to_string(),
@@ -1420,10 +1421,10 @@ fn server_receipt_model_coverage(
     request: &ChatCompletionRequest,
     active_model: &model_manager::ModelMetadata,
 ) -> Option<ServerReceiptModelCoverage> {
-    if route == DENSE_QWEN_ROUTE {
-        if let Some(coverage) = dense_qwen_server_coverage_for_request(request, active_model) {
-            return Some(coverage);
-        }
+    if route == DENSE_QWEN_ROUTE
+        && let Some(coverage) = dense_qwen_server_coverage_for_request(request, active_model)
+    {
+        return Some(coverage);
     }
     if route == BITNET_QK256_ROUTE && is_official_bitnet_qk256_model(request, active_model) {
         return Some(ServerReceiptModelCoverage {
