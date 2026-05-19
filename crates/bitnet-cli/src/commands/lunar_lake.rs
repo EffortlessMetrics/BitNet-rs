@@ -78,6 +78,8 @@ const OPENVINO_NPU_PROFILE_PROMOTION_TARGETS: &[&str] = &["warm_resident"];
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const BLOCKED_AUTO_ASK_RECEIPT: &str = "lunar-lake-operator-ask-auto-low-power-blocked.json";
+const AUTO_GPU_ASK_NORMAL_ASK_RECEIPT: &str =
+    "lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json";
 const AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT: &str =
     "lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
@@ -214,6 +216,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = THERMAL_TEMPERATURE_AVAILABILITY_FILE)]
         thermal_temperature_availability: Option<PathBuf>,
+
+        /// Optional successful auto ask_normal ask receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = AUTO_GPU_ASK_NORMAL_ASK_RECEIPT)]
+        ask_normal_ask_receipt: Option<PathBuf>,
 
         /// Optional successful auto warm-resident ask receipt to index.
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
@@ -987,6 +994,8 @@ pub struct LunarLakeRegressionBundle {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thermal_temperature_availability: Option<ThermalTemperatureAvailabilityRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ask_normal_ask_receipt: Option<OperatorAskRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub warm_resident_ask_receipt: Option<OperatorAskRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocked_ask_receipt: Option<BlockedAskRegressionSummary>,
@@ -1017,6 +1026,10 @@ pub struct RegressionSurfaceSummary {
     pub thermal_temperature_available: bool,
     #[serde(default)]
     pub thermal_usable_temperature_reading_count: usize,
+    #[serde(default)]
+    pub ask_normal_ask_receipt_indexed: bool,
+    #[serde(default)]
+    pub ask_normal_auto_ask_ready: bool,
     #[serde(default)]
     pub warm_resident_ask_receipt_indexed: bool,
     #[serde(default)]
@@ -1064,6 +1077,8 @@ impl Default for RegressionSurfaceSummary {
             thermal_temperature_availability_indexed: false,
             thermal_temperature_available: false,
             thermal_usable_temperature_reading_count: 0,
+            ask_normal_ask_receipt_indexed: false,
+            ask_normal_auto_ask_ready: false,
             warm_resident_ask_receipt_indexed: false,
             warm_resident_auto_ask_ready: false,
             blocked_ask_receipt_indexed: false,
@@ -1328,6 +1343,8 @@ pub struct LunarLakeComparisonReceipt {
     pub regression_passed: bool,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ask_normal_ask_receipt: Option<OperatorAskRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub warm_resident_ask_receipt: Option<OperatorAskRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2625,6 +2642,7 @@ impl LunarLakeCommand {
                 bitnet_semantic_intake,
                 power_profile_evidence,
                 thermal_temperature_availability,
+                ask_normal_ask_receipt,
                 warm_resident_ask_receipt,
                 blocked_ask_receipt,
                 json_out,
@@ -2646,6 +2664,7 @@ impl LunarLakeCommand {
                         bitnet_semantic_intake.as_deref(),
                         power_profile_evidence.as_deref(),
                         thermal_temperature_availability.as_deref(),
+                        ask_normal_ask_receipt.as_deref(),
                         warm_resident_ask_receipt.as_deref(),
                         blocked_ask_receipt.as_deref(),
                         created_utc,
@@ -3707,6 +3726,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
         power_profile_evidence,
         None,
         None,
+        None,
         blocked_ask_receipt,
         created_utc,
     )
@@ -3722,6 +3742,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
     bitnet_semantic_intake: Option<&Path>,
     power_profile_evidence: Option<&Path>,
     thermal_temperature_availability: Option<&Path>,
+    ask_normal_ask_receipt: Option<&Path>,
     warm_resident_ask_receipt: Option<&Path>,
     blocked_ask_receipt: Option<&Path>,
     created_utc: String,
@@ -3921,9 +3942,54 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         cold_warm_benchmark.as_ref(),
         route_profile_comparison.as_ref(),
     );
+    let gpu_ask_normal_promoted = openvino_gpu_profile_is_promoted(
+        "ask_normal",
+        cold_warm_benchmark.as_ref(),
+        route_profile_comparison.as_ref(),
+    );
+    let ask_normal_ask_receipt = if let Some(path) = ask_normal_ask_receipt {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_operator_ask_regression(
+            &path,
+            OperatorAskRegressionExpectation {
+                label: "ask_normal",
+                profile_id: "ask_normal",
+                selected_route: "dense_slm_openvino_gpu_candidate",
+                selected_backend: "openvino-gpu",
+            },
+        )?;
+        checks.push(regression_check_owned(
+            "ask_normal_auto_ask_receipt_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            operator_ask_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        if gpu_ask_normal_promoted {
+            checks.push(regression_check_owned(
+                "ask_normal_auto_ask_receipt_regression_ready",
+                false,
+                vec![AUTO_GPU_ASK_NORMAL_ASK_RECEIPT.to_string()],
+                vec![
+                    "OpenVINO GPU is promoted for ask_normal but no successful auto ask receipt was indexed"
+                        .to_string(),
+                ],
+            ));
+        }
+        None
+    };
     let warm_resident_ask_receipt = if let Some(path) = warm_resident_ask_receipt {
         let path = resolve_receipt_path(root, path);
-        let summary = inspect_operator_ask_regression(&path)?;
+        let summary = inspect_operator_ask_regression(
+            &path,
+            OperatorAskRegressionExpectation {
+                label: "warm_resident",
+                profile_id: "warm_resident",
+                selected_route: "dense_slm_openvino_npu_candidate",
+                selected_backend: "openvino-npu",
+            },
+        )?;
         checks.push(regression_check_owned(
             "warm_resident_auto_ask_receipt_regression_ready",
             summary.regression_ready,
@@ -3971,6 +4037,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         bitnet_semantic_intake.as_ref(),
         power_profile_evidence.as_ref(),
         thermal_temperature_availability.as_ref(),
+        ask_normal_ask_receipt.as_ref(),
         warm_resident_ask_receipt.as_ref(),
         blocked_ask_receipt.as_ref(),
     );
@@ -3990,6 +4057,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         bitnet_semantic_intake,
         power_profile_evidence,
         thermal_temperature_availability,
+        ask_normal_ask_receipt,
         warm_resident_ask_receipt,
         blocked_ask_receipt,
         regression_surface,
@@ -4008,6 +4076,7 @@ fn build_regression_surface_summary(
     bitnet_semantic_intake: Option<&BitnetSemanticIntakeRegressionSummary>,
     power_profile_evidence: Option<&PowerProfileRegressionSummary>,
     thermal_temperature_availability: Option<&ThermalTemperatureAvailabilityRegressionSummary>,
+    ask_normal_ask_receipt: Option<&OperatorAskRegressionSummary>,
     warm_resident_ask_receipt: Option<&OperatorAskRegressionSummary>,
     blocked_ask_receipt: Option<&BlockedAskRegressionSummary>,
 ) -> RegressionSurfaceSummary {
@@ -4025,6 +4094,10 @@ fn build_regression_surface_summary(
         thermal_usable_temperature_reading_count: thermal_temperature_availability
             .map(|summary| summary.usable_temperature_reading_count)
             .unwrap_or(0),
+        ask_normal_ask_receipt_indexed: ask_normal_ask_receipt.is_some(),
+        ask_normal_auto_ask_ready: ask_normal_ask_receipt
+            .map(|summary| summary.regression_ready)
+            .unwrap_or(false),
         warm_resident_ask_receipt_indexed: warm_resident_ask_receipt.is_some(),
         warm_resident_auto_ask_ready: warm_resident_ask_receipt
             .map(|summary| summary.regression_ready)
@@ -4267,6 +4340,37 @@ fn build_regression_surface_summary(
         .openvino_npu_promoted_profiles
         .iter()
         .any(|profile| profile == "warm_resident");
+    let gpu_ask_normal_promoted = summary
+        .route_promotion_scope
+        .openvino_gpu_promoted_profiles
+        .iter()
+        .any(|profile| profile == "ask_normal");
+    if gpu_ask_normal_promoted {
+        if let Some(ask) = ask_normal_ask_receipt {
+            if !ask.regression_ready {
+                summary.gaps.push(format!(
+                    "ask_normal auto GPU ask receipt is not regression-ready: {}",
+                    ask.gaps.join("; ")
+                ));
+            }
+            if ask.profile_id != "ask_normal"
+                || ask.requested_device != "auto"
+                || ask.requested_route != "auto"
+                || ask.selected_route != "dense_slm_openvino_gpu_candidate"
+            {
+                summary.gaps.push(
+                    "ask_normal ask receipt does not prove auto selected the promoted GPU route"
+                        .to_string(),
+                );
+            }
+        } else {
+            summary.gaps.push(
+                "OpenVINO GPU is promoted for ask_normal but no successful auto ask receipt is indexed"
+                    .to_string(),
+            );
+        }
+    }
+
     if npu_warm_resident_promoted {
         if let Some(ask) = warm_resident_ask_receipt {
             if !ask.regression_ready {
@@ -5057,7 +5161,42 @@ fn npu_warm_resident_is_promoted(
         .unwrap_or(false)
 }
 
-fn inspect_operator_ask_regression(path: &Path) -> Result<OperatorAskRegressionSummary> {
+fn openvino_gpu_profile_is_promoted(
+    profile_id: &str,
+    cold_warm_benchmark: Option<&ColdWarmRegressionSummary>,
+    route_profile_comparison: Option<&RouteProfileRegressionSummary>,
+) -> bool {
+    cold_warm_benchmark
+        .map(|summary| {
+            summary
+                .route_promotion_scope
+                .openvino_gpu_promoted_profiles
+                .iter()
+                .any(|profile| profile == profile_id)
+        })
+        .or_else(|| {
+            route_profile_comparison.map(|summary| {
+                summary
+                    .route_promotion_scope
+                    .openvino_gpu_promoted_profiles
+                    .iter()
+                    .any(|profile| profile == profile_id)
+            })
+        })
+        .unwrap_or(false)
+}
+
+struct OperatorAskRegressionExpectation<'a> {
+    label: &'a str,
+    profile_id: &'a str,
+    selected_route: &'a str,
+    selected_backend: &'a str,
+}
+
+fn inspect_operator_ask_regression(
+    path: &Path,
+    expected: OperatorAskRegressionExpectation<'_>,
+) -> Result<OperatorAskRegressionSummary> {
     let receipt: Value = read_json_receipt(path)?;
     let mut gaps = Vec::new();
     let artifact_kind = string_at(&receipt, "artifact_kind").unwrap_or_default();
@@ -5142,21 +5281,28 @@ fn inspect_operator_ask_regression(path: &Path) -> Result<OperatorAskRegressionS
         ) == Some(true);
     let source_run_receipt = string_at(&receipt, "source_run_receipt");
 
-    if profile_id != "warm_resident" {
-        gaps.push(format!("operator ask receipt should cover warm_resident; got {profile_id}"));
+    if profile_id != expected.profile_id {
+        gaps.push(format!(
+            "operator ask receipt should cover {}; got {profile_id}",
+            expected.profile_id
+        ));
     }
     if requested_device != "auto" || requested_route != "auto" {
         gaps.push(format!(
             "operator ask receipt should cover auto/auto request; got device={requested_device} route={requested_route}"
         ));
     }
-    if selected_route != "dense_slm_openvino_npu_candidate" {
+    if selected_route != expected.selected_route {
         gaps.push(format!(
-            "expected selected_route=dense_slm_openvino_npu_candidate; got {selected_route}"
+            "expected selected_route={}; got {selected_route}",
+            expected.selected_route
         ));
     }
-    if selected_backend != "openvino-npu" {
-        gaps.push(format!("expected selected_backend=openvino-npu; got {selected_backend}"));
+    if selected_backend != expected.selected_backend {
+        gaps.push(format!(
+            "expected selected_backend={}; got {selected_backend}",
+            expected.selected_backend
+        ));
     }
     if runtime_api != "openvino_genai" {
         gaps.push(format!("expected runtime_api=openvino_genai; got {runtime_api}"));
@@ -5172,33 +5318,37 @@ fn inspect_operator_ask_regression(path: &Path) -> Result<OperatorAskRegressionS
     }
     if !route_profile_blockers.is_empty() {
         gaps.push(format!(
-            "warm_resident ask receipt has route profile blockers: {}",
+            "{} ask receipt has route profile blockers: {}",
+            expected.label,
             route_profile_blockers.join("; ")
         ));
     }
     if fallback_used {
-        gaps.push("warm_resident ask receipt observed fallback_used=true".to_string());
+        gaps.push(format!("{} ask receipt observed fallback_used=true", expected.label));
     }
     if !answer_gate_passed {
-        gaps.push("warm_resident ask receipt did not pass answer gate".to_string());
+        gaps.push(format!("{} ask receipt did not pass answer gate", expected.label));
     }
     if !openvino_candidate_route_executed {
-        gaps.push(
-            "warm_resident ask receipt does not prove OpenVINO candidate route execution"
-                .to_string(),
-        );
+        gaps.push(format!(
+            "{} ask receipt does not prove OpenVINO candidate route execution",
+            expected.label
+        ));
     }
     if !new_inference_executed {
-        gaps.push("warm_resident ask receipt did not record an executed operator ask".to_string());
+        gaps.push(format!(
+            "{} ask receipt did not record an executed operator ask",
+            expected.label
+        ));
     }
     if speedup_claim || power_advantage_claim || acceleration_claim || bitnet_qk256_i2s_claim {
-        gaps.push(
-            "warm_resident ask receipt violates speedup/power/acceleration/BitNet QK256 claim boundary"
-                .to_string(),
-        );
+        gaps.push(format!(
+            "{} ask receipt violates speedup/power/acceleration/BitNet QK256 claim boundary",
+            expected.label
+        ));
     }
     if !generated_token_ids_available {
-        gaps.push("warm_resident ask receipt has no generated token ID evidence".to_string());
+        gaps.push(format!("{} ask receipt has no generated token ID evidence", expected.label));
     }
 
     gaps.sort();
@@ -5676,6 +5826,7 @@ pub fn build_comparison_receipt_with_created_utc(
         operator_ready: operator.operator_ready,
         regression_passed: regression.regression_passed,
         regression_surface: regression.regression_surface,
+        ask_normal_ask_receipt: regression.ask_normal_ask_receipt,
         warm_resident_ask_receipt: regression.warm_resident_ask_receipt,
         blocked_ask_receipt: regression.blocked_ask_receipt,
         route_policy: operator.route_policy,
@@ -19722,8 +19873,15 @@ mod tests {
         let temp = tempfile::tempdir()?;
         write_warm_resident_auto_npu_ask(temp.path(), AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT)?;
 
-        let summary =
-            inspect_operator_ask_regression(&temp.path().join(AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT))?;
+        let summary = inspect_operator_ask_regression(
+            &temp.path().join(AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT),
+            OperatorAskRegressionExpectation {
+                label: "warm_resident",
+                profile_id: "warm_resident",
+                selected_route: "dense_slm_openvino_npu_candidate",
+                selected_backend: "openvino-npu",
+            },
+        )?;
 
         assert!(summary.regression_ready, "{:?}", summary.gaps);
         assert_eq!(summary.profile_id, "warm_resident");
@@ -19731,6 +19889,36 @@ mod tests {
         assert_eq!(summary.requested_route, "auto");
         assert_eq!(summary.selected_route, "dense_slm_openvino_npu_candidate");
         assert_eq!(summary.selected_backend, "openvino-npu");
+        assert!(summary.new_inference_executed);
+        assert!(summary.generated_token_ids_available);
+        assert!(!summary.speedup_claim);
+        assert!(!summary.power_advantage_claim);
+        assert!(!summary.acceleration_claim);
+        assert!(!summary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn ask_normal_auto_gpu_ask_receipt_is_regression_ready() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_ask_normal_auto_gpu_ask(temp.path(), AUTO_GPU_ASK_NORMAL_ASK_RECEIPT)?;
+
+        let summary = inspect_operator_ask_regression(
+            &temp.path().join(AUTO_GPU_ASK_NORMAL_ASK_RECEIPT),
+            OperatorAskRegressionExpectation {
+                label: "ask_normal",
+                profile_id: "ask_normal",
+                selected_route: "dense_slm_openvino_gpu_candidate",
+                selected_backend: "openvino-gpu",
+            },
+        )?;
+
+        assert!(summary.regression_ready, "{:?}", summary.gaps);
+        assert_eq!(summary.profile_id, "ask_normal");
+        assert_eq!(summary.requested_device, "auto");
+        assert_eq!(summary.requested_route, "auto");
+        assert_eq!(summary.selected_route, "dense_slm_openvino_gpu_candidate");
+        assert_eq!(summary.selected_backend, "openvino-gpu");
         assert!(summary.new_inference_executed);
         assert!(summary.generated_token_ids_available);
         assert!(!summary.speedup_claim);
@@ -19759,6 +19947,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
         assert!(!missing.strict_ready);
         assert!(missing.gaps.iter().any(|gap| {
@@ -19774,6 +19963,7 @@ mod tests {
             Some(&durability),
             Some(&intake),
             Some(&power),
+            None,
             None,
             Some(&ask),
             None,
@@ -20807,6 +20997,77 @@ mod tests {
                         "generated_token_ids_available_from_pipeline": true,
                         "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
                         "generated_token_ids": [17, 488, 220, 17, 16819, 220, 19, 13, 151645]
+                    },
+                    "verification": {
+                        "answer_gate_passed": true,
+                        "fallback_used": false,
+                        "generated_token_ids_available_from_pipeline": true,
+                        "acceleration_claim": false
+                    }
+                },
+                "claim_boundary": {
+                    "openvino_candidate_route_executed": true,
+                    "fallback_used": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "arc_or_npu_acceleration_claim": false,
+                    "bitnet_qk256_i2s_claim": false
+                }
+            }),
+        )
+    }
+
+    fn write_ask_normal_auto_gpu_ask(root: &Path, file: &str) -> Result<()> {
+        write_json(
+            root,
+            file,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_operator_ask",
+                "proof_stage": "operator_candidate_route_executed_through_lunar_lake_ask",
+                "machine_id": "intel-258v",
+                "requested_device": "auto",
+                "requested_route": "auto",
+                "profile_id": "ask_normal",
+                "selected_route": "dense_slm_openvino_gpu_candidate",
+                "selected_backend": "openvino-gpu",
+                "runtime_api": "openvino_genai",
+                "route_id": "dense_slm_openvino_gpu_candidate",
+                "promotion_status": "promoted",
+                "route_profile_status": "promoted_route_ready",
+                "route_profile_blockers": [],
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "openvino_candidate_route_executed": true,
+                "speedup_claim": false,
+                "power_advantage_claim": false,
+                "acceleration_claim": false,
+                "bitnet_qk256_i2s_claim": false,
+                "tokens": {
+                    "prompt_count": 39,
+                    "generated_count": 8,
+                    "generated_ids": [17, 488, 220, 17, 16819, 220, 19, 13]
+                },
+                "route_selection": {
+                    "requested_device": "auto",
+                    "requested_route": "auto",
+                    "profile_id": "ask_normal",
+                    "selected_route": "dense_slm_openvino_gpu_candidate",
+                    "selected_backend": "openvino-gpu",
+                    "runtime_api": "openvino_genai",
+                    "promotion_status": "promoted",
+                    "route_profile_status": "promoted_route_ready",
+                    "route_profile_blockers": [],
+                    "selection_source": "promotion_ledger_auto"
+                },
+                "source_run_receipt": "source-run.json",
+                "source_receipt": {
+                    "artifact_kind": "lunar_lake_openvino_operator_ask",
+                    "output": {
+                        "generated_token_ids_available_from_pipeline": true,
+                        "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+                        "generated_token_ids": [17, 488, 220, 17, 16819, 220, 19, 13]
                     },
                     "verification": {
                         "answer_gate_passed": true,

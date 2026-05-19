@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-20T05:35:00Z",
+  "created_utc": "2026-05-20T06:25:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -22,6 +22,8 @@
     "thermal_temperature_availability_indexed": true,
     "thermal_temperature_available": false,
     "thermal_usable_temperature_reading_count": 0,
+    "ask_normal_ask_receipt_indexed": true,
+    "ask_normal_auto_ask_ready": true,
     "warm_resident_ask_receipt_indexed": true,
     "warm_resident_auto_ask_ready": true,
     "blocked_ask_receipt_indexed": true,
@@ -108,6 +110,31 @@
     "low_power_promotion_ready": false,
     "power_advantage_proven": false,
     "strict_ready": true,
+    "gaps": []
+  },
+  "ask_normal_ask_receipt": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json",
+    "ask_receipt_ready": true,
+    "profile_id": "ask_normal",
+    "requested_device": "auto",
+    "requested_route": "auto",
+    "selected_route": "dense_slm_openvino_gpu_candidate",
+    "selected_backend": "openvino-gpu",
+    "runtime_api": "openvino_genai",
+    "promotion_status": "promoted",
+    "route_profile_status": "promoted_route_ready",
+    "route_profile_blockers": [],
+    "fallback_used": false,
+    "answer_gate_passed": true,
+    "openvino_candidate_route_executed": true,
+    "new_inference_executed": true,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "bitnet_qk256_i2s_claim": false,
+    "generated_token_ids_available": true,
+    "source_run_receipt": "ci/hardware/intel-258v/2026-05-08\\lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief-source-run.json",
+    "regression_ready": true,
     "gaps": []
   },
   "warm_resident_ask_receipt": {
@@ -894,6 +921,29 @@
         "measured_temperature_claim=false",
         "telemetry_probe_executed=true",
         "claim_boundary_preserved=true"
+      ]
+    },
+    {
+      "check_id": "ask_normal_auto_ask_receipt_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json"
+      ],
+      "notes": [
+        "profile_id=ask_normal",
+        "requested_device=auto",
+        "requested_route=auto",
+        "selected_route=dense_slm_openvino_gpu_candidate",
+        "selected_backend=openvino-gpu",
+        "runtime_api=openvino_genai",
+        "promotion_status=promoted",
+        "route_profile_status=promoted_route_ready",
+        "fallback_used=false",
+        "answer_gate_passed=true",
+        "openvino_candidate_route_executed=true",
+        "new_inference_executed=true",
+        "generated_token_ids_available=true",
+        "ask_receipt_ready=true"
       ]
     },
     {
