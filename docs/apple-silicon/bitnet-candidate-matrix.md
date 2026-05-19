@@ -109,3 +109,12 @@ Apple answer, benchmark, Metal, or server claim may be made until artifact
 inventory, TL1 conversion/runner authority, tokenizer/prompt authority,
 reference-good output, TL1 scalar/NEON fixtures, and strict Apple receipts pass
 with `fallback=false`.
+
+## TL1 route boundary
+
+TL1 is an ARM-first table-lookup route tracked by `docs/bitnet/tl1/README.md`,
+`plans/tl1/implementation-plan.md`, and
+`docs/tracking/campaigns/tl1/CAMPAIGN.md`. Apple candidate planning must treat
+TL1 as distinct from `I2_S`/QK256 and distinct from TL2; no TL1 answer/backend
+claim is valid before TL1 layout authority, scalar oracle, artifact authority,
+and reference-good output are proven.

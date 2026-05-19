@@ -46,6 +46,7 @@
 | qwen36 | Qwen3.6 governed model family | QWEN36-DOCS-000 | Qwen3.6 registration is not native BitNet-rs inference support. |
 | server-real-inference | Server real inference | SERVER-005 | Do not reintroduce simulated inference. |
 | slm-cpu | Small dense model CPU proof | SLM-CPU-021 | Do not edit BitNet QK256/I2_S kernels. |
+| tl1 | TL1 ARM table lookup route | TL1-PLAN-000 | TL1 registration is not native BitNet-rs inference support. |
 | tl2 | TL2 x86 table lookup route | TL2-DOCS-000 | TL2 registration is not native BitNet-rs inference support. |
 | tracker-infra | Tracker infrastructure | TRACKER-003 | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
 | wasm-inference | WASM inference proof lane | WASM-002 | WASM detection is not inference. |
