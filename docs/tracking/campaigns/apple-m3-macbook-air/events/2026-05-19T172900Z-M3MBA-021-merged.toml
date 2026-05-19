@@ -1,0 +1,34 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-021"
+event = "merged"
+timestamp = "2026-05-19T17:29:00Z"
+actor = "codex"
+pr = 5952
+head_sha = "256c46491b1cffa69c2992fee8833f7cb5e2eda9"
+merge_sha = "16de92563ceffcbe2b9e13beb2d5dd5144330849"
+branch = "codex/apple-m3-macbook-air/M3MBA-021-device-profile-contract"
+
+summary = "Merged #5952 with the structured M3 Air device/profile contract and advanced the lane toward the M3MBA-022 accuracy comparison profile."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5952",
+  "crates/bitnet-device-config-core/src/profile.rs",
+  "crates/bitnet-device-config-core/src/lib.rs",
+  "crates/bitnet-device-probe/src/apple_receipts.rs",
+  "crates/bitnet-device-probe/tests/apple_backend_receipts.rs",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+]
+
+notes = [
+  "M3MBA-021 records the M3 Air host/profile contract for CPU/NEON, Metal, and MPSGraph proof-lane labels.",
+  "Metal and MPSGraph remain visibility/request identities with execution_available=false.",
+  "The merge keeps unsupported Metal model inference, MPSGraph model inference, Neural Engine execution, QK256 Apple Silicon, M4 proof, and broad Apple Silicon claims explicit.",
+  "No new M3 inference, artifact download, runtime behavior change, M4 proof, Metal model inference, MPSGraph model inference, Neural Engine execution, QK256, or performance claim is made.",
+]
+
+validation = [
+  "Hosted PR #5952 checks passed after the dependent CI-policy repair PRs landed.",
+  "Local validation before PR included cargo fmt, device-config-core tests, device-probe Apple tests, cli-config-core apple_m3 tests, campaign check, campaign doctor, campaign generate --check, and git diff --check.",
+]
