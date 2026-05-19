@@ -216,7 +216,7 @@ fn dense_model_family(architecture: &str) -> Option<String> {
     }
 }
 
-fn classify_dense_tensor_role(name: &str) -> DenseGgufTensorRole {
+pub fn classify_dense_tensor_role(name: &str) -> DenseGgufTensorRole {
     let n = name.to_ascii_lowercase();
     if n == "token_embd.weight"
         || n.ends_with(".embed_tokens.weight")

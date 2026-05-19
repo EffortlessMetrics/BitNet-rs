@@ -1,5 +1,6 @@
 //! BitNet model implementation
 
+use crate::dense_gguf_q8_sidecar::DenseGgufQ8SidecarRegistry;
 use crate::transformer::{KVCache, TransformerModel};
 use bitnet_common::{
     BitNetConfig, BitNetError, BitNetTensor, ConcreteTensor, Device, Result, Tensor,
@@ -26,11 +27,18 @@ pub struct BitNetModel {
     device: Device,
     tensors: HashMap<String, CandleTensor>,
     transformer: Option<Arc<TransformerModel>>,
+    dense_q8_sidecars: DenseGgufQ8SidecarRegistry,
 }
 
 impl BitNetModel {
     pub fn new(config: BitNetConfig, device: Device) -> Self {
-        Self { config, device, tensors: HashMap::new(), transformer: None }
+        Self {
+            config,
+            device,
+            tensors: HashMap::new(),
+            transformer: None,
+            dense_q8_sidecars: DenseGgufQ8SidecarRegistry::default(),
+        }
     }
 
     /// Create a BitNet model from GGUF tensors
@@ -38,6 +46,23 @@ impl BitNetModel {
         config: BitNetConfig,
         tensors: HashMap<String, CandleTensor>,
         raw_tensors: HashMap<String, CandleTensor>,
+        device: Device,
+    ) -> Result<Self> {
+        Self::from_gguf_with_dense_q8_sidecars(
+            config,
+            tensors,
+            raw_tensors,
+            DenseGgufQ8SidecarRegistry::default(),
+            device,
+        )
+    }
+
+    /// Create a BitNet model from GGUF tensors and inert dense Q8 sidecar metadata.
+    pub fn from_gguf_with_dense_q8_sidecars(
+        config: BitNetConfig,
+        tensors: HashMap<String, CandleTensor>,
+        raw_tensors: HashMap<String, CandleTensor>,
+        dense_q8_sidecars: DenseGgufQ8SidecarRegistry,
         device: Device,
     ) -> Result<Self> {
         tracing::debug!(
@@ -51,6 +76,12 @@ impl BitNetModel {
             tensors.len(),
             raw_tensors.len()
         );
+        if !dense_q8_sidecars.is_empty() {
+            tracing::debug!(
+                "from_gguf: carrying {} inert dense Q8_0 sidecar descriptors; eager F32 runtime remains selected",
+                dense_q8_sidecars.descriptor_count()
+            );
+        }
 
         // Validate that required tensors are present
         // LM head can be tied to embeddings, so check for either output.weight or embeddings
@@ -79,7 +110,7 @@ impl BitNetModel {
         // Try to build transformer model; propagate errors so missing weights fail fast
         let transformer = Self::build_transformer(&config, &tensors, &raw_tensors, &device)?;
 
-        Ok(Self { config, device, tensors, transformer: Some(transformer) })
+        Ok(Self { config, device, tensors, transformer: Some(transformer), dense_q8_sidecars })
     }
 
     /// Build transformer model from loaded tensors
@@ -143,6 +174,11 @@ impl BitNetModel {
     /// List all tensor names
     pub fn tensor_names(&self) -> Vec<&String> {
         self.tensors.keys().collect()
+    }
+
+    /// Inert dense Q8_0 sidecar descriptors carried from GGUF loading.
+    pub fn dense_q8_sidecars(&self) -> &DenseGgufQ8SidecarRegistry {
+        &self.dense_q8_sidecars
     }
 
     /// Convert ConcreteTensor to Candle tensor

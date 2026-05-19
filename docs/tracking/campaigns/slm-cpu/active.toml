@@ -2695,7 +2695,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-045"
-status = "ready"
+status = "pr_open"
+pr = 5845
+head_sha = "c6522e7989bc547990c97218f6d2499e5a03d900"
 branch = "codex/slm-cpu-045-q8-sidecar-carrier"
 stackable = false
 review_mode = "codex_premerge"
