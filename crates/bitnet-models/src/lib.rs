@@ -18,6 +18,7 @@ pub mod dense_gguf_descriptors;
 pub mod dense_gguf_linear_fixture;
 pub mod dense_gguf_norm_fixture;
 pub mod dense_gguf_q8_dispatch;
+pub mod dense_gguf_q8_equivalence;
 pub mod dense_gguf_q8_sidecar;
 pub mod download_manager;
 pub mod fingerprint;
