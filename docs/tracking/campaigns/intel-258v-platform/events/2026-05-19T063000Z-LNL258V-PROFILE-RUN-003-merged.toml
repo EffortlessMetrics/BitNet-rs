@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T06:30:00Z"
+event = "merged"
+item = "LNL258V-PROFILE-RUN-003"
+pr = 5874
+head_sha = "145331aac133cbb932699765977288e9b3dc19c5"
+merge_sha = "9d398b803e92dd8557d09c9cffadf1d2498ae62a"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-003-cpu-baseline-input"
+actor = "codex"
+summary = "Merged LNL258V-PROFILE-RUN-003 after adding optional Rust GGUF CPU profile-run baseline input."
+
+notes = [
+  "PR #5874 added --cpu-profile-run to lunar-lake profile-compare and uses matching fallback-free CPU profile cases as profile-specific dense CPU default-route timing.",
+  "Existing route decisions remain unchanged when no CPU profile-run receipt is supplied.",
+  "The merge makes no new-inference, route-promotion, speedup, power-advantage, OpenVINO GPU/NPU promotion, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]
