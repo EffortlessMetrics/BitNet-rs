@@ -405,6 +405,31 @@ a successful timing sample. This is still a prerequisite only:
 `M4-BENCH-005` remains responsible for the live dense Qwen variance envelopes,
 and BitNet variance remains `M4-BENCH-006`.
 
+`M4-BENCH-005` publishes the first live dense Qwen repeatability receipts from
+`ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/`. Each
+supported dense Qwen identity was checked with `bitnet mac benchmark-preflight`
+and then run through release-mode
+`bitnet --device apple-m4-cpu-neon mac benchmark --repeat 2` over the nine
+required profiles. The aggregate receipts validate as
+`apple_m4_benchmark_variance_v1`, record `fallback_used=false`, preserve raw
+repeat samples with no outlier filtering, and carry dense-only claim
+boundaries.
+
+| Model | Repeats | Samples | Prompt runs | Generated tokens | Comparison status | Invalid-comparison reasons |
+|---|---:|---:|---:|---:|---|---|
+| `qwen2.5-0.5b-instruct-q8_0` | 2 | 18 | 402 | 4300 | `invalid_for_comparison` | `profile_timeout_exceeded:context_4k:720s` |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 2 | 18 | 402 | 4780 | `invalid_for_comparison` | `profile_timeout_exceeded:context_4k:720s` |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 2 | 18 | 402 | 3586 | `invalid_for_comparison` | `profile_timeout_exceeded:long_prompt_128_out:420s`; `profile_timeout_exceeded:context_1k:360s`; `profile_timeout_exceeded:context_4k:720s` |
+
+These receipts are useful repeatability and timeout-behavior evidence, not
+final comparable timing envelopes. Because at least one calibrated profile
+timed out for every model, `comparison_readiness.can_compare_timing=false` and
+timing drift must not be interpreted from these aggregates. BitNet one-shot and
+warm-session variance remains scoped to `M4-BENCH-006`; this evidence does not
+claim BitNet timing variance, BitNet chat or serve behavior, Metal, QK256,
+Neural Engine, MPSGraph, MacBook evidence, speedup, broad model quality, or
+broad Apple Silicon performance.
+
 ## Drift Thresholds
 
 `M4-EXCELLENCE-004` publishes the current family-specific drift policy in the

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T23:25:00Z",
+  "created_utc": "2026-05-20T02:25:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -61,18 +61,15 @@
     ],
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 21,
-      "proxy_or_missing_route_count": 2,
+      "profile_specific_route_count": 23,
+      "proxy_or_missing_route_count": 0,
       "promotion_eligible_route_count": 8,
       "promotion_eligible_profile_specific_route_count": 8,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
-      "proxy_or_missing_routes": [
-        "decode_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_default_cpu"
-      ],
+      "proxy_or_missing_routes": [],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
     },
@@ -244,18 +241,15 @@
     ],
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 21,
-      "proxy_or_missing_route_count": 2,
+      "profile_specific_route_count": 23,
+      "proxy_or_missing_route_count": 0,
       "promotion_eligible_route_count": 8,
       "promotion_eligible_profile_specific_route_count": 8,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
-      "proxy_or_missing_routes": [
-        "decode_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_default_cpu"
-      ],
+      "proxy_or_missing_routes": [],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
     },
@@ -397,6 +391,17 @@
       "route not promoted for profile low_power"
     ]
   },
+  "thermal_temperature_availability": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-thermal-temperature-availability.json",
+    "thermal_zone_visibility_available": true,
+    "thermal_temperature_available": false,
+    "usable_temperature_reading_count": 0,
+    "measured_temperature_claim": false,
+    "telemetry_probe_executed": true,
+    "claim_boundary_preserved": true,
+    "regression_ready": true,
+    "gaps": []
+  },
   "warm_resident_ask_receipt": {
     "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json",
     "ask_receipt_ready": true,
@@ -466,6 +471,9 @@
     "durability_bundle_indexed": true,
     "bitnet_semantic_intake_indexed": true,
     "power_profile_evidence_indexed": true,
+    "thermal_temperature_availability_indexed": true,
+    "thermal_temperature_available": false,
+    "thermal_usable_temperature_reading_count": 0,
     "warm_resident_ask_receipt_indexed": true,
     "warm_resident_auto_ask_ready": true,
     "blocked_ask_receipt_indexed": true,
@@ -515,18 +523,15 @@
     "cold_warm_benchmark_ready": true,
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 21,
-      "proxy_or_missing_route_count": 2,
+      "profile_specific_route_count": 23,
+      "proxy_or_missing_route_count": 0,
       "promotion_eligible_route_count": 8,
       "promotion_eligible_profile_specific_route_count": 8,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
-      "proxy_or_missing_routes": [
-        "decode_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_default_cpu"
-      ],
+      "proxy_or_missing_routes": [],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
     },
@@ -658,7 +663,7 @@
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
-        "profile_specific_timing=21/23",
+        "profile_specific_timing=23/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "promotion_blocker_summary_count=9",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short,decode_heavy,prefill_heavy",
@@ -680,7 +685,7 @@
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
         "telemetry_gap_count=46",
-        "profile_specific_timing=21/23",
+        "profile_specific_timing=23/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short,decode_heavy,prefill_heavy",
         "openvino_npu_promoted_profiles=warm_resident",
@@ -742,6 +747,21 @@
         "thermal_context_recorded=true",
         "claim_boundary_preserved=true",
         "blocker_count=7"
+      ]
+    },
+    {
+      "check_id": "thermal_temperature_availability_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-thermal-temperature-availability.json"
+      ],
+      "notes": [
+        "thermal_zone_visibility_available=true",
+        "thermal_temperature_available=false",
+        "usable_temperature_reading_count=0",
+        "measured_temperature_claim=false",
+        "telemetry_probe_executed=true",
+        "claim_boundary_preserved=true"
       ]
     },
     {

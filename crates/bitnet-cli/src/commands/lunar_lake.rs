@@ -24,6 +24,8 @@ const DENSE_OV_PHASE: &str = "slm-openvino-cpu-gpu-npu-phase-runner.json";
 const DENSE_OV_CPU: &str = "slm-openvino-cpu-llmpipeline-smoke.json";
 const DENSE_OV_GPU: &str = "slm-openvino-gpu-arc140v-llmpipeline-smoke.json";
 const DENSE_OV_NPU: &str = "slm-openvino-npu-llmpipeline-smoke.json";
+const DENSE_SLM_ARTIFACT_MANIFEST: &str = "slm-artifact-manifest.json";
+const DENSE_SLM_OPENVINO_IR_MANIFEST: &str = "slm-openvino-ir-qwen25-int4-sym-manifest.json";
 const DENSE_OV_GPU_OPERATOR_ASK: &str = "lunar-lake-openvino-operator-ask-gpu-math-brief.json";
 const DENSE_OV_NPU_OPERATOR_ASK: &str = "lunar-lake-openvino-operator-ask-npu-math-brief.json";
 const DENSE_CPU_CORPUS_V2: &str = "slm-answer-corpus-qwen25-cpu-corpus-v2.json";
@@ -54,6 +56,8 @@ const COLD_WARM_PROFILE_BENCHMARK: &str =
 const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
 const POWER_THERMAL_CONTEXT_FILE: &str = "lunar-lake-power-thermal-context.json";
 const POWER_PROFILE_EVIDENCE_FILE: &str = "lunar-lake-power-profile-evidence.json";
+const THERMAL_TEMPERATURE_AVAILABILITY_FILE: &str =
+    "lunar-lake-thermal-temperature-availability.json";
 const LOW_POWER_ENERGY_PROXY_FILE: &str = "lunar-lake-low-power-energy-proxy.json";
 const DURABILITY_BUNDLE: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
@@ -143,6 +147,16 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
         route_profile_comparison: Option<PathBuf>,
 
+        /// Low-power route power-profile evidence receipt to index in readiness.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = POWER_PROFILE_EVIDENCE_FILE)]
+        power_profile_evidence: Option<PathBuf>,
+
+        /// Thermal temperature availability diagnosis receipt to index in readiness.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = THERMAL_TEMPERATURE_AVAILABILITY_FILE)]
+        thermal_temperature_availability: Option<PathBuf>,
+
         /// Output JSON readiness receipt to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -195,6 +209,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = POWER_PROFILE_EVIDENCE_FILE)]
         power_profile_evidence: Option<PathBuf>,
+
+        /// Optional thermal temperature availability diagnosis receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = THERMAL_TEMPERATURE_AVAILABILITY_FILE)]
+        thermal_temperature_availability: Option<PathBuf>,
 
         /// Optional successful auto warm-resident ask receipt to index.
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
@@ -857,6 +876,10 @@ pub struct LunarLakeOperatorReceipt {
     pub routes: Vec<OperatorRoute>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub route_policy: Option<OperatorRoutePolicySummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub power_profile_evidence: Option<PowerProfileRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thermal_temperature_availability: Option<ThermalTemperatureAvailabilityRegressionSummary>,
     pub evidence: Vec<EvidenceStatus>,
     pub gaps: Vec<String>,
     pub claim_boundary: ClaimBoundary,
@@ -953,6 +976,8 @@ pub struct LunarLakeRegressionBundle {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub power_profile_evidence: Option<PowerProfileRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thermal_temperature_availability: Option<ThermalTemperatureAvailabilityRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub warm_resident_ask_receipt: Option<OperatorAskRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocked_ask_receipt: Option<BlockedAskRegressionSummary>,
@@ -977,6 +1002,12 @@ pub struct RegressionSurfaceSummary {
     pub bitnet_semantic_intake_indexed: bool,
     #[serde(default)]
     pub power_profile_evidence_indexed: bool,
+    #[serde(default)]
+    pub thermal_temperature_availability_indexed: bool,
+    #[serde(default)]
+    pub thermal_temperature_available: bool,
+    #[serde(default)]
+    pub thermal_usable_temperature_reading_count: usize,
     #[serde(default)]
     pub warm_resident_ask_receipt_indexed: bool,
     #[serde(default)]
@@ -1017,6 +1048,9 @@ impl Default for RegressionSurfaceSummary {
             durability_bundle_indexed: false,
             bitnet_semantic_intake_indexed: false,
             power_profile_evidence_indexed: false,
+            thermal_temperature_availability_indexed: false,
+            thermal_temperature_available: false,
+            thermal_usable_temperature_reading_count: 0,
             warm_resident_ask_receipt_indexed: false,
             warm_resident_auto_ask_ready: false,
             blocked_ask_receipt_indexed: false,
@@ -1190,6 +1224,19 @@ pub struct PowerProfileRegressionSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ThermalTemperatureAvailabilityRegressionSummary {
+    pub path: String,
+    pub thermal_zone_visibility_available: bool,
+    pub thermal_temperature_available: bool,
+    pub usable_temperature_reading_count: usize,
+    pub measured_temperature_claim: bool,
+    pub telemetry_probe_executed: bool,
+    pub claim_boundary_preserved: bool,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OperatorAskRegressionSummary {
     pub path: String,
     pub ask_receipt_ready: bool,
@@ -1350,6 +1397,51 @@ pub struct RoutePromotion {
     pub reason: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct RouteModelIdentityCoverage {
+    pub route_row_count: usize,
+    pub route_rows_with_identity: usize,
+    pub route_rows_with_model_hash: usize,
+    pub route_rows_with_tokenizer_template: usize,
+    pub all_route_rows_have_identity: bool,
+    pub routes_without_model_hash: Vec<String>,
+    pub routes_without_tokenizer_template: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct RouteModelIdentity {
+    pub identity_source: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub manifest_receipt: Option<String>,
+    pub selected_model: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_format: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_artifact: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_sha256: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo_revision: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quantization: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tokenizer_source: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tokenizer_family: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_template: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stop_token_policy: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub known_gaps: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeRouteProfileComparison {
     pub schema_version: String,
@@ -1375,6 +1467,8 @@ pub struct LunarLakeRouteProfileComparison {
     pub profiles: Vec<WorkloadProfileEvaluation>,
     #[serde(default)]
     pub timing_coverage: TimingApplicabilityCoverageSummary,
+    #[serde(default)]
+    pub route_model_identity_coverage: RouteModelIdentityCoverage,
     #[serde(default)]
     pub route_promotion_scope: RoutePromotionScopeSummary,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1412,8 +1506,12 @@ pub struct ProfileRouteEvidence {
     pub route_status: String,
     #[serde(default)]
     pub ledger_route_status: String,
+    #[serde(default)]
+    pub selected_model: String,
     pub selected_backend: String,
     pub runtime_api: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_identity: Option<RouteModelIdentity>,
     pub fallback_used: Option<bool>,
     pub answer_gate_passed: Option<bool>,
     pub phase_timing_present: Option<bool>,
@@ -1631,8 +1729,12 @@ pub struct ColdWarmRouteBenchmark {
     pub route_status: String,
     #[serde(default)]
     pub ledger_route_status: String,
+    #[serde(default)]
+    pub selected_model: String,
     pub selected_backend: String,
     pub runtime_api: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_identity: Option<RouteModelIdentity>,
     pub fallback_used: Option<bool>,
     pub answer_gate_passed: Option<bool>,
     pub phase_timing_present: Option<bool>,
@@ -2445,6 +2547,8 @@ impl LunarLakeCommand {
                 artifact_root,
                 route_promotion_ledger,
                 route_profile_comparison,
+                power_profile_evidence,
+                thermal_temperature_availability,
                 json_out,
                 created_utc,
                 strict,
@@ -2457,12 +2561,16 @@ impl LunarLakeCommand {
                             created_utc,
                             route_promotion_ledger.as_deref(),
                             route_profile_comparison.as_deref(),
+                            power_profile_evidence.as_deref(),
+                            thermal_temperature_availability.as_deref(),
                         )?
                     }
                     None => build_operator_readiness_receipt_with_route_policy(
                         artifact_root,
                         route_promotion_ledger.as_deref(),
                         route_profile_comparison.as_deref(),
+                        power_profile_evidence.as_deref(),
+                        thermal_temperature_availability.as_deref(),
                     )?,
                 };
                 write_or_print_receipt(&receipt, json_out.as_deref())?;
@@ -2480,6 +2588,7 @@ impl LunarLakeCommand {
                 durability_bundle,
                 bitnet_semantic_intake,
                 power_profile_evidence,
+                thermal_temperature_availability,
                 warm_resident_ask_receipt,
                 blocked_ask_receipt,
                 json_out,
@@ -2500,6 +2609,7 @@ impl LunarLakeCommand {
                         durability_bundle.as_deref(),
                         bitnet_semantic_intake.as_deref(),
                         power_profile_evidence.as_deref(),
+                        thermal_temperature_availability.as_deref(),
                         warm_resident_ask_receipt.as_deref(),
                         blocked_ask_receipt.as_deref(),
                         created_utc,
@@ -2999,12 +3109,16 @@ pub fn build_operator_readiness_receipt_with_route_policy(
     root: &Path,
     route_promotion_ledger: Option<&Path>,
     route_profile_comparison: Option<&Path>,
+    power_profile_evidence: Option<&Path>,
+    thermal_temperature_availability: Option<&Path>,
 ) -> Result<LunarLakeOperatorReceipt> {
     build_operator_readiness_receipt_with_created_utc_and_route_policy(
         root,
         chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         route_promotion_ledger,
         route_profile_comparison,
+        power_profile_evidence,
+        thermal_temperature_availability,
     )
 }
 
@@ -3018,6 +3132,8 @@ pub fn build_operator_readiness_receipt_with_created_utc(
         created_utc,
         None,
         None,
+        None,
+        None,
     )
 }
 
@@ -3026,6 +3142,8 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
     created_utc: String,
     route_promotion_ledger: Option<&Path>,
     route_profile_comparison: Option<&Path>,
+    power_profile_evidence: Option<&Path>,
+    thermal_temperature_availability: Option<&Path>,
 ) -> Result<LunarLakeOperatorReceipt> {
     let evidence = vec![
         inspect_receipt(
@@ -3189,6 +3307,57 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
         }
         (None, None) => None,
     };
+    let power_profile_evidence = if let Some(path) = power_profile_evidence {
+        let path = resolve_receipt_path(root, path);
+        if path.exists() {
+            let summary = inspect_power_profile_regression(&path)?;
+            if !summary.regression_ready {
+                gaps.push(format!(
+                    "power-profile evidence is not readiness-ready: {}",
+                    summary.gaps.join(", ")
+                ));
+            }
+            if summary.power_advantage_proven || summary.low_power_promotion_ready {
+                gaps.push(
+                    "power-profile evidence cannot claim low_power promotion or power advantage in readiness"
+                        .to_string(),
+                );
+            }
+            Some(summary)
+        } else {
+            gaps.push(format!("missing low-power power-profile evidence: {}", path.display()));
+            None
+        }
+    } else {
+        None
+    };
+    let thermal_temperature_availability = if let Some(path) = thermal_temperature_availability {
+        let path = resolve_receipt_path(root, path);
+        if path.exists() {
+            let summary = inspect_thermal_temperature_availability_regression(&path)?;
+            if !summary.regression_ready {
+                gaps.push(format!(
+                    "thermal temperature availability is not readiness-ready: {}",
+                    summary.gaps.join(", ")
+                ));
+            }
+            if summary.measured_temperature_claim && summary.usable_temperature_reading_count == 0 {
+                gaps.push(
+                        "thermal temperature availability claims measured temperatures without usable readings"
+                            .to_string(),
+                    );
+            }
+            Some(summary)
+        } else {
+            gaps.push(format!(
+                "missing thermal temperature availability evidence: {}",
+                path.display()
+            ));
+            None
+        }
+    } else {
+        None
+    };
 
     let default_route = dense_slm_cpu_route();
     let routes = vec![
@@ -3209,6 +3378,8 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
         default_route,
         routes,
         route_policy,
+        power_profile_evidence,
+        thermal_temperature_availability,
         evidence,
         gaps,
         claim_boundary: ClaimBoundary {
@@ -3484,6 +3655,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
         bitnet_semantic_intake,
         power_profile_evidence,
         None,
+        None,
         blocked_ask_receipt,
         created_utc,
     )
@@ -3498,6 +3670,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
     durability_bundle: Option<&Path>,
     bitnet_semantic_intake: Option<&Path>,
     power_profile_evidence: Option<&Path>,
+    thermal_temperature_availability: Option<&Path>,
     warm_resident_ask_receipt: Option<&Path>,
     blocked_ask_receipt: Option<&Path>,
     created_utc: String,
@@ -3680,6 +3853,19 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
     } else {
         None
     };
+    let thermal_temperature_availability = if let Some(path) = thermal_temperature_availability {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_thermal_temperature_availability_regression(&path)?;
+        checks.push(regression_check_owned(
+            "thermal_temperature_availability_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            thermal_temperature_availability_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
     let npu_warm_resident_promoted = npu_warm_resident_is_promoted(
         cold_warm_benchmark.as_ref(),
         route_profile_comparison.as_ref(),
@@ -3733,6 +3919,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         durability_bundle.as_ref(),
         bitnet_semantic_intake.as_ref(),
         power_profile_evidence.as_ref(),
+        thermal_temperature_availability.as_ref(),
         warm_resident_ask_receipt.as_ref(),
         blocked_ask_receipt.as_ref(),
     );
@@ -3751,6 +3938,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         durability_bundle,
         bitnet_semantic_intake,
         power_profile_evidence,
+        thermal_temperature_availability,
         warm_resident_ask_receipt,
         blocked_ask_receipt,
         regression_surface,
@@ -3768,6 +3956,7 @@ fn build_regression_surface_summary(
     durability_bundle: Option<&DurabilityRegressionSummary>,
     bitnet_semantic_intake: Option<&BitnetSemanticIntakeRegressionSummary>,
     power_profile_evidence: Option<&PowerProfileRegressionSummary>,
+    thermal_temperature_availability: Option<&ThermalTemperatureAvailabilityRegressionSummary>,
     warm_resident_ask_receipt: Option<&OperatorAskRegressionSummary>,
     blocked_ask_receipt: Option<&BlockedAskRegressionSummary>,
 ) -> RegressionSurfaceSummary {
@@ -3778,6 +3967,13 @@ fn build_regression_surface_summary(
         durability_bundle_indexed: durability_bundle.is_some(),
         bitnet_semantic_intake_indexed: bitnet_semantic_intake.is_some(),
         power_profile_evidence_indexed: power_profile_evidence.is_some(),
+        thermal_temperature_availability_indexed: thermal_temperature_availability.is_some(),
+        thermal_temperature_available: thermal_temperature_availability
+            .map(|summary| summary.thermal_temperature_available)
+            .unwrap_or(false),
+        thermal_usable_temperature_reading_count: thermal_temperature_availability
+            .map(|summary| summary.usable_temperature_reading_count)
+            .unwrap_or(0),
         warm_resident_ask_receipt_indexed: warm_resident_ask_receipt.is_some(),
         warm_resident_auto_ask_ready: warm_resident_ask_receipt
             .map(|summary| summary.regression_ready)
@@ -3974,6 +4170,26 @@ fn build_regression_surface_summary(
             summary
                 .gaps
                 .push("low_power power-profile claim boundary is not preserved".to_string());
+        }
+    }
+
+    if let Some(thermal) = thermal_temperature_availability {
+        if !thermal.regression_ready {
+            summary.gaps.push(format!(
+                "thermal temperature availability is not regression-ready: {}",
+                thermal.gaps.join("; ")
+            ));
+        }
+        if !thermal.claim_boundary_preserved {
+            summary.gaps.push(
+                "thermal temperature availability claim boundary is not preserved".to_string(),
+            );
+        }
+        if thermal.measured_temperature_claim && thermal.usable_temperature_reading_count == 0 {
+            summary.gaps.push(
+                "thermal temperature availability claims measured temperatures without usable readings"
+                    .to_string(),
+            );
         }
     }
 
@@ -4666,6 +4882,67 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
     })
 }
 
+fn inspect_thermal_temperature_availability_regression(
+    path: &Path,
+) -> Result<ThermalTemperatureAvailabilityRegressionSummary> {
+    let thermal: Value = read_json_receipt(path)?;
+    let mut gaps = Vec::new();
+
+    let artifact_kind = string_at(&thermal, "artifact_kind").unwrap_or_default();
+    if artifact_kind != "lunar_lake_thermal_temperature_availability" {
+        gaps.push(format!("unexpected artifact_kind={artifact_kind}"));
+    }
+
+    let thermal_zone_visibility_available =
+        bool_at_any(&thermal, &["decision.thermal_zone_visibility_available"]).unwrap_or(false);
+    let thermal_temperature_available =
+        bool_at_any(&thermal, &["decision.thermal_temperature_available"]).unwrap_or(false);
+    let usable_temperature_reading_count =
+        u64_at(&thermal, "decision.usable_temperature_reading_count").unwrap_or(0) as usize;
+
+    if thermal_temperature_available && usable_temperature_reading_count == 0 {
+        gaps.push(
+            "thermal temperature availability claims temperature availability without usable readings"
+                .to_string(),
+        );
+    }
+
+    let measured_temperature_claim =
+        bool_at_any(&thermal, &["claim_boundary.measured_temperature_claim"]).unwrap_or(false);
+    let telemetry_probe_executed =
+        bool_at_any(&thermal, &["claim_boundary.telemetry_probe_executed"]).unwrap_or(false);
+
+    let claim_boundary_preserved =
+        !bool_at_any(&thermal, &["claim_boundary.new_inference_executed"]).unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.route_promotion_changed"]).unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.speedup_claim"]).unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.power_advantage_claim"]).unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.acceleration_claim"]).unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.native_opencl_or_native_npu_claim"])
+                .unwrap_or(false)
+            && !bool_at_any(&thermal, &["claim_boundary.bitnet_qk256_or_i2s_behavior_changed"])
+                .unwrap_or(false)
+            && (!measured_temperature_claim || usable_temperature_reading_count > 0);
+    if !claim_boundary_preserved {
+        gaps.push(
+            "thermal temperature availability must preserve no-inference/no-promotion/no-speedup/no-power-advantage/no-acceleration/no-QK256-change claim boundary"
+                .to_string(),
+        );
+    }
+
+    Ok(ThermalTemperatureAvailabilityRegressionSummary {
+        path: path_string(path),
+        thermal_zone_visibility_available,
+        thermal_temperature_available,
+        usable_temperature_reading_count,
+        measured_temperature_claim,
+        telemetry_probe_executed,
+        claim_boundary_preserved,
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
 fn npu_warm_resident_is_promoted(
     cold_warm_benchmark: Option<&ColdWarmRegressionSummary>,
     route_profile_comparison: Option<&RouteProfileRegressionSummary>,
@@ -5142,6 +5419,21 @@ fn power_profile_regression_notes(summary: &PowerProfileRegressionSummary) -> Ve
     notes
 }
 
+fn thermal_temperature_availability_regression_notes(
+    summary: &ThermalTemperatureAvailabilityRegressionSummary,
+) -> Vec<String> {
+    let mut notes = vec![
+        format!("thermal_zone_visibility_available={}", summary.thermal_zone_visibility_available),
+        format!("thermal_temperature_available={}", summary.thermal_temperature_available),
+        format!("usable_temperature_reading_count={}", summary.usable_temperature_reading_count),
+        format!("measured_temperature_claim={}", summary.measured_temperature_claim),
+        format!("telemetry_probe_executed={}", summary.telemetry_probe_executed),
+        format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
 fn operator_ask_regression_notes(summary: &OperatorAskRegressionSummary) -> Vec<String> {
     let mut notes = vec![
         format!("profile_id={}", summary.profile_id),
@@ -5505,6 +5797,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
     let ledger: LunarLakeRoutePromotionLedger = read_json_receipt(&promotion_ledger_path)?;
     let phase_comparison_json: Value = read_json_receipt(&phase_comparison_path)?;
     let quality_index = load_profile_quality_index(root, cpu_corpus_v2, openvino_corpus_v2)?;
+    let route_identity_index = load_route_model_identity_index(root)?;
 
     let mut gaps = Vec::new();
     let corpus_alignment =
@@ -5549,6 +5842,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
                 &corpus_alignment,
                 telemetry_context.as_ref(),
                 &route_diagnostics,
+                &route_identity_index,
                 cpu_profile_run,
             )
         })
@@ -5573,6 +5867,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
     }
 
     let timing_coverage = timing_applicability_coverage(&profiles);
+    let route_model_identity_coverage = route_model_identity_coverage(&profiles);
     if !timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
         gaps.push(format!(
             "promotion-eligible routes lack profile-specific timing: {}",
@@ -5609,6 +5904,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
         default_route_id: ledger.default_route_id,
         profiles,
         timing_coverage,
+        route_model_identity_coverage,
         route_promotion_scope,
         promotion_blocker_summary,
         gaps,
@@ -8542,8 +8838,10 @@ fn cold_warm_route_benchmark(
         route_id: route.route_id.clone(),
         route_status: route.route_status.clone(),
         ledger_route_status: route.ledger_route_status.clone(),
+        selected_model: route.selected_model.clone(),
         selected_backend: route.selected_backend.clone(),
         runtime_api: route.runtime_api.clone(),
+        model_identity: route.model_identity.clone(),
         fallback_used: route.fallback_used,
         answer_gate_passed: route.answer_gate_passed,
         phase_timing_present: route.phase_timing_present,
@@ -10925,6 +11223,234 @@ fn corpus_case_alignment_blockers(
 }
 
 #[derive(Debug, Clone, Default)]
+struct RouteModelIdentityIndex {
+    dense_gguf_cpu: RouteModelIdentity,
+    dense_openvino_ir: RouteModelIdentity,
+    bitnet_cpu: RouteModelIdentity,
+}
+
+impl RouteModelIdentityIndex {
+    fn identity_for(&self, route: &RoutePromotion) -> RouteModelIdentity {
+        match route.route_id.as_str() {
+            DEFAULT_ASK_ROUTE => self.with_selected_model(&self.dense_gguf_cpu, route),
+            "dense_slm_openvino_gpu_candidate" | "dense_slm_openvino_npu_candidate" => {
+                self.with_selected_model(&self.dense_openvino_ir, route)
+            }
+            "bitnet_reference_cpu" => self.with_selected_model(&self.bitnet_cpu, route),
+            _ => fallback_route_model_identity(route),
+        }
+    }
+
+    fn with_selected_model(
+        &self,
+        identity: &RouteModelIdentity,
+        route: &RoutePromotion,
+    ) -> RouteModelIdentity {
+        let mut identity = identity.clone();
+        if identity.selected_model.is_empty() {
+            identity.selected_model = route_model_label(route);
+        }
+        identity
+    }
+}
+
+fn load_route_model_identity_index(root: &Path) -> Result<RouteModelIdentityIndex> {
+    Ok(RouteModelIdentityIndex {
+        dense_gguf_cpu: load_dense_gguf_route_identity(root)?,
+        dense_openvino_ir: load_dense_openvino_route_identity(root)?,
+        bitnet_cpu: load_bitnet_cpu_route_identity(root)?,
+    })
+}
+
+fn load_dense_gguf_route_identity(root: &Path) -> Result<RouteModelIdentity> {
+    let manifest_path = resolve_receipt_path(root, Path::new(DENSE_SLM_ARTIFACT_MANIFEST));
+    if !manifest_path.exists() {
+        return Ok(fallback_manifest_missing_identity(
+            "dense_slm_gguf_manifest_missing",
+            "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+            &manifest_path,
+        ));
+    }
+    let manifest: Value = read_json_receipt(&manifest_path)?;
+    Ok(RouteModelIdentity {
+        identity_source: "dense_slm_gguf_manifest".to_string(),
+        manifest_receipt: Some(path_string(&manifest_path)),
+        selected_model: "Qwen2.5-0.5B-Instruct Q8_0 GGUF".to_string(),
+        model_name: string_at(&manifest, "selected_candidate.model_name"),
+        model_family: string_at(&manifest, "selected_candidate.family"),
+        model_format: string_at(&manifest, "selected_candidate.format"),
+        model_artifact: string_at(&manifest, "selected_candidate.file"),
+        model_sha256: string_at(&manifest, "selected_candidate.sha256"),
+        repo: string_at(&manifest, "selected_candidate.repo"),
+        repo_revision: string_at(&manifest, "selected_candidate.repo_revision"),
+        quantization: string_at(&manifest, "selected_candidate.quantization"),
+        tokenizer_source: string_at(&manifest, "tokenizer.source"),
+        tokenizer_family: string_at(&manifest, "tokenizer.pretokenizer")
+            .or_else(|| string_at(&manifest, "tokenizer.tokenizer_model")),
+        prompt_template: string_at(&manifest, "tokenizer.prompt_template"),
+        stop_token_policy: string_at(&manifest, "tokenizer.stop_token_policy"),
+        known_gaps: Vec::new(),
+    })
+}
+
+fn load_dense_openvino_route_identity(root: &Path) -> Result<RouteModelIdentity> {
+    let manifest_path = resolve_receipt_path(root, Path::new(DENSE_SLM_OPENVINO_IR_MANIFEST));
+    if !manifest_path.exists() {
+        return Ok(fallback_manifest_missing_identity(
+            "dense_slm_openvino_manifest_missing",
+            "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            &manifest_path,
+        ));
+    }
+    let manifest: Value = read_json_receipt(&manifest_path)?;
+    Ok(RouteModelIdentity {
+        identity_source: "dense_slm_openvino_ir_manifest".to_string(),
+        manifest_receipt: Some(path_string(&manifest_path)),
+        selected_model: "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM".to_string(),
+        model_name: string_at(&manifest, "source_model.model_name"),
+        model_family: string_at(&manifest, "source_model.model_family"),
+        model_format: string_at(&manifest, "export_contract.format"),
+        model_artifact: string_at(&manifest, "export_contract.expected_output_dir"),
+        model_sha256: None,
+        repo: string_at(&manifest, "source_model.repo"),
+        repo_revision: string_at(&manifest, "source_model.revision"),
+        quantization: string_at(&manifest, "export_contract.weight_format").map(|format| {
+            if bool_at_any(&manifest, &["export_contract.symmetric"]).unwrap_or(false) {
+                format!("{format}_symmetric")
+            } else {
+                format
+            }
+        }),
+        tokenizer_source: string_at(&manifest, "tokenizer.source"),
+        tokenizer_family: string_at(&manifest, "tokenizer.tokenizer_family"),
+        prompt_template: string_at(&manifest, "tokenizer.prompt_template"),
+        stop_token_policy: string_at(&manifest, "tokenizer.stop_token_policy"),
+        known_gaps: vec![
+            "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256".to_string(),
+        ],
+    })
+}
+
+fn load_bitnet_cpu_route_identity(root: &Path) -> Result<RouteModelIdentity> {
+    let manifest_path = resolve_receipt_path(root, Path::new(BITNET_CPU_BUNDLE));
+    if !manifest_path.exists() {
+        return Ok(fallback_manifest_missing_identity(
+            "bitnet_cpu_reference_bundle_missing",
+            "microsoft/bitnet-b1.58-2B-4T GGUF I2_S",
+            &manifest_path,
+        ));
+    }
+    let manifest: Value = read_json_receipt(&manifest_path)?;
+    Ok(RouteModelIdentity {
+        identity_source: "bitnet_cpu_reference_bundle".to_string(),
+        manifest_receipt: Some(path_string(&manifest_path)),
+        selected_model: "microsoft/bitnet-b1.58-2B-4T GGUF I2_S".to_string(),
+        model_name: string_at(&manifest, "model.file"),
+        model_family: string_at(&manifest, "model.architecture"),
+        model_format: string_at(&manifest, "model.format"),
+        model_artifact: string_at(&manifest, "model.file"),
+        model_sha256: string_at(&manifest, "model.sha256"),
+        repo: string_at(&manifest, "model.repo"),
+        repo_revision: None,
+        quantization: Some("I2_S".to_string()),
+        tokenizer_source: string_at(&manifest, "tokenizer.source"),
+        tokenizer_family: string_at(&manifest, "tokenizer.type")
+            .or_else(|| string_at(&manifest, "tokenizer.pretokenizer_authority")),
+        prompt_template: string_at(&manifest, "cpu_reference.prompt_policy"),
+        stop_token_policy: None,
+        known_gaps: Vec::new(),
+    })
+}
+
+fn fallback_manifest_missing_identity(
+    identity_source: &str,
+    selected_model: &str,
+    manifest_path: &Path,
+) -> RouteModelIdentity {
+    RouteModelIdentity {
+        identity_source: identity_source.to_string(),
+        manifest_receipt: Some(path_string(manifest_path)),
+        selected_model: selected_model.to_string(),
+        known_gaps: vec![format!(
+            "route model identity manifest missing: {}",
+            manifest_path.display()
+        )],
+        ..RouteModelIdentity::default()
+    }
+}
+
+fn fallback_route_model_identity(route: &RoutePromotion) -> RouteModelIdentity {
+    RouteModelIdentity {
+        identity_source: "route_promotion_ledger".to_string(),
+        selected_model: route_model_label(route),
+        known_gaps: vec![
+            "route has no specialized model manifest mapping; identity is limited to route ledger fields"
+                .to_string(),
+        ],
+        ..RouteModelIdentity::default()
+    }
+}
+
+fn route_model_label(route: &RoutePromotion) -> String {
+    match route.route_id.as_str() {
+        DEFAULT_ASK_ROUTE => "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+        "dense_slm_openvino_gpu_candidate" | "dense_slm_openvino_npu_candidate" => {
+            "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM"
+        }
+        "bitnet_reference_cpu" => "microsoft/bitnet-b1.58-2B-4T GGUF I2_S",
+        _ => route.route_id.as_str(),
+    }
+    .to_string()
+}
+
+fn route_model_identity_coverage(
+    profiles: &[WorkloadProfileEvaluation],
+) -> RouteModelIdentityCoverage {
+    let mut route_row_count = 0usize;
+    let mut route_rows_with_identity = 0usize;
+    let mut route_rows_with_model_hash = 0usize;
+    let mut route_rows_with_tokenizer_template = 0usize;
+    let mut routes_without_model_hash = BTreeSet::new();
+    let mut routes_without_tokenizer_template = BTreeSet::new();
+
+    for profile in profiles {
+        for route in &profile.route_evidence {
+            route_row_count += 1;
+            if let Some(identity) = &route.model_identity {
+                route_rows_with_identity += 1;
+                if identity.model_sha256.is_some() {
+                    route_rows_with_model_hash += 1;
+                } else {
+                    routes_without_model_hash
+                        .insert(format!("{}:{}", profile.profile_id, route.route_id));
+                }
+                if identity.tokenizer_source.is_some() && identity.prompt_template.is_some() {
+                    route_rows_with_tokenizer_template += 1;
+                } else {
+                    routes_without_tokenizer_template
+                        .insert(format!("{}:{}", profile.profile_id, route.route_id));
+                }
+            } else {
+                routes_without_model_hash
+                    .insert(format!("{}:{}", profile.profile_id, route.route_id));
+                routes_without_tokenizer_template
+                    .insert(format!("{}:{}", profile.profile_id, route.route_id));
+            }
+        }
+    }
+
+    RouteModelIdentityCoverage {
+        route_row_count,
+        route_rows_with_identity,
+        route_rows_with_model_hash,
+        route_rows_with_tokenizer_template,
+        all_route_rows_have_identity: route_row_count == route_rows_with_identity,
+        routes_without_model_hash: routes_without_model_hash.into_iter().collect(),
+        routes_without_tokenizer_template: routes_without_tokenizer_template.into_iter().collect(),
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 struct RouteDiagnosticsIndex {
     by_route: BTreeMap<String, RouteDiagnosticEvidence>,
     by_route_profile: BTreeMap<(String, String), RouteDiagnosticEvidence>,
@@ -12484,6 +13010,7 @@ fn evaluate_workload_profile(
     corpus_alignment: &CorpusCaseAlignmentIndex,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
     route_diagnostics: &RouteDiagnosticsIndex,
+    route_identity_index: &RouteModelIdentityIndex,
     cpu_profile_run: Option<&Path>,
 ) -> Result<WorkloadProfileEvaluation> {
     let mut route_ids = Vec::new();
@@ -12509,6 +13036,7 @@ fn evaluate_workload_profile(
                 corpus_alignment,
                 telemetry_context,
                 route_diagnostics,
+                route_identity_index,
                 cpu_profile_run,
             )
         })
@@ -12580,6 +13108,7 @@ fn evaluate_profile_route(
     corpus_alignment: &CorpusCaseAlignmentIndex,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
     route_diagnostics: &RouteDiagnosticsIndex,
+    route_identity_index: &RouteModelIdentityIndex,
     cpu_profile_run: Option<&Path>,
 ) -> Result<ProfileRouteEvidence> {
     let route = ledger
@@ -12680,12 +13209,16 @@ fn evaluate_profile_route(
         }
     }
 
+    let model_identity = route_identity_index.identity_for(route);
+
     Ok(ProfileRouteEvidence {
         route_id: route.route_id.clone(),
         route_status,
         ledger_route_status: route.status.clone(),
+        selected_model: model_identity.selected_model.clone(),
         selected_backend: route.selected_backend.clone(),
         runtime_api: route.runtime_api.clone(),
+        model_identity: Some(model_identity),
         fallback_used: route.fallback_used,
         answer_gate_passed: route.answer_gate_passed,
         phase_timing_present: route.phase_timing_present,
@@ -14576,8 +15109,10 @@ mod tests {
             route_id: "dense_slm_openvino_gpu_candidate".to_string(),
             route_status: "promoted".to_string(),
             ledger_route_status: "promoted".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM".to_string(),
             selected_backend: "openvino-gpu".to_string(),
             runtime_api: "openvino_genai".to_string(),
+            model_identity: None,
             fallback_used: Some(false),
             answer_gate_passed: Some(true),
             phase_timing_present: Some(true),
@@ -14603,8 +15138,10 @@ mod tests {
             route_id: "dense_slm_openvino_npu_candidate".to_string(),
             route_status: "candidate".to_string(),
             ledger_route_status: "candidate".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM".to_string(),
             selected_backend: "openvino-npu".to_string(),
             runtime_api: "openvino_genai".to_string(),
+            model_identity: None,
             fallback_used: Some(false),
             answer_gate_passed: Some(true),
             phase_timing_present: Some(true),
@@ -14868,6 +15405,8 @@ mod tests {
             "2026-05-19T14:30:00Z".to_string(),
             Some(Path::new(ROUTE_PROMOTION_LEDGER)),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            None,
+            None,
         )?;
 
         assert!(receipt.operator_ready, "{:?}", receipt.gaps);
@@ -14884,6 +15423,137 @@ mod tests {
         assert!(policy.blocked_profiles.contains(&"low_power".to_string()));
         assert!(policy.profile_promotions.iter().any(|profile| profile.profile_id == "ask_normal"
             && profile.promoted_route.as_deref() == Some("dense_slm_openvino_gpu_candidate")));
+        Ok(())
+    }
+
+    #[test]
+    fn operator_readiness_indexes_power_and_thermal_context() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_minimal_route_policy(temp.path())?;
+        write_json(
+            temp.path(),
+            POWER_PROFILE_EVIDENCE_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_profile_evidence",
+                "proof_stage": "low_power_profile_evidence_indexed",
+                "created_utc": "2026-05-20T01:05:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(temp.path()),
+                "route_profile_comparison_receipt": ROUTE_PROFILE_COMPARISON,
+                "cold_warm_benchmark_receipt": COLD_WARM_PROFILE_BENCHMARK_FILE,
+                "telemetry_context_receipt": POWER_THERMAL_CONTEXT_FILE,
+                "battery_telemetry_context_receipt": null,
+                "energy_proxy_receipt": null,
+                "telemetry": {
+                    "memory_context_recorded": true,
+                    "power_context_recorded": true,
+                    "thermal_context_recorded": true,
+                    "active_scheme": "Balanced",
+                    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+                    "ac_power_inferred": true,
+                    "thermal_zones_visible": 1,
+                    "thermal_temperature_count": 0,
+                    "current_context_is_ac_only": true,
+                    "battery_mode_sample_recorded": false,
+                    "battery_sample_source": null,
+                    "energy_proxy_recorded": false,
+                    "energy_proxy_source": null
+                },
+                "low_power_routes": [
+                    {
+                        "route_id": "dense_slm_openvino_npu_candidate",
+                        "route_status": "candidate",
+                        "ledger_route_status": "candidate",
+                        "selected_backend": "openvino-npu",
+                        "runtime_api": "openvino_genai",
+                        "fallback_used": false,
+                        "answer_gate_passed": true,
+                        "total_response_ms": null,
+                        "throughput_tokens_per_s": null,
+                        "benchmark_qualified_advantage": false,
+                        "power_related_blockers": [
+                            "battery-mode sample is missing for low_power promotion"
+                        ],
+                        "all_blockers": [
+                            "battery-mode sample is missing for low_power promotion"
+                        ],
+                        "power_promotion_ready": false
+                    }
+                ],
+                "power_profile_index_ready": true,
+                "low_power_promotion_ready": false,
+                "power_advantage_proven": false,
+                "gaps": [
+                    "battery-mode sample is missing for low_power promotion"
+                ],
+                "next_required_evidence": [
+                    "battery-mode low_power telemetry"
+                ],
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_npu_inference_claim": false,
+                    "bitnet_qk256_i2s_behavior_changed": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            THERMAL_TEMPERATURE_AVAILABILITY_FILE,
+            json!({
+                "schema_version": 1,
+                "artifact_kind": "lunar_lake_thermal_temperature_availability",
+                "proof_stage": "thermal_temperature_sources_probed_no_claim_change",
+                "machine_id": "intel-258v",
+                "decision": {
+                    "thermal_zone_visibility_available": true,
+                    "thermal_temperature_available": false,
+                    "usable_temperature_reading_count": 0
+                },
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "telemetry_probe_executed": true,
+                    "measured_temperature_claim": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_opencl_or_native_npu_claim": false,
+                    "bitnet_qk256_or_i2s_behavior_changed": false
+                }
+            }),
+        )?;
+
+        let receipt = build_operator_readiness_receipt_with_created_utc_and_route_policy(
+            temp.path(),
+            "2026-05-20T01:10:00Z".to_string(),
+            Some(Path::new(ROUTE_PROMOTION_LEDGER)),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            Some(Path::new(POWER_PROFILE_EVIDENCE_FILE)),
+            Some(Path::new(THERMAL_TEMPERATURE_AVAILABILITY_FILE)),
+        )?;
+
+        assert!(receipt.operator_ready, "{:?}", receipt.gaps);
+        let power = receipt.power_profile_evidence.as_ref().context("missing power summary")?;
+        assert!(power.power_profile_index_ready);
+        assert!(!power.low_power_promotion_ready);
+        assert!(!power.power_advantage_proven);
+        assert!(power.current_context_is_ac_only);
+        assert!(!power.battery_mode_sample_recorded);
+        assert!(power.thermal_context_recorded);
+        let thermal =
+            receipt.thermal_temperature_availability.as_ref().context("missing thermal summary")?;
+        assert!(thermal.thermal_zone_visibility_available);
+        assert!(!thermal.thermal_temperature_available);
+        assert_eq!(thermal.usable_temperature_reading_count, 0);
+        assert!(!thermal.measured_temperature_claim);
+        assert!(thermal.claim_boundary_preserved);
         Ok(())
     }
 
@@ -15082,6 +15752,8 @@ mod tests {
             "2026-05-19T14:30:00Z".to_string(),
             Some(Path::new(ROUTE_PROMOTION_LEDGER)),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            None,
+            None,
         )?;
         fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
         let regression = build_regression_bundle_with_created_utc(
@@ -15416,6 +16088,76 @@ mod tests {
                 }
             }),
         )?;
+        write_json(
+            temp.path(),
+            DENSE_SLM_ARTIFACT_MANIFEST,
+            json!({
+                "selected_candidate": {
+                    "model_name": "Qwen2.5-0.5B-Instruct",
+                    "family": "qwen2.5",
+                    "format": "GGUF",
+                    "file": "Qwen2.5-0.5B-Instruct-Q8_0.gguf",
+                    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+                    "repo_revision": "main",
+                    "quantization": "Q8_0"
+                },
+                "tokenizer": {
+                    "source": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "pretokenizer": "qwen2",
+                    "prompt_template": "qwen2.5-instruct-chatml",
+                    "stop_token_policy": "eos_or_stop_sequence"
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            DENSE_SLM_OPENVINO_IR_MANIFEST,
+            json!({
+                "source_model": {
+                    "model_name": "Qwen2.5-0.5B-Instruct",
+                    "model_family": "qwen2.5",
+                    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "revision": "main"
+                },
+                "export_contract": {
+                    "format": "OpenVINO IR",
+                    "expected_output_dir": "openvino/qwen25-0.5b-int4-sym",
+                    "weight_format": "INT4",
+                    "symmetric": true
+                },
+                "tokenizer": {
+                    "source": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "tokenizer_family": "qwen2",
+                    "prompt_template": "qwen2.5-instruct-chatml",
+                    "stop_token_policy": "eos_or_stop_sequence"
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            BITNET_CPU_BUNDLE,
+            json!({
+                "artifact_kind": "intel_258v_cpu_reference_bundle",
+                "captured_at_utc": "2026-05-12T18:43:14Z",
+                "fallback_used": false,
+                "model": {
+                    "file": "bitnet-b1.58-2B-4T.I2_S.gguf",
+                    "architecture": "bitnet",
+                    "format": "GGUF",
+                    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                    "repo": "microsoft/bitnet-b1.58-2B-4T"
+                },
+                "tokenizer": {
+                    "source": "microsoft/bitnet-b1.58-2B-4T",
+                    "type": "sentencepiece"
+                },
+                "cpu_reference": {
+                    "fallback_used": false,
+                    "prompt_policy": "bitnet_strict_reference_prompt"
+                }
+            }),
+        )?;
 
         let operator = build_operator_readiness_receipt_with_created_utc(
             temp.path(),
@@ -15452,6 +16194,15 @@ mod tests {
 
         assert!(profiles.profile_comparison_ready, "{:?}", profiles.gaps);
         assert_eq!(profiles.artifact_kind, "lunar_lake_route_profile_comparison");
+        assert!(profiles.route_model_identity_coverage.all_route_rows_have_identity);
+        assert!(profiles.route_model_identity_coverage.route_rows_with_model_hash > 0);
+        assert!(
+            profiles
+                .route_model_identity_coverage
+                .routes_without_model_hash
+                .iter()
+                .any(|route| route.contains("dense_slm_openvino_gpu_candidate"))
+        );
         assert!(profiles.timing_coverage.route_count > 0);
         assert!(profiles.timing_coverage.promotion_eligible_routes_have_profile_specific_timing);
         assert!(profiles.timing_coverage.proxy_or_missing_timing_routes_blocked);
@@ -15469,6 +16220,15 @@ mod tests {
             .iter()
             .find(|route| route.route_id == DEFAULT_ASK_ROUTE)
             .context("missing ask_normal CPU route")?;
+        assert_eq!(cpu_ask_normal.selected_model, "Qwen2.5-0.5B-Instruct Q8_0 GGUF");
+        let cpu_identity =
+            cpu_ask_normal.model_identity.as_ref().context("missing CPU model identity")?;
+        assert_eq!(cpu_identity.identity_source, "dense_slm_gguf_manifest");
+        assert_eq!(
+            cpu_identity.model_sha256.as_deref(),
+            Some("ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e")
+        );
+        assert_eq!(cpu_identity.prompt_template.as_deref(), Some("qwen2.5-instruct-chatml"));
         assert_eq!(cpu_ask_normal.timing_applicability.measured_prompt_tokens, Some(38));
         assert!(cpu_ask_normal.timing_applicability.timing_matches_profile);
         assert!(ask_normal.route_evidence.iter().any(|route| {
@@ -15481,6 +16241,16 @@ mod tests {
             .iter()
             .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
             .context("missing ask_normal GPU route")?;
+        let gpu_identity =
+            gpu_ask_normal.model_identity.as_ref().context("missing GPU model identity")?;
+        assert_eq!(gpu_identity.identity_source, "dense_slm_openvino_ir_manifest");
+        assert_eq!(gpu_identity.model_sha256, None);
+        assert!(
+            gpu_identity
+                .known_gaps
+                .iter()
+                .any(|gap| gap.contains("OpenVINO IR model binaries are not committed"))
+        );
         assert_eq!(gpu_ask_normal.timing_applicability.measured_output_tokens, None);
         assert!(!gpu_ask_normal.timing_applicability.timing_matches_profile);
         assert!(gpu_ask_normal.blockers.contains(
@@ -15535,6 +16305,23 @@ mod tests {
                     &"power telemetry receipt missing for low_power promotion".to_string(),
                 )
         }));
+        let bitnet_profile = profiles
+            .profiles
+            .iter()
+            .find(|profile| profile.profile_id == "bitnet_strict_reference")
+            .context("missing bitnet_strict_reference profile")?;
+        let bitnet_route = bitnet_profile
+            .route_evidence
+            .iter()
+            .find(|route| route.route_id == "bitnet_reference_cpu")
+            .context("missing BitNet CPU route")?;
+        assert_eq!(
+            bitnet_route
+                .model_identity
+                .as_ref()
+                .and_then(|identity| identity.model_sha256.as_deref()),
+            Some("4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162")
+        );
 
         write_json(
             temp.path(),
@@ -18587,6 +19374,95 @@ mod tests {
     }
 
     #[test]
+    fn thermal_temperature_availability_receipt_is_regression_ready_without_temperatures()
+    -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            THERMAL_TEMPERATURE_AVAILABILITY_FILE,
+            json!({
+                "schema_version": 1,
+                "artifact_kind": "lunar_lake_thermal_temperature_availability",
+                "proof_stage": "thermal_temperature_sources_probed_no_claim_change",
+                "machine_id": "intel-258v",
+                "decision": {
+                    "thermal_zone_visibility_available": true,
+                    "thermal_temperature_available": false,
+                    "usable_temperature_reading_count": 0
+                },
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "telemetry_probe_executed": true,
+                    "measured_temperature_claim": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_opencl_or_native_npu_claim": false,
+                    "bitnet_qk256_or_i2s_behavior_changed": false
+                }
+            }),
+        )?;
+
+        let summary = inspect_thermal_temperature_availability_regression(
+            &temp.path().join(THERMAL_TEMPERATURE_AVAILABILITY_FILE),
+        )?;
+
+        assert!(summary.regression_ready, "{:?}", summary.gaps);
+        assert!(summary.thermal_zone_visibility_available);
+        assert!(!summary.thermal_temperature_available);
+        assert_eq!(summary.usable_temperature_reading_count, 0);
+        assert!(!summary.measured_temperature_claim);
+        assert!(summary.telemetry_probe_executed);
+        assert!(summary.claim_boundary_preserved);
+        let notes = thermal_temperature_availability_regression_notes(&summary);
+        assert!(notes.iter().any(|note| note == "usable_temperature_reading_count=0"));
+        Ok(())
+    }
+
+    #[test]
+    fn thermal_temperature_availability_fails_false_measured_temperature_claim() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            THERMAL_TEMPERATURE_AVAILABILITY_FILE,
+            json!({
+                "schema_version": 1,
+                "artifact_kind": "lunar_lake_thermal_temperature_availability",
+                "proof_stage": "thermal_temperature_sources_probed_no_claim_change",
+                "machine_id": "intel-258v",
+                "decision": {
+                    "thermal_zone_visibility_available": true,
+                    "thermal_temperature_available": true,
+                    "usable_temperature_reading_count": 0
+                },
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "telemetry_probe_executed": true,
+                    "measured_temperature_claim": true,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_opencl_or_native_npu_claim": false,
+                    "bitnet_qk256_or_i2s_behavior_changed": false
+                }
+            }),
+        )?;
+
+        let summary = inspect_thermal_temperature_availability_regression(
+            &temp.path().join(THERMAL_TEMPERATURE_AVAILABILITY_FILE),
+        )?;
+
+        assert!(!summary.regression_ready);
+        assert!(summary.gaps.iter().any(|gap| {
+            gap.contains("claims temperature availability without usable readings")
+        }));
+        assert!(summary.gaps.iter().any(|gap| gap.contains("claim boundary")));
+        Ok(())
+    }
+
+    #[test]
     fn warm_resident_auto_ask_receipt_is_regression_ready() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_warm_resident_auto_npu_ask(temp.path(), AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT)?;
@@ -18627,6 +19503,7 @@ mod tests {
             Some(&power),
             None,
             None,
+            None,
         );
         assert!(!missing.strict_ready);
         assert!(missing.gaps.iter().any(|gap| {
@@ -18642,6 +19519,7 @@ mod tests {
             Some(&durability),
             Some(&intake),
             Some(&power),
+            None,
             Some(&ask),
             None,
         );
