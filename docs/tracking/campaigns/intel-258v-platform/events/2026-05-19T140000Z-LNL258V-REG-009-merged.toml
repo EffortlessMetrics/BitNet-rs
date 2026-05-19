@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:00:00Z"
+event = "merged"
+item = "LNL258V-REG-009"
+branch = "codex/lunar-lake/LNL258V-REG-009-blocked-ask-receipt"
+pr = 5843
+head_sha = "8c132e0917094c18557757a65b71790d8708996d"
+merge_sha = "44c4251b0b202f2dd33c952bb03e0fd9b39c5a15"
+actor = "codex"
+summary = "Merged LNL258V-REG-009 after wiring blocked auto-route ask receipts into regression v2."
+
+notes = [
+  "PR #5843 indexes the low_power auto-route blocked ask receipt in strict regression v2 and carries the surface into operator comparison.",
+  "The blocked receipt proves route_selection_blocked=true, new_inference_executed=false, fallback_used=false, and preserved no-promotion/no-speedup/no-power/no-acceleration/no-BitNet-QK256 claim boundaries.",
+  "The merge makes no route promotion, speedup, power-advantage, new-inference, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]

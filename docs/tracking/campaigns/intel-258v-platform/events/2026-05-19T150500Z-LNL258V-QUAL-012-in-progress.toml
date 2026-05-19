@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T15:05:00Z"
+event = "in_progress"
+item = "LNL258V-QUAL-012"
+branch = "codex/lunar-lake/LNL258V-QUAL-012-warm-resident-corpus"
+actor = "codex"
+summary = "Started adding a warm_resident lens to the Lunar Lake answer corpus v2 fixture."
+
+notes = [
+  "The current route-profile comparison blocks warm_resident because corpus-v2 profile quality evidence is missing.",
+  "This work adds the warm_resident fixture target and strict inspection requirement before any NPU resident promotion work.",
+  "The scope is fixture/inspection only with no inference, route promotion, speedup, power-advantage, Arc/NPU acceleration, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]

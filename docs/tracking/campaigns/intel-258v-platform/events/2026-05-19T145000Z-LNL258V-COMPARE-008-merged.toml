@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:50:00Z"
+event = "merged"
+item = "LNL258V-COMPARE-008"
+branch = "codex/lunar-lake/LNL258V-COMPARE-008-route-policy"
+pr = 5850
+head_sha = "3b4b5cdbb6c31ba236e015441e9a89614c234bd0"
+merge_sha = "b89c3c3ad2daefbdc95c79f0e914a8ad9c151aaa"
+actor = "codex"
+summary = "Merged LNL258V-COMPARE-008 after carrying profile-aware route policy into operator comparison."
+
+notes = [
+  "PR #5850 carries the route_policy summary from operator readiness into the comparison receipt.",
+  "The comparison receipt now directly exposes policy_ready=true, OpenVINO GPU ask_normal/ask_short promotion, NPU candidate-only status, hidden_fallback_allowed=false, and blocked unpromoted profiles.",
+  "The merge makes no new-inference, route-promotion, speedup, power-advantage, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]
