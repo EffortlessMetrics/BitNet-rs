@@ -30,7 +30,7 @@
 | apple-silicon-macbook | MB-AS-002 | TBD | blocked | MB-AS-004 | Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns. |
 | bitnet-b158-3b | B158-3B-001 | TBD | ready | none | Do not commit model binaries. |
 | ci-coverage | CI-COVERAGE-002 | #5775 | merged | none | Do not block unrelated runtime or tracker work on optional coverage uploads. |
-| cpu-proof | CPU-AVX512-000 | TBD | in_progress | CPU-SCALAR-000 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
+| cpu-proof | CPU-SCALAR-000 | TBD | ready | none | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | KBL8250U-004 | #3839 | merged | none | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | LEAF-001 | TBD | proposed | none | Do not combine crate movement with runtime proof. |
 | falcon-e-family | FE-000 | TBD | ready | FE-001 | Do not commit model binaries. |
