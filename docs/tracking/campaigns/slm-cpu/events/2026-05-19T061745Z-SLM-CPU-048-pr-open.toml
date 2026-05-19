@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T06:17:45Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-048"
+event = "pr_open"
+pr = 5873
+head_sha = "4b1f335ec95ff23a5fd457711e21249ea6750546"
+actor = "codex"
+
+notes = [
+  "Opened the non-executing packed Q8_0 sidecar runtime preflight PR.",
+  "Scope remains runtime eligibility reporting only; the production selector still preserves eager F32 Candle and sidecar_runtime_compute_allowed=false.",
+  "No packed sidecar runtime compute, speedup, generated-ID/text change, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
