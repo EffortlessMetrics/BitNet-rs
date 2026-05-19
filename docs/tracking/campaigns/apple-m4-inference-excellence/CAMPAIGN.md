@@ -105,7 +105,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-BENCH-008 | merged | Add the repeat-run benchmark variance harness before live variance envelopes. |
 | M4-BENCH-009 | merged | Enforce calibrated dense benchmark profile timeouts before live variance envelopes. |
 | M4-BENCH-010 | merged | Make benchmark variance aggregation timeout-aware before live dense envelopes. |
-| M4-BENCH-005 | in_progress | Publish repeatability and variance envelopes for supported dense Qwen timing families. |
+| M4-BENCH-005 | pr_open | Publish repeatability and variance envelopes for supported dense Qwen timing families. |
 | M4-BENCH-006 | proposed | Publish explicit BitNet one-shot and warm variance receipts. |
 | M4-BENCH-003 | proposed | Wire benchmark summaries into matching-identity regression comparisons. |
 | M4-BITNET-REG-001 | merged | Add direct BitNet warm-session regression support. |
