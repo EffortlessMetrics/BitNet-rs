@@ -47,6 +47,7 @@ Roadmap
 - Public support claims belong in `docs/status/`, hardware matrices, model
   artifact gates, and receipts.
 - Policy exceptions and CI routing belong in `policy/*.toml`.
+- PR queue disposition and closure law belongs in `docs/specs/BITNET-SPEC-PR-QUEUE-DISPOSITION.md` with machine-readable reasons in `policy/pr-dispositions.toml`.
 
 ## Rules
 

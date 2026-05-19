@@ -782,3 +782,17 @@ Use these artifacts before implementing or claiming TL2 route support:
 11. [TL2 CPU](BITNET-SPEC-TL2-CPU.md), [CUDA](BITNET-SPEC-TL2-CUDA.md), [Performance](BITNET-SPEC-TL2-PERFORMANCE.md), and [Status Surface](BITNET-SPEC-TL2-STATUS-SURFACE.md)
 
 TL2 is x86-first and separate from I2_S/QK256 and TL1 proof families.
+
+
+## PR Queue Disposition and Identity Preservation
+
+Use these artifacts before queue cleanup, restack, or closure decisions:
+
+1. [PR Queue Disposition Spec](BITNET-SPEC-PR-QUEUE-DISPOSITION.md)
+   - Defines valid/invalid closure reasons, required successor/issue links, and routing semantics for stale/restack states.
+2. [PR Closure Backlog ADR](../adr/0003-pr-closure-creates-backlog.md)
+   - Records durable decision that closure without durable disposition creates hidden backlog.
+3. [PR Identity Preservation ADR](../adr/0004-preserve-pr-identity.md)
+   - Makes rebase/restack/retarget the default over PR recreation.
+
+Do not treat stale age, parent closure, or restack needs as disposal reasons.

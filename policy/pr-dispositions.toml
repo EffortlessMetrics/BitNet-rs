@@ -1,0 +1,28 @@
+schema_version = "1.0"
+policy = "pr-dispositions"
+
+[valid_close_reasons]
+merged = true
+duplicate = true
+superseded_by_landed_successor = true
+ported_successor_landed = true
+historical_evidence_captured = true
+no_unique_durable_value_after_audit = true
+
+[invalid_close_reasons]
+old = true
+stale = true
+behind_main = true
+root_closed = true
+parent_closed = true
+needs_restack = true
+not_based_on_main = true
+diagnostic_only = true
+noisy = true
+inconvenient = true
+
+[requires_tracking_issue]
+close_with_intent_to_reopen = true
+close_with_intent_to_port = true
+close_with_intent_to_restack = true
+close_with_future_work_remaining = true
