@@ -1,0 +1,966 @@
+{
+  "allocation_audit": {
+    "enabled": false,
+    "method": "not_requested",
+    "scope": "not_requested"
+  },
+  "apple": {
+    "machine_id": "apple-m4-mac-mini",
+    "macos": {
+      "build": "25E253",
+      "native_or_virtualized": "native-macos",
+      "version": "26.4.1"
+    },
+    "metal_visible": true,
+    "resolved_device": {
+      "chip": "Apple M4",
+      "cpu_cores": 10,
+      "gpu_cores": 10,
+      "unified_memory": true,
+      "unified_memory_bytes": 17179869184
+    }
+  },
+  "artifact_kind": "bitnet_apple_m4_warm_session",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark.json",
+  "backend": {
+    "fallback_reason": null,
+    "fallback_used": false,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon"
+  },
+  "bitnet_quality_claimed": false,
+  "bitnet_warm_prompt_source": {
+    "determinism_requires_repeated_prompt": true,
+    "fixed_proof_prompt_count": 3,
+    "session_prompt_count": 3,
+    "source": "fixed_proof_prompts",
+    "variable_prompts": false
+  },
+  "broad_performance_claim": false,
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "bitnet_warm_session": true,
+    "broad_performance_claim": false,
+    "chat_enabled": false,
+    "full_metal_inference_claimed": false,
+    "metal_phase_contribution_only": false,
+    "model_loaded_once": true,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "serve_enabled": false,
+    "speedup_claim": false,
+    "tokenizer_loaded_once": true,
+    "warm_session_flow": true
+  },
+  "corpus": null,
+  "counts": {
+    "n_kv": 24,
+    "n_tensors": 332
+  },
+  "cpu": {
+    "arch": "aarch64",
+    "features": [
+      "neon"
+    ],
+    "model": "unknown-cpu",
+    "threads": 1
+  },
+  "determinism": {
+    "checked": true,
+    "groups": [
+      {
+        "attempt_count": 2,
+        "case_id": "prompt_01",
+        "prompt": "Answer with a single digit: 2+2=",
+        "prompt_indices": [
+          0,
+          2
+        ],
+        "reference_generated_ids": [
+          19,
+          128009
+        ],
+        "reference_text": "4",
+        "stable_generated_token_ids": true,
+        "stable_text": true
+      }
+    ],
+    "passed": true,
+    "repeated_prompt_groups": 1
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generation": {
+    "deterministic": true,
+    "max_new_tokens": 8,
+    "mode": "greedy",
+    "prompt_template": "bitnetcpp-answer",
+    "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0
+  },
+  "mac_bitnet_claim_boundary": {
+    "answer_corpus_proof_gate": "MODEL-ARTIFACT-007/M4-QA-001",
+    "bitnet_warm_session": true,
+    "broad_performance_claim": false,
+    "chat_enabled": false,
+    "full_metal_inference_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "requested_backend": "apple-m4-cpu-neon",
+    "serve_enabled": false,
+    "speedup_claim": false,
+    "tokenizer_path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+    "tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+  },
+  "machine_id": "apple-m4-mac-mini",
+  "memory": {
+    "available": true,
+    "resident_memory_bytes": 2062172160,
+    "resident_memory_source": "sysinfo_current_process",
+    "virtual_memory_bytes": 463247785984
+  },
+  "metal_phase_contributions": {
+    "cpu_pipeline_for_remaining_phases": true,
+    "enabled": false,
+    "execution_phase": null,
+    "fallback_used": false,
+    "full_metal_inference_claimed": false,
+    "resident_generation_backend": "apple-m4-cpu-neon",
+    "resident_greedy_token_ids_match_cpu_reference": true,
+    "runtime_api": null,
+    "selected_backend": null,
+    "speedup_claim": false
+  },
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "sha256_rehash_skipped": true,
+    "sha256_source": "verified_mac_model_cache",
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "model_cache": {
+    "architecture": "bitnet_b1_58",
+    "bytes": 1187801280,
+    "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+    "chat_template": true,
+    "display_name": "Microsoft BitNet-b1.58 2B 4T I2_S",
+    "id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+    "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "quantization": "I2_S/QK256",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "support_note": "Answer-ready BitNet artifact for backend gates when paired with external llama-bpe tokenizer authority and bitnetcpp-answer prompt authority. RTX 5070 Ti CUDA and x86 CPU routes require their own strict receipts; speedup_claim remains false unless profile-qualified.",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "llama-bpe-external"
+  },
+  "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+  "operator_command": "mac bitnet-warm",
+  "operator_ux": {
+    "aggregate_receipt_at_exit": true,
+    "clear_failure_messages": true,
+    "interactive_prompt_collection": false,
+    "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+    "per_turn_receipts_enabled": true,
+    "progress_enabled": true,
+    "quiet_default_logs": false,
+    "quiet_requested": false,
+    "status_stream": "stderr",
+    "stdout_token_stream": false,
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipts": true,
+    "token_stream": "disabled"
+  },
+  "power": {
+    "available": false,
+    "mode": null,
+    "source": "not_sampled_in_slm_cpu_warm_session"
+  },
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 8,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": false,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 1,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "20c52c04fcec40994be744252a3251ce1af63fcb655d29dbb1a624a609b87007",
+    "identity_sha256": "cdb268d5de82b8a5b8413a5a2e7e78d6d0ae0a97a043bf1db57095396087b03a",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "stop_string_window": null,
+      "stop_token_ids": [
+        128009,
+        128001
+      ]
+    },
+    "stop_criteria_sha256": "9505ad092f87c0177008daa89e0d653eef300fcf917191e74ba043805b5247c6",
+    "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+    "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+    "template": {
+      "family": "bitnetcpp-answer",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "bitnetcpp-answer",
+    "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+    "tokenizer_authority": {
+      "authority": "llama-bpe",
+      "sha256": null,
+      "source": "explicit",
+      "strict": true
+    }
+  },
+  "prompts": [
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "prompt_01",
+      "generated_token_ids": [
+        19,
+        128009
+      ],
+      "generated_tokens": 2,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": true,
+        "quiet_default_logs": false,
+        "quiet_requested": false,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Answer with a single digit: 2+2=",
+      "prompt_index": 0,
+      "quality": {
+        "distinct_generated_tokens": 2,
+        "failed_rules": [],
+        "gate_kind": null,
+        "gate_passed": true,
+        "generated_tokens": 2,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "4",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/01-answer-with-a-single-digit-22.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "buffer_reuse_evidence": {
+          "buffers_cleared_without_reallocation": false,
+          "capacity_sufficient_for_prompt": true,
+          "decode_allocation_sample_capacity": 8,
+          "decode_timing_capacity": 8,
+          "generated_token_capacity": 8,
+          "generated_token_capacity_grew": true,
+          "generated_token_capacity_needed": 8,
+          "logits_capacity": 128256,
+          "logits_capacity_grew": true,
+          "logits_capacity_needed": 128256,
+          "prefill_allocation_sample_capacity": 16,
+          "previous_generated_token_capacity": 0,
+          "previous_logits_capacity": 0,
+          "previous_stop_tail_capacity": 0,
+          "previous_token_capacity": 0,
+          "reset_reused_existing_capacity": false,
+          "stop_tail_capacity": 31,
+          "stop_tail_capacity_grew": true,
+          "stop_tail_capacity_needed": 31,
+          "token_capacity": 25,
+          "token_capacity_grew": true,
+          "token_capacity_needed": 25
+        },
+        "direct_greedy_logits_steps": 1,
+        "generated_token_buffer_reused": true,
+        "kv_cache_cleared_per_prompt": true,
+        "kv_cache_recreated_per_prompt": false,
+        "kv_cache_reuse_policy": "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+        "kv_cache_reused_across_prompts": true,
+        "logits_buffer_reuse_policy": "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer",
+        "logits_scratch_reuse_steps": 1,
+        "logits_vec_extraction_bypassed": true,
+        "logits_vec_extraction_steps": 0,
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "prompt_token_cache_enabled": true,
+        "prompt_token_cache_entry_count": 1,
+        "prompt_token_cache_hit": false,
+        "prompt_token_cache_policy": "rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts",
+        "reuse_scope": "resident_session",
+        "sampler_recreated_per_prompt": false,
+        "sampler_reuse_policy": "single_sampler_reused_for_temperature_zero_prompt_independence",
+        "sampler_reused_across_prompts": true,
+        "session_owned_buffers": true,
+        "stop_policy_precomputed_once": true,
+        "stop_sequence_count": 2,
+        "stop_tail_buffer_reused": true,
+        "stop_token_id_count": 2,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "4",
+      "timing": {
+        "decode_steady_state_tok_s": 2.08,
+        "decode_total_ms": 960.087,
+        "embed_ms": {
+          "count": 2,
+          "max_ms": 0.004,
+          "mean_ms": 0.003,
+          "min_ms": 0.002,
+          "p50_ms": 0.002,
+          "p95_ms": 0.004,
+          "total_ms": 0.006
+        },
+        "first_token_decode_ms": 479.36,
+        "first_token_ms": 7491,
+        "forward_ms": {
+          "count": 2,
+          "max_ms": 438.716,
+          "mean_ms": 438.114,
+          "min_ms": 437.513,
+          "p50_ms": 437.513,
+          "p95_ms": 438.716,
+          "total_ms": 876.228
+        },
+        "logits_ms": {
+          "count": 2,
+          "max_ms": 41.84,
+          "mean_ms": 41.716,
+          "min_ms": 41.592,
+          "p50_ms": 41.592,
+          "p95_ms": 41.84,
+          "total_ms": 83.432
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 7012.437,
+        "sample_ms": {
+          "count": 2,
+          "max_ms": 0.413,
+          "mean_ms": 0.206,
+          "min_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.413,
+          "total_ms": 0.413
+        },
+        "sampling_ms_per_token": 0.206,
+        "session_model_load_ms": 4499.005,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 158.153,
+        "time_to_first_token_ms": 7491,
+        "token_decode_ms": {
+          "count": 2,
+          "max_ms": 0.002,
+          "mean_ms": 0.002,
+          "min_ms": 0.002,
+          "p50_ms": 0.002,
+          "p95_ms": 0.002,
+          "total_ms": 0.005
+        },
+        "tokenize_ms": 0.052,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 7972.614
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "prompt_02",
+      "generated_token_ids": [
+        60704,
+        128009
+      ],
+      "generated_tokens": 2,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": true,
+        "quiet_default_logs": false,
+        "quiet_requested": false,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Name the capital of France. Answer with one word.",
+      "prompt_index": 1,
+      "quality": {
+        "distinct_generated_tokens": 2,
+        "failed_rules": [],
+        "gate_kind": null,
+        "gate_passed": true,
+        "generated_tokens": 2,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "Paris",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/02-name-the-capital-of-france-answer-with-one-word.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "buffer_reuse_evidence": {
+          "buffers_cleared_without_reallocation": true,
+          "capacity_sufficient_for_prompt": true,
+          "decode_allocation_sample_capacity": 8,
+          "decode_timing_capacity": 8,
+          "generated_token_capacity": 8,
+          "generated_token_capacity_grew": false,
+          "generated_token_capacity_needed": 8,
+          "logits_capacity": 128256,
+          "logits_capacity_grew": false,
+          "logits_capacity_needed": 128256,
+          "prefill_allocation_sample_capacity": 16,
+          "previous_generated_token_capacity": 8,
+          "previous_logits_capacity": 128256,
+          "previous_stop_tail_capacity": 31,
+          "previous_token_capacity": 25,
+          "reset_reused_existing_capacity": true,
+          "stop_tail_capacity": 31,
+          "stop_tail_capacity_grew": false,
+          "stop_tail_capacity_needed": 31,
+          "token_capacity": 25,
+          "token_capacity_grew": false,
+          "token_capacity_needed": 25
+        },
+        "direct_greedy_logits_steps": 1,
+        "generated_token_buffer_reused": true,
+        "kv_cache_cleared_per_prompt": true,
+        "kv_cache_recreated_per_prompt": false,
+        "kv_cache_reuse_policy": "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+        "kv_cache_reused_across_prompts": true,
+        "logits_buffer_reuse_policy": "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer",
+        "logits_scratch_reuse_steps": 1,
+        "logits_vec_extraction_bypassed": true,
+        "logits_vec_extraction_steps": 0,
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "prompt_token_cache_enabled": true,
+        "prompt_token_cache_entry_count": 2,
+        "prompt_token_cache_hit": false,
+        "prompt_token_cache_policy": "rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts",
+        "reuse_scope": "resident_session",
+        "sampler_recreated_per_prompt": false,
+        "sampler_reuse_policy": "single_sampler_reused_for_temperature_zero_prompt_independence",
+        "sampler_reused_across_prompts": true,
+        "session_owned_buffers": true,
+        "stop_policy_precomputed_once": true,
+        "stop_sequence_count": 2,
+        "stop_tail_buffer_reused": true,
+        "stop_token_id_count": 2,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "Paris",
+      "timing": {
+        "decode_steady_state_tok_s": 2.084,
+        "decode_total_ms": 960.025,
+        "embed_ms": {
+          "count": 2,
+          "max_ms": 0.003,
+          "mean_ms": 0.003,
+          "min_ms": 0.003,
+          "p50_ms": 0.003,
+          "p95_ms": 0.003,
+          "total_ms": 0.006
+        },
+        "first_token_decode_ms": 480.086,
+        "first_token_ms": 7485,
+        "forward_ms": {
+          "count": 2,
+          "max_ms": 438.428,
+          "mean_ms": 438.168,
+          "min_ms": 437.909,
+          "p50_ms": 437.909,
+          "p95_ms": 438.428,
+          "total_ms": 876.337
+        },
+        "logits_ms": {
+          "count": 2,
+          "max_ms": 41.652,
+          "mean_ms": 41.628,
+          "min_ms": 41.605,
+          "p50_ms": 41.605,
+          "p95_ms": 41.652,
+          "total_ms": 83.256
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 7005.484,
+        "sample_ms": {
+          "count": 2,
+          "max_ms": 0.418,
+          "mean_ms": 0.209,
+          "min_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.418,
+          "total_ms": 0.418
+        },
+        "sampling_ms_per_token": 0.209,
+        "session_model_load_ms": 4499.005,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 158.153,
+        "time_to_first_token_ms": 7485,
+        "token_decode_ms": {
+          "count": 2,
+          "max_ms": 0.003,
+          "mean_ms": 0.003,
+          "min_ms": 0.003,
+          "p50_ms": 0.003,
+          "p95_ms": 0.003,
+          "total_ms": 0.005
+        },
+        "tokenize_ms": 0.05,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 7965.576
+      }
+    },
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "selected_backend": "apple-m4-cpu-neon"
+      },
+      "case_id": "prompt_03",
+      "generated_token_ids": [
+        19,
+        128009
+      ],
+      "generated_tokens": 2,
+      "metal_phase_contributions": [],
+      "operator_ux": {
+        "aggregate_receipt_at_exit": true,
+        "clear_failure_messages": true,
+        "interactive_prompt_collection": false,
+        "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+        "per_turn_receipts_enabled": true,
+        "progress_enabled": true,
+        "quiet_default_logs": false,
+        "quiet_requested": false,
+        "status_stream": "stderr",
+        "stdout_token_stream": false,
+        "stream_tokens_requested": false,
+        "time_to_first_token_receipt": true,
+        "token_stream": "disabled"
+      },
+      "prompt": "Answer with a single digit: 2+2=",
+      "prompt_index": 2,
+      "quality": {
+        "distinct_generated_tokens": 2,
+        "failed_rules": [],
+        "gate_kind": null,
+        "gate_passed": true,
+        "generated_tokens": 2,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_replacement_chars": true,
+        "non_degenerate": true,
+        "non_empty": true,
+        "normalized_text": "4",
+        "passed": true,
+        "printable_utf8": true,
+        "valid_utf8": true
+      },
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/03-answer-with-a-single-digit-22.json",
+      "repeat_index": 0,
+      "session_reuse": {
+        "allocation_audit_buffers_reused": true,
+        "buffer_reuse_evidence": {
+          "buffers_cleared_without_reallocation": true,
+          "capacity_sufficient_for_prompt": true,
+          "decode_allocation_sample_capacity": 8,
+          "decode_timing_capacity": 8,
+          "generated_token_capacity": 8,
+          "generated_token_capacity_grew": false,
+          "generated_token_capacity_needed": 8,
+          "logits_capacity": 128256,
+          "logits_capacity_grew": false,
+          "logits_capacity_needed": 128256,
+          "prefill_allocation_sample_capacity": 16,
+          "previous_generated_token_capacity": 8,
+          "previous_logits_capacity": 128256,
+          "previous_stop_tail_capacity": 31,
+          "previous_token_capacity": 25,
+          "reset_reused_existing_capacity": true,
+          "stop_tail_capacity": 31,
+          "stop_tail_capacity_grew": false,
+          "stop_tail_capacity_needed": 31,
+          "token_capacity": 25,
+          "token_capacity_grew": false,
+          "token_capacity_needed": 25
+        },
+        "direct_greedy_logits_steps": 1,
+        "generated_token_buffer_reused": true,
+        "kv_cache_cleared_per_prompt": true,
+        "kv_cache_recreated_per_prompt": false,
+        "kv_cache_reuse_policy": "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+        "kv_cache_reused_across_prompts": true,
+        "logits_buffer_reuse_policy": "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer",
+        "logits_scratch_reuse_steps": 1,
+        "logits_vec_extraction_bypassed": true,
+        "logits_vec_extraction_steps": 0,
+        "model_loaded_once": true,
+        "prompt_token_buffer_reused": true,
+        "prompt_token_cache_enabled": true,
+        "prompt_token_cache_entry_count": 2,
+        "prompt_token_cache_hit": true,
+        "prompt_token_cache_policy": "rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts",
+        "reuse_scope": "resident_session",
+        "sampler_recreated_per_prompt": false,
+        "sampler_reuse_policy": "single_sampler_reused_for_temperature_zero_prompt_independence",
+        "sampler_reused_across_prompts": true,
+        "session_owned_buffers": true,
+        "stop_policy_precomputed_once": true,
+        "stop_sequence_count": 2,
+        "stop_tail_buffer_reused": true,
+        "stop_token_id_count": 2,
+        "timing_buffers_reused": true,
+        "tokenizer_loaded_once": true
+      },
+      "text": "4",
+      "timing": {
+        "decode_steady_state_tok_s": 1.936,
+        "decode_total_ms": 1032.75,
+        "embed_ms": {
+          "count": 2,
+          "max_ms": 0.004,
+          "mean_ms": 0.003,
+          "min_ms": 0.002,
+          "p50_ms": 0.002,
+          "p95_ms": 0.004,
+          "total_ms": 0.006
+        },
+        "first_token_decode_ms": 516.329,
+        "first_token_ms": 8486,
+        "forward_ms": {
+          "count": 2,
+          "max_ms": 471.509,
+          "mean_ms": 471.356,
+          "min_ms": 471.203,
+          "p50_ms": 471.203,
+          "p95_ms": 471.509,
+          "total_ms": 942.713
+        },
+        "logits_ms": {
+          "count": 2,
+          "max_ms": 44.813,
+          "mean_ms": 44.789,
+          "min_ms": 44.765,
+          "p50_ms": 44.765,
+          "p95_ms": 44.813,
+          "total_ms": 89.578
+        },
+        "model_load_ms": 0.0,
+        "prefill_ms": 7970.634,
+        "sample_ms": {
+          "count": 2,
+          "max_ms": 0.447,
+          "mean_ms": 0.223,
+          "min_ms": 0.0,
+          "p50_ms": 0.0,
+          "p95_ms": 0.447,
+          "total_ms": 0.447
+        },
+        "sampling_ms_per_token": 0.223,
+        "session_model_load_ms": 4499.005,
+        "session_model_sha256_ms": 0.0,
+        "session_tokenizer_load_ms": 158.153,
+        "time_to_first_token_ms": 8486,
+        "token_decode_ms": {
+          "count": 2,
+          "max_ms": 0.003,
+          "mean_ms": 0.002,
+          "min_ms": 0.001,
+          "p50_ms": 0.001,
+          "p95_ms": 0.003,
+          "total_ms": 0.004
+        },
+        "tokenize_ms": 0.0,
+        "tokenizer_load_ms": 0.0,
+        "total_ms": 9003.402
+      }
+    }
+  ],
+  "quality_summary": {
+    "fail_on_quality": true,
+    "failed_prompt_indices": [],
+    "min_distinct_generated_tokens": 1,
+    "min_generated_tokens": 1,
+    "passed": true
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "gpu_cores": 10,
+    "unified_memory": true,
+    "unified_memory_bytes": 17179869184
+  },
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "session": {
+    "allocation_audit_buffers_reused": true,
+    "direct_greedy_logits_steps": 3,
+    "generated_token_buffer_reused": true,
+    "kv_cache_cleared_per_prompt": true,
+    "kv_cache_recreated_per_prompt": false,
+    "kv_cache_recreated_prompt_count": 0,
+    "kv_cache_reuse_policy": "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+    "kv_cache_reused_across_prompts": true,
+    "kv_cache_reused_prompt_count": 3,
+    "logits_buffer_reuse_policy": "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer",
+    "logits_scratch_reuse_steps": 3,
+    "logits_vec_extraction_bypassed": true,
+    "logits_vec_extraction_steps": 0,
+    "metal_phase_contributions_enabled": false,
+    "metal_phase_receipts": [],
+    "model_loaded_once": true,
+    "per_prompt_receipt_dir": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts",
+    "per_prompt_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/01-answer-with-a-single-digit-22.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/02-name-the-capital-of-france-answer-with-one-word.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/03-answer-with-a-single-digit-22.json"
+    ],
+    "per_prompt_receipts_enabled": true,
+    "prompt_count": 3,
+    "prompt_token_buffer_reused": true,
+    "prompt_token_cache_enabled": true,
+    "prompt_token_cache_entry_count": 2,
+    "prompt_token_cache_hits": 1,
+    "prompt_token_cache_misses": 2,
+    "prompt_token_cache_policy": "rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts",
+    "prompt_token_cache_reused_rendered_prompts": true,
+    "reuse_scope": "resident_session",
+    "sampler_recreated_per_prompt": false,
+    "sampler_recreated_prompt_count": 0,
+    "sampler_reuse_policy": "single_sampler_reused_for_temperature_zero_prompt_independence",
+    "sampler_reused_across_prompts": true,
+    "sampler_reused_prompt_count": 3,
+    "session_owned_buffers": true,
+    "stop_policy_precomputed_once": true,
+    "stop_sequence_count": 2,
+    "stop_tail_buffer_reused": true,
+    "stop_token_id_count": 2,
+    "timing_buffers_reused": true,
+    "tokenizer_loaded_once": true
+  },
+  "session_setup_allocation_audit": {
+    "enabled": false,
+    "kv_cache": {
+      "alloc_bytes_total": 0,
+      "alloc_count_total": 0,
+      "count": 1,
+      "dealloc_bytes_total": 0,
+      "dealloc_count_total": 0,
+      "max_alloc_bytes_per_token": 0,
+      "max_alloc_count_per_token": 0,
+      "mean_alloc_bytes_per_token": 0.0,
+      "mean_alloc_count_per_token": 0.0,
+      "net_bytes_total": 0
+    },
+    "kv_cache_reuse_policy": "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+    "scope": "resident warm-session setup before prompt loop"
+  },
+  "speed": {
+    "broad_performance_claim": false,
+    "claim": "warm-answer timing is measured for this model, corpus, backend, and machine context only",
+    "counts": {
+      "generated_tokens": 6,
+      "prompt_count": 3,
+      "prompt_tokens": 51
+    },
+    "measurement_scope": "validated SLM warm session on apple-m4-cpu-neon",
+    "reuse": {
+      "allocation_audit_buffers_reused": true,
+      "generated_token_buffer_reused": true,
+      "kv_cache_cleared_per_prompt": true,
+      "kv_cache_recreated_per_prompt": false,
+      "kv_cache_recreated_prompt_count": 0,
+      "kv_cache_reuse_policy": "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+      "kv_cache_reused_across_prompts": true,
+      "kv_cache_reused_prompt_count": 3,
+      "logits_buffer_reuse_claimed": false,
+      "logits_buffer_reuse_policy": "full logits Vec extraction is reported by the session receipt; model.logits tensor allocation remains measured",
+      "model_loaded_once": true,
+      "per_prompt_model_load_ms": 0.0,
+      "per_prompt_tokenizer_load_ms": 0.0,
+      "prompt_token_buffer_reused": true,
+      "reuse_scope": "resident_session",
+      "sampler_recreated_per_prompt": false,
+      "sampler_recreated_prompt_count": 0,
+      "sampler_reuse_policy": "single_sampler_reused_for_temperature_zero_prompt_independence",
+      "sampler_reused_across_prompts": true,
+      "sampler_reused_prompt_count": 3,
+      "session_owned_buffers": true,
+      "stop_tail_buffer_reused": true,
+      "timing_buffers_reused": true,
+      "tokenizer_loaded_once": true
+    },
+    "speedup_claim": false,
+    "throughput": {
+      "cold_session_generated_tok_s": 0.2,
+      "decode_generated_tok_s": 2.032,
+      "warm_prompt_generated_tok_s": 0.241
+    },
+    "timing": {
+      "decode_total_ms": 2952.861,
+      "first_token_ms": {
+        "count": 3,
+        "max_ms": 8486.0,
+        "mean_ms": 7820.667,
+        "min_ms": 7485.0,
+        "p50_ms": 7491.0,
+        "p95_ms": 8486.0,
+        "total_ms": 23462.0
+      },
+      "model_load_ms": 4499.005,
+      "prefill_ms": 21988.554,
+      "sampling_ms": 1.277,
+      "steady_decode_tok_s": {
+        "count": 3,
+        "max": 2.084,
+        "mean": 2.033,
+        "min": 1.936,
+        "p50": 2.08,
+        "p95": 2.084
+      },
+      "time_to_first_token_ms": {
+        "count": 3,
+        "max_ms": 8486.0,
+        "mean_ms": 7820.667,
+        "min_ms": 7485.0,
+        "p50_ms": 7491.0,
+        "p95_ms": 8486.0,
+        "total_ms": 23462.0
+      },
+      "tokenize_ms": 0.103,
+      "tokenizer_load_ms": 158.153,
+      "total_session_ms": 30039.887,
+      "warm_prompt_wall_ms": 24941.592
+    }
+  },
+  "speedup_claim": false,
+  "storage": {
+    "model_path": {
+      "available": true,
+      "available_bytes": 11512827968,
+      "mount_point": "/",
+      "path": "/Users/steven/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+      "source": "sysinfo_disk",
+      "total_bytes": 245107195904
+    },
+    "receipt_path": {
+      "available": true,
+      "available_bytes": 11512827968,
+      "mount_point": "/",
+      "path": "/Users/steven/Code/Rust/BitNet-rs/ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark.json",
+      "source": "sysinfo_disk",
+      "total_bytes": 245107195904
+    }
+  },
+  "thermal": {
+    "available": false,
+    "source": "not_sampled_in_slm_cpu_warm_session",
+    "temperature_c": null
+  },
+  "timeout_boundary": {
+    "configured_seconds": null,
+    "enforced": false,
+    "reached": false,
+    "stage": null,
+    "status": "not_reached"
+  },
+  "timestamp": "2026-05-19T22:47:07.734225+00:00",
+  "timing": {
+    "model_load_ms": 4499.005,
+    "model_sha256_ms": 0.0,
+    "tokenizer_load_ms": 158.153,
+    "total_session_ms": 30039.887
+  },
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "model_family": "llama3",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  }
+}

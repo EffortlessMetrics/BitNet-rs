@@ -430,6 +430,43 @@ claim BitNet timing variance, BitNet chat or serve behavior, Metal, QK256,
 Neural Engine, MPSGraph, MacBook evidence, speedup, broad model quality, or
 broad Apple Silicon performance.
 
+`M4-BENCH-006` publishes the first explicit BitNet repeatability and variance
+receipt for the accepted Microsoft I2_S artifact/tokenizer identity:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json
+```
+
+The release-mode command repeats the full `mac bitnet-benchmark` contract twice.
+Each repeat runs one `mac ask` prompt and one fixed three-prompt warm session,
+then the parent aggregate records repeat count, completed count, path count,
+sample count, child summary receipts, timeout-stage accounting, raw p50/p90/p99
+bands, min/max samples, outlier policy, and advisory-vs-failure threshold
+language. The aggregate and all child receipts validate through
+`target/release/bitnet mac receipts-check ... --json`.
+
+| Field | Value |
+|---|---:|
+| Repeats requested/completed | 2 / 2 |
+| Path samples | 4 |
+| Prompt runs | 8 |
+| Generated tokens | 16 |
+| Timeouts | 0 |
+| TTFT p50/p90/p99 | 7491 / 8486 / 8486 ms |
+| Input tok/s p50/p90/p99 | 2.422 / 2.428 / 2.428 |
+| Output tok/s p50/p90/p99 | 0.251 / 0.251 / 0.251 |
+| Decode tok/s p50/p90/p99 | 2.082 / 2.083 / 2.083 |
+| Peak memory p50/p90/p99 | 4322.875 / 4327.438 / 4327.438 MB |
+
+The receipt preserves model SHA
+`4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162`, tokenizer
+SHA `e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7`,
+`selected_backend=apple-m4-cpu-neon`, and `fallback_used=false`. It is bounded
+BitNet one-shot and fixed warm-session variance evidence only; it does not
+enable BitNet chat or serve, prove dense SLM behavior, claim broad BitNet
+quality, claim broad Apple Silicon performance, or widen Metal, QK256, Neural
+Engine, MPSGraph, or MacBook support.
+
 ## Drift Thresholds
 
 `M4-EXCELLENCE-004` publishes the current family-specific drift policy in the

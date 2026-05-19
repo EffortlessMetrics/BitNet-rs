@@ -1,0 +1,567 @@
+{
+  "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/summary.json",
+  "benchmark_contract": {
+    "cold_load_separated": true,
+    "decode_tok_s_definition": "generated_tokens / decode_total_ms",
+    "fixed_warm_model_tokenizer_reuse_visible": true,
+    "input_tok_s_definition": "prompt_tokens / (prompt_tokenize_ms + prefill_ms)",
+    "memory_drift_definition": "ru_maxrss process peak delta when available; monotonic peak, not live RSS",
+    "one_shot_loaded_independently": true,
+    "output_tok_s_definition": "generated_tokens / total_prompt_wall_ms",
+    "path_execution_model": "one mac ask run plus one fixed-prompt resident warm-session run",
+    "percentiles": [
+      "p50",
+      "p90",
+      "p99"
+    ],
+    "scope": "Apple M4 Mac mini BitNet one-shot and fixed-warm benchmark v1",
+    "thresholds_are_claim_bounds_not_speed_guarantees": true,
+    "timeout_boundary_recorded": true
+  },
+  "benchmark_set": "bitnet-one-shot-fixed-warm-v1",
+  "bitnet_quality_claimed": false,
+  "broad_performance_claim": false,
+  "build": {
+    "profile": "release",
+    "release_mode": true
+  },
+  "evidence": {
+    "generated_text_recorded": true,
+    "generated_token_ids_recorded": true,
+    "one_shot_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-ask-benchmark.json",
+    "operator_commands": [
+      "mac ask",
+      "mac bitnet-warm"
+    ],
+    "warm_prompt_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/01-answer-with-a-single-digit-22.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/02-name-the-capital-of-france-answer-with-one-word.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/03-answer-with-a-single-digit-22.json"
+    ],
+    "warm_session_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark.json"
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generated_tokens": 8,
+  "mac_claim_boundary": {
+    "accepted_i2s_artifact_only": true,
+    "bitnet_benchmark": true,
+    "bitnet_quality_claimed": false,
+    "broad_apple_silicon_claimed": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "chat_enabled": false,
+    "dense_slm_evidence_used": false,
+    "fixed_warm_session": true,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "one_shot_mac_ask": true,
+    "qk256_apple_claimed": false,
+    "serve_enabled": false,
+    "speedup_claim": false
+  },
+  "memory": {
+    "end_peak_memory_mb": 4327.438,
+    "memory_drift_mb_p50": 0.0,
+    "memory_drift_mb_p90": 0.0,
+    "memory_drift_mb_p99": 0.0,
+    "peak_memory_mb_p50": 4327.234,
+    "peak_memory_mb_p90": 4327.438,
+    "peak_memory_mb_p99": 4327.438,
+    "process_peak_drift_mb": 4.563,
+    "source": "getrusage.ru_maxrss process peak delta",
+    "start_peak_memory_mb": 4322.875
+  },
+  "model": {
+    "answer_ready": {
+      "state": "answer_ready"
+    },
+    "answer_ready_artifact_available": true,
+    "architecture": "bitnet_b1_58",
+    "bytes": 1187801280,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+    "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "quantization": "I2_S",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "paths": {
+    "fixed_warm": {
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "chat_enabled": false,
+        "scope": "this fixed warm prompt set, model, backend, and machine receipt only",
+        "serve_enabled": false,
+        "speedup_claim": false
+      },
+      "generated_tokens": 6,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "samples": [
+            0.0
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 4327.438,
+          "min": 4327.438,
+          "p50": 4327.438,
+          "p90": 4327.438,
+          "p99": 4327.438,
+          "samples": [
+            4327.438
+          ]
+        },
+        "source": "getrusage.ru_maxrss process peak"
+      },
+      "model_loaded_once": true,
+      "operator_command": "mac bitnet-warm",
+      "output_tokens": {
+        "count": 3,
+        "max": 2.0,
+        "min": 2.0,
+        "p50": 2.0,
+        "p90": 2.0,
+        "p99": 2.0,
+        "samples": [
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "path_id": "fixed_warm_session",
+      "prompt_count": 3,
+      "prompt_tokens": {
+        "count": 3,
+        "max": 17.0,
+        "min": 17.0,
+        "p50": 17.0,
+        "p90": 17.0,
+        "p99": 17.0,
+        "samples": [
+          17.0,
+          17.0,
+          17.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark.json",
+      "reuse_scope": "resident_session",
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 3,
+          "max": 2.083,
+          "min": 1.937,
+          "p50": 2.083,
+          "p90": 2.083,
+          "p99": 2.083,
+          "samples": [
+            2.083,
+            2.083,
+            1.937
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 3,
+          "max": 2.427,
+          "min": 2.133,
+          "p50": 2.424,
+          "p90": 2.427,
+          "p99": 2.427,
+          "samples": [
+            2.424,
+            2.427,
+            2.133
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 3,
+          "max": 0.251,
+          "min": 0.222,
+          "p50": 0.251,
+          "p90": 0.251,
+          "p99": 0.251,
+          "samples": [
+            0.251,
+            0.251,
+            0.222
+          ]
+        }
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "status": "not_reached"
+      },
+      "timing": {
+        "decode_total_ms": {
+          "count": 3,
+          "max": 1032.75,
+          "min": 960.025,
+          "p50": 960.087,
+          "p90": 1032.75,
+          "p99": 1032.75,
+          "samples": [
+            960.087,
+            960.025,
+            1032.75
+          ]
+        },
+        "model_load_ms": {
+          "count": 1,
+          "max": 4499.005,
+          "min": 4499.005,
+          "p50": 4499.005,
+          "p90": 4499.005,
+          "p99": 4499.005,
+          "samples": [
+            4499.005
+          ]
+        },
+        "prefill_ms": {
+          "count": 3,
+          "max": 7970.634,
+          "min": 7005.484,
+          "p50": 7012.437,
+          "p90": 7970.634,
+          "p99": 7970.634,
+          "samples": [
+            7012.437,
+            7005.484,
+            7970.634
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 3,
+          "max": 0.052,
+          "min": 0.0,
+          "p50": 0.05,
+          "p90": 0.052,
+          "p99": 0.052,
+          "samples": [
+            0.052,
+            0.05,
+            0.0
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 3,
+          "max": 0.223,
+          "min": 0.206,
+          "p50": 0.209,
+          "p90": 0.223,
+          "p99": 0.223,
+          "samples": [
+            0.206,
+            0.209,
+            0.223
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 3,
+          "max": 8486.0,
+          "min": 7485.0,
+          "p50": 7491.0,
+          "p90": 8486.0,
+          "p99": 8486.0,
+          "samples": [
+            7491.0,
+            7485.0,
+            8486.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 158.153,
+          "min": 158.153,
+          "p50": 158.153,
+          "p90": 158.153,
+          "p99": 158.153,
+          "samples": [
+            158.153
+          ]
+        },
+        "total_wall_ms": {
+          "count": 3,
+          "max": 9003.402,
+          "min": 7965.576,
+          "p50": 7972.614,
+          "p90": 9003.402,
+          "p99": 9003.402,
+          "samples": [
+            7972.614,
+            7965.576,
+            9003.402
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    },
+    "one_shot": {
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "chat_enabled": false,
+        "scope": "this one-shot prompt, model, backend, and machine receipt only",
+        "serve_enabled": false,
+        "speedup_claim": false
+      },
+      "generated_tokens": 2,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "samples": [
+            0.0
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 4327.234,
+          "min": 4327.234,
+          "p50": 4327.234,
+          "p90": 4327.234,
+          "p99": 4327.234,
+          "samples": [
+            4327.234
+          ]
+        },
+        "source": "getrusage.ru_maxrss process peak"
+      },
+      "model_loaded_once": true,
+      "operator_command": "mac ask",
+      "output_tokens": {
+        "count": 1,
+        "max": 2.0,
+        "min": 2.0,
+        "p50": 2.0,
+        "p90": 2.0,
+        "p99": 2.0,
+        "samples": [
+          2.0
+        ]
+      },
+      "path_id": "one_shot_mac_ask",
+      "prompt_count": 1,
+      "prompt_tokens": {
+        "count": 1,
+        "max": 19.0,
+        "min": 19.0,
+        "p50": 19.0,
+        "p90": 19.0,
+        "p99": 19.0,
+        "samples": [
+          19.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-ask-benchmark.json",
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 1,
+          "max": 2.08,
+          "min": 2.08,
+          "p50": 2.08,
+          "p90": 2.08,
+          "p99": 2.08,
+          "samples": [
+            2.08
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 1,
+          "max": 2.41,
+          "min": 2.41,
+          "p50": 2.41,
+          "p90": 2.41,
+          "p99": 2.41,
+          "samples": [
+            2.41
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 1,
+          "max": 0.226,
+          "min": 0.226,
+          "p50": 0.226,
+          "p90": 0.226,
+          "p99": 0.226,
+          "samples": [
+            0.226
+          ]
+        }
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "status": "not_reached"
+      },
+      "timing": {
+        "decode_total_ms": {
+          "count": 1,
+          "max": 961.572,
+          "min": 961.572,
+          "p50": 961.572,
+          "p90": 961.572,
+          "p99": 961.572,
+          "samples": [
+            961.572
+          ]
+        },
+        "model_load_ms": {
+          "count": 1,
+          "max": 4495.505,
+          "min": 4495.505,
+          "p50": 4495.505,
+          "p90": 4495.505,
+          "p99": 4495.505,
+          "samples": [
+            4495.505
+          ]
+        },
+        "prefill_ms": {
+          "count": 1,
+          "max": 7882.915,
+          "min": 7882.915,
+          "p50": 7882.915,
+          "p90": 7882.915,
+          "p99": 7882.915,
+          "samples": [
+            7882.915
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 1,
+          "max": 0.05,
+          "min": 0.05,
+          "p50": 0.05,
+          "p90": 0.05,
+          "p99": 0.05,
+          "samples": [
+            0.05
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 1,
+          "max": 0.416,
+          "min": 0.416,
+          "p50": 0.416,
+          "p90": 0.416,
+          "p99": 0.416,
+          "samples": [
+            0.416
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 1,
+          "max": 8363.0,
+          "min": 8363.0,
+          "p50": 8363.0,
+          "p90": 8363.0,
+          "p99": 8363.0,
+          "samples": [
+            8363.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 163.017,
+          "min": 163.017,
+          "p50": 163.017,
+          "p90": 163.017,
+          "p99": 163.017,
+          "samples": [
+            163.017
+          ]
+        },
+        "total_wall_ms": {
+          "count": 1,
+          "max": 8844.0,
+          "min": 8844.0,
+          "p50": 8844.0,
+          "p90": 8844.0,
+          "p99": 8844.0,
+          "samples": [
+            8844.0
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    }
+  },
+  "prompt_count": 4,
+  "prompt_template": "bitnetcpp-answer",
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "speed": {
+    "cold_load_ms_p50": 4495.505,
+    "cold_load_ms_p90": 4499.005,
+    "cold_load_ms_p99": 4499.005,
+    "decode_tok_s_p50": 2.08,
+    "decode_tok_s_p90": 2.083,
+    "decode_tok_s_p99": 2.083,
+    "decode_total_ms_p50": 960.087,
+    "decode_total_ms_p90": 1032.75,
+    "decode_total_ms_p99": 1032.75,
+    "input_tok_s_p50": 2.41,
+    "input_tok_s_p90": 2.427,
+    "input_tok_s_p99": 2.427,
+    "model_load_ms_p50": 4495.505,
+    "model_load_ms_p90": 4499.005,
+    "model_load_ms_p99": 4499.005,
+    "output_tok_s_p50": 0.226,
+    "output_tok_s_p90": 0.251,
+    "output_tok_s_p99": 0.251,
+    "prefill_ms_p50": 7012.437,
+    "prefill_ms_p90": 7970.634,
+    "prefill_ms_p99": 7970.634,
+    "prompt_tokenize_ms_p50": 0.05,
+    "prompt_tokenize_ms_p90": 0.052,
+    "prompt_tokenize_ms_p99": 0.052,
+    "sampling_ms_per_token_p50": 0.209,
+    "sampling_ms_per_token_p90": 0.416,
+    "sampling_ms_per_token_p99": 0.416,
+    "tokenizer_load_ms_p50": 158.153,
+    "tokenizer_load_ms_p90": 163.017,
+    "tokenizer_load_ms_p99": 163.017,
+    "total_wall_ms_p50": 7972.614,
+    "total_wall_ms_p90": 9003.402,
+    "total_wall_ms_p99": 9003.402,
+    "ttft_ms_p50": 7491.0,
+    "ttft_ms_p90": 8486.0,
+    "ttft_ms_p99": 8486.0
+  },
+  "speedup_claim": false,
+  "timeout_boundary": {
+    "enforced": false,
+    "partial_failure_receipt": false,
+    "reached": false,
+    "status": "not_reached",
+    "timeout_seconds": null
+  },
+  "timestamp": "2026-05-19T22:47:07.775152+00:00",
+  "tokenizer": {
+    "authority": "llama-bpe",
+    "path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+    "pretokenizer_authority": "llama-bpe",
+    "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "source": "external_tokenizer_json",
+    "strict": true
+  }
+}
