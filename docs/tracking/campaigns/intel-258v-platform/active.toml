@@ -8281,7 +8281,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-008"
-status = "in_progress"
+status = "merged"
+pr = 5833
+head_sha = "2849abe7cb12403e6200bc59819e9c34472b664c"
+merge_sha = "b5a257b3d84cbea295187cfe95697d01ca052702"
 branch = "codex/lunar-lake/LNL258V-OP-008-auto-route-blockers"
 stackable = false
 review_mode = "codex_premerge"
