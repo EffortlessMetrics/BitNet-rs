@@ -1432,8 +1432,9 @@ fn mac_ask_help_documents_positional_question() {
 }
 
 #[test]
-fn mac_ask_accepts_positional_question_and_progress_flags_before_cache_lookup() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_ask_accepts_positional_question_and_progress_flags_before_cache_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let cache_str = cache.to_string_lossy().into_owned();
 
@@ -1453,6 +1454,7 @@ fn mac_ask_accepts_positional_question_and_progress_flags_before_cache_lookup() 
         .stderr(predicate::str::contains("bitnet mac models --cache-dir"))
         .stderr(predicate::str::contains("Disk guidance:"))
         .stderr(predicate::str::contains("unexpected argument").not());
+    Ok(())
 }
 
 #[test]
@@ -2235,7 +2237,7 @@ fn mac_receipts_check_rejects_bitnet_serve_gate_missing_fallback_state()
 
     let mut receipt_json: serde_json::Value =
         serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
-    receipt_json.as_object_mut().unwrap().remove("fallback_used");
+    receipt_json.as_object_mut().ok_or("receipt must be an object")?.remove("fallback_used");
     std::fs::write(&gate_receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
 
     bitnet()
@@ -3999,8 +4001,9 @@ fn mac_receipts_check_accepts_golden_smoke_receipt() -> Result<(), Box<dyn std::
 }
 
 #[test]
-fn mac_receipts_check_accepts_bitnet_warm_session_receipt() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_accepts_bitnet_warm_session_receipt() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("bitnet-warm.json");
     let prompt = "Answer with a single digit: 2+2=";
     let prompts = serde_json::json!([
@@ -4168,10 +4171,8 @@ fn mac_receipts_check_accepts_bitnet_warm_session_receipt() {
             "bitnet_quality_claimed": false,
             "broad_performance_claim": false,
             "speedup_claim": false
-        }))
-        .expect("json"),
-    )
-    .expect("write receipt");
+        }))?,
+    )?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -4181,6 +4182,7 @@ fn mac_receipts_check_accepts_bitnet_warm_session_receipt() {
         .stdout(predicate::str::contains("bitnet_apple_m4_warm_session"))
         .stdout(predicate::str::contains("\"prompt_count\": 3"))
         .stdout(predicate::str::contains("\"passed\": true"));
+    Ok(())
 }
 
 #[test]
@@ -4791,14 +4793,14 @@ fn mac_receipts_check_rejects_dense_slm_regression_context_mismatch() {
 }
 
 #[test]
-fn mac_receipts_check_accepts_dense_slm_quality_corpus_gate() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_accepts_dense_slm_quality_corpus_gate()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("warm-quality.json");
     std::fs::write(
         &receipt_path,
-        serde_json::to_vec_pretty(&dense_quality_warm_session_receipt()).expect("json"),
-    )
-    .expect("write receipt");
+        serde_json::to_vec_pretty(&dense_quality_warm_session_receipt())?,
+    )?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -4807,17 +4809,24 @@ fn mac_receipts_check_accepts_dense_slm_quality_corpus_gate() {
         .success()
         .stdout(predicate::str::contains("slm_apple_m4_warm_session"))
         .stdout(predicate::str::contains("\"prompt_count\": 14"));
+    Ok(())
 }
 
 #[test]
-fn mac_receipts_check_rejects_warm_session_missing_generated_token_ids() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_rejects_warm_session_missing_generated_token_ids()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("warm-missing-generated-ids.json");
     let mut receipt = dense_quality_warm_session_receipt();
-    receipt["prompts"][0].as_object_mut().unwrap().remove("generated_token_ids");
-    receipt["prompts"][0].as_object_mut().unwrap().remove("tokens");
-    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
-        .expect("write receipt");
+    receipt["prompts"][0]
+        .as_object_mut()
+        .ok_or("prompt receipt must be an object")?
+        .remove("generated_token_ids");
+    receipt["prompts"][0]
+        .as_object_mut()
+        .ok_or("prompt receipt must be an object")?
+        .remove("tokens");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -4825,6 +4834,7 @@ fn mac_receipts_check_rejects_warm_session_missing_generated_token_ids() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("generated token IDs"));
+    Ok(())
 }
 
 #[test]

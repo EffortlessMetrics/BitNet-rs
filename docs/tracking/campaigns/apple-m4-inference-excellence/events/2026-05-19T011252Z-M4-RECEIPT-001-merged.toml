@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T01:12:52Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-RECEIPT-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-RECEIPT-001-schema-compat"
+pr = 5811
+merge_sha = "c8cbe29a0bd21cc5cb77680df81224f404a1306a"
+notes = [
+  "Merged PR #5811 for M4 receipt schema compatibility fixture hardening.",
+  "Follow-up cleanup removes unallowlisted no-panic findings introduced by the fixture tests without changing runtime behavior or expanding M4 claims.",
+]
