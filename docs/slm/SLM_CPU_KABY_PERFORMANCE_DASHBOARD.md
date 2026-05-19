@@ -196,6 +196,32 @@ The preflight is the final eligibility surface before a later production
 compute hook can be attached. It still does not execute packed sidecar compute
 or claim speedup.
 
+SLM-CPU-049 adds the generated-ID/text receipt equivalence gate required before
+that preflight can stop naming generated-ID evidence as a blocker. The gate
+compares an eager F32 behavior oracle receipt against a future packed Q8_0
+sidecar candidate receipt across the fields that matter for this lane:
+
+```text
+artifact_kind = dense_gguf_q8_generated_id_text_equivalence
+model_sha256 = equal
+tokenizer_source = equal
+tokenizer_strict = true
+corpus_id / prompt_id = equal
+prompt_ids = equal
+generated_ids = equal
+decoded_text = equal
+selected_backend = equal
+selected_kernel = equal
+fallback_used = false
+speedup_claim = false
+sidecar_runtime_compute_allowed = false
+```
+
+Passing this gate only proves behavior/provenance equivalence for the compared
+receipts. It still keeps packed sidecar runtime compute disabled until a later
+production compute hook exists and the selector is explicitly updated under the
+same receipt discipline.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
