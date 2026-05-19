@@ -3088,9 +3088,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-052"
-status = "pr_open"
+status = "merged"
 pr = 5921
-head_sha = "9252f366485c02233271d4cc841aca5adf53253a"
+head_sha = "d803a63446c6aec5935cd39b35885f91f00d8ba7"
+merge_sha = "d9bd53cbdc87207698a6d8d58604731a405604c7"
 branch = "codex/slm-cpu-052-selector-update-impl"
 stackable = false
 review_mode = "codex_premerge"
