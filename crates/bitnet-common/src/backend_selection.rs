@@ -678,16 +678,9 @@ mod tests {
     }
 
     #[test]
-    fn intel_a770_opencl_request_preserves_identity_when_opencl_available() {
-        let selection = select_backend(BackendRequest::IntelA770OpenCl, &opencl_caps());
-        assert!(
-            selection.is_ok(),
-            "intel A770 OpenCL request should resolve when OpenCL is available"
-        );
-        let result = match selection {
-            Ok(result) => result,
-            Err(_) => return,
-        };
+    fn intel_a770_opencl_request_preserves_identity_when_opencl_available()
+    -> Result<(), BackendSelectionError> {
+        let result = select_backend(BackendRequest::IntelA770OpenCl, &opencl_caps())?;
 
         assert_eq!(result.selected, KernelBackend::OpenCL);
         assert_eq!(result.requested_backend(), "intel-a770-opencl");
@@ -700,6 +693,7 @@ mod tests {
         assert!(summary.contains("selected_backend=intel-a770-opencl"), "got: {summary}");
         assert!(summary.contains("runtime_api=opencl"), "got: {summary}");
         assert!(summary.contains("fallback_used=false"), "got: {summary}");
+        Ok(())
     }
 
     #[test]
