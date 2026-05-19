@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T19:05:00Z",
+  "created_utc": "2026-05-19T19:40:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -405,8 +405,8 @@
     "current_context_is_ac_only": true,
     "battery_mode_sample_recorded": false,
     "battery_sample_source": null,
-    "energy_proxy_recorded": false,
-    "energy_proxy_source": null,
+    "energy_proxy_recorded": true,
+    "energy_proxy_source": "energy_proxy_receipt",
     "thermal_context_recorded": true,
     "claim_boundary_preserved": true,
     "regression_ready": true,
@@ -417,7 +417,6 @@
       "benchmark-qualified speedup or power advantage missing",
       "benchmark_qualified_speedup_or_power_advantage",
       "current telemetry is AC-only; battery comparison evidence is missing",
-      "energy proxy evidence is missing for low_power promotion",
       "no low_power route has benchmark-qualified power evidence",
       "power advantage evidence missing for low_power promotion",
       "route not promoted for profile low_power"
@@ -714,11 +713,11 @@
         "current_context_is_ac_only=true",
         "battery_mode_sample_recorded=false",
         "battery_sample_source=none",
-        "energy_proxy_recorded=false",
-        "energy_proxy_source=none",
+        "energy_proxy_recorded=true",
+        "energy_proxy_source=energy_proxy_receipt",
         "thermal_context_recorded=true",
         "claim_boundary_preserved=true",
-        "blocker_count=9"
+        "blocker_count=8"
       ]
     },
     {
