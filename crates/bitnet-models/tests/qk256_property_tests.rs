@@ -150,7 +150,10 @@ proptest! {
         input in random_input_vector(QK256_BLOCK),
     ) {
         let packed_vec = pack_qk256_row_codes(&codes, QK256_BLOCK);
-        let packed: [u8; QK256_PACKED_BYTES] = packed_vec.try_into().unwrap();
+        let packed: [u8; QK256_PACKED_BYTES] = packed_vec
+            .as_slice()
+            .try_into()
+            .map_err(|_| TestCaseError::fail("packed QK256 row length mismatch"))?;
 
         // Compute QK256 result
         let qk256_result = gemv_qk256_row(&packed, &input, QK256_BLOCK);
@@ -179,7 +182,10 @@ proptest! {
         cols in 1usize..=255, // Tail only (< QK256_BLOCK)
     ) {
         let packed_vec = pack_qk256_row_codes(&codes, QK256_BLOCK);
-        let packed: [u8; QK256_PACKED_BYTES] = packed_vec.try_into().unwrap();
+        let packed: [u8; QK256_PACKED_BYTES] = packed_vec
+            .as_slice()
+            .try_into()
+            .map_err(|_| TestCaseError::fail("packed QK256 row length mismatch"))?;
 
         // Compute QK256 result with limited cols
         let qk256_result = gemv_qk256_row(&packed, &input, cols);

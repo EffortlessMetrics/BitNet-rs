@@ -567,17 +567,16 @@ mod tests {
     use crate::formats::gguf::GgufValue;
 
     #[test]
-    fn qwen_q8_attention_q_fixture_dequantizes_and_computes_cpu_reference() {
+    fn qwen_q8_attention_q_fixture_dequantizes_and_computes_cpu_reference() -> Result<()> {
         let data = build_qwen_gguf(vec![(
             "blk.0.attn_q.weight",
             vec![4, 3],
             GgufTensorType::Q8_0,
             q8_0_blob(0.5, &(1..=12).collect::<Vec<_>>()),
         )]);
-        let reader = GgufReader::new(&data).expect("parse qwen q8 fixture");
+        let reader = GgufReader::new(&data)?;
 
-        let fixture = extract_dense_gguf_linear_fixture(&reader, DenseGgufTensorRole::AttentionQ)
-            .expect("extract linear fixture");
+        let fixture = extract_dense_gguf_linear_fixture(&reader, DenseGgufTensorRole::AttentionQ)?;
 
         assert_eq!(fixture.summary.artifact_kind, DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND);
         assert_eq!(fixture.summary.model_family, "qwen");
@@ -599,28 +598,27 @@ mod tests {
                 fixture.summary.matrix_rows,
                 fixture.summary.matrix_cols,
                 &fixture.cpu_reference_input
-            )
-            .unwrap()
+            )?
         );
         assert!(fixture.summary.values_materialized_as_f32);
         assert!(fixture.summary.cpu_reference_computed);
         assert!(!fixture.summary.cpu_cuda_parity_claimed);
         assert!(!fixture.summary.dense_gguf_inference_claimed);
         assert!(!fixture.summary.bitnet_packed_i2s_qk256_proof);
+        Ok(())
     }
 
     #[test]
-    fn qwen_q8_sidecar_matvec_matches_eager_f32_fixture() {
+    fn qwen_q8_sidecar_matvec_matches_eager_f32_fixture() -> Result<()> {
         let data = build_qwen_gguf(vec![(
             "blk.0.ffn_down.weight",
             vec![4, 3],
             GgufTensorType::Q8_0,
             q8_0_blob(0.25, &(1..=12).collect::<Vec<_>>()),
         )]);
-        let reader = GgufReader::new(&data).expect("parse qwen q8 fixture");
+        let reader = GgufReader::new(&data)?;
 
-        let sidecar = extract_dense_gguf_q8_linear_sidecar(&reader, DenseGgufTensorRole::MlpDown)
-            .expect("extract q8 sidecar");
+        let sidecar = extract_dense_gguf_q8_linear_sidecar(&reader, DenseGgufTensorRole::MlpDown)?;
 
         assert_eq!(sidecar.summary.artifact_kind, DENSE_GGUF_Q8_LINEAR_SIDECAR_ARTIFACT_KIND);
         assert_eq!(sidecar.summary.tensor_name, "blk.0.ffn_down.weight");
@@ -636,10 +634,11 @@ mod tests {
         assert!(!sidecar.summary.dense_runtime_replaced);
         assert_eq!(sidecar.summary.max_abs_diff_vs_eager_f32, 0.0);
         assert_eq!(sidecar.fused_output, sidecar.eager_output);
+        Ok(())
     }
 
     #[test]
-    fn qwen_q8_sidecar_rejects_non_q8_fixture() {
+    fn qwen_q8_sidecar_rejects_non_q8_fixture() -> Result<()> {
         let values: Vec<f32> = (0..12).map(|idx| idx as f32 / 8.0).collect();
         let data = build_qwen_gguf(vec![(
             "blk.0.ffn_up.weight",
@@ -647,17 +646,23 @@ mod tests {
             GgufTensorType::F16,
             f16_blob(&values),
         )]);
-        let reader = GgufReader::new(&data).expect("parse qwen f16 fixture");
+        let reader = GgufReader::new(&data)?;
 
-        let err = extract_dense_gguf_q8_linear_sidecar(&reader, DenseGgufTensorRole::MlpUp)
-            .unwrap_err()
-            .to_string();
+        let err = match extract_dense_gguf_q8_linear_sidecar(&reader, DenseGgufTensorRole::MlpUp) {
+            Ok(_) => {
+                return Err(BitNetError::Validation(
+                    "expected non-Q8 fixture to be rejected".to_string(),
+                ));
+            }
+            Err(err) => err.to_string(),
+        };
 
         assert!(err.contains("requires tensor type q8_0"), "unexpected error: {err}");
+        Ok(())
     }
 
     #[test]
-    fn qwen_f16_mlp_up_fixture_materializes_cpu_reference() {
+    fn qwen_f16_mlp_up_fixture_materializes_cpu_reference() -> Result<()> {
         let values: Vec<f32> = (0..12).map(|idx| idx as f32 / 8.0).collect();
         let data = build_qwen_gguf(vec![(
             "blk.0.ffn_up.weight",
@@ -665,16 +670,16 @@ mod tests {
             GgufTensorType::F16,
             f16_blob(&values),
         )]);
-        let reader = GgufReader::new(&data).expect("parse qwen f16 fixture");
+        let reader = GgufReader::new(&data)?;
 
-        let fixture = extract_dense_gguf_linear_fixture(&reader, DenseGgufTensorRole::MlpUp)
-            .expect("extract f16 fixture");
+        let fixture = extract_dense_gguf_linear_fixture(&reader, DenseGgufTensorRole::MlpUp)?;
 
         assert_eq!(fixture.summary.tensor_type, "f16");
         assert_eq!(fixture.summary.matrix_rows, 3);
         assert_eq!(fixture.summary.matrix_cols, 4);
         assert_eq!(fixture.summary.value_count, 12);
         assert_eq!(fixture.cpu_reference_output.len(), 3);
+        Ok(())
     }
 
     #[test]
