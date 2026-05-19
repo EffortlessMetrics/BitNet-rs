@@ -101,7 +101,7 @@ pub enum ModelAction {
 
     /// Show user-facing model support for a device from the coverage matrix.
     Status {
-        /// Device label to summarize, for example nvidia-rtx-5070-ti-cuda.
+        /// Device label to summarize, for example cuda or nvidia-rtx-5070-ti-cuda.
         #[arg(long, value_name = "DEVICE")]
         device: String,
 
@@ -619,6 +619,8 @@ struct ModelCoverageEntryOutput<'a> {
 pub(crate) struct ModelStatusDashboard {
     schema_version: u32,
     device: String,
+    requested_backend: String,
+    selected_backend: Option<String>,
     source: PathBuf,
     note: &'static str,
     models: Vec<ModelStatusRow>,
@@ -642,6 +644,7 @@ pub(crate) struct ModelStatusRow {
     model_class: String,
     route: Option<String>,
     selected_route: Option<String>,
+    requested_backend: String,
     selected_backend: String,
     tier: String,
     current_tier: String,
@@ -1479,26 +1482,42 @@ fn model_status_dashboard(
     matrix_path: &Path,
     matrix: &ModelCoverageMatrix,
 ) -> ModelStatusDashboard {
-    let models = matrix
-        .entry
-        .iter()
-        .filter(|entry| model_status_includes_entry(device, entry))
-        .map(|entry| model_status_row(device, entry))
-        .collect();
+    let selected_backend = model_status_selected_backend(device);
+    let models = selected_backend
+        .as_deref()
+        .map(|backend| {
+            matrix
+                .entry
+                .iter()
+                .filter(|entry| model_status_includes_entry(backend, entry))
+                .map(|entry| model_status_row(device, backend, entry))
+                .collect()
+        })
+        .unwrap_or_default();
 
     ModelStatusDashboard {
         schema_version: 1,
         device: device.to_string(),
+        requested_backend: device.to_string(),
+        selected_backend,
         source: matrix_path.to_path_buf(),
         note: "Read-only model coverage view; it does not probe hardware or create new proof.",
         models,
     }
 }
 
-fn model_status_includes_entry(device: &str, entry: &ModelCoverageEntry) -> bool {
-    if device != "nvidia-rtx-5070-ti-cuda" {
+fn model_status_selected_backend(device: &str) -> Option<String> {
+    match device {
+        "cuda" | "nvidia-rtx-5070-ti-cuda" => Some("nvidia-rtx-5070-ti-cuda".to_string()),
+        _ => None,
+    }
+}
+
+fn model_status_includes_entry(selected_backend: &str, entry: &ModelCoverageEntry) -> bool {
+    if selected_backend != "nvidia-rtx-5070-ti-cuda" {
         return false;
     }
+
     if entry.claims.product_cli_ready
         && (entry.accelerator_routes.iter().any(|route| route == "bitnet_qk256_cuda")
             || entry.accelerator_routes.iter().any(|route| route == "dense_regular_llm_cuda"))
@@ -1514,7 +1533,11 @@ fn model_status_includes_entry(device: &str, entry: &ModelCoverageEntry) -> bool
         && matches!(entry.model_class.as_str(), "dense_slm" | "small_llm")
 }
 
-fn model_status_row(device: &str, entry: &ModelCoverageEntry) -> ModelStatusRow {
+fn model_status_row(
+    requested_backend: &str,
+    selected_backend: &str,
+    entry: &ModelCoverageEntry,
+) -> ModelStatusRow {
     let route = entry.accelerator_routes.first().cloned();
     let category =
         if entry.claims.product_cli_ready { "supported" } else { "candidate" }.to_string();
@@ -1532,7 +1555,8 @@ fn model_status_row(device: &str, entry: &ModelCoverageEntry) -> ModelStatusRow 
         model_class: entry.model_class.clone(),
         route: route.clone(),
         selected_route: route.clone(),
-        selected_backend: device.to_string(),
+        requested_backend: requested_backend.to_string(),
+        selected_backend: selected_backend.to_string(),
         tier: entry.current_tier.clone(),
         current_tier: entry.current_tier.clone(),
         status: entry.status.clone(),
@@ -1619,6 +1643,12 @@ fn server_status(entry: &ModelCoverageEntry) -> ServerStatus {
 
 fn print_model_status_text(dashboard: &ModelStatusDashboard) {
     println!("CUDA model status for {}", dashboard.device);
+    println!("requested backend: {}", dashboard.requested_backend);
+    if let Some(selected_backend) = &dashboard.selected_backend {
+        println!("selected backend: {selected_backend}");
+    } else {
+        println!("selected backend: none");
+    }
     println!("source: {}", dashboard.source.display());
     println!("{}", dashboard.note);
     println!();
@@ -3692,12 +3722,15 @@ mod tests {
 
         assert_eq!(dashboard.schema_version, 1);
         assert_eq!(dashboard.device, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(dashboard.requested_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(dashboard.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
         assert!(dashboard.note.contains("does not probe hardware"));
 
         let bitnet = model_status_row_for(&dashboard, "bitnet_official_2b_i2s_qk256")?;
         assert_eq!(bitnet.display_name, "microsoft-bitnet-b1.58-2B-4T-i2s");
         assert_eq!(bitnet.model_coverage_row, "bitnet_official_2b_i2s_qk256");
         assert_eq!(bitnet.current_tier, "product_cli_ready");
+        assert_eq!(bitnet.requested_backend, "nvidia-rtx-5070-ti-cuda");
         assert_eq!(bitnet.selected_backend, "nvidia-rtx-5070-ti-cuda");
         assert_eq!(bitnet.selected_route.as_deref(), Some("bitnet_qk256_cuda"));
         assert_eq!(bitnet.fallback_used, Some(false));
@@ -3734,6 +3767,7 @@ mod tests {
         assert_eq!(dense.display_name, "qwen2.5-0.5b-instruct-q8_0");
         assert_eq!(dense.model_coverage_row, "dense_qwen25_05b_q8_cuda");
         assert_eq!(dense.current_tier, "product_cli_ready");
+        assert_eq!(dense.requested_backend, "nvidia-rtx-5070-ti-cuda");
         assert_eq!(dense.selected_backend, "nvidia-rtx-5070-ti-cuda");
         assert_eq!(dense.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
         assert_eq!(dense.fallback_used, Some(false));
@@ -3822,12 +3856,36 @@ mod tests {
     }
 
     #[test]
-    fn model_status_dashboard_is_strictly_device_scoped() -> Result<()> {
+    fn model_status_dashboard_resolves_generic_cuda_to_strict_backend() -> Result<()> {
         let matrix_path = workspace_model_coverage_matrix_path();
         let matrix = read_model_coverage_matrix(&matrix_path)?;
         let dashboard = model_status_dashboard("cuda", &matrix_path, &matrix);
 
         assert_eq!(dashboard.device, "cuda");
+        assert_eq!(dashboard.requested_backend, "cuda");
+        assert_eq!(dashboard.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
+
+        let bitnet = model_status_row_for(&dashboard, "bitnet_official_2b_i2s_qk256")?;
+        assert_eq!(bitnet.requested_backend, "cuda");
+        assert_eq!(bitnet.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(bitnet.selected_route.as_deref(), Some("bitnet_qk256_cuda"));
+        assert_eq!(bitnet.fallback_used, Some(false));
+        assert!(!bitnet.speedup_claim);
+        assert!(!bitnet.full_residency_claim);
+        assert!(bitnet.bitnet_packed_i2s_qk256_proof);
+        assert!(!bitnet.dense_regular_llm_cuda_proof);
+        Ok(())
+    }
+
+    #[test]
+    fn model_status_dashboard_stays_empty_for_unknown_device() -> Result<()> {
+        let matrix_path = workspace_model_coverage_matrix_path();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
+        let dashboard = model_status_dashboard("cuda-experimental", &matrix_path, &matrix);
+
+        assert_eq!(dashboard.device, "cuda-experimental");
+        assert_eq!(dashboard.requested_backend, "cuda-experimental");
+        assert_eq!(dashboard.selected_backend, None);
         assert!(dashboard.models.is_empty());
         Ok(())
     }
@@ -3841,10 +3899,13 @@ mod tests {
 
         assert_eq!(value["schema_version"], 1);
         assert_eq!(value["device"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["requested_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
 
         let bitnet = model_status_json_row_for(&value, "bitnet_official_2b_i2s_qk256")?;
         assert_eq!(bitnet["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
         assert_eq!(bitnet["current_tier"], "product_cli_ready");
+        assert_eq!(bitnet["requested_backend"], "nvidia-rtx-5070-ti-cuda");
         assert_eq!(bitnet["selected_backend"], "nvidia-rtx-5070-ti-cuda");
         assert_eq!(bitnet["selected_route"], "bitnet_qk256_cuda");
         assert_eq!(bitnet["fallback_used"], false);
@@ -3865,6 +3926,7 @@ mod tests {
         let qwen25 = model_status_json_row_for(&value, "dense_qwen25_05b_q8_cuda")?;
         assert_eq!(qwen25["model_coverage_row"], "dense_qwen25_05b_q8_cuda");
         assert_eq!(qwen25["current_tier"], "product_cli_ready");
+        assert_eq!(qwen25["requested_backend"], "nvidia-rtx-5070-ti-cuda");
         assert_eq!(qwen25["selected_backend"], "nvidia-rtx-5070-ti-cuda");
         assert_eq!(qwen25["selected_route"], "dense_regular_llm_cuda");
         assert_eq!(qwen25["fallback_used"], false);
@@ -3886,6 +3948,7 @@ mod tests {
         assert_eq!(qwen3["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
         assert_eq!(qwen3["category"], "supported");
         assert_eq!(qwen3["current_tier"], "product_cli_ready");
+        assert_eq!(qwen3["requested_backend"], "nvidia-rtx-5070-ti-cuda");
         assert_eq!(qwen3["selected_backend"], "nvidia-rtx-5070-ti-cuda");
         assert_eq!(qwen3["selected_route"], "dense_regular_llm_cuda");
         assert_eq!(qwen3["fallback_used"], false);
@@ -3905,6 +3968,7 @@ mod tests {
         assert_eq!(smollm2["model_coverage_row"], "dense_smollm2_360m_candidate");
         assert_eq!(smollm2["category"], "candidate");
         assert_eq!(smollm2["current_tier"], "structurally_valid");
+        assert_eq!(smollm2["requested_backend"], "nvidia-rtx-5070-ti-cuda");
         assert_eq!(smollm2["selected_backend"], "nvidia-rtx-5070-ti-cuda");
         assert!(smollm2["selected_route"].is_null());
         assert!(smollm2["fallback_used"].is_null());
