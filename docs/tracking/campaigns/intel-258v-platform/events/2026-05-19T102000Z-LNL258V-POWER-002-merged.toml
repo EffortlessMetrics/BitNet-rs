@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T10:20:00Z"
+event = "merged"
+item = "LNL258V-POWER-002"
+branch = "codex/lunar-lake/LNL258V-POWER-002-energy-proxy-evidence"
+pr = 5818
+head_sha = "149dfce9b424f97570c5bbd7ff1cf3af5e79faff"
+merge_sha = "89589e9ee9abc8c561a4629ce351c2c3dac29f96"
+actor = "codex"
+summary = "Merged LNL258V-POWER-002 after adding optional low_power battery and energy-proxy evidence indexing."
+
+notes = [
+  "PR #5818 adds optional battery-telemetry and energy-proxy inputs to lunar-lake power-profile.",
+  "Power-profile, regression-v2, and operator-comparison receipts now expose battery_sample_source and energy_proxy_source.",
+  "The committed 258V receipt remains AC-only with battery and energy evidence missing, and low_power remains unpromoted.",
+  "The closeout preserves no new inference, no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]
