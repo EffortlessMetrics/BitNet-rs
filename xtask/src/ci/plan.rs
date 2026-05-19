@@ -161,7 +161,16 @@ fn area_patterns() -> Vec<(&'static str, Vec<&'static str>)> {
             vec![
                 r"^crates/",
                 r"^tests/",
+                r"^tests-new/",
+                r"^tools/",
                 r"^xtask/",
+                r"^xtask-build-helper/",
+                r"^src/",
+                r"^examples/",
+                r"^benches/",
+                r"^scripts/.*\.rs$",
+                r"^build\.rs$",
+                r"^Makefile$",
                 r"^Cargo\.(toml|lock)$",
                 r"^rust-toolchain\.toml$",
             ],
@@ -1315,6 +1324,11 @@ mod tests {
             "scripts/off-workspace-helper.rs",
         ] {
             assert!(is_rust_input_path(path), "{path} should run Rust CI planning");
+            let plan = build_plan(&s(&[path]), &[]);
+            assert!(
+                plan.selected_lanes.iter().any(|lane| lane.id == "ci-core-build-test"),
+                "{path} should select CI Core"
+            );
         }
     }
 
