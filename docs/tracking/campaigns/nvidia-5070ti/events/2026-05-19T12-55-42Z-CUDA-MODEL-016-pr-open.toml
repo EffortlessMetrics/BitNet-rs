@@ -1,0 +1,22 @@
+timestamp = "2026-05-19T12:55:42Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-016"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5941
+branch = "codex/cuda-model-016-qwen3-repeated-comparator-receipt"
+head_sha = "7fa254b90efd9727392a5bb82444f755c65511ec"
+summary = "Opened PR #5941 for the Qwen3 repeated comparator receipt validator, generator, tests, and campaign plan updates."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5941",
+  "crates/bitnet-bench-receipts/src/bin/qwen3_cuda_repeated_comparator_receipt.rs",
+  "docs/reports/CUDA_MODEL_016_QWEN3_REPEATED_COMPARATOR_RECEIPT_CONTRACT.md",
+]
+
+notes = [
+  "The PR keeps Qwen3 speedup, benchmark-qualified speed, full residency, broad dense GGUF readiness, Qwen2.5 inheritance, and BitNet packed I2_S/QK256 proof false.",
+  "No runtime math, tokenizer, loader, kernel, or server behavior changes are included.",
+]
