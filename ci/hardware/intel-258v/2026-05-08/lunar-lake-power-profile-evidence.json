@@ -2,12 +2,14 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_profile_evidence",
   "proof_stage": "low_power_evidence_indexed_no_promotion_change",
-  "created_utc": "2026-05-19T09:30:00Z",
+  "created_utc": "2026-05-19T10:15:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
   "cold_warm_benchmark_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
   "telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+  "battery_telemetry_context_receipt": null,
+  "energy_proxy_receipt": null,
   "telemetry": {
     "memory_context_recorded": true,
     "power_context_recorded": true,
@@ -19,7 +21,9 @@
     "thermal_temperature_count": 0,
     "current_context_is_ac_only": true,
     "battery_mode_sample_recorded": false,
-    "energy_proxy_recorded": false
+    "battery_sample_source": null,
+    "energy_proxy_recorded": false,
+    "energy_proxy_source": null
   },
   "low_power_routes": [
     {

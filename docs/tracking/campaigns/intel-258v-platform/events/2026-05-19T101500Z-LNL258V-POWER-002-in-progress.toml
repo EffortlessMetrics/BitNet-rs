@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T10:15:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-002"
+branch = "codex/lunar-lake/LNL258V-POWER-002-energy-proxy-evidence"
+actor = "codex"
+summary = "Started LNL258V-POWER-002 to make low_power battery and energy-proxy evidence explicitly indexable."
+
+notes = [
+  "The work adds optional battery-mode telemetry and repeated-run energy-proxy inputs to lunar-lake power-profile.",
+  "The refreshed receipts keep the current 258V sample AC-only, with battery and energy evidence still missing.",
+  "low_power remains unpromoted until answer gates, fallback=false, stable timing, and benchmark-qualified power advantage all pass.",
+  "The claim boundary remains no new inference, no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]
