@@ -13,10 +13,15 @@ model readiness, receipt explanation, or support bundles:
    - Defines the normalized `bitnet receipts explain --format json` shape,
      flat support aliases, nested diagnostic objects, unknown-vs-false
      semantics, and promotion warnings.
-3. [Support Bundle Schema](BITNET-SPEC-SUPPORT-BUNDLE-SCHEMA.md)
+3. [Support Bundle](BITNET-SPEC-SUPPORT-BUNDLE.md)
    - Defines `bitnet support bundle --latest --device <device> --format json`
      as a read-only issue artifact that embeds model status and receipt
-     explanation without promoting claims.
+     explanation without promoting claims. The older
+     [Support Bundle Schema](BITNET-SPEC-SUPPORT-BUNDLE-SCHEMA.md) URL remains
+     as a compatibility pointer.
+4. [CUDA Support Issue](BITNET-SPEC-CUDA-SUPPORT-ISSUE.md)
+   - Defines the receipt-backed CUDA issue template contract, required support
+     bundle field, JSON rendering, and claim-boundary checklist.
 
 Do not remove or repurpose support JSON fields without a schema-version bump.
 Do not let status, receipt explanation, or support bundles infer speedup,

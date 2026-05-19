@@ -84,7 +84,7 @@
 | apple-m4-inference-excellence | M4-BENCH-004 | M4-REPRO-001 | merged |
 | apple-m4-inference-excellence | M4-BENCH-002 | M4-BENCH-001, M4-BENCH-004, M4-BENCH-007 | merged |
 | apple-m4-inference-excellence | M4-BENCH-009 | M4-BENCH-007, M4-BENCH-008 | merged |
-| apple-m4-inference-excellence | M4-BENCH-005 | M4-BENCH-002, M4-BENCH-008, M4-BENCH-009, M4-BENCH-010 | pr_open |
+| apple-m4-inference-excellence | M4-BENCH-005 | M4-BENCH-002, M4-BENCH-008, M4-BENCH-009, M4-BENCH-010 | merged |
 | apple-m4-inference-excellence | M4-BENCH-010 | M4-BENCH-008, M4-BENCH-009 | merged |
 | apple-m4-inference-excellence | M4-BENCH-008 | M4-BENCH-002 | merged |
 | apple-m4-inference-excellence | M4-BENCH-006 | M4-BENCH-005, M4-BITNET-EX-003, M4-BITNET-EX-004 | proposed |
@@ -391,6 +391,7 @@
 | intel-258v-platform | LNL258V-VALIDATE-002 | LNL258V-VALIDATE-001, LNL258V-POWER-005, LNL258V-THERMAL-002, LNL258V-REG-010 | merged |
 | intel-258v-platform | LNL258V-GOAL-AUDIT-002 | LNL258V-GOAL-AUDIT-001, LNL258V-REG-010, LNL258V-VALIDATE-002 | merged |
 | intel-258v-platform | LNL258V-ROUTE-025 | LNL258V-ROUTE-024, LNL258V-VALIDATE-002, LNL258V-GOAL-AUDIT-002 | merged |
+| intel-258v-platform | LNL258V-REG-011 | LNL258V-ROUTE-025 | merged |
 | intel-258v-platform | LNL258V-POWER-006 | LNL258V-POWER-005 | blocked |
 | intel-258v-platform | LNL258V-POWER-005 | LNL258V-POWER-004, LNL258V-ASK-005 | merged |
 | intel-258v-platform | LNL258V-ASK-005 | LNL258V-ROUTE-024 | merged |

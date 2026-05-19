@@ -28,7 +28,8 @@ body:
             "selected_backend": "nvidia-rtx-5070-ti-cuda",
             "selected_route": "...",
             "fallback_used": false,
-            "speedup_claim": false
+            "speedup_claim": false,
+            "claim_boundary": "..."
           }
         }
       render: json

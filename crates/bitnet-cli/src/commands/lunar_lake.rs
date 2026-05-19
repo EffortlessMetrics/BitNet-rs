@@ -907,6 +907,10 @@ pub struct OperatorRoutePolicySummary {
     pub policy_ready: bool,
     pub promotion_ready: bool,
     pub profile_comparison_ready: bool,
+    #[serde(default)]
+    pub route_model_identity_ready: bool,
+    #[serde(default)]
+    pub route_model_identity_coverage: RouteModelIdentityCoverage,
     pub default_route_id: String,
     pub auto_route_policy_stage: String,
     pub hidden_fallback_allowed: bool,
@@ -1014,6 +1018,10 @@ pub struct RegressionSurfaceSummary {
     pub warm_resident_auto_ask_ready: bool,
     #[serde(default)]
     pub blocked_ask_receipt_indexed: bool,
+    #[serde(default)]
+    pub route_profile_model_identity_ready: bool,
+    #[serde(default)]
+    pub cold_warm_model_identity_ready: bool,
     pub required_answer_profiles: Vec<String>,
     pub required_answer_categories: Vec<String>,
     pub required_route_profiles: Vec<String>,
@@ -1054,6 +1062,8 @@ impl Default for RegressionSurfaceSummary {
             warm_resident_ask_receipt_indexed: false,
             warm_resident_auto_ask_ready: false,
             blocked_ask_receipt_indexed: false,
+            route_profile_model_identity_ready: false,
+            cold_warm_model_identity_ready: false,
             required_answer_profiles: REQUIRED_CORPUS_V2_PROFILES
                 .iter()
                 .map(|profile| (*profile).to_string())
@@ -1137,6 +1147,10 @@ pub struct RouteProfileRegressionSummary {
     pub profiles: Vec<String>,
     #[serde(default)]
     pub timing_coverage: TimingApplicabilityCoverageSummary,
+    #[serde(default)]
+    pub route_model_identity_coverage: RouteModelIdentityCoverage,
+    #[serde(default)]
+    pub route_model_identity_ready: bool,
     pub candidate_routes_remain_unpromoted: bool,
     pub benchmark_qualified_advantage_claimed: bool,
     pub fallback_observed: bool,
@@ -1156,6 +1170,10 @@ pub struct ColdWarmRegressionSummary {
     pub profiles: Vec<String>,
     #[serde(default)]
     pub timing_coverage: TimingApplicabilityCoverageSummary,
+    #[serde(default)]
+    pub route_model_identity_coverage: RouteModelIdentityCoverage,
+    #[serde(default)]
+    pub route_model_identity_ready: bool,
     pub promoted_routes_have_critical_timing: bool,
     pub candidate_routes_remain_unpromoted: bool,
     pub fallback_observed: bool,
@@ -1403,8 +1421,16 @@ pub struct RouteModelIdentityCoverage {
     pub route_rows_with_identity: usize,
     pub route_rows_with_model_hash: usize,
     pub route_rows_with_tokenizer_template: usize,
+    #[serde(default)]
+    pub route_rows_without_model_hash_with_known_gap: usize,
     pub all_route_rows_have_identity: bool,
+    #[serde(default)]
+    pub all_route_rows_have_tokenizer_template: bool,
+    #[serde(default)]
+    pub model_hash_or_explicit_gap_for_all_route_rows: bool,
     pub routes_without_model_hash: Vec<String>,
+    #[serde(default)]
+    pub routes_without_model_hash_missing_known_gap: Vec<String>,
     pub routes_without_tokenizer_template: Vec<String>,
 }
 
@@ -1708,6 +1734,8 @@ pub struct LunarLakeColdWarmBenchmark {
     pub profiles: Vec<ColdWarmProfileBenchmark>,
     #[serde(default)]
     pub timing_coverage: TimingApplicabilityCoverageSummary,
+    #[serde(default)]
+    pub route_model_identity_coverage: RouteModelIdentityCoverage,
     #[serde(default)]
     pub route_promotion_scope: RoutePromotionScopeSummary,
     pub gaps: Vec<String>,
@@ -3469,6 +3497,19 @@ fn inspect_operator_route_policy(
             ));
         }
     }
+    let route_model_identity_coverage = comparison
+        .as_ref()
+        .map(|comparison| route_model_identity_coverage(&comparison.profiles))
+        .unwrap_or_default();
+    let route_model_identity_ready =
+        route_model_identity_coverage_ready(&route_model_identity_coverage);
+    if comparison.is_some() {
+        append_route_model_identity_coverage_gaps(
+            "operator route policy",
+            &route_model_identity_coverage,
+            &mut gaps,
+        );
+    }
 
     let default_route_id = ledger
         .as_ref()
@@ -3565,6 +3606,8 @@ fn inspect_operator_route_policy(
         policy_ready: gaps.is_empty() && promotion_ready && profile_comparison_ready,
         promotion_ready,
         profile_comparison_ready,
+        route_model_identity_ready,
+        route_model_identity_coverage,
         default_route_id,
         auto_route_policy_stage,
         hidden_fallback_allowed,
@@ -3979,6 +4022,12 @@ fn build_regression_surface_summary(
             .map(|summary| summary.regression_ready)
             .unwrap_or(false),
         blocked_ask_receipt_indexed: blocked_ask_receipt.is_some(),
+        route_profile_model_identity_ready: route_profile_comparison
+            .map(|summary| summary.route_model_identity_ready)
+            .unwrap_or(false),
+        cold_warm_model_identity_ready: cold_warm_benchmark
+            .map(|summary| summary.route_model_identity_ready)
+            .unwrap_or(false),
         candidate_routes_remain_unpromoted: route_profile_comparison
             .map(|summary| summary.candidate_routes_remain_unpromoted)
             .unwrap_or(false),
@@ -4064,6 +4113,12 @@ fn build_regression_surface_summary(
                     .join(",")
             ));
         }
+        if !route_profiles.route_model_identity_ready {
+            summary.gaps.push(format!(
+                "route profile comparison lacks route/model identity coverage: {}",
+                route_profiles.gaps.join("; ")
+            ));
+        }
     } else {
         summary.gaps.push("route profile comparison is not indexed".to_string());
     }
@@ -4102,6 +4157,12 @@ fn build_regression_surface_summary(
             summary.gaps.push(format!(
                 "cold/warm benchmark has unexpected OpenVINO promotions: {}",
                 benchmark.route_promotion_scope.unexpected_openvino_profile_promotions.join(",")
+            ));
+        }
+        if !benchmark.route_model_identity_ready {
+            summary.gaps.push(format!(
+                "cold/warm benchmark lacks route/model identity coverage: {}",
+                benchmark.gaps.join("; ")
             ));
         }
     } else {
@@ -4434,6 +4495,12 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
     } else {
         timing_applicability_coverage(&comparison.profiles)
     };
+    let route_model_identity_coverage = route_model_identity_coverage(&comparison.profiles);
+    append_route_model_identity_coverage_gaps(
+        "route profile comparison",
+        &route_model_identity_coverage,
+        &mut gaps,
+    );
     let route_promotion_scope = route_promotion_scope_from_profile_comparison(&comparison.profiles);
     for profile in &comparison.profiles {
         for route in &profile.route_evidence {
@@ -4496,6 +4563,10 @@ fn inspect_route_profile_regression(path: &Path) -> Result<RouteProfileRegressio
         default_route_id: comparison.default_route_id,
         profiles,
         timing_coverage,
+        route_model_identity_ready: route_model_identity_coverage_ready(
+            &route_model_identity_coverage,
+        ),
+        route_model_identity_coverage,
         candidate_routes_remain_unpromoted: !unexpected_candidate_promotion_eligible,
         benchmark_qualified_advantage_claimed,
         fallback_observed,
@@ -4540,6 +4611,13 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
     let mut unexpected_candidate_routes_remain_unpromoted = true;
     let mut telemetry_gaps = BTreeSet::new();
     let timing_coverage = benchmark.timing_coverage.clone();
+    let route_model_identity_coverage =
+        cold_warm_route_model_identity_coverage(&benchmark.profiles);
+    append_route_model_identity_coverage_gaps(
+        "cold/warm benchmark",
+        &route_model_identity_coverage,
+        &mut gaps,
+    );
     let route_promotion_scope = route_promotion_scope_from_cold_warm(&benchmark.profiles);
     for profile in &benchmark.profiles {
         for route in &profile.routes {
@@ -4618,6 +4696,10 @@ fn inspect_cold_warm_regression(path: &Path) -> Result<ColdWarmRegressionSummary
         benchmark_gate_ready: benchmark.benchmark_gate_ready,
         profiles,
         timing_coverage,
+        route_model_identity_ready: route_model_identity_coverage_ready(
+            &route_model_identity_coverage,
+        ),
+        route_model_identity_coverage,
         promoted_routes_have_critical_timing,
         candidate_routes_remain_unpromoted: unexpected_candidate_routes_remain_unpromoted,
         fallback_observed,
@@ -5295,6 +5377,17 @@ fn route_profile_regression_notes(summary: &RouteProfileRegressionSummary) -> Ve
             "proxy_or_missing_timing_routes_blocked={}",
             summary.timing_coverage.proxy_or_missing_timing_routes_blocked
         ),
+        format!("route_model_identity_ready={}", summary.route_model_identity_ready),
+        format!(
+            "route_model_identity_rows={}/{}",
+            summary.route_model_identity_coverage.route_rows_with_identity,
+            summary.route_model_identity_coverage.route_row_count
+        ),
+        format!(
+            "route_model_tokenizer_template_rows={}/{}",
+            summary.route_model_identity_coverage.route_rows_with_tokenizer_template,
+            summary.route_model_identity_coverage.route_row_count
+        ),
         format!(
             "promotion_blocker_summary_count={}",
             summary.gpu_npu_promotion_blocker_summary.len()
@@ -5342,6 +5435,17 @@ fn cold_warm_regression_notes(summary: &ColdWarmRegressionSummary) -> Vec<String
         format!(
             "proxy_or_missing_timing_routes_blocked={}",
             summary.timing_coverage.proxy_or_missing_timing_routes_blocked
+        ),
+        format!("route_model_identity_ready={}", summary.route_model_identity_ready),
+        format!(
+            "route_model_identity_rows={}/{}",
+            summary.route_model_identity_coverage.route_rows_with_identity,
+            summary.route_model_identity_coverage.route_row_count
+        ),
+        format!(
+            "route_model_tokenizer_template_rows={}/{}",
+            summary.route_model_identity_coverage.route_rows_with_tokenizer_template,
+            summary.route_model_identity_coverage.route_row_count
         ),
         format!(
             "openvino_gpu_promoted_profiles={}",
@@ -5868,6 +5972,11 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
 
     let timing_coverage = timing_applicability_coverage(&profiles);
     let route_model_identity_coverage = route_model_identity_coverage(&profiles);
+    append_route_model_identity_coverage_gaps(
+        "route profile comparison",
+        &route_model_identity_coverage,
+        &mut gaps,
+    );
     if !timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
         gaps.push(format!(
             "promotion-eligible routes lack profile-specific timing: {}",
@@ -5956,6 +6065,12 @@ pub fn build_cold_warm_benchmark_with_created_utc(
     } else {
         timing_applicability_coverage(&comparison.profiles)
     };
+    let route_model_identity_coverage = cold_warm_route_model_identity_coverage(&profiles);
+    append_route_model_identity_coverage_gaps(
+        "cold/warm benchmark",
+        &route_model_identity_coverage,
+        &mut gaps,
+    );
     let route_promotion_scope = route_promotion_scope_from_cold_warm(&profiles);
     if !timing_coverage.promotion_eligible_routes_have_profile_specific_timing {
         gaps.push(format!(
@@ -5983,6 +6098,7 @@ pub fn build_cold_warm_benchmark_with_created_utc(
         benchmark_gate_ready,
         profiles,
         timing_coverage,
+        route_model_identity_coverage,
         route_promotion_scope,
         gaps,
         claim_boundary: BenchmarkClaimBoundary {
@@ -11406,47 +11522,115 @@ fn route_model_label(route: &RoutePromotion) -> String {
 fn route_model_identity_coverage(
     profiles: &[WorkloadProfileEvaluation],
 ) -> RouteModelIdentityCoverage {
+    route_model_identity_coverage_from_entries(profiles.iter().flat_map(|profile| {
+        profile.route_evidence.iter().map(|route| {
+            (format!("{}:{}", profile.profile_id, route.route_id), route.model_identity.as_ref())
+        })
+    }))
+}
+
+fn cold_warm_route_model_identity_coverage(
+    profiles: &[ColdWarmProfileBenchmark],
+) -> RouteModelIdentityCoverage {
+    route_model_identity_coverage_from_entries(profiles.iter().flat_map(|profile| {
+        profile.routes.iter().map(|route| {
+            (format!("{}:{}", profile.profile_id, route.route_id), route.model_identity.as_ref())
+        })
+    }))
+}
+
+fn route_model_identity_coverage_from_entries<'a>(
+    entries: impl Iterator<Item = (String, Option<&'a RouteModelIdentity>)>,
+) -> RouteModelIdentityCoverage {
     let mut route_row_count = 0usize;
     let mut route_rows_with_identity = 0usize;
     let mut route_rows_with_model_hash = 0usize;
     let mut route_rows_with_tokenizer_template = 0usize;
+    let mut route_rows_without_model_hash_with_known_gap = 0usize;
     let mut routes_without_model_hash = BTreeSet::new();
+    let mut routes_without_model_hash_missing_known_gap = BTreeSet::new();
     let mut routes_without_tokenizer_template = BTreeSet::new();
 
-    for profile in profiles {
-        for route in &profile.route_evidence {
-            route_row_count += 1;
-            if let Some(identity) = &route.model_identity {
-                route_rows_with_identity += 1;
-                if identity.model_sha256.is_some() {
-                    route_rows_with_model_hash += 1;
-                } else {
-                    routes_without_model_hash
-                        .insert(format!("{}:{}", profile.profile_id, route.route_id));
-                }
-                if identity.tokenizer_source.is_some() && identity.prompt_template.is_some() {
-                    route_rows_with_tokenizer_template += 1;
-                } else {
-                    routes_without_tokenizer_template
-                        .insert(format!("{}:{}", profile.profile_id, route.route_id));
-                }
+    for (route_label, identity) in entries {
+        route_row_count += 1;
+        if let Some(identity) = identity {
+            route_rows_with_identity += 1;
+            if identity.model_sha256.is_some() {
+                route_rows_with_model_hash += 1;
             } else {
-                routes_without_model_hash
-                    .insert(format!("{}:{}", profile.profile_id, route.route_id));
-                routes_without_tokenizer_template
-                    .insert(format!("{}:{}", profile.profile_id, route.route_id));
+                routes_without_model_hash.insert(route_label.clone());
+                if identity.known_gaps.is_empty() {
+                    routes_without_model_hash_missing_known_gap.insert(route_label.clone());
+                } else {
+                    route_rows_without_model_hash_with_known_gap += 1;
+                }
             }
+            if identity.tokenizer_source.is_some() && identity.prompt_template.is_some() {
+                route_rows_with_tokenizer_template += 1;
+            } else {
+                routes_without_tokenizer_template.insert(route_label);
+            }
+        } else {
+            routes_without_model_hash.insert(route_label.clone());
+            routes_without_model_hash_missing_known_gap.insert(route_label.clone());
+            routes_without_tokenizer_template.insert(route_label);
         }
     }
+
+    let all_route_rows_have_tokenizer_template =
+        route_row_count == route_rows_with_tokenizer_template;
+    let model_hash_or_explicit_gap_for_all_route_rows = route_row_count
+        == route_rows_with_model_hash + route_rows_without_model_hash_with_known_gap;
 
     RouteModelIdentityCoverage {
         route_row_count,
         route_rows_with_identity,
         route_rows_with_model_hash,
         route_rows_with_tokenizer_template,
+        route_rows_without_model_hash_with_known_gap,
         all_route_rows_have_identity: route_row_count == route_rows_with_identity,
+        all_route_rows_have_tokenizer_template,
+        model_hash_or_explicit_gap_for_all_route_rows,
         routes_without_model_hash: routes_without_model_hash.into_iter().collect(),
+        routes_without_model_hash_missing_known_gap: routes_without_model_hash_missing_known_gap
+            .into_iter()
+            .collect(),
         routes_without_tokenizer_template: routes_without_tokenizer_template.into_iter().collect(),
+    }
+}
+
+fn route_model_identity_coverage_ready(coverage: &RouteModelIdentityCoverage) -> bool {
+    coverage.route_row_count > 0
+        && coverage.all_route_rows_have_identity
+        && coverage.all_route_rows_have_tokenizer_template
+        && coverage.model_hash_or_explicit_gap_for_all_route_rows
+}
+
+fn append_route_model_identity_coverage_gaps(
+    surface: &str,
+    coverage: &RouteModelIdentityCoverage,
+    gaps: &mut Vec<String>,
+) {
+    if coverage.route_row_count == 0 {
+        gaps.push(format!("{surface} has no route/model identity rows"));
+    }
+    if !coverage.all_route_rows_have_identity {
+        gaps.push(format!(
+            "{surface} has route rows without model identity; missing hash rows: {}",
+            coverage.routes_without_model_hash.join(",")
+        ));
+    }
+    if !coverage.all_route_rows_have_tokenizer_template {
+        gaps.push(format!(
+            "{surface} has route rows without tokenizer/template identity: {}",
+            coverage.routes_without_tokenizer_template.join(",")
+        ));
+    }
+    if !coverage.model_hash_or_explicit_gap_for_all_route_rows {
+        gaps.push(format!(
+            "{surface} has route rows without model hash or explicit no-hash gap: {}",
+            coverage.routes_without_model_hash_missing_known_gap.join(",")
+        ));
     }
 }
 
@@ -16088,76 +16272,7 @@ mod tests {
                 }
             }),
         )?;
-        write_json(
-            temp.path(),
-            DENSE_SLM_ARTIFACT_MANIFEST,
-            json!({
-                "selected_candidate": {
-                    "model_name": "Qwen2.5-0.5B-Instruct",
-                    "family": "qwen2.5",
-                    "format": "GGUF",
-                    "file": "Qwen2.5-0.5B-Instruct-Q8_0.gguf",
-                    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
-                    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
-                    "repo_revision": "main",
-                    "quantization": "Q8_0"
-                },
-                "tokenizer": {
-                    "source": "Qwen/Qwen2.5-0.5B-Instruct",
-                    "pretokenizer": "qwen2",
-                    "prompt_template": "qwen2.5-instruct-chatml",
-                    "stop_token_policy": "eos_or_stop_sequence"
-                }
-            }),
-        )?;
-        write_json(
-            temp.path(),
-            DENSE_SLM_OPENVINO_IR_MANIFEST,
-            json!({
-                "source_model": {
-                    "model_name": "Qwen2.5-0.5B-Instruct",
-                    "model_family": "qwen2.5",
-                    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
-                    "revision": "main"
-                },
-                "export_contract": {
-                    "format": "OpenVINO IR",
-                    "expected_output_dir": "openvino/qwen25-0.5b-int4-sym",
-                    "weight_format": "INT4",
-                    "symmetric": true
-                },
-                "tokenizer": {
-                    "source": "Qwen/Qwen2.5-0.5B-Instruct",
-                    "tokenizer_family": "qwen2",
-                    "prompt_template": "qwen2.5-instruct-chatml",
-                    "stop_token_policy": "eos_or_stop_sequence"
-                }
-            }),
-        )?;
-        write_json(
-            temp.path(),
-            BITNET_CPU_BUNDLE,
-            json!({
-                "artifact_kind": "intel_258v_cpu_reference_bundle",
-                "captured_at_utc": "2026-05-12T18:43:14Z",
-                "fallback_used": false,
-                "model": {
-                    "file": "bitnet-b1.58-2B-4T.I2_S.gguf",
-                    "architecture": "bitnet",
-                    "format": "GGUF",
-                    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
-                    "repo": "microsoft/bitnet-b1.58-2B-4T"
-                },
-                "tokenizer": {
-                    "source": "microsoft/bitnet-b1.58-2B-4T",
-                    "type": "sentencepiece"
-                },
-                "cpu_reference": {
-                    "fallback_used": false,
-                    "prompt_policy": "bitnet_strict_reference_prompt"
-                }
-            }),
-        )?;
+        write_route_model_identity_manifests(temp.path())?;
 
         let operator = build_operator_readiness_receipt_with_created_utc(
             temp.path(),
@@ -16411,6 +16526,57 @@ mod tests {
                     &"power telemetry receipt missing for low_power promotion".to_string(),
                 )
         }));
+
+        fs::write(
+            temp.path().join("route-profile-ready.json"),
+            serde_json::to_vec_pretty(&profiles_with_telemetry)?,
+        )?;
+        let route_profile_summary =
+            inspect_route_profile_regression(&temp.path().join("route-profile-ready.json"))?;
+        assert!(route_profile_summary.route_model_identity_ready);
+        assert!(route_profile_summary.regression_ready, "{:?}", route_profile_summary.gaps);
+        let mut missing_route_identity = profiles_with_telemetry.clone();
+        missing_route_identity.profiles[0].route_evidence[0].model_identity = None;
+        fs::write(
+            temp.path().join("route-profile-missing-identity.json"),
+            serde_json::to_vec_pretty(&missing_route_identity)?,
+        )?;
+        let missing_route_identity_summary = inspect_route_profile_regression(
+            &temp.path().join("route-profile-missing-identity.json"),
+        )?;
+        assert!(!missing_route_identity_summary.route_model_identity_ready);
+        assert!(missing_route_identity_summary.gaps.iter().any(|gap| {
+            gap.contains("route profile comparison has route rows without model identity")
+        }));
+
+        let cold_warm = build_cold_warm_benchmark_with_created_utc(
+            temp.path(),
+            Path::new("route-profile-ready.json"),
+            Path::new(DENSE_PHASE_COMPARISON),
+            Some(Path::new(POWER_THERMAL_CONTEXT_FILE)),
+            "2026-05-17T07:05:00Z".to_string(),
+        )?;
+        assert!(cold_warm.route_model_identity_coverage.all_route_rows_have_identity);
+        fs::write(
+            temp.path().join("cold-warm-ready.json"),
+            serde_json::to_vec_pretty(&cold_warm)?,
+        )?;
+        let cold_warm_summary =
+            inspect_cold_warm_regression(&temp.path().join("cold-warm-ready.json"))?;
+        assert!(cold_warm_summary.route_model_identity_ready);
+        assert!(cold_warm_summary.regression_ready, "{:?}", cold_warm_summary.gaps);
+        let mut missing_benchmark_identity = cold_warm.clone();
+        missing_benchmark_identity.profiles[0].routes[0].model_identity = None;
+        fs::write(
+            temp.path().join("cold-warm-missing-identity.json"),
+            serde_json::to_vec_pretty(&missing_benchmark_identity)?,
+        )?;
+        let missing_benchmark_identity_summary =
+            inspect_cold_warm_regression(&temp.path().join("cold-warm-missing-identity.json"))?;
+        assert!(!missing_benchmark_identity_summary.route_model_identity_ready);
+        assert!(missing_benchmark_identity_summary.gaps.iter().any(|gap| {
+            gap.contains("cold/warm benchmark has route rows without model identity")
+        }));
         Ok(())
     }
 
@@ -16503,6 +16669,7 @@ mod tests {
     fn route_profile_comparison_indexes_corpus_v2_profile_quality_blockers() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
+        write_route_model_identity_manifests(temp.path())?;
         write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
         write_route_corpus_v2_receipts(temp.path())?;
         write_json(
@@ -16851,7 +17018,8 @@ mod tests {
                 .any(|blocker| { blocker.contains("benchmark-qualified advantage is false") })
         );
         assert!(gpu_advantage.qualification_blockers.iter().any(|blocker| {
-            blocker.contains("baseline route dense_slm_default_cpu is not promotion-eligible")
+            blocker
+                .contains("baseline route dense_slm_default_cpu is not benchmark-reference-ready")
         }));
         assert!(
             gpu_route.timing.phase_coverage.iter().any(|coverage| {
@@ -16948,13 +17116,14 @@ mod tests {
             .iter()
             .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
             .context("missing low_power GPU route evidence")?;
-        assert!(low_power_gpu.timing.known_gaps.iter().any(|gap| {
-            gap == "profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power"
+        assert!(low_power_gpu.timing.phase_coverage.iter().any(|coverage| {
+            coverage
+                == "profile_timing_supplemented_from_corpus_v2_case_low_power_route_evidence_copy"
         }));
         assert!(
             low_power_gpu
                 .blockers
-                .contains(&"timing coverage has missing profile fields".to_string())
+                .contains(&"power telemetry receipt missing for low_power promotion".to_string())
         );
         let Some(npu_route) = ask_short
             .route_evidence
@@ -18248,7 +18417,7 @@ mod tests {
         );
         assert!(receipt.case_alignment.fixture_verified);
         assert_eq!(receipt.case_alignment.observed_case_count, 2);
-        assert_eq!(receipt.case_alignment.expected_case_count, Some(13));
+        assert_eq!(receipt.case_alignment.expected_case_count, Some(14));
         assert_eq!(receipt.case_alignment.aligned_with_active_fixture, Some(false));
         assert!(
             receipt
@@ -19020,6 +19189,7 @@ mod tests {
     fn regression_bundle_v2_indexes_corpus_fixture_and_profile_comparison() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
+        write_route_model_identity_manifests(temp.path())?;
         write_answer_corpus_v2(temp.path(), "corpus-v2.yaml")?;
         write_json(
             temp.path(),
@@ -20422,6 +20592,83 @@ mod tests {
         {
             write_json(root, file, no_speedup.clone())?;
         }
+        if !fallback {
+            write_route_model_identity_manifests(root)?;
+        }
+        Ok(())
+    }
+
+    fn write_route_model_identity_manifests(root: &Path) -> Result<()> {
+        write_json(
+            root,
+            DENSE_SLM_ARTIFACT_MANIFEST,
+            json!({
+                "selected_candidate": {
+                    "model_name": "Qwen2.5-0.5B-Instruct",
+                    "family": "qwen2.5",
+                    "format": "GGUF",
+                    "file": "Qwen2.5-0.5B-Instruct-Q8_0.gguf",
+                    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+                    "repo_revision": "main",
+                    "quantization": "Q8_0"
+                },
+                "tokenizer": {
+                    "source": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "pretokenizer": "qwen2",
+                    "prompt_template": "qwen2.5-instruct-chatml",
+                    "stop_token_policy": "eos_or_stop_sequence"
+                }
+            }),
+        )?;
+        write_json(
+            root,
+            DENSE_SLM_OPENVINO_IR_MANIFEST,
+            json!({
+                "source_model": {
+                    "model_name": "Qwen2.5-0.5B-Instruct",
+                    "model_family": "qwen2.5",
+                    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "revision": "main"
+                },
+                "export_contract": {
+                    "format": "OpenVINO IR",
+                    "expected_output_dir": "openvino/qwen25-0.5b-int4-sym",
+                    "weight_format": "INT4",
+                    "symmetric": true
+                },
+                "tokenizer": {
+                    "source": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "tokenizer_family": "qwen2",
+                    "prompt_template": "qwen2.5-instruct-chatml",
+                    "stop_token_policy": "eos_or_stop_sequence"
+                }
+            }),
+        )?;
+        write_json(
+            root,
+            BITNET_CPU_BUNDLE,
+            json!({
+                "artifact_kind": "intel_258v_cpu_reference_bundle",
+                "captured_at_utc": "2026-05-12T18:43:14Z",
+                "fallback_used": false,
+                "model": {
+                    "file": "bitnet-b1.58-2B-4T.I2_S.gguf",
+                    "architecture": "bitnet",
+                    "format": "GGUF",
+                    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                    "repo": "microsoft/bitnet-b1.58-2B-4T"
+                },
+                "tokenizer": {
+                    "source": "microsoft/bitnet-b1.58-2B-4T",
+                    "type": "sentencepiece"
+                },
+                "cpu_reference": {
+                    "fallback_used": false,
+                    "prompt_policy": "bitnet_strict_reference_prompt"
+                }
+            }),
+        )?;
         Ok(())
     }
 
@@ -20513,6 +20760,24 @@ mod tests {
         }
     }
 
+    fn ready_route_model_identity_coverage() -> RouteModelIdentityCoverage {
+        RouteModelIdentityCoverage {
+            route_row_count: 2,
+            route_rows_with_identity: 2,
+            route_rows_with_model_hash: 1,
+            route_rows_with_tokenizer_template: 2,
+            route_rows_without_model_hash_with_known_gap: 1,
+            all_route_rows_have_identity: true,
+            all_route_rows_have_tokenizer_template: true,
+            model_hash_or_explicit_gap_for_all_route_rows: true,
+            routes_without_model_hash: vec![
+                "warm_resident:dense_slm_openvino_npu_candidate".to_string(),
+            ],
+            routes_without_model_hash_missing_known_gap: vec![],
+            routes_without_tokenizer_template: vec![],
+        }
+    }
+
     fn npu_warm_route_promotion_scope() -> RoutePromotionScopeSummary {
         RoutePromotionScopeSummary {
             openvino_gpu_promoted_profiles: vec![],
@@ -20534,6 +20799,8 @@ mod tests {
                 .map(|profile| (*profile).to_string())
                 .collect(),
             timing_coverage: ready_timing_coverage(),
+            route_model_identity_coverage: ready_route_model_identity_coverage(),
+            route_model_identity_ready: true,
             candidate_routes_remain_unpromoted: true,
             benchmark_qualified_advantage_claimed: false,
             fallback_observed: false,
@@ -20554,6 +20821,8 @@ mod tests {
                 .map(|profile| (*profile).to_string())
                 .collect(),
             timing_coverage: ready_timing_coverage(),
+            route_model_identity_coverage: ready_route_model_identity_coverage(),
+            route_model_identity_ready: true,
             promoted_routes_have_critical_timing: true,
             candidate_routes_remain_unpromoted: true,
             fallback_observed: false,
@@ -20863,8 +21132,29 @@ mod tests {
                                 "route_id": "dense_slm_openvino_npu_candidate",
                                 "route_status": "candidate",
                                 "ledger_route_status": "candidate",
+                                "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
                                 "selected_backend": "openvino-npu",
                                 "runtime_api": "openvino_genai",
+                                "model_identity": {
+                                    "identity_source": "dense_slm_openvino_ir_manifest",
+                                    "manifest_receipt": "slm-openvino-ir-qwen25-int4-sym-manifest.json",
+                                    "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+                                    "model_name": "Qwen2.5-0.5B-Instruct",
+                                    "model_family": "qwen2.5",
+                                    "model_format": "OpenVINO IR",
+                                    "model_artifact": "openvino/qwen25-0.5b-int4-sym",
+                                    "model_sha256": null,
+                                    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+                                    "repo_revision": "main",
+                                    "quantization": "INT4_symmetric",
+                                    "tokenizer_source": "Qwen/Qwen2.5-0.5B-Instruct",
+                                    "tokenizer_family": "qwen2",
+                                    "prompt_template": "qwen2.5-instruct-chatml",
+                                    "stop_token_policy": "eos_or_stop_sequence",
+                                    "known_gaps": [
+                                        "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+                                    ]
+                                },
                                 "fallback_used": false,
                                 "answer_gate_passed": true,
                                 "phase_timing_present": true,
