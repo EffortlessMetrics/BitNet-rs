@@ -16,6 +16,8 @@ use serde::{Deserialize, Serialize};
 
 pub const DENSE_GGUF_Q8_SIDECAR_EQUIVALENCE_GATE_ARTIFACT_KIND: &str =
     "dense_gguf_q8_sidecar_equivalence_gate";
+pub const DENSE_GGUF_Q8_GENERATED_ID_TEXT_EQUIVALENCE_ARTIFACT_KIND: &str =
+    "dense_gguf_q8_generated_id_text_equivalence";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -32,6 +34,27 @@ pub enum DenseQ8RuntimePreflightBlocker {
     GeneratedIdReceiptEquivalenceMissing,
     ProductionComputeHookMissing,
     ProductionSelectorStillEagerF32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DenseQ8GeneratedIdTextMismatch {
+    ModelSha256,
+    TokenizerSource,
+    TokenizerStrict,
+    CorpusId,
+    PromptId,
+    PromptIds,
+    GeneratedIds,
+    DecodedText,
+    SelectedBackend,
+    SelectedKernel,
+    BaselineFallbackUsed,
+    CandidateFallbackUsed,
+    BaselineSpeedupClaim,
+    CandidateSpeedupClaim,
+    RuntimePreflightNotEagerF32,
+    RuntimePreflightAllowsSidecarCompute,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -75,6 +98,39 @@ pub struct DenseQ8SidecarRuntimePreflight {
     pub speedup_claim: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DenseQ8BehaviorReceiptSummary {
+    pub receipt_id: String,
+    pub model_sha256: String,
+    pub tokenizer_source: String,
+    pub tokenizer_strict: bool,
+    pub corpus_id: Option<String>,
+    pub prompt_id: Option<String>,
+    pub prompt_ids: Vec<i64>,
+    pub generated_ids: Vec<i64>,
+    pub decoded_text: String,
+    pub selected_backend: String,
+    pub selected_kernel: String,
+    pub fallback_used: bool,
+    pub speedup_claim: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DenseQ8GeneratedIdTextEquivalenceGate {
+    pub schema: u64,
+    pub artifact_kind: String,
+    pub selected_path: DenseQ8RuntimePath,
+    pub selected_kernel: String,
+    pub baseline_receipt: DenseQ8BehaviorReceiptSummary,
+    pub candidate_receipt: DenseQ8BehaviorReceiptSummary,
+    pub generated_id_receipt_equivalence_passed: bool,
+    pub sidecar_runtime_compute_allowed: bool,
+    pub mismatches: Vec<DenseQ8GeneratedIdTextMismatch>,
+    pub eager_f32_runtime_preserved: bool,
+    pub dense_runtime_replaced: bool,
+    pub speedup_claim: bool,
+}
+
 impl DenseQ8SidecarEquivalenceGate {
     pub fn runtime_still_blocked(&self) -> bool {
         !self.sidecar_runtime_compute_allowed
@@ -88,6 +144,15 @@ impl DenseQ8SidecarRuntimePreflight {
     pub fn selects_eager_f32(&self) -> bool {
         self.selected_path == DenseQ8RuntimePath::EagerF32Candle
             && self.selected_kernel == "dense-f32-candle-linear"
+            && self.eager_f32_runtime_preserved
+            && !self.dense_runtime_replaced
+            && !self.speedup_claim
+    }
+}
+
+impl DenseQ8GeneratedIdTextEquivalenceGate {
+    pub fn runtime_still_blocked(&self) -> bool {
+        !self.sidecar_runtime_compute_allowed
             && self.eager_f32_runtime_preserved
             && !self.dense_runtime_replaced
             && !self.speedup_claim
@@ -148,6 +213,78 @@ pub fn build_dense_q8_sidecar_equivalence_gate(
         dense_runtime_replaced: false,
         speedup_claim: false,
     })
+}
+
+pub fn build_dense_q8_generated_id_text_equivalence_gate(
+    preflight: &DenseQ8SidecarRuntimePreflight,
+    baseline_receipt: DenseQ8BehaviorReceiptSummary,
+    candidate_receipt: DenseQ8BehaviorReceiptSummary,
+) -> DenseQ8GeneratedIdTextEquivalenceGate {
+    let mut mismatches = Vec::new();
+
+    if baseline_receipt.model_sha256 != candidate_receipt.model_sha256 {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::ModelSha256);
+    }
+    if baseline_receipt.tokenizer_source != candidate_receipt.tokenizer_source {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::TokenizerSource);
+    }
+    if baseline_receipt.tokenizer_strict != candidate_receipt.tokenizer_strict {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::TokenizerStrict);
+    }
+    if baseline_receipt.corpus_id != candidate_receipt.corpus_id {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::CorpusId);
+    }
+    if baseline_receipt.prompt_id != candidate_receipt.prompt_id {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::PromptId);
+    }
+    if baseline_receipt.prompt_ids != candidate_receipt.prompt_ids {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::PromptIds);
+    }
+    if baseline_receipt.generated_ids != candidate_receipt.generated_ids {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::GeneratedIds);
+    }
+    if baseline_receipt.decoded_text != candidate_receipt.decoded_text {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::DecodedText);
+    }
+    if baseline_receipt.selected_backend != candidate_receipt.selected_backend {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::SelectedBackend);
+    }
+    if baseline_receipt.selected_kernel != candidate_receipt.selected_kernel {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::SelectedKernel);
+    }
+    if baseline_receipt.fallback_used {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::BaselineFallbackUsed);
+    }
+    if candidate_receipt.fallback_used {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::CandidateFallbackUsed);
+    }
+    if baseline_receipt.speedup_claim {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::BaselineSpeedupClaim);
+    }
+    if candidate_receipt.speedup_claim {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::CandidateSpeedupClaim);
+    }
+    if !preflight.selects_eager_f32() {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::RuntimePreflightNotEagerF32);
+    }
+    if preflight.sidecar_runtime_compute_allowed {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::RuntimePreflightAllowsSidecarCompute);
+    }
+
+    DenseQ8GeneratedIdTextEquivalenceGate {
+        schema: 1,
+        artifact_kind: DENSE_GGUF_Q8_GENERATED_ID_TEXT_EQUIVALENCE_ARTIFACT_KIND.to_string(),
+        selected_path: preflight.selected_path,
+        selected_kernel: preflight.selected_kernel.clone(),
+        baseline_receipt,
+        candidate_receipt,
+        generated_id_receipt_equivalence_passed: mismatches.is_empty(),
+        sidecar_runtime_compute_allowed: false,
+        mismatches,
+        eager_f32_runtime_preserved: true,
+        dense_runtime_replaced: false,
+        speedup_claim: false,
+    }
 }
 
 pub fn build_dense_q8_sidecar_runtime_preflight(
@@ -239,6 +376,32 @@ mod tests {
         registry
     }
 
+    fn behavior_receipt(receipt_id: &str) -> DenseQ8BehaviorReceiptSummary {
+        DenseQ8BehaviorReceiptSummary {
+            receipt_id: receipt_id.to_string(),
+            model_sha256: "model-sha".to_string(),
+            tokenizer_source: "gguf_metadata".to_string(),
+            tokenizer_strict: true,
+            corpus_id: Some("qwen3-kaby-corpus".to_string()),
+            prompt_id: Some("math_2_plus_2".to_string()),
+            prompt_ids: vec![151644, 3838, 374, 220, 17, 10, 17],
+            generated_ids: vec![19],
+            decoded_text: "4".to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            selected_kernel: "dense-f32-candle-linear".to_string(),
+            fallback_used: false,
+            speedup_claim: false,
+        }
+    }
+
+    fn runtime_preflight() -> Result<DenseQ8SidecarRuntimePreflight> {
+        let registry = registry_with_q_proj();
+        let selection = select_dense_q8_runtime("blk.0.attn_q.weight", &registry);
+        let gate =
+            build_dense_q8_sidecar_equivalence_gate(&sidecar_summary(0.0), &selection, 1e-6)?;
+        Ok(build_dense_q8_sidecar_runtime_preflight(&gate, false))
+    }
+
     #[test]
     fn q8_sidecar_equivalence_gate_keeps_runtime_blocked_after_fixture_match() -> Result<()> {
         let registry = registry_with_q_proj();
@@ -325,6 +488,69 @@ mod tests {
                 .runtime_blockers
                 .contains(&DenseQ8RuntimePreflightBlocker::FixtureEquivalenceMissing)
         );
+        Ok(())
+    }
+
+    #[test]
+    fn q8_generated_id_text_equivalence_passes_for_matching_receipts_but_keeps_runtime_blocked()
+    -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let candidate = behavior_receipt("q8-sidecar-candidate");
+
+        let gate =
+            build_dense_q8_generated_id_text_equivalence_gate(&preflight, baseline, candidate);
+
+        assert_eq!(gate.artifact_kind, DENSE_GGUF_Q8_GENERATED_ID_TEXT_EQUIVALENCE_ARTIFACT_KIND);
+        assert!(gate.generated_id_receipt_equivalence_passed);
+        assert!(gate.mismatches.is_empty());
+        assert!(gate.runtime_still_blocked());
+        assert_eq!(gate.selected_path, DenseQ8RuntimePath::EagerF32Candle);
+        assert_eq!(gate.selected_kernel, "dense-f32-candle-linear");
+        Ok(())
+    }
+
+    #[test]
+    fn q8_generated_id_text_equivalence_records_behavior_and_claim_mismatches() -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let mut candidate = behavior_receipt("q8-sidecar-candidate");
+        candidate.generated_ids = vec![84644];
+        candidate.decoded_text = "htar".to_string();
+        candidate.fallback_used = true;
+        candidate.speedup_claim = true;
+
+        let gate =
+            build_dense_q8_generated_id_text_equivalence_gate(&preflight, baseline, candidate);
+
+        assert!(!gate.generated_id_receipt_equivalence_passed);
+        assert!(gate.runtime_still_blocked());
+        assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::GeneratedIds));
+        assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::DecodedText));
+        assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::CandidateFallbackUsed));
+        assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::CandidateSpeedupClaim));
+        Ok(())
+    }
+
+    #[test]
+    fn q8_generated_id_text_equivalence_requires_strict_same_provenance() -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let mut candidate = behavior_receipt("q8-sidecar-candidate");
+        candidate.model_sha256 = "other-model-sha".to_string();
+        candidate.tokenizer_source = "sibling_file".to_string();
+        candidate.tokenizer_strict = false;
+        candidate.selected_kernel = "dense-q8-sidecar-linear".to_string();
+
+        let gate =
+            build_dense_q8_generated_id_text_equivalence_gate(&preflight, baseline, candidate);
+
+        assert!(!gate.generated_id_receipt_equivalence_passed);
+        assert!(gate.runtime_still_blocked());
+        assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::ModelSha256));
+        assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::TokenizerSource));
+        assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::TokenizerStrict));
+        assert!(gate.mismatches.contains(&DenseQ8GeneratedIdTextMismatch::SelectedKernel));
         Ok(())
     }
 }
