@@ -709,6 +709,10 @@ enum MacAction {
         #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 8)]
         max_new_tokens: usize,
 
+        /// Number of full one-shot plus fixed-warm benchmark runs to aggregate.
+        #[arg(long, default_value_t = 1)]
+        repeat: usize,
+
         /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
         #[arg(long, default_value_t = 0)]
         threads: usize,
@@ -1417,6 +1421,7 @@ impl MacCommand {
                 tokenizer,
                 one_shot_prompt,
                 max_new_tokens,
+                repeat,
                 threads,
                 progress,
                 quiet,
@@ -1430,6 +1435,7 @@ impl MacCommand {
                     tokenizer,
                     one_shot_prompt,
                     max_new_tokens,
+                    repeat,
                     threads,
                     progress,
                     quiet,
@@ -6646,6 +6652,7 @@ struct BitnetBenchmarkRun<'a> {
     tokenizer: Option<PathBuf>,
     one_shot_prompt: String,
     max_new_tokens: usize,
+    repeat: usize,
     threads: usize,
     progress: bool,
     quiet: bool,
@@ -6741,6 +6748,7 @@ async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
         tokenizer,
         one_shot_prompt,
         max_new_tokens,
+        repeat,
         threads,
         progress,
         quiet,
@@ -6749,18 +6757,136 @@ async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
     if max_new_tokens == 0 {
         anyhow::bail!("`bitnet mac bitnet-benchmark` requires --max-new-tokens greater than zero");
     }
+    if repeat == 0 {
+        anyhow::bail!("`bitnet mac bitnet-benchmark` requires --repeat greater than zero");
+    }
     if one_shot_prompt.trim().is_empty() {
         anyhow::bail!("`bitnet mac bitnet-benchmark` requires a non-empty --one-shot-prompt");
     }
 
     let output_dir = json_out.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
-    let receipt_dir = output_dir.join("receipts");
-    std::fs::create_dir_all(&receipt_dir)
-        .with_context(|| format!("failed to create {}", receipt_dir.display()))?;
-    let ask_receipt = receipt_dir.join("bitnet-mac-ask-benchmark.json");
-    let warm_receipt = receipt_dir.join("bitnet-mac-bitnet-warm-benchmark.json");
+    if repeat == 1 {
+        let receipt_dir = output_dir.join("receipts");
+        let ask_receipt = receipt_dir.join("bitnet-mac-ask-benchmark.json");
+        let warm_receipt = receipt_dir.join("bitnet-mac-bitnet-warm-benchmark.json");
+        let summary = run_bitnet_benchmark_once(BitnetBenchmarkOnceRun {
+            model_id,
+            cache_dir,
+            model_path,
+            tokenizer,
+            one_shot_prompt,
+            max_new_tokens,
+            threads,
+            progress,
+            quiet,
+            ask_receipt,
+            warm_receipt,
+            summary_path: json_out.clone(),
+            benchmark_start_peak_mb: peak_memory_mb(),
+        })
+        .await?;
+        if !quiet {
+            println!(
+                "Mac BitNet benchmark summary written to {} (one-shot + fixed warm, chat=false, serve=false)",
+                json_out.display()
+            );
+        }
+        validate_mac_receipt_value(&json_out, &summary)?;
+        return Ok(());
+    }
 
     let benchmark_start_peak_mb = peak_memory_mb();
+    let summary_root = output_dir.join("summary-runs");
+    let mut child_summaries = Vec::with_capacity(repeat);
+    let mut child_summary_receipts = Vec::with_capacity(repeat);
+    for index in 1..=repeat {
+        if progress && !quiet {
+            eprintln!("mac bitnet-benchmark: repeat {index}/{repeat}");
+        }
+        let run_dir = summary_root.join(format!("run-{index:02}"));
+        let receipt_dir = run_dir.join("receipts");
+        let child_summary_path = run_dir.join("summary.json");
+        let child_summary = run_bitnet_benchmark_once(BitnetBenchmarkOnceRun {
+            model_id,
+            cache_dir: cache_dir.clone(),
+            model_path: model_path.clone(),
+            tokenizer: tokenizer.clone(),
+            one_shot_prompt: one_shot_prompt.clone(),
+            max_new_tokens,
+            threads,
+            progress,
+            quiet,
+            ask_receipt: receipt_dir.join("bitnet-mac-ask-benchmark.json"),
+            warm_receipt: receipt_dir.join("bitnet-mac-bitnet-warm-benchmark.json"),
+            summary_path: child_summary_path.clone(),
+            benchmark_start_peak_mb: peak_memory_mb(),
+        })
+        .await?;
+        child_summary_receipts.push(child_summary_path.display().to_string());
+        child_summaries.push(child_summary);
+    }
+    let summary = bitnet_benchmark_repeat_summary(
+        &json_out,
+        repeat,
+        &child_summary_receipts,
+        &child_summaries,
+        benchmark_start_peak_mb,
+    )?;
+    std::fs::write(&json_out, serde_json::to_vec_pretty(&summary)?)
+        .with_context(|| format!("failed to write {}", json_out.display()))?;
+    validate_mac_receipt_value(&json_out, &summary)?;
+    if !quiet {
+        println!(
+            "Mac BitNet benchmark summary written to {} (repeats: {}, one-shot + fixed warm, chat=false, serve=false)",
+            json_out.display(),
+            repeat
+        );
+    }
+    Ok(())
+}
+
+struct BitnetBenchmarkOnceRun<'a> {
+    model_id: &'a str,
+    cache_dir: Option<PathBuf>,
+    model_path: Option<PathBuf>,
+    tokenizer: Option<PathBuf>,
+    one_shot_prompt: String,
+    max_new_tokens: usize,
+    threads: usize,
+    progress: bool,
+    quiet: bool,
+    ask_receipt: PathBuf,
+    warm_receipt: PathBuf,
+    summary_path: PathBuf,
+    benchmark_start_peak_mb: Option<f64>,
+}
+
+async fn run_bitnet_benchmark_once(
+    request: BitnetBenchmarkOnceRun<'_>,
+) -> Result<serde_json::Value> {
+    let BitnetBenchmarkOnceRun {
+        model_id,
+        cache_dir,
+        model_path,
+        tokenizer,
+        one_shot_prompt,
+        max_new_tokens,
+        threads,
+        progress,
+        quiet,
+        ask_receipt,
+        warm_receipt,
+        summary_path,
+        benchmark_start_peak_mb,
+    } = request;
+    if let Some(parent) = ask_receipt.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    if let Some(parent) = warm_receipt.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
     if progress && !quiet {
         eprintln!("mac bitnet-benchmark: running one-shot ask path");
     }
@@ -6806,23 +6932,350 @@ async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
     let ask = read_json_receipt(&ask_receipt)?;
     let warm = read_json_receipt(&warm_receipt)?;
     let summary = bitnet_benchmark_summary(
-        &json_out,
+        &summary_path,
         &ask_receipt,
         &ask,
         &warm_receipt,
         &warm,
         benchmark_start_peak_mb,
     )?;
-    std::fs::write(&json_out, serde_json::to_vec_pretty(&summary)?)
-        .with_context(|| format!("failed to write {}", json_out.display()))?;
-    validate_mac_receipt_value(&json_out, &summary)?;
-    if !quiet {
-        println!(
-            "Mac BitNet benchmark summary written to {} (one-shot + fixed warm, chat=false, serve=false)",
-            json_out.display()
+    std::fs::write(&summary_path, serde_json::to_vec_pretty(&summary)?)
+        .with_context(|| format!("failed to write {}", summary_path.display()))?;
+    validate_mac_receipt_value(&summary_path, &summary)?;
+    Ok(summary)
+}
+
+fn bitnet_benchmark_repeat_summary(
+    json_out: &Path,
+    repeat: usize,
+    child_summary_receipts: &[String],
+    child_summaries: &[serde_json::Value],
+    benchmark_start_peak_mb: Option<f64>,
+) -> Result<serde_json::Value> {
+    if child_summaries.is_empty() {
+        anyhow::bail!("BitNet benchmark repeat summary requires at least one child summary");
+    }
+    let one_shot_summary = bitnet_benchmark_repeat_path_summary(
+        child_summaries,
+        "one_shot",
+        "one_shot_mac_ask",
+        "mac ask",
+        false,
+    )?;
+    let warm_summary = bitnet_benchmark_repeat_path_summary(
+        child_summaries,
+        "fixed_warm",
+        "fixed_warm_session",
+        "mac bitnet-warm",
+        true,
+    )?;
+    let mut all_samples = BitnetBenchmarkMetricSamples::default();
+    all_samples.extend_from_summary(&one_shot_summary);
+    all_samples.extend_from_summary(&warm_summary);
+
+    let prompt_count = one_shot_summary["prompt_count"].as_u64().unwrap_or_default()
+        + warm_summary["prompt_count"].as_u64().unwrap_or_default();
+    let generated_tokens = one_shot_summary["generated_tokens"].as_u64().unwrap_or_default()
+        + warm_summary["generated_tokens"].as_u64().unwrap_or_default();
+    let memory_end_peak_mb = peak_memory_mb();
+    let mut memory = all_samples.memory_json();
+    if let Some(object) = memory.as_object_mut() {
+        object
+            .insert("start_peak_memory_mb".to_string(), optional_f64_json(benchmark_start_peak_mb));
+        object.insert("end_peak_memory_mb".to_string(), optional_f64_json(memory_end_peak_mb));
+        object.insert(
+            "process_peak_drift_mb".to_string(),
+            optional_f64_json(memory_delta_mb(benchmark_start_peak_mb, memory_end_peak_mb)),
         );
     }
-    Ok(())
+
+    let first = &child_summaries[0];
+    let model_path = first["model"]["path"].as_str().unwrap_or_default();
+    let tokenizer_path =
+        first["tokenizer"]["path"].as_str().unwrap_or(BITNET_M4_DEFAULT_TOKENIZER_PATH);
+    let timeout_reasons = child_summaries
+        .iter()
+        .filter_map(|summary| summary["timeout_boundary"]["status"].as_str())
+        .filter(|status| *status != "not_reached")
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let one_shot_receipts = child_summaries
+        .iter()
+        .filter_map(|summary| {
+            summary["evidence"]["one_shot_receipt"].as_str().map(ToString::to_string)
+        })
+        .collect::<Vec<_>>();
+    let warm_session_receipts = child_summaries
+        .iter()
+        .filter_map(|summary| {
+            summary["evidence"]["warm_session_receipt"].as_str().map(ToString::to_string)
+        })
+        .collect::<Vec<_>>();
+    let warm_prompt_receipts = child_summaries
+        .iter()
+        .filter_map(|summary| summary["evidence"]["warm_prompt_receipts"].as_array())
+        .flatten()
+        .filter_map(|receipt| receipt.as_str().map(ToString::to_string))
+        .collect::<Vec<_>>();
+
+    Ok(serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "benchmark_set": "bitnet-one-shot-fixed-warm-v1",
+        "repeat": {
+            "requested": repeat,
+            "completed": child_summaries.len(),
+            "path_count": 2,
+            "sample_count": child_summaries.len() * 2,
+            "child_summary_receipts": child_summary_receipts,
+        },
+        "paths": {
+            "one_shot": one_shot_summary,
+            "fixed_warm": warm_summary,
+        },
+        "prompt_count": prompt_count,
+        "generated_tokens": generated_tokens,
+        "speed": all_samples.speed_json(),
+        "memory": memory,
+        "timeout_boundary": {
+            "enforced": false,
+            "reached": false,
+            "status": "not_reached",
+            "timeout_seconds": serde_json::Value::Null,
+            "partial_failure_receipt": false,
+            "timeout_stage_accounting": {
+                "timeouts": timeout_reasons.len(),
+                "statuses": timeout_reasons,
+            },
+        },
+        "build": {
+            "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
+            "release_mode": !cfg!(debug_assertions),
+        },
+        "model": {
+            "id": BITNET_M4_MODEL_ID,
+            "family": "bitnet",
+            "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+            "file": "ggml-model-i2_s.gguf",
+            "path": model_path,
+            "sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+            "bytes": first["model"]["bytes"].as_u64(),
+            "architecture": "bitnet_b1_58",
+            "quantization": "I2_S",
+            "answer_ready_artifact_available": true,
+            "answer_ready": {
+                "state": "answer_ready"
+            }
+        },
+        "tokenizer": {
+            "source": "external_tokenizer_json",
+            "path": tokenizer_path,
+            "sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+            "authority": "llama-bpe",
+            "pretokenizer_authority": "llama-bpe",
+            "strict": true
+        },
+        "prompt_template": BITNET_M4_PROMPT_TEMPLATE,
+        "benchmark_contract": {
+            "scope": "Apple M4 Mac mini BitNet repeated one-shot and fixed-warm benchmark v1",
+            "path_execution_model": "repeat full mac ask plus fixed-prompt resident warm-session benchmark runs",
+            "one_shot_loaded_independently": true,
+            "fixed_warm_model_tokenizer_reuse_visible": true,
+            "cold_load_separated": true,
+            "repeatability": {
+                "run_count": child_summaries.len(),
+                "outlier_handling": "none",
+                "variance_band": "min/max and p50/p90/p99 over raw repeated child benchmark path samples",
+                "advisory_vs_failure": "timing and memory drift are advisory unless a later lane opts into fail-on-drift",
+            },
+            "percentiles": ["p50", "p90", "p99"],
+            "input_tok_s_definition": "prompt_tokens / (prompt_tokenize_ms + prefill_ms)",
+            "output_tok_s_definition": "generated_tokens / total_prompt_wall_ms",
+            "decode_tok_s_definition": "generated_tokens / decode_total_ms",
+            "memory_drift_definition": "ru_maxrss process peak delta when available; monotonic peak, not live RSS",
+            "timeout_boundary_recorded": true,
+            "thresholds_are_claim_bounds_not_speed_guarantees": true
+        },
+        "evidence": {
+            "child_summary_receipts": child_summary_receipts,
+            "one_shot_receipt": one_shot_receipts.first().cloned().unwrap_or_default(),
+            "one_shot_receipts": one_shot_receipts,
+            "warm_session_receipt": warm_session_receipts.first().cloned().unwrap_or_default(),
+            "warm_session_receipts": warm_session_receipts,
+            "warm_prompt_receipts": warm_prompt_receipts,
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "operator_commands": ["mac ask", "mac bitnet-warm"],
+        },
+        "mac_claim_boundary": {
+            "bitnet_benchmark": true,
+            "one_shot_mac_ask": true,
+            "fixed_warm_session": true,
+            "accepted_i2s_artifact_only": true,
+            "dense_slm_evidence_used": false,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "bitnet_quality_claimed": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claimed": false
+        },
+        "bitnet_quality_claimed": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+    }))
+}
+
+fn bitnet_benchmark_repeat_path_summary(
+    child_summaries: &[serde_json::Value],
+    path_key: &str,
+    expected_path_id: &str,
+    expected_operator_command: &str,
+    require_resident_reuse: bool,
+) -> Result<serde_json::Value> {
+    let mut path_summaries = Vec::with_capacity(child_summaries.len());
+    for summary in child_summaries {
+        let path_summary = summary["paths"].get(path_key).ok_or_else(|| {
+            anyhow!("BitNet benchmark child summary is missing {path_key} path summary")
+        })?;
+        validate_bitnet_benchmark_path_summary(
+            Path::new("bitnet-benchmark-repeat-child"),
+            path_summary,
+            expected_path_id,
+            expected_operator_command,
+            require_resident_reuse,
+        )?;
+        path_summaries.push(path_summary.clone());
+    }
+
+    let prompt_count = path_summaries
+        .iter()
+        .map(|summary| summary["prompt_count"].as_u64().unwrap_or_default())
+        .sum::<u64>();
+    let generated_tokens = path_summaries
+        .iter()
+        .map(|summary| summary["generated_tokens"].as_u64().unwrap_or_default())
+        .sum::<u64>();
+    let quality_passed =
+        path_summaries.iter().all(|summary| summary["quality_passed"].as_bool() == Some(true));
+    let receipt_paths = path_summaries
+        .iter()
+        .filter_map(|summary| summary["receipt_path"].as_str().map(ToString::to_string))
+        .collect::<Vec<_>>();
+
+    let prompt_tokens = collect_bitnet_path_stat_samples(&path_summaries, &["prompt_tokens"]);
+    let output_tokens = collect_bitnet_path_stat_samples(&path_summaries, &["output_tokens"]);
+    let model_load_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "model_load_ms"]);
+    let tokenizer_load_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "tokenizer_load_ms"]);
+    let prompt_tokenize_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "prompt_tokenize_ms"]);
+    let prefill_ms = collect_bitnet_path_stat_samples(&path_summaries, &["timing", "prefill_ms"]);
+    let ttft_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "time_to_first_token_ms"]);
+    let decode_total_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "decode_total_ms"]);
+    let sampling_ms_per_token =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "sampling_ms_per_token"]);
+    let total_wall_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "total_wall_ms"]);
+    let input_tok_s = collect_bitnet_path_stat_samples(
+        &path_summaries,
+        &["throughput", "input_tokens_per_second"],
+    );
+    let output_tok_s = collect_bitnet_path_stat_samples(
+        &path_summaries,
+        &["throughput", "output_tokens_per_second"],
+    );
+    let decode_tok_s = collect_bitnet_path_stat_samples(
+        &path_summaries,
+        &["throughput", "decode_tokens_per_second"],
+    );
+    let peak_memory_mb =
+        collect_bitnet_path_stat_samples(&path_summaries, &["memory", "peak_memory_mb"]);
+    let memory_drift_mb =
+        collect_bitnet_path_stat_samples(&path_summaries, &["memory", "memory_drift_mb"]);
+
+    let mut object = serde_json::json!({
+        "path_id": expected_path_id,
+        "operator_command": expected_operator_command,
+        "receipt_path": format!("repeat:{path_key}"),
+        "receipt_paths": receipt_paths,
+        "prompt_count": prompt_count,
+        "generated_tokens": generated_tokens,
+        "model_loaded_once": true,
+        "tokenizer_loaded_once": true,
+        "quality_passed": quality_passed,
+        "repeat": {
+            "completed": path_summaries.len(),
+            "sample_count": path_summaries.len(),
+            "outlier_handling": "none",
+        },
+        "prompt_tokens": benchmark_stat_json(&prompt_tokens),
+        "output_tokens": benchmark_stat_json(&output_tokens),
+        "timing": {
+            "model_load_ms": benchmark_stat_json(&model_load_ms),
+            "tokenizer_load_ms": benchmark_stat_json(&tokenizer_load_ms),
+            "prompt_tokenize_ms": benchmark_stat_json(&prompt_tokenize_ms),
+            "prefill_ms": benchmark_stat_json(&prefill_ms),
+            "time_to_first_token_ms": benchmark_stat_json(&ttft_ms),
+            "decode_total_ms": benchmark_stat_json(&decode_total_ms),
+            "sampling_ms_per_token": benchmark_stat_json(&sampling_ms_per_token),
+            "total_wall_ms": benchmark_stat_json(&total_wall_ms),
+        },
+        "throughput": {
+            "input_tokens_per_second": benchmark_stat_json(&input_tok_s),
+            "output_tokens_per_second": benchmark_stat_json(&output_tok_s),
+            "decode_tokens_per_second": benchmark_stat_json(&decode_tok_s),
+        },
+        "memory": {
+            "peak_memory_mb": benchmark_stat_json(&peak_memory_mb),
+            "memory_drift_mb": benchmark_stat_json(&memory_drift_mb),
+            "source": "getrusage.ru_maxrss process peak",
+        },
+        "timeout_boundary": {
+            "enforced": false,
+            "reached": false,
+            "status": "not_reached",
+        },
+        "claim_boundary": {
+            "scope": "repeated BitNet benchmark path summaries for this accepted artifact, backend, and machine only",
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    });
+    if require_resident_reuse {
+        object["reuse_scope"] = serde_json::json!("resident_session");
+    }
+    Ok(object)
+}
+
+fn collect_bitnet_path_stat_samples(summaries: &[serde_json::Value], path: &[&str]) -> Vec<f64> {
+    let mut out = Vec::new();
+    for summary in summaries {
+        let mut value = summary;
+        for key in path {
+            value = &value[*key];
+        }
+        out.extend(benchmark_stat_samples(value));
+    }
+    out
 }
 
 fn bitnet_benchmark_summary(
@@ -19213,6 +19666,48 @@ fn validate_bitnet_benchmark_v1_receipt(
     require_non_empty_string_array_at(path, receipt, &["evidence", "warm_prompt_receipts"])?;
     require_non_empty_string_array_at(path, receipt, &["evidence", "operator_commands"])?;
 
+    let repeat = json_value_at(receipt, &["repeat"]);
+    if !repeat.is_null() {
+        let repeat_requested = require_u64_at(path, receipt, &["repeat", "requested"], true)?;
+        let repeat_completed = require_u64_at(path, receipt, &["repeat", "completed"], true)?;
+        let path_count = require_u64_at(path, receipt, &["repeat", "path_count"], true)?;
+        let sample_count = require_u64_at(path, receipt, &["repeat", "sample_count"], true)?;
+        require_non_empty_string_array_at(path, receipt, &["repeat", "child_summary_receipts"])?;
+        require_non_empty_string_array_at(path, receipt, &["evidence", "child_summary_receipts"])?;
+        if repeat_completed < 2 {
+            anyhow::bail!(
+                "{} BitNet benchmark repeat completed count must be at least 2",
+                path.display()
+            );
+        }
+        if repeat_requested != repeat_completed {
+            anyhow::bail!(
+                "{} BitNet benchmark repeat requested and completed counts must match",
+                path.display()
+            );
+        }
+        if path_count != 2 || sample_count != repeat_completed * path_count {
+            anyhow::bail!(
+                "{} BitNet benchmark repeat sample_count must equal completed paths",
+                path.display()
+            );
+        }
+        let child_receipts = json_value_at(receipt, &["repeat", "child_summary_receipts"])
+            .as_array()
+            .ok_or_else(|| {
+                anyhow!(
+                    "{} BitNet benchmark repeat child_summary_receipts must be an array",
+                    path.display()
+                )
+            })?;
+        if child_receipts.len() as u64 != repeat_completed {
+            anyhow::bail!(
+                "{} BitNet benchmark repeat child_summary_receipts length must equal completed repeats",
+                path.display()
+            );
+        }
+    }
+
     require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_benchmark"], true)?;
     require_bool_at(path, receipt, &["mac_claim_boundary", "one_shot_mac_ask"], true)?;
     require_bool_at(path, receipt, &["mac_claim_boundary", "fixed_warm_session"], true)?;
@@ -22594,6 +23089,34 @@ mod tests {
         assert_eq!(summary.artifact_kind, "bitnet_apple_m4_benchmark_v1");
         assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
         assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(4));
+        assert_eq!(summary.generated_tokens, Some(8));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_accepts_bitnet_benchmark_v1_repeat()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut receipt = test_bitnet_benchmark_v1_receipt();
+        receipt["repeat"] = serde_json::json!({
+            "requested": 2,
+            "completed": 2,
+            "path_count": 2,
+            "sample_count": 4,
+            "child_summary_receipts": [
+                "summary-runs/run-01/summary.json",
+                "summary-runs/run-02/summary.json"
+            ]
+        });
+        receipt["evidence"]["child_summary_receipts"] = serde_json::json!([
+            "summary-runs/run-01/summary.json",
+            "summary-runs/run-02/summary.json"
+        ]);
+
+        let summary =
+            validate_mac_receipt_value(Path::new("bitnet-benchmark-repeat.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "bitnet_apple_m4_benchmark_v1");
         assert_eq!(summary.prompt_count, Some(4));
         assert_eq!(summary.generated_tokens, Some(8));
         Ok(())
