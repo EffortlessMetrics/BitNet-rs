@@ -9026,6 +9026,59 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-GOAL-AUDIT-003"
+status = "in_progress"
+pr = 6030
+head_sha = "2db0a81a80ca0b67b4f5e680e751ae4e93d09306"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-003-post-reg011"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-002", "LNL258V-REG-011"]
+acceptance = "Refresh the no-inference Lunar Lake excellence audit and goal artifact checklist after REG-011 so the completion audit records that strict regression, operator readiness, and operator comparison now index route/model identity, tokenizer/template coverage, and model-hash-or-explicit-gap coverage for route-profile and cold/warm benchmark evidence, while still marking the broader Lunar Lake objective not complete because LNL258V-POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence."
+commands = [
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+]
+may_claim = [
+  "The Lunar Lake completion audit reflects REG-011 readiness, regression, and comparison indexing of route/model identity readiness for route-profile and cold/warm benchmark evidence.",
+  "The audit records 23/23 route rows with model identity and tokenizer/template coverage, with OpenVINO IR rows using explicit no-local-model-SHA gaps instead of fake hashes.",
+  "The audit still records excellent support as not complete because LNL258V-POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence.",
+  "The audit refresh is no-inference and leaves route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, measured-temperature, and BitNet QK256/I2_S behavior claims unchanged.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "A measured thermal temperature is available.",
+  "Battery-mode low_power evidence is available while the 258V remains on AC power.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-006"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"

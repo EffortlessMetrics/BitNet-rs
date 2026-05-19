@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-20T01:20:00Z",
+  "created_utc": "2026-05-20T04:35:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "4e0cc053d8a4d33888ca1677d5b4002c53e8c698",
+  "source_revision": "790037837d26fb3a0706a37e313b37d3ce8f8605",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
   "excellent_support_ready": false,
-  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 now carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
+  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness, and REG-011 now gates route/profile and cold/warm evidence on route/model identity, tokenizer/template coverage, and model-hash-or-explicit-gap coverage. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
   "tracker_state": {
     "active_item": "LNL258V-POWER-006",
     "active_item_status": "blocked",
@@ -16,15 +16,18 @@
     "last_merged_operator_policy_item": "LNL258V-OP-012",
     "last_merged_operator_policy_pr": 5990,
     "last_merged_operator_policy_merge_sha": "5aedf1d241e4953c7b78f079f400097d320297da",
-    "last_merged_regression_item": "LNL258V-REG-010",
-    "last_merged_regression_pr": 6012,
-    "last_merged_regression_merge_sha": "d5918c25e8aa2291b0125a2f73831e03ebe45e13",
+    "last_merged_regression_item": "LNL258V-REG-011",
+    "last_merged_regression_pr": 6027,
+    "last_merged_regression_merge_sha": "6985f5846f8bf1236bda89b399d7d2d4313c0579",
     "last_merged_validate_item": "LNL258V-VALIDATE-002",
     "last_merged_validate_pr": 6014,
     "last_merged_validate_merge_sha": "7af45b27147cda88ec195f293d5d8062ce67955d",
-    "last_closeout_pr": 6015,
-    "last_closeout_merge_sha": "4e0cc053d8a4d33888ca1677d5b4002c53e8c698",
-    "audit_refresh_scope": "no_inference_post_validate_power_thermal_refresh"
+    "last_merged_route_model_identity_item": "LNL258V-REG-011",
+    "last_merged_route_model_identity_pr": 6027,
+    "last_merged_route_model_identity_merge_sha": "6985f5846f8bf1236bda89b399d7d2d4313c0579",
+    "last_closeout_pr": 6028,
+    "last_closeout_merge_sha": "790037837d26fb3a0706a37e313b37d3ce8f8605",
+    "audit_refresh_scope": "no_inference_post_reg011_route_model_identity_gate_refresh"
   },
   "command_surface": {
     "ask": {
@@ -39,19 +42,28 @@
       ]
     },
     "validate": {
-      "status": "ready_power_thermal_indexed",
+      "status": "ready_power_thermal_route_model_identity_indexed",
       "operator_ready": true,
       "route_reason_surface": "profile_scoped_routes_and_low_power_blockers_explained",
       "power_profile_evidence_indexed": true,
       "thermal_temperature_availability_indexed": true,
+      "route_model_identity_ready": true,
+      "route_model_identity_rows": "23/23",
+      "route_model_tokenizer_template_rows": "23/23",
+      "route_model_hash_or_explicit_gap_rows": "23/23",
       "evidence": "lunar-lake-operator-readiness.json"
     },
     "regress": {
-      "status": "ready_strict_v2",
+      "status": "ready_strict_v2_route_model_identity_indexed",
       "regression_passed": true,
       "checks_indexed": 15,
       "power_profile_evidence_indexed": true,
       "thermal_temperature_availability_indexed": true,
+      "route_profile_model_identity_ready": true,
+      "cold_warm_model_identity_ready": true,
+      "route_model_identity_rows": "23/23",
+      "route_model_tokenizer_template_rows": "23/23",
+      "route_model_hash_or_explicit_gap_rows": "23/23",
       "evidence": "lunar-lake-regression-bundle-v2.json"
     },
     "compare": {
@@ -59,6 +71,8 @@
       "operator_ready": true,
       "regression_passed": true,
       "comparison_ready": true,
+      "route_profile_model_identity_ready": true,
+      "cold_warm_model_identity_ready": true,
       "evidence": "lunar-lake-operator-comparison.json"
     }
   },
@@ -78,6 +92,10 @@
       "low_power"
     ],
     "profile_scoped_promotion_only": true,
+    "route_model_identity_ready": true,
+    "route_model_identity_rows": "23/23",
+    "route_model_tokenizer_template_rows": "23/23",
+    "route_model_hash_or_explicit_gap_rows": "23/23",
     "openvino_npu_remains_candidate": false,
     "profiles": [
       {
@@ -337,6 +355,7 @@
     "op_012_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-19T185705Z-LNL258V-OP-012-merged.toml",
     "reg_010_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T005500Z-LNL258V-REG-010-merged.toml",
     "validate_002_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T012000Z-LNL258V-VALIDATE-002-merged.toml",
+    "reg_011_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T040000Z-LNL258V-REG-011-merged.toml",
     "power_006_blocked_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-19T230000Z-LNL258V-POWER-006-blocked.toml",
     "route_profile_comparison": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-route-profile-comparison.json",
     "route_promotion_ledger": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-route-promotion.json",
@@ -371,6 +390,6 @@
     "measured_temperature_claim": false,
     "full_bitnet_accelerator_inference_claim": false,
     "bitnet_qk256_i2s_behavior_change": false,
-    "new_inference_scope": "no new inference; audit refresh from committed readiness, route-policy, power, regression, comparison, and tracker evidence"
+    "new_inference_scope": "no new inference; audit refresh from committed readiness, route-policy, route/model identity, power, regression, comparison, and tracker evidence"
   }
 }
