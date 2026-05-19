@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T08:40:00Z"
+event = "pr_open"
+item = "LNL258V-POWER-001"
+pr = 5806
+head_sha = "5aeefcbc8cbf95322c9ab894513f06f6e4b785a5"
+branch = "codex/lunar-lake/LNL258V-POWER-001-power-profile-evidence"
+actor = "codex"
+summary = "Opened PR #5806 for Lunar Lake low-power route power-profile evidence indexing."
+
+notes = [
+  "The PR adds the lunar-lake power-profile command and a committed power-profile evidence receipt that indexes telemetry and low_power blockers without promoting any route.",
+  "The claim boundary remains no new inference, no speedup or power-advantage claim, no route promotion, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]

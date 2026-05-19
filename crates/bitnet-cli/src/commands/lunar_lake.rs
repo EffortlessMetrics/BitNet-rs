@@ -52,6 +52,7 @@ const COLD_WARM_PROFILE_BENCHMARK: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json";
 const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
 const POWER_THERMAL_CONTEXT_FILE: &str = "lunar-lake-power-thermal-context.json";
+const POWER_PROFILE_EVIDENCE_FILE: &str = "lunar-lake-power-profile-evidence.json";
 const DURABILITY_BUNDLE: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
 const DURABLE_QWEN_CPU_WARM_SESSION: &str = "lunar-lake-durable-qwen25-cpu-warm-session.json";
@@ -566,6 +567,37 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when memory and power context cannot be captured.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Index low-power route evidence from telemetry and benchmark receipts without promotion.
+    PowerProfile {
+        /// Artifact root containing the 258V receipts to inspect.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Route profile comparison receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
+        route_profile_comparison: PathBuf,
+
+        /// Cold/warm benchmark qualification receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = COLD_WARM_PROFILE_BENCHMARK_FILE)]
+        cold_warm_benchmark: PathBuf,
+
+        /// Power/thermal context receipt to inspect. Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = POWER_THERMAL_CONTEXT_FILE)]
+        telemetry_context: PathBuf,
+
+        /// Output JSON power-profile evidence receipt to file.
+        #[arg(long, default_value = POWER_PROFILE_EVIDENCE_FILE)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the power-profile evidence cannot be indexed.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -1907,6 +1939,71 @@ pub struct TelemetryClaimBoundary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakePowerProfileEvidence {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub route_profile_comparison_receipt: String,
+    pub cold_warm_benchmark_receipt: String,
+    pub telemetry_context_receipt: String,
+    pub telemetry: PowerProfileTelemetrySummary,
+    pub low_power_routes: Vec<PowerProfileRouteEvidence>,
+    pub power_profile_index_ready: bool,
+    pub low_power_promotion_ready: bool,
+    pub power_advantage_proven: bool,
+    pub gaps: Vec<String>,
+    pub next_required_evidence: Vec<String>,
+    pub claim_boundary: PowerProfileClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PowerProfileTelemetrySummary {
+    pub memory_context_recorded: bool,
+    pub power_context_recorded: bool,
+    pub thermal_context_recorded: bool,
+    pub active_scheme: Option<String>,
+    pub battery_status: Option<String>,
+    pub ac_power_inferred: Option<bool>,
+    pub thermal_zones_visible: Option<u64>,
+    pub thermal_temperature_count: usize,
+    pub current_context_is_ac_only: bool,
+    pub battery_mode_sample_recorded: bool,
+    pub energy_proxy_recorded: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PowerProfileRouteEvidence {
+    pub route_id: String,
+    pub route_status: String,
+    pub ledger_route_status: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub total_response_ms: Option<f64>,
+    pub throughput_tokens_per_s: Option<f64>,
+    pub benchmark_qualified_advantage: bool,
+    pub power_related_blockers: Vec<String>,
+    pub all_blockers: Vec<String>,
+    pub power_promotion_ready: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PowerProfileClaimBoundary {
+    pub new_inference_executed: bool,
+    pub route_promotion_changed: bool,
+    pub speedup_claim: bool,
+    pub power_advantage_claim: bool,
+    pub acceleration_claim: bool,
+    pub native_npu_inference_claim: bool,
+    pub bitnet_qk256_i2s_behavior_changed: bool,
+    pub hidden_fallback_allowed: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeDurabilityBundle {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -2438,6 +2535,33 @@ impl LunarLakeCommand {
                         "Lunar Lake telemetry context capture failed required memory/power context: {}",
                         receipt.gaps.join("; ")
                     );
+                }
+                Ok(())
+            }
+            LunarLakeAction::PowerProfile {
+                artifact_root,
+                route_profile_comparison,
+                cold_warm_benchmark,
+                telemetry_context,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_power_profile_evidence_with_created_utc(
+                    artifact_root,
+                    route_profile_comparison,
+                    cold_warm_benchmark,
+                    telemetry_context,
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_power_profile_evidence(&receipt, Some(&json_out))?;
+                if *strict && !receipt.power_profile_index_ready {
+                    bail!("Lunar Lake power-profile evidence failed: {}", receipt.gaps.join("; "));
                 }
                 Ok(())
             }
@@ -6194,6 +6318,237 @@ pub fn build_telemetry_context_with_created_utc(
     }
 }
 
+pub fn build_power_profile_evidence_with_created_utc(
+    root: &Path,
+    route_profile_comparison: &Path,
+    cold_warm_benchmark: &Path,
+    telemetry_context: &Path,
+    created_utc: String,
+) -> Result<LunarLakePowerProfileEvidence> {
+    let route_profile_path = resolve_receipt_path(root, route_profile_comparison);
+    let benchmark_path = resolve_receipt_path(root, cold_warm_benchmark);
+    let telemetry_path = resolve_receipt_path(root, telemetry_context);
+    let route_profile_json: Value = read_json_receipt(&route_profile_path)?;
+    let benchmark_json: Value = read_json_receipt(&benchmark_path)?;
+    let telemetry_json: Value = read_json_receipt(&telemetry_path)?;
+
+    let mut gaps = Vec::new();
+    if value_at(&route_profile_json, "profile_comparison_ready").and_then(Value::as_bool)
+        != Some(true)
+    {
+        gaps.push("route profile comparison is not ready".to_string());
+    }
+    if value_at(&benchmark_json, "benchmark_gate_ready").and_then(Value::as_bool) != Some(true) {
+        gaps.push("cold/warm benchmark is not ready".to_string());
+    }
+    if value_at(&route_profile_json, "claim_boundary.hidden_fallback_allowed")
+        .and_then(Value::as_bool)
+        == Some(true)
+        || value_at(&benchmark_json, "claim_boundary.hidden_fallback_allowed")
+            .and_then(Value::as_bool)
+            == Some(true)
+    {
+        gaps.push("power-profile evidence refuses hidden fallback".to_string());
+    }
+
+    let telemetry = power_profile_telemetry_summary(&telemetry_json);
+    if !telemetry.power_context_recorded {
+        gaps.push("power context is not recorded".to_string());
+    }
+    if telemetry.current_context_is_ac_only {
+        gaps.push(
+            "current telemetry is AC-only; battery comparison evidence is missing".to_string(),
+        );
+    }
+    if !telemetry.battery_mode_sample_recorded {
+        gaps.push("battery-mode sample is missing for low_power promotion".to_string());
+    }
+    if !telemetry.energy_proxy_recorded {
+        gaps.push("energy proxy evidence is missing for low_power promotion".to_string());
+    }
+    if !telemetry.thermal_context_recorded {
+        gaps.push("thermal sensor context remains unavailable".to_string());
+    }
+
+    let low_power_routes = power_profile_low_power_routes(&route_profile_json, &benchmark_json);
+    if low_power_routes.is_empty() {
+        gaps.push("low_power route evidence is missing".to_string());
+    }
+    let power_advantage_proven = low_power_routes.iter().any(|route| route.power_promotion_ready);
+    if !power_advantage_proven {
+        gaps.push("no low_power route has benchmark-qualified power evidence".to_string());
+    }
+    let low_power_promotion_ready = power_advantage_proven
+        && telemetry.battery_mode_sample_recorded
+        && telemetry.energy_proxy_recorded
+        && telemetry.power_context_recorded
+        && low_power_routes
+            .iter()
+            .any(|route| route.route_status == "promoted" && route.power_promotion_ready);
+    let power_profile_index_ready = value_at(&route_profile_json, "profiles").is_some()
+        && value_at(&benchmark_json, "profiles").is_some()
+        && telemetry.power_context_recorded
+        && !low_power_routes.is_empty();
+
+    let next_required_evidence = vec![
+        "collect AC and battery samples for the same route/profile matrix".to_string(),
+        "record an energy or battery-drain proxy across repeated low_power runs".to_string(),
+        "capture thermal context or keep thermal unavailable as an explicit blocker".to_string(),
+        "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass".to_string(),
+    ];
+
+    Ok(LunarLakePowerProfileEvidence {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_power_profile_evidence".to_string(),
+        proof_stage: "low_power_evidence_indexed_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        route_profile_comparison_receipt: path_string(&route_profile_path),
+        cold_warm_benchmark_receipt: path_string(&benchmark_path),
+        telemetry_context_receipt: path_string(&telemetry_path),
+        telemetry,
+        low_power_routes,
+        power_profile_index_ready,
+        low_power_promotion_ready,
+        power_advantage_proven,
+        gaps,
+        next_required_evidence,
+        claim_boundary: PowerProfileClaimBoundary {
+            new_inference_executed: false,
+            route_promotion_changed: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            native_npu_inference_claim: false,
+            bitnet_qk256_i2s_behavior_changed: false,
+            hidden_fallback_allowed: false,
+        },
+    })
+}
+
+fn power_profile_telemetry_summary(telemetry_json: &Value) -> PowerProfileTelemetrySummary {
+    let memory_context_recorded = value_at(telemetry_json, "availability.memory_context_recorded")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let power_context_recorded = value_at(telemetry_json, "availability.power_context_recorded")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let thermal_context_recorded =
+        value_at(telemetry_json, "availability.thermal_context_recorded")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+    let active_scheme = string_at(telemetry_json, "power.active_scheme");
+    let battery_status = string_at(telemetry_json, "power.battery_status");
+    let ac_power_inferred =
+        value_at(telemetry_json, "power.ac_power_inferred").and_then(Value::as_bool);
+    let thermal_zones_visible = u64_at(telemetry_json, "thermal.thermal_zones_visible");
+    let thermal_temperature_count = value_at(telemetry_json, "thermal.temperatures_celsius")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len);
+    let current_context_is_ac_only = ac_power_inferred == Some(true);
+    let battery_mode_sample_recorded = ac_power_inferred == Some(false);
+    let energy_proxy_recorded = value_at(telemetry_json, "energy_proxy").is_some()
+        || value_at(telemetry_json, "power.energy_proxy").is_some()
+        || value_at(telemetry_json, "battery_delta").is_some();
+
+    PowerProfileTelemetrySummary {
+        memory_context_recorded,
+        power_context_recorded,
+        thermal_context_recorded,
+        active_scheme,
+        battery_status,
+        ac_power_inferred,
+        thermal_zones_visible,
+        thermal_temperature_count,
+        current_context_is_ac_only,
+        battery_mode_sample_recorded,
+        energy_proxy_recorded,
+    }
+}
+
+fn power_profile_low_power_routes(
+    route_profile_json: &Value,
+    benchmark_json: &Value,
+) -> Vec<PowerProfileRouteEvidence> {
+    let Some(profile) = find_profile_value(route_profile_json, "low_power") else {
+        return Vec::new();
+    };
+    let benchmark_profile = find_profile_value(benchmark_json, "low_power");
+    value_at(profile, "route_evidence")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|route| {
+            let route_id = string_at(route, "route_id")?;
+            let benchmark_route = benchmark_profile.and_then(|profile| {
+                value_at(profile, "routes").and_then(Value::as_array).and_then(|routes| {
+                    routes.iter().find(|candidate| {
+                        string_at(candidate, "route_id").as_deref() == Some(route_id.as_str())
+                    })
+                })
+            });
+            let mut all_blockers = string_array_at(route, "blockers");
+            if let Some(benchmark_route) = benchmark_route {
+                all_blockers.extend(string_array_at(benchmark_route, "blockers"));
+            }
+            all_blockers.sort();
+            all_blockers.dedup();
+            let power_related_blockers = all_blockers
+                .iter()
+                .filter(|blocker| {
+                    blocker.contains("power")
+                        || blocker.contains("battery")
+                        || blocker.contains("energy")
+                        || blocker.contains("low_power")
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+            let benchmark_qualified_advantage = value_at(route, "benchmark_qualified_advantage")
+                .and_then(Value::as_bool)
+                == Some(true)
+                || benchmark_route.and_then(|route| {
+                    value_at(route, "benchmark_qualified_advantage").and_then(Value::as_bool)
+                }) == Some(true);
+            let power_promotion_ready = benchmark_qualified_advantage
+                && power_related_blockers.is_empty()
+                && value_at(route, "fallback_used").and_then(Value::as_bool) == Some(false)
+                && value_at(route, "answer_gate_passed").and_then(Value::as_bool) == Some(true);
+            Some(PowerProfileRouteEvidence {
+                route_id,
+                route_status: string_at(route, "route_status")
+                    .unwrap_or_else(|| "unknown".to_string()),
+                ledger_route_status: string_at(route, "ledger_route_status")
+                    .unwrap_or_else(|| "unknown".to_string()),
+                selected_backend: string_at(route, "selected_backend")
+                    .unwrap_or_else(|| "unknown".to_string()),
+                runtime_api: string_at(route, "runtime_api")
+                    .unwrap_or_else(|| "unknown".to_string()),
+                fallback_used: value_at(route, "fallback_used").and_then(Value::as_bool),
+                answer_gate_passed: value_at(route, "answer_gate_passed").and_then(Value::as_bool),
+                total_response_ms: benchmark_route
+                    .and_then(|route| number_at_any(route, &["timing.total_response_ms"]))
+                    .or_else(|| number_at_any(route, &["timing.total_response_ms"])),
+                throughput_tokens_per_s: benchmark_route
+                    .and_then(|route| number_at_any(route, &["timing.throughput_tokens_per_s"]))
+                    .or_else(|| number_at_any(route, &["timing.throughput_tokens_per_s"])),
+                benchmark_qualified_advantage,
+                power_related_blockers,
+                all_blockers,
+                power_promotion_ready,
+            })
+        })
+        .collect()
+}
+
+fn find_profile_value<'a>(json: &'a Value, profile_id: &str) -> Option<&'a Value> {
+    value_at(json, "profiles").and_then(Value::as_array).and_then(|profiles| {
+        profiles
+            .iter()
+            .find(|profile| string_at(profile, "profile_id").as_deref() == Some(profile_id))
+    })
+}
+
 fn collect_telemetry_memory_context() -> TelemetryMemoryContext {
     let mut system = sysinfo::System::new();
     system.refresh_memory();
@@ -8503,6 +8858,25 @@ fn write_or_print_telemetry_context(
         }
         fs::write(path, json)?;
         println!("Lunar Lake telemetry context receipt written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_power_profile_evidence(
+    receipt: &LunarLakePowerProfileEvidence,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake power-profile evidence written to {}", path.display());
     } else {
         println!("{}", String::from_utf8_lossy(&json));
     }
@@ -14738,6 +15112,124 @@ mod tests {
         assert!(!receipt.claim_boundary.acceleration_claim);
         assert_eq!(receipt.memory.source, "sysinfo");
         assert!(receipt.sources.iter().any(|source| source.source == "sysinfo"));
+        Ok(())
+    }
+
+    #[test]
+    fn power_profile_evidence_indexes_low_power_blockers_without_claims() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_json(
+            temp.path(),
+            ROUTE_PROFILE_COMPARISON,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_route_profile_comparison",
+                "profile_comparison_ready": true,
+                "profiles": [
+                    {
+                        "profile_id": "low_power",
+                        "route_evidence": [
+                            {
+                                "route_id": "dense_slm_openvino_npu_candidate",
+                                "route_status": "candidate",
+                                "ledger_route_status": "candidate",
+                                "selected_backend": "openvino-npu",
+                                "runtime_api": "openvino_genai",
+                                "fallback_used": false,
+                                "answer_gate_passed": true,
+                                "benchmark_qualified_advantage": false,
+                                "blockers": [
+                                    "power advantage evidence missing for low_power promotion"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "claim_boundary": {
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            COLD_WARM_PROFILE_BENCHMARK_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
+                "benchmark_gate_ready": true,
+                "profiles": [
+                    {
+                        "profile_id": "low_power",
+                        "routes": [
+                            {
+                                "route_id": "dense_slm_openvino_npu_candidate",
+                                "timing": {
+                                    "total_response_ms": 950.0,
+                                    "throughput_tokens_per_s": 9.5
+                                },
+                                "blockers": [
+                                    "power telemetry receipt does not provide low_power promotion evidence"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "claim_boundary": {
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            POWER_THERMAL_CONTEXT_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "availability": {
+                    "memory_context_recorded": true,
+                    "power_context_recorded": true,
+                    "thermal_context_recorded": false
+                },
+                "power": {
+                    "active_scheme": "Balanced",
+                    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+                    "ac_power_inferred": true
+                },
+                "thermal": {
+                    "thermal_zones_visible": null,
+                    "temperatures_celsius": []
+                }
+            }),
+        )?;
+
+        let receipt = build_power_profile_evidence_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(COLD_WARM_PROFILE_BENCHMARK_FILE),
+            Path::new(POWER_THERMAL_CONTEXT_FILE),
+            "2026-05-19T08:30:00Z".to_string(),
+        )?;
+
+        assert!(receipt.power_profile_index_ready, "{:?}", receipt.gaps);
+        assert!(!receipt.low_power_promotion_ready);
+        assert!(!receipt.power_advantage_proven);
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.power_advantage_claim);
+        assert!(
+            receipt
+                .gaps
+                .iter()
+                .any(|gap| gap.contains("AC-only; battery comparison evidence is missing"))
+        );
+        assert!(receipt.gaps.iter().any(|gap| gap.contains("energy proxy evidence is missing")));
+        let npu = receipt
+            .low_power_routes
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_npu_candidate")
+            .context("missing NPU low_power route")?;
+        assert_eq!(npu.total_response_ms, Some(950.0));
+        assert!(!npu.power_promotion_ready);
+        assert!(npu.power_related_blockers.iter().any(|blocker| blocker.contains("power")));
         Ok(())
     }
 
