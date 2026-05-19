@@ -21,7 +21,9 @@ hard_constraints = [
 [[work_item]]
 id = "I2S-DOCS-000"
 title = "docs(i2s): add I2_S source map and implementation plan"
-status = "ready"
+status = "merged"
+pr = 5880
+merge_sha = "603b87839ae0d59b101c01bf9262be7ae9ca3601"
 branch = "codex/document-i2_s-productization-plan"
 stackable = false
 review_mode = "codex_premerge"

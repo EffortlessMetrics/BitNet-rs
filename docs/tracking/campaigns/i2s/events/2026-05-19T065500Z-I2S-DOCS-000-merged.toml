@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T06:55:00Z"
+campaign = "i2s"
+item = "I2S-DOCS-000"
+event = "merged"
+pr = 5880
+merge_sha = "603b87839ae0d59b101c01bf9262be7ae9ca3601"
+actor = "codex"
+
+notes = [
+  "Merged the docs-only I2_S source map, campaign manifest, proposal, plan, and initial contract specs.",
+  "The merge establishes the I2_S productization control plane without runtime code changes.",
+  "No scaled math, backend parity, strict artifact, receipt, or performance claim is made.",
+]
