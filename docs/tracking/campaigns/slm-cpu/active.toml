@@ -3265,9 +3265,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-055"
-status = "pr_open"
+status = "merged"
 pr = 6008
-head_sha = "fcbc822e01681e5ba282f1bb3890ad139ea265e6"
+head_sha = "b8823a533829db1f199a02ebe9c70201fa87463d"
+merge_sha = "d6a99278d8a931a3e0ba1d38acf4a541a97b3705"
 branch = "codex/slm-cpu-055-production-dense-linear-hook-contract"
 stackable = false
 review_mode = "codex_premerge"
@@ -3307,6 +3308,62 @@ forbidden_paths = [
 may_claim = [
   "SLM-CPU-055 is the next packed Q8_0 sidecar production-hook contract gate after SLM-CPU-054.",
   "The transformer dense-linear path has an explicit contract for eager-F32 selection or a selected Q8_0 sidecar descriptor before any packed compute can be enabled.",
+  "The default Qwen3 Q8_0 Kaby runtime path remains eager_f32_candle unless before/after generated-ID and decoded-text receipts prove a sidecar path is behavior-preserving.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "Generated IDs or decoded text changed.",
+  "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, or fallback=false provenance changed.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-056"
+status = "ready"
+branch = "codex/slm-cpu-056-production-dense-linear-hook-impl"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-055"]
+acceptance = "Implement the first production dense-linear hook boundary defined by SLM-CPU-055 without enabling packed Q8_0 sidecar compute by default. The hook must let transformer dense linear calls report an explicit eager-F32 selection or a selected Q8_0 sidecar descriptor while preserving the current Qwen3 Q8_0 Kaby behavior oracle. Any before/after artifact must prove identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, and fallback_used=false. If packed runtime compute remains disabled, emit a machine-checkable blocker artifact naming the remaining runtime or receipt gap. It must not claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-models --lib dense_gguf_q8 --no-default-features",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-common/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-056 is the first implementation slice for the production dense-linear hook contract added by SLM-CPU-055.",
+  "The transformer dense-linear path can report explicit eager-F32 selection or selected Q8_0 sidecar descriptor state without enabling packed compute by default.",
   "The default Qwen3 Q8_0 Kaby runtime path remains eager_f32_candle unless before/after generated-ID and decoded-text receipts prove a sidecar path is behavior-preserving.",
 ]
 must_not_claim = [

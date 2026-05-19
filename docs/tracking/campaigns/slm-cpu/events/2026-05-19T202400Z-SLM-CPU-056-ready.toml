@@ -1,0 +1,15 @@
+timestamp = "2026-05-19T20:24:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-056"
+event = "in_progress"
+actor = "codex"
+previous_status = "untracked"
+new_status = "ready"
+summary = "Add SLM-CPU-056 as the next ready production dense-linear hook implementation slice."
+
+notes = [
+  "Added SLM-CPU-056 as the implementation slice after the SLM-CPU-055 hook contract gate.",
+  "The item must preserve eager_f32_candle as the default Qwen3 Q8_0 Kaby behavior oracle unless before/after receipts prove identical generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, and fallback=false.",
+  "If packed runtime compute remains disabled, the item must emit a machine-checkable blocker artifact naming the remaining runtime or receipt gap.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
