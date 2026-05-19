@@ -2475,9 +2475,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SETUP-001"
-status = "pr_open"
+status = "merged"
 pr = 5854
 branch = "codex/apple-m4-inference-excellence/M4-SETUP-001-first-run"
+merge_sha = "8e06f84e526f18999610d1ebf022f34eb6dabe22"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
