@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-19T07:15:00Z",
+  "created_utc": "2026-05-19T09:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -51,8 +51,7 @@
               "telemetry_context_indexed"
             ],
             "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "thermal sensor context unavailable in telemetry receipt"
+              "bounded math ask only; not expanded profile regression corpus"
             ]
           },
           "timing_applicability": {
@@ -69,11 +68,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -81,8 +79,7 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": false,
           "blockers": [
-            "bounded math ask only; not expanded profile regression corpus",
-            "thermal sensor context unavailable in telemetry receipt"
+            "bounded math ask only; not expanded profile regression corpus"
           ]
         },
         {
@@ -155,11 +152,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -244,11 +240,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -347,11 +342,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -396,8 +390,7 @@
               "telemetry_context_indexed"
             ],
             "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "thermal sensor context unavailable in telemetry receipt"
+              "bounded math ask only; not expanded profile regression corpus"
             ]
           },
           "timing_applicability": {
@@ -432,11 +425,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -445,8 +437,7 @@
           "promotion_blocked": true,
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
-            "route not promoted for profile ask_short",
-            "thermal sensor context unavailable in telemetry receipt"
+            "route not promoted for profile ask_short"
           ]
         },
         {
@@ -522,11 +513,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -544,7 +534,7 @@
         }
       ],
       "profile_gaps": [
-        "ask_short route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile ask_short; thermal sensor context unavailable in telemetry receipt",
+        "ask_short route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile ask_short",
         "ask_short route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile ask_short"
       ]
     },
@@ -625,11 +615,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -674,8 +663,7 @@
               "telemetry_context_indexed"
             ],
             "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "thermal sensor context unavailable in telemetry receipt"
+              "bounded math ask only; not expanded profile regression corpus"
             ]
           },
           "timing_applicability": {
@@ -710,11 +698,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -723,8 +710,7 @@
           "promotion_blocked": true,
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
-            "route not promoted for profile ask_normal",
-            "thermal sensor context unavailable in telemetry receipt"
+            "route not promoted for profile ask_normal"
           ]
         },
         {
@@ -800,11 +786,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -822,7 +807,7 @@
         }
       ],
       "profile_gaps": [
-        "ask_normal route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile ask_normal; thermal sensor context unavailable in telemetry receipt",
+        "ask_normal route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile ask_normal",
         "ask_normal route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile ask_normal"
       ]
     },
@@ -869,8 +854,7 @@
               "telemetry_context_indexed"
             ],
             "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "thermal sensor context unavailable in telemetry receipt"
+              "bounded math ask only; not expanded profile regression corpus"
             ]
           },
           "timing_applicability": {
@@ -887,11 +871,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -901,7 +884,6 @@
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
             "route not promoted for profile prefill_heavy",
-            "thermal sensor context unavailable in telemetry receipt",
             "timing evidence is not profile-specific for profile prefill_heavy"
           ]
         },
@@ -979,11 +961,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1071,11 +1052,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1093,7 +1073,7 @@
         }
       ],
       "profile_gaps": [
-        "prefill_heavy route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile prefill_heavy; thermal sensor context unavailable in telemetry receipt; timing evidence is not profile-specific for profile prefill_heavy",
+        "prefill_heavy route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile prefill_heavy; timing evidence is not profile-specific for profile prefill_heavy",
         "prefill_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; route not promoted for profile prefill_heavy",
         "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile prefill_heavy",
         "prefill_heavy has no benchmark-qualified promoted route; candidate evidence remains indexed only"
@@ -1142,8 +1122,7 @@
               "telemetry_context_indexed"
             ],
             "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "thermal sensor context unavailable in telemetry receipt"
+              "bounded math ask only; not expanded profile regression corpus"
             ]
           },
           "timing_applicability": {
@@ -1160,11 +1139,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1174,7 +1152,6 @@
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
             "route not promoted for profile decode_heavy",
-            "thermal sensor context unavailable in telemetry receipt",
             "timing evidence is not profile-specific for profile decode_heavy"
           ]
         },
@@ -1252,11 +1229,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1344,11 +1320,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1366,7 +1341,7 @@
         }
       ],
       "profile_gaps": [
-        "decode_heavy route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile decode_heavy; thermal sensor context unavailable in telemetry receipt; timing evidence is not profile-specific for profile decode_heavy",
+        "decode_heavy route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile decode_heavy; timing evidence is not profile-specific for profile decode_heavy",
         "decode_heavy route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; route not promoted for profile decode_heavy",
         "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; route not promoted for profile decode_heavy",
         "decode_heavy has no benchmark-qualified promoted route; candidate evidence remains indexed only"
@@ -1413,8 +1388,7 @@
               "telemetry_context_indexed"
             ],
             "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "thermal sensor context unavailable in telemetry receipt"
+              "bounded math ask only; not expanded profile regression corpus"
             ]
           },
           "timing_applicability": {
@@ -1431,11 +1405,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1444,13 +1417,12 @@
           "promotion_blocked": true,
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
-            "route not promoted for profile structured",
-            "thermal sensor context unavailable in telemetry receipt"
+            "route not promoted for profile structured"
           ]
         }
       ],
       "profile_gaps": [
-        "structured route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile structured; thermal sensor context unavailable in telemetry receipt",
+        "structured route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile structured",
         "structured has no benchmark-qualified promoted route; candidate evidence remains indexed only"
       ]
     },
@@ -1497,8 +1469,7 @@
               "telemetry_context_indexed"
             ],
             "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "thermal sensor context unavailable in telemetry receipt"
+              "bounded math ask only; not expanded profile regression corpus"
             ]
           },
           "timing_applicability": {
@@ -1515,11 +1486,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1530,8 +1500,7 @@
             "bounded math ask only; not expanded profile regression corpus",
             "corpus_v2 profile quality evidence missing",
             "power advantage evidence missing for low_power promotion",
-            "route not promoted for profile low_power",
-            "thermal sensor context unavailable in telemetry receipt"
+            "route not promoted for profile low_power"
           ]
         },
         {
@@ -1613,11 +1582,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1715,11 +1683,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1738,7 +1705,7 @@
         }
       ],
       "profile_gaps": [
-        "low_power route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; corpus_v2 profile quality evidence missing; power advantage evidence missing for low_power promotion; route not promoted for profile low_power; thermal sensor context unavailable in telemetry receipt",
+        "low_power route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; corpus_v2 profile quality evidence missing; power advantage evidence missing for low_power promotion; route not promoted for profile low_power",
         "low_power route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; corpus_v2 profile quality evidence missing; power advantage evidence missing for low_power promotion; profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power; profile_regression_bundle; route not promoted for profile low_power; timing coverage has missing profile fields",
         "low_power route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; corpus_v2 profile quality evidence missing; power advantage evidence missing for low_power promotion; profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power; route not promoted for profile low_power; timing coverage has missing profile fields",
         "low_power has no benchmark-qualified promoted route; candidate evidence remains indexed only"
@@ -1787,8 +1754,7 @@
               "telemetry_context_indexed"
             ],
             "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "thermal sensor context unavailable in telemetry receipt"
+              "bounded math ask only; not expanded profile regression corpus"
             ]
           },
           "timing_applicability": {
@@ -1805,11 +1771,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1819,8 +1784,7 @@
           "blockers": [
             "bounded math ask only; not expanded profile regression corpus",
             "corpus_v2 profile quality evidence missing",
-            "route not promoted for profile warm_resident",
-            "thermal sensor context unavailable in telemetry receipt"
+            "route not promoted for profile warm_resident"
           ]
         },
         {
@@ -1895,11 +1859,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -1993,11 +1956,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },
@@ -2015,7 +1977,7 @@
         }
       ],
       "profile_gaps": [
-        "warm_resident route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; corpus_v2 profile quality evidence missing; route not promoted for profile warm_resident; thermal sensor context unavailable in telemetry receipt",
+        "warm_resident route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; corpus_v2 profile quality evidence missing; route not promoted for profile warm_resident",
         "warm_resident route dense_slm_openvino_npu_candidate remains blocked: benchmark_qualified_speedup_or_power_advantage; candidate route requires benchmark-qualified profile evidence; cold/warm critical timing is incomplete; corpus_v2 profile quality evidence missing; profile_regression_bundle; resident evidence is not a route promotion or power-advantage claim; route not promoted for profile warm_resident; warm_resident timing excludes one-off NPU pipeline construction",
         "warm_resident route dense_slm_openvino_gpu_candidate remains blocked: OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; corpus_v2 profile quality evidence missing; profile timing borrowed from corpus_v2 profile regression_tiny for profile warm_resident; route not promoted for profile warm_resident; timing coverage has missing profile fields",
         "warm_resident has no benchmark-qualified promoted route; candidate evidence remains indexed only"
@@ -2074,11 +2036,10 @@
           },
           "telemetry": {
             "telemetry_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10407493632;used_bytes=23466287104",
+            "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
             "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
-            "thermal_context": "thermal_context_unavailable",
+            "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
             "telemetry_gaps": [
-              "thermal sensor context is not available from the current OS telemetry probe",
               "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             ]
           },

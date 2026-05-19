@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-19T07:15:00Z",
+  "created_utc": "2026-05-19T09:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -18,6 +18,7 @@
     "cold_warm_benchmark_indexed": true,
     "durability_bundle_indexed": true,
     "bitnet_semantic_intake_indexed": true,
+    "power_profile_evidence_indexed": true,
     "required_answer_profiles": [
       "regression_tiny",
       "ask_short",
@@ -92,6 +93,8 @@
         "Profile promotion is not a broad acceleration, power-advantage, or all-profile claim"
       ]
     },
+    "low_power_promotion_ready": false,
+    "power_advantage_proven": false,
     "strict_ready": true,
     "gaps": []
   },
@@ -583,7 +586,7 @@
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
-        "telemetry_gap_count=69",
+        "telemetry_gap_count=46",
         "profile_specific_timing=21/23",
         "proxy_or_missing_timing_routes_blocked=true",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short",
@@ -623,6 +626,26 @@
         "stale_after_merged_count=0",
         "source_lanes=a770",
         "claim_boundary_preserved=true"
+      ]
+    },
+    {
+      "check_id": "low_power_profile_evidence_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json"
+      ],
+      "notes": [
+        "power_profile_index_ready=true",
+        "low_power_promotion_ready=false",
+        "power_advantage_proven=false",
+        "low_power_route_count=3",
+        "low_power_routes_remain_unpromoted=true",
+        "current_context_is_ac_only=true",
+        "battery_mode_sample_recorded=false",
+        "energy_proxy_recorded=false",
+        "thermal_context_recorded=true",
+        "claim_boundary_preserved=true",
+        "blocker_count=9"
       ]
     }
   ],

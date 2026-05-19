@@ -6584,12 +6584,25 @@ pub fn build_power_profile_evidence_with_created_utc(
         && telemetry.power_context_recorded
         && !low_power_routes.is_empty();
 
-    let next_required_evidence = vec![
+    let mut next_required_evidence = vec![
         "collect AC and battery samples for the same route/profile matrix".to_string(),
         "record an energy or battery-drain proxy across repeated low_power runs".to_string(),
-        "capture thermal context or keep thermal unavailable as an explicit blocker".to_string(),
-        "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass".to_string(),
     ];
+    if !telemetry.thermal_context_recorded {
+        next_required_evidence.push(
+            "capture thermal context or keep thermal unavailable as an explicit blocker"
+                .to_string(),
+        );
+    } else if telemetry.thermal_temperature_count == 0 {
+        next_required_evidence.push(
+            "record thermal temperatures if available; current thermal evidence is zone visibility only"
+                .to_string(),
+        );
+    }
+    next_required_evidence.push(
+        "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
+            .to_string(),
+    );
 
     Ok(LunarLakePowerProfileEvidence {
         schema_version: "1.0.0".to_string(),
@@ -6784,8 +6797,17 @@ fn collect_telemetry_thermal_context() -> TelemetryThermalContext {
                 temperatures_celsius,
             };
         }
+        if let Some(thermal_zones_visible) = windows_thermal_zone_count()
+            && thermal_zones_visible > 0
+        {
+            return TelemetryThermalContext {
+                source: "windows_perf_thermal_zone".to_string(),
+                thermal_zones_visible: Some(thermal_zones_visible),
+                temperatures_celsius: Vec::new(),
+            };
+        }
         TelemetryThermalContext {
-            source: "windows_msa_cpi_thermal_zone".to_string(),
+            source: "windows_thermal_probe_unavailable".to_string(),
             thermal_zones_visible: None,
             temperatures_celsius: Vec::new(),
         }
@@ -7000,6 +7022,29 @@ fn windows_thermal_temperatures_celsius() -> Option<Vec<f64>> {
         .filter(|value| *value > -50.0 && *value < 150.0)
         .collect::<Vec<_>>();
     (!temperatures.is_empty()).then_some(temperatures)
+}
+
+#[cfg(target_os = "windows")]
+fn windows_thermal_zone_count() -> Option<u64> {
+    let json = command_stdout(
+        "powershell",
+        &[
+            "-NoProfile",
+            "-Command",
+            "Get-CimInstance -ClassName Win32_PerfFormattedData_Counters_ThermalZoneInformation -ErrorAction SilentlyContinue | Where-Object { $_.Name } | Select-Object -ExpandProperty Name | ConvertTo-Json -Compress",
+        ],
+    )?;
+    let value: Value = serde_json::from_str(&json).ok()?;
+    let count = match value {
+        Value::String(value) => u64::from(!value.trim().is_empty()),
+        Value::Array(values) => values
+            .into_iter()
+            .filter_map(|value| value.as_str().map(str::trim).map(str::to_string))
+            .filter(|value| !value.is_empty())
+            .count() as u64,
+        _ => 0,
+    };
+    nonzero_u64(count)
 }
 
 #[cfg(target_os = "linux")]
@@ -7245,6 +7290,15 @@ fn power_context_is_recorded(context: &BenchmarkTelemetryContext) -> bool {
         || value.contains("missing")
         || value.contains("unavailable")
         || value.contains("required_for_promotion_but_not_recorded"))
+}
+
+fn thermal_context_is_unavailable(value: &str) -> bool {
+    let value = value.to_ascii_lowercase();
+    value == "thermal_context_unavailable"
+        || value.contains("thermal_probe_unavailable")
+        || value.contains("not_recorded")
+        || value.contains("not_normalized")
+        || value.contains("missing")
 }
 
 fn power_context_is_promotion_evidence(telemetry: &BenchmarkTelemetry) -> bool {
@@ -11614,7 +11668,7 @@ fn dense_cpu_profile_timing(
         vec!["bounded math ask only; not expanded profile regression corpus".to_string()];
     if let Some(context) = telemetry_context {
         phase_coverage.push("telemetry_context_indexed".to_string());
-        if context.thermal_context.to_ascii_lowercase().contains("unavailable") {
+        if thermal_context_is_unavailable(&context.thermal_context) {
             known_gaps.push("thermal sensor context unavailable in telemetry receipt".to_string());
         }
         if !power_context_is_recorded(context) {
@@ -15307,6 +15361,30 @@ mod tests {
         assert_eq!(receipt.memory.source, "sysinfo");
         assert!(receipt.sources.iter().any(|source| source.source == "sysinfo"));
         Ok(())
+    }
+
+    #[test]
+    fn thermal_context_can_record_zone_visibility_without_temperatures() {
+        let thermal = TelemetryThermalContext {
+            source: "windows_perf_thermal_zone".to_string(),
+            thermal_zones_visible: Some(1),
+            temperatures_celsius: Vec::new(),
+        };
+
+        let formatted = format_thermal_context(&thermal);
+
+        assert_eq!(
+            formatted,
+            "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable"
+        );
+    }
+
+    #[test]
+    fn thermal_zone_visibility_is_not_a_missing_thermal_context() {
+        assert!(!thermal_context_is_unavailable(
+            "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable"
+        ));
+        assert!(thermal_context_is_unavailable("thermal_context_unavailable"));
     }
 
     #[test]
