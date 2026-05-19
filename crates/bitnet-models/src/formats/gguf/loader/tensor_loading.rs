@@ -147,7 +147,26 @@ fn load_i2s_tensor(
         return load_qk256_tensor(info, data, candle_device, model_config);
     }
 
-    load_dequantized_i2s_tensor(info, data, candle_device, policy_plan)
+    let logical_size = flavor.logical_size_bytes(nelems);
+    if data.len() < logical_size {
+        return Err(BitNetError::Validation(format!(
+            "I2_S '{}': available bytes {} shorter than logical {} for {:?}",
+            info.name,
+            data.len(),
+            logical_size,
+            flavor
+        )));
+    }
+    let logical_data = &data[..logical_size];
+    if data.len() > logical_size {
+        tracing::debug!(
+            "I2_S '{}': trimming {} GGUF alignment padding bytes before decode",
+            info.name,
+            data.len() - logical_size
+        );
+    }
+
+    load_dequantized_i2s_tensor(info, logical_data, candle_device, policy_plan)
 }
 
 fn validate_i2s_can_be_quantized(info: &TensorInfo) -> Result<()> {
