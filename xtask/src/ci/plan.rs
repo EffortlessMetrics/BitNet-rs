@@ -487,9 +487,16 @@ fn is_rust_input_path(path: &str) -> bool {
     path.starts_with("crates/")
         || path.starts_with("crossval/")
         || path.starts_with("tests/")
-        || path.starts_with("tools/bitnet-task/")
+        || path.starts_with("tests-new/")
+        || path.starts_with("tools/")
         || path.starts_with("xtask/")
+        || path.starts_with("xtask-build-helper/")
         || path.starts_with("fuzz/")
+        || path.starts_with("src/")
+        || path.starts_with("examples/")
+        || path.starts_with("benches/")
+        || (path.starts_with("scripts/") && path.ends_with(".rs"))
+        || path == "build.rs"
         || path == "Cargo.toml"
         || path == "Cargo.lock"
         || path == "rust-toolchain.toml"
@@ -1293,6 +1300,31 @@ mod tests {
             plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
             "full-cli label should opt back into the cpu+full-cli smoke"
         );
+    }
+
+    #[test]
+    fn package_mapped_paths_are_rust_inputs() {
+        for path in [
+            "src/lib.rs",
+            "examples/simple_demo.rs",
+            "benches/quantization_ops.rs",
+            "build.rs",
+            "tests-new/lib.rs",
+            "tools/migrate-gen-config/src/main.rs",
+            "xtask-build-helper/src/lib.rs",
+            "scripts/off-workspace-helper.rs",
+        ] {
+            assert!(is_rust_input_path(path), "{path} should run Rust CI planning");
+        }
+    }
+
+    #[test]
+    fn root_package_paths_require_broad_sweep() {
+        let plan = build_plan(&s(&["src/lib.rs", "build.rs"]), &[]);
+
+        assert!(!plan.classification.no_rust_inputs);
+        assert_eq!(plan.packages.changed, vec!["bitnet".to_string()]);
+        assert!(plan.packages.broad_sweep_required);
     }
 
     #[test]
