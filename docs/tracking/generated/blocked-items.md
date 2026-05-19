@@ -421,7 +421,7 @@
 | intel-258v-platform | LNL258V-OP-006 | LNL258V-ROUTE-015 | merged |
 | intel-a770 | A770-003 | A770-000 | merged |
 | intel-a770 | A770-004 | A770-003 | merged |
-| intel-a770 | A770-005 | A770-004 | proposed |
+| intel-a770 | A770-005 | A770-004 | blocked |
 | intel-a770 | A770-006 | A770-005 | proposed |
 | intel-a770 | A770-007 | A770-006 | proposed |
 | intel-npu | NPU-003 | NPU-002 | merged |
