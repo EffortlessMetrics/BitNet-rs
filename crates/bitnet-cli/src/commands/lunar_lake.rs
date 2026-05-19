@@ -11594,10 +11594,10 @@ fn route_model_identity_coverage_from_entries<'a>(
                 route_rows_with_model_hash += 1;
             } else {
                 routes_without_model_hash.insert(route_label.clone());
-                if identity.known_gaps.is_empty() {
-                    routes_without_model_hash_missing_known_gap.insert(route_label.clone());
-                } else {
+                if route_model_identity_has_explicit_no_hash_gap(identity) {
                     route_rows_without_model_hash_with_known_gap += 1;
+                } else {
+                    routes_without_model_hash_missing_known_gap.insert(route_label.clone());
                 }
             }
             if identity.tokenizer_source.is_some() && identity.prompt_template.is_some() {
@@ -11639,6 +11639,17 @@ fn route_model_identity_coverage_ready(coverage: &RouteModelIdentityCoverage) ->
         && coverage.all_route_rows_have_identity
         && coverage.all_route_rows_have_tokenizer_template
         && coverage.model_hash_or_explicit_gap_for_all_route_rows
+}
+
+fn route_model_identity_has_explicit_no_hash_gap(identity: &RouteModelIdentity) -> bool {
+    identity.known_gaps.iter().any(|gap| {
+        let gap = gap.to_ascii_lowercase();
+        (gap.contains("sha256") || gap.contains("model hash"))
+            && (gap.contains("no-local")
+                || gap.contains("no local")
+                || gap.contains("not committed")
+                || gap.contains("instead of a local"))
+    })
 }
 
 fn append_route_model_identity_coverage_gaps(
@@ -16591,6 +16602,36 @@ mod tests {
         assert!(!missing_route_identity_summary.route_model_identity_ready);
         assert!(missing_route_identity_summary.gaps.iter().any(|gap| {
             gap.contains("route profile comparison has route rows without model identity")
+        }));
+
+        let mut unrelated_hash_gap = profiles_with_telemetry.clone();
+        let route_without_hash = unrelated_hash_gap
+            .profiles
+            .iter_mut()
+            .flat_map(|profile| profile.route_evidence.iter_mut())
+            .find(|route| {
+                route
+                    .model_identity
+                    .as_ref()
+                    .map(|identity| identity.model_sha256.is_none())
+                    .unwrap_or(false)
+            })
+            .context("missing route evidence without a model hash")?;
+        route_without_hash
+            .model_identity
+            .as_mut()
+            .context("missing route model identity")?
+            .known_gaps = vec!["OpenVINO timing is not GGUF CPU phase timing".to_string()];
+        fs::write(
+            temp.path().join("route-profile-unrelated-hash-gap.json"),
+            serde_json::to_vec_pretty(&unrelated_hash_gap)?,
+        )?;
+        let unrelated_hash_gap_summary = inspect_route_profile_regression(
+            &temp.path().join("route-profile-unrelated-hash-gap.json"),
+        )?;
+        assert!(!unrelated_hash_gap_summary.route_model_identity_ready);
+        assert!(unrelated_hash_gap_summary.gaps.iter().any(|gap| {
+            gap.contains("route profile comparison has route rows without model hash or explicit no-hash gap")
         }));
 
         let cold_warm = build_cold_warm_benchmark_with_created_utc(
