@@ -1069,6 +1069,30 @@ callee = "unwrap"
 receiver_fingerprint = "prop_assert_eq!(parsed.unwrap(), scenario);"
 
 [[baseline]]
+path = "crates/bitnet-bdd-grid/src/lib.rs"
+family = "panic_macro"
+snippet = 'let cell = cell.unwrap_or_else(|| panic!("unit/local row exists in curated grid"));'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'let cell = cell.unwrap_or_else(|| panic!("unit/local row exists in curated grid"));'
+
+[[baseline]]
+path = "crates/bitnet-bdd-grid/src/lib.rs"
+family = "panic_macro"
+snippet = 'panic!("curated BDD grid contains unknown feature names: {}", unknown.join(", "))'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'panic!("curated BDD grid contains unknown feature names: {}", unknown.join(", "))'
+
+[[baseline]]
 path = "crates/bitnet-bdd-grid/tests/bdd_grid_curated_edge_cases.rs"
 family = "unwrap"
 snippet = "let cell = grid.find(TestingScenario::Unit, ExecutionEnvironment::Local).unwrap();"
@@ -3856,7 +3880,7 @@ receiver_fingerprint = 'let model = *supported_model("qwen2.5-0.5b-instruct-q8_0
 path = "crates/bitnet-cli/src/model_cache.rs"
 family = "unwrap"
 snippet = 'let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s").unwrap();'
-count = 1
+count = 3
 
 [baseline.selector]
 kind = "method_call"
@@ -3868,7 +3892,7 @@ receiver_fingerprint = 'let model = supported_model("microsoft-bitnet-b1.58-2B-4
 path = "crates/bitnet-cli/src/model_cache.rs"
 family = "unwrap"
 snippet = 'let model = supported_model("qwen2.5-0.5b-instruct-q4_k_m").unwrap();'
-count = 1
+count = 2
 
 [baseline.selector]
 kind = "method_call"
@@ -3880,7 +3904,7 @@ receiver_fingerprint = 'let model = supported_model("qwen2.5-0.5b-instruct-q4_k_
 path = "crates/bitnet-cli/src/model_cache.rs"
 family = "unwrap"
 snippet = 'let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();'
-count = 2
+count = 3
 
 [baseline.selector]
 kind = "method_call"
@@ -3892,13 +3916,61 @@ receiver_fingerprint = 'let model = supported_model("qwen2.5-0.5b-instruct-q8_0"
 path = "crates/bitnet-cli/src/model_cache.rs"
 family = "unwrap"
 snippet = 'let model = supported_model("qwen2.5-1.5b-instruct-q4_k_m").unwrap();'
-count = 1
+count = 2
 
 [baseline.selector]
 kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = 'let model = supported_model("qwen2.5-1.5b-instruct-q4_k_m").unwrap();'
+
+[[baseline]]
+path = "crates/bitnet-cli/src/model_cache.rs"
+family = "unwrap"
+snippet = 'let result = verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf")).unwrap();'
+count = 2
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = 'let result = verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf")).unwrap();'
+
+[[baseline]]
+path = "crates/bitnet-cli/src/model_cache.rs"
+family = "unwrap"
+snippet = 'let result = verify_model(model, Path::new("/tmp/missing-qwen-15-q4.gguf")).unwrap();'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = 'let result = verify_model(model, Path::new("/tmp/missing-qwen-15-q4.gguf")).unwrap();'
+
+[[baseline]]
+path = "crates/bitnet-cli/src/model_cache.rs"
+family = "unwrap"
+snippet = 'let result = verify_model(model, Path::new("/tmp/missing-qwen-q4.gguf")).unwrap();'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = 'let result = verify_model(model, Path::new("/tmp/missing-qwen-q4.gguf")).unwrap();'
+
+[[baseline]]
+path = "crates/bitnet-cli/src/model_cache.rs"
+family = "unwrap"
+snippet = 'let result = verify_model(model, Path::new("/tmp/missing-qwen-q8.gguf")).unwrap();'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = 'let result = verify_model(model, Path::new("/tmp/missing-qwen-q8.gguf")).unwrap();'
 
 [[baseline]]
 path = "crates/bitnet-cli/src/model_cache.rs"
@@ -4443,6 +4515,18 @@ receiver_fingerprint = '.expect("parse corpus");'
 [[baseline]]
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
+snippet = '.expect("partial model");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = '.expect("partial model");'
+
+[[baseline]]
+path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
+family = "expect"
 snippet = '.expect("write artifact");'
 count = 1
 
@@ -4480,7 +4564,7 @@ receiver_fingerprint = '.expect("write current");'
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
 snippet = '.expect("write receipt");'
-count = 16
+count = 15
 
 [baseline.selector]
 kind = "method_call"
@@ -4672,7 +4756,7 @@ receiver_fingerprint = 'let cmd = parse(&["test"]).expect("no-args must parse");
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
 snippet = 'let dir = tempfile::tempdir().expect("tempdir");'
-count = 40
+count = 39
 
 [baseline.selector]
 kind = "method_call"
@@ -4767,6 +4851,18 @@ receiver_fingerprint = 'serde_yaml::from_slice(&std::fs::read(corpus_path).expec
 [[baseline]]
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
+snippet = 'std::fs::create_dir_all(&model_dir).expect("model dir");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'std::fs::create_dir_all(&model_dir).expect("model dir");'
+
+[[baseline]]
+path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
+family = "expect"
 snippet = 'std::fs::write(&baseline_path, serde_json::to_vec_pretty(&baseline).expect("json"))'
 count = 4
 
@@ -4828,7 +4924,7 @@ receiver_fingerprint = 'std::fs::write(&receipt, b"{}").expect("write receipt pl
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
 family = "expect"
 snippet = 'std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))'
-count = 4
+count = 3
 
 [baseline.selector]
 kind = "method_call"
@@ -4919,42 +5015,6 @@ kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = "out.to_str().unwrap(),"
-
-[[baseline]]
-path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
-family = "unwrap"
-snippet = 'receipt["prompts"][0].as_object_mut().unwrap().remove("generated_token_ids");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'receipt["prompts"][0].as_object_mut().unwrap().remove("generated_token_ids");'
-
-[[baseline]]
-path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
-family = "unwrap"
-snippet = 'receipt["prompts"][0].as_object_mut().unwrap().remove("tokens");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'receipt["prompts"][0].as_object_mut().unwrap().remove("tokens");'
-
-[[baseline]]
-path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
-family = "unwrap"
-snippet = 'receipt_json.as_object_mut().unwrap().remove("fallback_used");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'receipt_json.as_object_mut().unwrap().remove("fallback_used");'
 
 [[baseline]]
 path = "crates/bitnet-cli/tests/cli_arg_tests.rs"
@@ -167943,6 +168003,30 @@ receiver_fingerprint = 'other => panic!("unsupported test GGUF value: {other:?}"
 [[baseline]]
 path = "crates/bitnet-models/src/dense_gguf_linear_fixture.rs"
 family = "expect"
+snippet = '.expect("extract f16 fixture");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = '.expect("extract f16 fixture");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/dense_gguf_linear_fixture.rs"
+family = "expect"
+snippet = '.expect("extract linear fixture");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = '.expect("extract linear fixture");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/dense_gguf_linear_fixture.rs"
+family = "expect"
 snippet = 'let reader = GgufReader::new(&data).expect("parse bitnet marker fixture");'
 count = 1
 
@@ -167951,6 +168035,18 @@ kind = "method_call"
 container = ""
 callee = "expect"
 receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("parse bitnet marker fixture");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/dense_gguf_linear_fixture.rs"
+family = "expect"
+snippet = 'let reader = GgufReader::new(&data).expect("parse qwen f16 fixture");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("parse qwen f16 fixture");'
 
 [[baseline]]
 path = "crates/bitnet-models/src/dense_gguf_linear_fixture.rs"
@@ -167966,6 +168062,18 @@ receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("parse qwen n
 
 [[baseline]]
 path = "crates/bitnet-models/src/dense_gguf_linear_fixture.rs"
+family = "expect"
+snippet = 'let reader = GgufReader::new(&data).expect("parse qwen q8 fixture");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("parse qwen q8 fixture");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/dense_gguf_linear_fixture.rs"
 family = "panic_macro"
 snippet = 'other => panic!("unsupported test GGUF value: {other:?}"),'
 count = 1
@@ -167975,6 +168083,18 @@ kind = "macro_call"
 container = ""
 callee = "panic"
 receiver_fingerprint = 'other => panic!("unsupported test GGUF value: {other:?}"),'
+
+[[baseline]]
+path = "crates/bitnet-models/src/dense_gguf_linear_fixture.rs"
+family = "unwrap"
+snippet = ".unwrap()"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = ".unwrap()"
 
 [[baseline]]
 path = "crates/bitnet-models/src/dense_gguf_norm_fixture.rs"
@@ -168119,6 +168239,18 @@ kind = "method_call"
 container = ""
 callee = "expect"
 receiver_fingerprint = '.expect("slice length checked"),'
+
+[[baseline]]
+path = "crates/bitnet-models/src/formats/gguf/loader.rs"
+family = "expect"
+snippet = '.expect("tied lm_head should be valid when token embeddings are present");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = '.expect("tied lm_head should be valid when token embeddings are present");'
 
 [[baseline]]
 path = "crates/bitnet-models/src/formats/gguf/loader.rs"
@@ -169011,6 +169143,18 @@ receiver_fingerprint = "skip_gguf_value_seek(&mut cur, t1).unwrap();"
 [[baseline]]
 path = "crates/bitnet-models/src/gguf_simple.rs"
 family = "expect"
+snippet = 'let config = extract_config_from_gguf(&reader).expect("extract config");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let config = extract_config_from_gguf(&reader).expect("extract config");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/gguf_simple.rs"
+family = "expect"
 snippet = 'let dir = TempDir::new().expect("tempdir");'
 count = 2
 
@@ -169035,6 +169179,18 @@ receiver_fingerprint = 'let err = result.err().expect("error").to_string();'
 [[baseline]]
 path = "crates/bitnet-models/src/gguf_simple.rs"
 family = "expect"
+snippet = 'let reader = GgufReader::new(&data).expect("metadata-only gguf reader");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let reader = GgufReader::new(&data).expect("metadata-only gguf reader");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/gguf_simple.rs"
+family = "expect"
 snippet = 'std::fs::write(&path, b"mock_gguf_content").expect("write mock fixture");'
 count = 2
 
@@ -169043,6 +169199,30 @@ kind = "method_call"
 container = ""
 callee = "expect"
 receiver_fingerprint = 'std::fs::write(&path, b"mock_gguf_content").expect("write mock fixture");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/gguf_simple.rs"
+family = "panic_macro"
+snippet = 'other => panic!("test helper does not write {other:?}"),'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'other => panic!("test helper does not write {other:?}"),'
+
+[[baseline]]
+path = "crates/bitnet-models/src/gguf_simple.rs"
+family = "panic_macro"
+snippet = 'panic!("test helper only writes string arrays");'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = 'panic!("test helper only writes string arrays");'
 
 [[baseline]]
 path = "crates/bitnet-models/src/gguf_simple.rs"
@@ -169883,6 +170063,18 @@ kind = "method_call"
 container = ""
 callee = "expect"
 receiver_fingerprint = 'let contract = find_bitnet_model_contract(label).expect("official TL contract");'
+
+[[baseline]]
+path = "crates/bitnet-models/src/model_kernel_compat.rs"
+family = "unreachable"
+snippet = 'unreachable!("supported routes are allowed at the compatibility layer")'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "unreachable"
+receiver_fingerprint = 'unreachable!("supported routes are allowed at the compatibility layer")'
 
 [[baseline]]
 path = "crates/bitnet-models/src/model_metadata.rs"
@@ -175202,6 +175394,30 @@ receiver_fingerprint = 'let qk256_tensor = create_qk256_tensor(rows, cols, code)
 
 [[baseline]]
 path = "crates/bitnet-models/tests/qk256_integration.rs"
+family = "panic_macro"
+snippet = '_ => panic!("Invalid FP32 value in QK256 space: {}", w),'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = '_ => panic!("Invalid FP32 value in QK256 space: {}", w),'
+
+[[baseline]]
+path = "crates/bitnet-models/tests/qk256_integration.rs"
+family = "panic_macro"
+snippet = '_ => panic!("Invalid QK256 code: {}", code),'
+count = 1
+
+[baseline.selector]
+kind = "macro_call"
+container = ""
+callee = "panic"
+receiver_fingerprint = '_ => panic!("Invalid QK256 code: {}", code),'
+
+[[baseline]]
+path = "crates/bitnet-models/tests/qk256_integration.rs"
 family = "unwrap"
 snippet = "let qk256 = qk256.unwrap();"
 count = 1
@@ -178847,6 +179063,114 @@ kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = "let input = Tensor::ones(&[1, 1, 256], DType::F32, &device).unwrap();"
+
+[[baseline]]
+path = "crates/bitnet-qk256-dispatch/tests/forward_qk256.rs"
+family = "unwrap"
+snippet = ".unwrap();"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = ".unwrap();"
+
+[[baseline]]
+path = "crates/bitnet-qk256-dispatch/tests/forward_qk256.rs"
+family = "unwrap"
+snippet = "let input = Tensor::from_vec(vec![1.0f32; 128], (1, 128), &device).unwrap();"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let input = Tensor::from_vec(vec![1.0f32; 128], (1, 128), &device).unwrap();"
+
+[[baseline]]
+path = "crates/bitnet-qk256-dispatch/tests/forward_qk256.rs"
+family = "unwrap"
+snippet = "let input = Tensor::from_vec(vec![1.0f32; 2 * 2 * 256], (2, 2, 256), &device).unwrap();"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let input = Tensor::from_vec(vec![1.0f32; 2 * 2 * 256], (2, 2, 256), &device).unwrap();"
+
+[[baseline]]
+path = "crates/bitnet-qk256-dispatch/tests/forward_qk256.rs"
+family = "unwrap"
+snippet = "let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device).unwrap();"
+count = 2
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device).unwrap();"
+
+[[baseline]]
+path = "crates/bitnet-qk256-dispatch/tests/forward_qk256.rs"
+family = "unwrap"
+snippet = 'let out = forward_qk256(&input, &qk, "layers.0.attention.q_proj.weight.qk256_qs").unwrap();'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = 'let out = forward_qk256(&input, &qk, "layers.0.attention.q_proj.weight.qk256_qs").unwrap();'
+
+[[baseline]]
+path = "crates/bitnet-qk256-dispatch/tests/forward_qk256.rs"
+family = "unwrap"
+snippet = 'let out = forward_qk256(&input, &qk, "layers.0.feed_forward.up_proj.weight.qk256_qs").unwrap();'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = 'let out = forward_qk256(&input, &qk, "layers.0.feed_forward.up_proj.weight.qk256_qs").unwrap();'
+
+[[baseline]]
+path = "crates/bitnet-qk256-dispatch/tests/forward_qk256.rs"
+family = "unwrap"
+snippet = "let out_vals = out.to_vec2::<f32>().unwrap();"
+count = 2
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let out_vals = out.to_vec2::<f32>().unwrap();"
+
+[[baseline]]
+path = "crates/bitnet-qk256-dispatch/tests/forward_qk256.rs"
+family = "unwrap"
+snippet = "let out_vals = out.to_vec3::<f32>().unwrap();"
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let out_vals = out.to_vec3::<f32>().unwrap();"
+
+[[baseline]]
+path = "crates/bitnet-qk256-dispatch/tests/forward_qk256.rs"
+family = "unwrap"
+snippet = "let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();"
+count = 4
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "unwrap"
+receiver_fingerprint = "let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device).unwrap();"
 
 [[baseline]]
 path = "crates/bitnet-qk256-layout-core/tests/layout_tests.rs"
@@ -185054,21 +185378,9 @@ receiver_fingerprint = "validate_dense_regular_llm_cuda_tensor_residency_receipt
 
 [[baseline]]
 path = "crates/bitnet-receipts/tests/m4_run_identity_validation.rs"
-family = "panic_macro"
-snippet = '.unwrap_or_else(|err| panic!("{artifact_kind} should validate: {err}"));'
-count = 1
-
-[baseline.selector]
-kind = "macro_call"
-container = ""
-callee = "panic"
-receiver_fingerprint = '.unwrap_or_else(|err| panic!("{artifact_kind} should validate: {err}"));'
-
-[[baseline]]
-path = "crates/bitnet-receipts/tests/m4_run_identity_validation.rs"
 family = "unwrap"
 snippet = 'json!(m4_run_identity_sha256(&receipt["run_identity"]).unwrap());'
-count = 2
+count = 3
 
 [baseline.selector]
 kind = "method_call"
@@ -185111,42 +185423,6 @@ kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = 'receipt["run_identity"].as_object_mut().unwrap().remove("machine_id");'
-
-[[baseline]]
-path = "crates/bitnet-receipts/tests/m4_run_identity_validation.rs"
-family = "unwrap"
-snippet = 'receipt["run_identity"]["backend"].as_object_mut().unwrap().remove("fallback_used");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'receipt["run_identity"]["backend"].as_object_mut().unwrap().remove("fallback_used");'
-
-[[baseline]]
-path = "crates/bitnet-receipts/tests/m4_run_identity_validation.rs"
-family = "unwrap"
-snippet = 'receipt["run_identity"]["tokenizer"].as_object_mut().unwrap().remove("authority");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'receipt["run_identity"]["tokenizer"].as_object_mut().unwrap().remove("authority");'
-
-[[baseline]]
-path = "crates/bitnet-receipts/tests/m4_run_identity_validation.rs"
-family = "unwrap"
-snippet = 'receipt["run_identity"]["tokenizer"].as_object_mut().unwrap().remove("sha256");'
-count = 1
-
-[baseline.selector]
-kind = "method_call"
-container = ""
-callee = "unwrap"
-receiver_fingerprint = 'receipt["run_identity"]["tokenizer"].as_object_mut().unwrap().remove("sha256");'
 
 [[baseline]]
 path = "crates/bitnet-receipts/tests/m4_run_identity_validation.rs"
@@ -197461,6 +197737,42 @@ callee = "expect"
 receiver_fingerprint = 'self.bpe_piece_to_gguf_id.as_ref().expect("BPE piece-to-ID map should be present");'
 
 [[baseline]]
+path = "crates/bitnet-tokenizers/src/hf_tokenizer.rs"
+family = "expect"
+snippet = 'HfTokenizer::from_file(&path).expect("fixture tokenizer should load")'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'HfTokenizer::from_file(&path).expect("fixture tokenizer should load")'
+
+[[baseline]]
+path = "crates/bitnet-tokenizers/src/hf_tokenizer.rs"
+family = "expect"
+snippet = 'let ids = tokenizer.encode("<s>▁t", false, true).expect("encode should succeed");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let ids = tokenizer.encode("<s>▁t", false, true).expect("encode should succeed");'
+
+[[baseline]]
+path = "crates/bitnet-tokenizers/src/hf_tokenizer.rs"
+family = "expect"
+snippet = 'let ids = tokenizer.encode("▁t", true, true).expect("encode should succeed");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let ids = tokenizer.encode("▁t", true, true).expect("encode should succeed");'
+
+[[baseline]]
 path = "crates/bitnet-tokenizers/src/lib.rs"
 family = "unwrap"
 snippet = "let decoded = tok.decode(&tokens).unwrap();"
@@ -203665,6 +203977,18 @@ callee = "unwrap"
 receiver_fingerprint = 'println!("🎯 First token ID: {}", ids.first().unwrap());'
 
 [[baseline]]
+path = "crates/bitnet-tool-use-core/src/lib.rs"
+family = "expect"
+snippet = 'let call = parse_tool_call(text, &ToolUseFormat::ChatMLTools).expect("valid tool call");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'let call = parse_tool_call(text, &ToolUseFormat::ChatMLTools).expect("valid tool call");'
+
+[[baseline]]
 path = "crates/bitnet-trace/src/lib.rs"
 family = "unwrap"
 snippet = "let deserialized: TraceRecord = serde_json::from_str(&json).unwrap();"
@@ -204107,6 +204431,18 @@ kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = "let json = serde_json::to_string(&rec).unwrap();"
+
+[[baseline]]
+path = "crates/bitnet-transformer/src/lib.rs"
+family = "expect"
+snippet = "self.feed_forward_output_slot.take().expect("
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = "self.feed_forward_output_slot.take().expect("
 
 [[baseline]]
 path = "crates/bitnet-transformer/src/lib.rs"
@@ -205043,6 +205379,18 @@ kind = "method_call"
 container = ""
 callee = "unwrap"
 receiver_fingerprint = "pos0.sub(&pos1).unwrap().abs().unwrap().sum_all().unwrap().to_scalar::<f32>().unwrap();"
+
+[[baseline]]
+path = "crates/bitnet-transformer/tests/transformer_model_tests.rs"
+family = "expect"
+snippet = 'workspace.first_output_surface().expect("workspace should classify one output surface");'
+count = 1
+
+[baseline.selector]
+kind = "method_call"
+container = ""
+callee = "expect"
+receiver_fingerprint = 'workspace.first_output_surface().expect("workspace should classify one output surface");'
 
 [[baseline]]
 path = "crates/bitnet-transformer/tests/transformer_model_tests.rs"
