@@ -8403,7 +8403,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-022"
-status = "in_progress"
+status = "merged"
+pr = 5865
+head_sha = "148288d23ae365526783151b184e63423575b48b"
+merge_sha = "603625f37e97a74f2dd62db4788b4127bc018ee9"
 branch = "codex/lunar-lake/LNL258V-ROUTE-022-warm-resident-gpu-route"
 stackable = false
 review_mode = "codex_premerge"
