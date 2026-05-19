@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T16:35:00Z"
+event = "merged"
+item = "LNL258V-EXCELLENCE-AUDIT-001"
+branch = "codex/lunar-lake/LNL258V-EXCELLENCE-AUDIT-001"
+pr = 5858
+head_sha = "1da2a659e9466fe026e935e5c7bcdc1962e7968f"
+merge_sha = "4e60ea8daa06398a06cdedf91b62fcda1c201019"
+actor = "codex"
+summary = "Merged LNL258V-EXCELLENCE-AUDIT-001 after adding the no-inference Lunar Lake excellence audit artifact."
+
+notes = [
+  "PR #5858 added lunar-lake-excellence-audit.json to map current command surfaces, route policy, quality/regression, telemetry, BitNet, Arc, and NPU evidence to the excellent-platform objective.",
+  "The audit records operator-ready/profile-aware status while explicitly marking unpromoted prefill_heavy, decode_heavy, structured, low_power, and warm_resident gaps.",
+  "The merge makes no new-inference, route-promotion, speedup, power-advantage, acceleration, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]
