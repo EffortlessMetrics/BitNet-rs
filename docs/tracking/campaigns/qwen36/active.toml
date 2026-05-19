@@ -1,0 +1,13 @@
+schema = 1
+campaign = "qwen36"
+status = "active"
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+plan = "plans/qwen36/implementation-plan.md"
+source_map = "docs/qwen/qwen36/README.md"
+
+[work_item]
+id = "QWEN36-DOCS-000"
+title = "Register Qwen3.6 family governance lane"
+status = "ready"

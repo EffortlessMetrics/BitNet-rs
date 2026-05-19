@@ -695,3 +695,21 @@ Technical specification for implementing manual KV cache position tracking in th
 - `bitnet-cpp-ffi-sockets.md` - Socket 1/Socket 3 architecture
 - `dual-backend-crossval.md` - Cross-validation patterns
 - `cpp-setup.md` - C++ reference setup guide
+
+
+## Qwen3.6 Modern Dense/Multimodal Family
+
+Use these artifacts before implementing or claiming Qwen3.6 support:
+
+1. [Qwen3.6 Source Map](../qwen/qwen36/README.md)
+2. [Qwen3.6 Implementation Plan](../../plans/qwen36/implementation-plan.md)
+3. [Qwen3.6 Proposal](../proposals/BITNET-PROP-0017-qwen36-modern-dense-model-family.md)
+4. [Artifact Contract](BITNET-SPEC-QWEN36-FAMILY-ARTIFACT-CONTRACT.md)
+5. [Processor/Tokenizer/Prompt](BITNET-SPEC-QWEN36-PROCESSOR-TOKENIZER-PROMPT.md)
+6. [Architecture Inventory](BITNET-SPEC-QWEN36-ARCHITECTURE-INVENTORY.md)
+7. [External Reference](BITNET-SPEC-QWEN36-EXTERNAL-REFERENCE.md)
+8. [Text-only Native](BITNET-SPEC-QWEN36-TEXT-ONLY-NATIVE.md)
+9. [MoE 35B-A3B](BITNET-SPEC-QWEN36-MOE-35B-A3B.md)
+10. [Multimodal](BITNET-SPEC-QWEN36-MULTIMODAL.md), [Memory Envelope](BITNET-SPEC-QWEN36-MEMORY-ENVELOPE.md), [Quality](BITNET-SPEC-QWEN36-QUALITY.md), [Performance](BITNET-SPEC-QWEN36-PERFORMANCE.md), [Server](BITNET-SPEC-QWEN36-SERVER.md), [Status Surface](BITNET-SPEC-QWEN36-STATUS-SURFACE.md)
+
+Qwen3.6 is a separate governed family lane: not BitNet proof, not inherited Qwen2.5/Qwen3 0.6B proof, and external sidecar/API evidence is not native Rust proof.

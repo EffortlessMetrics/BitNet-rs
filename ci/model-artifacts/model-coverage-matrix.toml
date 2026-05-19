@@ -1663,3 +1663,267 @@ claim_boundary = "x86 TL2 3B is a registered future route only and must not inhe
   full_residency_claim = false
   bitnet_packed_i2s_qk256_proof = false
   dense_regular_llm_cuda_proof = false
+
+
+[[entry]]
+id = "qwen36_27b_hf_reference_candidate"
+model_class = "dense_llm"
+family = "qwen3_6"
+artifact_kind = "safetensors_vl_reference"
+contract_id = "qwen36_27b_hf_safetensors"
+status = "registered_reference_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify qwen3.6-27b"
+tokenizer_authority = "pending_processor_prompt_audit"
+prompt_authority = "pending_qwen36_chat_template_audit"
+cpu_reference = "pending_external_reference_good"
+accelerator_routes = []
+required_receipts = ["artifact_inventory","processor_tokenizer_prompt_authority","external_reference_good","architecture_inventory","memory_envelope"]
+forbidden_claims = ["bitnet_packed_i2s_qk256_proof","qwen2_5_proof_inheritance","qwen3_06b_proof_inheritance","native_rust_answer_ready","cuda_answer_ready","server_ready","speedup"]
+next_proof = "Record artifact inventory, processor/tokenizer/prompt authority, external reference corpus, architecture inventory, and memory envelope before any local runtime claim."
+claim_boundary = "Registered reference candidate only; not BitNet, not Qwen2.5/Qwen3 0.6B inheritance, and no native answer/backend/server/speed claims."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+
+[[entry]]
+id = "qwen36_27b_text_quant_candidate"
+model_class = "dense_llm"
+family = "qwen3_6"
+artifact_kind = "text_quant_candidate"
+contract_id = "qwen36_27b_text_quant_candidate"
+status = "registered_reference_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify qwen3.6-27b-text-quant"
+tokenizer_authority = "pending_processor_prompt_audit"
+prompt_authority = "pending_qwen36_chat_template_audit"
+cpu_reference = "pending_external_reference_good"
+accelerator_routes = []
+required_receipts = ["artifact_inventory","processor_tokenizer_prompt_authority","external_reference_good","architecture_inventory","memory_envelope"]
+forbidden_claims = ["bitnet_packed_i2s_qk256_proof","qwen2_5_proof_inheritance","qwen3_06b_proof_inheritance","native_rust_answer_ready","cuda_answer_ready","server_ready","speedup"]
+next_proof = "Record artifact inventory, processor/tokenizer/prompt authority, external reference corpus, architecture inventory, and memory envelope before any local runtime claim."
+claim_boundary = "Registered reference candidate only; not BitNet, not Qwen2.5/Qwen3 0.6B inheritance, and no native answer/backend/server/speed claims."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+
+[[entry]]
+id = "qwen36_35b_a3b_hf_reference_candidate"
+model_class = "dense_llm"
+family = "qwen3_6"
+artifact_kind = "safetensors_vl_reference"
+contract_id = "qwen36_35b_a3b_hf_safetensors"
+status = "registered_reference_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify qwen3.6-35b-a3b"
+tokenizer_authority = "pending_processor_prompt_audit"
+prompt_authority = "pending_qwen36_chat_template_audit"
+cpu_reference = "pending_external_reference_good"
+accelerator_routes = []
+required_receipts = ["artifact_inventory","processor_tokenizer_prompt_authority","external_reference_good","architecture_inventory","memory_envelope"]
+forbidden_claims = ["bitnet_packed_i2s_qk256_proof","qwen2_5_proof_inheritance","qwen3_06b_proof_inheritance","native_rust_answer_ready","cuda_answer_ready","server_ready","speedup"]
+next_proof = "Record artifact inventory, processor/tokenizer/prompt authority, external reference corpus, architecture inventory, and memory envelope before any local runtime claim."
+claim_boundary = "Registered reference candidate only; not BitNet, not Qwen2.5/Qwen3 0.6B inheritance, and no native answer/backend/server/speed claims."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+
+[[entry]]
+id = "qwen36_35b_a3b_text_sidecar_candidate"
+model_class = "dense_llm"
+family = "qwen3_6"
+artifact_kind = "safetensors_vl_reference"
+contract_id = "qwen36_35b_a3b_text_sidecar_candidate"
+status = "registered_reference_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify qwen3.6-35b-a3b-text-sidecar"
+tokenizer_authority = "pending_processor_prompt_audit"
+prompt_authority = "pending_qwen36_chat_template_audit"
+cpu_reference = "pending_external_reference_good"
+accelerator_routes = []
+required_receipts = ["artifact_inventory","processor_tokenizer_prompt_authority","external_reference_good","architecture_inventory","memory_envelope"]
+forbidden_claims = ["bitnet_packed_i2s_qk256_proof","qwen2_5_proof_inheritance","qwen3_06b_proof_inheritance","native_rust_answer_ready","cuda_answer_ready","server_ready","speedup"]
+next_proof = "Record artifact inventory, processor/tokenizer/prompt authority, external reference corpus, architecture inventory, and memory envelope before any local runtime claim."
+claim_boundary = "Registered reference candidate only; not BitNet, not Qwen2.5/Qwen3 0.6B inheritance, and no native answer/backend/server/speed claims."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+
+[[entry]]
+id = "qwen36_plus_api_reference"
+model_class = "dense_llm"
+family = "qwen3_6"
+artifact_kind = "hosted_api_reference"
+contract_id = "qwen36_plus_api_reference"
+status = "registered_reference_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify qwen3.6-plus-api"
+tokenizer_authority = "pending_processor_prompt_audit"
+prompt_authority = "pending_qwen36_chat_template_audit"
+cpu_reference = "pending_external_reference_good"
+accelerator_routes = []
+required_receipts = ["artifact_inventory","processor_tokenizer_prompt_authority","external_reference_good","architecture_inventory","memory_envelope"]
+forbidden_claims = ["bitnet_packed_i2s_qk256_proof","qwen2_5_proof_inheritance","qwen3_06b_proof_inheritance","native_rust_answer_ready","cuda_answer_ready","server_ready","speedup"]
+next_proof = "Record artifact inventory, processor/tokenizer/prompt authority, external reference corpus, architecture inventory, and memory envelope before any local runtime claim."
+claim_boundary = "Registered reference candidate only; not BitNet, not Qwen2.5/Qwen3 0.6B inheritance, and no native answer/backend/server/speed claims."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+
+[[entry]]
+id = "qwen36_max_preview_api_reference"
+model_class = "dense_llm"
+family = "qwen3_6"
+artifact_kind = "hosted_api_reference"
+contract_id = "qwen36_max_preview_api_reference"
+status = "registered_reference_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify qwen3.6-max-preview-api"
+tokenizer_authority = "pending_processor_prompt_audit"
+prompt_authority = "pending_qwen36_chat_template_audit"
+cpu_reference = "pending_external_reference_good"
+accelerator_routes = []
+required_receipts = ["artifact_inventory","processor_tokenizer_prompt_authority","external_reference_good","architecture_inventory","memory_envelope"]
+forbidden_claims = ["bitnet_packed_i2s_qk256_proof","qwen2_5_proof_inheritance","qwen3_06b_proof_inheritance","native_rust_answer_ready","cuda_answer_ready","server_ready","speedup"]
+next_proof = "Record artifact inventory, processor/tokenizer/prompt authority, external reference corpus, architecture inventory, and memory envelope before any local runtime claim."
+claim_boundary = "Registered reference candidate only; not BitNet, not Qwen2.5/Qwen3 0.6B inheritance, and no native answer/backend/server/speed claims."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+
+[[entry]]
+id = "qwen36_ollama_reference_candidate"
+model_class = "dense_llm"
+family = "qwen3_6"
+artifact_kind = "ollama_reference_candidate"
+contract_id = "qwen36_ollama_reference_candidate"
+status = "registered_reference_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify qwen3.6-ollama"
+tokenizer_authority = "pending_processor_prompt_audit"
+prompt_authority = "pending_qwen36_chat_template_audit"
+cpu_reference = "pending_external_reference_good"
+accelerator_routes = []
+required_receipts = ["artifact_inventory","processor_tokenizer_prompt_authority","external_reference_good","architecture_inventory","memory_envelope"]
+forbidden_claims = ["bitnet_packed_i2s_qk256_proof","qwen2_5_proof_inheritance","qwen3_06b_proof_inheritance","native_rust_answer_ready","cuda_answer_ready","server_ready","speedup"]
+next_proof = "Record artifact inventory, processor/tokenizer/prompt authority, external reference corpus, architecture inventory, and memory envelope before any local runtime claim."
+claim_boundary = "Registered reference candidate only; not BitNet, not Qwen2.5/Qwen3 0.6B inheritance, and no native answer/backend/server/speed claims."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
+
+
+[[entry]]
+id = "qwen36_mlx_reference_candidate"
+model_class = "dense_llm"
+family = "qwen3_6"
+artifact_kind = "mlx_reference_candidate"
+contract_id = "qwen36_mlx_reference_candidate"
+status = "registered_reference_candidate"
+current_tier = "registered"
+verifier_surface = "bitnet model verify qwen3.6-mlx"
+tokenizer_authority = "pending_processor_prompt_audit"
+prompt_authority = "pending_qwen36_chat_template_audit"
+cpu_reference = "pending_external_reference_good"
+accelerator_routes = []
+required_receipts = ["artifact_inventory","processor_tokenizer_prompt_authority","external_reference_good","architecture_inventory","memory_envelope"]
+forbidden_claims = ["bitnet_packed_i2s_qk256_proof","qwen2_5_proof_inheritance","qwen3_06b_proof_inheritance","native_rust_answer_ready","cuda_answer_ready","server_ready","speedup"]
+next_proof = "Record artifact inventory, processor/tokenizer/prompt authority, external reference corpus, architecture inventory, and memory envelope before any local runtime claim."
+claim_boundary = "Registered reference candidate only; not BitNet, not Qwen2.5/Qwen3 0.6B inheritance, and no native answer/backend/server/speed claims."
+
+  [entry.claims]
+  registered = true
+  structurally_valid = false
+  reference_good = false
+  cpu_answer_ready = false
+  accelerator_answer_ready = false
+  benchmark_qualified = false
+  product_cli_ready = false
+  server_ready = false
+  speedup_claim = false
+  full_residency_claim = false
+  bitnet_packed_i2s_qk256_proof = false
+  dense_regular_llm_cuda_proof = false
