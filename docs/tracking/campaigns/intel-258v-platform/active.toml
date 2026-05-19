@@ -8349,7 +8349,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-010"
-status = "in_progress"
+status = "pr_open"
+pr = 5953
+head_sha = "01eb1789cd1bad42b5e955ab06541a4728cbdc5b"
 branch = "codex/lunar-lake/LNL258V-OP-010-structured-blocked-ask"
 stackable = false
 review_mode = "codex_premerge"
