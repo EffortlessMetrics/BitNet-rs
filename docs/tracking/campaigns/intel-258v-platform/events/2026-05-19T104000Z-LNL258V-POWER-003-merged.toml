@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T10:40:00Z"
+event = "merged"
+item = "LNL258V-POWER-003"
+branch = "codex/lunar-lake/LNL258V-POWER-003-energy-proxy-receipt"
+pr = 5823
+head_sha = "0174aa0b829d92ed3e904f36011d64e83f51dd76"
+merge_sha = "249565539163d2642cbb18ed55a9a7c7bcd8318e"
+actor = "codex"
+summary = "Merged LNL258V-POWER-003 after adding a structured low_power energy-proxy receipt builder."
+
+notes = [
+  "PR #5823 adds bitnet lunar-lake energy-proxy for before/after battery-mode telemetry receipts.",
+  "The energy-proxy receipt records route/profile identity, sample count, battery status, charge delta, and strict claim boundaries.",
+  "This supplies a validated input to lunar-lake power-profile for future battery runs without promoting low_power.",
+  "The closeout preserves no new inference, no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]

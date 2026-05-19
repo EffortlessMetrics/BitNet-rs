@@ -8347,7 +8347,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-003"
-status = "in_progress"
+status = "merged"
+pr = 5823
+head_sha = "0174aa0b829d92ed3e904f36011d64e83f51dd76"
+merge_sha = "249565539163d2642cbb18ed55a9a7c7bcd8318e"
 branch = "codex/lunar-lake/LNL258V-POWER-003-energy-proxy-receipt"
 stackable = false
 review_mode = "codex_premerge"
