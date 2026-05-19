@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T01:13:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-RECEIPT-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5811
+head_sha = "d6868c5b1eccad8012ab21469717e4ccc5ae162c"
+merge_sha = "c8cbe29a0bd21cc5cb77680df81224f404a1306a"
+branch = "codex/apple-m4-inference-excellence/M4-RECEIPT-001-schema-compat"
+
+notes = [
+  "Closed M4-RECEIPT-001 after PR #5811 merged receipt-schema compatibility and negative fixtures for M4 evidence families.",
+  "The merged tests cover M4 eval, benchmark, warm-session, chat-gate, serve-gate, dashboard, and failure receipt families, including missing identity fields, fallback ambiguity, malformed timing, absent token IDs, and unsupported claim fields.",
+  "No live runtime proof, model support, backend support, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was added.",
+]
