@@ -1,0 +1,18 @@
+timestamp = "2026-05-19T11:12:09Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-010"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5929
+merge_sha = "86068afee5e279eea06c4e7b879ef6fb3ece8a7a"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-010-timeout-aware-variance"
+
+notes = [
+  "Merged PR #5929 with timeout-aware M4 dense benchmark variance aggregation.",
+  "`bitnet mac benchmark --repeat` can now preserve calibrated profile timeouts as invalid-for-comparison profile entries instead of aborting the aggregate.",
+  "Timed-out profiles are skipped from timing and throughput samples while invalid-comparison reasons propagate into child and parent benchmark receipts.",
+  "This closeout records tracker state only; M4-BENCH-005 remains responsible for live dense Qwen variance envelopes.",
+  "No BitNet timing variance, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
