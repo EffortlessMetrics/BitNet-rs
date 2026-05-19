@@ -8480,9 +8480,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-012"
-status = "ready"
+status = "merged"
 pr = 5990
 head_sha = "dfb376c49781df2f7206c4edee26726bdfdf8f81"
+merge_sha = "5aedf1d241e4953c7b78f079f400097d320297da"
 branch = "codex/lunar-lake/LNL258V-OP-012-readiness-route-reasons"
 stackable = false
 review_mode = "codex_premerge"

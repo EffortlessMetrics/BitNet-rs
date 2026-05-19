@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T19:05:35Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-012"
+event = "merged"
+actor = "codex"
+previous_status = "ready"
+new_status = "merged"
+pr = 5990
+head_sha = "dfb376c49781df2f7206c4edee26726bdfdf8f81"
+merge_sha = "5aedf1d241e4953c7b78f079f400097d320297da"
+
+notes = [
+  "Merged PR #5990 as 5aedf1d241e4953c7b78f079f400097d320297da.",
+  "LNL258V-OP-012 aligns Lunar Lake operator-readiness route reasons with profile-scoped routing policy.",
+  "The merge keeps CPU as the default route id and regression baseline while GPU/NPU route selection remains ledger/profile-scoped.",
+  "No route promotion, speedup, power-advantage, native accelerator, broad quality, or BitNet QK256/I2_S behavior claim is changed.",
+]
