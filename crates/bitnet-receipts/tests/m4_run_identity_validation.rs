@@ -104,8 +104,8 @@ fn accepts_m4_excellence_receipt_family_contracts() {
         ("bitnet_apple_m4_mac_ask_failure", "bitnet_failure", "mac ask"),
     ] {
         let receipt = receipt_for_family(artifact_kind, evidence_family, command_class);
-        validate_m4_run_identity_contract_json(&receipt)
-            .unwrap_or_else(|err| panic!("{artifact_kind} should validate: {err}"));
+        let validation = validate_m4_run_identity_contract_json(&receipt);
+        assert!(validation.is_ok(), "{artifact_kind} should validate: {validation:?}");
     }
 }
 
@@ -145,7 +145,11 @@ fn rejects_invalid_model_sha() {
 #[test]
 fn rejects_missing_tokenizer_authority() {
     let mut receipt = valid_receipt();
-    receipt["run_identity"]["tokenizer"].as_object_mut().unwrap().remove("authority");
+    let tokenizer = receipt["run_identity"]["tokenizer"].as_object_mut();
+    assert!(tokenizer.is_some(), "tokenizer identity must be an object");
+    if let Some(tokenizer) = tokenizer {
+        tokenizer.remove("authority");
+    }
     refresh_run_identity_digest(&mut receipt);
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
@@ -155,7 +159,11 @@ fn rejects_missing_tokenizer_authority() {
 #[test]
 fn rejects_missing_tokenizer_sha() {
     let mut receipt = valid_receipt();
-    receipt["run_identity"]["tokenizer"].as_object_mut().unwrap().remove("sha256");
+    let tokenizer = receipt["run_identity"]["tokenizer"].as_object_mut();
+    assert!(tokenizer.is_some(), "tokenizer identity must be an object");
+    if let Some(tokenizer) = tokenizer {
+        tokenizer.remove("sha256");
+    }
     refresh_run_identity_digest(&mut receipt);
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
@@ -175,7 +183,11 @@ fn rejects_backend_mismatch() {
 #[test]
 fn rejects_missing_identity_fallback_state() {
     let mut receipt = valid_receipt();
-    receipt["run_identity"]["backend"].as_object_mut().unwrap().remove("fallback_used");
+    let backend = receipt["run_identity"]["backend"].as_object_mut();
+    assert!(backend.is_some(), "backend identity must be an object");
+    if let Some(backend) = backend {
+        backend.remove("fallback_used");
+    }
     refresh_run_identity_digest(&mut receipt);
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
