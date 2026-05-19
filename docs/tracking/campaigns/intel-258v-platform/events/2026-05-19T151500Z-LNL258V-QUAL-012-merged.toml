@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T15:15:00Z"
+event = "merged"
+item = "LNL258V-QUAL-012"
+branch = "codex/lunar-lake/LNL258V-QUAL-012-warm-resident-corpus"
+pr = 5852
+head_sha = "6cabb963ec1732b4bfaaf498116cf36f02ad368a"
+merge_sha = "047da332a9da15d56094e6eee1573d68ef065b77"
+actor = "codex"
+summary = "Merged LNL258V-QUAL-012 after adding the warm_resident answer-corpus-v2 lens."
+
+notes = [
+  "PR #5852 adds the warm_resident_route_copy case to the Lunar Lake dense Qwen answer-corpus-v2 fixture.",
+  "Strict corpus-v2 inspection now requires warm_resident profile and resident_session category coverage before corpus-v2 can be treated as complete profile evidence.",
+  "The merge makes no new-inference, broad-quality, route-promotion, speedup, power-advantage, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]
