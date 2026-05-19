@@ -81,6 +81,9 @@ use monitoring::{
 const DENSE_QWEN25_Q8_MODEL_ID: &str = "qwen2.5-0.5b-instruct-q8_0";
 const DENSE_QWEN25_Q8_MODEL_SHA256: &str =
     "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e";
+const DENSE_QWEN3_Q8_MODEL_ID: &str = "qwen3-0.6b-instruct-q8_0";
+const DENSE_QWEN3_Q8_MODEL_SHA256: &str =
+    "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031";
 const BITNET_QK256_MODEL_ID: &str = "microsoft-bitnet-b1.58-2B-4T-i2s";
 const BITNET_QK256_MODEL_SHA256: &str =
     "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162";
@@ -1400,7 +1403,7 @@ fn server_receipt_route(
     active_model: &model_manager::ModelMetadata,
 ) -> String {
     if matches!(configured_device, DeviceConfig::NvidiaRtx5070TiCuda)
-        && is_dense_qwen25_q8_model(request, active_model)
+        && dense_qwen_server_coverage_for_request(request, active_model).is_some()
     {
         DENSE_QWEN_ROUTE.to_string()
     } else if matches!(configured_device, DeviceConfig::NvidiaRtx5070TiCuda)
@@ -1417,12 +1420,10 @@ fn server_receipt_model_coverage(
     request: &ChatCompletionRequest,
     active_model: &model_manager::ModelMetadata,
 ) -> Option<ServerReceiptModelCoverage> {
-    if route == DENSE_QWEN_ROUTE && is_dense_qwen25_q8_model(request, active_model) {
-        return Some(ServerReceiptModelCoverage {
-            row: "dense_qwen25_05b_q8_cuda",
-            tier: "product_cli_ready",
-            route: DENSE_QWEN_ROUTE,
-        });
+    if route == DENSE_QWEN_ROUTE {
+        if let Some(coverage) = dense_qwen_server_coverage_for_request(request, active_model) {
+            return Some(coverage);
+        }
     }
     if route == BITNET_QK256_ROUTE && is_official_bitnet_qk256_model(request, active_model) {
         return Some(ServerReceiptModelCoverage {
@@ -1459,6 +1460,19 @@ fn server_model_coverage_for_active_model(
         && active_model
             .model_sha256
             .as_deref()
+            .is_some_and(|sha256| sha256.eq_ignore_ascii_case(DENSE_QWEN3_Q8_MODEL_SHA256))
+    {
+        return Some(ServerReceiptModelCoverage {
+            row: "dense_qwen3_06b_q8_candidate",
+            tier: "product_cli_ready",
+            route: DENSE_QWEN_ROUTE,
+        });
+    }
+
+    if active_model_device_is_cuda(active_model)
+        && active_model
+            .model_sha256
+            .as_deref()
             .is_some_and(|sha256| sha256.eq_ignore_ascii_case(BITNET_QK256_MODEL_SHA256))
     {
         return Some(ServerReceiptModelCoverage {
@@ -1471,16 +1485,36 @@ fn server_model_coverage_for_active_model(
     None
 }
 
-fn is_dense_qwen25_q8_model(
+fn dense_qwen_server_coverage_for_request(
     request: &ChatCompletionRequest,
     active_model: &model_manager::ModelMetadata,
-) -> bool {
-    request.model == DENSE_QWEN25_Q8_MODEL_ID
-        && active_model_device_is_cuda(active_model)
-        && active_model
-            .model_sha256
-            .as_deref()
-            .is_some_and(|sha256| sha256.eq_ignore_ascii_case(DENSE_QWEN25_Q8_MODEL_SHA256))
+) -> Option<ServerReceiptModelCoverage> {
+    if !active_model_device_is_cuda(active_model) {
+        return None;
+    }
+    let sha256 = active_model.model_sha256.as_deref()?;
+
+    if request.model == DENSE_QWEN25_Q8_MODEL_ID
+        && sha256.eq_ignore_ascii_case(DENSE_QWEN25_Q8_MODEL_SHA256)
+    {
+        return Some(ServerReceiptModelCoverage {
+            row: "dense_qwen25_05b_q8_cuda",
+            tier: "product_cli_ready",
+            route: DENSE_QWEN_ROUTE,
+        });
+    }
+
+    if request.model == DENSE_QWEN3_Q8_MODEL_ID
+        && sha256.eq_ignore_ascii_case(DENSE_QWEN3_Q8_MODEL_SHA256)
+    {
+        return Some(ServerReceiptModelCoverage {
+            row: "dense_qwen3_06b_q8_candidate",
+            tier: "product_cli_ready",
+            route: DENSE_QWEN_ROUTE,
+        });
+    }
+
+    None
 }
 
 fn is_official_bitnet_qk256_model(
@@ -2076,6 +2110,49 @@ mod tests {
         )
     }
 
+    fn qwen3_server_receipt(request_id: &str) -> super::ServerSharedEngineReceipt {
+        let request = ChatCompletionRequest {
+            model: "qwen3-0.6b-instruct-q8_0".to_string(),
+            messages: vec![ChatCompletionMessage {
+                role: "user".to_string(),
+                content: "Say OK.".to_string(),
+            }],
+            max_tokens: Some(2),
+            temperature: Some(0.0),
+            top_p: Some(1.0),
+            stream: Some(false),
+        };
+        let usage =
+            ChatCompletionUsage { prompt_tokens: 15, completion_tokens: 1, total_tokens: 16 };
+        let metadata = ModelMetadata {
+            model_id: "qwen3-0.6b-instruct-q8_0".to_string(),
+            model_path: "models/Qwen3-0.6B-Q8_0.gguf".to_string(),
+            model_sha256: Some(
+                "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031".to_string(),
+            ),
+            device: "Cuda(0)".to_string(),
+            quantization_type: "Q8_0".to_string(),
+            loaded_at: SystemTime::UNIX_EPOCH,
+            size_mb: 620,
+            parameters: 600_000_000,
+            context_length: 32_768,
+            inference_count: 0,
+            avg_tokens_per_second: 0.0,
+        };
+
+        build_server_shared_engine_receipt(
+            request_id,
+            &request,
+            &metadata,
+            &DeviceConfig::NvidiaRtx5070TiCuda,
+            "chatml",
+            &usage,
+            "OK",
+            31,
+            None,
+        )
+    }
+
     #[tokio::test]
     async fn server_receipt_store_exports_latest_and_by_id() {
         let store = ServerReceiptStore::default();
@@ -2292,6 +2369,53 @@ mod tests {
     }
 
     #[test]
+    fn server_readiness_links_qwen3_model_coverage_without_server_claims()
+    -> Result<(), &'static str> {
+        let response = build_server_readiness_response(
+            ModelMemoryStats {
+                total_models: 1,
+                total_size_mb: 620,
+                active_model_id: Some("model-1".to_string()),
+                cache_size_limit: 3,
+                memory_limit_gb: Some(16.0),
+            },
+            Some(ModelMetadata {
+                model_id: "model-1".to_string(),
+                model_path: "models/Qwen3-0.6B-Q8_0.gguf".to_string(),
+                model_sha256: Some(
+                    "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031".to_string(),
+                ),
+                device: "Cuda(0)".to_string(),
+                quantization_type: "Q8_0".to_string(),
+                loaded_at: SystemTime::UNIX_EPOCH,
+                size_mb: 620,
+                parameters: 600_000_000,
+                context_length: 32_768,
+                inference_count: 0,
+                avg_tokens_per_second: 0.0,
+            }),
+            true,
+            "nvidia-rtx-5070-ti-cuda".to_string(),
+            &DeviceConfig::NvidiaRtx5070TiCuda,
+            false,
+            Vec::new(),
+            Some("nvidia-rtx-5070-ti-cuda".to_string()),
+        );
+
+        let active_model = response.model.active_model.as_ref().ok_or("active model")?;
+        assert_eq!(
+            active_model.model_coverage_row.as_deref(),
+            Some("dense_qwen3_06b_q8_candidate")
+        );
+        assert_eq!(active_model.model_coverage_tier.as_deref(), Some("product_cli_ready"));
+        assert_eq!(active_model.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert!(!response.claim_boundary.server_ready_claimed);
+        assert!(!response.claim_boundary.speedup_claim);
+        assert!(!response.claim_boundary.full_cuda_residency_claimed);
+        Ok(())
+    }
+
+    #[test]
     fn server_shared_engine_renders_qwen_chatml_prompt() {
         let request = ChatCompletionRequest {
             model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
@@ -2490,6 +2614,36 @@ mod tests {
         assert_eq!(metadata.latest_receipt_path, "/receipts/latest");
         assert_eq!(metadata.readiness_path, "/readiness");
         assert_eq!(metadata.model_coverage_row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
+        assert_eq!(metadata.model_coverage_tier.as_deref(), Some("product_cli_ready"));
+        assert_eq!(metadata.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(metadata.selected_route, "dense_regular_llm_cuda");
+        assert!(!metadata.fallback_used);
+    }
+
+    #[test]
+    fn server_shared_engine_receipt_records_qwen3_dense_smoke_boundary() {
+        let receipt = qwen3_server_receipt("qwen3-request-1");
+
+        assert_eq!(receipt.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(receipt.runtime_api, "cuda");
+        assert_eq!(receipt.model_identity.model_id, "qwen3-0.6b-instruct-q8_0");
+        assert_eq!(receipt.requested_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(receipt.selected_route, "dense_regular_llm_cuda");
+        assert_eq!(receipt.model_coverage_row.as_deref(), Some("dense_qwen3_06b_q8_candidate"));
+        assert_eq!(receipt.model_coverage_tier.as_deref(), Some("product_cli_ready"));
+        assert!(!receipt.fallback_used);
+        assert!(receipt.generated_text_non_empty);
+        assert!(receipt.quality_gate.passed);
+        assert!(receipt.server_smoke_response_claimed);
+        assert!(!receipt.server_ready_claimed);
+        assert!(!receipt.speedup_claim);
+        assert!(!receipt.full_cuda_residency_claimed);
+        assert!(receipt.dense_regular_llm_cuda_inference_claimed);
+        assert!(!receipt.bitnet_packed_i2s_qk256_proof);
+
+        let metadata = ChatCompletionResponseMetadata::from_receipt(&receipt);
+        assert_eq!(metadata.receipt_id, "qwen3-request-1");
+        assert_eq!(metadata.model_coverage_row.as_deref(), Some("dense_qwen3_06b_q8_candidate"));
         assert_eq!(metadata.model_coverage_tier.as_deref(), Some("product_cli_ready"));
         assert_eq!(metadata.selected_backend, "nvidia-rtx-5070-ti-cuda");
         assert_eq!(metadata.selected_route, "dense_regular_llm_cuda");

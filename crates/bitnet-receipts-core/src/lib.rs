@@ -316,10 +316,31 @@ fn validate_dense_qwen_server_shared_engine_receipt(
     receipt: &Value,
     model_identity: &Value,
 ) -> Result<()> {
-    require_string_eq(model_identity, "model_id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
-    require_string_eq(model_identity, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
-    require_string_eq(receipt, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
-    require_string_eq(receipt, "model_coverage_row", "dense_qwen25_05b_q8_cuda")?;
+    let (model_id, model_sha256, model_coverage_row) = match required_string(
+        model_identity,
+        "model_id",
+    )? {
+        QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID => (
+            QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID,
+            QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256,
+            "dense_qwen25_05b_q8_cuda",
+        ),
+        QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID => (
+            QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID,
+            QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256,
+            "dense_qwen3_06b_q8_candidate",
+        ),
+        model_id => {
+            return Err(anyhow!(
+                "dense server shared-engine receipt model_id `{model_id}` is not an accepted exact-profile dense Qwen model"
+            ));
+        }
+    };
+
+    require_string_eq(model_identity, "model_id", model_id)?;
+    require_string_eq(model_identity, "model_sha256", model_sha256)?;
+    require_string_eq(receipt, "model_sha256", model_sha256)?;
+    require_string_eq(receipt, "model_coverage_row", model_coverage_row)?;
     require_string_eq(receipt, "model_coverage_tier", "product_cli_ready")?;
     require_bool_eq(receipt, "dense_regular_llm_cuda_inference_claimed", true)?;
     require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", false)?;
