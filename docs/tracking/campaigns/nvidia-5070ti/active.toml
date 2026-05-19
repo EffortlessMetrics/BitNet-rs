@@ -3038,6 +3038,56 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-MODEL-016"
+status = "pr_open"
+branch = "codex/cuda-model-016-qwen3-repeated-comparator-receipt"
+pr = 5941
+head_sha = "7fa254b90efd9727392a5bb82444f755c65511ec"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-MODEL-015"]
+acceptance = "Add a Qwen3 repeated comparator receipt validator and generator for one_token, short_decode_8, short_decode_32, warm_session_3_turns, and decode_128_from_warm_context on Windows 9950X3D + RTX 5070 Ti. Require at least three same-artifact CPU/CUDA comparator runs per profile, selected nvidia-rtx-5070-ti-cuda backend, dense_regular_llm_cuda route, fallback_used=false, quality/parity pass fields, runtime performance phase fields, transfer byte/timing fields or explicit source labeling, VRAM high-water, and power/thermal context. Preserve speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, broad dense GGUF false, Qwen2.5 inheritance false, and BitNet QK256 proof false."
+commands = [
+  "cargo fmt -p bitnet-bench-receipts -- --check",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features qwen3",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "docs/reports/CUDA_MODEL_016_QWEN3_REPEATED_COMPARATOR_RECEIPT_CONTRACT.md",
+  "plans/native-rust-inference/dense-qwen3.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  ".github/workflows/**",
+]
+may_claim = [
+  "The Qwen3 repeated comparator receipt contract and generator exist for the five CUDA-MODEL-015 profiles.",
+  "The contract requires repeated fallback-free same-artifact CPU/CUDA comparator evidence before any Qwen3 benchmark-qualified or speedup review.",
+  "The generated receipt preserves selected RTX 5070 Ti CUDA backend identity and dense_regular_llm_cuda route identity.",
+]
+must_not_claim = [
+  "Qwen3 speedup exists.",
+  "Qwen3 benchmark-qualified speed exists.",
+  "Qwen3 full CUDA residency exists.",
+  "Qwen3 broad dense GGUF readiness exists.",
+  "Qwen3 proof inherits Qwen2.5 evidence.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+  "Runtime math, tokenizer, loader, kernel, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-MODEL-SMOLLM2-001"
 status = "merged"
 branch = "model/cuda-smollm2-360m-artifact-contract"

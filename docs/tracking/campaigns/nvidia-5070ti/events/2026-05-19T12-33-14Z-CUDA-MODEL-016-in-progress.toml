@@ -1,0 +1,20 @@
+timestamp = "2026-05-19T12:33:14Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-016"
+event = "in_progress"
+actor = "codex"
+from = "blocked"
+to = "in_progress"
+branch = "codex/cuda-model-016-qwen3-repeated-comparator-receipt"
+summary = "Started the Qwen3 repeated comparator receipt contract after CUDA-MODEL-015 queued the five required profiles."
+
+artifacts = [
+  "crates/bitnet-bench-receipts/src/bin/qwen3_cuda_repeated_comparator_receipt.rs",
+  "docs/reports/CUDA_MODEL_016_QWEN3_REPEATED_COMPARATOR_RECEIPT_CONTRACT.md",
+]
+
+notes = [
+  "The receipt contract requires repeated same-artifact CPU/CUDA comparator evidence for one_token, short_decode_8, short_decode_32, warm_session_3_turns, and decode_128_from_warm_context.",
+  "Speedup, benchmark-qualified speed, full CUDA residency, broad dense GGUF readiness, Qwen2.5 inheritance, and BitNet packed I2_S/QK256 proof remain forbidden claims.",
+  "No runtime math, tokenizer, loader, kernel, or server behavior changes are in scope.",
+]
