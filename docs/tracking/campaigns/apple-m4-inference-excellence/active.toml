@@ -850,7 +850,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-BENCH-002"]
+blocked_by = ["M4-BENCH-002", "M4-BENCH-008"]
 acceptance = "Publish M4 benchmark repeatability and variance envelopes for dense SLM and BitNet timing families, including run count, sample count, variance band, outlier handling, threshold derivation, and when timing drift is advisory instead of failure."
 commands = [
   "target/release/bitnet --device apple-m4-cpu-neon mac benchmark --repeat <n> --json-out ci/hardware/apple-m4-mac-mini/<date>/benchmark-variance/summary.json",
@@ -878,6 +878,47 @@ may_claim = [
 must_not_claim = [
   "Variance envelopes are broad Apple Silicon benchmarks.",
   "Variance envelopes prove a speedup.",
+]
+
+[[work_item]]
+id = "M4-BENCH-008"
+status = "proposed"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-008-repeat-harness"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BENCH-002"]
+acceptance = "Implement the repeat-run M4 benchmark variance harness required before M4-BENCH-005 can publish live variance evidence: expose `bitnet mac benchmark --repeat <n>` or a documented equivalent, write a benchmark-variance receipt with run count, sample count, variance band, outlier handling, threshold derivation, invalid-comparison reasons, model/profile identity, backend/fallback state, and receipt validation/tests."
+commands = [
+  "target/release/bitnet mac benchmark --help | rg -- '--repeat'",
+  "target/release/bitnet --device apple-m4-cpu-neon mac benchmark --model-id qwen2.5-0.5b-instruct-q8_0 --profile short_prompt_16_out --repeat 2 --json-out ci/hardware/apple-m4-mac-mini/<date>/benchmark-variance/harness-smoke.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/benchmark-variance/harness-smoke.json --json",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_benchmark -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/hardware/apple-m4-mac-mini/**/benchmark-variance/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The M4 benchmark CLI has a repeat-run variance harness and receipt validator ready for live variance evidence.",
+]
+must_not_claim = [
+  "The repeat harness itself publishes the final dense or BitNet variance envelope.",
+  "A two-repeat harness smoke is a broad performance benchmark.",
 ]
 
 [[work_item]]
