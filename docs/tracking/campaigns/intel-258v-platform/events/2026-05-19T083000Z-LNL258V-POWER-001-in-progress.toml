@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T08:30:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-001"
+branch = "codex/lunar-lake/LNL258V-POWER-001-power-profile-evidence"
+actor = "codex"
+summary = "Started Lunar Lake low-power route power-profile evidence indexing."
+
+notes = [
+  "The work adds a no-inference power-profile receipt that indexes telemetry, low_power route-profile evidence, cold/warm timing, and explicit AC-only, battery, energy, and thermal blockers.",
+  "The scope keeps low_power unpromoted and preserves no speedup, power-advantage, native accelerator, route-promotion, or BitNet QK256/I2_S behavior-change claims.",
+]
