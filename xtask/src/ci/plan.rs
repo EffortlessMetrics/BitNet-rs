@@ -759,13 +759,13 @@ fn workspace_package_graph() -> Result<WorkspacePackageGraph> {
             let Some(path) = dep.path.as_ref() else {
                 continue;
             };
-            if let Some(dep_name) = package_by_root.get(&normalized_path_key(path)) {
-                if dep_name != &package.name {
-                    direct_dependents_by_dependency
-                        .entry(dep_name.clone())
-                        .or_default()
-                        .insert(package.name.clone());
-                }
+            if let Some(dep_name) = package_by_root.get(&normalized_path_key(path))
+                && dep_name != &package.name
+            {
+                direct_dependents_by_dependency
+                    .entry(dep_name.clone())
+                    .or_default()
+                    .insert(package.name.clone());
             }
         }
     }
