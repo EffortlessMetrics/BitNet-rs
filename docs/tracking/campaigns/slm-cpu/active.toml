@@ -2695,9 +2695,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-045"
-status = "pr_open"
+status = "merged"
 pr = 5845
-head_sha = "b9e8be252341b3aa2c1af38d63c7a4e1bdc34ed0"
+head_sha = "bd8cae5c28771202169b9f4551de1988bfe4a5fb"
+merge_sha = "78fe24de69bb8ac320869927009e0b6ff2200669"
 branch = "codex/slm-cpu-045-q8-sidecar-carrier"
 stackable = false
 review_mode = "codex_premerge"
