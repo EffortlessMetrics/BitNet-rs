@@ -1267,6 +1267,7 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
     let mut patch_apply = None;
     let mut build_capture = None;
     let mut run_capture = None;
+    let mut operation_errors = Vec::<Value>::new();
 
     if blocked_reasons.is_empty() && !generated_lut_header_exists_before {
         codegen_capture = Some(run_reference_kernel_codegen(&reference_root)?);
@@ -1281,17 +1282,51 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
     }
 
     if blocked_reasons.is_empty() {
-        compatibility = apply_windows_reference_compatibility_fixes(&reference_root)?;
-        patch_apply = Some(run_git(&cpp_root, &["apply", &path_to_string(&patch)])?);
-        if !patch_apply.as_ref().is_some_and(|capture| capture.success) {
-            blocked_reasons.push("reference_layer_trace_patch_apply_failed".to_string());
+        match apply_windows_reference_compatibility_fixes(&reference_root) {
+            Ok(applied) => compatibility = applied,
+            Err(error) => {
+                blocked_reasons.push("reference_compatibility_fixes_failed".to_string());
+                operation_errors.push(json!({
+                    "stage": "reference_compatibility_fixes",
+                    "error": format!("{error:#}"),
+                }));
+            }
         }
     }
 
     if blocked_reasons.is_empty() {
-        build_capture = Some(build_reference_cli(&reference_root, &build_dir)?);
-        if !build_capture.as_ref().is_some_and(|capture| capture.success) {
-            blocked_reasons.push("reference_layer_trace_build_failed".to_string());
+        match run_git(&cpp_root, &["apply", &path_to_string(&patch)]) {
+            Ok(capture) => {
+                if !capture.success {
+                    blocked_reasons.push("reference_layer_trace_patch_apply_failed".to_string());
+                }
+                patch_apply = Some(capture);
+            }
+            Err(error) => {
+                blocked_reasons.push("reference_layer_trace_patch_apply_error".to_string());
+                operation_errors.push(json!({
+                    "stage": "reference_layer_trace_patch_apply",
+                    "error": format!("{error:#}"),
+                }));
+            }
+        }
+    }
+
+    if blocked_reasons.is_empty() {
+        match build_reference_cli(&reference_root, &build_dir) {
+            Ok(capture) => {
+                if !capture.success {
+                    blocked_reasons.push("reference_layer_trace_build_failed".to_string());
+                }
+                build_capture = Some(capture);
+            }
+            Err(error) => {
+                blocked_reasons.push("reference_layer_trace_build_error".to_string());
+                operation_errors.push(json!({
+                    "stage": "reference_layer_trace_build",
+                    "error": format!("{error:#}"),
+                }));
+            }
         }
     }
 
@@ -1303,22 +1338,59 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
         } else {
             let mut argv = reference_argv.clone();
             argv[0] = path_to_string(&selected_exe);
-            run_capture = Some(run_reference_with_sidecar(
+            match run_reference_with_sidecar(
                 &argv,
                 &sidecar,
                 args.trace_layer,
                 args.first_values_limit,
                 args.rope_scalar_trace.as_ref(),
-            )?);
-            if !run_capture.as_ref().is_some_and(|capture| capture.success) {
-                blocked_reasons.push("reference_layer_trace_run_failed".to_string());
+            ) {
+                Ok(capture) => {
+                    if !capture.success {
+                        blocked_reasons.push("reference_layer_trace_run_failed".to_string());
+                    }
+                    run_capture = Some(capture);
+                }
+                Err(error) => {
+                    blocked_reasons.push("reference_layer_trace_run_error".to_string());
+                    operation_errors.push(json!({
+                        "stage": "reference_layer_trace_run",
+                        "error": format!("{error:#}"),
+                    }));
+                }
             }
         }
     }
 
-    let sidecar_value = if sidecar.is_file() { Some(read_json(&sidecar)?) } else { None };
+    let sidecar_value = if sidecar.is_file() {
+        match read_json(&sidecar) {
+            Ok(value) => Some(value),
+            Err(error) => {
+                blocked_reasons
+                    .push("reference_first_token_layer_trace_sidecar_invalid".to_string());
+                operation_errors.push(json!({
+                    "stage": "reference_sidecar_read",
+                    "path": path_to_string(&sidecar),
+                    "error": format!("{error:#}"),
+                }));
+                None
+            }
+        }
+    } else {
+        None
+    };
     let rope_scalar_trace_values =
-        args.rope_scalar_trace.as_ref().and_then(|config| read_jsonl_values(&config.path).ok());
+        args.rope_scalar_trace.as_ref().and_then(|config| match read_jsonl_values(&config.path) {
+            Ok(values) => Some(values),
+            Err(error) => {
+                operation_errors.push(json!({
+                    "stage": "reference_rope_scalar_trace_read",
+                    "path": path_to_string(&config.path),
+                    "error": format!("{error:#}"),
+                }));
+                None
+            }
+        });
     if run_capture.as_ref().is_some_and(|capture| capture.success) && sidecar_value.is_none() {
         blocked_reasons.push("reference_first_token_layer_trace_sidecar_missing".to_string());
     }
@@ -1330,14 +1402,24 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
     }
 
     let cleanup_capture = if reference_root.is_dir() && cpp_root.is_dir() {
-        Some(cleanup_reference_sources(
+        match cleanup_reference_sources(
             &reference_root,
             &cpp_root,
             &generated_lut_header,
             generated_lut_header_exists_before,
             &generated_kernel_config,
             generated_kernel_config_exists_before,
-        )?)
+        ) {
+            Ok(capture) => Some(capture),
+            Err(error) => {
+                blocked_reasons.push("reference_source_cleanup_failed".to_string());
+                operation_errors.push(json!({
+                    "stage": "reference_source_cleanup",
+                    "error": format!("{error:#}"),
+                }));
+                None
+            }
+        }
     } else {
         None
     };
@@ -1427,6 +1509,7 @@ fn run_instrumented_reference(args: &LayerTraceRunArgs) -> Result<Value> {
         "patch_apply": capture_json(patch_apply.as_ref()),
         "build": capture_json(build_capture.as_ref()),
         "reference_run": capture_json(run_capture.as_ref()),
+        "operation_errors": operation_errors,
         "sidecar": {
             "exists": sidecar.is_file(),
             "sha256": sidecar.is_file().then(|| sha256_bytes(&fs::read(&sidecar).unwrap_or_default())),
