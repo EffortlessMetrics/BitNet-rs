@@ -1127,6 +1127,43 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
 }
 
 #[test]
+fn mac_receipts_check_rejects_regression_dashboard_unsupported_claim()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
+    let receipt = dir.path().join("regression-dashboard.json");
+    let markdown = dir.path().join("regression-dashboard.md");
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let markdown_str = markdown.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression-dashboard",
+            "--root",
+            report_root_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+            "--markdown-out",
+            markdown_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let mut receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    receipt_json["claim_boundary"]["dashboard_only"] = serde_json::json!(false);
+    std::fs::write(&receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("dashboard_only"));
+    Ok(())
+}
+
+#[test]
 fn mac_receipts_check_accepts_m4_report_ops_run_identity() -> Result<(), Box<dyn std::error::Error>>
 {
     let dir = tempfile::tempdir()?;
@@ -1816,6 +1853,41 @@ fn mac_bitnet_chat_gate_writes_blocked_receipt_without_required_evidence()
 }
 
 #[test]
+fn mac_receipts_check_rejects_bitnet_chat_gate_unsupported_claim()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let warm_receipt = dir.path().join("missing-warm-session.json");
+    let gate_receipt = dir.path().join("bitnet-chat-gate.json");
+    let warm_receipt_str = warm_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-chat-gate",
+            "--warm-receipt",
+            warm_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("receipt written"));
+
+    let mut receipt_json: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
+    receipt_json["mac_bitnet_claim_boundary"]["chat_enabled"] = serde_json::json!(true);
+    std::fs::write(&gate_receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", gate_receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("chat_enabled"));
+    Ok(())
+}
+
+#[test]
 fn mac_bitnet_chat_gate_writes_ready_receipt_with_required_evidence()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
@@ -2140,6 +2212,41 @@ fn mac_bitnet_serve_gate_writes_blocked_receipt_without_required_evidence()
 }
 
 #[test]
+fn mac_receipts_check_rejects_bitnet_serve_gate_missing_fallback_state()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let chat_receipt = dir.path().join("missing-chat-session.json");
+    let gate_receipt = dir.path().join("bitnet-serve-gate.json");
+    let chat_receipt_str = chat_receipt.to_string_lossy().into_owned();
+    let gate_receipt_str = gate_receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-serve-gate",
+            "--chat-receipt",
+            chat_receipt_str.as_str(),
+            "--json-out",
+            gate_receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("receipt written"));
+
+    let mut receipt_json: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
+    receipt_json.as_object_mut().unwrap().remove("fallback_used");
+    std::fs::write(&gate_receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", gate_receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("fallback_used=true"));
+    Ok(())
+}
+
+#[test]
 fn mac_bitnet_serve_gate_writes_ready_receipt_with_required_evidence()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
@@ -2257,6 +2364,30 @@ fn mac_bitnet_serve_gate_blocks_invalid_failure_evidence() -> Result<(), Box<dyn
             .unwrap_or_default()
             .contains("timeout_boundary.enforced")
     );
+    Ok(())
+}
+
+#[test]
+fn mac_receipts_check_rejects_bitnet_serve_failure_missing_timeout_boundary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("bitnet-serve-failure.json");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+    write_bitnet_serve_failure_receipt(&receipt_path)?;
+
+    let mut receipt_json: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&receipt_path)?)?;
+    receipt_json["timeout_boundary"]
+        .as_object_mut()
+        .ok_or_else(|| std::io::Error::other("timeout_boundary"))?
+        .remove("reached");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt_json)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("timeout_boundary.reached"));
     Ok(())
 }
 
@@ -4445,6 +4576,25 @@ fn mac_benchmark_receipt_contract_rejects_missing_sampling_overhead()
 }
 
 #[test]
+fn mac_benchmark_receipt_contract_rejects_malformed_timing_percentiles()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("slm-benchmark-v2-bad-timing.json");
+    let mut receipt = slm_benchmark_v2_summary();
+    receipt["profiles"][0]["timing"]["prefill_ms"]["p90"] = serde_json::json!(100.0);
+    receipt["profiles"][0]["timing"]["prefill_ms"]["p50"] = serde_json::json!(650.0);
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("p50 <= p90 <= p99"));
+    Ok(())
+}
+
+#[test]
 fn mac_benchmark_receipt_contract_rejects_profiles_required_mismatch()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
@@ -4660,6 +4810,24 @@ fn mac_receipts_check_accepts_dense_slm_quality_corpus_gate() {
 }
 
 #[test]
+fn mac_receipts_check_rejects_warm_session_missing_generated_token_ids() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let receipt_path = dir.path().join("warm-missing-generated-ids.json");
+    let mut receipt = dense_quality_warm_session_receipt();
+    receipt["prompts"][0].as_object_mut().unwrap().remove("generated_token_ids");
+    receipt["prompts"][0].as_object_mut().unwrap().remove("tokens");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
+        .expect("write receipt");
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("generated token IDs"));
+}
+
+#[test]
 fn slm_eval_report_schema_accepts_fixture_summary() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("slm-eval-summary.json");
@@ -4674,6 +4842,27 @@ fn slm_eval_report_schema_accepts_fixture_summary() -> Result<(), Box<dyn std::e
         .stdout(predicate::str::contains("\"prompt_count\": 10"))
         .stdout(predicate::str::contains("\"generated_tokens\": 128"))
         .stdout(predicate::str::contains("\"passed\": true"));
+    Ok(())
+}
+
+#[test]
+fn slm_eval_report_schema_rejects_missing_tokenizer_identity()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_path = dir.path().join("slm-eval-summary-missing-tokenizer.json");
+    let mut receipt = slm_eval_summary_report();
+    receipt["tokenizer"]
+        .as_object_mut()
+        .ok_or_else(|| std::io::Error::other("tokenizer object missing"))?
+        .remove("authority");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+    let receipt_str = receipt_path.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("tokenizer.authority"));
     Ok(())
 }
 
@@ -7156,10 +7345,7 @@ fn answer_corpus_bitnet_eval_dry_run_preserves_task_family_and_reference_schema(
         "reference_not_supplied"
     );
     assert_eq!(receipt["reference_comparison"]["enabled"], true);
-    assert_eq!(
-        receipt["reference_comparison"]["reference_comparison_plan"]["status"],
-        "reference_250_sidecar_not_yet_supplied"
-    );
+    assert!(receipt["reference_comparison"]["reference_comparison_plan"].is_null());
     assert_eq!(receipt["reference_comparison"]["rust_runner"]["fallback_used"], false);
     assert_eq!(receipt["reference_comparison"]["summary"]["reference_not_supplied"], 100);
     assert_eq!(receipt["reference_comparison"]["claim_boundary"]["dense_slm_evidence_used"], false);

@@ -1,0 +1,16 @@
+timestamp = "2026-05-19T00:42:31Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-RECEIPT-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5811
+head_sha = "4b2cc424576489ef853e6e00e51dfb02d925fcb5"
+branch = "codex/apple-m4-inference-excellence/M4-RECEIPT-001-schema-compat"
+
+notes = [
+  "Opened PR #5811 for M4-RECEIPT-001 receipt-schema compatibility and negative fixtures.",
+  "PR scope remains fixture/schema validation only for M4 eval, benchmark, warm, chat-gate, serve-gate, dashboard, and failure receipts.",
+  "No live runtime proof, model support, backend support, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
