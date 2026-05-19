@@ -8281,9 +8281,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-023"
-status = "pr_open"
+status = "merged"
 pr = 5908
-head_sha = "e9f09ea468b19c047c29cc01ef8364e29183156c"
+head_sha = "e62ea5706e694eccac81970f430a84787daca826"
+merge_sha = "aaa34955ca27cfbead36ca36d96132970936ba12"
 branch = "codex/lunar-lake/LNL258V-ROUTE-023-heavy-gpu-promotion"
 stackable = false
 review_mode = "codex_premerge"

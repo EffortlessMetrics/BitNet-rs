@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T19:20:00Z"
+event = "merged"
+item = "LNL258V-ROUTE-023"
+branch = "codex/lunar-lake/LNL258V-ROUTE-023-heavy-gpu-promotion"
+pr = 5908
+head_sha = "e62ea5706e694eccac81970f430a84787daca826"
+merge_sha = "aaa34955ca27cfbead36ca36d96132970936ba12"
+actor = "codex"
+summary = "Merged LNL258V-ROUTE-023 after promoting OpenVINO GPU for dense Qwen heavy profiles."
+
+notes = [
+  "PR #5908 promotes OpenVINO GPU for prefill_heavy and decode_heavy using existing fallback-free corpus-v2, profile-matched timing, and benchmark-qualified latency evidence.",
+  "OpenVINO GPU remains profile-scoped for ask_short, ask_normal, warm_resident, prefill_heavy, and decode_heavy; structured/regression_tiny stay on CPU and low_power remains unpromoted.",
+  "OpenVINO NPU remains candidate-only and the merge makes no new-inference, power-advantage, native accelerator, acceleration, broad GPU, or BitNet QK256/I2_S behavior-change claim.",
+]
