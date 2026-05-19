@@ -890,8 +890,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BENCH-005"
-status = "pr_open"
+status = "merged"
 pr = 6023
+merge_sha = "419e56d9662ef9b599cc1258976470067fe5c0e3"
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-005-repeatability-variance"
 stackable = false
 review_mode = "codex_premerge"
