@@ -10,7 +10,6 @@ use std::io::{self, BufRead, IsTerminal, Read, Write};
 #[cfg(unix)]
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
-#[cfg(unix)]
 use std::process::Command;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
