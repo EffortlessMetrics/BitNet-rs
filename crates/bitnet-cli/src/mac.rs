@@ -5,6 +5,7 @@ use bitnet_repl_core::{ReplInput, parse_repl_input};
 use clap::{ArgAction, Args, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::ffi::OsString;
 use std::io::{self, BufRead, IsTerminal, Read, Write};
 #[cfg(unix)]
 use std::mem::MaybeUninit;
@@ -12,6 +13,7 @@ use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::process::Command;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
@@ -9990,44 +9992,25 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
             eprintln!("mac benchmark: running {profile_id}");
         }
         let profile_start_peak_mb = peak_memory_mb();
-        crate::run_slm_warm_session(
+        let profile_result = run_benchmark_profile_warm_session(BenchmarkProfileRun {
             requested_backend,
-            model.path.clone(),
-            "auto".to_string(),
-            None,
-            None,
-            1,
-            spec.prompts.clone(),
-            spec.max_new_tokens,
-            0.0,
-            1,
-            1.0,
-            1.1,
-            None,
-            true,
-            true,
-            true,
-            true,
+            model,
+            spec: &spec,
             threads,
-            QWEN_PROMPT_TEMPLATE.to_string(),
-            false,
-            None,
-            vec!["<|im_end|>".to_string()],
-            Vec::new(),
-            true,
-            false,
             allocation_audit,
-            crate::SlmWarmSessionOutput::new(false, progress, quiet)
-                .with_model_sha256_override(Some(model.sha256.clone())),
-            1,
-            1,
-            receipt_path.clone(),
-        )
-        .await?;
+            progress,
+            quiet,
+            receipt_path: &receipt_path,
+        })?;
         annotate_and_validate_mac_receipt(&receipt_path, model, "mac benchmark")?;
         let receipt = read_json_receipt(&receipt_path)?;
-        let summary =
-            benchmark_profile_summary(&spec, &receipt_path, &receipt, profile_start_peak_mb)?;
+        let summary = benchmark_profile_summary(
+            &spec,
+            &receipt_path,
+            &receipt,
+            profile_start_peak_mb,
+            profile_result.peak_memory_mb,
+        )?;
         all_samples.extend_from_profile(&summary);
         summaries.push(summary);
     }
@@ -10109,7 +10092,7 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
             "input_tok_s_definition": "prompt_tokens / (prompt_tokenize_ms + prefill_ms)",
             "output_tok_s_definition": "generated_tokens / total_prompt_wall_ms",
             "decode_tok_s_definition": "generated_tokens / decode_total_ms",
-            "memory_drift_definition": "per-profile ru_maxrss process peak delta; monotonic peak, not live RSS",
+            "memory_drift_definition": "per-profile child process peak RSS; child exits between profiles",
             "thresholds_are_claim_bounds_not_speed_guarantees": true
         },
         "evidence": {
@@ -10146,6 +10129,229 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
         profile_ids_display
     );
     Ok(aggregate)
+}
+
+struct BenchmarkProfileRun<'a> {
+    requested_backend: &'a str,
+    model: &'a VerifiedCachedModel,
+    spec: &'a BenchmarkProfileSpec,
+    threads: usize,
+    allocation_audit: bool,
+    progress: bool,
+    quiet: bool,
+    receipt_path: &'a Path,
+}
+
+struct BenchmarkProfileRunResult {
+    peak_memory_mb: Option<f64>,
+}
+
+fn run_benchmark_profile_warm_session(
+    request: BenchmarkProfileRun<'_>,
+) -> Result<BenchmarkProfileRunResult> {
+    let profile_id = request.spec.profile.id();
+    let timeout = Duration::from_secs(benchmark_calibration_profile_timeout_seconds(profile_id));
+    let exe = std::env::current_exe().context("failed to resolve current bitnet executable")?;
+    let args = benchmark_profile_warm_session_args(&request);
+    let mut command = Command::new(&exe);
+    command.args(&args);
+    if request.progress && !request.quiet {
+        command.stdout(std::process::Stdio::inherit());
+        command.stderr(std::process::Stdio::inherit());
+    } else {
+        command.stdout(std::process::Stdio::null());
+        command.stderr(std::process::Stdio::null());
+    }
+    let mut child = command
+        .spawn()
+        .with_context(|| format!("failed to spawn benchmark profile child {}", exe.display()))?;
+    let child_id = child.id();
+    let started = Instant::now();
+    let mut peak_memory_mb = process_rss_mb(child_id);
+    loop {
+        if let Some(status) = child.try_wait()? {
+            if status.success() {
+                return Ok(BenchmarkProfileRunResult { peak_memory_mb });
+            }
+            anyhow::bail!(
+                "benchmark profile {profile_id} child exited with status {status}; receipt path {}",
+                request.receipt_path.display()
+            );
+        }
+        if let Some(rss) = process_rss_mb(child_id) {
+            peak_memory_mb = Some(peak_memory_mb.map_or(rss, |peak| peak.max(rss)));
+        }
+        if started.elapsed() >= timeout {
+            let _ = child.kill();
+            let status = child.wait().ok();
+            let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+            write_benchmark_profile_timeout_receipt(
+                request.receipt_path,
+                request.model,
+                request.requested_backend,
+                request.spec,
+                timeout,
+                elapsed_ms,
+                peak_memory_mb,
+                status.and_then(|status| status.code()),
+            )?;
+            anyhow::bail!(
+                "benchmark profile {profile_id} exceeded calibrated timeout {}s; timeout receipt written to {}",
+                timeout.as_secs(),
+                request.receipt_path.display()
+            );
+        }
+        std::thread::sleep(Duration::from_millis(250));
+    }
+}
+
+fn benchmark_profile_warm_session_args(request: &BenchmarkProfileRun<'_>) -> Vec<OsString> {
+    let mut args = vec![
+        OsString::from("slm-warm-session"),
+        OsString::from("--device"),
+        OsString::from(request.requested_backend),
+        OsString::from("--model"),
+        request.model.path.as_os_str().to_os_string(),
+        OsString::from("--model-format"),
+        OsString::from("auto"),
+    ];
+    for prompt in &request.spec.prompts {
+        args.push(OsString::from("--prompt"));
+        args.push(OsString::from(prompt));
+    }
+    args.extend([
+        OsString::from("--max-new-tokens"),
+        OsString::from(request.spec.max_new_tokens.to_string()),
+        OsString::from("--temperature"),
+        OsString::from("0"),
+        OsString::from("--top-k"),
+        OsString::from("1"),
+        OsString::from("--top-p"),
+        OsString::from("1.0"),
+        OsString::from("--repetition-penalty"),
+        OsString::from("1.1"),
+        OsString::from("--strict-tokenizer"),
+        OsString::from("--strict-loader"),
+        OsString::from("--greedy"),
+        OsString::from("--deterministic"),
+        OsString::from("--threads"),
+        OsString::from(request.threads.to_string()),
+        OsString::from("--prompt-template"),
+        OsString::from(QWEN_PROMPT_TEMPLATE),
+        OsString::from("--stop"),
+        OsString::from("<|im_end|>"),
+        OsString::from("--fail-on-quality"),
+        OsString::from("--min-generated-tokens"),
+        OsString::from("1"),
+        OsString::from("--min-distinct-generated-tokens"),
+        OsString::from("1"),
+        OsString::from("--json-out"),
+        request.receipt_path.as_os_str().to_os_string(),
+    ]);
+    if request.allocation_audit {
+        args.push(OsString::from("--allocation-audit"));
+    }
+    if request.progress {
+        args.push(OsString::from("--progress"));
+    }
+    if request.quiet {
+        args.push(OsString::from("--quiet"));
+    }
+    args
+}
+
+fn write_benchmark_profile_timeout_receipt(
+    path: &Path,
+    model: &VerifiedCachedModel,
+    requested_backend: &str,
+    spec: &BenchmarkProfileSpec,
+    timeout: Duration,
+    elapsed_ms: f64,
+    peak_memory_mb: Option<f64>,
+    exit_code: Option<i32>,
+) -> Result<()> {
+    let profile_id = spec.profile.id();
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_slm_benchmark_profile_timeout",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": path.display().to_string(),
+        "operator_command": "mac benchmark",
+        "status": "invalid_for_comparison",
+        "requested_backend": requested_backend,
+        "selected_backend": requested_backend,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "profile_set": "slm-benchmark-v2",
+        "profile_id": profile_id,
+        "scenario": spec.scenario,
+        "requested_max_new_tokens": spec.max_new_tokens,
+        "target_context_tokens": spec.target_context_tokens,
+        "prompt_count": spec.prompts.len(),
+        "generated_tokens": 0,
+        "timeout_boundary": {
+            "configured_seconds": timeout.as_secs(),
+            "elapsed_ms": round3(elapsed_ms),
+            "reached": true,
+            "enforced": true,
+            "behavior": "child warm-session process killed; profile marked invalid for envelope comparison",
+        },
+        "invalid_comparison_reasons": [
+            format!("profile_timeout_exceeded:{profile_id}:{}s", timeout.as_secs())
+        ],
+        "child_process": {
+            "mode": "slm-warm-session subprocess",
+            "exit_code": exit_code,
+            "killed_on_timeout": true,
+        },
+        "model_cache": {
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        },
+        "memory": {
+            "peak_memory_mb": optional_f64_json(peak_memory_mb),
+            "source": "parent-polled child RSS before timeout kill",
+        },
+        "mac_claim_boundary": {
+            "dense_slm_only": true,
+            "benchmark_profile_timeout": true,
+            "bounded_benchmark_profiles_only": true,
+            "final_variance_envelope": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "bitnet_quality_claimed": false,
+            "bitnet_performance_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false
+        },
+        "speedup_claim": false,
+    });
+    write_json_receipt(path, &receipt)
+}
+
+fn process_rss_mb(pid: u32) -> Option<f64> {
+    let output = Command::new("ps").args(["-o", "rss=", "-p", &pid.to_string()]).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let rss_kb = text.trim().parse::<f64>().ok()?;
+    Some(round3(rss_kb / 1024.0))
 }
 
 async fn run_benchmark_variance(request: MacBenchmarkSummaryRun<'_>, repeat: usize) -> Result<()> {
@@ -11144,6 +11350,7 @@ fn benchmark_profile_summary(
     path: &Path,
     receipt: &serde_json::Value,
     profile_start_peak_mb: Option<f64>,
+    profile_peak_memory_mb: Option<f64>,
 ) -> Result<serde_json::Value> {
     let profile_id = spec.profile.id();
     let prompt_count = receipt["session"]["prompt_count"].as_u64().unwrap_or_default();
@@ -11206,8 +11413,17 @@ fn benchmark_profile_summary(
         generated_total += generated_token_count as u64;
     }
 
-    let profile_end_peak_mb = peak_memory_mb();
-    let memory_drift_mb = memory_delta_mb(profile_start_peak_mb, profile_end_peak_mb);
+    let profile_end_peak_mb = profile_peak_memory_mb.or_else(peak_memory_mb);
+    let memory_drift_mb = if profile_peak_memory_mb.is_some() {
+        Some(0.0)
+    } else {
+        memory_delta_mb(profile_start_peak_mb, profile_end_peak_mb)
+    };
+    let memory_source = if profile_peak_memory_mb.is_some() {
+        "child process peak RSS sampled by benchmark parent; drift set to 0 because the child exits per profile"
+    } else {
+        "getrusage.ru_maxrss process peak delta"
+    };
     Ok(serde_json::json!({
         "profile_id": profile_id,
         "receipt_path": path.display().to_string(),
@@ -11240,7 +11456,7 @@ fn benchmark_profile_summary(
         "memory": {
             "peak_memory_mb": benchmark_stat_json(&optional_sample(profile_end_peak_mb)),
             "memory_drift_mb": benchmark_stat_json(&optional_sample(memory_drift_mb)),
-            "source": "getrusage.ru_maxrss process peak delta",
+            "source": memory_source,
         },
         "claim_boundary": {
             "scope": "this profile, model, backend, and machine receipt only",
@@ -15756,6 +15972,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_larger_corpus_decision_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
         validate_slm_benchmark_v2_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_slm_benchmark_profile_timeout" {
+        validate_slm_benchmark_profile_timeout_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_benchmark_variance_v1" {
         validate_apple_m4_benchmark_variance_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_benchmark_calibration" {
@@ -19224,6 +19442,82 @@ fn validate_slm_benchmark_v2_receipt(
     Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
 }
 
+fn validate_slm_benchmark_profile_timeout_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "apple_m4_slm_benchmark_profile_timeout",
+    )?;
+    require_exact_string_at(path, receipt, &["status"], "invalid_for_comparison")?;
+    require_exact_string_at(path, receipt, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    require_exact_string_at(path, receipt, &["profile_set"], "slm-benchmark-v2")?;
+    let profile_id = require_non_empty_string_at(path, receipt, &["profile_id"])?;
+    if !M4_SLM_BENCHMARK_V2_PROFILES.contains(&profile_id) {
+        anyhow::bail!(
+            "{} benchmark timeout profile_id {profile_id:?} is not part of the v2 profile contract",
+            path.display()
+        );
+    }
+    require_non_empty_string_at(path, receipt, &["scenario"])?;
+    require_u64_at(path, receipt, &["requested_max_new_tokens"], true)?;
+    require_u64_at(path, receipt, &["prompt_count"], true)?;
+    require_u64_exact(path, receipt, &["generated_tokens"], 0)?;
+    require_u64_at(path, receipt, &["timeout_boundary", "configured_seconds"], true)?;
+    require_positive_number_at(path, receipt, &["timeout_boundary", "elapsed_ms"])?;
+    require_bool_at(path, receipt, &["timeout_boundary", "reached"], true)?;
+    require_bool_at(path, receipt, &["timeout_boundary", "enforced"], true)?;
+    require_non_empty_string_at(path, receipt, &["timeout_boundary", "behavior"])?;
+    require_non_empty_string_array_at(path, receipt, &["invalid_comparison_reasons"])?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["child_process", "mode"],
+        "slm-warm-session subprocess",
+    )?;
+    require_bool_at(path, receipt, &["child_process", "killed_on_timeout"], true)?;
+    require_non_empty_string_at(path, receipt, &["model_cache", "id"])?;
+    require_non_empty_string_at(path, receipt, &["model_cache", "sha256"])?;
+    require_non_empty_string_at(path, receipt, &["model_cache", "tokenizer_pre"])?;
+    require_non_empty_string_at(path, receipt, &["memory", "source"])?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "benchmark_profile_timeout"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "bounded_benchmark_profiles_only"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "final_variance_envelope"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "speedup_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_performance_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "neural_engine_execution_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "macbook_evidence"], false)?;
+
+    Ok((
+        receipt["prompt_count"].as_u64().map(|value| value as usize),
+        receipt["generated_tokens"].as_u64().map(|value| value as usize),
+    ))
+}
+
 fn validate_apple_m4_benchmark_variance_receipt(
     path: &Path,
     receipt: &serde_json::Value,
@@ -21444,6 +21738,80 @@ mod tests {
         .to_string();
 
         assert!(err.contains("cannot be combined with --prompt"), "got: {err}");
+    }
+
+    #[test]
+    fn benchmark_profile_child_args_preserve_warm_session_contract()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let spec = benchmark_profile_spec(MacBenchmarkProfile::ShortPrompt16Out);
+        let receipt_path = temp.path().join("short_prompt_16_out.json");
+        let request = BenchmarkProfileRun {
+            requested_backend: APPLE_M4_CPU_NEON,
+            model: &model,
+            spec: &spec,
+            threads: 2,
+            allocation_audit: true,
+            progress: true,
+            quiet: false,
+            receipt_path: &receipt_path,
+        };
+
+        let args = benchmark_profile_warm_session_args(&request)
+            .into_iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        let receipt_path_text = receipt_path.display().to_string();
+
+        assert_eq!(args.first().map(String::as_str), Some("slm-warm-session"));
+        assert!(args.windows(2).any(|pair| pair == ["--device", APPLE_M4_CPU_NEON]));
+        assert!(args.windows(2).any(|pair| pair == ["--prompt-template", QWEN_PROMPT_TEMPLATE]));
+        assert!(args.windows(2).any(|pair| pair == ["--threads", "2"]));
+        assert!(
+            args.windows(2).any(|pair| pair[0] == "--json-out" && pair[1] == receipt_path_text)
+        );
+        assert!(args.contains(&"--strict-loader".to_string()));
+        assert!(args.contains(&"--strict-tokenizer".to_string()));
+        assert!(args.contains(&"--greedy".to_string()));
+        assert!(args.contains(&"--deterministic".to_string()));
+        assert!(args.contains(&"--fail-on-quality".to_string()));
+        assert!(args.contains(&"--allocation-audit".to_string()));
+        assert!(args.contains(&"--progress".to_string()));
+        assert_eq!(args.iter().filter(|arg| arg.as_str() == "--prompt").count(), 5);
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_accepts_benchmark_profile_timeout()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let spec = benchmark_profile_spec(MacBenchmarkProfile::Context4k);
+        let receipt_path = temp.path().join("context_4k-timeout.json");
+
+        write_benchmark_profile_timeout_receipt(
+            &receipt_path,
+            &model,
+            APPLE_M4_CPU_NEON,
+            &spec,
+            Duration::from_secs(benchmark_calibration_profile_timeout_seconds("context_4k")),
+            720_250.0,
+            Some(4096.0),
+            None,
+        )?;
+
+        let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt_path)?)?;
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_slm_benchmark_profile_timeout");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(3));
+        assert_eq!(summary.generated_tokens, Some(0));
+        assert_eq!(receipt["status"].as_str(), Some("invalid_for_comparison"));
+        assert_eq!(receipt["timeout_boundary"]["enforced"].as_bool(), Some(true));
+        Ok(())
     }
 
     #[test]

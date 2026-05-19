@@ -1,0 +1,406 @@
+{
+  "artifact_kind": "apple_m4_slm_benchmark_v2",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T0939Z/benchmark-timeout-enforcement/harness-smoke-runs/run-02.json",
+  "benchmark_contract": {
+    "cold_load_separated": true,
+    "contract_version": "1.1.0",
+    "decode_tok_s_definition": "generated_tokens / decode_total_ms",
+    "input_tok_s_definition": "prompt_tokens / (prompt_tokenize_ms + prefill_ms)",
+    "memory_drift_definition": "per-profile child process peak RSS; child exits between profiles",
+    "model_tokenizer_reuse_visible_per_profile": true,
+    "output_tok_s_definition": "generated_tokens / total_prompt_wall_ms",
+    "percentiles": [
+      "p50",
+      "p90",
+      "p99"
+    ],
+    "profile_execution_model": "one resident warm-session run per named profile",
+    "profile_set_model_loads": 1,
+    "profiles_loaded_independently": true,
+    "required_metrics": {
+      "aggregate_speed": [
+        "cold_load_ms",
+        "tokenizer_load_ms",
+        "prompt_tokenize_ms",
+        "prefill_ms",
+        "ttft_ms",
+        "sampling_ms_per_token",
+        "input_tok_s",
+        "output_tok_s",
+        "decode_tok_s",
+        "total_wall_ms"
+      ],
+      "memory": [
+        "peak_memory_mb",
+        "memory_drift_mb"
+      ],
+      "throughput": [
+        "input_tokens_per_second",
+        "output_tokens_per_second",
+        "decode_tokens_per_second"
+      ],
+      "timing": [
+        "cold_load_ms",
+        "tokenizer_load_ms",
+        "prompt_tokenize_ms",
+        "prefill_ms",
+        "time_to_first_token_ms",
+        "decode_total_ms",
+        "sampling_ms_per_token",
+        "total_wall_ms"
+      ]
+    },
+    "scope": "Apple M4 Mac mini dense SLM benchmark v2",
+    "supported_profiles": [
+      "short_prompt_16_out",
+      "short_prompt_64_out",
+      "long_prompt_16_out",
+      "long_prompt_128_out",
+      "context_1k",
+      "context_4k",
+      "resident_25",
+      "resident_50",
+      "resident_100"
+    ],
+    "thresholds_are_claim_bounds_not_speed_guarantees": true
+  },
+  "build": {
+    "profile": "release",
+    "release_mode": true
+  },
+  "evidence": {
+    "generated_text_recorded": true,
+    "generated_token_ids_recorded": true,
+    "operator_command": "mac benchmark",
+    "profile_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-19T0939Z/benchmark-timeout-enforcement/harness-smoke-runs/run-02-profiles/short_prompt_16_out.json"
+    ]
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generated_tokens": 31,
+  "mac_claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "bounded_benchmark_profiles_only": true,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dense_slm_only": true,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false,
+    "timing_profile": true
+  },
+  "memory": {
+    "end_peak_memory_mb": 14.453,
+    "memory_drift_mb_p50": 0.0,
+    "memory_drift_mb_p90": 0.0,
+    "memory_drift_mb_p99": 0.0,
+    "peak_memory_mb_p50": 3799.594,
+    "peak_memory_mb_p90": 3799.594,
+    "peak_memory_mb_p99": 3799.594,
+    "process_peak_drift_mb": 0.078,
+    "source": "getrusage.ru_maxrss process peak delta",
+    "start_peak_memory_mb": 14.375
+  },
+  "model_cache": {
+    "architecture": "qwen2",
+    "bytes": 675710816,
+    "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+    "chat_template": true,
+    "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quantization": "Q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "support_note": "Rust-native Apple M4 CPU/NEON SLM baseline artifact; RTX 5070 Ti dense CUDA ask is bounded to the CUDA-UX-003 receipt gate.",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "qwen2"
+  },
+  "profile_set": "slm-benchmark-v2",
+  "profiles": [
+    {
+      "allocation_audit": {
+        "enabled": false,
+        "method": "not_requested",
+        "scope": "not_requested"
+      },
+      "claim_boundary": {
+        "broad_performance_claim": false,
+        "scope": "this profile, model, backend, and machine receipt only",
+        "speedup_claim": false
+      },
+      "generated_tokens": 31,
+      "memory": {
+        "memory_drift_mb": {
+          "count": 1,
+          "max": 0.0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "p99": 0.0,
+          "samples": [
+            0.0
+          ]
+        },
+        "peak_memory_mb": {
+          "count": 1,
+          "max": 3799.594,
+          "min": 3799.594,
+          "p50": 3799.594,
+          "p90": 3799.594,
+          "p99": 3799.594,
+          "samples": [
+            3799.594
+          ]
+        },
+        "source": "child process peak RSS sampled by benchmark parent; drift set to 0 because the child exits per profile"
+      },
+      "model_loaded_once": true,
+      "output_tokens": {
+        "count": 5,
+        "max": 16.0,
+        "min": 2.0,
+        "p50": 3.0,
+        "p90": 16.0,
+        "p99": 16.0,
+        "samples": [
+          3.0,
+          2.0,
+          16.0,
+          3.0,
+          7.0
+        ]
+      },
+      "profile_id": "short_prompt_16_out",
+      "prompt_count": 5,
+      "prompt_tokens": {
+        "count": 5,
+        "max": 46.0,
+        "min": 36.0,
+        "p50": 42.0,
+        "p90": 46.0,
+        "p99": 46.0,
+        "samples": [
+          42.0,
+          40.0,
+          36.0,
+          43.0,
+          46.0
+        ]
+      },
+      "quality_passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T0939Z/benchmark-timeout-enforcement/harness-smoke-runs/run-02-profiles/short_prompt_16_out.json",
+      "requested_max_new_tokens": 16,
+      "reuse_scope": "resident_session",
+      "scenario": "short_prompt",
+      "target_context_tokens": null,
+      "throughput": {
+        "decode_tokens_per_second": {
+          "count": 5,
+          "max": 15.496,
+          "min": 15.432,
+          "p50": 15.461,
+          "p90": 15.496,
+          "p99": 15.496,
+          "samples": [
+            15.461,
+            15.496,
+            15.45,
+            15.472,
+            15.432
+          ]
+        },
+        "input_tokens_per_second": {
+          "count": 5,
+          "max": 21.656,
+          "min": 21.488,
+          "p50": 21.574,
+          "p90": 21.656,
+          "p99": 21.656,
+          "samples": [
+            21.574,
+            21.589,
+            21.656,
+            21.488,
+            21.568
+          ]
+        },
+        "output_tokens_per_second": {
+          "count": 5,
+          "max": 5.93,
+          "min": 1.009,
+          "p50": 1.401,
+          "p90": 5.93,
+          "p99": 5.93,
+          "samples": [
+            1.401,
+            1.009,
+            5.93,
+            1.367,
+            2.707
+          ]
+        }
+      },
+      "timing": {
+        "cold_load_ms": {
+          "count": 1,
+          "max": 4229.568,
+          "min": 4229.568,
+          "p50": 4229.568,
+          "p90": 4229.568,
+          "p99": 4229.568,
+          "samples": [
+            4229.568
+          ]
+        },
+        "decode_total_ms": {
+          "count": 5,
+          "max": 1035.629,
+          "min": 129.063,
+          "p50": 194.039,
+          "p90": 1035.629,
+          "p99": 1035.629,
+          "samples": [
+            194.039,
+            129.063,
+            1035.629,
+            193.899,
+            453.589
+          ]
+        },
+        "prefill_ms": {
+          "count": 5,
+          "max": 2097.084,
+          "min": 1626.547,
+          "p50": 1909.974,
+          "p90": 2097.084,
+          "p99": 2097.084,
+          "samples": [
+            1909.974,
+            1815.799,
+            1626.547,
+            1960.112,
+            2097.084
+          ]
+        },
+        "prompt_tokenize_ms": {
+          "count": 5,
+          "max": 41.047,
+          "min": 35.67,
+          "p50": 36.838,
+          "p90": 41.047,
+          "p99": 41.047,
+          "samples": [
+            36.838,
+            37.007,
+            35.773,
+            41.047,
+            35.67
+          ]
+        },
+        "sampling_ms_per_token": {
+          "count": 5,
+          "max": 0.454,
+          "min": 0.237,
+          "p50": 0.326,
+          "p90": 0.454,
+          "p99": 0.454,
+          "samples": [
+            0.324,
+            0.237,
+            0.454,
+            0.326,
+            0.42
+          ]
+        },
+        "time_to_first_token_ms": {
+          "count": 5,
+          "max": 2196.0,
+          "min": 1726.0,
+          "p50": 2011.0,
+          "p90": 2196.0,
+          "p99": 2196.0,
+          "samples": [
+            2011.0,
+            1917.0,
+            1726.0,
+            2065.0,
+            2196.0
+          ]
+        },
+        "tokenizer_load_ms": {
+          "count": 1,
+          "max": 50.079,
+          "min": 50.079,
+          "p50": 50.079,
+          "p90": 50.079,
+          "p99": 50.079,
+          "samples": [
+            50.079
+          ]
+        },
+        "total_wall_ms": {
+          "count": 5,
+          "max": 2697.986,
+          "min": 1981.89,
+          "p50": 2195.076,
+          "p90": 2697.986,
+          "p99": 2697.986,
+          "samples": [
+            2140.88,
+            1981.89,
+            2697.986,
+            2195.076,
+            2586.366
+          ]
+        }
+      },
+      "tokenizer_loaded_once": true
+    }
+  ],
+  "profiles_required": [
+    "short_prompt_16_out"
+  ],
+  "prompt_count": 5,
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.1.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "speed": {
+    "cold_load_ms_p50": 4229.568,
+    "cold_load_ms_p90": 4229.568,
+    "cold_load_ms_p99": 4229.568,
+    "decode_tok_s_p50": 15.461,
+    "decode_tok_s_p90": 15.496,
+    "decode_tok_s_p99": 15.496,
+    "input_tok_s_p50": 21.574,
+    "input_tok_s_p90": 21.656,
+    "input_tok_s_p99": 21.656,
+    "output_tok_s_p50": 1.401,
+    "output_tok_s_p90": 5.93,
+    "output_tok_s_p99": 5.93,
+    "prefill_ms_p50": 1909.974,
+    "prefill_ms_p90": 2097.084,
+    "prefill_ms_p99": 2097.084,
+    "prompt_tokenize_ms_p50": 36.838,
+    "prompt_tokenize_ms_p90": 41.047,
+    "prompt_tokenize_ms_p99": 41.047,
+    "sampling_ms_per_token_p50": 0.326,
+    "sampling_ms_per_token_p90": 0.454,
+    "sampling_ms_per_token_p99": 0.454,
+    "tokenizer_load_ms_p50": 50.079,
+    "tokenizer_load_ms_p90": 50.079,
+    "tokenizer_load_ms_p99": 50.079,
+    "total_wall_ms_p50": 2195.076,
+    "total_wall_ms_p90": 2697.986,
+    "total_wall_ms_p99": 2697.986,
+    "ttft_ms_p50": 2011.0,
+    "ttft_ms_p90": 2196.0,
+    "ttft_ms_p99": 2196.0
+  },
+  "speedup_claim": false,
+  "timestamp": "2026-05-19T09:40:01.056673+00:00"
+}
