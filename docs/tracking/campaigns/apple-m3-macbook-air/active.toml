@@ -1041,7 +1041,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-021"
-status = "in_progress"
+status = "pr_open"
+pr = 5952
+head_sha = "47e27d6511093b669153ab270752eac7e1e49990"
 branch = "codex/apple-m3-macbook-air/M3MBA-021-device-profile-contract"
 stackable = false
 review_mode = "codex_premerge"
