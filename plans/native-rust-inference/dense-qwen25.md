@@ -85,7 +85,7 @@ exact-profile server readiness.
 
 ## Work item: CUDA-DENSE-QWEN25-OPS-003
 
-Status: ready
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
@@ -99,8 +99,11 @@ Reduce logits/top-k transfer when greedy or top-k proof is sufficient.
 
 ### Production delta
 
-Reduce D2H bytes or explain why reduction is not possible while preserving
-selected-token equality and top-k evidence.
+Dense Qwen short-decode and warm-session receipts now expose and validate
+logits-transfer accounting. PR #6010 records that D2H bytes are not reduced
+yet because the CPU sampler still requires full logits until a device top-k
+sampler exists, while preserving selected-token equality, top-k evidence, and
+quality evidence.
 
 ### Non-goals
 
@@ -108,27 +111,33 @@ No quality regression and no speedup claim.
 
 ### Acceptance
 
-Quality receipts remain unchanged and D2H byte change is recorded.
+Quality receipts remain unchanged, D2H byte accounting is recorded, and any
+future `device_to_host_bytes_reduced=true` claim must prove actual D2H bytes
+fell below the full-logits envelope.
 
 ### Proof commands
 
 ```bash
-cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- ask --device cuda --model <qwen25> "..."
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation dense_gguf_qwen_short_decode
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation dense_gguf_qwen_warm_session
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation
+git diff --check
 ```
 
 ### Rollback
 
-Restore full logits transfer.
+Revert PR #6010 receipt aliases and validators. Existing Qwen2.5 product CLI
+and exact-profile server readiness evidence remains unchanged.
 
 ## Work item: CUDA-DENSE-QWEN25-PERF-007
 
-Status: blocked
+Status: ready
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
 Blocks: exact-profile status updates
-Blocked by: CUDA-DENSE-QWEN25-OPS-003
+Blocked by: none
 
 ### Goal
 
