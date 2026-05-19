@@ -4,7 +4,9 @@ use bitnet_receipts::{
 };
 use serde_json::{Value, json};
 
-fn valid_receipt() -> Value {
+type TestResult = Result<(), Box<dyn std::error::Error>>;
+
+fn valid_receipt() -> Result<Value, Box<dyn std::error::Error>> {
     let run_identity = json!({
         "contract_version": M4_RUN_IDENTITY_CONTRACT_VERSION,
         "machine_id": "apple-m4-mac-mini",
@@ -59,8 +61,8 @@ fn valid_receipt() -> Value {
             "source": "wall_clock_utc"
         }
     });
-    let run_identity_sha256 = m4_run_identity_sha256(&run_identity).unwrap();
-    json!({
+    let run_identity_sha256 = m4_run_identity_sha256(&run_identity)?;
+    Ok(json!({
         "artifact_kind": "apple_m4_regression_dashboard",
         "requested_backend": "apple-m4-cpu-neon",
         "selected_backend": "apple-m4-cpu-neon",
@@ -68,32 +70,37 @@ fn valid_receipt() -> Value {
         "fallback_used": false,
         "run_identity": run_identity,
         "run_identity_sha256": run_identity_sha256
-    })
+    }))
 }
 
-fn refresh_run_identity_digest(receipt: &mut Value) {
-    receipt["run_identity_sha256"] =
-        json!(m4_run_identity_sha256(&receipt["run_identity"]).unwrap());
+fn refresh_run_identity_digest(receipt: &mut Value) -> Result<(), Box<dyn std::error::Error>> {
+    receipt["run_identity_sha256"] = json!(m4_run_identity_sha256(&receipt["run_identity"])?);
+    Ok(())
 }
 
-fn receipt_for_family(artifact_kind: &str, evidence_family: &str, command_class: &str) -> Value {
-    let mut receipt = valid_receipt();
+fn receipt_for_family(
+    artifact_kind: &str,
+    evidence_family: &str,
+    command_class: &str,
+) -> Result<Value, Box<dyn std::error::Error>> {
+    let mut receipt = valid_receipt()?;
     receipt["artifact_kind"] = json!(artifact_kind);
     receipt["run_identity"]["artifact_kind"] = json!(artifact_kind);
     receipt["run_identity"]["evidence_family"] = json!(evidence_family);
     receipt["run_identity"]["command"]["class"] = json!(command_class);
-    refresh_run_identity_digest(&mut receipt);
-    receipt
+    refresh_run_identity_digest(&mut receipt)?;
+    Ok(receipt)
 }
 
 #[test]
-fn accepts_complete_m4_run_identity_contract() {
-    let receipt = valid_receipt();
-    validate_m4_run_identity_contract_json(&receipt).unwrap();
+fn accepts_complete_m4_run_identity_contract() -> TestResult {
+    let receipt = valid_receipt()?;
+    validate_m4_run_identity_contract_json(&receipt)?;
+    Ok(())
 }
 
 #[test]
-fn accepts_m4_excellence_receipt_family_contracts() {
+fn accepts_m4_excellence_receipt_family_contracts() -> TestResult {
     for (artifact_kind, evidence_family, command_class) in [
         ("apple_m4_slm_eval_summary", "dense_slm_eval_v2", "mac eval"),
         ("apple_m4_slm_benchmark_v2", "dense_slm_benchmark_v2", "mac benchmark"),
@@ -103,120 +110,144 @@ fn accepts_m4_excellence_receipt_family_contracts() {
         ("apple_m4_regression_dashboard", "operator", "mac regression-dashboard"),
         ("bitnet_apple_m4_mac_ask_failure", "bitnet_failure", "mac ask"),
     ] {
-        let receipt = receipt_for_family(artifact_kind, evidence_family, command_class);
+        let receipt = receipt_for_family(artifact_kind, evidence_family, command_class)?;
         validate_m4_run_identity_contract_json(&receipt)
-            .unwrap_or_else(|err| panic!("{artifact_kind} should validate: {err}"));
+            .map_err(|err| format!("{artifact_kind} should validate: {err}"))?;
     }
+    Ok(())
 }
 
 #[test]
-fn rejects_missing_machine_id() {
-    let mut receipt = valid_receipt();
-    receipt["run_identity"].as_object_mut().unwrap().remove("machine_id");
+fn rejects_missing_machine_id() -> TestResult {
+    let mut receipt = valid_receipt()?;
+    receipt["run_identity"]
+        .as_object_mut()
+        .ok_or("run_identity must be an object")?
+        .remove("machine_id");
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("machine_id"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_missing_binary_hash_and_build_profile() {
-    let mut receipt = valid_receipt();
-    let binary = receipt["run_identity"]["binary"].as_object_mut().unwrap();
+fn rejects_missing_binary_hash_and_build_profile() -> TestResult {
+    let mut receipt = valid_receipt()?;
+    let binary =
+        receipt["run_identity"]["binary"].as_object_mut().ok_or("binary must be an object")?;
     binary.remove("build_profile");
     binary.remove("binary_sha256");
-    receipt["run_identity_sha256"] =
-        json!(m4_run_identity_sha256(&receipt["run_identity"]).unwrap());
+    refresh_run_identity_digest(&mut receipt)?;
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("build_profile or binary_sha256"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_invalid_model_sha() {
-    let mut receipt = valid_receipt();
+fn rejects_invalid_model_sha() -> TestResult {
+    let mut receipt = valid_receipt()?;
     receipt["run_identity"]["model"]["id"] = json!("qwen2.5-0.5b-instruct-q8_0");
     receipt["run_identity"]["model"]["sha256"] = json!("not-a-sha");
-    refresh_run_identity_digest(&mut receipt);
+    refresh_run_identity_digest(&mut receipt)?;
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("sha256"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_missing_tokenizer_authority() {
-    let mut receipt = valid_receipt();
-    receipt["run_identity"]["tokenizer"].as_object_mut().unwrap().remove("authority");
-    refresh_run_identity_digest(&mut receipt);
+fn rejects_missing_tokenizer_authority() -> TestResult {
+    let mut receipt = valid_receipt()?;
+    receipt["run_identity"]["tokenizer"]
+        .as_object_mut()
+        .ok_or("tokenizer must be an object")?
+        .remove("authority");
+    refresh_run_identity_digest(&mut receipt)?;
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("authority"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_missing_tokenizer_sha() {
-    let mut receipt = valid_receipt();
-    receipt["run_identity"]["tokenizer"].as_object_mut().unwrap().remove("sha256");
-    refresh_run_identity_digest(&mut receipt);
+fn rejects_missing_tokenizer_sha() -> TestResult {
+    let mut receipt = valid_receipt()?;
+    receipt["run_identity"]["tokenizer"]
+        .as_object_mut()
+        .ok_or("tokenizer must be an object")?
+        .remove("sha256");
+    refresh_run_identity_digest(&mut receipt)?;
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("sha256"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_backend_mismatch() {
-    let mut receipt = valid_receipt();
+fn rejects_backend_mismatch() -> TestResult {
+    let mut receipt = valid_receipt()?;
     receipt["run_identity"]["backend"]["selected_backend"] = json!("apple-m4-metal");
-    refresh_run_identity_digest(&mut receipt);
+    refresh_run_identity_digest(&mut receipt)?;
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("run_identity backend selection"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_missing_identity_fallback_state() {
-    let mut receipt = valid_receipt();
-    receipt["run_identity"]["backend"].as_object_mut().unwrap().remove("fallback_used");
-    refresh_run_identity_digest(&mut receipt);
+fn rejects_missing_identity_fallback_state() -> TestResult {
+    let mut receipt = valid_receipt()?;
+    receipt["run_identity"]["backend"]
+        .as_object_mut()
+        .ok_or("backend must be an object")?
+        .remove("fallback_used");
+    refresh_run_identity_digest(&mut receipt)?;
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("fallback_used"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_fallback_mismatch() {
-    let mut receipt = valid_receipt();
+fn rejects_fallback_mismatch() -> TestResult {
+    let mut receipt = valid_receipt()?;
     receipt["fallback_used"] = json!(true);
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("fallback_used"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_malformed_timing_source() {
-    let mut receipt = valid_receipt();
+fn rejects_malformed_timing_source() -> TestResult {
+    let mut receipt = valid_receipt()?;
     receipt["run_identity"]["timing"]["source"] = json!("");
-    refresh_run_identity_digest(&mut receipt);
+    refresh_run_identity_digest(&mut receipt)?;
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("source"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_artifact_kind_mismatch() {
-    let mut receipt = valid_receipt();
+fn rejects_artifact_kind_mismatch() -> TestResult {
+    let mut receipt = valid_receipt()?;
     receipt["run_identity"]["artifact_kind"] = json!("bitnet_apple_m4_serve_gate");
-    refresh_run_identity_digest(&mut receipt);
+    refresh_run_identity_digest(&mut receipt)?;
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("artifact_kind"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_digest_mismatch() {
-    let mut receipt = valid_receipt();
+fn rejects_digest_mismatch() -> TestResult {
+    let mut receipt = valid_receipt()?;
     receipt["run_identity_sha256"] =
         json!("0000000000000000000000000000000000000000000000000000000000000000");
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("does not match run_identity"), "got: {err}");
+    Ok(())
 }
