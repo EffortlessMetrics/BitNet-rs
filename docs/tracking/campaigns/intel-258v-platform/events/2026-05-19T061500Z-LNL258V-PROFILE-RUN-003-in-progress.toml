@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T06:15:00Z"
+event = "in_progress"
+item = "LNL258V-PROFILE-RUN-003"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-003-cpu-baseline-input"
+actor = "codex"
+summary = "Started wiring optional Rust GGUF CPU profile-run timing into Lunar Lake route-profile comparison."
+
+notes = [
+  "This lets future fallback-free CPU prefill_heavy/decode_heavy profile-run receipts replace bounded math-ask timing for the dense CPU default-route baseline.",
+  "Existing route decisions remain unchanged when no CPU profile-run receipt is supplied.",
+  "The scope makes no new-inference, route-promotion, speedup, power-advantage, OpenVINO GPU/NPU promotion, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]

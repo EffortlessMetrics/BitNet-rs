@@ -333,6 +333,11 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = OPENVINO_GENERATION_BUDGET_SENSITIVITY)]
         openvino_budget_sensitivity: Option<PathBuf>,
 
+        /// Optional Rust GGUF CPU profile-run receipt for profile-specific default-route timing.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long)]
+        cpu_profile_run: Option<PathBuf>,
+
         /// Output JSON profile comparison to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -2498,6 +2503,7 @@ impl LunarLakeCommand {
                 npu_resident_session,
                 npu_cache_experiment,
                 openvino_budget_sensitivity,
+                cpu_profile_run,
                 json_out,
                 created_utc,
                 strict,
@@ -2521,6 +2527,7 @@ impl LunarLakeCommand {
                         npu_resident_session.as_deref(),
                         npu_cache_experiment.as_deref(),
                         openvino_budget_sensitivity.as_deref(),
+                        cpu_profile_run.as_deref(),
                         created_utc,
                     )?;
                 write_or_print_route_profile_comparison(&receipt, json_out.as_deref())?;
@@ -5009,6 +5016,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_diagnostics(
         npu_resident_session,
         npu_cache_experiment,
         None,
+        None,
         created_utc,
     )
 }
@@ -5028,6 +5036,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
     npu_resident_session: Option<&Path>,
     npu_cache_experiment: Option<&Path>,
     openvino_budget_sensitivity: Option<&Path>,
+    cpu_profile_run: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRouteProfileComparison> {
     let promotion_ledger_path = resolve_receipt_path(root, promotion_ledger);
@@ -5079,6 +5088,7 @@ pub fn build_route_profile_comparison_with_created_utc_and_budget_diagnostics(
                 &corpus_alignment,
                 telemetry_context.as_ref(),
                 &route_diagnostics,
+                cpu_profile_run,
             )
         })
         .collect::<Result<Vec<_>>>()?;
@@ -11743,6 +11753,7 @@ fn evaluate_workload_profile(
     corpus_alignment: &CorpusCaseAlignmentIndex,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
     route_diagnostics: &RouteDiagnosticsIndex,
+    cpu_profile_run: Option<&Path>,
 ) -> Result<WorkloadProfileEvaluation> {
     let mut route_ids = Vec::new();
     if let Some(route_id) = &profile.promoted_route {
@@ -11767,6 +11778,7 @@ fn evaluate_workload_profile(
                 corpus_alignment,
                 telemetry_context,
                 route_diagnostics,
+                cpu_profile_run,
             )
         })
         .collect::<Result<Vec<_>>>()?;
@@ -11837,6 +11849,7 @@ fn evaluate_profile_route(
     corpus_alignment: &CorpusCaseAlignmentIndex,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
     route_diagnostics: &RouteDiagnosticsIndex,
+    cpu_profile_run: Option<&Path>,
 ) -> Result<ProfileRouteEvidence> {
     let route = ledger
         .routes
@@ -11850,6 +11863,7 @@ fn evaluate_profile_route(
         phase_comparison,
         telemetry_context,
         quality_index,
+        cpu_profile_run,
     )?;
     let timing_applicability = timing_applicability_for_profile(profile, &timing);
     let mut blockers = route.missing_evidence.clone();
@@ -12429,9 +12443,16 @@ fn profile_timing_for_route(
     phase_comparison: &Value,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
     quality_index: &ProfileQualityIndex,
+    cpu_profile_run: Option<&Path>,
 ) -> Result<ProfileTimingSummary> {
     match route_id {
-        DEFAULT_ASK_ROUTE => dense_cpu_profile_timing(root, phase_comparison, telemetry_context),
+        DEFAULT_ASK_ROUTE => dense_cpu_profile_timing(
+            root,
+            phase_comparison,
+            telemetry_context,
+            &profile.profile_id,
+            cpu_profile_run,
+        ),
         "dense_slm_openvino_gpu_candidate" => openvino_profile_timing(
             root,
             DENSE_OV_GPU_OPERATOR_ASK,
@@ -12500,16 +12521,23 @@ fn dense_cpu_profile_timing(
     root: &Path,
     phase_comparison: &Value,
     telemetry_context: Option<&BenchmarkTelemetryContext>,
+    profile_id: &str,
+    cpu_profile_run: Option<&Path>,
 ) -> Result<ProfileTimingSummary> {
     let ask_path = root.join(DENSE_CPU_OPERATOR_ASK);
     let ask: Value = read_json_receipt(&ask_path)?;
-    let cold_load_ms = number_at_any(&ask, &["timing.model_load_ms"]);
+    let profile_context = match cpu_profile_run {
+        Some(path) => cpu_profile_run_timing_context(root, path, profile_id)?,
+        None => None,
+    };
+    let operator_cold_load_ms = number_at_any(&ask, &["timing.model_load_ms"]);
     let tokenizer_load_ms = number_at_any(&ask, &["timing.tokenizer_load_ms"]);
-    let tokenize_ms = number_at_any(&ask, &["timing.tokenize_ms"]);
+    let operator_tokenize_ms = number_at_any(&ask, &["timing.tokenize_ms"]);
     let prefill_ms = number_at_any(&ask, &["timing.prefill_ms"]);
-    let output_tokens = number_at_any(&ask, &["tokens.generated_count", "timing.decode_tokens"])
-        .map(|value| value as u64);
-    let prompt_tokens = number_at_any(
+    let operator_output_tokens =
+        number_at_any(&ask, &["tokens.generated_count", "timing.decode_tokens"])
+            .map(|value| value as u64);
+    let operator_prompt_tokens = number_at_any(
         &ask,
         &[
             "tokens.prompt_count",
@@ -12520,7 +12548,26 @@ fn dense_cpu_profile_timing(
     )
     .map(|value| value as u64);
     let generation_total_ms = number_at_any(&ask, &["timing.decode_total_ms"]);
-    let throughput_tokens_per_s = number_at_any(&ask, &["timing.decode_steady_state_tok_s"])
+    let prompt_tokens = profile_context
+        .as_ref()
+        .and_then(|context| context.prompt_tokens)
+        .or(operator_prompt_tokens);
+    let output_tokens = profile_context
+        .as_ref()
+        .and_then(|context| context.output_tokens)
+        .or(operator_output_tokens);
+    let generation_total_ms = profile_context
+        .as_ref()
+        .and_then(|context| context.generation_total_ms)
+        .or(generation_total_ms);
+    let cold_load_ms =
+        profile_context.as_ref().and_then(|context| context.load_time_ms).or(operator_cold_load_ms);
+    let tokenize_ms =
+        profile_context.as_ref().and_then(|context| context.tokenize_ms).or(operator_tokenize_ms);
+    let throughput_tokens_per_s = profile_context
+        .as_ref()
+        .and_then(|context| context.throughput_tokens_per_s)
+        .or_else(|| number_at_any(&ask, &["timing.decode_steady_state_tok_s"]))
         .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms));
     let total_response_ms = number_at_any(&ask, &["latency.total_ms", "timing.total_response_ms"])
         .or_else(|| {
@@ -12532,10 +12579,19 @@ fn dense_cpu_profile_timing(
                 generation_total_ms,
             ])
         });
+    let total_response_ms = profile_context
+        .as_ref()
+        .and_then(|context| context.total_response_ms)
+        .or(total_response_ms);
 
     let mut phase_coverage = vec![
         "operator_ask_math_brief".to_string(),
         "cpu_timing_model_load_tokenize_prefill_first_token_decode".to_string(),
+    ];
+    let mut source_receipts = vec![
+        DENSE_CPU_OPERATOR_ASK.to_string(),
+        DENSE_CPU_PHASE.to_string(),
+        DENSE_PHASE_COMPARISON.to_string(),
     ];
     let prefill_512 = value_at(phase_comparison, "gguf_cpu_reference.timing.prefill_512").is_some();
     let decode_128 = value_at(phase_comparison, "gguf_cpu_reference.timing.decode_128").is_some();
@@ -12545,8 +12601,30 @@ fn dense_cpu_profile_timing(
     if decode_128 {
         phase_coverage.push("warm_decode_128".to_string());
     }
-    let mut known_gaps =
-        vec!["bounded math ask only; not expanded profile regression corpus".to_string()];
+    let mut known_gaps = Vec::new();
+    if let Some(context) = profile_context.as_ref() {
+        if !source_receipts.contains(&context.source_receipt) {
+            source_receipts.push(context.source_receipt.clone());
+        }
+        phase_coverage.push(format!(
+            "profile_timing_from_rust_gguf_cpu_profile_run_case_{}",
+            context.case_id
+        ));
+        if context.profile_id != profile_id {
+            known_gaps.push(format!(
+                "profile timing borrowed from Rust GGUF CPU profile-run profile {} for profile {}",
+                context.profile_id, profile_id
+            ));
+        }
+    } else {
+        known_gaps
+            .push("bounded math ask only; not expanded profile regression corpus".to_string());
+        if cpu_profile_run.is_some() {
+            known_gaps.push(format!(
+                "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile {profile_id}"
+            ));
+        }
+    }
     if let Some(context) = telemetry_context {
         phase_coverage.push("telemetry_context_indexed".to_string());
         if thermal_context_is_unavailable(&context.thermal_context) {
@@ -12561,16 +12639,15 @@ fn dense_cpu_profile_timing(
 
     Ok(ProfileTimingSummary {
         timing_scope: "dense_qwen_cpu_operator_ask_plus_warm_phase_receipts".to_string(),
-        source_receipts: vec![
-            DENSE_CPU_OPERATOR_ASK.to_string(),
-            DENSE_CPU_PHASE.to_string(),
-            DENSE_PHASE_COMPARISON.to_string(),
-        ],
+        source_receipts,
         prompt_tokens,
         cold_load_ms,
         tokenize_ms,
         prefill_ms,
-        first_token_ms: number_at_any(&ask, &["timing.first_token_ms"]),
+        first_token_ms: profile_context
+            .as_ref()
+            .and_then(|context| context.first_token_ms)
+            .or_else(|| number_at_any(&ask, &["timing.first_token_ms"])),
         decode_total_ms: generation_total_ms,
         generation_total_ms,
         total_response_ms,
@@ -12804,6 +12881,130 @@ struct OpenVinoCorpusOperatorTimingContext {
     total_response_ms: Option<f64>,
     throughput_tokens_per_s: Option<f64>,
     direct_generated_token_ids_available: bool,
+}
+
+fn cpu_profile_run_timing_context(
+    root: &Path,
+    cpu_profile_run: &Path,
+    profile_id: &str,
+) -> Result<Option<OpenVinoCorpusOperatorTimingContext>> {
+    let path = resolve_receipt_path(root, cpu_profile_run);
+    if !path.exists() {
+        return Ok(None);
+    }
+    let json: Value = read_json_receipt(&path)?;
+    let artifact_kind = string_at(&json, "artifact_kind");
+    if !matches!(
+        artifact_kind.as_deref(),
+        Some("intel_258v_dense_slm_cpu_profile_run" | "lunar_lake_cpu_profile_run")
+    ) {
+        return Ok(None);
+    }
+
+    let case = cpu_profile_run_case(&json, profile_id);
+    let Some(case) = case else {
+        return Ok(None);
+    };
+    if fallback_used(case).or_else(|| fallback_used(&json)) != Some(false) {
+        return Ok(None);
+    }
+
+    let prompt_tokens = u64_at(case, "prompt_token_count")
+        .or_else(|| u64_at(case, "prompt.prompt_token_count"))
+        .or_else(|| u64_at(case, "tokens.prompt"))
+        .or_else(|| u64_at(case, "tokens.prompt_count"));
+    let output_tokens = u64_at(case, "generated_token_count")
+        .or_else(|| u64_at(case, "tokens.generated"))
+        .or_else(|| u64_at(case, "tokens.generated_count"))
+        .or_else(|| u64_at(case, "tokens.output"))
+        .or_else(|| u64_at(case, "timing.decode_tokens"));
+    if prompt_tokens.is_none() && output_tokens.is_none() {
+        return Ok(None);
+    }
+
+    let generation_total_ms = number_at_any(
+        case,
+        &["timing.generation_wall_ms", "timing.decode_total_ms", "timing.generation_total_ms"],
+    );
+    let load_time_ms =
+        number_at_any(case, &["timing.model_load_ms", "timing.pipeline_construct_wall_ms"]);
+    let tokenize_ms = number_at_any(case, &["timing.tokenize_ms"]);
+    let first_token_ms =
+        number_at_any(case, &["timing.first_token_ms", "timing.time_to_first_token_ms"]);
+    let total_response_ms = number_at_any(
+        case,
+        &["timing.total_response_ms", "latency.total_ms", "total_response_ms", "total_ms"],
+    )
+    .or_else(|| {
+        sum_all_optional([
+            load_time_ms,
+            number_at_any(case, &["timing.tokenizer_load_ms"]),
+            tokenize_ms,
+            number_at_any(case, &["timing.prefill_ms"]),
+            generation_total_ms,
+        ])
+    });
+    let throughput_tokens_per_s = number_at_any(
+        case,
+        &[
+            "throughput.tokens_per_second",
+            "timing.decode_steady_state_tok_s",
+            "throughput_tokens_per_s",
+        ],
+    )
+    .or_else(|| throughput_from_tokens(output_tokens, generation_total_ms));
+
+    Ok(Some(OpenVinoCorpusOperatorTimingContext {
+        source_receipt: path_string(&path),
+        case_id: string_at(case, "id").unwrap_or_else(|| "unknown_case".to_string()),
+        profile_id: string_at(case, "profile").unwrap_or_else(|| profile_id.to_string()),
+        prompt_tokens,
+        output_tokens,
+        load_time_ms,
+        tokenize_ms,
+        first_token_ms,
+        generation_total_ms,
+        total_response_ms,
+        throughput_tokens_per_s,
+        direct_generated_token_ids_available: bool_at_any(
+            case,
+            &["tokens.direct_generated_token_ids_available", "generated_token_ids_available"],
+        )
+        .unwrap_or(false),
+    }))
+}
+
+fn cpu_profile_run_case<'a>(json: &'a Value, profile_id: &str) -> Option<&'a Value> {
+    fn matching_case<'a>(cases: &'a [Value], profile_id: &str) -> Option<&'a Value> {
+        cases.iter().find(|case| {
+            string_at(case, "profile").as_deref() == Some(profile_id)
+                && string_at(case, "route_id")
+                    .as_deref()
+                    .map_or(true, |route_id| route_id == DEFAULT_ASK_ROUTE)
+                && string_at(case, "selected_backend")
+                    .as_deref()
+                    .map_or(true, |backend| backend == "cpu-rust")
+        })
+    }
+
+    if let Some(cases) = json.get("cases").and_then(Value::as_array)
+        && let Some(case) = matching_case(cases, profile_id)
+    {
+        return Some(case);
+    }
+    if let Some(cases) = value_at(json, "generation.cases").and_then(Value::as_array)
+        && let Some(case) = matching_case(cases, profile_id)
+    {
+        return Some(case);
+    }
+    let devices = value_at(json, "generation.devices").and_then(Value::as_array)?;
+    let device = devices.iter().find(|device| {
+        string_at(device, "route_id").as_deref() == Some(DEFAULT_ASK_ROUTE)
+            || string_at(device, "selected_backend").as_deref() == Some("cpu-rust")
+            || string_at(device, "runtime_api").as_deref() == Some("cpu")
+    })?;
+    let cases = device.get("cases").and_then(Value::as_array)?;
+    matching_case(cases, profile_id)
 }
 
 fn openvino_profile_run_timing_context(
@@ -14549,6 +14750,91 @@ mod tests {
     }
 
     #[test]
+    fn dense_cpu_profile_timing_uses_matching_cpu_profile_run() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_json(
+            temp.path(),
+            DENSE_CPU_OPERATOR_ASK,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "timing": {
+                    "model_load_ms": 100.0,
+                    "tokenize_ms": 2.0,
+                    "prefill_ms": 20.0,
+                    "first_token_ms": 30.0,
+                    "decode_total_ms": 90.0,
+                    "decode_steady_state_tok_s": 10.0
+                },
+                "latency": {
+                    "total_ms": 150.0
+                },
+                "tokens": {
+                    "prompt_count": 38,
+                    "generated_count": 8
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "cpu-profile-run.json",
+            json!({
+                "artifact_kind": "intel_258v_dense_slm_cpu_profile_run",
+                "fallback_used": false,
+                "cases": [
+                    {
+                        "id": "prefill_heavy_cpu_baseline",
+                        "profile": "prefill_heavy",
+                        "route_id": DEFAULT_ASK_ROUTE,
+                        "selected_backend": "cpu-rust",
+                        "fallback_used": false,
+                        "prompt_token_count": 2300,
+                        "generated_token_count": 64,
+                        "timing": {
+                            "model_load_ms": 1000.0,
+                            "tokenize_ms": 20.0,
+                            "generation_wall_ms": 44000.0,
+                            "first_token_ms": 1200.0,
+                            "total_response_ms": 45020.0
+                        },
+                        "quality": {
+                            "passed": true
+                        }
+                    }
+                ]
+            }),
+        )?;
+
+        let timing = dense_cpu_profile_timing(
+            temp.path(),
+            &json!({}),
+            None,
+            "prefill_heavy",
+            Some(Path::new("cpu-profile-run.json")),
+        )?;
+
+        assert_eq!(timing.prompt_tokens, Some(2300));
+        assert_eq!(timing.output_tokens, Some(64));
+        assert_eq!(timing.total_response_ms, Some(45020.0));
+        assert!(timing.source_receipts.iter().any(|path| path.ends_with("cpu-profile-run.json")));
+        assert!(timing.phase_coverage.iter().any(|item| {
+            item == "profile_timing_from_rust_gguf_cpu_profile_run_case_prefill_heavy_cpu_baseline"
+        }));
+        let profile = WorkloadProfile {
+            profile_id: "prefill_heavy".to_string(),
+            prompt_tokens: ">=2048".to_string(),
+            output_tokens: "<=64".to_string(),
+            purpose: "test profile".to_string(),
+            promoted_route: None,
+            candidate_routes: vec![],
+        };
+        assert!(timing_applicability_for_profile(&profile, &timing).timing_matches_profile);
+        Ok(())
+    }
+
+    #[test]
     fn route_profile_comparison_indexes_corpus_v2_profile_quality_blockers() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
@@ -14843,6 +15129,7 @@ mod tests {
             None,
             None,
             Some(Path::new(OPENVINO_GENERATION_BUDGET_SENSITIVITY)),
+            None,
             "2026-05-16T07:30:00Z".to_string(),
         )?;
 
