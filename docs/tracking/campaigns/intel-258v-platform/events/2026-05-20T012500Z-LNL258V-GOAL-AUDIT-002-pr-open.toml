@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T01:25:00Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-002"
+pr = 6017
+head_sha = "88e19588b7a24db65cd443713a27de62ea44a5fc"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-002-post-validate"
+actor = "codex"
+summary = "Opened PR #6017 for the post-VALIDATE-002 Lunar Lake audit refresh."
+
+notes = [
+  "The PR refreshes the excellence audit and goal artifact checklist after REG-010 and VALIDATE-002.",
+  "The audit records that strict regression and operator readiness now index low_power power-profile evidence plus thermal temperature availability.",
+  "The PR keeps excellent support marked not complete while LNL258V-POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence.",
+  "The PR makes no new-inference, route-promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]
