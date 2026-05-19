@@ -2976,8 +2976,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-050"
-status = "ready"
-branch = "codex/slm-cpu-050-q8-production-compute-hook"
+status = "merged"
+pr = 5885
+head_sha = "c11508411e022dbd5809239d3f0f1adb47d0ae02"
+merge_sha = "29ffb758ba57d78c21968f07b74d4563611ef4b6"
+branch = "codex/slm-cpu-050-q8-production-hook-availability"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
