@@ -806,7 +806,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-AVX512-000"
-status = "in_progress"
+status = "merged"
+pr = 5554
+head_sha = "18ec173922bea3c858aaaa9f8194fe62cd6ac1b9"
+merge_sha = "f3e1986ecb48b55cc0258127d2e378d50400e8ce"
 branch = "codex/cpu-avx512-kernel-contract"
 stackable = false
 review_mode = "codex_premerge"

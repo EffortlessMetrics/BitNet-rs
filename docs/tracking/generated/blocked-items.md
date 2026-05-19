@@ -235,7 +235,7 @@
 | cpu-proof | CPU-ANSWER-005 | CPU-ANSWER-004 | merged |
 | cpu-proof | CPU-ANSWER-006 | CPU-ANSWER-005 | merged |
 | cpu-proof | CPU-ANSWER-007 | CPU-ANSWER-006 | merged |
-| cpu-proof | CPU-AVX512-000 | CPU-ANSWER-007 | in_progress |
+| cpu-proof | CPU-AVX512-000 | CPU-ANSWER-007 | merged |
 | cpu-proof | CPU-SCALAR-000 | CPU-ANSWER-007 | ready |
 | cpu-proof | CPU-AVX2-HOTPATH-000 | CPU-ANSWER-007 | merged |
 | cpu-proof | CPU-AVX2-HOTPATH-001 | CPU-AVX2-HOTPATH-000 | merged |

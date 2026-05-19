@@ -30,7 +30,7 @@
 | apple-silicon-macbook | Apple Silicon MacBook cross-reference | MB-AS-002 | Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns. |
 | bitnet-b158-3b | BitNet b1.58 3B TL candidate | B158-3B-001 | Do not commit model binaries. |
 | ci-coverage | CI coverage | CI-COVERAGE-002 | Do not block unrelated runtime or tracker work on optional coverage uploads. |
-| cpu-proof | BitNet CPU proof | CPU-AVX512-000 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
+| cpu-proof | BitNet CPU proof | CPU-SCALAR-000 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | CPU QK256 performance | KBL8250U-004 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | Crate collapse | LEAF-001 | Do not combine crate movement with runtime proof. |
 | falcon-e-family | Falcon-E Family compact 1.58-bit lane | FE-000 | Do not commit model binaries. |
