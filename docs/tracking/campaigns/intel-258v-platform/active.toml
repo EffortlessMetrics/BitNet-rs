@@ -8416,9 +8416,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-011"
-status = "ready"
+status = "merged"
 pr = 5986
-head_sha = "7db515020eaaa290f1331e65b82058387d0f3fca"
+head_sha = "686b83fcfddb56bad89517b01bb7bb4e554356c4"
+merge_sha = "93218894b1f48af9b172993a922a5e71d9b1fa28"
 branch = "codex/lunar-lake/LNL258V-OP-011-readable-low-power-blockers"
 stackable = false
 review_mode = "codex_premerge"
