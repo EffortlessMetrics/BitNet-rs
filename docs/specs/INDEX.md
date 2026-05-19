@@ -251,6 +251,45 @@ current allowed claim is registered candidate only: upstream route support is
 known, the HF safetensors artifact is visible, and BitNet-rs has conservative
 onboarding contracts.
 
+## NPU Productization
+
+Use these docs before implementing or claiming NPU support:
+
+1. [NPU Source-of-Truth Map](../npu/README.md)
+   - Maps current Intel NPU evidence, claim boundaries, source-of-truth layers,
+     and future NPU families.
+2. [NPU Productization Proposal](../proposals/BITNET-PROP-0007-npu-productization.md)
+   - Defines why NPUs are the low-power / resident inference lane rather than a
+     generic accelerator bucket.
+3. [Intel Lunar Lake NPU Roadmap](intel-lunar-lake-npu-roadmap.md)
+   - Defines the existing Intel NPU proof levels, OpenVINO constraints, and
+     NPU-002 through NPU-011 evidence boundary.
+4. [NPU Route Contract](BITNET-SPEC-NPU-ROUTE-CONTRACT.md)
+   - Defines route IDs, backend labels, receipt fields, proof-family separation,
+     and non-conflation rules.
+5. [NPU Proof Ladder](BITNET-SPEC-NPU-PROOF-LADDER.md)
+   - Defines maturity levels from detection through complete full-route proof.
+6. [NPU Cold/Warm/Cache Contract](BITNET-SPEC-NPU-COLD-WARM-CACHE.md)
+   - Defines cold, cached, warm, and resident timing fields and promotion rules.
+7. [NPU Dense SLM Contract](BITNET-SPEC-NPU-DENSE-SLM.md)
+   - Defines Qwen2.5/Qwen3-class OpenVINO GenAI dense SLM candidate routes.
+8. [NPU BitNet Subgraph Contract](BITNET-SPEC-NPU-BITNET-SUBGRAPH.md)
+   - Defines static BitNet-shaped subgraph parity without full inference claims.
+9. [NPU Quality Contract](BITNET-SPEC-NPU-QUALITY.md),
+   [Performance Contract](BITNET-SPEC-NPU-PERFORMANCE.md),
+   [Residency Contract](BITNET-SPEC-NPU-RESIDENCY.md), and
+   [Status Surface Contract](BITNET-SPEC-NPU-STATUS-SURFACE.md)
+   - Define answer quality, benchmark, residency, and user-visible status gates.
+10. [NPU Implementation Plan](../../plans/npu/implementation-plan.md)
+   - Defines PR-sized sequencing and proof commands for the NPU productization
+     campaign.
+
+Do not proceed from NPU detection, OpenVINO NPU smoke, or static BitNet-shaped
+subgraph parity to full inference, speedup, packed QK256, generic NPU, or full
+residency claims. NPU promotion is per model + route + profile and requires
+strict fallback=false receipts.
+
+
 ## CPU AVX-512 Kernel Proof
 
 Use these specs before implementing or claiming AVX-512 CPU kernel support:

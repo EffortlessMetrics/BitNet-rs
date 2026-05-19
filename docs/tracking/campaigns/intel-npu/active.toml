@@ -551,3 +551,48 @@ must_not_claim = [
   "Intel NPU proof applies to Apple Neural Engine, Qualcomm Hexagon, or AMD Ryzen AI.",
   "NPU warm/resident dense-SLM routes are promoted.",
 ]
+
+[[work_item]]
+id = "NPU-013"
+status = "ready"
+branch = "codex/npu-013-productization-specs"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["NPU-012"]
+acceptance = "Add docs-only NPU productization proposal and spec contracts for route identity, proof ladder, cold/cache/warm timing, dense SLM, BitNet subgraph, quality, performance, residency, and status surfaces without runtime claims or route promotion."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-npu",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/proposals/BITNET-PROP-0007-npu-productization.md",
+  "docs/specs/BITNET-SPEC-NPU-*.md",
+  "docs/specs/INDEX.md",
+  "docs/tracking/campaigns/intel-npu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+  "ci/hardware/**",
+  "models/**",
+  "docs/npu/**",
+  "plans/npu/**",
+  "docs/hardware/**",
+]
+may_claim = [
+  "The NPU productization proposal and spec contracts are defined for follow-on work.",
+]
+must_not_claim = [
+  "Full BitNet inference works on Intel NPU.",
+  "Native bitnet-rs NPU inference works.",
+  "Intel NPU accelerates BitNet.",
+  "Packed BitNet QK256 decode works on Intel NPU.",
+  "CPU fallback satisfies NPU proof.",
+  "OpenVINO GPU or Arc 140V OpenCL proof is NPU proof.",
+  "Intel NPU proof applies to Apple Neural Engine, Qualcomm Hexagon, or AMD Ryzen AI.",
+  "NPU warm/resident dense-SLM routes are promoted.",
+]
