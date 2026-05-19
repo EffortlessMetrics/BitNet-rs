@@ -78,6 +78,8 @@ const OPENVINO_NPU_PROFILE_PROMOTION_TARGETS: &[&str] = &["warm_resident"];
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const BLOCKED_AUTO_ASK_RECEIPT: &str = "lunar-lake-operator-ask-auto-low-power-blocked.json";
+const AUTO_GPU_ASK_SHORT_ASK_RECEIPT: &str =
+    "lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json";
 const AUTO_GPU_ASK_NORMAL_ASK_RECEIPT: &str =
     "lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json";
 const AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT: &str =
@@ -216,6 +218,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = THERMAL_TEMPERATURE_AVAILABILITY_FILE)]
         thermal_temperature_availability: Option<PathBuf>,
+
+        /// Optional successful auto ask_short ask receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = AUTO_GPU_ASK_SHORT_ASK_RECEIPT)]
+        ask_short_ask_receipt: Option<PathBuf>,
 
         /// Optional successful auto ask_normal ask receipt to index.
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
@@ -994,6 +1001,8 @@ pub struct LunarLakeRegressionBundle {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thermal_temperature_availability: Option<ThermalTemperatureAvailabilityRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ask_short_ask_receipt: Option<OperatorAskRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ask_normal_ask_receipt: Option<OperatorAskRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub warm_resident_ask_receipt: Option<OperatorAskRegressionSummary>,
@@ -1026,6 +1035,10 @@ pub struct RegressionSurfaceSummary {
     pub thermal_temperature_available: bool,
     #[serde(default)]
     pub thermal_usable_temperature_reading_count: usize,
+    #[serde(default)]
+    pub ask_short_ask_receipt_indexed: bool,
+    #[serde(default)]
+    pub ask_short_auto_ask_ready: bool,
     #[serde(default)]
     pub ask_normal_ask_receipt_indexed: bool,
     #[serde(default)]
@@ -1077,6 +1090,8 @@ impl Default for RegressionSurfaceSummary {
             thermal_temperature_availability_indexed: false,
             thermal_temperature_available: false,
             thermal_usable_temperature_reading_count: 0,
+            ask_short_ask_receipt_indexed: false,
+            ask_short_auto_ask_ready: false,
             ask_normal_ask_receipt_indexed: false,
             ask_normal_auto_ask_ready: false,
             warm_resident_ask_receipt_indexed: false,
@@ -1343,6 +1358,8 @@ pub struct LunarLakeComparisonReceipt {
     pub regression_passed: bool,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ask_short_ask_receipt: Option<OperatorAskRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ask_normal_ask_receipt: Option<OperatorAskRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2642,6 +2659,7 @@ impl LunarLakeCommand {
                 bitnet_semantic_intake,
                 power_profile_evidence,
                 thermal_temperature_availability,
+                ask_short_ask_receipt,
                 ask_normal_ask_receipt,
                 warm_resident_ask_receipt,
                 blocked_ask_receipt,
@@ -2664,6 +2682,7 @@ impl LunarLakeCommand {
                         bitnet_semantic_intake.as_deref(),
                         power_profile_evidence.as_deref(),
                         thermal_temperature_availability.as_deref(),
+                        ask_short_ask_receipt.as_deref(),
                         ask_normal_ask_receipt.as_deref(),
                         warm_resident_ask_receipt.as_deref(),
                         blocked_ask_receipt.as_deref(),
@@ -3727,6 +3746,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
         None,
         None,
         None,
+        None,
         blocked_ask_receipt,
         created_utc,
     )
@@ -3742,6 +3762,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
     bitnet_semantic_intake: Option<&Path>,
     power_profile_evidence: Option<&Path>,
     thermal_temperature_availability: Option<&Path>,
+    ask_short_ask_receipt: Option<&Path>,
     ask_normal_ask_receipt: Option<&Path>,
     warm_resident_ask_receipt: Option<&Path>,
     blocked_ask_receipt: Option<&Path>,
@@ -3947,6 +3968,43 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         cold_warm_benchmark.as_ref(),
         route_profile_comparison.as_ref(),
     );
+    let gpu_ask_short_promoted = openvino_gpu_profile_is_promoted(
+        "ask_short",
+        cold_warm_benchmark.as_ref(),
+        route_profile_comparison.as_ref(),
+    );
+    let ask_short_ask_receipt = if let Some(path) = ask_short_ask_receipt {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_operator_ask_regression(
+            &path,
+            OperatorAskRegressionExpectation {
+                label: "ask_short",
+                profile_id: "ask_short",
+                selected_route: "dense_slm_openvino_gpu_candidate",
+                selected_backend: "openvino-gpu",
+            },
+        )?;
+        checks.push(regression_check_owned(
+            "ask_short_auto_ask_receipt_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            operator_ask_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        if gpu_ask_short_promoted {
+            checks.push(regression_check_owned(
+                "ask_short_auto_ask_receipt_regression_ready",
+                false,
+                vec![AUTO_GPU_ASK_SHORT_ASK_RECEIPT.to_string()],
+                vec![
+                    "OpenVINO GPU is promoted for ask_short but no successful auto ask receipt was indexed"
+                        .to_string(),
+                ],
+            ));
+        }
+        None
+    };
     let ask_normal_ask_receipt = if let Some(path) = ask_normal_ask_receipt {
         let path = resolve_receipt_path(root, path);
         let summary = inspect_operator_ask_regression(
@@ -4037,6 +4095,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         bitnet_semantic_intake.as_ref(),
         power_profile_evidence.as_ref(),
         thermal_temperature_availability.as_ref(),
+        ask_short_ask_receipt.as_ref(),
         ask_normal_ask_receipt.as_ref(),
         warm_resident_ask_receipt.as_ref(),
         blocked_ask_receipt.as_ref(),
@@ -4057,6 +4116,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         bitnet_semantic_intake,
         power_profile_evidence,
         thermal_temperature_availability,
+        ask_short_ask_receipt,
         ask_normal_ask_receipt,
         warm_resident_ask_receipt,
         blocked_ask_receipt,
@@ -4076,6 +4136,7 @@ fn build_regression_surface_summary(
     bitnet_semantic_intake: Option<&BitnetSemanticIntakeRegressionSummary>,
     power_profile_evidence: Option<&PowerProfileRegressionSummary>,
     thermal_temperature_availability: Option<&ThermalTemperatureAvailabilityRegressionSummary>,
+    ask_short_ask_receipt: Option<&OperatorAskRegressionSummary>,
     ask_normal_ask_receipt: Option<&OperatorAskRegressionSummary>,
     warm_resident_ask_receipt: Option<&OperatorAskRegressionSummary>,
     blocked_ask_receipt: Option<&BlockedAskRegressionSummary>,
@@ -4094,6 +4155,10 @@ fn build_regression_surface_summary(
         thermal_usable_temperature_reading_count: thermal_temperature_availability
             .map(|summary| summary.usable_temperature_reading_count)
             .unwrap_or(0),
+        ask_short_ask_receipt_indexed: ask_short_ask_receipt.is_some(),
+        ask_short_auto_ask_ready: ask_short_ask_receipt
+            .map(|summary| summary.regression_ready)
+            .unwrap_or(false),
         ask_normal_ask_receipt_indexed: ask_normal_ask_receipt.is_some(),
         ask_normal_auto_ask_ready: ask_normal_ask_receipt
             .map(|summary| summary.regression_ready)
@@ -4345,6 +4410,36 @@ fn build_regression_surface_summary(
         .openvino_gpu_promoted_profiles
         .iter()
         .any(|profile| profile == "ask_normal");
+    let gpu_ask_short_promoted = summary
+        .route_promotion_scope
+        .openvino_gpu_promoted_profiles
+        .iter()
+        .any(|profile| profile == "ask_short");
+    if gpu_ask_short_promoted {
+        if let Some(ask) = ask_short_ask_receipt {
+            if !ask.regression_ready {
+                summary.gaps.push(format!(
+                    "ask_short auto GPU ask receipt is not regression-ready: {}",
+                    ask.gaps.join("; ")
+                ));
+            }
+            if ask.profile_id != "ask_short"
+                || ask.requested_device != "auto"
+                || ask.requested_route != "auto"
+                || ask.selected_route != "dense_slm_openvino_gpu_candidate"
+            {
+                summary.gaps.push(
+                    "ask_short ask receipt does not prove auto selected the promoted GPU route"
+                        .to_string(),
+                );
+            }
+        } else {
+            summary.gaps.push(
+                "OpenVINO GPU is promoted for ask_short but no successful auto ask receipt is indexed"
+                    .to_string(),
+            );
+        }
+    }
     if gpu_ask_normal_promoted {
         if let Some(ask) = ask_normal_ask_receipt {
             if !ask.regression_ready {
@@ -5826,6 +5921,7 @@ pub fn build_comparison_receipt_with_created_utc(
         operator_ready: operator.operator_ready,
         regression_passed: regression.regression_passed,
         regression_surface: regression.regression_surface,
+        ask_short_ask_receipt: regression.ask_short_ask_receipt,
         ask_normal_ask_receipt: regression.ask_normal_ask_receipt,
         warm_resident_ask_receipt: regression.warm_resident_ask_receipt,
         blocked_ask_receipt: regression.blocked_ask_receipt,
@@ -16048,12 +16144,16 @@ mod tests {
         regression.regression_surface.durability_bundle_indexed = true;
         regression.regression_surface.cold_warm_benchmark_ready = true;
         regression.regression_surface.durability_stability_proven = true;
+        regression.regression_surface.ask_short_ask_receipt_indexed = true;
+        regression.regression_surface.ask_short_auto_ask_ready = true;
         regression.regression_surface.warm_resident_ask_receipt_indexed = true;
         regression.regression_surface.warm_resident_auto_ask_ready = true;
         regression.regression_surface.blocked_ask_receipt_indexed = true;
         regression.regression_surface.candidate_routes_remain_unpromoted = true;
         regression.regression_surface.strict_ready = true;
         regression.regression_surface.gaps.clear();
+        regression.ask_short_ask_receipt =
+            Some(ready_gpu_operator_ask_summary("ask_short", AUTO_GPU_ASK_SHORT_ASK_RECEIPT));
         regression.warm_resident_ask_receipt = Some(ready_operator_ask_summary());
         regression.blocked_ask_receipt = Some(BlockedAskRegressionSummary {
             path: "lunar-lake-operator-ask-auto-low-power-blocked.json".to_string(),
@@ -16106,9 +16206,16 @@ mod tests {
         assert!(comparison.regression_surface.cold_warm_benchmark_indexed);
         assert!(comparison.regression_surface.durability_bundle_indexed);
         assert!(comparison.regression_surface.durability_stability_proven);
+        assert!(comparison.regression_surface.ask_short_ask_receipt_indexed);
+        assert!(comparison.regression_surface.ask_short_auto_ask_ready);
         assert!(comparison.regression_surface.warm_resident_ask_receipt_indexed);
         assert!(comparison.regression_surface.warm_resident_auto_ask_ready);
         assert!(comparison.regression_surface.blocked_ask_receipt_indexed);
+        let Some(ask_short) = comparison.ask_short_ask_receipt.as_ref() else {
+            bail!("comparison did not carry ask_short ask receipt summary");
+        };
+        assert_eq!(ask_short.profile_id, "ask_short");
+        assert_eq!(ask_short.selected_route, "dense_slm_openvino_gpu_candidate");
         let Some(warm_ask) = comparison.warm_resident_ask_receipt.as_ref() else {
             bail!("comparison did not carry warm resident ask receipt summary");
         };
@@ -19899,6 +20006,36 @@ mod tests {
     }
 
     #[test]
+    fn ask_short_auto_gpu_ask_receipt_is_regression_ready() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_ask_short_auto_gpu_ask(temp.path(), AUTO_GPU_ASK_SHORT_ASK_RECEIPT)?;
+
+        let summary = inspect_operator_ask_regression(
+            &temp.path().join(AUTO_GPU_ASK_SHORT_ASK_RECEIPT),
+            OperatorAskRegressionExpectation {
+                label: "ask_short",
+                profile_id: "ask_short",
+                selected_route: "dense_slm_openvino_gpu_candidate",
+                selected_backend: "openvino-gpu",
+            },
+        )?;
+
+        assert!(summary.regression_ready, "{:?}", summary.gaps);
+        assert_eq!(summary.profile_id, "ask_short");
+        assert_eq!(summary.requested_device, "auto");
+        assert_eq!(summary.requested_route, "auto");
+        assert_eq!(summary.selected_route, "dense_slm_openvino_gpu_candidate");
+        assert_eq!(summary.selected_backend, "openvino-gpu");
+        assert!(summary.new_inference_executed);
+        assert!(summary.generated_token_ids_available);
+        assert!(!summary.speedup_claim);
+        assert!(!summary.power_advantage_claim);
+        assert!(!summary.acceleration_claim);
+        assert!(!summary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
     fn ask_normal_auto_gpu_ask_receipt_is_regression_ready() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_ask_normal_auto_gpu_ask(temp.path(), AUTO_GPU_ASK_NORMAL_ASK_RECEIPT)?;
@@ -19929,6 +20066,62 @@ mod tests {
     }
 
     #[test]
+    fn regression_surface_requires_auto_ask_when_gpu_ask_short_is_promoted() -> Result<()> {
+        let mut route_profiles = ready_route_profile_regression_with_npu_warm_resident();
+        let mut cold_warm = ready_cold_warm_regression_with_npu_warm_resident();
+        for scope in
+            [&mut route_profiles.route_promotion_scope, &mut cold_warm.route_promotion_scope]
+        {
+            scope.openvino_gpu_promoted_profiles = vec!["ask_short".to_string()];
+            scope.openvino_npu_promoted_profiles.clear();
+            scope.openvino_npu_remains_candidate = true;
+            scope.notes = vec!["OpenVINO GPU is profile-promoted only for ask_short".to_string()];
+        }
+        let corpus = ready_answer_corpus_v2_summary();
+        let durability = ready_durability_summary();
+        let intake = ready_bitnet_semantic_intake_summary();
+        let power = ready_power_profile_summary();
+
+        let missing = build_regression_surface_summary(
+            Some(&corpus),
+            Some(&route_profiles),
+            Some(&cold_warm),
+            Some(&durability),
+            Some(&intake),
+            Some(&power),
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+        assert!(!missing.strict_ready);
+        assert!(missing.gaps.iter().any(|gap| {
+            gap.contains("OpenVINO GPU is promoted for ask_short")
+                && gap.contains("no successful auto ask receipt")
+        }));
+
+        let ask = ready_gpu_operator_ask_summary("ask_short", AUTO_GPU_ASK_SHORT_ASK_RECEIPT);
+        let ready = build_regression_surface_summary(
+            Some(&corpus),
+            Some(&route_profiles),
+            Some(&cold_warm),
+            Some(&durability),
+            Some(&intake),
+            Some(&power),
+            None,
+            Some(&ask),
+            None,
+            None,
+            None,
+        );
+        assert!(ready.ask_short_ask_receipt_indexed);
+        assert!(ready.ask_short_auto_ask_ready);
+        assert!(ready.strict_ready, "{:?}", ready.gaps);
+        Ok(())
+    }
+
+    #[test]
     fn regression_surface_requires_auto_ask_when_npu_warm_resident_is_promoted() -> Result<()> {
         let route_profiles = ready_route_profile_regression_with_npu_warm_resident();
         let cold_warm = ready_cold_warm_regression_with_npu_warm_resident();
@@ -19948,6 +20141,7 @@ mod tests {
             None,
             None,
             None,
+            None,
         );
         assert!(!missing.strict_ready);
         assert!(missing.gaps.iter().any(|gap| {
@@ -19963,6 +20157,7 @@ mod tests {
             Some(&durability),
             Some(&intake),
             Some(&power),
+            None,
             None,
             None,
             Some(&ask),
@@ -21018,7 +21213,15 @@ mod tests {
         )
     }
 
+    fn write_ask_short_auto_gpu_ask(root: &Path, file: &str) -> Result<()> {
+        write_auto_gpu_ask(root, file, "ask_short")
+    }
+
     fn write_ask_normal_auto_gpu_ask(root: &Path, file: &str) -> Result<()> {
+        write_auto_gpu_ask(root, file, "ask_normal")
+    }
+
+    fn write_auto_gpu_ask(root: &Path, file: &str, profile_id: &str) -> Result<()> {
         write_json(
             root,
             file,
@@ -21029,7 +21232,7 @@ mod tests {
                 "machine_id": "intel-258v",
                 "requested_device": "auto",
                 "requested_route": "auto",
-                "profile_id": "ask_normal",
+                "profile_id": profile_id,
                 "selected_route": "dense_slm_openvino_gpu_candidate",
                 "selected_backend": "openvino-gpu",
                 "runtime_api": "openvino_genai",
@@ -21052,7 +21255,7 @@ mod tests {
                 "route_selection": {
                     "requested_device": "auto",
                     "requested_route": "auto",
-                    "profile_id": "ask_normal",
+                    "profile_id": profile_id,
                     "selected_route": "dense_slm_openvino_gpu_candidate",
                     "selected_backend": "openvino-gpu",
                     "runtime_api": "openvino_genai",
@@ -21288,6 +21491,37 @@ mod tests {
                 "lunar-lake-operator-ask-auto-npu-warm-resident-math-brief-source-run.json"
                     .to_string(),
             ),
+            regression_ready: true,
+            gaps: vec![],
+        }
+    }
+
+    fn ready_gpu_operator_ask_summary(
+        profile_id: &str,
+        path: &str,
+    ) -> OperatorAskRegressionSummary {
+        OperatorAskRegressionSummary {
+            path: path.to_string(),
+            ask_receipt_ready: true,
+            profile_id: profile_id.to_string(),
+            requested_device: "auto".to_string(),
+            requested_route: "auto".to_string(),
+            selected_route: "dense_slm_openvino_gpu_candidate".to_string(),
+            selected_backend: "openvino-gpu".to_string(),
+            runtime_api: "openvino_genai".to_string(),
+            promotion_status: "promoted".to_string(),
+            route_profile_status: Some("promoted_route_ready".to_string()),
+            route_profile_blockers: vec![],
+            fallback_used: false,
+            answer_gate_passed: true,
+            openvino_candidate_route_executed: true,
+            new_inference_executed: true,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            bitnet_qk256_i2s_claim: false,
+            generated_token_ids_available: true,
+            source_run_receipt: Some(path.replace(".json", "-source-run.json")),
             regression_ready: true,
             gaps: vec![],
         }

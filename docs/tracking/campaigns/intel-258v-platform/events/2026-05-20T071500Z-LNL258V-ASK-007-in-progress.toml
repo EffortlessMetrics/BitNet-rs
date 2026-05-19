@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T07:15:00Z"
+event = "in_progress"
+item = "LNL258V-ASK-007"
+branch = "codex/lunar-lake/LNL258V-ASK-007-auto-gpu-ask-short"
+actor = "codex"
+summary = "Started wiring the existing ask_short auto GPU ask receipt into strict Lunar Lake regression and operator comparison."
+
+notes = [
+  "The slice indexes the already committed ask_short auto OpenVINO GPU appliance receipt; it does not run new inference.",
+  "Strict regression should fail closed if OpenVINO GPU remains promoted for ask_short without a successful auto ask receipt.",
+  "POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence while the 258V is on AC power.",
+]
