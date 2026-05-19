@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T05:50:00Z"
+event = "merged"
+item = "LNL258V-OP-013"
+pr = 6034
+branch = "codex/lunar-lake/LNL258V-OP-013-ask-model-defaults"
+head_sha = "87253b5b9045f8d0f30681b34b211b136293f84e"
+merge_sha = "beb920ca0d0977bd736a43aae839a98138ad0e1a"
+actor = "codex"
+summary = "Merged LNL258V-OP-013, making Lunar Lake ask fail closed before model resolution for blocked auto routes."
+
+notes = [
+  "The merged PR lets executable dense Qwen CPU or OpenVINO ask routes resolve committed local default model paths when the referenced artifact exists.",
+  "Blocked low_power auto-route asks now record that no model path was required and no model was loaded before the no-inference route-selection block.",
+  "The merge preserves no successful new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]
