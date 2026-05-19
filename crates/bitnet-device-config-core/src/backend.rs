@@ -14,6 +14,7 @@ impl DeviceConfig {
             DeviceConfig::OpenVinoNpu => BackendRequest::OpenVinoNpu,
             DeviceConfig::NvidiaRtx5070TiCuda => BackendRequest::NvidiaRtx5070TiCuda,
             DeviceConfig::NvidiaRtx5070TiWgpu => BackendRequest::NvidiaRtx5070TiWgpu,
+            DeviceConfig::IntelA770OpenCl => BackendRequest::IntelA770OpenCl,
             DeviceConfig::Metal => BackendRequest::Metal,
             DeviceConfig::MpsGraph => BackendRequest::MpsGraph,
             DeviceConfig::AppleM4Metal => BackendRequest::AppleM4Metal,
