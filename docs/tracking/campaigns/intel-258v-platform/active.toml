@@ -8833,6 +8833,64 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-REG-008"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-REG-008-power-profile-regression"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-POWER-001", "LNL258V-REG-007"]
+acceptance = "Wire lunar-lake-power-profile-evidence.json into strict Lunar Lake regression v2 so the regression bundle indexes low_power power-profile blockers, records low_power_promotion_ready and power_advantage_proven, keeps low_power unpromoted without failing on expected missing battery/energy/thermal proof, and fails closed only for unsafe fallback, promotion, speedup, power-advantage, native accelerator, or BitNet QK256/I2_S claim-boundary violations."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::regression_bundle_v2_indexes_corpus_fixture_and_profile_comparison -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::power_profile_evidence_indexes_low_power_blockers_without_claims -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-19T09:00:00Z --strict",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Strict Lunar Lake regression v2 indexes low_power power-profile evidence and blocker context.",
+  "low_power remains unpromoted while battery-mode, energy proxy, thermal, and benchmark-qualified power-advantage evidence are missing.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-001"
 status = "merged"
 pr = 5806
