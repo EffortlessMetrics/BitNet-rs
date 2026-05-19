@@ -1,0 +1,32 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-020"
+event = "merged"
+timestamp = "2026-05-19T12:39:09Z"
+actor = "codex"
+pr = 5937
+head_sha = "aba72a51099e4a5e83343c21421c3ea97aeca573"
+merge_sha = "4eb60320b46cd59e183525839587b38a656a4cbe"
+branch = "codex/apple-m3-macbook-air/M3MBA-020-execution-roadmap"
+
+summary = "Merged #5937 with the M3 Air post-handoff execution queue and advanced the lane toward the M3MBA-021 device/profile contract slice."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5937",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+  "docs/tracking/campaigns/apple-m3-macbook-air/generated/status.md",
+  "docs/tracking/generated/global-dashboard.md",
+  "docs/tracking/generated/lane-dashboard.md",
+]
+
+notes = [
+  "M3MBA-020 is a roadmap/tracker merge only.",
+  "M3MBA-021 is now the next concrete M3 Air implementation item for the structured device/profile contract.",
+  "M3MBA-022 through M3MBA-025 remain proposed behind the device/profile and artifact-unblock dependencies.",
+  "No new M3 inference, artifact download, runtime behavior change, M4 proof, Metal, MPSGraph, Neural Engine, QK256, or performance claim is made.",
+]
+
+validation = [
+  "Hosted PR #5937 checks passed, including PR Gate Success, PR Plan, CI Core Success, Campaign Tracker, Docs Automation, Markdownlint, Link Checker, Guards, Policy, and macOS route checks.",
+]

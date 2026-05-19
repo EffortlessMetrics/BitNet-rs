@@ -1000,7 +1000,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-020"
-status = "in_progress"
+status = "merged"
+pr = 5937
+head_sha = "aba72a51099e4a5e83343c21421c3ea97aeca573"
+merge_sha = "4eb60320b46cd59e183525839587b38a656a4cbe"
 branch = "codex/apple-m3-macbook-air/M3MBA-020-execution-roadmap"
 stackable = true
 review_mode = "codex_premerge"

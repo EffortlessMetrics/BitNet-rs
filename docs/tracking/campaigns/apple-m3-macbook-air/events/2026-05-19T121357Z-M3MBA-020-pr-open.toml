@@ -1,0 +1,35 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-020"
+event = "pr_open"
+timestamp = "2026-05-19T12:13:57Z"
+actor = "codex"
+pr = 5937
+head_sha = "aba72a51099e4a5e83343c21421c3ea97aeca573"
+branch = "codex/apple-m3-macbook-air/M3MBA-020-execution-roadmap"
+
+summary = "Opened #5937 with the M3 Air post-handoff execution queue."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5937",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+  "docs/tracking/campaigns/apple-m3-macbook-air/generated/status.md",
+  "docs/tracking/generated/global-dashboard.md",
+  "docs/tracking/generated/lane-dashboard.md",
+]
+
+notes = [
+  "The PR converts the M3MBA-019 roadmap reset into concrete follow-on items M3MBA-021 through M3MBA-025.",
+  "M3MBA-021 is the next implementation slice for a structured M3 Air device/profile contract.",
+  "M3MBA-023 carries forward the selected-long-job rule: use completed healthy runs plus cushion for caps, retain phase artifacts, and avoid near-completion cancellation as cost control.",
+  "No new M3 inference, artifact download, runtime behavior change, M4 proof, Metal, MPSGraph, Neural Engine, QK256, or performance claim is made.",
+]
+
+validation = [
+  "cargo fmt --all -- --check",
+  "target/debug/xtask campaign check apple-m3-macbook-air",
+  "target/debug/xtask campaign doctor",
+  "target/debug/xtask campaign generate --check",
+  "git diff --check",
+]
