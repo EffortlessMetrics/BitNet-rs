@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T08:57:55Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-053"
+event = "pr_open"
+pr = 5944
+branch = "codex/slm-cpu-053-packed-q8-runtime-gate"
+head_sha = "fc56764e0a37d92e52c2cc286db4ffbe999b5040"
+actor = "codex"
+notes = [
+  "The PR adds a proof-only dense_gguf_q8_runtime_execution_proof artifact for the exact selector-updated sidecar tensor.",
+  "The real i5-8250U Qwen3 Q8_0 warm-session receipt preserves strict GGUF tokenizer authority, generated IDs, cpu-rust, fallback=false, and speedup_claim=false.",
+  "Production transformer routing remains disabled until a separate non-cyclic dense-linear runtime API boundary is proven.",
+]
