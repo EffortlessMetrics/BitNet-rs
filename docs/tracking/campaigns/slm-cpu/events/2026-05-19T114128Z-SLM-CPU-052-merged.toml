@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T11:41:28Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-052"
+event = "merged"
+pr = 5921
+head_sha = "d803a63446c6aec5935cd39b35885f91f00d8ba7"
+merge_sha = "d9bd53cbdc87207698a6d8d58604731a405604c7"
+actor = "codex"
+
+notes = [
+  "Merged the behavior-preserving packed Q8_0 sidecar selector-update gate after rebasing onto current main and preserving the review fix that scopes the update to the exact proven tensor and sidecar payload.",
+  "The merged slice allows the selector to choose packed_q8_sidecar only for the evidence-scoped sidecar update while preserving fallback=false provenance and no speedup claim.",
+  "No sustained throughput, broad answer-quality, Q4/Q5 runtime, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, BitNet QK256/I2_S, or accelerator claim is made.",
+]
