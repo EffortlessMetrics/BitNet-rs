@@ -9842,6 +9842,9 @@ struct BenchmarkMetricSamples {
 
 impl BenchmarkMetricSamples {
     fn extend_from_profile(&mut self, profile: &serde_json::Value) {
+        if profile["status"].as_str() == Some("invalid_for_comparison") {
+            return;
+        }
         self.cold_load_ms.extend(benchmark_stat_samples(&profile["timing"]["cold_load_ms"]));
         self.tokenizer_load_ms
             .extend(benchmark_stat_samples(&profile["timing"]["tokenizer_load_ms"]));
@@ -10001,7 +10004,18 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
             quiet,
             receipt_path: &receipt_path,
         })?;
-        annotate_and_validate_mac_receipt(&receipt_path, model, "mac benchmark")?;
+        if profile_result.timed_out {
+            let timeout_receipt = read_json_receipt(&receipt_path)?;
+            let summary = validate_mac_receipt_value(&receipt_path, &timeout_receipt)?;
+            println!(
+                "Mac receipt checked: {} ({}, generated_tokens={:?})",
+                receipt_path.display(),
+                summary.artifact_kind,
+                summary.generated_tokens
+            );
+        } else {
+            annotate_and_validate_mac_receipt(&receipt_path, model, "mac benchmark")?;
+        }
         let receipt = read_json_receipt(&receipt_path)?;
         let summary = benchmark_profile_summary(
             &spec,
@@ -10036,6 +10050,9 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
             optional_f64_json(memory_delta_mb(benchmark_start_peak_mb, memory_end_peak_mb)),
         );
     }
+    let invalid_comparison_reasons = benchmark_profile_invalid_comparison_reasons(&summaries);
+    let comparison_status =
+        if invalid_comparison_reasons.is_empty() { "comparable" } else { "invalid_for_comparison" };
 
     let aggregate = serde_json::json!({
         "schema_version": "1.1.0",
@@ -10094,6 +10111,12 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
             "memory_drift_definition": "per-profile child process peak RSS; child exits between profiles",
             "thresholds_are_claim_bounds_not_speed_guarantees": true
         },
+        "comparison_readiness": {
+            "status": comparison_status,
+            "can_compare_timing": invalid_comparison_reasons.is_empty(),
+            "invalid_comparison_reasons": invalid_comparison_reasons.clone(),
+        },
+        "invalid_comparison_reasons": invalid_comparison_reasons,
         "evidence": {
             "profile_receipts": summaries
                 .iter()
@@ -10143,6 +10166,7 @@ struct BenchmarkProfileRun<'a> {
 
 struct BenchmarkProfileRunResult {
     peak_memory_mb: Option<f64>,
+    timed_out: bool,
 }
 
 fn run_benchmark_profile_warm_session(
@@ -10170,7 +10194,7 @@ fn run_benchmark_profile_warm_session(
     loop {
         if let Some(status) = child.try_wait()? {
             if status.success() {
-                return Ok(BenchmarkProfileRunResult { peak_memory_mb });
+                return Ok(BenchmarkProfileRunResult { peak_memory_mb, timed_out: false });
             }
             anyhow::bail!(
                 "benchmark profile {profile_id} child exited with status {status}; receipt path {}",
@@ -10194,11 +10218,7 @@ fn run_benchmark_profile_warm_session(
                 peak_memory_mb,
                 status.and_then(|status| status.code()),
             )?;
-            anyhow::bail!(
-                "benchmark profile {profile_id} exceeded calibrated timeout {}s; timeout receipt written to {}",
-                timeout.as_secs(),
-                request.receipt_path.display()
-            );
+            return Ok(BenchmarkProfileRunResult { peak_memory_mb, timed_out: true });
         }
         std::thread::sleep(Duration::from_millis(250));
     }
@@ -10411,6 +10431,9 @@ async fn run_benchmark_variance(request: MacBenchmarkSummaryRun<'_>, repeat: usi
         .cloned()
         .unwrap_or_default();
     let profile_count = profiles_required.len();
+    let invalid_comparison_reasons = benchmark_profile_invalid_comparison_reasons(&child_summaries);
+    let comparison_status =
+        if invalid_comparison_reasons.is_empty() { "comparable" } else { "invalid_for_comparison" };
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": "apple_m4_benchmark_variance_v1",
@@ -10453,7 +10476,12 @@ async fn run_benchmark_variance(request: MacBenchmarkSummaryRun<'_>, repeat: usi
             "method": "none",
             "reason": "raw repeat samples are preserved; M4-BENCH-005 may define filtering policy for published envelopes",
         },
-        "invalid_comparison_reasons": [],
+        "comparison_readiness": {
+            "status": comparison_status,
+            "can_compare_timing": invalid_comparison_reasons.is_empty(),
+            "invalid_comparison_reasons": invalid_comparison_reasons.clone(),
+        },
+        "invalid_comparison_reasons": invalid_comparison_reasons,
         "build": {
             "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
             "release_mode": !cfg!(debug_assertions),
@@ -11352,6 +11380,41 @@ fn benchmark_profile_summary(
     profile_peak_memory_mb: Option<f64>,
 ) -> Result<serde_json::Value> {
     let profile_id = spec.profile.id();
+    if receipt["artifact_kind"].as_str() == Some("apple_m4_slm_benchmark_profile_timeout") {
+        let timeout_profile_id = receipt["profile_id"].as_str().unwrap_or_default();
+        if timeout_profile_id != profile_id {
+            anyhow::bail!(
+                "benchmark timeout profile id mismatch: expected {profile_id}, got {timeout_profile_id:?}"
+            );
+        }
+        let prompt_count = receipt["prompt_count"].as_u64().unwrap_or(spec.prompts.len() as u64);
+        return Ok(serde_json::json!({
+            "profile_id": profile_id,
+            "receipt_path": path.display().to_string(),
+            "status": "invalid_for_comparison",
+            "scenario": receipt["scenario"].as_str().unwrap_or(spec.scenario),
+            "requested_max_new_tokens": receipt["requested_max_new_tokens"].as_u64().unwrap_or(spec.max_new_tokens as u64),
+            "prompt_count": prompt_count,
+            "target_context_tokens": receipt["target_context_tokens"].clone(),
+            "generated_tokens": 0,
+            "quality_passed": false,
+            "model_loaded_once": false,
+            "tokenizer_loaded_once": false,
+            "reuse_scope": "profile_timeout",
+            "timeout_boundary": receipt["timeout_boundary"].clone(),
+            "invalid_comparison_reasons": receipt["invalid_comparison_reasons"].clone(),
+            "memory": {
+                "peak_memory_mb": benchmark_stat_json(&optional_sample(receipt["memory"]["peak_memory_mb"].as_f64().or(profile_peak_memory_mb))),
+                "memory_drift_mb": benchmark_stat_json(&[]),
+                "source": receipt["memory"]["source"].as_str().unwrap_or("parent-polled child RSS before timeout kill"),
+            },
+            "claim_boundary": {
+                "scope": "this profile timed out under the calibrated boundary and is invalid for timing comparison",
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+            },
+        }));
+    }
     let prompt_count = receipt["session"]["prompt_count"].as_u64().unwrap_or_default();
     let quality_passed = receipt["quality_summary"]["passed"].as_bool().unwrap_or(false);
     if prompt_count == 0 || !quality_passed {
@@ -11464,6 +11527,24 @@ fn benchmark_profile_summary(
         },
         "allocation_audit": receipt["allocation_audit"].clone(),
     }))
+}
+
+fn benchmark_profile_invalid_comparison_reasons(profiles: &[serde_json::Value]) -> Vec<String> {
+    let mut reasons = Vec::new();
+    for profile in profiles {
+        let Some(profile_reasons) = profile["invalid_comparison_reasons"].as_array() else {
+            continue;
+        };
+        for reason in profile_reasons {
+            let Some(reason) = reason.as_str() else {
+                continue;
+            };
+            if !reasons.iter().any(|existing| existing == reason) {
+                reasons.push(reason.to_string());
+            }
+        }
+    }
+    reasons
 }
 
 fn push_positive_rate(out: &mut Vec<f64>, numerator: f64, denominator_ms: f64) {
@@ -19361,6 +19442,7 @@ fn validate_slm_benchmark_v2_receipt(
     let mut generated_tokens_total = 0u64;
     let mut seen_profiles = std::collections::BTreeSet::new();
     let mut observed_profile_ids = Vec::with_capacity(profiles.len());
+    let mut has_invalid_profile = false;
     for profile in profiles {
         let profile_id = require_non_empty_string_at(path, profile, &["profile_id"])?;
         if !M4_SLM_BENCHMARK_V2_PROFILES.contains(&profile_id) {
@@ -19378,7 +19460,25 @@ fn validate_slm_benchmark_v2_receipt(
         observed_profile_ids.push(profile_id.to_string());
         require_non_empty_string_at(path, profile, &["receipt_path"])?;
         let prompt_count = require_u64_at(path, profile, &["prompt_count"], true)?;
-        let generated_tokens = require_u64_at(path, profile, &["generated_tokens"], true)?;
+        let generated_tokens = require_u64_at(path, profile, &["generated_tokens"], false)?;
+        if profile["status"].as_str() == Some("invalid_for_comparison") {
+            has_invalid_profile = true;
+            require_bool_at(path, profile, &["quality_passed"], false)?;
+            require_u64_exact(path, profile, &["generated_tokens"], 0)?;
+            require_non_empty_string_array_at(path, profile, &["invalid_comparison_reasons"])?;
+            require_positive_number_at(path, profile, &["timeout_boundary", "elapsed_ms"])?;
+            require_bool_at(path, profile, &["timeout_boundary", "reached"], true)?;
+            require_bool_at(path, profile, &["timeout_boundary", "enforced"], true)?;
+            prompt_count_total += prompt_count;
+            generated_tokens_total += generated_tokens;
+            continue;
+        }
+        if generated_tokens == 0 {
+            anyhow::bail!(
+                "{} SLM benchmark v2 profile {profile_id:?} generated_tokens must be greater than zero",
+                path.display()
+            );
+        }
         require_bool_at(path, profile, &["quality_passed"], true)?;
         require_bool_at(path, profile, &["model_loaded_once"], true)?;
         require_bool_at(path, profile, &["tokenizer_loaded_once"], true)?;
@@ -19398,6 +19498,21 @@ fn validate_slm_benchmark_v2_receipt(
 
         prompt_count_total += prompt_count;
         generated_tokens_total += generated_tokens;
+    }
+    if has_invalid_profile {
+        require_non_empty_string_array_at(path, receipt, &["invalid_comparison_reasons"])?;
+        require_exact_string_at(
+            path,
+            receipt,
+            &["comparison_readiness", "status"],
+            "invalid_for_comparison",
+        )?;
+        require_bool_at(path, receipt, &["comparison_readiness", "can_compare_timing"], false)?;
+        require_non_empty_string_array_at(
+            path,
+            receipt,
+            &["comparison_readiness", "invalid_comparison_reasons"],
+        )?;
     }
     if requires_explicit_contract {
         let profiles_required =
@@ -19627,9 +19742,27 @@ fn validate_apple_m4_benchmark_variance_receipt(
     require_non_empty_string_at(path, receipt, &["variance_band", "advisory_vs_failure"])?;
     require_non_empty_string_at(path, receipt, &["outlier_handling", "method"])?;
     require_non_empty_string_at(path, receipt, &["outlier_handling", "reason"])?;
-    json_value_at(receipt, &["invalid_comparison_reasons"]).as_array().ok_or_else(|| {
-        anyhow!("{} benchmark variance invalid_comparison_reasons must be an array", path.display())
-    })?;
+    let invalid_comparison_reasons =
+        json_value_at(receipt, &["invalid_comparison_reasons"]).as_array().ok_or_else(|| {
+            anyhow!(
+                "{} benchmark variance invalid_comparison_reasons must be an array",
+                path.display()
+            )
+        })?;
+    if !invalid_comparison_reasons.is_empty() {
+        require_exact_string_at(
+            path,
+            receipt,
+            &["comparison_readiness", "status"],
+            "invalid_for_comparison",
+        )?;
+        require_bool_at(path, receipt, &["comparison_readiness", "can_compare_timing"], false)?;
+        require_non_empty_string_array_at(
+            path,
+            receipt,
+            &["comparison_readiness", "invalid_comparison_reasons"],
+        )?;
+    }
 
     require_non_empty_string_array_at(path, receipt, &["evidence", "child_summary_receipts"])?;
     let child_receipts = json_value_at(receipt, &["evidence", "child_summary_receipts"]);
@@ -21674,6 +21807,270 @@ mod tests {
         }
     }
 
+    fn test_valid_benchmark_profile_summary(profile_id: &str) -> serde_json::Value {
+        serde_json::json!({
+            "profile_id": profile_id,
+            "receipt_path": format!("{profile_id}.json"),
+            "scenario": "short_prompt",
+            "requested_max_new_tokens": 16,
+            "prompt_count": 1,
+            "target_context_tokens": serde_json::Value::Null,
+            "generated_tokens": 2,
+            "quality_passed": true,
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "reuse_scope": "resident_session",
+            "prompt_tokens": benchmark_stat_json(&[5.0]),
+            "output_tokens": benchmark_stat_json(&[2.0]),
+            "timing": {
+                "cold_load_ms": benchmark_stat_json(&[3.0]),
+                "tokenizer_load_ms": benchmark_stat_json(&[2.0]),
+                "prompt_tokenize_ms": benchmark_stat_json(&[1.0]),
+                "prefill_ms": benchmark_stat_json(&[4.0]),
+                "time_to_first_token_ms": benchmark_stat_json(&[10.0]),
+                "decode_total_ms": benchmark_stat_json(&[5.0]),
+                "sampling_ms_per_token": benchmark_stat_json(&[0.5]),
+                "total_wall_ms": benchmark_stat_json(&[15.0]),
+            },
+            "throughput": {
+                "input_tokens_per_second": benchmark_stat_json(&[1000.0]),
+                "output_tokens_per_second": benchmark_stat_json(&[133.333]),
+                "decode_tokens_per_second": benchmark_stat_json(&[400.0]),
+            },
+            "memory": {
+                "peak_memory_mb": benchmark_stat_json(&[128.0]),
+                "memory_drift_mb": benchmark_stat_json(&[0.0]),
+                "source": "test fixture",
+            },
+            "claim_boundary": {
+                "scope": "test fixture",
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+            },
+            "allocation_audit": serde_json::Value::Null,
+        })
+    }
+
+    fn test_timeout_profile_summary(
+        dir: &Path,
+        model: &VerifiedCachedModel,
+    ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+        let spec = benchmark_profile_spec(MacBenchmarkProfile::Context4k);
+        let receipt_path = dir.join("context_4k-timeout.json");
+        write_benchmark_profile_timeout_receipt(
+            &receipt_path,
+            model,
+            APPLE_M4_CPU_NEON,
+            &spec,
+            Duration::from_secs(benchmark_calibration_profile_timeout_seconds("context_4k")),
+            720_250.0,
+            Some(4096.0),
+            None,
+        )?;
+        let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt_path)?)?;
+        Ok(benchmark_profile_summary(&spec, &receipt_path, &receipt, Some(128.0), Some(4096.0))?)
+    }
+
+    fn test_benchmark_v2_receipt(
+        model: &VerifiedCachedModel,
+        path: PathBuf,
+        profiles: Vec<serde_json::Value>,
+    ) -> serde_json::Value {
+        let mut samples = BenchmarkMetricSamples::default();
+        for profile in &profiles {
+            samples.extend_from_profile(profile);
+        }
+        let invalid_comparison_reasons = benchmark_profile_invalid_comparison_reasons(&profiles);
+        let comparison_status = if invalid_comparison_reasons.is_empty() {
+            "comparable"
+        } else {
+            "invalid_for_comparison"
+        };
+        let prompt_count =
+            profiles.iter().filter_map(|profile| profile["prompt_count"].as_u64()).sum::<u64>();
+        let generated_tokens =
+            profiles.iter().filter_map(|profile| profile["generated_tokens"].as_u64()).sum::<u64>();
+        let profiles_required = profiles
+            .iter()
+            .filter_map(|profile| profile["profile_id"].as_str().map(str::to_string))
+            .collect::<Vec<_>>();
+        serde_json::json!({
+            "schema_version": "1.1.0",
+            "artifact_kind": "apple_m4_slm_benchmark_v2",
+            "timestamp": "2026-05-19T10:00:00Z",
+            "artifact_path": path.display().to_string(),
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "fallback_reason": serde_json::Value::Null,
+            "profile_set": "slm-benchmark-v2",
+            "profiles_required": profiles_required,
+            "profiles": profiles,
+            "prompt_count": prompt_count,
+            "generated_tokens": generated_tokens,
+            "speed": samples.speed_json(),
+            "memory": samples.memory_json(),
+            "build": {
+                "profile": "release",
+                "release_mode": true,
+            },
+            "model_cache": test_model_cache_json(model),
+            "benchmark_contract": test_benchmark_contract_json(),
+            "comparison_readiness": {
+                "status": comparison_status,
+                "can_compare_timing": invalid_comparison_reasons.is_empty(),
+                "invalid_comparison_reasons": invalid_comparison_reasons.clone(),
+            },
+            "invalid_comparison_reasons": invalid_comparison_reasons,
+            "evidence": {
+                "profile_receipts": ["short_prompt_16_out.json", "context_4k-timeout.json"],
+                "generated_text_recorded": true,
+                "generated_token_ids_recorded": true,
+                "operator_command": "mac benchmark",
+            },
+            "mac_claim_boundary": test_dense_benchmark_claim_boundary_json(false),
+            "speedup_claim": false,
+        })
+    }
+
+    fn test_benchmark_variance_receipt(
+        model: &VerifiedCachedModel,
+        path: &Path,
+        child_summaries: &[serde_json::Value],
+        child_summary_receipts: Vec<String>,
+        invalid_comparison_reasons: Vec<String>,
+    ) -> serde_json::Value {
+        let comparison_status = if invalid_comparison_reasons.is_empty() {
+            "comparable"
+        } else {
+            "invalid_for_comparison"
+        };
+        let prompt_count = child_summaries
+            .iter()
+            .filter_map(|summary| summary["prompt_count"].as_u64())
+            .sum::<u64>();
+        let generated_tokens = child_summaries
+            .iter()
+            .filter_map(|summary| summary["generated_tokens"].as_u64())
+            .sum::<u64>();
+        serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "apple_m4_benchmark_variance_v1",
+            "timestamp": "2026-05-19T10:00:00Z",
+            "artifact_path": path.display().to_string(),
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "fallback_reason": serde_json::Value::Null,
+            "profile_set": "slm-benchmark-v2",
+            "profiles_required": child_summaries[0]["profiles_required"].clone(),
+            "prompt_count": prompt_count,
+            "generated_tokens": generated_tokens,
+            "repeat": {
+                "requested": child_summaries.len(),
+                "completed": child_summaries.len(),
+                "profile_count": 2,
+                "sample_count": child_summaries.len() * 2,
+            },
+            "metrics": {
+                "speed": benchmark_variance_metric_json(
+                    child_summaries,
+                    "speed",
+                    M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS,
+                ),
+                "memory": benchmark_variance_metric_json(
+                    child_summaries,
+                    "memory",
+                    &["peak_memory_mb", "memory_drift_mb"],
+                ),
+            },
+            "variance_band": {
+                "method": "test fixture",
+                "reported_stats": ["count", "p50", "p90", "p99", "min", "max", "samples"],
+                "threshold_derivation": "test fixture",
+                "advisory_vs_failure": "test fixture",
+            },
+            "outlier_handling": {
+                "method": "none",
+                "reason": "test fixture",
+            },
+            "comparison_readiness": {
+                "status": comparison_status,
+                "can_compare_timing": invalid_comparison_reasons.is_empty(),
+                "invalid_comparison_reasons": invalid_comparison_reasons.clone(),
+            },
+            "invalid_comparison_reasons": invalid_comparison_reasons,
+            "build": {
+                "profile": "release",
+                "release_mode": true,
+            },
+            "model_cache": test_model_cache_json(model),
+            "evidence": {
+                "child_summary_receipts": child_summary_receipts,
+                "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+                "generated_text_recorded": true,
+                "generated_token_ids_recorded": true,
+                "operator_command": "mac benchmark --repeat",
+            },
+            "mac_claim_boundary": test_dense_benchmark_claim_boundary_json(true),
+            "speedup_claim": false,
+        })
+    }
+
+    fn test_model_cache_json(model: &VerifiedCachedModel) -> serde_json::Value {
+        serde_json::json!({
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        })
+    }
+
+    fn test_benchmark_contract_json() -> serde_json::Value {
+        serde_json::json!({
+            "contract_version": "1.1.0",
+            "scope": "Apple M4 Mac mini dense SLM benchmark v2",
+            "profile_execution_model": "one resident warm-session run per named profile",
+            "supported_profiles": M4_SLM_BENCHMARK_V2_PROFILES,
+            "required_metrics": {
+                "timing": M4_SLM_BENCHMARK_V2_TIMING_METRICS,
+                "throughput": M4_SLM_BENCHMARK_V2_THROUGHPUT_METRICS,
+                "memory": M4_SLM_BENCHMARK_V2_MEMORY_METRICS,
+                "aggregate_speed": M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS,
+            },
+        })
+    }
+
+    fn test_dense_benchmark_claim_boundary_json(variance: bool) -> serde_json::Value {
+        serde_json::json!({
+            "dense_slm_only": true,
+            "timing_profile": !variance,
+            "variance_harness_only": variance,
+            "bounded_benchmark_profiles_only": true,
+            "final_variance_envelope": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "bitnet_quality_claimed": false,
+            "bitnet_performance_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false,
+        })
+    }
+
     fn test_state() -> Result<(tempfile::TempDir, MacServeState), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
         let receipt_dir = temp.path().join("receipts");
@@ -21810,6 +22207,76 @@ mod tests {
         assert_eq!(summary.generated_tokens, Some(0));
         assert_eq!(receipt["status"].as_str(), Some("invalid_for_comparison"));
         assert_eq!(receipt["timeout_boundary"]["enforced"].as_bool(), Some(true));
+        Ok(())
+    }
+
+    #[test]
+    fn slm_benchmark_v2_accepts_timeout_profile_without_timing_sample()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let timeout_profile = test_timeout_profile_summary(temp.path(), &model)?;
+        let valid_profile = test_valid_benchmark_profile_summary("short_prompt_16_out");
+        let receipt = test_benchmark_v2_receipt(
+            &model,
+            temp.path().join("run-01.json"),
+            vec![valid_profile, timeout_profile],
+        );
+
+        let summary = validate_mac_receipt_value(Path::new("run-01.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_slm_benchmark_v2");
+        assert_eq!(summary.prompt_count, Some(4));
+        assert_eq!(summary.generated_tokens, Some(2));
+        assert_eq!(
+            receipt["comparison_readiness"]["status"].as_str(),
+            Some("invalid_for_comparison")
+        );
+        assert_eq!(receipt["speed"]["ttft_ms_p50"].as_f64(), Some(10.0));
+        Ok(())
+    }
+
+    #[test]
+    fn benchmark_variance_accepts_timeout_aware_child_summaries()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let child_paths = [temp.path().join("run-01.json"), temp.path().join("run-02.json")];
+        let mut child_summaries = Vec::new();
+        for child_path in &child_paths {
+            let timeout_profile = test_timeout_profile_summary(temp.path(), &model)?;
+            let valid_profile = test_valid_benchmark_profile_summary("short_prompt_16_out");
+            let child = test_benchmark_v2_receipt(
+                &model,
+                child_path.clone(),
+                vec![valid_profile, timeout_profile],
+            );
+            std::fs::write(&child_path, serde_json::to_vec_pretty(&child)?)?;
+            child_summaries.push(child);
+        }
+        let parent_path = temp.path().join("variance.json");
+        let child_summary_receipts =
+            child_paths.iter().map(|path| path.display().to_string()).collect::<Vec<_>>();
+        let invalid_comparison_reasons =
+            benchmark_profile_invalid_comparison_reasons(&child_summaries);
+        let variance = test_benchmark_variance_receipt(
+            &model,
+            &parent_path,
+            &child_summaries,
+            child_summary_receipts,
+            invalid_comparison_reasons,
+        );
+
+        let summary = validate_mac_receipt_value(&parent_path, &variance)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_benchmark_variance_v1");
+        assert_eq!(summary.prompt_count, Some(8));
+        assert_eq!(summary.generated_tokens, Some(4));
+        assert_eq!(
+            variance["comparison_readiness"]["status"].as_str(),
+            Some("invalid_for_comparison")
+        );
+        assert_eq!(variance["metrics"]["speed"]["ttft_ms_p50"]["count"].as_u64(), Some(2));
         Ok(())
     }
 
