@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T15:55:17Z"
+campaign = "intel-a770"
+item = "A770-003"
+event = "in_progress"
+branch = "codex/intel-a770/A770-003-backend-identity"
+actor = "codex"
+
+notes = [
+  "Started A770-003 to preserve Intel Arc A770 OpenCL requested and selected backend identity without adding kernels or inference claims.",
+  "The patch scope is backend/config/logging identity only: labels, request parsing, strict selection, and receipt-facing selected backend identity.",
+  "The item scope now includes crates/bitnet-common/src/backend_selection.rs because BackendRequest and selection identity live there in the current code layout.",
+  "No A770 OpenCL execution, BitNet inference, packed QK256, speedup, or route promotion claim is made.",
+]

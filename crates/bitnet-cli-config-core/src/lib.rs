@@ -27,6 +27,7 @@ pub const SUPPORTED_DEVICE_LABELS: &[&str] = &[
     "intel-npu-openvino",
     "nvidia-rtx-5070-ti-cuda",
     "nvidia-rtx-5070-ti-wgpu",
+    "intel-a770-opencl",
     "metal",
     "mpsgraph",
     "apple-m4-metal",
@@ -39,7 +40,7 @@ pub const SUPPORTED_DEVICE_LABELS: &[&str] = &[
 ];
 
 /// Stable help text for supported package-level device/backend labels.
-pub const SUPPORTED_DEVICE_LABELS_TEXT: &str = "cpu, cuda, gpu, vulkan, opencl, ocl, hip, rocm, oneapi, npu, npu:<index>, intel-npu, intel-npu:<index>, openvino-npu, intel-npu-openvino, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto";
+pub const SUPPORTED_DEVICE_LABELS_TEXT: &str = "cpu, cuda, gpu, vulkan, opencl, ocl, hip, rocm, oneapi, npu, npu:<index>, intel-npu, intel-npu:<index>, openvino-npu, intel-npu-openvino, nvidia-rtx-5070-ti-cuda, nvidia-rtx-5070-ti-wgpu, intel-a770-opencl, metal, mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto";
 
 /// Stable help text for Apple M4 proof-lane labels.
 pub const APPLE_M4_DEVICE_LABELS_TEXT: &str = "apple-m4-metal = native Metal proof lane, apple-m4-mpsgraph = MPSGraph graph/reference lane, apple-m4-cpu-neon = Apple CPU/NEON fallback/parity lane";
@@ -48,7 +49,7 @@ pub const APPLE_M4_DEVICE_LABELS_TEXT: &str = "apple-m4-metal = native Metal pro
 pub const APPLE_M3_AIR_DEVICE_LABELS_TEXT: &str = "apple-m3-air-metal = strict request identity for future M3 MacBook Air Metal receipts, apple-m3-air-mpsgraph = strict request identity for future M3 MacBook Air MPSGraph/reference receipts, apple-m3-air-cpu-neon = M3 MacBook Air Apple CPU/NEON lane";
 
 /// Top-level `--device` help for package-level backend labels.
-pub const DEVICE_HELP: &str = "Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes";
+pub const DEVICE_HELP: &str = "Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, intel-a770-opencl, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes";
 
 /// Help for legacy full-cli commands that do not emit Apple proof receipts.
 pub const LEGACY_RUNTIME_DEVICE_HELP: &str = "Device for this legacy command (cpu, cuda/gpu aliases, auto). Use `bitnet run` for receipt-backed Apple proof labels";
@@ -246,6 +247,7 @@ pub fn is_supported_device_label(label: &str) -> bool {
             | "intel-npu-openvino"
             | "nvidia-rtx-5070-ti-cuda"
             | "nvidia-rtx-5070-ti-wgpu"
+            | "intel-a770-opencl"
             | "metal"
             | "mpsgraph"
             | "apple-m4-metal"
@@ -313,8 +315,9 @@ impl ConfigBuilder {
 mod tests {
     use super::{
         APPLE_M3_AIR_DEVICE_LABELS_TEXT, APPLE_M4_DEVICE_LABELS_TEXT, CliConfig, ConfigBuilder,
-        LoggingConfig, PerformanceConfig, SUPPORTED_DEVICE_LABELS, invalid_device_message,
-        is_supported_device_label, unsupported_legacy_command_device_message,
+        DEVICE_HELP, LoggingConfig, PerformanceConfig, SUPPORTED_DEVICE_LABELS,
+        SUPPORTED_DEVICE_LABELS_TEXT, invalid_device_message, is_supported_device_label,
+        unsupported_legacy_command_device_message,
     };
     use std::path::PathBuf;
 
@@ -919,6 +922,18 @@ memory_optimization = true
             },
         )?;
         assert!(format!("{err}").contains("Invalid device"));
+        Ok(())
+    }
+
+    #[test]
+    fn validation_accepts_intel_a770_opencl_proof_lane_label() -> anyhow::Result<()> {
+        let config =
+            CliConfig { default_device: "intel-a770-opencl".to_string(), ..CliConfig::default() };
+
+        config.validate()?;
+        assert!(is_supported_device_label("intel-a770-opencl"));
+        assert!(SUPPORTED_DEVICE_LABELS_TEXT.contains("intel-a770-opencl"));
+        assert!(DEVICE_HELP.contains("intel-a770-opencl"));
         Ok(())
     }
 

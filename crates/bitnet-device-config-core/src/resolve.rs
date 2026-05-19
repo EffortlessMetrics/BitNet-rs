@@ -14,6 +14,7 @@ impl DeviceConfig {
             DeviceConfig::NvidiaRtx5070TiCuda => Device::Cuda(0),
             // WGPU is a reference-lane identity; execution lands in a later item.
             DeviceConfig::NvidiaRtx5070TiWgpu => Device::Cpu,
+            DeviceConfig::IntelA770OpenCl => Device::OpenCL(0),
             DeviceConfig::Metal | DeviceConfig::AppleM4Metal => Device::Metal,
             // M3 Air Metal is an identity-only request until a receipt-backed runtime item lands.
             DeviceConfig::AppleM3AirMetal => Device::Cpu,
