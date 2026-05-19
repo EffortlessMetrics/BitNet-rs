@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T00:14:33Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-RECEIPT-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-RECEIPT-001-schema-compat"
+
+notes = [
+  "Started M4-RECEIPT-001 to add receipt-schema compatibility and negative fixtures for M4 excellence receipt families.",
+  "Scope is fixture/schema validation only: missing identity fields, fallback ambiguity, malformed timing, absent token IDs, and unsupported claim fields must fail clearly.",
+  "No live runtime proof, model support, backend support, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
