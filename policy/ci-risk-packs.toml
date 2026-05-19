@@ -110,9 +110,9 @@ paths = [
   ".cargo/**",
   "crates/**/Cargo.toml",
 ]
-lanes = ["ci-core-build-test", "compatibility-msrv", "feature-matrix-pr"]
+lanes = ["ci-core-build-test", "compatibility-msrv", "feature-matrix-pr", "feature-matrix-full-cli"]
 deep_lanes = ["feature-matrix-full", "security-audit", "coverage"]
-labels = ["feature-matrix", "security-audit", "full-ci"]
+labels = ["full-cli", "feature-matrix", "security-audit", "full-ci"]
 
 [risk_pack.public_api]
 description = "Public Rust API, FFI, compatibility, and release-package surfaces."

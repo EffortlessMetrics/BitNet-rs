@@ -148,8 +148,10 @@ jobs:
                 required_jobs+=(
                   "pr-check (no-features)"
                   "pr-check (cpu)"
-                  "pr-check (cpu+full-cli)"
                 )
+                ;;
+              feature-matrix-full-cli)
+                required_jobs+=("pr-check (cpu+full-cli)")
                 ;;
               gpu-native)
                 required_jobs+=(

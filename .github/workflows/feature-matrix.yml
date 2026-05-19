@@ -8,13 +8,19 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - '.cargo/**'
+      - '.github/workflows/feature-matrix.yml'
+  workflow_dispatch:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - 'crates/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
+      - '.cargo/**'
+      - '.github/workflows/feature-matrix.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,6 +28,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   # Reduced PR-time matrix: just the canonical CPU paths. Catches the most common
@@ -44,8 +51,6 @@ jobs:
             flags: "--no-default-features"
           - label: "cpu"
             flags: "--no-default-features --features cpu"
-          - label: "cpu+full-cli"
-            flags: "--no-default-features --features cpu,full-cli"
 
     steps:
       - name: Checkout
@@ -64,6 +69,74 @@ jobs:
 
       - name: cargo check ${{ matrix.label }}
         run: cargo check --workspace --locked ${{ matrix.flags }}
+
+  # Targeted PR-time full CLI smoke. The job is present on ordinary Rust PRs,
+  # but it only performs the expensive cargo check when CLI/server/validation
+  # paths, manifest/toolchain inputs, or the `full-cli` label select it.
+  pr-full-cli-check:
+    name: "pr-check (cpu+full-cli)"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.ref != 'refs/heads/main' &&
+      !contains(github.event.pull_request.labels.*.name, 'feature-matrix') &&
+      !contains(github.event.pull_request.labels.*.name, 'full-ci')
+    steps:
+      - name: Route full-cli PR smoke
+        id: route
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          selected=false
+          reason="no full-cli path or label"
+
+          if printf '%s' "${LABELS_JSON:-[]}" | jq -e 'index("full-cli") != null' >/dev/null; then
+            selected=true
+            reason="full-cli label"
+          fi
+
+          if [ "$selected" != "true" ]; then
+            files=$(gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[].filename')
+            while IFS= read -r path; do
+              case "$path" in
+                Cargo.toml|Cargo.lock|rust-toolchain.toml|.cargo/*|.github/workflows/feature-matrix.yml|crates/*/Cargo.toml|crates/bitnet-api-*/*|crates/bitnet-cli/*|crates/bitnet-cli-config-core/*|crates/bitnet-cli-sampling-core/*|crates/bitnet-client-ip-core/*|crates/bitnet-download*/*|crates/bitnet-endpoint-registry-core/*|crates/bitnet-eval-core/*|crates/bitnet-http-auth-core/*|crates/bitnet-model-cache*/*|crates/bitnet-request*/*|crates/bitnet-server/*|crates/bitnet-server-health-types-core/*|crates/bitnet-validation/*)
+                  selected=true
+                  reason="full-cli path: $path"
+                  break
+                  ;;
+              esac
+            done <<< "$files"
+          fi
+
+          echo "selected=$selected" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          echo "Full CLI PR smoke selected: $selected ($reason)"
+
+      - name: Checkout
+        if: steps.route.outputs.selected == 'true'
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Install Rust toolchain
+        if: steps.route.outputs.selected == 'true'
+        uses: dtolnay/rust-toolchain@888c2e1ea69ab0d4330cbf0af1ecc7b68f368cc1
+        with:
+          toolchain: "1.95.0"
+
+      - name: Rust cache
+        if: steps.route.outputs.selected == 'true'
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
+        with:
+          shared-key: feature-matrix-full-cli-pr
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: cargo check cpu+full-cli
+        if: steps.route.outputs.selected == 'true'
+        run: cargo check --workspace --locked --no-default-features --features cpu,full-cli
 
   # Full feature matrix. Runs on main pushes, manual dispatch, and PRs that opt in
   # via the `feature-matrix` or `full-ci` label. The PR-time matrix above already

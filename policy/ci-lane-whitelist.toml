@@ -118,16 +118,37 @@ tier = "frontdoor"
 default_pr = true
 blocking = true
 runner = "ubuntu_22_04"
-base_lem = 12
+base_lem = 8
 owner = "core/features"
 intent = "Prevent drift in canonical PR feature combinations."
-failure_mode = "No-default/cpu/full-cli feature combinations stop compiling."
-proof_obligation = "Run reduced PR feature matrix: no-features, cpu, cpu+full-cli."
+failure_mode = "No-default/cpu feature combinations stop compiling."
+proof_obligation = "Run reduced PR feature matrix: no-features and cpu."
 evidence = ["job logs"]
 allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
 duplicate_of = ["ci-core-build-test where CPU overlap exists"]
 review_after = "2026-06-07"
 expires = "2026-11-07"
+
+[[lane]]
+id = "feature-matrix-full-cli"
+workflow = ".github/workflows/feature-matrix.yml"
+job = "Feature Matrix full-cli PR smoke"
+kind = "feature"
+tier = "frontdoor"
+default_pr = false
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 5
+owner = "core/features"
+intent = "Keep full CLI feature wiring covered only for CLI/server/validation/model-cache risk."
+failure_mode = "The cpu+full-cli feature combination stops compiling for user-facing CLI/server paths."
+proof_obligation = "Run cargo check --workspace --locked --no-default-features --features cpu,full-cli when selected by path or label."
+evidence = ["job logs", "ci-plan.json selected_lanes"]
+allowed_triggers = ["pull_request", "workflow_dispatch"]
+labels = ["full-cli", "feature-matrix", "full-ci"]
+duplicate_of = ["feature-matrix-full"]
+review_after = "2026-06-18"
+expires = "2026-11-18"
 
 [[lane]]
 id = "test-telemetry-route"
@@ -471,7 +492,7 @@ evidence = ["job logs"]
 allowed_triggers = ["push", "workflow_dispatch", "pull_request:labeled"]
 labels = ["feature-matrix", "full-ci"]
 expensive = true
-duplicate_of = ["feature-matrix-pr"]
+duplicate_of = ["feature-matrix-pr", "feature-matrix-full-cli"]
 review_after = "2026-06-07"
 expires = "2026-11-07"
 

@@ -467,6 +467,8 @@ git diff --check
 **Files:**
 
 - `.github/workflows/feature-matrix.yml`
+- `.github/workflows/pr-gate.yml`
+- `policy/ci-lane-whitelist.toml`
 - `policy/ci-risk-packs.toml`
 - `policy/ci-lanes.toml`
 - `docs/ci/cost-and-verification-policy.md`
@@ -474,9 +476,10 @@ git diff --check
 **Required behavior:**
 
 - Default ordinary PR matrix: `no-features` and `cpu`.
-- Run `cpu+full-cli` for CLI/server/validation/model-cache/full-cli feature
-  files, manifest/lock/toolchain changes, or labels `full-cli`,
-  `feature-matrix`, and `full-ci`.
+- Run targeted `cpu+full-cli` for CLI/server/validation/model-cache/full-cli
+  feature files, manifest/lock/toolchain changes, or label `full-cli`.
+- Treat `feature-matrix` and `full-ci` as full-matrix opt-ins; that full
+  matrix still includes `cpu+full-cli`.
 - Keep full matrix available on `main` and `full-ci`.
 
 **Validation:**
