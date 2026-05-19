@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T05:40:00Z"
+event = "pr_open"
+item = "LNL258V-OP-013"
+pr = 6034
+branch = "codex/lunar-lake/LNL258V-OP-013-ask-model-defaults"
+head_sha = "b5c2b3e3f6281ab5d3b2c5e61da2eff64652da3d"
+actor = "codex"
+summary = "Opened LNL258V-OP-013 to make Lunar Lake ask model resolution fail closed and appliance-friendly."
+
+notes = [
+  "PR #6034 makes blocked auto-route profiles fail closed before a model path is required.",
+  "Executable dense Qwen CPU or OpenVINO ask routes may resolve committed local default model paths only when the referenced artifact exists.",
+  "The PR refreshes blocked low_power ask, strict regression, and operator comparison artifacts without successful new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]
