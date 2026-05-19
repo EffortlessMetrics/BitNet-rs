@@ -2,10 +2,14 @@
 # PowerShell version for Windows systems
 
 param(
-    [string]$Tag = $(if ($env:BITNET_CPP_TAG) { $env:BITNET_CPP_TAG } else { "v1.0.0" }),
+    # Microsoft BitNet publishes the reference implementation from the main
+    # branch rather than release tags; keep the default aligned with the bash
+    # fetch script.
+    [string]$Tag = $(if ($env:BITNET_CPP_TAG) { $env:BITNET_CPP_TAG } else { "main" }),
     [string]$CachePath = $(if ($env:BITNET_CPP_PATH) { $env:BITNET_CPP_PATH } else { "$env:USERPROFILE\.cache\bitnet_cpp" }),
     [switch]$Force,
     [switch]$Clean,
+    [switch]$SkipPatches,
     [switch]$Help
 )
 
@@ -13,6 +17,11 @@ $ErrorActionPreference = "Stop"
 
 # Configuration
 $BitNetCppRepo = "https://github.com/microsoft/BitNet.git"
+
+if (-not [System.IO.Path]::IsPathRooted($CachePath)) {
+    $CachePath = Join-Path (Get-Location) $CachePath
+}
+$CachePath = [System.IO.Path]::GetFullPath($CachePath)
 $BuildDir = Join-Path $CachePath "build"
 
 function Write-Info {
@@ -35,6 +44,10 @@ function Write-Debug {
     Write-Host "[DEBUG] $Message" -ForegroundColor Blue
 }
 
+function Test-IsWindows {
+    return [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT
+}
+
 function Show-Usage {
     @"
 Usage: .\fetch_bitnet_cpp.ps1 [OPTIONS]
@@ -46,6 +59,7 @@ OPTIONS:
     -CachePath PATH     Specify cache directory (default: $CachePath)
     -Force              Force rebuild even if already built
     -Clean              Clean build directory before building
+    -SkipPatches        Use upstream C++ source as-is without applying local patches
     -Help               Show this help message
 
 ENVIRONMENT VARIABLES:
@@ -57,6 +71,7 @@ EXAMPLES:
     .\fetch_bitnet_cpp.ps1 -Tag v1.1.0         # Use specific version
     .\fetch_bitnet_cpp.ps1 -Force              # Force rebuild
     .\fetch_bitnet_cpp.ps1 -Clean -Force       # Clean rebuild
+    .\fetch_bitnet_cpp.ps1 -SkipPatches        # Build upstream source without patches
 
 After successful build, set environment variables:
     `$env:BITNET_CPP_PATH = "$CachePath"
@@ -74,10 +89,47 @@ function Test-Dependencies {
         $MissingDeps += "cmake"
     }
 
-    # Check for Visual Studio or Build Tools
-    $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-    if (-not (Test-Path $VsWhere)) {
-        $MissingDeps += "Visual Studio Build Tools"
+    if (Test-IsWindows) {
+        $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        if (-not (Test-Path $VsWhere)) {
+            $MissingDeps += "Visual Studio Build Tools"
+        } else {
+            $VsPath = & $VsWhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+            if (-not $VsPath) {
+                $MissingDeps += "Visual Studio C++ build tools"
+            }
+
+            $Generator = if ($env:CMAKE_GENERATOR) {
+                $env:CMAKE_GENERATOR
+            } else {
+                "Visual Studio 17 2022"
+            }
+            if ($Generator.StartsWith("Visual Studio", [System.StringComparison]::OrdinalIgnoreCase)) {
+                $Platform = if ($env:CMAKE_GENERATOR_PLATFORM) {
+                    $env:CMAKE_GENERATOR_PLATFORM
+                } else {
+                    "x64"
+                }
+                $Toolset = if ($env:CMAKE_GENERATOR_TOOLSET) {
+                    $env:CMAKE_GENERATOR_TOOLSET
+                } else {
+                    "ClangCL"
+                }
+                $ToolsetPath = Join-Path $VsPath "MSBuild\Microsoft\VC\v170\Platforms\$Platform\PlatformToolsets\$Toolset"
+                if (-not (Test-Path $ToolsetPath)) {
+                    $MissingDeps += "Visual Studio $Toolset toolset for $Platform"
+                }
+            } else {
+                # Non-Visual-Studio generators need compiler executables on PATH.
+                if (-not (Get-Command clang -ErrorAction SilentlyContinue)) {
+                    $MissingDeps += "clang"
+                }
+
+                if (-not (Get-Command clang++ -ErrorAction SilentlyContinue)) {
+                    $MissingDeps += "clang++"
+                }
+            }
+        }
     }
 
     if ($MissingDeps.Count -gt 0) {
@@ -86,7 +138,22 @@ function Test-Dependencies {
         Write-Error "  Git: https://git-scm.com/download/win"
         Write-Error "  CMake: https://cmake.org/download/"
         Write-Error "  Visual Studio: https://visualstudio.microsoft.com/downloads/"
+        if (Test-IsWindows) {
+            Write-Error "  Visual Studio components: C++ Clang Compiler for Windows and MS-Build Support for LLVM-Toolset"
+        }
         exit 1
+    }
+}
+
+function Invoke-Git {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    & git @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "git $($Arguments -join ' ') failed"
     }
 }
 
@@ -102,21 +169,35 @@ function Get-SourceCode {
 
         try {
             # Fetch latest changes
-            git fetch origin
+            Invoke-Git @("fetch", "origin")
 
-            # Check if we're already on the right tag
+            $OldErrorActionPreference = $ErrorActionPreference
+            $ErrorActionPreference = "Continue"
             $CurrentTag = git describe --tags --exact-match 2>$null
-            if ($CurrentTag -eq $Tag) {
-                Write-Info "Already on correct tag: $Tag"
-                return
+            $DescribeExitCode = $LASTEXITCODE
+            $ErrorActionPreference = $OldErrorActionPreference
+
+            $CurrentBranch = git rev-parse --abbrev-ref HEAD
+            if ($LASTEXITCODE -ne 0) {
+                throw "git rev-parse --abbrev-ref HEAD failed"
             }
 
-            # Clean any local changes
-            git reset --hard
-            git clean -fd
+            # Clean any local changes before moving refs.
+            Invoke-Git @("reset", "--hard")
+            Invoke-Git @("clean", "-fd")
 
-            # Checkout the specified tag
-            git checkout $Tag
+            if ($DescribeExitCode -eq 0 -and $CurrentTag -eq $Tag) {
+                Write-Info "Already on correct tag: $Tag"
+                Invoke-Git @("submodule", "update", "--init", "--recursive")
+            } elseif ($CurrentBranch -eq $Tag) {
+                Write-Info "Already on branch $Tag; fast-forwarding to origin/$Tag"
+                Invoke-Git @("reset", "--hard", "origin/$Tag")
+                Invoke-Git @("submodule", "update", "--init", "--recursive")
+            } else {
+                # Checkout the specified tag or branch.
+                Invoke-Git @("checkout", $Tag)
+                Invoke-Git @("submodule", "update", "--init", "--recursive")
+            }
         }
         finally {
             Pop-Location
@@ -131,10 +212,67 @@ function Get-SourceCode {
         }
 
         # Clone the repository
-        git clone --depth 1 --branch $Tag $BitNetCppRepo $CachePath
+        Invoke-Git @(
+            "clone",
+            "--depth",
+            "1",
+            "--recurse-submodules",
+            "--shallow-submodules",
+            "--branch",
+            $Tag,
+            $BitNetCppRepo,
+            $CachePath
+        )
+        Push-Location $CachePath
+        try {
+            Invoke-Git @("submodule", "update", "--init", "--recursive")
+        }
+        finally {
+            Pop-Location
+        }
+    }
+
+    $LlamaCMake = Join-Path $CachePath "3rdparty\llama.cpp\CMakeLists.txt"
+    if (-not (Test-Path $LlamaCMake)) {
+        throw "llama.cpp submodule is not initialized; expected $LlamaCMake"
     }
 
     Write-Info "Source code fetched successfully"
+}
+
+function Ensure-KernelHeader {
+    $KernelHeader = Join-Path $CachePath "include\bitnet-lut-kernels.h"
+    $IncludeDir = Split-Path $KernelHeader -Parent
+    if ((Test-Path $KernelHeader) -or (-not (Test-Path $IncludeDir))) {
+        return
+    }
+
+    $PresetRoot = Join-Path $CachePath "preset_kernels"
+    $PresetKernel = $null
+    if (Test-Path $PresetRoot) {
+        foreach ($PresetDir in (Get-ChildItem -Path $PresetRoot -Directory | Sort-Object Name)) {
+            $Tl2 = Join-Path $PresetDir.FullName "bitnet-lut-kernels-tl2.h"
+            $Generic = Join-Path $PresetDir.FullName "bitnet-lut-kernels.h"
+            if (Test-Path $Tl2) {
+                $PresetKernel = $Tl2
+                break
+            }
+            if (Test-Path $Generic) {
+                $PresetKernel = $Generic
+                break
+            }
+        }
+    }
+
+    if ($PresetKernel) {
+        Write-Warn "bitnet-lut-kernels.h missing, copying from preset: $PresetKernel"
+        Copy-Item -Path $PresetKernel -Destination $KernelHeader -Force
+    }
+
+    if (-not (Test-Path $KernelHeader)) {
+        Write-Warn "bitnet-lut-kernels.h not found. Build may succeed without it."
+        Write-Warn "If build fails, check the Microsoft BitNet repository structure."
+    }
 }
 
 function Invoke-Build {
@@ -159,13 +297,45 @@ function Invoke-Build {
                 throw "Visual Studio with C++ tools not found"
             }
 
+            $CMakeArgs = @(
+                "..",
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+                "-DBUILD_SHARED_LIBS=ON",
+                "-DCMAKE_INSTALL_PREFIX=$BuildDir\install"
+            )
+
+            if (Test-IsWindows) {
+                $Generator = if ($env:CMAKE_GENERATOR) {
+                    $env:CMAKE_GENERATOR
+                } else {
+                    "Visual Studio 17 2022"
+                }
+                $CMakeArgs += @("-G", $Generator)
+
+                if ($Generator.StartsWith("Visual Studio", [System.StringComparison]::OrdinalIgnoreCase)) {
+                    $Platform = if ($env:CMAKE_GENERATOR_PLATFORM) {
+                        $env:CMAKE_GENERATOR_PLATFORM
+                    } else {
+                        "x64"
+                    }
+                    $Toolset = if ($env:CMAKE_GENERATOR_TOOLSET) {
+                        $env:CMAKE_GENERATOR_TOOLSET
+                    } else {
+                        "ClangCL"
+                    }
+                    $CMakeArgs += @("-A", $Platform, "-T", $Toolset)
+                } else {
+                    $CMakeArgs += @(
+                        "-DCMAKE_C_COMPILER=clang",
+                        "-DCMAKE_CXX_COMPILER=clang++"
+                    )
+                }
+            }
+
             # Configure with CMake
             Write-Info "Configuring build with CMake..."
-            cmake .. `
-                -DCMAKE_BUILD_TYPE=Release `
-                -DCMAKE_POSITION_INDEPENDENT_CODE=ON `
-                -DBUILD_SHARED_LIBS=ON `
-                "-DCMAKE_INSTALL_PREFIX=$BuildDir\install"
+            cmake @CMakeArgs
 
             if ($LASTEXITCODE -ne 0) {
                 throw "CMake configuration failed"
@@ -205,6 +375,9 @@ function Invoke-ApplyPatches {
     if (Test-Path $PatchScript) {
         Write-Info "Applying patches..."
         & $PatchScript -CppPath $CachePath
+        if ($LASTEXITCODE -ne 0) {
+            throw "Patch application failed"
+        }
     } else {
         Write-Info "No patch application script found - using C++ implementation as-is"
     }
@@ -304,8 +477,17 @@ function Main {
     # Fetch source code
     Get-SourceCode
 
-    # Apply patches
-    Invoke-ApplyPatches
+    # Apply patches, unless explicitly disabled for upstream reference checks.
+    if ($SkipPatches) {
+        Write-Info "Skipping local patches; using upstream C++ implementation as-is"
+    } else {
+        Invoke-ApplyPatches
+    }
+
+    # Upstream main no longer always provides the generated LUT header in the
+    # include directory. Recover it after patch application so the patch guard
+    # can still enforce a clean external checkout.
+    Ensure-KernelHeader
 
     # Build
     Invoke-Build
