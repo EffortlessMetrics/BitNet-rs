@@ -25,9 +25,9 @@
 //! - [`bitnet_common`]: Shared types, config, error types
 //! - [`bitnet_models`]: GGUF / `SafeTensors` model loading
 //! - [`bitnet_quantization`]: `I2_S`, `TL1`, `TL2` quantization
-//! - [`bitnet_kernels`]: AVX2 / AVX-512 / NEON / CUDA compute kernels
-//! - [`bitnet_inference`]: Autoregressive generation engine
-//! - [`bitnet_tokenizers`]: Universal tokenizer with auto-discovery
+//! - `bitnet_kernels`: AVX2 / AVX-512 / NEON / CUDA compute kernels
+//! - `bitnet_inference`: Autoregressive generation engine
+//! - `bitnet_tokenizers`: Universal tokenizer with auto-discovery
 //!
 //! ## Quick Start
 //!
@@ -51,7 +51,7 @@
 /// Build metadata captured at compile time.
 pub mod build_info;
 mod constants;
-/// Convenient prelude for common imports.
+/// Convenient imports for common BitNet types and traits.
 pub mod prelude;
 
 pub use build_info::*;
