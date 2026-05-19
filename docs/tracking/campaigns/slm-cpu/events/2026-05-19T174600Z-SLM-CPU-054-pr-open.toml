@@ -3,7 +3,7 @@ campaign = "slm-cpu"
 item = "SLM-CPU-054"
 event = "pr_open"
 pr = 5983
-head_sha = "2d08026d03b1236dea703c55fd9551c17a5a3bf4"
+head_sha = "9636dac244ede712b4b603e1d08aec341902dbf6"
 branch = "codex/slm-cpu-054-sidecar-runtime-hook"
 actor = "codex"
 
