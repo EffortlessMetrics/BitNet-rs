@@ -73,6 +73,8 @@ const OPENVINO_NPU_PROFILE_PROMOTION_TARGETS: &[&str] = &["warm_resident"];
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const BLOCKED_AUTO_ASK_RECEIPT: &str = "lunar-lake-operator-ask-auto-low-power-blocked.json";
+const AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT: &str =
+    "lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
 const REGRESSION_V2_SURFACE_ID: &str = "lunar_lake_regression_v2";
 pub const DEFAULT_ASK_ROUTE: &str = "dense_slm_default_cpu";
@@ -192,6 +194,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = POWER_PROFILE_EVIDENCE_FILE)]
         power_profile_evidence: Option<PathBuf>,
+
+        /// Optional successful auto warm-resident ask receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT)]
+        warm_resident_ask_receipt: Option<PathBuf>,
 
         /// Optional blocked auto-route ask receipt to index.
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
@@ -941,6 +948,8 @@ pub struct LunarLakeRegressionBundle {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub power_profile_evidence: Option<PowerProfileRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warm_resident_ask_receipt: Option<OperatorAskRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocked_ask_receipt: Option<BlockedAskRegressionSummary>,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
@@ -963,6 +972,10 @@ pub struct RegressionSurfaceSummary {
     pub bitnet_semantic_intake_indexed: bool,
     #[serde(default)]
     pub power_profile_evidence_indexed: bool,
+    #[serde(default)]
+    pub warm_resident_ask_receipt_indexed: bool,
+    #[serde(default)]
+    pub warm_resident_auto_ask_ready: bool,
     #[serde(default)]
     pub blocked_ask_receipt_indexed: bool,
     pub required_answer_profiles: Vec<String>,
@@ -999,6 +1012,8 @@ impl Default for RegressionSurfaceSummary {
             durability_bundle_indexed: false,
             bitnet_semantic_intake_indexed: false,
             power_profile_evidence_indexed: false,
+            warm_resident_ask_receipt_indexed: false,
+            warm_resident_auto_ask_ready: false,
             blocked_ask_receipt_indexed: false,
             required_answer_profiles: REQUIRED_CORPUS_V2_PROFILES
                 .iter()
@@ -1166,6 +1181,33 @@ pub struct PowerProfileRegressionSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OperatorAskRegressionSummary {
+    pub path: String,
+    pub ask_receipt_ready: bool,
+    pub profile_id: String,
+    pub requested_device: String,
+    pub requested_route: String,
+    pub selected_route: String,
+    pub selected_backend: String,
+    pub runtime_api: String,
+    pub promotion_status: String,
+    pub route_profile_status: Option<String>,
+    pub route_profile_blockers: Vec<String>,
+    pub fallback_used: bool,
+    pub answer_gate_passed: bool,
+    pub openvino_candidate_route_executed: bool,
+    pub new_inference_executed: bool,
+    pub speedup_claim: bool,
+    pub power_advantage_claim: bool,
+    pub acceleration_claim: bool,
+    pub bitnet_qk256_i2s_claim: bool,
+    pub generated_token_ids_available: bool,
+    pub source_run_receipt: Option<String>,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BlockedAskRegressionSummary {
     pub path: String,
     pub blocked_receipt_ready: bool,
@@ -1200,6 +1242,8 @@ pub struct LunarLakeComparisonReceipt {
     pub regression_passed: bool,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warm_resident_ask_receipt: Option<OperatorAskRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocked_ask_receipt: Option<BlockedAskRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2409,6 +2453,7 @@ impl LunarLakeCommand {
                 durability_bundle,
                 bitnet_semantic_intake,
                 power_profile_evidence,
+                warm_resident_ask_receipt,
                 blocked_ask_receipt,
                 json_out,
                 created_utc,
@@ -2419,7 +2464,7 @@ impl LunarLakeCommand {
                     None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 };
                 let receipt =
-                    build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
+                    build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and_warm_ask(
                         artifact_root,
                         operator_receipt,
                         answer_corpus_v2.as_deref(),
@@ -2428,6 +2473,7 @@ impl LunarLakeCommand {
                         durability_bundle.as_deref(),
                         bitnet_semantic_intake.as_deref(),
                         power_profile_evidence.as_deref(),
+                        warm_resident_ask_receipt.as_deref(),
                         blocked_ask_receipt.as_deref(),
                         created_utc,
                     )?;
@@ -3369,6 +3415,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
     )
 }
 
+#[cfg(test)]
 pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
     root: &Path,
     operator_receipt: &Path,
@@ -3378,6 +3425,34 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
     durability_bundle: Option<&Path>,
     bitnet_semantic_intake: Option<&Path>,
     power_profile_evidence: Option<&Path>,
+    blocked_ask_receipt: Option<&Path>,
+    created_utc: String,
+) -> Result<LunarLakeRegressionBundle> {
+    build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and_warm_ask(
+        root,
+        operator_receipt,
+        answer_corpus_v2,
+        route_profile_comparison,
+        cold_warm_benchmark,
+        durability_bundle,
+        bitnet_semantic_intake,
+        power_profile_evidence,
+        None,
+        blocked_ask_receipt,
+        created_utc,
+    )
+}
+
+pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and_warm_ask(
+    root: &Path,
+    operator_receipt: &Path,
+    answer_corpus_v2: Option<&Path>,
+    route_profile_comparison: Option<&Path>,
+    cold_warm_benchmark: Option<&Path>,
+    durability_bundle: Option<&Path>,
+    bitnet_semantic_intake: Option<&Path>,
+    power_profile_evidence: Option<&Path>,
+    warm_resident_ask_receipt: Option<&Path>,
     blocked_ask_receipt: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRegressionBundle> {
@@ -3559,6 +3634,34 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
     } else {
         None
     };
+    let npu_warm_resident_promoted = npu_warm_resident_is_promoted(
+        cold_warm_benchmark.as_ref(),
+        route_profile_comparison.as_ref(),
+    );
+    let warm_resident_ask_receipt = if let Some(path) = warm_resident_ask_receipt {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_operator_ask_regression(&path)?;
+        checks.push(regression_check_owned(
+            "warm_resident_auto_ask_receipt_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            operator_ask_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        if npu_warm_resident_promoted {
+            checks.push(regression_check_owned(
+                "warm_resident_auto_ask_receipt_regression_ready",
+                false,
+                vec![AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT.to_string()],
+                vec![
+                    "OpenVINO NPU is promoted for warm_resident but no successful auto ask receipt was indexed"
+                        .to_string(),
+                ],
+            ));
+        }
+        None
+    };
     let blocked_ask_receipt = if let Some(path) = blocked_ask_receipt {
         let path = resolve_receipt_path(root, path);
         let summary = inspect_blocked_ask_regression(&path)?;
@@ -3584,6 +3687,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
         durability_bundle.as_ref(),
         bitnet_semantic_intake.as_ref(),
         power_profile_evidence.as_ref(),
+        warm_resident_ask_receipt.as_ref(),
         blocked_ask_receipt.as_ref(),
     );
 
@@ -3601,6 +3705,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
         durability_bundle,
         bitnet_semantic_intake,
         power_profile_evidence,
+        warm_resident_ask_receipt,
         blocked_ask_receipt,
         regression_surface,
         regression_passed: gaps.is_empty(),
@@ -3617,6 +3722,7 @@ fn build_regression_surface_summary(
     durability_bundle: Option<&DurabilityRegressionSummary>,
     bitnet_semantic_intake: Option<&BitnetSemanticIntakeRegressionSummary>,
     power_profile_evidence: Option<&PowerProfileRegressionSummary>,
+    warm_resident_ask_receipt: Option<&OperatorAskRegressionSummary>,
     blocked_ask_receipt: Option<&BlockedAskRegressionSummary>,
 ) -> RegressionSurfaceSummary {
     let mut summary = RegressionSurfaceSummary {
@@ -3626,6 +3732,10 @@ fn build_regression_surface_summary(
         durability_bundle_indexed: durability_bundle.is_some(),
         bitnet_semantic_intake_indexed: bitnet_semantic_intake.is_some(),
         power_profile_evidence_indexed: power_profile_evidence.is_some(),
+        warm_resident_ask_receipt_indexed: warm_resident_ask_receipt.is_some(),
+        warm_resident_auto_ask_ready: warm_resident_ask_receipt
+            .map(|summary| summary.regression_ready)
+            .unwrap_or(false),
         blocked_ask_receipt_indexed: blocked_ask_receipt.is_some(),
         candidate_routes_remain_unpromoted: route_profile_comparison
             .map(|summary| summary.candidate_routes_remain_unpromoted)
@@ -3818,6 +3928,37 @@ fn build_regression_surface_summary(
             summary
                 .gaps
                 .push("low_power power-profile claim boundary is not preserved".to_string());
+        }
+    }
+
+    let npu_warm_resident_promoted = summary
+        .route_promotion_scope
+        .openvino_npu_promoted_profiles
+        .iter()
+        .any(|profile| profile == "warm_resident");
+    if npu_warm_resident_promoted {
+        if let Some(ask) = warm_resident_ask_receipt {
+            if !ask.regression_ready {
+                summary.gaps.push(format!(
+                    "warm_resident auto NPU ask receipt is not regression-ready: {}",
+                    ask.gaps.join("; ")
+                ));
+            }
+            if ask.profile_id != "warm_resident"
+                || ask.requested_device != "auto"
+                || ask.requested_route != "auto"
+                || ask.selected_route != "dense_slm_openvino_npu_candidate"
+            {
+                summary.gaps.push(
+                    "warm_resident ask receipt does not prove auto selected the promoted NPU route"
+                        .to_string(),
+                );
+            }
+        } else {
+            summary.gaps.push(
+                "OpenVINO NPU is promoted for warm_resident but no successful auto ask receipt is indexed"
+                    .to_string(),
+            );
         }
     }
 
@@ -4477,6 +4618,203 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
     })
 }
 
+fn npu_warm_resident_is_promoted(
+    cold_warm_benchmark: Option<&ColdWarmRegressionSummary>,
+    route_profile_comparison: Option<&RouteProfileRegressionSummary>,
+) -> bool {
+    cold_warm_benchmark
+        .map(|summary| {
+            summary
+                .route_promotion_scope
+                .openvino_npu_promoted_profiles
+                .iter()
+                .any(|profile| profile == "warm_resident")
+        })
+        .or_else(|| {
+            route_profile_comparison.map(|summary| {
+                summary
+                    .route_promotion_scope
+                    .openvino_npu_promoted_profiles
+                    .iter()
+                    .any(|profile| profile == "warm_resident")
+            })
+        })
+        .unwrap_or(false)
+}
+
+fn inspect_operator_ask_regression(path: &Path) -> Result<OperatorAskRegressionSummary> {
+    let receipt: Value = read_json_receipt(path)?;
+    let mut gaps = Vec::new();
+    let artifact_kind = string_at(&receipt, "artifact_kind").unwrap_or_default();
+    if artifact_kind != "lunar_lake_operator_ask" {
+        gaps.push(format!("unexpected artifact_kind={artifact_kind}"));
+    }
+    let proof_stage = string_at(&receipt, "proof_stage").unwrap_or_default();
+    if proof_stage != "operator_candidate_route_executed_through_lunar_lake_ask" {
+        gaps.push(format!("unexpected proof_stage={proof_stage}"));
+    }
+
+    let profile_id = string_at(&receipt, "profile_id")
+        .or_else(|| string_at(&receipt, "route_selection.profile_id"))
+        .unwrap_or_default();
+    let requested_device = string_at(&receipt, "requested_device")
+        .or_else(|| string_at(&receipt, "route_selection.requested_device"))
+        .unwrap_or_default();
+    let requested_route = string_at(&receipt, "requested_route")
+        .or_else(|| string_at(&receipt, "route_selection.requested_route"))
+        .unwrap_or_default();
+    let selected_route = string_at(&receipt, "selected_route")
+        .or_else(|| string_at(&receipt, "route_selection.selected_route"))
+        .or_else(|| string_at(&receipt, "route_id"))
+        .unwrap_or_default();
+    let selected_backend = string_at(&receipt, "selected_backend")
+        .or_else(|| string_at(&receipt, "route_selection.selected_backend"))
+        .or_else(|| string_at(&receipt, "backend.selected_backend"))
+        .unwrap_or_default();
+    let runtime_api = string_at(&receipt, "runtime_api")
+        .or_else(|| string_at(&receipt, "route_selection.runtime_api"))
+        .or_else(|| string_at(&receipt, "backend.runtime_api"))
+        .unwrap_or_default();
+    let promotion_status = string_at(&receipt, "promotion_status")
+        .or_else(|| string_at(&receipt, "route_selection.promotion_status"))
+        .unwrap_or_default();
+    let route_profile_status = string_at(&receipt, "route_profile_status")
+        .or_else(|| string_at(&receipt, "route_selection.route_profile_status"));
+    let route_profile_blockers = string_array_at(&receipt, "route_profile_blockers")
+        .into_iter()
+        .chain(string_array_at(&receipt, "route_selection.route_profile_blockers"))
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    let fallback_used = fallback_used(&receipt).unwrap_or(true);
+    let answer_gate_passed = answer_gate_passed(&receipt).unwrap_or(false);
+    let openvino_candidate_route_executed = bool_at_any(
+        &receipt,
+        &["openvino_candidate_route_executed", "claim_boundary.openvino_candidate_route_executed"],
+    )
+    .unwrap_or(false);
+    let new_inference_executed = proof_stage.contains("executed");
+    let speedup_claim =
+        bool_at_any(&receipt, &["speedup_claim", "claim_boundary.speedup_claim"]).unwrap_or(false);
+    let power_advantage_claim =
+        bool_at_any(&receipt, &["power_advantage_claim", "claim_boundary.power_advantage_claim"])
+            .unwrap_or(false);
+    let acceleration_claim = bool_at_any(
+        &receipt,
+        &[
+            "acceleration_claim",
+            "route.acceleration_claim",
+            "claim_boundary.acceleration_claim",
+            "claim_boundary.arc_or_npu_acceleration_claim",
+        ],
+    )
+    .unwrap_or(false);
+    let bitnet_qk256_i2s_claim =
+        bool_at_any(&receipt, &["bitnet_qk256_i2s_claim", "claim_boundary.bitnet_qk256_i2s_claim"])
+            .unwrap_or(false);
+    let generated_token_ids_available = value_at(&receipt, "tokens.generated_ids")
+        .and_then(Value::as_array)
+        .is_some_and(|ids| !ids.is_empty())
+        || value_at(&receipt, "source_receipt.output.generated_token_ids")
+            .and_then(Value::as_array)
+            .is_some_and(|ids| !ids.is_empty())
+        || bool_at_any(
+            &receipt,
+            &[
+                "source_receipt.output.generated_token_ids_available_from_pipeline",
+                "source_receipt.verification.generated_token_ids_available_from_pipeline",
+            ],
+        ) == Some(true);
+    let source_run_receipt = string_at(&receipt, "source_run_receipt");
+
+    if profile_id != "warm_resident" {
+        gaps.push(format!("operator ask receipt should cover warm_resident; got {profile_id}"));
+    }
+    if requested_device != "auto" || requested_route != "auto" {
+        gaps.push(format!(
+            "operator ask receipt should cover auto/auto request; got device={requested_device} route={requested_route}"
+        ));
+    }
+    if selected_route != "dense_slm_openvino_npu_candidate" {
+        gaps.push(format!(
+            "expected selected_route=dense_slm_openvino_npu_candidate; got {selected_route}"
+        ));
+    }
+    if selected_backend != "openvino-npu" {
+        gaps.push(format!("expected selected_backend=openvino-npu; got {selected_backend}"));
+    }
+    if runtime_api != "openvino_genai" {
+        gaps.push(format!("expected runtime_api=openvino_genai; got {runtime_api}"));
+    }
+    if promotion_status != "promoted" {
+        gaps.push(format!("expected promotion_status=promoted; got {promotion_status}"));
+    }
+    if route_profile_status.as_deref() != Some("promoted_route_ready") {
+        gaps.push(format!(
+            "expected route_profile_status=promoted_route_ready; got {}",
+            route_profile_status.as_deref().unwrap_or("none")
+        ));
+    }
+    if !route_profile_blockers.is_empty() {
+        gaps.push(format!(
+            "warm_resident ask receipt has route profile blockers: {}",
+            route_profile_blockers.join("; ")
+        ));
+    }
+    if fallback_used {
+        gaps.push("warm_resident ask receipt observed fallback_used=true".to_string());
+    }
+    if !answer_gate_passed {
+        gaps.push("warm_resident ask receipt did not pass answer gate".to_string());
+    }
+    if !openvino_candidate_route_executed {
+        gaps.push(
+            "warm_resident ask receipt does not prove OpenVINO candidate route execution"
+                .to_string(),
+        );
+    }
+    if !new_inference_executed {
+        gaps.push("warm_resident ask receipt did not record an executed operator ask".to_string());
+    }
+    if speedup_claim || power_advantage_claim || acceleration_claim || bitnet_qk256_i2s_claim {
+        gaps.push(
+            "warm_resident ask receipt violates speedup/power/acceleration/BitNet QK256 claim boundary"
+                .to_string(),
+        );
+    }
+    if !generated_token_ids_available {
+        gaps.push("warm_resident ask receipt has no generated token ID evidence".to_string());
+    }
+
+    gaps.sort();
+    gaps.dedup();
+    Ok(OperatorAskRegressionSummary {
+        path: path_string(path),
+        ask_receipt_ready: gaps.is_empty(),
+        profile_id,
+        requested_device,
+        requested_route,
+        selected_route,
+        selected_backend,
+        runtime_api,
+        promotion_status,
+        route_profile_status,
+        route_profile_blockers,
+        fallback_used,
+        answer_gate_passed,
+        openvino_candidate_route_executed,
+        new_inference_executed,
+        speedup_claim,
+        power_advantage_claim,
+        acceleration_claim,
+        bitnet_qk256_i2s_claim,
+        generated_token_ids_available,
+        source_run_receipt,
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
 fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSummary> {
     let receipt: Value = read_json_receipt(path)?;
     let mut gaps = Vec::new();
@@ -4726,6 +5064,30 @@ fn power_profile_regression_notes(summary: &PowerProfileRegressionSummary) -> Ve
     notes
 }
 
+fn operator_ask_regression_notes(summary: &OperatorAskRegressionSummary) -> Vec<String> {
+    let mut notes = vec![
+        format!("profile_id={}", summary.profile_id),
+        format!("requested_device={}", summary.requested_device),
+        format!("requested_route={}", summary.requested_route),
+        format!("selected_route={}", summary.selected_route),
+        format!("selected_backend={}", summary.selected_backend),
+        format!("runtime_api={}", summary.runtime_api),
+        format!("promotion_status={}", summary.promotion_status),
+        format!(
+            "route_profile_status={}",
+            summary.route_profile_status.as_deref().unwrap_or("none")
+        ),
+        format!("fallback_used={}", summary.fallback_used),
+        format!("answer_gate_passed={}", summary.answer_gate_passed),
+        format!("openvino_candidate_route_executed={}", summary.openvino_candidate_route_executed),
+        format!("new_inference_executed={}", summary.new_inference_executed),
+        format!("generated_token_ids_available={}", summary.generated_token_ids_available),
+        format!("ask_receipt_ready={}", summary.ask_receipt_ready),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
 fn blocked_ask_regression_notes(summary: &BlockedAskRegressionSummary) -> Vec<String> {
     let mut notes = vec![
         format!("profile_id={}", summary.profile_id),
@@ -4801,6 +5163,7 @@ pub fn build_comparison_receipt_with_created_utc(
         operator_ready: operator.operator_ready,
         regression_passed: regression.regression_passed,
         regression_surface: regression.regression_surface,
+        warm_resident_ask_receipt: regression.warm_resident_ask_receipt,
         blocked_ask_receipt: regression.blocked_ask_receipt,
         route_policy: operator.route_policy,
         default_route_id: operator.default_route.route_id.clone(),
@@ -14300,10 +14663,13 @@ mod tests {
         regression.regression_surface.durability_bundle_indexed = true;
         regression.regression_surface.cold_warm_benchmark_ready = true;
         regression.regression_surface.durability_stability_proven = true;
+        regression.regression_surface.warm_resident_ask_receipt_indexed = true;
+        regression.regression_surface.warm_resident_auto_ask_ready = true;
         regression.regression_surface.blocked_ask_receipt_indexed = true;
         regression.regression_surface.candidate_routes_remain_unpromoted = true;
         regression.regression_surface.strict_ready = true;
         regression.regression_surface.gaps.clear();
+        regression.warm_resident_ask_receipt = Some(ready_operator_ask_summary());
         regression.blocked_ask_receipt = Some(BlockedAskRegressionSummary {
             path: "lunar-lake-operator-ask-auto-low-power-blocked.json".to_string(),
             blocked_receipt_ready: true,
@@ -14339,7 +14705,16 @@ mod tests {
         assert!(comparison.regression_surface.cold_warm_benchmark_indexed);
         assert!(comparison.regression_surface.durability_bundle_indexed);
         assert!(comparison.regression_surface.durability_stability_proven);
+        assert!(comparison.regression_surface.warm_resident_ask_receipt_indexed);
+        assert!(comparison.regression_surface.warm_resident_auto_ask_ready);
         assert!(comparison.regression_surface.blocked_ask_receipt_indexed);
+        let Some(warm_ask) = comparison.warm_resident_ask_receipt.as_ref() else {
+            bail!("comparison did not carry warm resident ask receipt summary");
+        };
+        assert_eq!(warm_ask.profile_id, "warm_resident");
+        assert_eq!(warm_ask.selected_route, "dense_slm_openvino_npu_candidate");
+        assert!(warm_ask.new_inference_executed);
+        assert!(warm_ask.generated_token_ids_available);
         let Some(blocked) = comparison.blocked_ask_receipt.as_ref() else {
             bail!("comparison did not carry blocked ask receipt summary");
         };
@@ -17750,6 +18125,71 @@ mod tests {
     }
 
     #[test]
+    fn warm_resident_auto_ask_receipt_is_regression_ready() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_warm_resident_auto_npu_ask(temp.path(), AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT)?;
+
+        let summary =
+            inspect_operator_ask_regression(&temp.path().join(AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT))?;
+
+        assert!(summary.regression_ready, "{:?}", summary.gaps);
+        assert_eq!(summary.profile_id, "warm_resident");
+        assert_eq!(summary.requested_device, "auto");
+        assert_eq!(summary.requested_route, "auto");
+        assert_eq!(summary.selected_route, "dense_slm_openvino_npu_candidate");
+        assert_eq!(summary.selected_backend, "openvino-npu");
+        assert!(summary.new_inference_executed);
+        assert!(summary.generated_token_ids_available);
+        assert!(!summary.speedup_claim);
+        assert!(!summary.power_advantage_claim);
+        assert!(!summary.acceleration_claim);
+        assert!(!summary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn regression_surface_requires_auto_ask_when_npu_warm_resident_is_promoted() -> Result<()> {
+        let route_profiles = ready_route_profile_regression_with_npu_warm_resident();
+        let cold_warm = ready_cold_warm_regression_with_npu_warm_resident();
+        let corpus = ready_answer_corpus_v2_summary();
+        let durability = ready_durability_summary();
+        let intake = ready_bitnet_semantic_intake_summary();
+        let power = ready_power_profile_summary();
+
+        let missing = build_regression_surface_summary(
+            Some(&corpus),
+            Some(&route_profiles),
+            Some(&cold_warm),
+            Some(&durability),
+            Some(&intake),
+            Some(&power),
+            None,
+            None,
+        );
+        assert!(!missing.strict_ready);
+        assert!(missing.gaps.iter().any(|gap| {
+            gap.contains("OpenVINO NPU is promoted for warm_resident")
+                && gap.contains("no successful auto ask receipt")
+        }));
+
+        let ask = ready_operator_ask_summary();
+        let ready = build_regression_surface_summary(
+            Some(&corpus),
+            Some(&route_profiles),
+            Some(&cold_warm),
+            Some(&durability),
+            Some(&intake),
+            Some(&power),
+            Some(&ask),
+            None,
+        );
+        assert!(ready.warm_resident_ask_receipt_indexed);
+        assert!(ready.warm_resident_auto_ask_ready);
+        assert!(ready.strict_ready, "{:?}", ready.gaps);
+        Ok(())
+    }
+
+    #[test]
     fn regression_bundle_v2_fails_when_profile_comparison_reports_fallback() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
@@ -18606,6 +19046,257 @@ mod tests {
             write_json(root, file, no_speedup.clone())?;
         }
         Ok(())
+    }
+
+    fn write_warm_resident_auto_npu_ask(root: &Path, file: &str) -> Result<()> {
+        write_json(
+            root,
+            file,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_operator_ask",
+                "proof_stage": "operator_candidate_route_executed_through_lunar_lake_ask",
+                "machine_id": "intel-258v",
+                "requested_device": "auto",
+                "requested_route": "auto",
+                "profile_id": "warm_resident",
+                "selected_route": "dense_slm_openvino_npu_candidate",
+                "selected_backend": "openvino-npu",
+                "runtime_api": "openvino_genai",
+                "route_id": "dense_slm_openvino_npu_candidate",
+                "promotion_status": "promoted",
+                "route_profile_status": "promoted_route_ready",
+                "route_profile_blockers": [],
+                "fallback_used": false,
+                "answer_gate_passed": true,
+                "openvino_candidate_route_executed": true,
+                "speedup_claim": false,
+                "power_advantage_claim": false,
+                "acceleration_claim": false,
+                "bitnet_qk256_i2s_claim": false,
+                "tokens": {
+                    "prompt_count": 39,
+                    "generated_count": 9,
+                    "generated_ids": [17, 488, 220, 17, 16819, 220, 19, 13, 151645]
+                },
+                "route_selection": {
+                    "requested_device": "auto",
+                    "requested_route": "auto",
+                    "profile_id": "warm_resident",
+                    "selected_route": "dense_slm_openvino_npu_candidate",
+                    "selected_backend": "openvino-npu",
+                    "runtime_api": "openvino_genai",
+                    "promotion_status": "promoted",
+                    "route_profile_status": "promoted_route_ready",
+                    "route_profile_blockers": [],
+                    "selection_source": "promotion_ledger_auto"
+                },
+                "source_run_receipt": "source-run.json",
+                "source_receipt": {
+                    "artifact_kind": "lunar_lake_openvino_operator_ask",
+                    "output": {
+                        "generated_token_ids_available_from_pipeline": true,
+                        "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+                        "generated_token_ids": [17, 488, 220, 17, 16819, 220, 19, 13, 151645]
+                    },
+                    "verification": {
+                        "answer_gate_passed": true,
+                        "fallback_used": false,
+                        "generated_token_ids_available_from_pipeline": true,
+                        "acceleration_claim": false
+                    }
+                },
+                "claim_boundary": {
+                    "openvino_candidate_route_executed": true,
+                    "fallback_used": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "arc_or_npu_acceleration_claim": false,
+                    "bitnet_qk256_i2s_claim": false
+                }
+            }),
+        )
+    }
+
+    fn ready_timing_coverage() -> TimingApplicabilityCoverageSummary {
+        TimingApplicabilityCoverageSummary {
+            route_count: 2,
+            profile_specific_route_count: 2,
+            proxy_or_missing_route_count: 0,
+            promotion_eligible_route_count: 1,
+            promotion_eligible_profile_specific_route_count: 1,
+            candidate_route_count: 1,
+            candidate_proxy_or_missing_route_count: 0,
+            promotion_eligible_routes_have_profile_specific_timing: true,
+            proxy_or_missing_timing_routes_blocked: true,
+            proxy_or_missing_routes: vec![],
+            promotion_eligible_proxy_or_missing_routes: vec![],
+            unblocked_proxy_or_missing_routes: vec![],
+        }
+    }
+
+    fn npu_warm_route_promotion_scope() -> RoutePromotionScopeSummary {
+        RoutePromotionScopeSummary {
+            openvino_gpu_promoted_profiles: vec![],
+            openvino_npu_promoted_profiles: vec!["warm_resident".to_string()],
+            profile_scoped_promotion_only: true,
+            openvino_npu_remains_candidate: false,
+            unexpected_openvino_profile_promotions: vec![],
+            notes: vec!["OpenVINO NPU is profile-promoted only for warm_resident".to_string()],
+        }
+    }
+
+    fn ready_route_profile_regression_with_npu_warm_resident() -> RouteProfileRegressionSummary {
+        RouteProfileRegressionSummary {
+            path: "route-profile.json".to_string(),
+            profile_comparison_ready: true,
+            default_route_id: DEFAULT_ASK_ROUTE.to_string(),
+            profiles: REQUIRED_ROUTE_PROFILES
+                .iter()
+                .map(|profile| (*profile).to_string())
+                .collect(),
+            timing_coverage: ready_timing_coverage(),
+            candidate_routes_remain_unpromoted: true,
+            benchmark_qualified_advantage_claimed: false,
+            fallback_observed: false,
+            gpu_npu_promotion_blockers: vec!["low_power_power_advantage_unproven".to_string()],
+            gpu_npu_promotion_blocker_summary: vec![],
+            route_promotion_scope: npu_warm_route_promotion_scope(),
+            regression_ready: true,
+            gaps: vec![],
+        }
+    }
+
+    fn ready_cold_warm_regression_with_npu_warm_resident() -> ColdWarmRegressionSummary {
+        ColdWarmRegressionSummary {
+            path: "cold-warm.json".to_string(),
+            benchmark_gate_ready: true,
+            profiles: REQUIRED_ROUTE_PROFILES
+                .iter()
+                .map(|profile| (*profile).to_string())
+                .collect(),
+            timing_coverage: ready_timing_coverage(),
+            promoted_routes_have_critical_timing: true,
+            candidate_routes_remain_unpromoted: true,
+            fallback_observed: false,
+            benchmark_qualified_advantage_claimed: false,
+            telemetry_gaps: vec![],
+            route_promotion_scope: npu_warm_route_promotion_scope(),
+            regression_ready: true,
+            gaps: vec![],
+        }
+    }
+
+    fn ready_answer_corpus_v2_summary() -> AnswerCorpusV2Summary {
+        AnswerCorpusV2Summary {
+            path: "corpus-v2.yaml".to_string(),
+            schema: 1,
+            name: "lunar-lake-qwen25-answer-corpus-v2".to_string(),
+            route_scope: Some(DEFAULT_ASK_ROUTE.to_string()),
+            model_family: Some("qwen".to_string()),
+            model_architecture: Some("qwen2".to_string()),
+            quantization: Some("Q8_0".to_string()),
+            prompt_template: Some("qwen2.5".to_string()),
+            case_count: 14,
+            profiles: REQUIRED_CORPUS_V2_PROFILES
+                .iter()
+                .map(|profile| (*profile).to_string())
+                .collect(),
+            categories: REQUIRED_CORPUS_V2_CATEGORIES
+                .iter()
+                .map(|category| (*category).to_string())
+                .collect(),
+            claim_boundary_preserved: true,
+            fixture_ready: true,
+            gaps: vec![],
+        }
+    }
+
+    fn ready_durability_summary() -> DurabilityRegressionSummary {
+        DurabilityRegressionSummary {
+            path: "durability.json".to_string(),
+            durability_index_ready: true,
+            stability_proven: true,
+            profiles: default_durability_required_profiles(),
+            required_repeat_count: 10,
+            stable_profile_count: 3,
+            fallback_observed: false,
+            answer_drift_detected: false,
+            route_drift_detected: false,
+            repeated_run_stability_claim: true,
+            regression_ready: true,
+            gaps: vec![],
+        }
+    }
+
+    fn ready_bitnet_semantic_intake_summary() -> BitnetSemanticIntakeRegressionSummary {
+        BitnetSemanticIntakeRegressionSummary {
+            path: BITNET_SEMANTIC_INTAKE.to_string(),
+            intake_ready: true,
+            rerun_required: false,
+            pending_shared_change_count: 1,
+            merged_to_main_count: 0,
+            stale_after_merged_count: 0,
+            source_lanes: vec!["a770".to_string()],
+            pending_changes: vec!["shared BitNet semantic fix pending".to_string()],
+            required_reruns: vec![],
+            claim_boundary_preserved: true,
+            regression_ready: true,
+            gaps: vec![],
+        }
+    }
+
+    fn ready_power_profile_summary() -> PowerProfileRegressionSummary {
+        PowerProfileRegressionSummary {
+            path: POWER_PROFILE_EVIDENCE_FILE.to_string(),
+            power_profile_index_ready: true,
+            low_power_promotion_ready: false,
+            power_advantage_proven: false,
+            low_power_route_count: 3,
+            low_power_routes_remain_unpromoted: true,
+            current_context_is_ac_only: true,
+            battery_mode_sample_recorded: false,
+            battery_sample_source: None,
+            energy_proxy_recorded: false,
+            energy_proxy_source: None,
+            thermal_context_recorded: false,
+            claim_boundary_preserved: true,
+            regression_ready: true,
+            gaps: vec![],
+            blockers: vec!["battery comparison evidence is missing".to_string()],
+        }
+    }
+
+    fn ready_operator_ask_summary() -> OperatorAskRegressionSummary {
+        OperatorAskRegressionSummary {
+            path: AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT.to_string(),
+            ask_receipt_ready: true,
+            profile_id: "warm_resident".to_string(),
+            requested_device: "auto".to_string(),
+            requested_route: "auto".to_string(),
+            selected_route: "dense_slm_openvino_npu_candidate".to_string(),
+            selected_backend: "openvino-npu".to_string(),
+            runtime_api: "openvino_genai".to_string(),
+            promotion_status: "promoted".to_string(),
+            route_profile_status: Some("promoted_route_ready".to_string()),
+            route_profile_blockers: vec![],
+            fallback_used: false,
+            answer_gate_passed: true,
+            openvino_candidate_route_executed: true,
+            new_inference_executed: true,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            bitnet_qk256_i2s_claim: false,
+            generated_token_ids_available: true,
+            source_run_receipt: Some(
+                "lunar-lake-operator-ask-auto-npu-warm-resident-math-brief-source-run.json"
+                    .to_string(),
+            ),
+            regression_ready: true,
+            gaps: vec![],
+        }
     }
 
     fn write_minimal_route_policy(root: &Path) -> Result<()> {
