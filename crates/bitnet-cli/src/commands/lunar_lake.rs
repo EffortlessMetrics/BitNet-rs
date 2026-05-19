@@ -10166,11 +10166,11 @@ fn route_not_selected_reasons(
         reasons.push("route source claims acceleration before profile promotion".to_string());
     }
     for item in &route.missing_evidence {
-        reasons.push(format!("missing evidence: {item}"));
+        reasons.push(describe_route_missing_evidence(item));
     }
     for blocker in &route.blocked_for {
         if route_blocker_applies_to_profile(blocker, profile_id) {
-            reasons.push(format!("route blocker for profile `{profile_id}`: {blocker}"));
+            reasons.push(describe_route_blocker(blocker, profile_id));
         }
     }
     if reasons.is_empty() {
@@ -10179,6 +10179,27 @@ fn route_not_selected_reasons(
     reasons.sort();
     reasons.dedup();
     reasons
+}
+
+fn describe_route_missing_evidence(item: &str) -> String {
+    match item {
+        "benchmark_qualified_speedup_or_power_advantage" => format!(
+            "missing evidence: {item} (benchmark-qualified latency or power advantage is not proven)"
+        ),
+        _ => format!("missing evidence: {item}"),
+    }
+}
+
+fn describe_route_blocker(blocker: &str, profile_id: &str) -> String {
+    match blocker {
+        "auto_default" => format!(
+            "route blocker for profile `{profile_id}`: {blocker} (auto routing only selects routes explicitly promoted for this profile)"
+        ),
+        "low_power_power_advantage_unproven" => format!(
+            "route blocker for profile `{profile_id}`: {blocker} (battery-mode or energy-proxy power advantage has not been benchmark-qualified)"
+        ),
+        _ => format!("route blocker for profile `{profile_id}`: {blocker}"),
+    }
 }
 
 fn route_blocker_applies_to_profile(blocker: &str, profile_id: &str) -> bool {
@@ -19161,7 +19182,10 @@ mod tests {
         assert!(err.contains("why_not_gpu="), "got: {err}");
         assert!(err.contains("why_not_npu="), "got: {err}");
         assert!(err.contains("low_power_power_advantage_unproven"), "got: {err}");
+        assert!(err.contains("battery-mode or energy-proxy power advantage"), "got: {err}");
+        assert!(err.contains("auto routing only selects routes explicitly promoted"), "got: {err}");
         assert!(err.contains("benchmark_qualified_speedup_or_power_advantage"), "got: {err}");
+        assert!(err.contains("benchmark-qualified latency or power advantage"), "got: {err}");
 
         let blocked = explain_blocked_operator_ask_route_selection(
             temp.path(),
@@ -19192,6 +19216,10 @@ mod tests {
                 .iter()
                 .any(|reason| { reason.contains("low_power_power_advantage_unproven") })
         );
+        assert!(blocked.why_not_npu.iter().any(|reason| {
+            reason.contains("auto_default")
+                && reason.contains("auto routing only selects routes explicitly promoted")
+        }));
         Ok(())
     }
 
