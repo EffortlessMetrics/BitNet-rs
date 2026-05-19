@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-19T21:20:00Z",
+  "created_utc": "2026-05-19T21:55:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "b725a5ce7b170faed3eaa98872888df8abc590ff",
+  "source_revision": "e5cd635bda902284542d7242b8b352cd233a2856",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
   "excellent_support_ready": false,
@@ -17,6 +17,7 @@
       "evidence": [
         "lunar-lake-operator-ask-math-brief.json",
         "lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json",
+        "lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json",
         "lunar-lake-operator-ask-auto-low-power-blocked.json"
       ]
     },
@@ -28,7 +29,7 @@
     "regress": {
       "status": "ready_strict_v2",
       "regression_passed": true,
-      "checks_indexed": 13,
+      "checks_indexed": 14,
       "evidence": "lunar-lake-regression-bundle-v2.json"
     },
     "compare": {

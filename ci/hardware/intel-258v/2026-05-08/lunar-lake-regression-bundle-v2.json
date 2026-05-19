@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T21:10:00Z",
+  "created_utc": "2026-05-19T21:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -395,6 +395,31 @@
       "route not promoted for profile low_power"
     ]
   },
+  "warm_resident_ask_receipt": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json",
+    "ask_receipt_ready": true,
+    "profile_id": "warm_resident",
+    "requested_device": "auto",
+    "requested_route": "auto",
+    "selected_route": "dense_slm_openvino_npu_candidate",
+    "selected_backend": "openvino-npu",
+    "runtime_api": "openvino_genai",
+    "promotion_status": "promoted",
+    "route_profile_status": "promoted_route_ready",
+    "route_profile_blockers": [],
+    "fallback_used": false,
+    "answer_gate_passed": true,
+    "openvino_candidate_route_executed": true,
+    "new_inference_executed": true,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "bitnet_qk256_i2s_claim": false,
+    "generated_token_ids_available": true,
+    "source_run_receipt": "ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-auto-npu-warm-resident-math-brief-source-run.json",
+    "regression_ready": true,
+    "gaps": []
+  },
   "blocked_ask_receipt": {
     "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-low-power-blocked.json",
     "blocked_receipt_ready": true,
@@ -422,6 +447,8 @@
     "durability_bundle_indexed": true,
     "bitnet_semantic_intake_indexed": true,
     "power_profile_evidence_indexed": true,
+    "warm_resident_ask_receipt_indexed": true,
+    "warm_resident_auto_ask_ready": true,
     "blocked_ask_receipt_indexed": true,
     "required_answer_profiles": [
       "regression_tiny",
@@ -695,6 +722,29 @@
         "thermal_context_recorded=true",
         "claim_boundary_preserved=true",
         "blocker_count=7"
+      ]
+    },
+    {
+      "check_id": "warm_resident_auto_ask_receipt_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json"
+      ],
+      "notes": [
+        "profile_id=warm_resident",
+        "requested_device=auto",
+        "requested_route=auto",
+        "selected_route=dense_slm_openvino_npu_candidate",
+        "selected_backend=openvino-npu",
+        "runtime_api=openvino_genai",
+        "promotion_status=promoted",
+        "route_profile_status=promoted_route_ready",
+        "fallback_used=false",
+        "answer_gate_passed=true",
+        "openvino_candidate_route_executed=true",
+        "new_inference_executed=true",
+        "generated_token_ids_available=true",
+        "ask_receipt_ready=true"
       ]
     },
     {

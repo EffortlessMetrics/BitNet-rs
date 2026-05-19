@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T21:40:00Z"
+event = "in_progress"
+item = "LNL258V-ASK-005"
+branch = "codex/lunar-lake/LNL258V-ASK-005-auto-npu-warm-resident"
+actor = "codex"
+summary = "Started LNL258V-ASK-005 to commit a live auto warm_resident ask receipt for the profile-promoted OpenVINO NPU route and make regression v2 index it."
+
+notes = [
+  "The work records a bounded lunar-lake ask run with requested_device=auto, requested_route=auto, profile_id=warm_resident, selected_route=dense_slm_openvino_npu_candidate, selected_backend=openvino-npu, runtime_api=openvino_genai, answer_gate_passed=true, and fallback_used=false.",
+  "Strict regression v2 will fail closed when OpenVINO NPU is promoted for warm_resident but the successful auto ask receipt is missing or not regression-ready.",
+  "The work preserves no speedup, no power-advantage, no native NPU, no acceleration, no broad quality, and no BitNet QK256/I2_S behavior-change claims.",
+]
