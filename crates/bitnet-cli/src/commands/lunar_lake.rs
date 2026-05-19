@@ -594,6 +594,16 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = POWER_THERMAL_CONTEXT_FILE)]
         telemetry_context: PathBuf,
 
+        /// Optional battery-mode telemetry receipt captured for the same low_power route/profile matrix.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long)]
+        battery_telemetry_context: Option<PathBuf>,
+
+        /// Optional repeated-run battery-drain or energy proxy receipt for low_power route evidence.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long)]
+        energy_proxy: Option<PathBuf>,
+
         /// Output JSON power-profile evidence receipt to file.
         #[arg(long, default_value = POWER_PROFILE_EVIDENCE_FILE)]
         json_out: PathBuf,
@@ -1037,7 +1047,9 @@ pub struct PowerProfileRegressionSummary {
     pub low_power_routes_remain_unpromoted: bool,
     pub current_context_is_ac_only: bool,
     pub battery_mode_sample_recorded: bool,
+    pub battery_sample_source: Option<String>,
     pub energy_proxy_recorded: bool,
+    pub energy_proxy_source: Option<String>,
     pub thermal_context_recorded: bool,
     pub claim_boundary_preserved: bool,
     pub regression_ready: bool,
@@ -1984,6 +1996,8 @@ pub struct LunarLakePowerProfileEvidence {
     pub route_profile_comparison_receipt: String,
     pub cold_warm_benchmark_receipt: String,
     pub telemetry_context_receipt: String,
+    pub battery_telemetry_context_receipt: Option<String>,
+    pub energy_proxy_receipt: Option<String>,
     pub telemetry: PowerProfileTelemetrySummary,
     pub low_power_routes: Vec<PowerProfileRouteEvidence>,
     pub power_profile_index_ready: bool,
@@ -2006,7 +2020,9 @@ pub struct PowerProfileTelemetrySummary {
     pub thermal_temperature_count: usize,
     pub current_context_is_ac_only: bool,
     pub battery_mode_sample_recorded: bool,
+    pub battery_sample_source: Option<String>,
     pub energy_proxy_recorded: bool,
+    pub energy_proxy_source: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -2581,6 +2597,8 @@ impl LunarLakeCommand {
                 route_profile_comparison,
                 cold_warm_benchmark,
                 telemetry_context,
+                battery_telemetry_context,
+                energy_proxy,
                 json_out,
                 created_utc,
                 strict,
@@ -2594,6 +2612,8 @@ impl LunarLakeCommand {
                     route_profile_comparison,
                     cold_warm_benchmark,
                     telemetry_context,
+                    battery_telemetry_context.as_deref(),
+                    energy_proxy.as_deref(),
                     created_utc,
                 )?;
                 let json_out = resolve_receipt_path(artifact_root, json_out);
@@ -3945,7 +3965,9 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
         low_power_routes_remain_unpromoted,
         current_context_is_ac_only: power.telemetry.current_context_is_ac_only,
         battery_mode_sample_recorded: power.telemetry.battery_mode_sample_recorded,
+        battery_sample_source: power.telemetry.battery_sample_source,
         energy_proxy_recorded: power.telemetry.energy_proxy_recorded,
+        energy_proxy_source: power.telemetry.energy_proxy_source,
         thermal_context_recorded: power.telemetry.thermal_context_recorded,
         claim_boundary_preserved,
         regression_ready: gaps.is_empty(),
@@ -4095,7 +4117,12 @@ fn power_profile_regression_notes(summary: &PowerProfileRegressionSummary) -> Ve
         ),
         format!("current_context_is_ac_only={}", summary.current_context_is_ac_only),
         format!("battery_mode_sample_recorded={}", summary.battery_mode_sample_recorded),
+        format!(
+            "battery_sample_source={}",
+            summary.battery_sample_source.as_deref().unwrap_or("none")
+        ),
         format!("energy_proxy_recorded={}", summary.energy_proxy_recorded),
+        format!("energy_proxy_source={}", summary.energy_proxy_source.as_deref().unwrap_or("none")),
         format!("thermal_context_recorded={}", summary.thermal_context_recorded),
         format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
         format!("blocker_count={}", summary.blockers.len()),
@@ -6517,14 +6544,23 @@ pub fn build_power_profile_evidence_with_created_utc(
     route_profile_comparison: &Path,
     cold_warm_benchmark: &Path,
     telemetry_context: &Path,
+    battery_telemetry_context: Option<&Path>,
+    energy_proxy: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakePowerProfileEvidence> {
     let route_profile_path = resolve_receipt_path(root, route_profile_comparison);
     let benchmark_path = resolve_receipt_path(root, cold_warm_benchmark);
     let telemetry_path = resolve_receipt_path(root, telemetry_context);
+    let battery_telemetry_path =
+        battery_telemetry_context.map(|path| resolve_receipt_path(root, path));
+    let energy_proxy_path = energy_proxy.map(|path| resolve_receipt_path(root, path));
     let route_profile_json: Value = read_json_receipt(&route_profile_path)?;
     let benchmark_json: Value = read_json_receipt(&benchmark_path)?;
     let telemetry_json: Value = read_json_receipt(&telemetry_path)?;
+    let battery_telemetry_json =
+        battery_telemetry_path.as_ref().map(|path| read_json_receipt(path)).transpose()?;
+    let energy_proxy_json =
+        energy_proxy_path.as_ref().map(|path| read_json_receipt(path)).transpose()?;
 
     let mut gaps = Vec::new();
     if value_at(&route_profile_json, "profile_comparison_ready").and_then(Value::as_bool)
@@ -6545,11 +6581,24 @@ pub fn build_power_profile_evidence_with_created_utc(
         gaps.push("power-profile evidence refuses hidden fallback".to_string());
     }
 
-    let telemetry = power_profile_telemetry_summary(&telemetry_json);
+    let telemetry = power_profile_telemetry_summary(
+        &telemetry_json,
+        battery_telemetry_json.as_ref(),
+        energy_proxy_json.as_ref(),
+    );
+    let input_claim_boundary_preserved =
+        low_power_input_claim_boundary_preserved(battery_telemetry_json.as_ref())
+            && low_power_input_claim_boundary_preserved(energy_proxy_json.as_ref());
+    if !input_claim_boundary_preserved {
+        gaps.push(
+            "low_power battery or energy proxy evidence violates no-inference/no-promotion/no-speedup/no-power-advantage/no-acceleration claim boundary"
+                .to_string(),
+        );
+    }
     if !telemetry.power_context_recorded {
         gaps.push("power context is not recorded".to_string());
     }
-    if telemetry.current_context_is_ac_only {
+    if telemetry.current_context_is_ac_only && !telemetry.battery_mode_sample_recorded {
         gaps.push(
             "current telemetry is AC-only; battery comparison evidence is missing".to_string(),
         );
@@ -6582,12 +6631,19 @@ pub fn build_power_profile_evidence_with_created_utc(
     let power_profile_index_ready = value_at(&route_profile_json, "profiles").is_some()
         && value_at(&benchmark_json, "profiles").is_some()
         && telemetry.power_context_recorded
+        && input_claim_boundary_preserved
         && !low_power_routes.is_empty();
 
-    let mut next_required_evidence = vec![
-        "collect AC and battery samples for the same route/profile matrix".to_string(),
-        "record an energy or battery-drain proxy across repeated low_power runs".to_string(),
-    ];
+    let mut next_required_evidence = Vec::new();
+    if !telemetry.battery_mode_sample_recorded {
+        next_required_evidence
+            .push("collect AC and battery samples for the same route/profile matrix".to_string());
+    }
+    if !telemetry.energy_proxy_recorded {
+        next_required_evidence.push(
+            "record an energy or battery-drain proxy across repeated low_power runs".to_string(),
+        );
+    }
     if !telemetry.thermal_context_recorded {
         next_required_evidence.push(
             "capture thermal context or keep thermal unavailable as an explicit blocker"
@@ -6614,6 +6670,10 @@ pub fn build_power_profile_evidence_with_created_utc(
         route_profile_comparison_receipt: path_string(&route_profile_path),
         cold_warm_benchmark_receipt: path_string(&benchmark_path),
         telemetry_context_receipt: path_string(&telemetry_path),
+        battery_telemetry_context_receipt: battery_telemetry_path
+            .as_ref()
+            .map(|path| path_string(path)),
+        energy_proxy_receipt: energy_proxy_path.as_ref().map(|path| path_string(path)),
         telemetry,
         low_power_routes,
         power_profile_index_ready,
@@ -6634,7 +6694,11 @@ pub fn build_power_profile_evidence_with_created_utc(
     })
 }
 
-fn power_profile_telemetry_summary(telemetry_json: &Value) -> PowerProfileTelemetrySummary {
+fn power_profile_telemetry_summary(
+    telemetry_json: &Value,
+    battery_telemetry_json: Option<&Value>,
+    energy_proxy_json: Option<&Value>,
+) -> PowerProfileTelemetrySummary {
     let memory_context_recorded = value_at(telemetry_json, "availability.memory_context_recorded")
         .and_then(Value::as_bool)
         .unwrap_or(false);
@@ -6654,10 +6718,26 @@ fn power_profile_telemetry_summary(telemetry_json: &Value) -> PowerProfileTeleme
         .and_then(Value::as_array)
         .map_or(0, Vec::len);
     let current_context_is_ac_only = ac_power_inferred == Some(true);
-    let battery_mode_sample_recorded = ac_power_inferred == Some(false);
-    let energy_proxy_recorded = value_at(telemetry_json, "energy_proxy").is_some()
-        || value_at(telemetry_json, "power.energy_proxy").is_some()
-        || value_at(telemetry_json, "battery_delta").is_some();
+    let battery_sample_source = if ac_power_inferred == Some(false) {
+        Some("primary_telemetry_context".to_string())
+    } else if battery_telemetry_json.is_some_and(|json| {
+        value_at(json, "power.ac_power_inferred").and_then(Value::as_bool) == Some(false)
+    }) {
+        Some("battery_telemetry_context".to_string())
+    } else {
+        None
+    };
+    let battery_mode_sample_recorded = battery_sample_source.is_some();
+    let energy_proxy_source = if low_power_energy_proxy_present(telemetry_json) {
+        Some("primary_telemetry_context".to_string())
+    } else if battery_telemetry_json.is_some_and(low_power_energy_proxy_present) {
+        Some("battery_telemetry_context".to_string())
+    } else if energy_proxy_json.is_some_and(low_power_energy_proxy_present) {
+        Some("energy_proxy_receipt".to_string())
+    } else {
+        None
+    };
+    let energy_proxy_recorded = energy_proxy_source.is_some();
 
     PowerProfileTelemetrySummary {
         memory_context_recorded,
@@ -6670,8 +6750,48 @@ fn power_profile_telemetry_summary(telemetry_json: &Value) -> PowerProfileTeleme
         thermal_temperature_count,
         current_context_is_ac_only,
         battery_mode_sample_recorded,
+        battery_sample_source,
         energy_proxy_recorded,
+        energy_proxy_source,
     }
+}
+
+fn low_power_energy_proxy_present(json: &Value) -> bool {
+    value_at(json, "energy_proxy").is_some()
+        || value_at(json, "power.energy_proxy").is_some()
+        || value_at(json, "battery_delta").is_some()
+        || value_at(json, "battery_delta_percent").is_some()
+        || value_at(json, "charge_delta_percent").is_some()
+        || value_at(json, "estimated_charge_delta_percent").is_some()
+        || value_at(json, "energy_proxy_recorded").and_then(Value::as_bool) == Some(true)
+}
+
+fn low_power_input_claim_boundary_preserved(json: Option<&Value>) -> bool {
+    let Some(json) = json else {
+        return true;
+    };
+    bool_at_any(json, &["new_inference_executed", "claim_boundary.new_inference_executed"])
+        != Some(true)
+        && bool_at_any(json, &["route_promotion_changed", "claim_boundary.route_promotion_changed"])
+            != Some(true)
+        && bool_at_any(json, &["speedup_claim", "claim_boundary.speedup_claim"]) != Some(true)
+        && bool_at_any(json, &["power_advantage_claim", "claim_boundary.power_advantage_claim"])
+            != Some(true)
+        && bool_at_any(json, &["acceleration_claim", "claim_boundary.acceleration_claim"])
+            != Some(true)
+        && bool_at_any(
+            json,
+            &["native_npu_inference_claim", "claim_boundary.native_npu_inference_claim"],
+        ) != Some(true)
+        && bool_at_any(
+            json,
+            &[
+                "bitnet_qk256_i2s_behavior_changed",
+                "claim_boundary.bitnet_qk256_i2s_behavior_changed",
+            ],
+        ) != Some(true)
+        && bool_at_any(json, &["hidden_fallback_allowed", "claim_boundary.hidden_fallback_allowed"])
+            != Some(true)
 }
 
 fn power_profile_low_power_routes(
@@ -15479,6 +15599,8 @@ mod tests {
             Path::new(ROUTE_PROFILE_COMPARISON),
             Path::new(COLD_WARM_PROFILE_BENCHMARK_FILE),
             Path::new(POWER_THERMAL_CONTEXT_FILE),
+            None,
+            None,
             "2026-05-19T08:30:00Z".to_string(),
         )?;
 
@@ -15502,6 +15624,160 @@ mod tests {
         assert_eq!(npu.total_response_ms, Some(950.0));
         assert!(!npu.power_promotion_ready);
         assert!(npu.power_related_blockers.iter().any(|blocker| blocker.contains("power")));
+        Ok(())
+    }
+
+    #[test]
+    fn power_profile_evidence_indexes_battery_and_energy_proxy_without_promotion() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_json(
+            temp.path(),
+            ROUTE_PROFILE_COMPARISON,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_route_profile_comparison",
+                "profile_comparison_ready": true,
+                "profiles": [
+                    {
+                        "profile_id": "low_power",
+                        "route_evidence": [
+                            {
+                                "route_id": "dense_slm_openvino_npu_candidate",
+                                "route_status": "candidate",
+                                "ledger_route_status": "candidate",
+                                "selected_backend": "openvino-npu",
+                                "runtime_api": "openvino_genai",
+                                "fallback_used": false,
+                                "answer_gate_passed": true,
+                                "benchmark_qualified_advantage": false,
+                                "blockers": [
+                                    "benchmark_qualified_speedup_or_power_advantage"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "claim_boundary": {
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            COLD_WARM_PROFILE_BENCHMARK_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
+                "benchmark_gate_ready": true,
+                "profiles": [
+                    {
+                        "profile_id": "low_power",
+                        "routes": [
+                            {
+                                "route_id": "dense_slm_openvino_npu_candidate",
+                                "timing": {
+                                    "total_response_ms": 950.0,
+                                    "throughput_tokens_per_s": 9.5
+                                },
+                                "blockers": [
+                                    "benchmark_qualified_speedup_or_power_advantage"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "claim_boundary": {
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            POWER_THERMAL_CONTEXT_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "availability": {
+                    "memory_context_recorded": true,
+                    "power_context_recorded": true,
+                    "thermal_context_recorded": true
+                },
+                "power": {
+                    "active_scheme": "Balanced",
+                    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+                    "ac_power_inferred": true
+                },
+                "thermal": {
+                    "thermal_zones_visible": 1,
+                    "temperatures_celsius": []
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "battery-telemetry.json",
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "availability": {
+                    "memory_context_recorded": true,
+                    "power_context_recorded": true,
+                    "thermal_context_recorded": true
+                },
+                "power": {
+                    "active_scheme": "Balanced",
+                    "battery_status": "BatteryStatus=1;EstimatedChargeRemaining=96",
+                    "ac_power_inferred": false
+                },
+                "thermal": {
+                    "thermal_zones_visible": 1,
+                    "temperatures_celsius": []
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            "energy-proxy.json",
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_low_power_energy_proxy",
+                "energy_proxy_recorded": true,
+                "charge_delta_percent": -1.0,
+                "sample_count": 10,
+                "claim_boundary": {
+                    "power_advantage_claim": false
+                }
+            }),
+        )?;
+
+        let receipt = build_power_profile_evidence_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(COLD_WARM_PROFILE_BENCHMARK_FILE),
+            Path::new(POWER_THERMAL_CONTEXT_FILE),
+            Some(Path::new("battery-telemetry.json")),
+            Some(Path::new("energy-proxy.json")),
+            "2026-05-19T10:15:00Z".to_string(),
+        )?;
+
+        assert!(receipt.power_profile_index_ready, "{:?}", receipt.gaps);
+        assert!(receipt.telemetry.battery_mode_sample_recorded);
+        assert_eq!(
+            receipt.telemetry.battery_sample_source.as_deref(),
+            Some("battery_telemetry_context")
+        );
+        assert!(receipt.telemetry.energy_proxy_recorded);
+        assert_eq!(receipt.telemetry.energy_proxy_source.as_deref(), Some("energy_proxy_receipt"));
+        assert!(!receipt.low_power_promotion_ready);
+        assert!(!receipt.power_advantage_proven);
+        assert!(!receipt.gaps.iter().any(|gap| gap.contains("battery-mode sample is missing")));
+        assert!(!receipt.gaps.iter().any(|gap| gap.contains("energy proxy evidence is missing")));
+        assert!(
+            receipt.gaps.iter().any(
+                |gap| gap.contains("no low_power route has benchmark-qualified power evidence")
+            )
+        );
         Ok(())
     }
 
@@ -15891,6 +16167,8 @@ mod tests {
             Path::new(ROUTE_PROFILE_COMPARISON),
             Path::new("cold-warm.json"),
             Path::new(POWER_THERMAL_CONTEXT_FILE),
+            None,
+            None,
             "2026-05-14T23:50:00Z".to_string(),
         )?;
         fs::write(
