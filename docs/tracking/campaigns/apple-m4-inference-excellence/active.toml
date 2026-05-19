@@ -2475,7 +2475,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SETUP-001"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-SETUP-001-first-run"
 stackable = false
 review_mode = "codex_premerge"
@@ -2488,6 +2488,7 @@ commands = [
   "bitnet model verify <model-id>",
   "bitnet mac doctor --include-bitnet",
   "bitnet mac smoke --model-id <supported-model-id>",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/setup/summary.json --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",

@@ -15168,6 +15168,8 @@ fn validate_mac_receipt_value(
         validate_apple_m4_inference_status_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_doctor" {
         validate_apple_m4_slm_doctor_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_first_run_setup_summary" {
+        validate_apple_m4_first_run_setup_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_operator_evidence_summary" {
         validate_apple_m4_operator_evidence_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_report_refresh_manifest" {
@@ -19331,6 +19333,74 @@ fn validate_apple_m4_slm_doctor_receipt(
     require_bool_at(path, receipt, &["checks", "smoke", "skipped"], true)?;
     require_bool_at(path, receipt, &["mac_claim_boundary", "slm_local_answer"], false)?;
     Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_first_run_setup_summary_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_first_run_setup_summary")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-SETUP-001")?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_bool_at(path, receipt, &["setup_steps", "verify_artifacts", "dense_verified"], true)?;
+    require_bool_at(path, receipt, &["setup_steps", "verify_artifacts", "bitnet_verified"], true)?;
+    require_bool_at(path, receipt, &["setup_steps", "doctor_readiness", "dense_ready"], true)?;
+    require_bool_at(path, receipt, &["setup_steps", "doctor_readiness", "bitnet_ready"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["setup_steps", "doctor_readiness", "bitnet_tokenizer_verified"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["setup_steps", "doctor_readiness", "low_disk"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["setup_steps", "dense_smoke", "expected_text_fragment_found"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["setup_steps", "dense_smoke", "receipt_check_passed"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["setup_steps", "bitnet_runtime_boundary", "live_smoke_run_in_this_setup_receipt"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["setup_steps", "bitnet_runtime_boundary", "chat_enabled"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["setup_steps", "bitnet_runtime_boundary", "serve_enabled"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "first_run_setup_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_smoke_completed"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_artifact_ready"], true)?;
+    for claim_path in [
+        &["claim_boundary", "bitnet_live_smoke_completed_in_this_artifact"][..],
+        &["claim_boundary", "broad_dense_quality_claim"][..],
+        &["claim_boundary", "broad_bitnet_quality_claim"][..],
+        &["claim_boundary", "bitnet_chat_enabled"][..],
+        &["claim_boundary", "bitnet_serve_enabled"][..],
+        &["claim_boundary", "full_metal_inference_claimed"][..],
+        &["claim_boundary", "qk256_apple_claimed"][..],
+        &["claim_boundary", "neural_engine_execution_claimed"][..],
+        &["claim_boundary", "mpsgraph_inference_claimed"][..],
+        &["claim_boundary", "macbook_claimed"][..],
+        &["claim_boundary", "broad_performance_claim"][..],
+        &["claim_boundary", "speedup_claim"][..],
+    ] {
+        require_bool_at(path, receipt, claim_path, false)?;
+    }
+    let generated_tokens =
+        require_u64_at(path, receipt, &["setup_steps", "dense_smoke", "generated_tokens"], true)?;
+    Ok((Some(1), Some(generated_tokens as usize)))
 }
 
 fn validate_one_shot_receipt(

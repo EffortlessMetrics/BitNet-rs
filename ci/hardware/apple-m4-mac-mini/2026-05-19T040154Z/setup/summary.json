@@ -1,0 +1,136 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "apple_m4_first_run_setup_summary",
+  "work_item": "M4-SETUP-001",
+  "timestamp": "2026-05-19T04:01:54Z",
+  "receipt_dir": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "setup_steps": {
+    "discover_model_state": {
+      "command": "target/debug/bitnet mac models --json",
+      "before_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/mac-models.json",
+      "after_fetch_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/mac-models-after-fetch.json",
+      "disk_before": {
+        "probe_path": "/Users/steven/Library/Caches/bitnet-rs/models",
+        "available_bytes": 10140348416,
+        "available": "10.14 GB",
+        "default_model_headroom_bytes": 2425163456,
+        "default_model_headroom": "2.43 GB",
+        "smallest_supported_headroom_bytes": 2056541888,
+        "smallest_supported_headroom": "2.06 GB",
+        "largest_supported_headroom_bytes": 3308383296,
+        "largest_supported_headroom": "3.31 GB",
+        "low_disk": false,
+        "recommended_first_model_id": "qwen2.5-0.5b-instruct-q8_0",
+        "recommendation": "Start with the default `qwen2.5-0.5b-instruct-q8_0`. Current headroom can also fetch explicit-only supported models such as `qwen2.5-1.5b-instruct-q4_k_m`.",
+        "guidance": "When low_disk=true, run `bitnet model prune --all` or set BITNET_MODEL_CACHE_DIR / --cache-dir to a larger volume before fetching."
+      },
+      "disk_after": {
+        "probe_path": "/Users/steven/Library/Caches/bitnet-rs/models",
+        "available_bytes": 8945999872,
+        "available": "8.95 GB",
+        "default_model_headroom_bytes": 2425163456,
+        "default_model_headroom": "2.43 GB",
+        "smallest_supported_headroom_bytes": 2056541888,
+        "smallest_supported_headroom": "2.06 GB",
+        "largest_supported_headroom_bytes": 3308383296,
+        "largest_supported_headroom": "3.31 GB",
+        "low_disk": false,
+        "recommended_first_model_id": "qwen2.5-0.5b-instruct-q8_0",
+        "recommendation": "Start with the default `qwen2.5-0.5b-instruct-q8_0`. Current headroom can also fetch explicit-only supported models such as `qwen2.5-1.5b-instruct-q4_k_m`.",
+        "guidance": "When low_disk=true, run `bitnet model prune --all` or set BITNET_MODEL_CACHE_DIR / --cache-dir to a larger volume before fetching."
+      },
+      "dense_default": {
+        "id": "qwen2.5-0.5b-instruct-q8_0",
+        "state": "default",
+        "cache_state": "ready",
+        "fetch_command": "bitnet model fetch qwen2.5-0.5b-instruct-q8_0 --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "verify_command": "bitnet model verify qwen2.5-0.5b-instruct-q8_0 --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "repair_command": "bitnet model verify qwen2.5-0.5b-instruct-q8_0 --cache-dir /Users/steven/Library/Caches/bitnet-rs/models"
+      },
+      "bitnet_artifact": {
+        "id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+        "state": "supported-ask",
+        "cache_state": "ready",
+        "mac_ask_enabled": true,
+        "mac_bitnet_warm_enabled": true,
+        "mac_chat_enabled": false,
+        "mac_serve_enabled": false,
+        "fetch_command": "bitnet model fetch microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "verify_command": "bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "repair_command": "bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "tokenizer_authority": "tokenizer.ggml.model=gpt2, tokenizer.ggml.pre=llama-bpe-external",
+        "prompt_authority": "bitnetcpp-answer"
+      }
+    },
+    "fetch_or_repair": {
+      "bitnet_before_cache_state": "missing",
+      "bitnet_after_cache_state": "ready",
+      "repair_command_recorded": "bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models"
+    },
+    "verify_artifacts": {
+      "dense_verify_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/qwen2.5-0.5b-instruct-q8_0-verify.json",
+      "dense_verified": true,
+      "dense_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+      "dense_tokenizer_authority": "qwen2",
+      "bitnet_verify_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/microsoft-bitnet-b1.58-2B-4T-i2s-verify.json",
+      "bitnet_verified": true,
+      "bitnet_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+      "bitnet_tokenizer_authority": "llama-bpe-external",
+      "bitnet_tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+    },
+    "doctor_readiness": {
+      "command": "target/debug/bitnet mac doctor --include-bitnet --json-out ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/mac-doctor.json",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/mac-doctor.json",
+      "result": "pass",
+      "live_inference_checked": false,
+      "dense_ready": true,
+      "bitnet_ready": true,
+      "bitnet_tokenizer_verified": true,
+      "low_disk": false,
+      "repair_flows": {
+        "bad_sha": "run the prune command then fetch the pinned model artifact again",
+        "low_disk": "run `bitnet model prune --dry-run --json` before deleting model-cache entries, or move cache_dir to a larger volume",
+        "missing_model": "run the dense SLM fetch command shown in readiness.dense_slm.cache_repair_guidance",
+        "missing_tokenizer": "restore the accepted external BitNet tokenizer path shown in checks.bitnet_ask.tokenizer.path",
+        "prune_dry_run": "dry-run prune receipts do not delete files and can be reviewed before rerunning without --dry-run",
+        "stale_symlink": "replace the symlink target with the verified artifact or prune and fetch again"
+      }
+    },
+    "dense_smoke": {
+      "command": "target/debug/bitnet mac smoke --model-id qwen2.5-0.5b-instruct-q8_0 --json-out ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/mac-smoke-qwen2.5-0.5b-instruct-q8_0.json",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/mac-smoke-qwen2.5-0.5b-instruct-q8_0.json",
+      "answer_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/mac-smoke-qwen2.5-0.5b-instruct-q8_0-answer.json",
+      "expected_text_fragment_found": true,
+      "generated_tokens": 2,
+      "generated_text": "4<|im_end|>",
+      "receipt_check_passed": true
+    },
+    "bitnet_runtime_boundary": {
+      "live_smoke_run_in_this_setup_receipt": false,
+      "reason": "M4-SETUP-001 records accepted BitNet artifact and external tokenizer readiness through model verify plus doctor readiness; BitNet runtime smoke remains the separate bitnet_apple_m4_mac_smoke evidence lane.",
+      "chat_enabled": false,
+      "serve_enabled": false
+    }
+  },
+  "claim_boundary": {
+    "first_run_setup_only": true,
+    "dense_smoke_completed": true,
+    "bitnet_artifact_ready": true,
+    "bitnet_live_smoke_completed_in_this_artifact": false,
+    "broad_dense_quality_claim": false,
+    "broad_bitnet_quality_claim": false,
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "macbook_claimed": false,
+    "broad_performance_claim": false,
+    "speedup_claim": false
+  }
+}

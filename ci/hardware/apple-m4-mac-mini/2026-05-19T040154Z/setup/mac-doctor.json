@@ -1,0 +1,220 @@
+{
+  "artifact_kind": "apple_m4_slm_doctor",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/mac-doctor.json",
+  "broad_performance_claim": false,
+  "checks": {
+    "backend": {
+      "checked": true,
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "bitnet_ask": {
+      "advisory": true,
+      "blocks_doctor": false,
+      "checked": true,
+      "claim_boundary": {
+        "bitnet_fixed_prompt_warm_session": true,
+        "bitnet_one_shot_mac_ask": true,
+        "bitnet_quality_claimed": false,
+        "broad_performance_claim": false,
+        "chat_enabled": false,
+        "full_metal_inference_claimed": false,
+        "mpsgraph_inference_claimed": false,
+        "neural_engine_execution_claimed": false,
+        "qk256_apple_claimed": false,
+        "readiness_only": true,
+        "serve_enabled": false,
+        "speedup_claim": false
+      },
+      "commands": {
+        "ask_cached_model": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json \"What is 2+2? Answer briefly.\"",
+        "fetch": "bitnet model fetch microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "models": "bitnet mac models --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "verify": "bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "warm_cached_model": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json"
+      },
+      "model": {
+        "cache_path": "/Users/steven/Library/Caches/bitnet-rs/models/microsoft-bitnet-b1.58-2B-4T-i2s/ggml-model-i2_s.gguf",
+        "cache_state": "ready",
+        "cached_model_ready": true,
+        "catalog_state": "supported-ask",
+        "expected_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "fetch_command": "bitnet model fetch microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+        "mac_ask_enabled": true,
+        "mac_bitnet_warm_enabled": true,
+        "mac_chat_enabled": false,
+        "mac_serve_enabled": false,
+        "proof_command": "bitnet --device apple-m4-cpu-neon mac bitnet-proof --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --proof-receipt ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json --strict",
+        "proof_status": "answer-corpus-and-warm-session-proof-passed-explicit-artifact",
+        "verify_command": "bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "warm_command": "bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --max-new-tokens 8 --json-out ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-warm/bitnet-mac-bitnet-warm-runtime-receipt.json",
+        "warm_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-warm/bitnet-mac-bitnet-warm-runtime-receipt.json"
+      },
+      "ready": true,
+      "tokenizer": {
+        "error": null,
+        "expected_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+        "path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+        "present": true,
+        "required_explicit_argument": "--tokenizer",
+        "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+        "verified": true
+      }
+    },
+    "cache": {
+      "cache_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+      "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+      "checked": true,
+      "metadata_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/bitnet-model-cache.json",
+      "metadata_present": true,
+      "next_step": null,
+      "present": true,
+      "ready": true,
+      "size_matches": true,
+      "stale_symlink": false,
+      "state": "ready",
+      "symlink_status": "not_symlink",
+      "symlink_target": null,
+      "verified": true
+    },
+    "disk": {
+      "available_bytes": 8952049664,
+      "checked": true,
+      "guidance": "run `bitnet model prune --all` or set BITNET_MODEL_CACHE_DIR / --cache-dir when low_disk=true",
+      "low_disk": false,
+      "probe_path": "/Users/steven/Library/Caches/bitnet-rs/models",
+      "recommended_headroom_bytes": 2425163456
+    },
+    "receipt_validation": {
+      "checked": true,
+      "doctor_receipt_checked": true,
+      "smoke_receipt_checked": false
+    },
+    "smoke": {
+      "checked": false,
+      "max_new_tokens": 4,
+      "prompt": "Answer with a single digit: 2+2=",
+      "skip_reason": "live dense SLM smoke is explicit via --run-smoke",
+      "skipped": true
+    },
+    "unsupported_backend": {
+      "checked": true,
+      "note": "mac doctor verifies that full apple-m4-metal inference remains blocked for the dense SLM wrapper",
+      "rejected": true,
+      "requested_backend": "apple-m4-metal"
+    }
+  },
+  "expected_text_fragment": "4",
+  "fallback_reason": null,
+  "fallback_used": false,
+  "live_inference_checked": false,
+  "mac_claim_boundary": {
+    "bitnet_fixed_prompt_warm_readiness_checked": true,
+    "bitnet_one_shot_ask_readiness_checked": true,
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "dense_slm_cache_readiness": true,
+    "doctor": true,
+    "full_metal_inference_claimed": false,
+    "live_inference_checked": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "requested_backend": "apple-m4-cpu-neon",
+    "slm_local_answer": false,
+    "speedup_claim": false
+  },
+  "prompt": "Answer with a single digit: 2+2=",
+  "readiness": {
+    "bitnet": {
+      "ask_enabled": true,
+      "cache_repair_guidance": "Accepted BitNet model and tokenizer are ready for one-shot ask and warm-session routes.",
+      "chat_enabled": false,
+      "claim_boundary": {
+        "bitnet_fixed_prompt_warm_session": true,
+        "bitnet_one_shot_mac_ask": true,
+        "bitnet_quality_claimed": false,
+        "broad_performance_claim": false,
+        "chat_enabled": false,
+        "full_metal_inference_claimed": false,
+        "mpsgraph_inference_claimed": false,
+        "neural_engine_execution_claimed": false,
+        "qk256_apple_claimed": false,
+        "readiness_only": true,
+        "serve_enabled": false,
+        "speedup_claim": false
+      },
+      "disabled_surfaces": [
+        "chat",
+        "serve"
+      ],
+      "last_matching_receipts": {
+        "benchmark": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+        "eval": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json",
+        "variable_warm": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json"
+      },
+      "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+      "ready": true,
+      "routes": {
+        "ask": "ready",
+        "chat": "disabled_until_gate_receipts",
+        "serve": "disabled_until_gate_receipts",
+        "warm": "ready"
+      },
+      "serve_enabled": false,
+      "status": "ready_for_ask_and_warm",
+      "warm_enabled": true
+    },
+    "dense_slm": {
+      "cache_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+      "cache_repair_guidance": "bitnet model fetch qwen2.5-0.5b-instruct-q8_0",
+      "cache_state": "ready",
+      "claim_boundary": {
+        "bitnet_evidence_used": false,
+        "broad_performance_claim": false,
+        "broad_quality_claim": false,
+        "dense_slm_only": true
+      },
+      "last_matching_receipts": {
+        "benchmark": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+        "eval": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+      },
+      "model_id": "qwen2.5-0.5b-instruct-q8_0",
+      "ready": true,
+      "routes": {
+        "ask": "ready",
+        "chat": "ready",
+        "serve": "ready"
+      },
+      "status": "ready"
+    },
+    "disk_pressure": {
+      "available_bytes": 8952049664,
+      "cache_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+      "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+      "checked": true,
+      "guidance": "run `bitnet model prune --all` or set BITNET_MODEL_CACHE_DIR / --cache-dir when low_disk=true",
+      "low_disk": false,
+      "recommended_headroom_bytes": 2425163456,
+      "repair_default": null
+    },
+    "repair_flows": {
+      "bad_sha": "run the prune command then fetch the pinned model artifact again",
+      "low_disk": "run `bitnet model prune --dry-run --json` before deleting model-cache entries, or move cache_dir to a larger volume",
+      "missing_model": "run the dense SLM fetch command shown in readiness.dense_slm.cache_repair_guidance",
+      "missing_tokenizer": "restore the accepted external BitNet tokenizer path shown in checks.bitnet_ask.tokenizer.path",
+      "prune_dry_run": "dry-run prune receipts do not delete files and can be reviewed before rerunning without --dry-run",
+      "stale_symlink": "replace the symlink target with the verified artifact or prune and fetch again"
+    }
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "result": "pass",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "speedup_claim": false,
+  "timestamp": "2026-05-19T04:05:32.219754+00:00"
+}
