@@ -82,3 +82,7 @@ cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070t
 cargo run --locked -p xtask --no-default-features -- campaign generate --check
 git diff --check
 ```
+
+## Qwen3.6 Candidate Boundary
+
+Qwen3.6 rows are registered candidates only in the model coverage matrix. They do not currently prove dense CUDA execution, product CLI, server readiness, speedup, or full residency.
