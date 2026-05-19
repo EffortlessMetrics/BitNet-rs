@@ -882,8 +882,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BENCH-008"
-status = "pr_open"
+status = "merged"
 pr = 5902
+merge_sha = "1cf5aedda58ef50919bdb943778aca4fe10a51f3"
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-008-repeat-harness"
 stackable = false
 review_mode = "codex_premerge"
