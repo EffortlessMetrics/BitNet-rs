@@ -1,0 +1,15 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T05:23:00Z"
+event = "in_progress"
+item = "SLM-CPU-046"
+branch = "codex/slm-cpu-046-q8-sidecar-dispatch-selector"
+actor = "codex"
+summary = "Queued the behavior-preserving Q8_0 sidecar dense-linear dispatch selector contract after SLM-CPU-045."
+
+notes = [
+  "SLM-CPU-045 carries inert packed Q8_0 sidecar descriptors from strict GGUF loading onto BitNetModel while preserving the eager F32 runtime path.",
+  "The next slice should add an explicit dense-linear selector contract that still chooses eager F32 and reports packed Q8_0 sidecar compute as unavailable until generated-ID/text and strict-receipt equivalence gates pass.",
+  "This is a selector/API boundary, not a sidecar-compute or speedup claim.",
+  "No sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

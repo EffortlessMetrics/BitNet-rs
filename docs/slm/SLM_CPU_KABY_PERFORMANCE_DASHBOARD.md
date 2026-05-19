@@ -141,6 +141,24 @@ decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel,
 model SHA, and `fallback=false` match the established Qwen3 Q8_0 appliance
 oracle.
 
+SLM-CPU-046 starts that selector boundary. The selector contract makes the
+current runtime choice explicit:
+
+```text
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+sidecar_candidate_status = missing | present_but_unavailable
+runtime_compute_enabled = false
+dense_runtime_replaced = false
+speedup_claim = false
+equivalence_gate_required = true
+```
+
+Packed Q8_0 sidecar descriptors may be visible to the selector, but they remain
+unavailable for runtime compute until a later slice proves generated-ID/text and
+strict-receipt equivalence. This is an API/receipt boundary, not a performance
+claim.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
