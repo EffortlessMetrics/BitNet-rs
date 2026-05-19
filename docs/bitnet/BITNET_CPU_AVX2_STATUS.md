@@ -38,6 +38,21 @@ Before AVX2 can be promoted beyond candidate status, receipts must show:
 - `fallback_used = false` and `fallback_reason = null`;
 - generated-token parity with the scalar packed oracle.
 
+## Current receipt counter surface
+
+`CPU-AVX2-HOTPATH-001` wires the existing QK256 dispatch counters into strict
+CPU BitNet run receipts and answer-corpus case rows under `qk256_hot_path`.
+Those counters distinguish:
+
+- no-scale F32 scalar/AVX2 GEMV invocations;
+- scaled I2_S x I8_S scalar/AVX2 GEMV invocations;
+- QK256 flat-byte extraction;
+- input-row materialization;
+- output-row allocation.
+
+This is a receipt-observability step only. It does not optimize or promote
+scaled AVX2 execution and does not make a speedup claim.
+
 ## Claim boundary
 
 This status page does not claim GPU, NPU, OpenVINO, CUDA, server readiness,
