@@ -222,6 +222,30 @@ receipts. It still keeps packed sidecar runtime compute disabled until a later
 production compute hook exists and the selector is explicitly updated under the
 same receipt discipline.
 
+SLM-CPU-050 adds the production-compute-hook availability surface. This is
+still a non-executing report: it distinguishes a missing production compute hook
+from a hook that exists but is not yet selected by the runtime selector. The
+selected path remains the eager F32 Candle oracle until a later selector update
+is proven with generated-ID/text receipts:
+
+```text
+artifact_kind = dense_gguf_q8_production_compute_hook
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+hook_status = missing | available_but_selector_still_eager_f32
+generated_id_receipt_equivalence_passed = true | false
+production_compute_hook_available = true | false
+selector_update_required_before_runtime_use = true
+sidecar_runtime_compute_allowed = false
+eager_f32_runtime_preserved = true
+dense_runtime_replaced = false
+speedup_claim = false
+```
+
+The availability surface does not execute packed Q8_0 sidecar compute, replace
+the dense runtime, change generated IDs/text, or claim speedup. It only makes
+the next runtime blocker machine-checkable.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
