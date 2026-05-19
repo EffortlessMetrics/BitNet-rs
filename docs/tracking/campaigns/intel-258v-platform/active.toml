@@ -8595,6 +8595,7 @@ must_not_claim = [
 [[work_item]]
 id = "LNL258V-GOAL-AUDIT-001"
 status = "in_progress"
+pr = 6005
 branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-001-artifact-checklist"
 stackable = false
 review_mode = "codex_premerge"
