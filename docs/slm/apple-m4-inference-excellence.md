@@ -356,6 +356,12 @@ shared benchmark envelope alone. It records one-shot and warm-session run
 counts, sample counts, timeout-stage accounting, variance bands, outlier
 handling, and advisory-vs-failure thresholds for the accepted BitNet artifact.
 
+`M4-BENCH-008` is the harness prerequisite for `M4-BENCH-005`. The current
+`bitnet mac benchmark` surface publishes single benchmark summaries and
+calibration/preflight receipts, but the live variance item requires a repeat-run
+receipt surface with `--repeat <n>` or an equivalent command. That harness must
+exist before the campaign can claim dense or BitNet timing variance envelopes.
+
 ## Drift Thresholds
 
 `M4-EXCELLENCE-004` publishes the current family-specific drift policy in the
