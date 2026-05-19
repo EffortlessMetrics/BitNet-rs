@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:40:00Z"
+event = "merged"
+item = "LNL258V-VALIDATE-001"
+branch = "codex/lunar-lake/LNL258V-VALIDATE-001-profile-policy"
+pr = 5848
+head_sha = "49a6bd32e4da923b896c03f56614d156408f28b7"
+merge_sha = "c33217171759e673ea2ae46b6879bfde78429107"
+actor = "codex"
+summary = "Merged LNL258V-VALIDATE-001 after making operator readiness index profile route policy."
+
+notes = [
+  "PR #5848 makes validate index the current route-promotion ledger and route-profile comparison by default.",
+  "The readiness receipt now records route_policy.policy_ready=true, OpenVINO GPU promotion for ask_normal/ask_short, NPU candidate-only status, hidden_fallback_allowed=false, and blocked unpromoted profiles.",
+  "The merge makes no new-inference, route-promotion, speedup, power-advantage, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]
