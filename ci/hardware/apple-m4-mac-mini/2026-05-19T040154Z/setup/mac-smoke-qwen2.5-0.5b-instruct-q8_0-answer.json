@@ -1,0 +1,634 @@
+{
+  "apple": {
+    "machine_id": "apple-m4-mac-mini",
+    "macos": {
+      "build": "25E253",
+      "native_or_virtualized": "native-macos",
+      "version": "26.4.1"
+    },
+    "metal_visible": true,
+    "resolved_device": {
+      "chip": "Apple M4",
+      "cpu_cores": 10,
+      "gpu_cores": 10,
+      "unified_memory": true,
+      "unified_memory_bytes": 17179869184
+    }
+  },
+  "artifact_kind": "inference_result",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/mac-smoke-qwen2.5-0.5b-instruct-q8_0-answer.json",
+  "counts": {
+    "n_kv": 26,
+    "n_tensors": 291,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "aarch64",
+    "features": [
+      "neon"
+    ],
+    "model": "unknown-cpu",
+    "threads": 1
+  },
+  "dense_slm": {
+    "architecture": "qwen2",
+    "claim_scope": "strict dense SLM CPU answer smoke only",
+    "execution_phase": "decode",
+    "kernel_family": "dense_qwen",
+    "kernel_id": "dense-qwen-cpu-reference",
+    "layout": "gguf_dense_q8_0",
+    "layout_source": "gguf_dense_q8_0_reference",
+    "model_family": "qwen",
+    "provenance": "dense_slm_gguf_cpu_reference",
+    "quant_format": "Q8_0"
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 2,
+    "phase": "decode",
+    "prompt_tokens": 40,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "dense_slm_layers_on_cpu": null,
+    "dense_slm_layers_total": null,
+    "execution_claim": "dense_slm_cpu_reference_answer_smoke",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": true,
+    "explicit_bos_requested": false,
+    "greedy": true,
+    "max_new_tokens": 4,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
+    "seed": 0,
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": true,
+    "family": "dense_qwen",
+    "implementation": "cpu-reference",
+    "kernel_id": "dense-qwen-cpu-reference",
+    "layout": "gguf_dense_q8_0"
+  },
+  "latency": {
+    "cmd_to_first_ms": 4668,
+    "decode_first_ms": 4668,
+    "total_ms": 4831
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "gguf_metadata"
+  },
+  "logits_dump": null,
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 151936,
+    "expected_logits_vector_length_source": "tokenizer_vocab_size",
+    "first_step_logits_vector_length": null,
+    "observed_logits_vector_length": null,
+    "observed_logits_vector_length_source": "not_available"
+  },
+  "mac_claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "requested_backend": "apple-m4-cpu-neon",
+    "slm_local_answer": true
+  },
+  "machine_id": "apple-m4-mac-mini",
+  "memory": {
+    "peak_memory_mb": 3971.953,
+    "peak_memory_source": "getrusage.ru_maxrss"
+  },
+  "model": {
+    "architecture": "qwen2",
+    "context_length": 32768,
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "output.weight",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quant_format": "Q8_0",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "tie_word_embeddings": false,
+    "tokenizer": "gguf_metadata",
+    "vocab_size": 151936
+  },
+  "model_cache": {
+    "architecture": "qwen2",
+    "bytes": 675710816,
+    "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+    "chat_template": true,
+    "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quantization": "Q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "support_note": "Rust-native Apple M4 CPU/NEON SLM baseline artifact; RTX 5070 Ti dense CUDA ask is bounded to the CUDA-UX-003 receipt gate.",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "qwen2"
+  },
+  "not_claims": [
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion"
+  ],
+  "operator_command": "mac smoke",
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 2,
+        "max_ms": 0.006,
+        "mean_ms": 0.005,
+        "min_ms": 0.003,
+        "p50_ms": 0.003,
+        "p95_ms": 0.006,
+        "total_ms": 0.009
+      },
+      "first_token_decode_ms": 164.502,
+      "forward_ms": {
+        "count": 2,
+        "max_ms": 116.067,
+        "mean_ms": 115.943,
+        "min_ms": 115.818,
+        "p50_ms": 115.818,
+        "p95_ms": 116.067,
+        "total_ms": 231.885
+      },
+      "generated_tokens": 2,
+      "logits_ms": {
+        "count": 2,
+        "max_ms": 43.811,
+        "mean_ms": 43.26,
+        "min_ms": 42.709,
+        "p50_ms": 42.709,
+        "p95_ms": 43.811,
+        "total_ms": 86.52
+      },
+      "per_token_ms": {
+        "count": 2,
+        "max_ms": 164.502,
+        "mean_ms": 164.06,
+        "min_ms": 163.617,
+        "p50_ms": 163.617,
+        "p95_ms": 164.502,
+        "total_ms": 328.119
+      },
+      "sample_ms": {
+        "count": 2,
+        "max_ms": 1.262,
+        "mean_ms": 1.244,
+        "min_ms": 1.226,
+        "p50_ms": 1.226,
+        "p95_ms": 1.262,
+        "total_ms": 2.488
+      },
+      "steady_per_token_ms": {
+        "count": 1,
+        "max_ms": 163.617,
+        "mean_ms": 163.617,
+        "min_ms": 163.617,
+        "p50_ms": 163.617,
+        "p95_ms": 163.617,
+        "total_ms": 163.617
+      },
+      "steady_state_tok_s": 6.112,
+      "steady_state_tokens": 1,
+      "token_decode_ms": {
+        "count": 2,
+        "max_ms": 0.027,
+        "mean_ms": 0.016,
+        "min_ms": 0.004,
+        "p50_ms": 0.004,
+        "p95_ms": 0.027,
+        "total_ms": 0.031
+      },
+      "warmup_tokens": 1
+    },
+    "id": "mac_ask",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 9647.064,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 4503.571,
+      "per_token_ms": {
+        "count": 39,
+        "max_ms": 119.599,
+        "mean_ms": 115.475,
+        "min_ms": 114.132,
+        "p50_ms": 115.342,
+        "p95_ms": 118.849,
+        "total_ms": 4503.541
+      },
+      "tokens": 39
+    },
+    "prompt_tokenize_ms": 77.152,
+    "requested": true,
+    "tokenizer_load_ms": 181.725
+  },
+  "prompt": "Answer with a single digit: 2+2=",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 4,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 1,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "6ac2b4f797d67be40091538247aa367d4ad48b6cd72bfd081e1f63afc173bf7c",
+    "identity_sha256": "a2cd4818f769f1e6b12391f28aa1ca8378539778799f55c2e2cf7166c0b3573e",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [
+        "<|im_end|>"
+      ],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        151645,
+        151644
+      ]
+    },
+    "stop_criteria_sha256": "44bdc32dd3f6bd1ad8dfd59a1441ad6ff91ff1cc45d9776d4d90fd90e4944cf7",
+    "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+    "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+    "template": {
+      "family": "qwen25-chat",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "qwen25-chat",
+    "template_sha256": "be829f95ac1a95f9fd9b9641a7df864186594cde3285438f6f8fdddc89c428e3",
+    "tokenizer_authority": {
+      "authority": "present",
+      "sha256": null,
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
+  "prompt_identity": {
+    "bos_policy": false,
+    "parse_special": true,
+    "prompt_token_count": 40,
+    "prompt_token_ids_sha256": "08da51d5b4cd7f5def4a1e055fd412e11ed5a7c807dfe7547db5c9ae57961f1c",
+    "rendered_prompt_sha256": "62b8139eeb2021d3a0c0c246ec088cd3a89a6fddbf659c4ab614a93a04ca1481",
+    "template": "qwen25-chat"
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "rendered_sha256": "62b8139eeb2021d3a0c0c246ec088cd3a89a6fddbf659c4ab614a93a04ca1481",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nAnswer with a single digit: 2+2=<|im_end|>\n<|im_start|>assistant\n",
+    "stop_sequences": [
+      "<|im_end|>",
+      "<|im_start|>"
+    ],
+    "stop_token_ids": [
+      151645,
+      151644
+    ],
+    "template_family": "qwen25-chat"
+  },
+  "proof_summary": {
+    "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
+    "claim_level": "diagnostic_cli_run",
+    "execution_backend": "apple-m4-cpu-neon",
+    "execution_backend_matched": true,
+    "fallback_used": false,
+    "kernel_route": {
+      "claimable": false,
+      "diagnostic_only": true,
+      "route_declared": false,
+      "route_id": null
+    },
+    "loader_fallback_used": false,
+    "model_contract": null,
+    "model_contract_declared": false,
+    "not_claims": [
+      "selected_attention_residency",
+      "resident_kv_decode",
+      "attention_scores_residency",
+      "softmax_residency",
+      "attention_value_mix_residency",
+      "full_support_op_residency",
+      "full_device_residency",
+      "completion"
+    ],
+    "requested_backend": "apple-m4-cpu-neon",
+    "requested_device": "apple-m4-cpu-neon",
+    "route_declared": false,
+    "selected_backend": "apple-m4-cpu-neon",
+    "strict_backend": true,
+    "tokenizer_fallback_used": false
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "gpu_cores": 10,
+    "unified_memory": true,
+    "unified_memory_bytes": 17179869184
+  },
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "strict_provenance": {
+    "cpu_features": [
+      "neon"
+    ],
+    "cpu_model": "unknown-cpu",
+    "decode_tokens": 2,
+    "decode_tps": 0.4139929621196439,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "qwen",
+    "phase": "decode",
+    "prompt_tokens": 40,
+    "provenance": "dense_slm_gguf_cpu_reference",
+    "quant_format": "Q8_0",
+    "requested_backend": "apple-m4-cpu-neon",
+    "requested_kernel": "dense-qwen-cpu-reference",
+    "selected_backend": "apple-m4-cpu-neon",
+    "selected_kernel": "dense-qwen-cpu-reference",
+    "thread_count": 1,
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true
+  },
+  "text": "4<|im_end|>",
+  "throughput": {
+    "decoded_tokens": 2,
+    "tokens_per_second": 0.4139929621196439
+  },
+  "timestamp": "2026-05-19T04:06:03.571915+00:00",
+  "timing": {
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 6.112,
+    "decode_total_ms": 328.119,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 164.502,
+    "first_token_ms": 4668,
+    "host_to_device_bytes": null,
+    "model_load_ms": 9647.064,
+    "prefill_ms": 4503.571,
+    "sampling_ms_per_token": 1.244,
+    "tokenize_ms": 77.152,
+    "tokenizer_load_ms": 181.725
+  },
+  "tokenizer": {
+    "bos": 151643,
+    "eos": 151645,
+    "model_family": "gguf_metadata",
+    "origin": "embedded",
+    "pretokenizer_authority": "present",
+    "source": "gguf_metadata",
+    "strict": true,
+    "type": "gguf_metadata"
+  },
+  "tokens": {
+    "generated": 2,
+    "generated_ids": [
+      19,
+      151645
+    ],
+    "ids": [
+      19,
+      151645
+    ],
+    "prompt": 40,
+    "prompt_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      1207,
+      16948,
+      11,
+      3465,
+      553,
+      54364,
+      14817,
+      13,
+      1446,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      16141,
+      448,
+      264,
+      3175,
+      15723,
+      25,
+      220,
+      17,
+      10,
+      17,
+      28,
+      151645,
+      198,
+      151644,
+      77091,
+      198
+    ],
+    "total": 42
+  }
+}

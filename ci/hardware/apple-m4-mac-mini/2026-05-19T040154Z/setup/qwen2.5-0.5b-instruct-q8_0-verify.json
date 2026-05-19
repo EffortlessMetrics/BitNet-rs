@@ -1,0 +1,141 @@
+{
+  "id": "qwen2.5-0.5b-instruct-q8_0",
+  "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+  "expected_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+  "actual_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+  "expected_bytes": 675710816,
+  "actual_bytes": 675710816,
+  "passed": true,
+  "model": {
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "aliases": [],
+    "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+    "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+    "filename": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/9217f5db79a29953eb74d5343926648285ec7e67/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "bytes": 675710816,
+    "architecture": "qwen2",
+    "quantization": "Q8_0",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "qwen2",
+    "tokenizer_sha256": null,
+    "tokenizer_sha256_status": "embedded_gguf_metadata_bound_to_model_sha256",
+    "tokenizer_path": null,
+    "chat_template": true,
+    "license_spdx": "apache-2.0",
+    "redistribution_boundary": "Upstream Hugging Face GGUF artifact is fetched by URL and pinned by revision, size, and SHA256; BitNet-rs does not vendor or redistribute the model file.",
+    "prompt_template": "qwen2.5",
+    "prompt_template_source": "GGUF tokenizer.chat_template / Qwen2.5 ChatML identity",
+    "provenance_manifests": [
+      "ci/quality/apple-m4-slm-answer-first-token-parity.toml",
+      "docs/slm/apple-m4-dense-slm-model-support-matrix.md"
+    ],
+    "model_contract": null,
+    "apple_m4_cpu_neon_supported": true,
+    "support_note": "Rust-native Apple M4 CPU/NEON SLM baseline artifact; RTX 5070 Ti dense CUDA ask is bounded to the CUDA-UX-003 receipt gate."
+  },
+  "model_capability": {
+    "id": "qwen_dense_slm_q8_0",
+    "model_family": "qwen",
+    "model_class": "dense_slm_gguf",
+    "artifact_format": "gguf",
+    "quantization": "Q8_0",
+    "tokenizer_authority": "qwen2",
+    "prompt_authority": "qwen2.5",
+    "cpu_oracle": "apple_m4_cpu_neon_slm_answer_lane",
+    "accelerator_routes": [
+      {
+        "backend": "apple-m4-cpu-neon",
+        "route": "dense_qwen_cpu_neon_slm",
+        "status": "answer_lane"
+      },
+      {
+        "backend": "nvidia-rtx-5070-ti-cuda",
+        "route": "dense_regular_llm_cuda",
+        "status": "bounded_ask_chat_receipt_gate"
+      }
+    ],
+    "capabilities": [
+      "chat_completion",
+      "code_generation",
+      "text_generation",
+      "tool_use"
+    ],
+    "permitted_claims": [
+      "artifact_inspection",
+      "model_verify",
+      "apple_m4_cpu_neon_slm_answer",
+      "nvidia_rtx_5070_ti_dense_cuda_ask",
+      "nvidia_rtx_5070_ti_dense_cuda_chat"
+    ],
+    "required_receipts": [
+      "model_verify",
+      "slm_answer_receipt",
+      "fallback_free_backend_receipt",
+      "dense_gguf_qwen_ask_strict_cuda_proof",
+      "dense_gguf_qwen_chat_strict_cuda_proof"
+    ],
+    "claim_boundary": "Dense Qwen SLM artifact for the Apple M4 CPU/NEON answer lane and bounded RTX 5070 Ti dense CUDA ask/chat gates; does not prove broad dense GGUF inference, BitNet packed QK256, server, speedup, or full-residency claims."
+  },
+  "artifact_provenance": {
+    "schema_version": "1.0.0",
+    "artifact_kind": "m4_supported_model_provenance",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "source": {
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+      "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+      "url": "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/9217f5db79a29953eb74d5343926648285ec7e67/qwen2.5-0.5b-instruct-q8_0.gguf",
+      "manifests": [
+        "ci/quality/apple-m4-slm-answer-first-token-parity.toml",
+        "docs/slm/apple-m4-dense-slm-model-support-matrix.md"
+      ]
+    },
+    "license": {
+      "spdx": "apache-2.0",
+      "redistribution_boundary": "Upstream Hugging Face GGUF artifact is fetched by URL and pinned by revision, size, and SHA256; BitNet-rs does not vendor or redistribute the model file."
+    },
+    "artifact": {
+      "format": "gguf",
+      "filename": "qwen2.5-0.5b-instruct-q8_0.gguf",
+      "size_bytes": 675710816,
+      "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+      "architecture": "qwen2",
+      "quantization": "Q8_0"
+    },
+    "tokenizer": {
+      "authority": "qwen2",
+      "model": "gpt2",
+      "pre_tokenizer": "qwen2",
+      "sha256": null,
+      "sha256_status": "embedded_gguf_metadata_bound_to_model_sha256",
+      "external_path": null,
+      "source": "gguf_metadata"
+    },
+    "prompt_template": {
+      "identity": "qwen2.5",
+      "identity_sha256": "4a65eed368b066945e57bb625e89d33190ea4863abb1c53422d4f9118a6d5e81",
+      "source": "GGUF tokenizer.chat_template / Qwen2.5 ChatML identity",
+      "chat_template_present": true
+    },
+    "local_cache": {
+      "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+      "cache_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+      "metadata_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/bitnet-model-cache.json",
+      "verify_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+      "path_role": "cache_path",
+      "symlink_target": null,
+      "symlink_status": "not_symlink"
+    },
+    "repair": {
+      "command": "bitnet model verify qwen2.5-0.5b-instruct-q8_0 --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "fetch_command": "bitnet model fetch qwen2.5-0.5b-instruct-q8_0 --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "verify_command": "bitnet model verify qwen2.5-0.5b-instruct-q8_0 --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "prune_command": "bitnet model prune qwen2.5-0.5b-instruct-q8_0 --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "cache_state": "ready"
+    },
+    "claim_boundary": "Artifact provenance only for supported dense Qwen Apple M4 CPU/NEON model identity; runtime quality and performance require separate eval, benchmark, and regression receipts."
+  }
+}

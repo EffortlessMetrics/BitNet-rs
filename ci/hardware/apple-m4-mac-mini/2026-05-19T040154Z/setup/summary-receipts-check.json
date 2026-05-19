@@ -1,0 +1,14 @@
+[
+  {
+    "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/summary.json",
+    "artifact_kind": "apple_m4_first_run_setup_summary",
+    "requested_backend": "apple-m4-cpu-neon",
+    "selected_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "fallback_used": false,
+    "prompt_count": 1,
+    "generated_tokens": 2,
+    "passed": true,
+    "regression": null
+  }
+]

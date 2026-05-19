@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T04:01:54Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SETUP-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-SETUP-001-first-run"
+
+notes = [
+  "Started M4-SETUP-001 after M4-STABILITY-002 merged and the campaign advanced to first-run setup evidence.",
+  "Scope is limited to operator setup evidence: model discovery, fetch or repair commands, dense and BitNet artifact verification, disk pressure, doctor readiness, and bounded smoke receipts or explicit non-runtime boundaries.",
+  "No broad dense quality, broad BitNet quality, BitNet chat/serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon performance claim is in scope.",
+]

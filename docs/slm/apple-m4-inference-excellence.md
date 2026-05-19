@@ -1056,6 +1056,18 @@ would be removed before any deletion is attempted. These are cache and disk
 repair receipts only; they do not run live inference by default or prove model
 quality, speed, BitNet chat/serve readiness, or any wider backend support.
 
+`M4-SETUP-001` records the first-run operator path as setup evidence under
+`ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/`. The setup bundle
+captures `bitnet mac models` before and after fetching the accepted BitNet
+artifact, `bitnet model verify` JSON for the dense default and Microsoft I2_S
+BitNet artifact, `bitnet mac doctor --include-bitnet` with live inference
+skipped by default, and a dense `bitnet mac smoke --model-id
+qwen2.5-0.5b-instruct-q8_0` aggregate plus answer receipt. Its
+`apple_m4_first_run_setup_summary` receipt is a setup summary only: BitNet chat
+and serve remain disabled, BitNet live smoke is not claimed by that summary, and
+broad quality, performance, speedup, full Metal, QK256, Neural Engine,
+MPSGraph, or MacBook claims remain out of scope.
+
 ## Metal Boundary
 
 Metal work is phase-scoped only:
