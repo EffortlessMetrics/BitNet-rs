@@ -666,7 +666,8 @@ mod tests {
     // ── A770 runtime probe ─────────────────────────────────────────────
 
     #[test]
-    fn opencl_a770_identity_selects_native_lane_without_execution_claim() {
+    fn opencl_a770_identity_selects_native_lane_without_execution_claim()
+    -> Result<(), serde_json::Error> {
         let opencl = OpenClRuntimeProbe {
             runtime_available: true,
             devices: vec![OpenClRuntimeDevice {
@@ -697,7 +698,7 @@ mod tests {
         assert!(!probe.fallback_used);
         assert!(probe.identity_evidence.iter().any(|entry| entry.starts_with("opencl:")));
 
-        let value = serde_json::to_value(&probe).expect("probe serializes");
+        let value = serde_json::to_value(&probe)?;
         assert_eq!(value["proof_stage"], "runtime_detected");
         assert_eq!(value["requested_backend"], INTEL_ARC_A770_REQUESTED_BACKEND);
         assert_eq!(value["selected_backend"], INTEL_ARC_A770_OPENCL_BACKEND);
@@ -707,6 +708,7 @@ mod tests {
         assert_eq!(value["qk256_decode"], false);
         assert_eq!(value["fallback_used"], false);
         assert_eq!(value["rebar_status"], "not_probed");
+        Ok(())
     }
 
     #[test]
