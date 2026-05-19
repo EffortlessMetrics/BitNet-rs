@@ -1,8 +1,9 @@
 schema = 1
 artifact_kind = "model_coverage_matrix"
-updated = "2026-05-15"
+updated = "2026-05-19"
 work_item = "MODEL-COVERAGE-005"
 source_map = "docs/bitnet/official-2b/README.md"
+i2s_source_map = "docs/bitnet/i2s/README.md"
 claim_boundary = "Model coverage is a claim-control surface. Registered or structurally valid models cannot imply CPU answer-readiness, CUDA execution, speedup, server readiness, BitNet packed QK256 proof, or dense regular-LLM proof unless the corresponding receipts are listed and the claim booleans are explicitly true."
 
 [[tier]]
@@ -50,6 +51,7 @@ meaning = "Normal user CLI paths exist for verified ask/chat/bench receipt surfa
 [[entry]]
 id = "bitnet_official_2b_i2s_qk256"
 source_map = "docs/bitnet/official-2b/README.md"
+i2s_source_map = "docs/bitnet/i2s/README.md"
 model_class = "bitnet"
 family = "bitnet_b1_58"
 artifact_kind = "gguf_i2_s"
@@ -293,6 +295,7 @@ claim_boundary = "Falcon3 10B is a registered conversion candidate only. It need
 [[entry]]
 id = "bitnet_official_2b_tl1_arm_candidate"
 source_map = "docs/bitnet/official-2b/README.md"
+i2s_source_map = "docs/bitnet/i2s/README.md"
 model_class = "bitnet"
 family = "bitnet_b1_58"
 artifact_kind = "gguf_tl1"
@@ -335,6 +338,7 @@ claim_boundary = "Official or derived TL1 BitNet rows are ARM-oriented candidate
 [[entry]]
 id = "bitnet_official_2b_tl2_x86_candidate"
 source_map = "docs/bitnet/official-2b/README.md"
+i2s_source_map = "docs/bitnet/i2s/README.md"
 model_class = "bitnet"
 family = "bitnet_b1_58"
 artifact_kind = "gguf_tl2"
@@ -378,6 +382,7 @@ claim_boundary = "Official or derived TL2 BitNet rows are separate x86 LUT candi
 [[entry]]
 id = "bitnet_official_2b_bf16_gpu_int2_candidate"
 source_map = "docs/bitnet/official-2b/README.md"
+i2s_source_map = "docs/bitnet/i2s/README.md"
 model_class = "bitnet"
 family = "bitnet_b1_58"
 artifact_kind = "bf16_master_to_gpu_packed_int2_w2a8"

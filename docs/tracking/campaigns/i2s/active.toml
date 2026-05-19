@@ -1,0 +1,13 @@
+schema = 1
+campaign = "i2s"
+status = "active"
+linked_plan = "plans/i2s/implementation-plan.md"
+linked_source_map = "docs/bitnet/i2s/README.md"
+
+[work_item]
+id = "I2S-DOCS-000"
+title = "docs(i2s): add I2_S source map and implementation plan"
+status = "ready"
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
