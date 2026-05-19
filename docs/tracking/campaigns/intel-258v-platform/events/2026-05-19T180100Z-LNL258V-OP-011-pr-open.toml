@@ -4,7 +4,7 @@ event = "pr_open"
 item = "LNL258V-OP-011"
 pr = 5986
 branch = "codex/lunar-lake/LNL258V-OP-011-readable-low-power-blockers"
-head_sha = "7db515020eaaa290f1331e65b82058387d0f3fca"
+head_sha = "686b83fcfddb56bad89517b01bb7bb4e554356c4"
 actor = "codex"
 summary = "Opened LNL258V-OP-011 to make fail-closed low_power auto-route blockers readable."
 
