@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PATCHES_DIR="$REPO_ROOT/patches"
+PATCHES_DIR="$REPO_ROOT/patches/bitnet_cpp"
 
 # Default C++ path
 CPP_PATH="${BITNET_CPP_PATH:-$HOME/.cache/bitnet_cpp}"

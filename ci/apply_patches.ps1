@@ -3,7 +3,7 @@
 
 param(
     [string]$CppPath = "$env:USERPROFILE\.cache\bitnet_cpp",
-    [string]$PatchesDir = "$PSScriptRoot\..\patches"
+    [string]$PatchesDir = "$PSScriptRoot\..\patches\bitnet_cpp"
 )
 
 $ErrorActionPreference = "Stop"
