@@ -1152,6 +1152,8 @@ pub struct LunarLakeComparisonReceipt {
     pub regression_passed: bool,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked_ask_receipt: Option<BlockedAskRegressionSummary>,
     pub default_route_id: String,
     pub routes: Vec<RouteComparison>,
     pub evidence: Vec<EvidenceStatus>,
@@ -4484,6 +4486,7 @@ pub fn build_comparison_receipt_with_created_utc(
         operator_ready: operator.operator_ready,
         regression_passed: regression.regression_passed,
         regression_surface: regression.regression_surface,
+        blocked_ask_receipt: regression.blocked_ask_receipt,
         default_route_id: operator.default_route.route_id.clone(),
         routes,
         evidence: operator.evidence,
@@ -13628,9 +13631,28 @@ mod tests {
         regression.regression_surface.durability_bundle_indexed = true;
         regression.regression_surface.cold_warm_benchmark_ready = true;
         regression.regression_surface.durability_stability_proven = true;
+        regression.regression_surface.blocked_ask_receipt_indexed = true;
         regression.regression_surface.candidate_routes_remain_unpromoted = true;
         regression.regression_surface.strict_ready = true;
         regression.regression_surface.gaps.clear();
+        regression.blocked_ask_receipt = Some(BlockedAskRegressionSummary {
+            path: "lunar-lake-operator-ask-auto-low-power-blocked.json".to_string(),
+            blocked_receipt_ready: true,
+            profile_id: "low_power".to_string(),
+            requested_device: "auto".to_string(),
+            requested_route: "auto".to_string(),
+            route_selection_blocked: true,
+            new_inference_executed: false,
+            fallback_used: false,
+            route_promotion_changed: false,
+            speedup_claim: false,
+            power_advantage_claim: false,
+            acceleration_claim: false,
+            bitnet_qk256_i2s_claim: false,
+            route_selection_error: "no promoted Lunar Lake auto route for profile `low_power`; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage".to_string(),
+            regression_ready: true,
+            gaps: Vec::new(),
+        });
         fs::write(temp.path().join(REGRESSION_BUNDLE_V2), serde_json::to_vec_pretty(&regression)?)?;
 
         let comparison = build_comparison_receipt_with_created_utc(
@@ -13648,6 +13670,14 @@ mod tests {
         assert!(comparison.regression_surface.cold_warm_benchmark_indexed);
         assert!(comparison.regression_surface.durability_bundle_indexed);
         assert!(comparison.regression_surface.durability_stability_proven);
+        assert!(comparison.regression_surface.blocked_ask_receipt_indexed);
+        let Some(blocked) = comparison.blocked_ask_receipt.as_ref() else {
+            bail!("comparison did not carry blocked ask receipt summary");
+        };
+        assert_eq!(blocked.profile_id, "low_power");
+        assert!(blocked.route_selection_blocked);
+        assert!(!blocked.new_inference_executed);
+        assert!(blocked.route_selection_error.contains("why_not_npu="));
         Ok(())
     }
 

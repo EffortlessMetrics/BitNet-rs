@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:10:00Z"
+event = "in_progress"
+item = "LNL258V-COMPARE-007"
+branch = "codex/lunar-lake/LNL258V-COMPARE-007-blocked-ask-summary"
+actor = "codex"
+summary = "Started carrying blocked auto-route ask summaries into Lunar Lake operator comparison."
+
+notes = [
+  "Regression v2 already indexes the low_power blocked auto-route ask receipt; compare should expose the same summary directly.",
+  "The comparison receipt should show route_selection_blocked=true, new_inference_executed=false, fallback_used=false, and the route-selection error without requiring users to open the regression bundle.",
+  "The scope makes no route promotion, speedup, power-advantage, new-inference, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]
