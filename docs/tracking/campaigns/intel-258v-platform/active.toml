@@ -9373,6 +9373,64 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-PROFILE-RUN-003"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-003-cpu-baseline-input"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-PROFILE-RUN-002", "LNL258V-ROUTE-022"]
+acceptance = "Add optional Rust GGUF CPU profile-run input to bitnet lunar-lake profile-compare so future fallback-free, profile-specific CPU baseline receipts for prefill_heavy/decode_heavy can replace bounded math-ask timing for the dense CPU default route; verify matching CPU profile cases satisfy route timing applicability while preserving current route decisions when the receipt is absent; make no route promotion, new inference, speedup/power claim, OpenVINO GPU/NPU promotion, or BitNet QK256/I2_S behavior change."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::dense_cpu_profile_timing_uses_matching_cpu_profile_run -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::route_profile_comparison_indexes_profiles_without_promoting_accelerators -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe lunar-lake profile-compare --artifact-root ci/hardware/intel-258v/2026-05-08 --promotion-ledger lunar-lake-route-promotion.json --phase-comparison slm-openvino-cpu-gpu-npu-phase-comparison.json --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --cpu-corpus-v2 slm-answer-corpus-qwen25-cpu-corpus-v2.json --openvino-corpus-v2 slm-openvino-cpu-gpu-npu-corpus-v2.json --telemetry-context lunar-lake-power-thermal-context.json --gpu-quality-diagnosis lunar-lake-openvino-gpu-corpus-v2-diagnosis.json --npu-quality-diagnosis lunar-lake-openvino-npu-corpus-v2-diagnosis.json --npu-cold-start-diagnosis lunar-lake-openvino-npu-cold-start-diagnosis.json --npu-resident-session lunar-lake-openvino-npu-resident-session.json --npu-cache-experiment lunar-lake-openvino-npu-cache-experiment.json --openvino-budget-sensitivity lunar-lake-openvino-generation-budget-sensitivity.json --json-out target/lunar-lake-route-profile-comparison-no-cpu-profile-run.json --created-utc 2026-05-19T06:15:00Z --strict",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Route-profile comparison can ingest an explicit Rust GGUF CPU profile-run receipt as profile-specific dense CPU baseline timing when a matching fallback-free profile case is supplied.",
+  "Existing route decisions are preserved when no CPU profile-run receipt is provided.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU or NPU is newly promoted by this PR.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-PROFILE-RUN-002"
 status = "merged"
 pr = 5803
