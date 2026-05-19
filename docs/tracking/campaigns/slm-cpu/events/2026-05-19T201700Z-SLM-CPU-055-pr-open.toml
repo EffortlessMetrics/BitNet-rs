@@ -1,0 +1,16 @@
+timestamp = "2026-05-19T20:17:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-055"
+event = "pr_open"
+actor = "codex"
+previous_status = "ready"
+new_status = "pr_open"
+pr = 6008
+head_sha = "fcbc822e01681e5ba282f1bb3890ad139ea265e6"
+
+notes = [
+  "Opened PR #6008 for the SLM-CPU-055 production dense-linear hook contract gate.",
+  "The PR is tracker/dashboard-only and does not enable packed Q8_0 sidecar runtime compute.",
+  "The next implementation slice must preserve eager_f32_candle unless before/after Qwen3 Q8_0 behavior receipts prove identical generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, and fallback=false.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
