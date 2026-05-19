@@ -2750,9 +2750,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-046"
-status = "pr_open"
+status = "merged"
 pr = 5860
 head_sha = "51fa63018fe0189777fcb596665e8bfcbe6a66ad"
+merge_sha = "4bfa68cbc5577bb0a81b709639a74af28788a134"
 branch = "codex/slm-cpu-046-q8-sidecar-dispatch-selector"
 stackable = false
 review_mode = "codex_premerge"
