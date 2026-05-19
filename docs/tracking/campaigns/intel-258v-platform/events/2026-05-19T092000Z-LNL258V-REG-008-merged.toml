@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T09:20:00Z"
+event = "merged"
+item = "LNL258V-REG-008"
+pr = 5808
+head_sha = "532e65cf36e2315431f7f42a9f4796061863841b"
+merge_sha = "49cbc3996391c996a927dabb4a0d9997565eed36"
+branch = "codex/lunar-lake/LNL258V-REG-008-power-profile-regression"
+actor = "codex"
+summary = "Merged PR #5808 for Lunar Lake strict regression power-profile evidence wiring."
+
+notes = [
+  "The merged PR wires low_power power-profile evidence into regression v2 and refreshes the committed regression bundle with power_profile_evidence_indexed=true.",
+  "The closeout preserves no new inference, no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]
