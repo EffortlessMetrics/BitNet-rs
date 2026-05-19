@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_profile_evidence",
   "proof_stage": "low_power_evidence_indexed_no_promotion_change",
-  "created_utc": "2026-05-19T19:35:00Z",
+  "created_utc": "2026-05-19T21:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -53,7 +53,7 @@
     {
       "route_id": "dense_slm_openvino_npu_candidate",
       "route_status": "candidate",
-      "ledger_route_status": "candidate",
+      "ledger_route_status": "promoted",
       "selected_backend": "openvino-npu",
       "runtime_api": "openvino_genai",
       "fallback_used": false,
@@ -63,7 +63,6 @@
       "benchmark_qualified_advantage": false,
       "power_related_blockers": [
         "benchmark-qualified speedup or power advantage missing",
-        "benchmark_qualified_speedup_or_power_advantage",
         "power advantage evidence missing for low_power promotion",
         "route not promoted for profile low_power"
       ],
@@ -71,8 +70,6 @@
         "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
         "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
         "benchmark-qualified speedup or power advantage missing",
-        "benchmark_qualified_speedup_or_power_advantage",
-        "candidate route requires benchmark-qualified profile evidence",
         "power advantage evidence missing for low_power promotion",
         "route not promoted for profile low_power"
       ],
