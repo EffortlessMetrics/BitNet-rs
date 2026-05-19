@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T07:30:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-051"
+event = "in_progress"
+from = "proposed"
+to = "ready"
+actor = "codex"
+
+notes = [
+  "Queued the selector-readiness gate after the SLM-CPU-050 production-compute-hook availability surface.",
+  "The next slice must keep eager F32 Candle selected and sidecar runtime compute disabled.",
+  "No speedup, Q4/Q5, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
