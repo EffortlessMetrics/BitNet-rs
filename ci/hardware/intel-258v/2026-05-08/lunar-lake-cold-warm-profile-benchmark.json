@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-19T15:46:00Z",
+  "created_utc": "2026-05-19T16:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -1349,14 +1349,12 @@
     },
     {
       "profile_id": "structured",
-      "promoted_route": null,
-      "candidate_routes": [
-        "dense_slm_default_cpu"
-      ],
+      "promoted_route": "dense_slm_default_cpu",
+      "candidate_routes": [],
       "routes": [
         {
           "route_id": "dense_slm_default_cpu",
-          "route_status": "candidate",
+          "route_status": "promoted",
           "ledger_route_status": "promoted",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
@@ -1414,17 +1412,13 @@
           },
           "critical_timing_present": true,
           "benchmark_qualified_advantage": false,
-          "promotion_blocked": true,
+          "promotion_blocked": false,
           "blockers": [
-            "bounded math ask only; not expanded profile regression corpus",
-            "route not promoted for profile structured"
+            "bounded math ask only; not expanded profile regression corpus"
           ]
         }
       ],
-      "profile_gaps": [
-        "structured route dense_slm_default_cpu remains blocked: bounded math ask only; not expanded profile regression corpus; route not promoted for profile structured",
-        "structured has no benchmark-qualified promoted route; candidate evidence remains indexed only"
-      ]
+      "profile_gaps": []
     },
     {
       "profile_id": "low_power",
@@ -2022,8 +2016,8 @@
     "route_count": 23,
     "profile_specific_route_count": 21,
     "proxy_or_missing_route_count": 2,
-    "promotion_eligible_route_count": 4,
-    "promotion_eligible_profile_specific_route_count": 4,
+    "promotion_eligible_route_count": 5,
+    "promotion_eligible_profile_specific_route_count": 5,
     "candidate_route_count": 14,
     "candidate_proxy_or_missing_route_count": 0,
     "promotion_eligible_routes_have_profile_specific_timing": true,

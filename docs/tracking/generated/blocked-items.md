@@ -374,6 +374,7 @@
 | intel-258v-platform | LNL258V-OV-TOKEN-001 | LNL258V-NPU-CACHE-002 | merged |
 | intel-258v-platform | LNL258V-ROUTE-015 | LNL258V-OV-TOKEN-001 | merged |
 | intel-258v-platform | LNL258V-EXCELLENCE-AUDIT-001 | LNL258V-QUAL-013 | merged |
+| intel-258v-platform | LNL258V-ROUTE-021 | LNL258V-EXCELLENCE-AUDIT-001 | in_progress |
 | intel-258v-platform | LNL258V-QUAL-013 | LNL258V-QUAL-012 | merged |
 | intel-258v-platform | LNL258V-QUAL-012 | LNL258V-ROUTE-019 | merged |
 | intel-258v-platform | LNL258V-VALIDATE-001 | LNL258V-COMPARE-007 | merged |

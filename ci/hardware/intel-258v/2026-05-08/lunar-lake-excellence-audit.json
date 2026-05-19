@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-19T16:25:00Z",
+  "created_utc": "2026-05-19T16:45:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "00228105037413e1c4dfd0286d866a8c4f000bfd",
+  "source_revision": "d5853e033897776e18e793e0afa8280d7e4a4e09",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_explicit_unpromoted_profiles",
   "excellent_support_ready": false,
-  "reason": "The platform is operator-ready and profile-aware, but excellent all-profile support is not complete while prefill_heavy, decode_heavy, structured, low_power, and warm_resident have no promoted route and low_power lacks battery/energy power-advantage proof.",
+  "reason": "The platform is operator-ready and profile-aware, with structured now promoted on the dense Qwen CPU control route, but excellent all-profile support is not complete while prefill_heavy, decode_heavy, low_power, and warm_resident have no promoted route and low_power lacks battery/energy power-advantage proof.",
   "command_surface": {
     "ask": {
       "status": "ready_profile_scoped",
@@ -50,7 +50,6 @@
     "blocked_profiles": [
       "prefill_heavy",
       "decode_heavy",
-      "structured",
       "low_power",
       "warm_resident"
     ],
@@ -143,15 +142,11 @@
       },
       {
         "profile_id": "structured",
-        "profile_status": "candidate_only",
-        "promoted_route": null,
-        "promotion_decision": "structured has no promoted route; candidate evidence is indexed without promotion",
-        "candidate_routes": [
-          "dense_slm_default_cpu"
-        ],
-        "blockers": [
-          "route not promoted for profile structured"
-        ]
+        "profile_status": "promoted_route_ready",
+        "promoted_route": "dense_slm_default_cpu",
+        "promotion_decision": "dense_slm_default_cpu remains promoted for structured",
+        "candidate_routes": [],
+        "blockers": []
       },
       {
         "profile_id": "low_power",
@@ -197,8 +192,12 @@
   },
   "capability_matrix": {
     "dense_qwen_cpu": {
-      "status": "promoted_control_and_correctness_plate",
+      "status": "promoted_control_and_structured_correctness_plate",
       "fallback_used": false,
+      "promoted_profiles": [
+        "regression_tiny",
+        "structured"
+      ],
       "quality_summary": {
         "failed": 0,
         "failure_categories": {},
@@ -290,7 +289,7 @@
     ]
   },
   "remaining_gaps": [
-    "No promoted route for prefill_heavy, decode_heavy, structured, low_power, or warm_resident.",
+    "No promoted route for prefill_heavy, decode_heavy, low_power, or warm_resident.",
     "OpenVINO NPU remains candidate-only; cold-start blockers are preserved for cold profiles.",
     "low_power lacks battery-mode sample, energy-proxy receipt, and benchmark-qualified power advantage.",
     "Thermal zone visibility is recorded, but temperature readings remain unavailable.",
@@ -298,36 +297,37 @@
     "BitNet accelerator inference and packed QK256 accelerator decode remain unclaimed."
   ],
   "next_recommended_work": [
-    "LNL258V-PROFILE-RUN follow-up for profile-specific prefill_heavy/decode_heavy/structured evidence.",
+    "LNL258V-PROFILE-RUN follow-up for profile-specific prefill_heavy/decode_heavy evidence.",
     "LNL258V-POWER follow-up for battery and energy-proxy low_power evidence.",
     "LNL258V-NPU follow-up for warm_resident promotion only after resident quality, latency stability, and power/latency advantage are benchmark-qualified.",
     "Continue BitNet semantic-intake reruns after shared A770/CUDA/CPU semantic fixes."
   ],
   "evidence_index": {
-    "operator_readiness": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
-    "operator_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
-    "regression_v2": "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
-    "route_profile_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
-    "route_promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
-    "cpu_qwen_corpus_v2": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
-    "openvino_corpus_v2": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
-    "openvino_profile_run": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-profile-run.json",
-    "cold_warm_benchmark": "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
-    "durability_bundle": "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
-    "power_profile_evidence": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json",
-    "power_thermal_context": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
-    "bitnet_reference_bundle": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
-    "bitnet_semantic_intake": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
-    "bitnet_external_boundary": "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-ref-001-external-boundary.json",
-    "bitnet_i2s_microbench": "ci/hardware/intel-258v/2026-05-08/cpu-bitnet-perf-001-i2s-microbench.json",
-    "arc_opencl_parity": "ci/hardware/intel-258v/2026-05-08/arc-140v-opencl-parity.json",
-    "npu_rmsnorm_subgraph": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
-    "npu_linear_subgraph": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
-    "npu_ffn_subgraph": "ci/hardware/intel-258v/2026-05-08/npu-bitnet-ffn-subgraph-parity.json"
+    "operator_readiness": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-operator-readiness.json",
+    "operator_comparison": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-operator-comparison.json",
+    "regression_v2": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-regression-bundle-v2.json",
+    "route_profile_comparison": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-route-profile-comparison.json",
+    "route_promotion_ledger": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-route-promotion.json",
+    "cpu_qwen_corpus_v2": "ci\\hardware\\intel-258v\\2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+    "openvino_corpus_v2": "ci\\hardware\\intel-258v\\2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+    "openvino_profile_run": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-openvino-profile-run.json",
+    "cold_warm_benchmark": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+    "durability_bundle": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-durability-bundle.json",
+    "power_profile_evidence": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-power-profile-evidence.json",
+    "power_thermal_context": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-power-thermal-context.json",
+    "bitnet_reference_bundle": "ci\\hardware\\intel-258v\\2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+    "bitnet_semantic_intake": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+    "bitnet_external_boundary": "ci\\hardware\\intel-258v\\2026-05-08/cpu-bitnet-ref-001-external-boundary.json",
+    "bitnet_i2s_microbench": "ci\\hardware\\intel-258v\\2026-05-08/cpu-bitnet-perf-001-i2s-microbench.json",
+    "arc_opencl_parity": "ci\\hardware\\intel-258v\\2026-05-08/arc-140v-opencl-parity.json",
+    "npu_rmsnorm_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
+    "npu_linear_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
+    "npu_ffn_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-ffn-subgraph-parity.json"
   },
   "claim_boundary": {
     "new_inference_run": false,
-    "route_promotion_changed": false,
+    "route_promotion_changed": true,
+    "route_promotion_scope": "dense_qwen_cpu_structured_only",
     "speedup_claim": false,
     "power_advantage_claim": false,
     "arc_npu_acceleration_claim": false,
