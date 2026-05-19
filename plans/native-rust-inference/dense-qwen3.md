@@ -306,12 +306,12 @@ the CUDA-MODEL-014B acceptance report. No runtime rollback is required.
 
 ## Work item: CUDA-MODEL-015
 
-Status: in_progress
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
-Blocks: Qwen3 benchmark qualification review
+Blocks: CUDA-MODEL-016
 Blocked by: CUDA-MODEL-014B
 
 ### Goal
@@ -374,3 +374,68 @@ git diff --check
 Remove the CUDA-MODEL-015 baseline report, receipt pointers, and campaign
 tracker entries. Do not change the existing Qwen3 product CLI or exact-profile
 server-ready state.
+
+## Work item: CUDA-MODEL-016
+
+Status: in_progress
+Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
+Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
+Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
+Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
+Blocks: Qwen3 benchmark qualification review
+Blocked by: CUDA-MODEL-015
+
+### Goal
+
+Add the Qwen3 repeated comparator receipt contract and generator needed before
+the Windows 9950X3D + RTX 5070 Ti lane can commit hardware receipts for the
+five CUDA-MODEL-015 profiles.
+
+### Production delta
+
+The `bitnet-bench-receipts` crate validates and can generate a
+`qwen3_cuda_repeated_comparator` receipt for repeated same-artifact CPU/CUDA
+Qwen3 runs across:
+
+- `one_token`;
+- `short_decode_8`;
+- `short_decode_32`;
+- `warm_session_3_turns`;
+- `decode_128_from_warm_context`.
+
+### Non-goals
+
+No model promotion, server promotion, speedup promotion, benchmark-qualified
+promotion, full-residency promotion, broad dense GGUF claim, Qwen2.5 proof
+inheritance, BitNet QK256 proof, runtime math change, tokenizer change, loader
+change, kernel change, or server behavior change.
+
+### Acceptance
+
+The validator requires at least three CPU/CUDA comparator runs per profile,
+the exact Qwen3 artifact SHA-256, selected
+`nvidia-rtx-5070-ti-cuda` backend, `dense_regular_llm_cuda` route,
+`fallback_used=false`, quality/parity pass fields, profile token counts,
+runtime performance phase fields, transfer byte/timing fields or explicit
+source labeling, VRAM high-water, and power/thermal context.
+
+The receipt preserves `speedup_claim=false`,
+`benchmark_qualified_speedup=false`, `full_cuda_residency_claimed=false`,
+`broad_dense_gguf_ready_claimed=false`, `qwen25_proof_inherited=false`, and
+`bitnet_packed_i2s_qk256_proof=false`.
+
+### Proof commands
+
+```bash
+cargo fmt -p bitnet-bench-receipts -- --check
+cargo test --locked -p bitnet-bench-receipts --no-default-features qwen3
+cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti
+cargo run --locked -p xtask --no-default-features -- campaign generate --check
+git diff --check
+```
+
+### Rollback
+
+Remove the Qwen3 repeated comparator validator, generator, tests, report, and
+campaign tracker entries. Do not change the existing Qwen3 product CLI or
+exact-profile server-ready state.
