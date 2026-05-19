@@ -92,9 +92,14 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-039 | merged | #5693 routed the feed-forward output through the typed workspace and recorded `feed_forward.output` as the first workspace-owned transformer output boundary while reusable Candle storage remains deferred. |
 | SLM-CPU-040 | merged | #5715 classified the exact `FeedForward::down_proj` output boundary and recorded that reusable workspace-backed storage remains blocked by Candle's owned linear output path. |
 | SLM-CPU-041 | merged | #5754 narrowed the `FeedForward::down_proj` storage blocker to the exact Candle tensor API gap: linear weight/bias are readable, but matmul/bias-add still lack caller-provided output storage. |
-| SLM-CPU-042 | pr_open | #5773 starts the next dense-math performance slice by identifying and instrumenting the first behavior-preserving Q8_0 dense linear locality or matmul/dequant boundary after the Candle output-storage API blocker. |
+| SLM-CPU-042 | merged | #5773 identifies and instruments the first behavior-preserving Q8_0 dense linear locality/dequant boundary after the Candle output-storage API blocker. |
+| SLM-CPU-043 | merged | #5794 added a fixture-level packed Q8_0 sidecar linear prototype that matches eager F32 fixture output without replacing production runtime compute. |
 | SLM-CPU-044 | merged | #5810 defined the first production-integration boundary for carrying packed Q8_0 sidecar metadata toward runtime dense-linear use while keeping eager F32 Candle tensors as the behavior oracle. |
-| SLM-CPU-045 | ready | First production-facing packed Q8_0 sidecar carrier slice: preserve packed sidecar metadata from strict GGUF tensor loading into an inert model-side descriptor without changing generation behavior or claiming speedup. |
+| SLM-CPU-045 | merged | #5845 preserves packed Q8_0 sidecar metadata from strict GGUF tensor loading into an inert model-side descriptor without changing generation behavior or claiming speedup. |
+| SLM-CPU-046 | merged | #5860 added a dense-linear dispatch selector that keeps eager F32 Candle selected while exposing packed Q8_0 sidecars only as unavailable candidates. |
+| SLM-CPU-047 | merged | #5868 added the packed Q8_0 sidecar equivalence gate that records fixture parity and keeps runtime compute disabled until generated-ID/text receipt equivalence exists. |
+| SLM-CPU-048 | merged | #5873 added the non-executing packed Q8_0 sidecar runtime preflight that names generated-ID receipt, production compute hook, and eager-selector blockers. |
+| SLM-CPU-049 | ready | Add the generated-ID/text receipt equivalence gate before any packed Q8_0 sidecar runtime selection or speedup claim. |
 
 ## Review Policy
 
