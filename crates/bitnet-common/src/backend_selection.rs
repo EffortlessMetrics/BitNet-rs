@@ -679,7 +679,9 @@ mod tests {
 
     #[test]
     fn intel_a770_opencl_request_preserves_identity_when_opencl_available() {
-        let result = select_backend(BackendRequest::IntelA770OpenCl, &opencl_caps()).unwrap();
+        let result = select_backend(BackendRequest::IntelA770OpenCl, &opencl_caps());
+        assert!(result.is_ok(), "expected A770 OpenCL selection, got {result:?}");
+        let result = if let Ok(result) = result { result } else { return };
 
         assert_eq!(result.selected, KernelBackend::OpenCL);
         assert_eq!(result.requested_backend(), "intel-a770-opencl");
