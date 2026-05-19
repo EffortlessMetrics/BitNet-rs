@@ -1,0 +1,15 @@
+timestamp = "2026-05-19T10:29:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-010"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-010-timeout-aware-variance"
+
+notes = [
+  "Started M4-BENCH-010 after the first M4-BENCH-005 live default-model attempt hit the enforced context_4k timeout.",
+  "The diagnostic timeout receipt validated as apple_m4_slm_benchmark_profile_timeout with status invalid_for_comparison, fallback_used=false, and profile_timeout_exceeded:context_4k:720s.",
+  "`bitnet mac benchmark --repeat` still aborted instead of writing a timeout-aware aggregate, so M4-BENCH-005 remains proposed and blocked until aggregate receipts can preserve invalid profile evidence without treating it as a timing sample.",
+  "Scope is dense SLM benchmark aggregation only; BitNet variance remains M4-BENCH-006 and no Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

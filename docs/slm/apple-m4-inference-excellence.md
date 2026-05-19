@@ -390,6 +390,21 @@ invalid for envelope comparison. The committed enforcement smoke at
 uses `qwen2.5-0.5b-instruct-q8_0`, `short_prompt_16_out`, and `--repeat 2` to
 prove the child-process benchmark path still validates for a bounded profile.
 
+`M4-BENCH-010` is the timeout-aware aggregation prerequisite found by the first
+live `M4-BENCH-005` attempt. The default Q8 dense model reached the enforced
+`context_4k` boundary at 720 seconds, wrote a valid
+`apple_m4_slm_benchmark_profile_timeout` receipt with
+`status=invalid_for_comparison`, `fallback_used=false`, and
+`profile_timeout_exceeded:context_4k:720s`, then the variance command aborted
+instead of writing a parent aggregate. The aggregate path now treats timed-out
+profiles as invalid profile entries, skips them from timing and throughput
+samples, propagates invalid-comparison reasons into child
+`apple_m4_slm_benchmark_v2` and parent `apple_m4_benchmark_variance_v1`
+receipts, and validates those receipts without converting timeout evidence into
+a successful timing sample. This is still a prerequisite only:
+`M4-BENCH-005` remains responsible for the live dense Qwen variance envelopes,
+and BitNet variance remains `M4-BENCH-006`.
+
 ## Drift Thresholds
 
 `M4-EXCELLENCE-004` publishes the current family-specific drift policy in the

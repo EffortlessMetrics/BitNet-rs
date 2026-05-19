@@ -896,7 +896,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-BENCH-002", "M4-BENCH-008", "M4-BENCH-009"]
+blocked_by = ["M4-BENCH-002", "M4-BENCH-008", "M4-BENCH-009", "M4-BENCH-010"]
 acceptance = "Publish M4 dense SLM benchmark repeatability and variance envelopes for the supported dense Qwen timing families, including run count, sample count, variance band, outlier handling, threshold derivation, and when timing drift is advisory instead of failure. BitNet one-shot and warm-session variance remains scoped to M4-BENCH-006."
 commands = [
   "target/release/bitnet --device apple-m4-cpu-neon mac benchmark --repeat <n> --json-out ci/hardware/apple-m4-mac-mini/<date>/benchmark-variance/summary.json",
@@ -925,6 +925,51 @@ must_not_claim = [
   "Variance envelopes are broad Apple Silicon benchmarks.",
   "Variance envelopes prove a speedup.",
   "Dense SLM variance envelopes prove BitNet timing variance.",
+]
+
+[[work_item]]
+id = "M4-BENCH-010"
+status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-010-timeout-aware-variance"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BENCH-008", "M4-BENCH-009"]
+acceptance = "Make `bitnet mac benchmark --repeat` produce timeout-aware dense benchmark aggregate receipts when one or more calibrated profiles time out: include timeout profiles as `invalid_for_comparison` entries in child `apple_m4_slm_benchmark_v2` summaries, propagate invalid-comparison reasons into `apple_m4_benchmark_variance_v1`, skip timed-out profiles from timing/throughput samples, validate child and aggregate receipts, and keep M4-BENCH-005 blocked until the live dense variance run can publish without aborting."
+commands = [
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli benchmark_profile -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli timeout_profile -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli timeout_aware -- --nocapture",
+  "cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/release/bitnet --device apple-m4-cpu-neon mac benchmark --model-id qwen2.5-0.5b-instruct-q8_0 --profile short_prompt_16_out --repeat 2 --quiet --json-out ci/hardware/apple-m4-mac-mini/<date>/benchmark-timeout-aware-variance/harness-smoke.json",
+  "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/benchmark-timeout-aware-variance/harness-smoke.json --json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "ci/hardware/apple-m4-mac-mini/**/benchmark-timeout-aware-variance/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "M4 dense SLM benchmark variance receipts can record timeout profiles as invalid-for-comparison instead of aborting the aggregate.",
+]
+must_not_claim = [
+  "Timeout-aware aggregation publishes the final dense variance envelope.",
+  "Timeout-aware aggregation proves a speedup.",
+  "Timeout-aware aggregation proves BitNet timing variance.",
 ]
 
 [[work_item]]
