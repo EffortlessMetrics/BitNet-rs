@@ -70,6 +70,7 @@ const OPENVINO_PROFILE_RUN: &str = "lunar-lake-openvino-profile-run.json";
 const OPENVINO_GPU_PROFILE_PROMOTION_TARGETS: &[&str] = &["ask_short", "ask_normal"];
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
+const BLOCKED_AUTO_ASK_RECEIPT: &str = "lunar-lake-operator-ask-auto-low-power-blocked.json";
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
 const REGRESSION_V2_SURFACE_ID: &str = "lunar_lake_regression_v2";
 pub const DEFAULT_ASK_ROUTE: &str = "dense_slm_default_cpu";
@@ -177,6 +178,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = POWER_PROFILE_EVIDENCE_FILE)]
         power_profile_evidence: Option<PathBuf>,
+
+        /// Optional blocked auto-route ask receipt to index.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = BLOCKED_AUTO_ASK_RECEIPT)]
+        blocked_ask_receipt: Option<PathBuf>,
 
         /// Output JSON regression bundle to file.
         #[arg(long)]
@@ -886,6 +892,8 @@ pub struct LunarLakeRegressionBundle {
     pub bitnet_semantic_intake: Option<BitnetSemanticIntakeRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub power_profile_evidence: Option<PowerProfileRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked_ask_receipt: Option<BlockedAskRegressionSummary>,
     #[serde(default)]
     pub regression_surface: RegressionSurfaceSummary,
     pub regression_passed: bool,
@@ -907,6 +915,8 @@ pub struct RegressionSurfaceSummary {
     pub bitnet_semantic_intake_indexed: bool,
     #[serde(default)]
     pub power_profile_evidence_indexed: bool,
+    #[serde(default)]
+    pub blocked_ask_receipt_indexed: bool,
     pub required_answer_profiles: Vec<String>,
     pub required_answer_categories: Vec<String>,
     pub required_route_profiles: Vec<String>,
@@ -941,6 +951,7 @@ impl Default for RegressionSurfaceSummary {
             durability_bundle_indexed: false,
             bitnet_semantic_intake_indexed: false,
             power_profile_evidence_indexed: false,
+            blocked_ask_receipt_indexed: false,
             required_answer_profiles: REQUIRED_CORPUS_V2_PROFILES
                 .iter()
                 .map(|profile| (*profile).to_string())
@@ -1104,6 +1115,26 @@ pub struct PowerProfileRegressionSummary {
     pub regression_ready: bool,
     pub gaps: Vec<String>,
     pub blockers: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BlockedAskRegressionSummary {
+    pub path: String,
+    pub blocked_receipt_ready: bool,
+    pub profile_id: String,
+    pub requested_device: String,
+    pub requested_route: String,
+    pub route_selection_blocked: bool,
+    pub new_inference_executed: bool,
+    pub fallback_used: bool,
+    pub route_promotion_changed: bool,
+    pub speedup_claim: bool,
+    pub power_advantage_claim: bool,
+    pub acceleration_claim: bool,
+    pub bitnet_qk256_i2s_claim: bool,
+    pub route_selection_error: String,
+    pub regression_ready: bool,
+    pub gaps: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -2313,6 +2344,7 @@ impl LunarLakeCommand {
                 durability_bundle,
                 bitnet_semantic_intake,
                 power_profile_evidence,
+                blocked_ask_receipt,
                 json_out,
                 created_utc,
                 strict,
@@ -2331,6 +2363,7 @@ impl LunarLakeCommand {
                         durability_bundle.as_deref(),
                         bitnet_semantic_intake.as_deref(),
                         power_profile_evidence.as_deref(),
+                        blocked_ask_receipt.as_deref(),
                         created_utc,
                     )?;
                 write_or_print_regression_bundle(&receipt, json_out.as_deref())?;
@@ -3019,6 +3052,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs(
         durability_bundle,
         bitnet_semantic_intake,
         None,
+        None,
         created_utc,
     )
 }
@@ -3032,6 +3066,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
     durability_bundle: Option<&Path>,
     bitnet_semantic_intake: Option<&Path>,
     power_profile_evidence: Option<&Path>,
+    blocked_ask_receipt: Option<&Path>,
     created_utc: String,
 ) -> Result<LunarLakeRegressionBundle> {
     let operator_receipt_path = resolve_receipt_path(root, operator_receipt);
@@ -3212,6 +3247,19 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
     } else {
         None
     };
+    let blocked_ask_receipt = if let Some(path) = blocked_ask_receipt {
+        let path = resolve_receipt_path(root, path);
+        let summary = inspect_blocked_ask_regression(&path)?;
+        checks.push(regression_check_owned(
+            "blocked_auto_ask_receipt_regression_ready",
+            summary.regression_ready,
+            vec![summary.path.clone()],
+            blocked_ask_regression_notes(&summary),
+        ));
+        Some(summary)
+    } else {
+        None
+    };
     let gaps = checks
         .iter()
         .filter(|check| check.status != "passed")
@@ -3224,6 +3272,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
         durability_bundle.as_ref(),
         bitnet_semantic_intake.as_ref(),
         power_profile_evidence.as_ref(),
+        blocked_ask_receipt.as_ref(),
     );
 
     Ok(LunarLakeRegressionBundle {
@@ -3240,6 +3289,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
         durability_bundle,
         bitnet_semantic_intake,
         power_profile_evidence,
+        blocked_ask_receipt,
         regression_surface,
         regression_passed: gaps.is_empty(),
         checks,
@@ -3255,6 +3305,7 @@ fn build_regression_surface_summary(
     durability_bundle: Option<&DurabilityRegressionSummary>,
     bitnet_semantic_intake: Option<&BitnetSemanticIntakeRegressionSummary>,
     power_profile_evidence: Option<&PowerProfileRegressionSummary>,
+    blocked_ask_receipt: Option<&BlockedAskRegressionSummary>,
 ) -> RegressionSurfaceSummary {
     let mut summary = RegressionSurfaceSummary {
         answer_corpus_v2_indexed: answer_corpus_v2.is_some(),
@@ -3263,6 +3314,7 @@ fn build_regression_surface_summary(
         durability_bundle_indexed: durability_bundle.is_some(),
         bitnet_semantic_intake_indexed: bitnet_semantic_intake.is_some(),
         power_profile_evidence_indexed: power_profile_evidence.is_some(),
+        blocked_ask_receipt_indexed: blocked_ask_receipt.is_some(),
         candidate_routes_remain_unpromoted: route_profile_comparison
             .map(|summary| summary.candidate_routes_remain_unpromoted)
             .unwrap_or(false),
@@ -3454,6 +3506,37 @@ fn build_regression_surface_summary(
             summary
                 .gaps
                 .push("low_power power-profile claim boundary is not preserved".to_string());
+        }
+    }
+
+    if let Some(blocked) = blocked_ask_receipt {
+        if !blocked.regression_ready {
+            summary.gaps.push(format!(
+                "blocked auto-route ask receipt is not regression-ready: {}",
+                blocked.gaps.join("; ")
+            ));
+        }
+        if !blocked.route_selection_blocked {
+            summary
+                .gaps
+                .push("blocked ask receipt does not prove route_selection_blocked".to_string());
+        }
+        if blocked.new_inference_executed {
+            summary.gaps.push("blocked ask receipt unexpectedly ran inference".to_string());
+        }
+        if blocked.fallback_used {
+            summary.gaps.push("blocked ask receipt unexpectedly observed fallback".to_string());
+        }
+        if blocked.route_promotion_changed
+            || blocked.speedup_claim
+            || blocked.power_advantage_claim
+            || blocked.acceleration_claim
+            || blocked.bitnet_qk256_i2s_claim
+        {
+            summary.gaps.push(
+                "blocked ask receipt violates route-promotion/speedup/power/acceleration claim boundary"
+                    .to_string(),
+            );
         }
     }
 
@@ -4082,6 +4165,100 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
     })
 }
 
+fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSummary> {
+    let receipt: Value = read_json_receipt(path)?;
+    let mut gaps = Vec::new();
+    let artifact_kind = string_at(&receipt, "artifact_kind").unwrap_or_default();
+    if artifact_kind != "lunar_lake_operator_ask_blocked" {
+        gaps.push(format!("unexpected artifact_kind={artifact_kind}"));
+    }
+    let proof_stage = string_at(&receipt, "proof_stage").unwrap_or_default();
+    if proof_stage != "operator_route_selection_blocked_no_inference" {
+        gaps.push(format!("unexpected proof_stage={proof_stage}"));
+    }
+    let profile_id = string_at(&receipt, "profile_id").unwrap_or_default();
+    if profile_id != "low_power" {
+        gaps.push(format!("blocked ask receipt should cover low_power; got {profile_id}"));
+    }
+    let requested_device = string_at(&receipt, "requested_device").unwrap_or_default();
+    let requested_route = string_at(&receipt, "requested_route").unwrap_or_default();
+    if requested_device != "auto" || requested_route != "auto" {
+        gaps.push(format!(
+            "blocked ask receipt should cover auto/auto request; got device={requested_device} route={requested_route}"
+        ));
+    }
+    let route_selection_blocked =
+        bool_at_any(&receipt, &["claim_boundary.route_selection_blocked"]).unwrap_or(false);
+    let new_inference_executed =
+        bool_at_any(&receipt, &["new_inference_executed", "claim_boundary.new_inference_executed"])
+            .unwrap_or(true);
+    let fallback_used =
+        bool_at_any(&receipt, &["fallback_used", "claim_boundary.fallback_used"]).unwrap_or(true);
+    let route_promotion_changed =
+        bool_at_any(&receipt, &["claim_boundary.route_promotion_changed"]).unwrap_or(true);
+    let speedup_claim =
+        bool_at_any(&receipt, &["speedup_claim", "claim_boundary.speedup_claim"]).unwrap_or(true);
+    let power_advantage_claim =
+        bool_at_any(&receipt, &["power_advantage_claim", "claim_boundary.power_advantage_claim"])
+            .unwrap_or(true);
+    let acceleration_claim =
+        bool_at_any(&receipt, &["acceleration_claim", "claim_boundary.acceleration_claim"])
+            .unwrap_or(true);
+    let bitnet_qk256_i2s_claim =
+        bool_at_any(&receipt, &["bitnet_qk256_i2s_claim", "claim_boundary.bitnet_qk256_i2s_claim"])
+            .unwrap_or(true);
+    if !route_selection_blocked {
+        gaps.push("blocked ask receipt does not prove route_selection_blocked=true".to_string());
+    }
+    if new_inference_executed {
+        gaps.push("blocked ask receipt must record new_inference_executed=false".to_string());
+    }
+    if fallback_used {
+        gaps.push("blocked ask receipt must record fallback_used=false".to_string());
+    }
+    if route_promotion_changed || speedup_claim || power_advantage_claim || acceleration_claim {
+        gaps.push(
+            "blocked ask receipt must preserve no route-promotion/speedup/power/acceleration claims"
+                .to_string(),
+        );
+    }
+    if bitnet_qk256_i2s_claim {
+        gaps.push("blocked ask receipt must not claim BitNet QK256/I2_S behavior".to_string());
+    }
+    let route_selection_error = string_at(&receipt, "route_selection_error").unwrap_or_default();
+    if route_selection_error.trim().is_empty() {
+        gaps.push("blocked ask receipt is missing route_selection_error".to_string());
+    }
+    for required in
+        ["no promoted Lunar Lake auto route", "why_not_cpu=", "why_not_gpu=", "why_not_npu="]
+    {
+        if !route_selection_error.contains(required) {
+            gaps.push(format!("route_selection_error is missing `{required}`"));
+        }
+    }
+
+    gaps.sort();
+    gaps.dedup();
+    Ok(BlockedAskRegressionSummary {
+        path: path_string(path),
+        blocked_receipt_ready: gaps.is_empty(),
+        profile_id,
+        requested_device,
+        requested_route,
+        route_selection_blocked,
+        new_inference_executed,
+        fallback_used,
+        route_promotion_changed,
+        speedup_claim,
+        power_advantage_claim,
+        acceleration_claim,
+        bitnet_qk256_i2s_claim,
+        route_selection_error,
+        regression_ready: gaps.is_empty(),
+        gaps,
+    })
+}
+
 fn corpus_v2_notes(summary: &AnswerCorpusV2Summary) -> Vec<String> {
     let mut notes = vec![
         format!("case_count={}", summary.case_count),
@@ -4232,6 +4409,20 @@ fn power_profile_regression_notes(summary: &PowerProfileRegressionSummary) -> Ve
         format!("thermal_context_recorded={}", summary.thermal_context_recorded),
         format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
         format!("blocker_count={}", summary.blockers.len()),
+    ];
+    notes.extend(summary.gaps.iter().cloned());
+    notes
+}
+
+fn blocked_ask_regression_notes(summary: &BlockedAskRegressionSummary) -> Vec<String> {
+    let mut notes = vec![
+        format!("profile_id={}", summary.profile_id),
+        format!("requested_device={}", summary.requested_device),
+        format!("requested_route={}", summary.requested_route),
+        format!("route_selection_blocked={}", summary.route_selection_blocked),
+        format!("new_inference_executed={}", summary.new_inference_executed),
+        format!("fallback_used={}", summary.fallback_used),
+        format!("blocked_receipt_ready={}", summary.blocked_receipt_ready),
     ];
     notes.extend(summary.gaps.iter().cloned());
     notes
@@ -16538,6 +16729,41 @@ mod tests {
             temp.path().join(POWER_PROFILE_EVIDENCE_FILE),
             serde_json::to_vec_pretty(&power_profile)?,
         )?;
+        write_json(
+            temp.path(),
+            BLOCKED_AUTO_ASK_RECEIPT,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_operator_ask_blocked",
+                "proof_stage": "operator_route_selection_blocked_no_inference",
+                "machine_id": "intel-258v",
+                "requested_device": "auto",
+                "requested_route": "auto",
+                "profile_id": "low_power",
+                "selected_route": null,
+                "selected_backend": null,
+                "runtime_api": null,
+                "route_selection_status": "blocked",
+                "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage",
+                "fallback_used": false,
+                "new_inference_executed": false,
+                "speedup_claim": false,
+                "acceleration_claim": false,
+                "power_advantage_claim": false,
+                "bitnet_qk256_i2s_claim": false,
+                "claim_boundary": {
+                    "route_selection_blocked": true,
+                    "new_inference_executed": false,
+                    "fallback_used": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_accelerator_claim": false,
+                    "bitnet_qk256_i2s_claim": false
+                }
+            }),
+        )?;
 
         let bundle = build_regression_bundle_with_created_utc_and_inputs_and_power_profile(
             temp.path(),
@@ -16548,6 +16774,7 @@ mod tests {
             Some(Path::new("durability.json")),
             Some(Path::new(BITNET_SEMANTIC_INTAKE)),
             Some(Path::new(POWER_PROFILE_EVIDENCE_FILE)),
+            Some(Path::new(BLOCKED_AUTO_ASK_RECEIPT)),
             "2026-05-14T23:55:00Z".to_string(),
         )?;
 
@@ -16599,6 +16826,7 @@ mod tests {
         assert!(bundle.regression_surface.durability_stability_proven);
         assert!(bundle.regression_surface.bitnet_semantic_intake_indexed);
         assert!(bundle.regression_surface.power_profile_evidence_indexed);
+        assert!(bundle.regression_surface.blocked_ask_receipt_indexed);
         assert!(!bundle.regression_surface.low_power_promotion_ready);
         assert!(!bundle.regression_surface.power_advantage_proven);
         let Some(cold_warm) = bundle.cold_warm_benchmark.as_ref() else {
@@ -16636,6 +16864,14 @@ mod tests {
                 .iter()
                 .any(|blocker| blocker.contains("battery comparison evidence is missing"))
         );
+        let Some(blocked) = bundle.blocked_ask_receipt.as_ref() else {
+            bail!("missing blocked_ask_receipt summary");
+        };
+        assert!(blocked.regression_ready, "{:?}", blocked.gaps);
+        assert_eq!(blocked.profile_id, "low_power");
+        assert!(blocked.route_selection_blocked);
+        assert!(!blocked.new_inference_executed);
+        assert!(!blocked.fallback_used);
         assert!(strict_regression_v2_gaps(&bundle).is_empty());
         Ok(())
     }

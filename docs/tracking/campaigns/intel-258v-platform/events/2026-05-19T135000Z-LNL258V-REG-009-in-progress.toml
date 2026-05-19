@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T13:50:00Z"
+event = "in_progress"
+item = "LNL258V-REG-009"
+branch = "codex/lunar-lake/LNL258V-REG-009-blocked-ask-receipt"
+actor = "codex"
+summary = "Started wiring blocked auto-route ask receipts into Lunar Lake strict regression v2."
+
+notes = [
+  "Regression v2 should index the committed low_power auto-route blocked ask receipt created by LNL258V-OP-009.",
+  "The receipt must prove route_selection_blocked=true, new_inference_executed=false, fallback_used=false, and no route-promotion/speedup/power/acceleration/BitNet QK256 claim boundary changes.",
+  "The scope refreshes regression and operator comparison artifacts without promoting routes or running model inference.",
+]
