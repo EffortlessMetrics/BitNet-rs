@@ -11,6 +11,8 @@ use std::path::{Path, PathBuf};
 
 const DEFAULT_RECEIPT_OUT: &str =
     "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-0_6b-repeated-comparator.json";
+const CONTRACT_AUTHORITY: &str = "contract_authoritative";
+const QWEN3_PROMPT_TEMPLATE: &str = "qwen-chat-raw-deterministic";
 
 const DEFAULT_ONE_TOKEN_RUNS: [&str; 3] = [
     "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-01/qwen3-0_6b-one-token-cuda.json",
@@ -219,6 +221,15 @@ fn assert_source_receipt(profile: &str, receipt: &Value) -> Result<(), Box<dyn E
     if str_at(receipt, "/selected_backend")? != "nvidia-rtx-5070-ti-cuda" {
         return Err("source receipt must select nvidia-rtx-5070-ti-cuda".into());
     }
+    if str_at(receipt, "/tokenizer_prompt_authority/tokenizer_authority")? != CONTRACT_AUTHORITY {
+        return Err("source receipt must use contract tokenizer authority".into());
+    }
+    if str_at(receipt, "/tokenizer_prompt_authority/prompt_authority")? != CONTRACT_AUTHORITY {
+        return Err("source receipt must use contract prompt authority".into());
+    }
+    if str_at(receipt, "/tokenizer_prompt_authority/prompt_template")? != QWEN3_PROMPT_TEMPLATE {
+        return Err("source receipt must use qwen-chat-raw-deterministic prompt template".into());
+    }
     if bool_at(receipt, "/fallback_used")? {
         return Err("source receipt must be fallback-free".into());
     }
@@ -288,7 +299,7 @@ fn build_receipt(args: &Args, runs: &ProfileRuns) -> Result<Value, Box<dyn Error
         "tokenizer_prompt_authority": {
             "tokenizer_authority": str_at(anchor, "/tokenizer_prompt_authority/tokenizer_authority")?,
             "prompt_authority": str_at(anchor, "/tokenizer_prompt_authority/prompt_authority")?,
-            "prompt_template": "qwen-chat-raw-deterministic",
+            "prompt_template": QWEN3_PROMPT_TEMPLATE,
             "prompt_policy": "profile-local deterministic prompts; same tokenizer and prompt policy across all runs",
             "deterministic_prompt": true
         },
