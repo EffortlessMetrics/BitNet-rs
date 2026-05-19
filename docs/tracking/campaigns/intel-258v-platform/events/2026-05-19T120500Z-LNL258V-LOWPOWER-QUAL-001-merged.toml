@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T12:05:00Z"
+event = "merged"
+item = "LNL258V-LOWPOWER-QUAL-001"
+branch = "codex/lunar-lake/LNL258V-LOWPOWER-QUAL-001"
+pr = 5829
+head_sha = "98ce477ef1c603a7ba91da907388749fcf27c48d"
+merge_sha = "d90c9ae965e4cbdaaa51ee5e4a61254496d4a05f"
+actor = "codex"
+summary = "Merged LNL258V-LOWPOWER-QUAL-001 after refreshing low_power corpus-v2 evidence across CPU and OpenVINO routes."
+
+notes = [
+  "PR #5829 refreshed the dense Qwen CPU corpus-v2 receipt to 13/13 passed with the low_power case and fallback_used=false.",
+  "The OpenVINO CPU/GPU/NPU corpus-v2 receipt records 13/13 passed per device with fallback_used=false, and downstream diagnosis/profile/regression/operator artifacts were refreshed.",
+  "low_power remains unpromoted: no route promotion, speedup claim, power-advantage claim, native accelerator claim, model/kernel change, or BitNet QK256/I2_S behavior change was made.",
+]
