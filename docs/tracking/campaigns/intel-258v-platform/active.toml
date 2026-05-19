@@ -8281,7 +8281,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-LOWPOWER-QUAL-001"
-status = "in_progress"
+status = "merged"
+pr = 5829
+head_sha = "98ce477ef1c603a7ba91da907388749fcf27c48d"
+merge_sha = "d90c9ae965e4cbdaaa51ee5e4a61254496d4a05f"
 branch = "codex/lunar-lake/LNL258V-LOWPOWER-QUAL-001"
 stackable = false
 review_mode = "codex_premerge"
