@@ -43,7 +43,7 @@ Revert the report.
 
 ## Work item: CUDA-DENSE-QWEN25-OPS-002
 
-Status: ready
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
@@ -57,8 +57,9 @@ Add persistent handles for dense Qwen2.5.
 
 ### Production delta
 
-Avoid per-request model/context/weight setup where the route can safely reuse
-state.
+Dense Qwen warm-session receipts now expose and validate stable persistent-handle
+aliases for one model load, one CUDA context, upload-once weights, no
+per-request model load, workspace reuse, and fallback false. Landed in PR #5995.
 
 ### Non-goals
 
@@ -73,22 +74,24 @@ Receipt shows `model_loaded_once=true`, `cuda_context_once=true`,
 ### Proof commands
 
 ```bash
-cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- chat --device cuda --model <qwen25>
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation dense_gguf_qwen_warm_session
+cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli receipts_explain
 ```
 
 ### Rollback
 
-Return to previous lifecycle and keep existing exact-profile server readiness.
+Revert PR #5995 receipt aliases and validators while keeping existing
+exact-profile server readiness.
 
 ## Work item: CUDA-DENSE-QWEN25-OPS-003
 
-Status: blocked
+Status: ready
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
 Blocks: CUDA-DENSE-QWEN25-PERF-007
-Blocked by: CUDA-DENSE-QWEN25-OPS-002
+Blocked by: none
 
 ### Goal
 
@@ -125,7 +128,7 @@ Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
 Blocks: exact-profile status updates
-Blocked by: CUDA-DENSE-QWEN25-OPS-002, CUDA-DENSE-QWEN25-OPS-003
+Blocked by: CUDA-DENSE-QWEN25-OPS-003
 
 ### Goal
 
