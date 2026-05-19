@@ -1,0 +1,37 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-021"
+event = "in_progress"
+timestamp = "2026-05-19T13:25:00Z"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-021-device-profile-contract"
+
+summary = "Started the M3 Air device/profile contract slice after M3MBA-020 advanced the lane."
+
+artifacts = [
+  "crates/bitnet-device-config-core/src/profile.rs",
+  "crates/bitnet-device-config-core/src/lib.rs",
+  "crates/bitnet-device-probe/src/apple_receipts.rs",
+  "crates/bitnet-device-probe/src/lib.rs",
+  "crates/bitnet-device-probe/tests/apple_backend_receipts.rs",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+]
+
+notes = [
+  "The implementation adds a structured M3 Air device/profile contract for CPU/NEON, Metal, and MPSGraph proof-lane labels.",
+  "The contract preserves Metal and MPSGraph as visibility/request identities only until receipt-backed runtime work lands.",
+  "The receipt-facing profile records fanless mobile thermal policy, storage/cache constraints, and unsupported claims.",
+  "No M3 Air model inference, M4 proof, Metal model inference, MPSGraph model inference, Neural Engine execution, QK256 support, or performance claim is made.",
+]
+
+validation = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-device-config-core --no-default-features",
+  "cargo test --locked -p bitnet-device-probe --no-default-features apple",
+  "cargo test --locked -p bitnet-cli-config-core --no-default-features apple_m3",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]

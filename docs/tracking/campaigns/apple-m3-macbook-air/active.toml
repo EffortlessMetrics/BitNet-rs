@@ -1041,13 +1041,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-021"
-status = "ready"
+status = "pr_open"
+pr = 5952
+head_sha = "47e27d6511093b669153ab270752eac7e1e49990"
 branch = "codex/apple-m3-macbook-air/M3MBA-021-device-profile-contract"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M3MBA-020"]
+blocked_by = []
 acceptance = "Extend the shared device/profile model with a structured M3 Air host profile contract that records SoC family, fanless thermal policy, core split, memory tier, storage budget, cache root, and supported proof-lane labels while preserving strict rejection for unsupported Metal, MPSGraph, Neural Engine, and hidden CPU fallback claims."
 commands = [
   "cargo fmt --all -- --check",

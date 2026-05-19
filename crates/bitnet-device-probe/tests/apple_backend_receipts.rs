@@ -1,7 +1,8 @@
 use bitnet_device_probe::{
     APPLE_M3_AIR_MACHINE_ID, APPLE_M3_AIR_METAL_BACKEND, APPLE_M3_AIR_MPSGRAPH_BACKEND,
     APPLE_VISIBILITY_PREFLIGHT_KIND, AppleBackendReceipt, AppleBackendVisibilityPreflight,
-    AppleReceiptError, AppleResolvedDevice,
+    AppleM3AirHostProfileContract, AppleM3AirUnsupportedClaim, AppleReceiptError,
+    AppleResolvedDevice,
 };
 use std::error::Error;
 use std::io;
@@ -12,6 +13,105 @@ fn m4_device() -> AppleResolvedDevice {
 
 fn m3_air_device() -> AppleResolvedDevice {
     AppleResolvedDevice::new("Apple M3").with_gpu_cores(10).with_unified_memory(true)
+}
+
+#[test]
+fn apple_m3_air_host_profile_contract_records_device_and_claim_boundaries()
+-> Result<(), Box<dyn Error>> {
+    let contract = AppleM3AirHostProfileContract::current();
+
+    contract.validate()?;
+
+    let value = serde_json::to_value(&contract)?;
+    ensure(value["machine_id"] == APPLE_M3_AIR_MACHINE_ID, "wrong machine id")?;
+    ensure(value["soc_family"] == "Apple M3", "wrong SoC family")?;
+    ensure(value["thermal_policy"] == "fanless_mobile", "wrong thermal policy")?;
+    ensure(value["core_split_required"] == true, "core split is not required")?;
+    ensure(value["memory_tier_required"] == true, "memory tier is not required")?;
+    ensure(value["storage"]["cache_root_required"] == true, "cache root is not required")?;
+    ensure(
+        value["storage"]["large_artifact_sweep_allowed"] == true,
+        "large artifact sweep is not allowed",
+    )?;
+    ensure(
+        value["storage"]["model_binaries_committed"] == false,
+        "model binaries are allowed in git",
+    )?;
+
+    let labels = value["proof_lane_labels"]
+        .as_array()
+        .ok_or_else(|| io::Error::other("proof_lane_labels is not an array"))?;
+    ensure(
+        labels.iter().any(|label| {
+            label["backend_label"] == "apple-m3-air-cpu-neon"
+                && label["runtime_api"] == "cpu-neon"
+                && label["execution_available"] == true
+        }),
+        "CPU/NEON proof label is missing",
+    )?;
+    ensure(
+        labels.iter().any(|label| {
+            label["backend_label"] == APPLE_M3_AIR_METAL_BACKEND
+                && label["runtime_api"] == "metal"
+                && label["execution_available"] == false
+        }),
+        "Metal visibility-only label is missing",
+    )?;
+    ensure(
+        labels.iter().any(|label| {
+            label["backend_label"] == APPLE_M3_AIR_MPSGRAPH_BACKEND
+                && label["runtime_api"] == "mpsgraph"
+                && label["execution_available"] == false
+        }),
+        "MPSGraph visibility-only label is missing",
+    )?;
+    ensure(
+        contract.unsupported_claims.contains(&AppleM3AirUnsupportedClaim::MetalModelInference),
+        "Metal model inference is not explicitly unsupported",
+    )?;
+    ensure(
+        contract.unsupported_claims.contains(&AppleM3AirUnsupportedClaim::Qk256AppleSilicon),
+        "QK256 Apple Silicon support is not explicitly unsupported",
+    )?;
+    Ok(())
+}
+
+#[test]
+fn apple_m3_air_host_profile_contract_rejects_accelerator_execution_claims()
+-> Result<(), Box<dyn Error>> {
+    let mut contract = AppleM3AirHostProfileContract::current();
+    let metal = contract
+        .proof_lane_labels
+        .iter_mut()
+        .find(|label| label.backend_label == APPLE_M3_AIR_METAL_BACKEND)
+        .ok_or_else(|| io::Error::other("missing Metal label"))?;
+    metal.execution_available = true;
+
+    ensure(
+        contract.validate()
+            == Err(AppleReceiptError::ClaimBoundaryViolation("accelerator_execution")),
+        "Metal execution claim was not rejected",
+    )?;
+    Ok(())
+}
+
+#[test]
+fn apple_m3_air_host_profile_contract_rejects_mislabelled_runtime_api() -> Result<(), Box<dyn Error>>
+{
+    let mut contract = AppleM3AirHostProfileContract::current();
+    let metal = contract
+        .proof_lane_labels
+        .iter_mut()
+        .find(|label| label.backend_label == APPLE_M3_AIR_METAL_BACKEND)
+        .ok_or_else(|| io::Error::other("missing Metal label"))?;
+    metal.runtime_api = "cpu-neon".to_owned();
+
+    ensure(
+        contract.validate()
+            == Err(AppleReceiptError::InvalidProfileField("proof_lane_labels.runtime_api")),
+        "Metal label accepted a CPU runtime API",
+    )?;
+    Ok(())
 }
 
 #[test]
