@@ -8695,6 +8695,8 @@ must_not_claim = [
 [[work_item]]
 id = "LNL258V-REG-010"
 status = "in_progress"
+pr = 6012
+head_sha = "d31b6080c9d9c9eeec44896f8043c227f5ac2356"
 branch = "codex/lunar-lake/LNL258V-REG-010-thermal-availability"
 stackable = false
 review_mode = "codex_premerge"
