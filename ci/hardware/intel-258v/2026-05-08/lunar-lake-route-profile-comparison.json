@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_profile_comparison",
   "proof_stage": "route_profiles_indexed_no_promotion_change",
-  "created_utc": "2026-05-20T02:05:00Z",
+  "created_utc": "2026-05-20T03:20:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
@@ -2890,7 +2890,10 @@
     "route_rows_with_identity": 23,
     "route_rows_with_model_hash": 9,
     "route_rows_with_tokenizer_template": 23,
+    "route_rows_without_model_hash_with_known_gap": 14,
     "all_route_rows_have_identity": true,
+    "all_route_rows_have_tokenizer_template": true,
+    "model_hash_or_explicit_gap_for_all_route_rows": true,
     "routes_without_model_hash": [
       "ask_normal:dense_slm_openvino_gpu_candidate",
       "ask_normal:dense_slm_openvino_npu_candidate",
@@ -2907,6 +2910,7 @@
       "warm_resident:dense_slm_openvino_gpu_candidate",
       "warm_resident:dense_slm_openvino_npu_candidate"
     ],
+    "routes_without_model_hash_missing_known_gap": [],
     "routes_without_tokenizer_template": []
   },
   "route_promotion_scope": {
