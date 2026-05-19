@@ -208,41 +208,44 @@ mod tests {
     }
 
     #[test]
-    fn gguf_reader_loader_accepts_string_model_bpe_metadata() {
+    fn gguf_reader_loader_accepts_string_model_bpe_metadata() -> Result<()> {
         let bytes = minimal_bpe_gguf();
-        let reader = GgufReader::new(&bytes).expect("minimal BPE GGUF should parse");
+        let reader = GgufReader::new(&bytes).context("minimal BPE GGUF should parse")?;
         let tokenizer = load_tokenizer_from_gguf_reader(&reader)
-            .expect("GGUF BPE tokenizer metadata should load");
+            .context("GGUF BPE tokenizer metadata should load")?;
 
         assert_eq!(tokenizer.vocab_size(), 6);
         assert_eq!(tokenizer.bos_token_id(), Some(0));
         assert_eq!(tokenizer.eos_token_id(), Some(1));
+        Ok(())
     }
 
     #[test]
-    fn gguf_reader_loader_parses_bpe_special_tokens_when_enabled() {
+    fn gguf_reader_loader_parses_bpe_special_tokens_when_enabled() -> Result<()> {
         let bytes = minimal_bpe_gguf();
-        let reader = GgufReader::new(&bytes).expect("minimal BPE GGUF should parse");
+        let reader = GgufReader::new(&bytes).context("minimal BPE GGUF should parse")?;
         let tokenizer = load_tokenizer_from_gguf_reader(&reader)
-            .expect("GGUF BPE tokenizer metadata should load");
+            .context("GGUF BPE tokenizer metadata should load")?;
 
         let ids = tokenizer
             .encode("<|eot_id|>", false, true)
-            .expect("parse_special should encode known GGUF special token");
+            .context("parse_special should encode known GGUF special token")?;
 
         assert_eq!(ids, vec![3]);
         assert_eq!(tokenizer.token_to_id("<|eot_id|>"), Some(3));
+        Ok(())
     }
 
     #[test]
-    fn gguf_reader_loader_does_not_synthesize_prefix_space() {
+    fn gguf_reader_loader_does_not_synthesize_prefix_space() -> Result<()> {
         let bytes = minimal_bpe_gguf();
-        let reader = GgufReader::new(&bytes).expect("minimal BPE GGUF should parse");
+        let reader = GgufReader::new(&bytes).context("minimal BPE GGUF should parse")?;
         let tokenizer = load_tokenizer_from_gguf_reader(&reader)
-            .expect("GGUF BPE tokenizer metadata should load");
+            .context("GGUF BPE tokenizer metadata should load")?;
 
-        let ids = tokenizer.encode("a", false, false).expect("a should encode");
+        let ids = tokenizer.encode("a", false, false).context("a should encode")?;
 
         assert_eq!(ids, vec![0]);
+        Ok(())
     }
 }
