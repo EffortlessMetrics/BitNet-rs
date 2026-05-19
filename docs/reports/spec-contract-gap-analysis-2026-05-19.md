@@ -59,7 +59,7 @@ campaign item. Anything that proves one run belongs in a receipt.
 6. **Model promotion ladder**
    - Add `docs/specs/BITNET-SPEC-MODEL-PROMOTION-LADDER.md`.
    - Define exact tier entry/reset rules and `next_proof` computation:
-     `registered -> structurally_valid -> reference_good -> cpu_answer_ready -> accelerator_answer_ready -> benchmark_qualified -> product_cli_ready -> server_ready`.
+     `registered -> structurally_valid -> reference_good -> cpu_answer_ready -> accelerator_answer_ready -> product_cli_ready -> benchmark_qualified -> server_ready`.
 
 7. **Performance/server/residency promotion safety**
    - Add:
