@@ -24,9 +24,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 9283,
-        "decode_first_ms": 9283,
-        "total_ms": 11640
+        "cmd_to_first_ms": 9349,
+        "decode_first_ms": 9349,
+        "total_ms": 11685
       },
       "loader": {
         "mode": "real_gguf"
@@ -212,21 +212,21 @@
       "task_family": "math",
       "throughput": {
         "decoded_tokens": 8,
-        "tokens_per_second": 0.6872852233676976
+        "tokens_per_second": 0.6846384253316217
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 2.973,
-        "decode_total_ms": 2693.78,
+        "decode_steady_state_tok_s": 2.999,
+        "decode_total_ms": 2665.111,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 338.958,
-        "first_token_ms": 9283,
+        "first_token_decode_ms": 330.648,
+        "first_token_ms": 9349,
         "host_to_device_bytes": null,
-        "model_load_ms": 14127.108,
-        "prefill_ms": 8943.884,
-        "sampling_ms_per_token": 2.157,
-        "tokenize_ms": 441.177,
-        "tokenizer_load_ms": 580.562
+        "model_load_ms": 13964.986,
+        "prefill_ms": 9017.752,
+        "sampling_ms_per_token": 2.143,
+        "tokenize_ms": 477.944,
+        "tokenizer_load_ms": 598.325
       },
       "token_ids": {
         "generated": [
@@ -370,9 +370,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 9727,
-        "decode_first_ms": 9727,
-        "total_ms": 12394
+        "cmd_to_first_ms": 9702,
+        "decode_first_ms": 9702,
+        "total_ms": 12354
       },
       "loader": {
         "mode": "real_gguf"
@@ -559,21 +559,21 @@
       "task_family": "math",
       "throughput": {
         "decoded_tokens": 9,
-        "tokens_per_second": 0.726157818299177
+        "tokens_per_second": 0.7285089849441477
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.001,
-        "decode_total_ms": 3003.701,
+        "decode_steady_state_tok_s": 3.019,
+        "decode_total_ms": 2994.801,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 337.558,
-        "first_token_ms": 9727,
+        "first_token_decode_ms": 344.695,
+        "first_token_ms": 9702,
         "host_to_device_bytes": null,
-        "model_load_ms": 13946.634,
-        "prefill_ms": 9388.907,
-        "sampling_ms_per_token": 2.349,
-        "tokenize_ms": 414.726,
-        "tokenizer_load_ms": 540.084
+        "model_load_ms": 13172.81,
+        "prefill_ms": 9356.763,
+        "sampling_ms_per_token": 2.222,
+        "tokenize_ms": 482.537,
+        "tokenizer_load_ms": 606.923
       },
       "token_ids": {
         "generated": [
@@ -724,9 +724,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 9719,
-        "decode_first_ms": 9719,
-        "total_ms": 10717
+        "cmd_to_first_ms": 9734,
+        "decode_first_ms": 9734,
+        "total_ms": 10727
       },
       "loader": {
         "mode": "real_gguf"
@@ -907,21 +907,21 @@
       "task_family": "copy_exact",
       "throughput": {
         "decoded_tokens": 4,
-        "tokens_per_second": 0.373238779509191
+        "tokens_per_second": 0.3728908362077002
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.009,
-        "decode_total_ms": 1343.685,
+        "decode_steady_state_tok_s": 3.024,
+        "decode_total_ms": 1325.365,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 346.623,
-        "first_token_ms": 9719,
+        "first_token_decode_ms": 333.181,
+        "first_token_ms": 9734,
         "host_to_device_bytes": null,
-        "model_load_ms": 13495.725,
-        "prefill_ms": 9371.813,
-        "sampling_ms_per_token": 2.33,
-        "tokenize_ms": 440.064,
-        "tokenizer_load_ms": 593.292
+        "model_load_ms": 13583.706,
+        "prefill_ms": 9399.498,
+        "sampling_ms_per_token": 2.176,
+        "tokenize_ms": 479.944,
+        "tokenizer_load_ms": 540.613
       },
       "token_ids": {
         "generated": [
@@ -1057,9 +1057,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 11887,
-        "decode_first_ms": 11887,
-        "total_ms": 11888
+        "cmd_to_first_ms": 11757,
+        "decode_first_ms": 11757,
+        "total_ms": 11759
       },
       "loader": {
         "mode": "real_gguf"
@@ -1240,21 +1240,21 @@
       "task_family": "yes_no",
       "throughput": {
         "decoded_tokens": 1,
-        "tokens_per_second": 0.08411843876177658
+        "tokens_per_second": 0.08504124500382686
       },
       "timing": {
         "cuda_kernel_time_ms": null,
         "decode_steady_state_tok_s": null,
-        "decode_total_ms": 338.244,
+        "decode_total_ms": 348.82,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 338.244,
-        "first_token_ms": 11887,
+        "first_token_decode_ms": 348.82,
+        "first_token_ms": 11757,
         "host_to_device_bytes": null,
-        "model_load_ms": 13420.391,
-        "prefill_ms": 11548.296,
-        "sampling_ms_per_token": 1.999,
-        "tokenize_ms": 394.383,
-        "tokenizer_load_ms": 583.094
+        "model_load_ms": 13436.342,
+        "prefill_ms": 11408.225,
+        "sampling_ms_per_token": 1.662,
+        "tokenize_ms": 451.293,
+        "tokenizer_load_ms": 561.639
       },
       "token_ids": {
         "generated": [
@@ -1397,9 +1397,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 8340,
-        "decode_first_ms": 8340,
-        "total_ms": 10635
+        "cmd_to_first_ms": 8425,
+        "decode_first_ms": 8425,
+        "total_ms": 10753
       },
       "loader": {
         "mode": "real_gguf"
@@ -1584,21 +1584,21 @@
       "task_family": "short_factual",
       "throughput": {
         "decoded_tokens": 8,
-        "tokens_per_second": 0.7522331922896098
+        "tokens_per_second": 0.7439784246256859
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.052,
-        "decode_total_ms": 2630.457,
+        "decode_steady_state_tok_s": 3.008,
+        "decode_total_ms": 2665.118,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 336.963,
-        "first_token_ms": 8340,
+        "first_token_decode_ms": 337.93,
+        "first_token_ms": 8425,
         "host_to_device_bytes": null,
-        "model_load_ms": 13692.657,
-        "prefill_ms": 8002.762,
-        "sampling_ms_per_token": 2.154,
-        "tokenize_ms": 468.182,
-        "tokenizer_load_ms": 593.467
+        "model_load_ms": 13429.22,
+        "prefill_ms": 8085.964,
+        "sampling_ms_per_token": 2.101,
+        "tokenize_ms": 438.19,
+        "tokenizer_load_ms": 515.997
       },
       "token_ids": {
         "generated": [
@@ -1734,9 +1734,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 8464,
-        "decode_first_ms": 8464,
-        "total_ms": 16106
+        "cmd_to_first_ms": 8692,
+        "decode_first_ms": 8692,
+        "total_ms": 16407
       },
       "loader": {
         "mode": "real_gguf"
@@ -1937,21 +1937,21 @@
       "task_family": "instruction_following",
       "throughput": {
         "decoded_tokens": 24,
-        "tokens_per_second": 1.490127902644977
+        "tokens_per_second": 1.4627902724446882
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.01,
-        "decode_total_ms": 7964.556,
+        "decode_steady_state_tok_s": 2.982,
+        "decode_total_ms": 8065.028,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 324.528,
-        "first_token_ms": 8464,
+        "first_token_decode_ms": 352.085,
+        "first_token_ms": 8692,
         "host_to_device_bytes": null,
-        "model_load_ms": 13518.629,
-        "prefill_ms": 8139.068,
-        "sampling_ms_per_token": 2.197,
-        "tokenize_ms": 410.286,
-        "tokenizer_load_ms": 581.168
+        "model_load_ms": 13575.444,
+        "prefill_ms": 8339.787,
+        "sampling_ms_per_token": 2.256,
+        "tokenize_ms": 423.955,
+        "tokenizer_load_ms": 575.362
       },
       "token_ids": {
         "generated": [
@@ -2137,9 +2137,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 9020,
-        "decode_first_ms": 9020,
-        "total_ms": 9356
+        "cmd_to_first_ms": 8911,
+        "decode_first_ms": 8911,
+        "total_ms": 9234
       },
       "loader": {
         "mode": "real_gguf"
@@ -2321,21 +2321,21 @@
       "task_family": "stop_and_eos",
       "throughput": {
         "decoded_tokens": 2,
-        "tokens_per_second": 0.21376656690893545
+        "tokens_per_second": 0.2165908598657137
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 2.996,
-        "decode_total_ms": 670.224,
+        "decode_steady_state_tok_s": 3.113,
+        "decode_total_ms": 657.315,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 336.455,
-        "first_token_ms": 9020,
+        "first_token_decode_ms": 336.08,
+        "first_token_ms": 8911,
         "host_to_device_bytes": null,
-        "model_load_ms": 13077.357,
-        "prefill_ms": 8683.805,
-        "sampling_ms_per_token": 2.223,
-        "tokenize_ms": 467.729,
-        "tokenizer_load_ms": 588.4
+        "model_load_ms": 13491.877,
+        "prefill_ms": 8575.207,
+        "sampling_ms_per_token": 2.224,
+        "tokenize_ms": 434.391,
+        "tokenizer_load_ms": 576.202
       },
       "token_ids": {
         "generated": [
@@ -2459,9 +2459,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 14425,
-        "decode_first_ms": 14425,
-        "total_ms": 14762
+        "cmd_to_first_ms": 14659,
+        "decode_first_ms": 14659,
+        "total_ms": 14997
       },
       "loader": {
         "mode": "real_gguf"
@@ -2640,21 +2640,21 @@
       "task_family": "prompt_history_sensitivity",
       "throughput": {
         "decoded_tokens": 2,
-        "tokens_per_second": 0.1354829968838911
+        "tokens_per_second": 0.1333600053344002
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 2.981,
-        "decode_total_ms": 672.894,
+        "decode_steady_state_tok_s": 2.968,
+        "decode_total_ms": 688.371,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 337.486,
-        "first_token_ms": 14425,
+        "first_token_decode_ms": 351.465,
+        "first_token_ms": 14659,
         "host_to_device_bytes": null,
-        "model_load_ms": 13797.931,
-        "prefill_ms": 14087.926,
-        "sampling_ms_per_token": 2.242,
-        "tokenize_ms": 438.954,
-        "tokenizer_load_ms": 570.841
+        "model_load_ms": 13619.472,
+        "prefill_ms": 14306.778,
+        "sampling_ms_per_token": 2.112,
+        "tokenize_ms": 515.335,
+        "tokenizer_load_ms": 579.335
       },
       "token_ids": {
         "generated": [
@@ -2824,9 +2824,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 10352,
-        "decode_first_ms": 10352,
-        "total_ms": 16969
+        "cmd_to_first_ms": 10341,
+        "decode_first_ms": 10341,
+        "total_ms": 17002
       },
       "loader": {
         "mode": "real_gguf"
@@ -3024,21 +3024,21 @@
       "task_family": "structured_output",
       "throughput": {
         "decoded_tokens": 21,
-        "tokens_per_second": 1.2375508279804348
+        "tokens_per_second": 1.2351488060228208
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.024,
-        "decode_total_ms": 6954.697,
+        "decode_steady_state_tok_s": 3.003,
+        "decode_total_ms": 7011.363,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 340.98,
-        "first_token_ms": 10352,
+        "first_token_decode_ms": 352.417,
+        "first_token_ms": 10341,
         "host_to_device_bytes": null,
-        "model_load_ms": 13197.19,
-        "prefill_ms": 10011.748,
-        "sampling_ms_per_token": 2.153,
-        "tokenize_ms": 476.267,
-        "tokenizer_load_ms": 608.666
+        "model_load_ms": 12976.773,
+        "prefill_ms": 9988.709,
+        "sampling_ms_per_token": 2.206,
+        "tokenize_ms": 542.224,
+        "tokenizer_load_ms": 614.715
       },
       "token_ids": {
         "generated": [
@@ -3231,9 +3231,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 23866,
-        "decode_first_ms": 23866,
-        "total_ms": 34379
+        "cmd_to_first_ms": 23753,
+        "decode_first_ms": 23753,
+        "total_ms": 34207
       },
       "loader": {
         "mode": "real_gguf"
@@ -3441,21 +3441,21 @@
       "task_family": "long_prompt_summarization",
       "throughput": {
         "decoded_tokens": 31,
-        "tokens_per_second": 0.9017132551848512
+        "tokens_per_second": 0.9062472593328852
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 2.854,
-        "decode_total_ms": 10860.793,
+        "decode_steady_state_tok_s": 2.871,
+        "decode_total_ms": 10811.378,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 350.612,
-        "first_token_ms": 23866,
+        "first_token_decode_ms": 361.3,
+        "first_token_ms": 23753,
         "host_to_device_bytes": null,
-        "model_load_ms": 13891.05,
-        "prefill_ms": 23515.556,
-        "sampling_ms_per_token": 2.247,
-        "tokenize_ms": 489.604,
-        "tokenizer_load_ms": 572.01
+        "model_load_ms": 13641.113,
+        "prefill_ms": 23392.544,
+        "sampling_ms_per_token": 2.235,
+        "tokenize_ms": 510.792,
+        "tokenizer_load_ms": 554.815
       },
       "token_ids": {
         "generated": [
@@ -3786,9 +3786,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 12030,
-        "decode_first_ms": 12030,
-        "total_ms": 12695
+        "cmd_to_first_ms": 12241,
+        "decode_first_ms": 12241,
+        "total_ms": 12921
       },
       "loader": {
         "mode": "real_gguf"
@@ -3968,21 +3968,21 @@
       "task_family": "short_reasoning",
       "throughput": {
         "decoded_tokens": 3,
-        "tokens_per_second": 0.23631350925561245
+        "tokens_per_second": 0.23218017181332715
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 3.01,
-        "decode_total_ms": 995.223,
+        "decode_steady_state_tok_s": 2.957,
+        "decode_total_ms": 1018.892,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 330.794,
-        "first_token_ms": 12030,
+        "first_token_decode_ms": 342.451,
+        "first_token_ms": 12241,
         "host_to_device_bytes": null,
-        "model_load_ms": 13333.099,
-        "prefill_ms": 11698.45,
-        "sampling_ms_per_token": 2.19,
-        "tokenize_ms": 472.057,
-        "tokenizer_load_ms": 597.16
+        "model_load_ms": 13408.083,
+        "prefill_ms": 11900.415,
+        "sampling_ms_per_token": 2.201,
+        "tokenize_ms": 403.432,
+        "tokenizer_load_ms": 629.793
       },
       "token_ids": {
         "generated": [
@@ -4135,9 +4135,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 13776,
-        "decode_first_ms": 13776,
-        "total_ms": 18877
+        "cmd_to_first_ms": 13618,
+        "decode_first_ms": 13618,
+        "total_ms": 18628
       },
       "loader": {
         "mode": "real_gguf"
@@ -4330,21 +4330,21 @@
       "task_family": "decode_heavy",
       "throughput": {
         "decoded_tokens": 16,
-        "tokens_per_second": 0.847592308099804
+        "tokens_per_second": 0.8589220528237063
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 2.942,
-        "decode_total_ms": 5447.627,
+        "decode_steady_state_tok_s": 2.995,
+        "decode_total_ms": 5342.403,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 348.247,
-        "first_token_ms": 13776,
+        "first_token_decode_ms": 334.254,
+        "first_token_ms": 13618,
         "host_to_device_bytes": null,
-        "model_load_ms": 13867.599,
-        "prefill_ms": 13426.872,
-        "sampling_ms_per_token": 2.463,
-        "tokenize_ms": 487.809,
-        "tokenizer_load_ms": 620.676
+        "model_load_ms": 13793.895,
+        "prefill_ms": 13284.13,
+        "sampling_ms_per_token": 2.185,
+        "tokenize_ms": 458.718,
+        "tokenizer_load_ms": 594.088
       },
       "token_ids": {
         "generated": [
@@ -4548,9 +4548,9 @@
         "selected_kernel": "dense-qwen-cpu-reference"
       },
       "latency": {
-        "cmd_to_first_ms": 9538,
-        "decode_first_ms": 9538,
-        "total_ms": 10213
+        "cmd_to_first_ms": 9570,
+        "decode_first_ms": 9570,
+        "total_ms": 10226
       },
       "loader": {
         "mode": "real_gguf"
@@ -4731,21 +4731,21 @@
       "task_family": "copy_exact",
       "throughput": {
         "decoded_tokens": 3,
-        "tokens_per_second": 0.2937432683834329
+        "tokens_per_second": 0.2933698415802855
       },
       "timing": {
         "cuda_kernel_time_ms": null,
-        "decode_steady_state_tok_s": 2.97,
-        "decode_total_ms": 1024.098,
+        "decode_steady_state_tok_s": 3.054,
+        "decode_total_ms": 1014.711,
         "device_to_host_bytes": null,
-        "first_token_decode_ms": 350.616,
-        "first_token_ms": 9538,
+        "first_token_decode_ms": 359.852,
+        "first_token_ms": 9570,
         "host_to_device_bytes": null,
-        "model_load_ms": 13468.504,
-        "prefill_ms": 9187.068,
-        "sampling_ms_per_token": 2.214,
-        "tokenize_ms": 433.599,
-        "tokenizer_load_ms": 559.986
+        "model_load_ms": 13460.46,
+        "prefill_ms": 9209.92,
+        "sampling_ms_per_token": 2.229,
+        "tokenize_ms": 448.403,
+        "tokenizer_load_ms": 598.605
       },
       "token_ids": {
         "generated": [
@@ -4859,6 +4859,339 @@
         ],
         "total": 43
       }
+    },
+    {
+      "answer": "Warm resident refers to a person",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "category": "resident_session",
+      "execution_plan": null,
+      "id": "warm_resident_route_copy",
+      "kernel": {
+        "family": "dense_qwen",
+        "selected_kernel": "dense-qwen-cpu-reference"
+      },
+      "latency": {
+        "cmd_to_first_ms": 8982,
+        "decode_first_ms": 8982,
+        "total_ms": 10684
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": null,
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 151936,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": null,
+        "observed_logits_vector_length": null,
+        "observed_logits_vector_length_source": "not_available"
+      },
+      "model": {
+        "architecture": "qwen2",
+        "family": "qwen",
+        "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+        "output_head_tensor": "output.weight",
+        "quant_format": "Q8_0",
+        "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+        "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+        "tie_word_embeddings": false,
+        "vocab_size": 151936
+      },
+      "position": {
+        "next_decode_position": 37
+      },
+      "profile": "warm_resident",
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "qwen_no_think": false,
+        "rendered_sha256": "ce3063f9f7c87a1f6a193da742a3b07ec0f4452bdce6736acb331755f10582b4",
+        "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nAnswer with this exact phrase: warm resident<|im_end|>\n<|im_start|>assistant\n",
+        "template_family": "qwen2.5"
+      },
+      "prompt_generation_identity": {
+        "generation_parameters": {
+          "deterministic": true,
+          "fixed_token_count": false,
+          "greedy": true,
+          "max_new_tokens": 6,
+          "qwen_no_think": false,
+          "repetition_penalty": 1.100000023841858,
+          "seed": null,
+          "stream": null,
+          "temperature": 0.0,
+          "threads": 1,
+          "top_k": 0,
+          "top_p": 1.0
+        },
+        "generation_params_sha256": "3d4808c7a2fa288b52ba506d70b3ffb58a300df2c26b7abb7563bcd363aca90e",
+        "identity_sha256": "99ec99287290b7a29a4505f16df631c68899e165e09c9f1657483e4a6714041b",
+        "schema_version": "1.0.0",
+        "stop_criteria": {
+          "manual_stop_sequences": [],
+          "manual_stop_token_ids": [],
+          "policy": "manual_plus_template_defaults",
+          "stop_sequences": [
+            "<|im_end|>",
+            "<|im_start|>"
+          ],
+          "stop_string_window": 10,
+          "stop_token_ids": [
+            151645,
+            151644
+          ]
+        },
+        "stop_criteria_sha256": "51dbd89eb1b858882b35fc2340257e0c109c8261500f46ba8b5b6cd2687948ca",
+        "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+        "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+        "template": {
+          "family": "qwen25-chat",
+          "source": "bitnet-prompt-templates-core"
+        },
+        "template_family": "qwen25-chat",
+        "template_sha256": "be829f95ac1a95f9fd9b9641a7df864186594cde3285438f6f8fdddc89c428e3",
+        "tokenizer_authority": {
+          "authority": "present",
+          "sha256": null,
+          "source": "gguf_metadata",
+          "strict": true
+        }
+      },
+      "prompt_prefill": {
+        "decode_start_position": 37,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 37,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "qwen2.5",
+      "quality": {
+        "distinct_generated_tokens": 6,
+        "failed_rules": [],
+        "failure_categories": {
+          "extraction": false,
+          "factual_table": false,
+          "formatting": false,
+          "normalization": false,
+          "refusal": false,
+          "schema": false,
+          "timeout": false
+        },
+        "failure_category_labels": [],
+        "failure_taxonomy": [],
+        "gate_kind": "readable",
+        "generated_tokens": 6,
+        "min_distinct_generated_tokens": 2,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true,
+        "scoring": {
+          "details": {
+            "kind": "required_keywords",
+            "required_keywords_missing": []
+          },
+          "failed_rules": [],
+          "failure_categories": {
+            "extraction": false,
+            "factual_table": false,
+            "formatting": false,
+            "normalization": false,
+            "refusal": false,
+            "schema": false,
+            "timeout": false
+          },
+          "failure_category_labels": [],
+          "failure_taxonomy": [],
+          "kind": "required_keywords",
+          "normalized_answer": "Warm resident refers to a person",
+          "passed": true
+        }
+      },
+      "question": "Answer with this exact phrase: warm resident",
+      "reference_comparison": {
+        "comparison": {
+          "comparable_fields": [],
+          "generated_token_ids_match": null,
+          "mismatched_fields": [],
+          "missing_fields": [
+            "reference.text",
+            "reference.generated_token_ids"
+          ],
+          "status": "reference_not_supplied",
+          "text_match": null
+        },
+        "enabled": false,
+        "reference": {
+          "generated_token_ids": null,
+          "receipt": null,
+          "runner": null,
+          "source": null,
+          "text": null
+        },
+        "rust": {
+          "fallback_used": false,
+          "generated_token_ids": [
+            95275,
+            18967,
+            19257,
+            311,
+            264,
+            1697
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust",
+          "status": "available",
+          "text": "Warm resident refers to a person"
+        },
+        "schema": "bitnet_reference_vs_rust_v1"
+      },
+      "run_receipt_path": "ci/hardware/intel-258v/2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\warm_resident_route_copy.json",
+      "seed_material": null,
+      "status": "passed",
+      "task_family": "resident_session",
+      "throughput": {
+        "decoded_tokens": 6,
+        "tokens_per_second": 0.5615874204417821
+      },
+      "timing": {
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 2.94,
+        "decode_total_ms": 2044.662,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 344.198,
+        "first_token_ms": 8982,
+        "host_to_device_bytes": null,
+        "model_load_ms": 13531.818,
+        "prefill_ms": 8637.309,
+        "sampling_ms_per_token": 2.369,
+        "tokenize_ms": 493.332,
+        "tokenizer_load_ms": 617.611
+      },
+      "token_ids": {
+        "generated": [
+          95275,
+          18967,
+          19257,
+          311,
+          264,
+          1697
+        ],
+        "prompt": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          1207,
+          16948,
+          11,
+          3465,
+          553,
+          54364,
+          14817,
+          13,
+          1446,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          16141,
+          448,
+          419,
+          4734,
+          17133,
+          25,
+          8205,
+          18967,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ]
+      },
+      "tokenizer": {
+        "model_family": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "source": "gguf_metadata",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 6,
+        "generated_ids": [
+          95275,
+          18967,
+          19257,
+          311,
+          264,
+          1697
+        ],
+        "ids": [
+          95275,
+          18967,
+          19257,
+          311,
+          264,
+          1697
+        ],
+        "prompt": 37,
+        "prompt_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          1207,
+          16948,
+          11,
+          3465,
+          553,
+          54364,
+          14817,
+          13,
+          1446,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          16141,
+          448,
+          419,
+          4734,
+          17133,
+          25,
+          8205,
+          18967,
+          151645,
+          198,
+          151644,
+          77091,
+          198
+        ],
+        "total": 43
+      }
     }
   ],
   "claim_boundary": {
@@ -4879,7 +5212,7 @@
     "strict_cuda_answer_claimed": false
   },
   "corpus": {
-    "case_count": 13,
+    "case_count": 14,
     "contract": null,
     "description": "Bounded Lunar Lake dense Qwen2.5 answer corpus v2 for profile-aware route regression.",
     "id": "lunar-lake-qwen25-answer-corpus-v2",
@@ -4903,7 +5236,7 @@
     },
     "name": "lunar-lake-qwen25-answer-corpus-v2",
     "path": "ci/quality/lunar-lake-answer-corpus-v2.yaml",
-    "selected_case_count": 13,
+    "selected_case_count": 14,
     "selected_case_ids": [
       "math_2_plus_2_brief",
       "arithmetic_add_7_8",
@@ -4917,7 +5250,8 @@
       "long_prompt_summary_route_policy",
       "short_reasoning_apples_left",
       "decode_heavy_short_list",
-      "low_power_route_evidence_copy"
+      "low_power_route_evidence_copy",
+      "warm_resident_route_copy"
     ]
   },
   "execution_plan": null,
@@ -5097,6 +5431,26 @@
       },
       "timeout": 0,
       "total": 1
+    },
+    "warm_resident": {
+      "failed": 0,
+      "failure_categories": {},
+      "failure_taxonomy": {},
+      "not_run": 0,
+      "other_statuses": {},
+      "passed": 1,
+      "scoring": {
+        "enabled": true,
+        "failed": 0,
+        "kinds": [
+          "required_keywords"
+        ],
+        "not_run": 0,
+        "passed": 1,
+        "total": 1
+      },
+      "timeout": 0,
+      "total": 1
     }
   },
   "prompt_generation_identity": {
@@ -5156,9 +5510,9 @@
     "failed": 0,
     "failure_categories": {},
     "not_run": 0,
-    "passed": 13,
+    "passed": 14,
     "timeout": 0,
-    "total": 13
+    "total": 14
   },
   "quantization": "Q8_0",
   "receipt_quality": {
@@ -5260,13 +5614,13 @@
       "mismatched_fields": {},
       "not_run": 0,
       "partially_compared": 0,
-      "reference_not_supplied": 13,
+      "reference_not_supplied": 14,
       "reference_supplied": 0,
       "status_counts": {
-        "reference_not_supplied": 13
+        "reference_not_supplied": 14
       },
       "text_matches": 0,
-      "total": 13
+      "total": 14
     }
   },
   "requested_backend": "cpu",
@@ -5312,8 +5666,8 @@
       "required_keywords"
     ],
     "not_run": 0,
-    "passed": 13,
-    "total": 13
+    "passed": 14,
+    "total": 14
   },
   "selected_backend": "cpu-rust",
   "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
@@ -5440,6 +5794,26 @@
       "timeout": 0,
       "total": 1
     },
+    "resident_session": {
+      "failed": 0,
+      "failure_categories": {},
+      "failure_taxonomy": {},
+      "not_run": 0,
+      "other_statuses": {},
+      "passed": 1,
+      "scoring": {
+        "enabled": true,
+        "failed": 0,
+        "kinds": [
+          "required_keywords"
+        ],
+        "not_run": 0,
+        "passed": 1,
+        "total": 1
+      },
+      "timeout": 0,
+      "total": 1
+    },
     "short_factual": {
       "failed": 0,
       "failure_categories": {},
@@ -5541,7 +5915,7 @@
       "total": 1
     }
   },
-  "timestamp": "2026-05-19T02:28:35.302844800+00:00",
+  "timestamp": "2026-05-19T05:02:52.197936800+00:00",
   "tokenizer": {
     "authority": null,
     "path": null,

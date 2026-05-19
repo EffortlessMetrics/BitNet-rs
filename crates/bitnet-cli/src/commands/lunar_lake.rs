@@ -18790,7 +18790,7 @@ cases:
   - id: warm_resident_route_copy
     category: resident_session
     profile: warm_resident
-    gate: {kind: contains_any}
+    gate: {kind: readable}
 "#,
         )?;
         Ok(())

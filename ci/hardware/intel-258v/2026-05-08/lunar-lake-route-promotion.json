@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_promotion_ledger",
   "proof_stage": "route_promotion_policy_recorded",
-  "created_utc": "2026-05-19T12:15:00Z",
+  "created_utc": "2026-05-19T15:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -158,7 +158,7 @@
       "phase_timing_present": true,
       "speedup_claim": false,
       "acceleration_claim": false,
-      "last_evidence_utc": "2026-05-14T11:20:00Z",
+      "last_evidence_utc": "2026-05-19T15:46:00Z",
       "reason": "Dense Qwen CPU remains the default route id and regression baseline, but OpenVINO GPU supersedes it for benchmark-qualified profiles [ask_normal,ask_short]."
     },
     {
@@ -195,7 +195,7 @@
       "phase_timing_present": false,
       "speedup_claim": false,
       "acceleration_claim": false,
-      "last_evidence_utc": "2026-05-14T11:20:00Z",
+      "last_evidence_utc": "2026-05-19T15:46:00Z",
       "reason": "BitNet CPU is promoted only as the strict BitNet reference route; dense Qwen CPU remains the default user-facing route."
     },
     {
@@ -237,7 +237,7 @@
       "phase_timing_present": true,
       "speedup_claim": false,
       "acceleration_claim": false,
-      "last_evidence_utc": "2026-05-14T11:20:00Z",
+      "last_evidence_utc": "2026-05-19T15:46:00Z",
       "reason": "OpenVINO GPU is promoted only for benchmark-qualified dense Qwen profiles [ask_normal,ask_short] with fallback=false, passing corpus-v2 evidence, direct token visibility, profile-matched timing, and lower total response than the CPU baseline."
     },
     {
@@ -280,7 +280,7 @@
       "phase_timing_present": true,
       "speedup_claim": false,
       "acceleration_claim": false,
-      "last_evidence_utc": "2026-05-14T11:20:00Z",
+      "last_evidence_utc": "2026-05-19T15:46:00Z",
       "reason": "OpenVINO NPU has bounded INT4 dense SLM answer and phase evidence with fallback=false, but remains a candidate until profile-specific advantage and constraints are recorded."
     }
   ],

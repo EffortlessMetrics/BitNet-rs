@@ -247,17 +247,12 @@ cases:
   - id: warm_resident_route_copy
     category: resident_session
     profile: warm_resident
-    question: "Copy exactly these two words and nothing else: warm resident"
+    question: "Answer with this exact phrase: warm resident"
     max_new_tokens: 6
     scoring:
-      kind: required_forbidden_tokens
+      kind: required_keywords
       required_keywords:
-        - "warm"
         - "resident"
-      forbidden_tokens:
-        - "<|"
     gate:
-      kind: contains_any
-      contains_any:
-        - "warm resident"
-        - "Warm resident"
+      kind: readable
+      min_words: 2

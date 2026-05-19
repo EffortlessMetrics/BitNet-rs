@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T14:35:00Z",
+  "created_utc": "2026-05-19T15:46:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -15,7 +15,7 @@
     "model_architecture": "qwen2",
     "quantization": "Q8_0",
     "prompt_template": "qwen2.5",
-    "case_count": 13,
+    "case_count": 14,
     "profiles": [
       "ask_normal",
       "ask_short",
@@ -23,7 +23,8 @@
       "low_power",
       "prefill_heavy",
       "regression_tiny",
-      "structured"
+      "structured",
+      "warm_resident"
     ],
     "categories": [
       "copy_exact",
@@ -32,6 +33,7 @@
       "long_prompt_summarization",
       "math",
       "prompt_history_sensitivity",
+      "resident_session",
       "short_factual",
       "short_reasoning",
       "stop_and_eos",
@@ -81,7 +83,6 @@
       "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
       "benchmark_qualified_speedup_or_power_advantage",
       "candidate route requires benchmark-qualified profile evidence",
-      "corpus_v2 profile quality evidence missing",
       "power advantage evidence missing for low_power promotion",
       "route not promoted for profile ask_normal",
       "route not promoted for profile ask_short",
@@ -89,8 +90,7 @@
       "route not promoted for profile low_power",
       "route not promoted for profile prefill_heavy",
       "route not promoted for profile regression_tiny",
-      "route not promoted for profile warm_resident",
-      "timing coverage has missing profile fields"
+      "route not promoted for profile warm_resident"
     ],
     "gpu_npu_promotion_blocker_summary": [
       {
@@ -111,7 +111,7 @@
       },
       {
         "blocker": "benchmark_qualified_speedup_or_power_advantage",
-        "occurrence_count": 7,
+        "occurrence_count": 6,
         "route_ids": [
           "dense_slm_openvino_npu_candidate"
         ],
@@ -121,14 +121,13 @@
           "decode_heavy",
           "low_power",
           "prefill_heavy",
-          "regression_tiny",
-          "warm_resident"
+          "regression_tiny"
         ],
         "next_action": "produce benchmark-qualified latency, throughput, power, or stability advantage evidence before promotion"
       },
       {
         "blocker": "candidate route requires benchmark-qualified profile evidence",
-        "occurrence_count": 7,
+        "occurrence_count": 6,
         "route_ids": [
           "dense_slm_openvino_npu_candidate"
         ],
@@ -138,23 +137,9 @@
           "decode_heavy",
           "low_power",
           "prefill_heavy",
-          "regression_tiny",
-          "warm_resident"
+          "regression_tiny"
         ],
         "next_action": "produce benchmark-qualified latency, throughput, power, or stability advantage evidence before promotion"
-      },
-      {
-        "blocker": "corpus_v2 profile quality evidence missing",
-        "occurrence_count": 3,
-        "route_ids": [
-          "dense_slm_default_cpu",
-          "dense_slm_openvino_gpu_candidate",
-          "dense_slm_openvino_npu_candidate"
-        ],
-        "profile_ids": [
-          "warm_resident"
-        ],
-        "next_action": "run corpus-v2 profile evidence for this route/profile before evaluating promotion"
       },
       {
         "blocker": "power advantage evidence missing for low_power promotion",
@@ -256,17 +241,6 @@
           "warm_resident"
         ],
         "next_action": "run NPU cache/resident warm-route proof and keep cold one-off routing blocked until classified"
-      },
-      {
-        "blocker": "timing coverage has missing profile fields",
-        "occurrence_count": 1,
-        "route_ids": [
-          "dense_slm_openvino_gpu_candidate"
-        ],
-        "profile_ids": [
-          "warm_resident"
-        ],
-        "next_action": "record profile-specific prefill/decode timing that satisfies the workload profile bounds"
       }
     ],
     "route_promotion_scope": {
@@ -486,7 +460,8 @@
       "structured",
       "prefill_heavy",
       "decode_heavy",
-      "low_power"
+      "low_power",
+      "warm_resident"
     ],
     "required_answer_categories": [
       "math",
@@ -499,7 +474,8 @@
       "structured_output",
       "long_prompt_summarization",
       "short_reasoning",
-      "decode_heavy"
+      "decode_heavy",
+      "resident_session"
     ],
     "required_route_profiles": [
       "regression_tiny",
@@ -645,9 +621,9 @@
         "ci/quality/lunar-lake-answer-corpus-v2.yaml"
       ],
       "notes": [
-        "case_count=13",
-        "profiles=ask_normal,ask_short,decode_heavy,low_power,prefill_heavy,regression_tiny,structured",
-        "categories=copy_exact,decode_heavy,instruction_following,long_prompt_summarization,math,prompt_history_sensitivity,short_factual,short_reasoning,stop_and_eos,structured_output,yes_no",
+        "case_count=14",
+        "profiles=ask_normal,ask_short,decode_heavy,low_power,prefill_heavy,regression_tiny,structured,warm_resident",
+        "categories=copy_exact,decode_heavy,instruction_following,long_prompt_summarization,math,prompt_history_sensitivity,resident_session,short_factual,short_reasoning,stop_and_eos,structured_output,yes_no",
         "claim_boundary_preserved=true"
       ]
     },
@@ -664,7 +640,7 @@
         "fallback_observed=false",
         "profile_specific_timing=21/23",
         "proxy_or_missing_timing_routes_blocked=true",
-        "promotion_blocker_summary_count=13",
+        "promotion_blocker_summary_count=11",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short",
         "openvino_npu_promoted_profiles=",
         "profile_scoped_promotion_only=true"
