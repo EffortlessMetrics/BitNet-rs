@@ -8643,6 +8643,54 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-THERMAL-002"
+status = "in_progress"
+pr = 6007
+branch = "codex/lunar-lake/LNL258V-THERMAL-002-temperature-availability"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-THERMAL-001", "LNL258V-GOAL-AUDIT-001"]
+acceptance = "Add a no-inference Lunar Lake thermal temperature availability diagnosis receipt that records the Windows MSAcpi thermal-zone, thermal-zone counter, and Win32 temperature-probe sources inspected on the 258V, preserves thermal-zone visibility, classifies zero/null/sentinel temperature fields as unavailable, and keeps low_power, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, and BitNet QK256/I2_S behavior claims unchanged."
+commands = [
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-thermal-temperature-availability.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-thermal-temperature-availability.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+]
+may_claim = [
+  "The Lunar Lake thermal temperature availability diagnosis records that Windows thermal-zone visibility exists but no usable measured temperature reading is available from the probed OS sources.",
+  "The diagnosis preserves the existing thermal unavailable gap and leaves route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, and BitNet QK256/I2_S behavior claims unchanged.",
+]
+must_not_claim = [
+  "A measured thermal temperature is available.",
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-006"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
