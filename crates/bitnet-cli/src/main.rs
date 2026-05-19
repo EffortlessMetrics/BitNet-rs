@@ -7641,7 +7641,6 @@ fn qk256_dispatch_coverage_receipt(
     })
 }
 
-#[cfg(feature = "full-cli")]
 fn qk256_cpu_hot_path_receipt(
     counters: &bitnet_qk256_dispatch::Qk256CpuHotPathCounters,
 ) -> serde_json::Value {
