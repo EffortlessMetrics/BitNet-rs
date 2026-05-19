@@ -1,0 +1,16 @@
+timestamp = "2026-05-19T07:23:50Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-002"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5887
+merge_sha = "7b8c7ad8b8594d376fb08ac94089363781bab1ea"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-002-p50-p90-p99"
+
+notes = [
+  "Merged PR #5887 publishing the committed dense SLM benchmark-v2 envelope for all supported M4 dense Qwen model IDs.",
+  "The documented receipts are the 2026-05-15T1845Z full-profile summaries with nine profiles, p50/p90/p99 and min/max profile stats, exact model SHA identity, apple-m4-cpu-neon, and fallback_used=false.",
+  "The merge does not claim BitNet performance, broad Apple Silicon performance, MacBook behavior, Metal inference, QK256, Neural Engine, MPSGraph, or a speedup.",
+]
