@@ -2988,10 +2988,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-015"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-model-015-qwen3-repeated-comparator-plan"
 pr = 5931
-head_sha = "17c9ce6db387860a0cdaaa82e7872f1e1835d18c"
+head_sha = "ded4f8d55fd3f5e1163f6dd9585c77ac886156a2"
+merge_sha = "f0221874619a6bf63f5c213a4fd4bc142dc63e52"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
