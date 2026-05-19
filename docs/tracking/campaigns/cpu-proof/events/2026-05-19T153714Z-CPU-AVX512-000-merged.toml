@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T15:37:14Z"
+campaign = "cpu-proof"
+item = "CPU-AVX512-000"
+event = "merged"
+pr = 5554
+head_sha = "18ec173922bea3c858aaaa9f8194fe62cd6ac1b9"
+merge_sha = "f3e1986ecb48b55cc0258127d2e378d50400e8ce"
+actor = "codex"
+
+notes = [
+  "Merged #5554 added the AVX-512 kernel contract, strict CPU ISA selection spec, 9950X3D roadmap, kernel matrix boundaries, and CPU AVX-512 implementation plan.",
+  "The closeout records the docs-only AVX-512 proof rails as merged before any runtime AVX-512 implementation starts.",
+  "No AVX-512 optimized kernel, auto-selection, speedup, sustained-performance, GPU/NPU/OpenVINO/OpenCL/CUDA/Metal/WGPU/server, or answer-quality readiness claim was made.",
+]

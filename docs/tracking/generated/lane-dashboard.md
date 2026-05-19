@@ -30,14 +30,14 @@
 | apple-silicon-macbook | Apple Silicon MacBook cross-reference | MB-AS-002 | Do not reopen the completed apple-m4 proof, operational, SLM answer, productization, performance, hardening, or regression campaigns. |
 | bitnet-b158-3b | BitNet b1.58 3B TL candidate | B158-3B-001 | Do not commit model binaries. |
 | ci-coverage | CI coverage | CI-COVERAGE-002 | Do not block unrelated runtime or tracker work on optional coverage uploads. |
-| cpu-proof | BitNet CPU proof | CPU-AVX512-000 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
+| cpu-proof | BitNet CPU proof | CPU-AVX2-HOTPATH-001 | 258V CPU is the lead BitNet CPU reference; no GPU or NPU claims. |
 | cpu-qk256-performance | CPU QK256 performance | KBL8250U-004 | Do not claim performance before strict proof receipts exist. |
 | crate-collapse | Crate collapse | LEAF-001 | Do not combine crate movement with runtime proof. |
 | falcon-e-family | Falcon-E Family compact 1.58-bit lane | FE-000 | Do not commit model binaries. |
 | falcon3-family | Falcon3 multi-size BitNet-family onboarding | F3-000 | Do not commit model binaries. |
 | i2s | I2_S productization | I2S-DOCS-000 | Do not change runtime code in docs-only I2_S tracker slices. |
 | intel-258v-platform | Intel 258V platform validation | LNL258V-POWER-006 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
-| intel-a770 | Intel Arc A770 validation | A770-003 | OpenCL-first for native A770 proof. |
+| intel-a770 | Intel Arc A770 validation | A770-004 | OpenCL-first for native A770 proof. |
 | intel-npu | Intel NPU validation | NPU-013 | Device-node detection is not inference. |
 | llama3-8b-158 | Llama3 8B 1.58 supported-model candidate | LLAMA3-158-000 | Do not commit model binaries. |
 | model-artifacts | Model artifact answer authority | MODEL-ARTIFACT-002 | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |

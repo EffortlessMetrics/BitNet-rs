@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T16:01:57Z"
+campaign = "intel-a770"
+item = "A770-003"
+event = "pr_open"
+pr = 5969
+head_sha = "f86bc087913a3c2251a8a97c730ac060b2ff7d18"
+branch = "codex/intel-a770/A770-003-backend-identity"
+actor = "codex"
+
+notes = [
+  "Opened PR #5969 to preserve Intel Arc A770 OpenCL requested and selected backend identity through config and backend-selection surfaces.",
+  "The PR keeps A770 OpenCL strict and label-preserving without adding kernels or inference claims.",
+  "No A770 OpenCL execution, OpenVINO GPU/native OpenCL equivalence, BitNet inference-on-A770, speedup, route promotion, or QK256 behavior claim is made.",
+]

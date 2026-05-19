@@ -15,6 +15,7 @@ impl FromStr for DeviceConfig {
             "openvino-npu" | "intel-npu-openvino" => Ok(DeviceConfig::OpenVinoNpu),
             "nvidia-rtx-5070-ti-cuda" => Ok(DeviceConfig::NvidiaRtx5070TiCuda),
             "nvidia-rtx-5070-ti-wgpu" => Ok(DeviceConfig::NvidiaRtx5070TiWgpu),
+            "intel-a770-opencl" | "a770-opencl" => Ok(DeviceConfig::IntelA770OpenCl),
             "metal" => Ok(DeviceConfig::Metal),
             "mpsgraph" => Ok(DeviceConfig::MpsGraph),
             "apple-m4-metal" => Ok(DeviceConfig::AppleM4Metal),

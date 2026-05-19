@@ -38,6 +38,7 @@ mod tests {
             parse_device("nvidia-rtx-5070-ti-wgpu"),
             Some(DeviceConfig::NvidiaRtx5070TiWgpu)
         );
+        assert_eq!(parse_device("intel-a770-opencl"), Some(DeviceConfig::IntelA770OpenCl));
         assert_eq!(parse_device("metal"), Some(DeviceConfig::Metal));
         assert_eq!(parse_device("mpsgraph"), Some(DeviceConfig::MpsGraph));
         assert_eq!(parse_device("apple-m4-metal"), Some(DeviceConfig::AppleM4Metal));
@@ -136,6 +137,20 @@ mod tests {
         assert_ne!(rtx_cuda.backend_label(), generic_cuda.backend_label());
         assert_ne!(rtx_wgpu.backend_label(), generic_gpu.backend_label());
         assert_ne!(rtx_wgpu.backend_label(), generic_cuda.backend_label());
+    }
+
+    #[test]
+    fn intel_a770_opencl_backend_label_does_not_alias_generic_gpu_or_oneapi() {
+        let generic_gpu = DeviceConfig::Gpu(0);
+        let generic_opencl_alias = DeviceConfig::Gpu(0);
+        let a770 = DeviceConfig::IntelA770OpenCl;
+
+        assert_eq!(a770.backend_label(), "intel-a770-opencl");
+        assert_eq!(a770.backend_request().to_string(), "intel-a770-opencl");
+        assert_eq!(a770.resolve(), bitnet_common::Device::OpenCL(0));
+        assert_ne!(a770.backend_label(), generic_gpu.backend_label());
+        assert_ne!(a770.backend_label(), generic_opencl_alias.backend_label());
+        assert_ne!(a770.backend_request(), bitnet_common::BackendRequest::OneApi);
     }
 
     #[test]
@@ -256,6 +271,7 @@ mod tests {
             DeviceConfig::OpenVinoNpu,
             DeviceConfig::NvidiaRtx5070TiCuda,
             DeviceConfig::NvidiaRtx5070TiWgpu,
+            DeviceConfig::IntelA770OpenCl,
             DeviceConfig::Metal,
             DeviceConfig::MpsGraph,
             DeviceConfig::AppleM4Metal,
