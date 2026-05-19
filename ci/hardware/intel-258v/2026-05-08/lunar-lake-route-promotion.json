@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_promotion_ledger",
   "proof_stage": "route_promotion_policy_recorded",
-  "created_utc": "2026-05-18T22:45:00Z",
+  "created_utc": "2026-05-19T12:15:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -246,9 +246,12 @@
       "promoted_for": [],
       "blocked_for": [
         "auto_default",
+        "cold_start_compile_load_blocker",
         "dynamic_decode",
         "beam_search",
-        "parallel_sampling"
+        "parallel_sampling",
+        "low_power_power_advantage_unproven",
+        "warm_resident_profile_unqualified"
       ],
       "required_evidence": [
         "fallback_used=false",
@@ -261,11 +264,11 @@
       ],
       "present_evidence": [
         "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-        "slm-openvino-cpu-gpu-npu-phase-runner.json"
+        "slm-openvino-cpu-gpu-npu-phase-runner.json",
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json"
       ],
       "missing_evidence": [
-        "benchmark_qualified_speedup_or_power_advantage",
-        "profile_regression_bundle"
+        "benchmark_qualified_speedup_or_power_advantage"
       ],
       "selected_backend": "openvino-npu",
       "runtime_api": "openvino_genai",
