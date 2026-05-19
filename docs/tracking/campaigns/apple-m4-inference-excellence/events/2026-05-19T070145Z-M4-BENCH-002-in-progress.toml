@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T07:01:45Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-002-p50-p90-p99"
+
+notes = [
+  "Started M4-BENCH-002 after M4-BENCH-001, M4-BENCH-004, and M4-BENCH-007 were merged.",
+  "Auditing the committed 2026-05-15T1845Z dense SLM benchmark-v2 summaries before rerunning live benchmarks.",
+  "Initial receipt-check validation passed for all three supported dense Qwen summaries with apple-m4-cpu-neon and fallback_used=false.",
+]

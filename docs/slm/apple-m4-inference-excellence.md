@@ -332,6 +332,25 @@ fixtures, profile timeout rules, and invalid-comparison reasons. It is a
 precondition for interpreting later benchmark envelopes, not a benchmark
 envelope itself.
 
+`M4-BENCH-002` publishes the committed dense SLM `slm-benchmark-v2` summaries
+from `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/` as the
+current full-profile benchmark envelope for the supported Qwen model set. Each
+summary is a release-mode `apple_m4_slm_benchmark_v2` receipt with the nine
+required profiles, 201 prompt runs, exact model SHA identity,
+`selected_backend=apple-m4-cpu-neon`, `fallback_used=false`, p50/p90/p99 plus
+min/max profile stats, and dense-only claim boundaries. The release
+`mac receipts-check ... --json` validator passes for all three summaries.
+
+| Model | TTFT p50 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 | Peak memory p50 |
+|---|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 2150 ms | 21.701 | 1.708 | 15.652 | 4051.297 MB |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 2150 ms | 21.698 | 3.079 | 15.653 | 4053.719 MB |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 8184 ms | 5.773 | 0.357 | 4.808 | 8395.047 MB |
+
+These are bounded M4 Mac mini dense SLM benchmark receipts only. They do not
+prove BitNet performance, broad Apple Silicon performance, MacBook behavior,
+Metal inference, QK256, Neural Engine, MPSGraph, or a speedup.
+
 `M4-BENCH-006` keeps BitNet timing variance explicit instead of relying on the
 shared benchmark envelope alone. It records one-shot and warm-session run
 counts, sample counts, timeout-stage accounting, variance bands, outlier

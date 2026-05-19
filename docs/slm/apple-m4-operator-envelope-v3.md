@@ -21,6 +21,12 @@ The durable envelope is based on these committed evidence surfaces:
 | BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | comparable matching history exists |
 | Report dashboard | `target/apple-m4-inference-excellence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | refreshed by `M4-EXCELLENCE-003`; five families, 18 reports, and nine comparable groups |
 
+`M4-BENCH-002` validates the dense SLM benchmark surface above with
+`target/release/bitnet mac receipts-check ... --json` for all three supported
+Qwen summaries. The validation covers the receipt contract, full profile set,
+p50/p90/p99 and min/max timing fields, model SHA identity, backend/fallback
+state, generated text/token IDs, and dense-only claim boundaries.
+
 All durable refresh receipts used by this envelope keep the supported local M4
 route bounded to:
 
