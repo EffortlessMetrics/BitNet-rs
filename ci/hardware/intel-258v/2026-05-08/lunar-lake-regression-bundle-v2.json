@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-19T13:52:00Z",
+  "created_utc": "2026-05-19T14:18:45Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -429,6 +429,23 @@
     "requested_device": "auto",
     "requested_route": "auto",
     "route_selection_blocked": true,
+    "candidate_routes": [
+      "dense_slm_default_cpu",
+      "dense_slm_openvino_npu_candidate",
+      "dense_slm_openvino_gpu_candidate"
+    ],
+    "why_not_cpu": [
+      "route is not promoted for profile `low_power`"
+    ],
+    "why_not_gpu": [
+      "route blocker for profile `low_power`: low_power_power_advantage_unproven",
+      "route is not promoted for profile `low_power`"
+    ],
+    "why_not_npu": [
+      "route blocker for profile `low_power`: auto_default",
+      "route blocker for profile `low_power`: low_power_power_advantage_unproven",
+      "route is not promoted for profile `low_power`"
+    ],
     "new_inference_executed": false,
     "fallback_used": false,
     "route_promotion_changed": false,
@@ -436,7 +453,7 @@
     "power_advantage_claim": false,
     "acceleration_claim": false,
     "bitnet_qk256_i2s_claim": false,
-    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage | route blocker for profile `low_power`: auto_default | route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power` | route status is `candidate`",
+    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default | route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`",
     "regression_ready": true,
     "gaps": []
   },
@@ -761,6 +778,10 @@
         "requested_device=auto",
         "requested_route=auto",
         "route_selection_blocked=true",
+        "candidate_routes=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate",
+        "why_not_cpu=route is not promoted for profile `low_power`",
+        "why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`",
+        "why_not_npu=route blocker for profile `low_power`: auto_default | route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`",
         "new_inference_executed=false",
         "fallback_used=false",
         "blocked_receipt_ready=true"
