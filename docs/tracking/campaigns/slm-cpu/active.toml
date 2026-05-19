@@ -3324,7 +3324,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-056"
-status = "ready"
+status = "pr_open"
+pr = 6018
+head_sha = "82051a28846cb58cebf082201d6524a4164a502d"
 branch = "codex/slm-cpu-056-production-dense-linear-hook-impl"
 stackable = false
 review_mode = "codex_premerge"
