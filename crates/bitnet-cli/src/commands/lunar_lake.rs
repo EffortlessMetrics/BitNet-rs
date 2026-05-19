@@ -8699,8 +8699,17 @@ pub fn resolve_operator_ask_route_selection(
         .iter()
         .find(|profile| profile.profile_id == profile_id)
         .with_context(|| format!("auto route profile `{profile_id}` not found in ledger"))?;
-    let selected_route_id =
-        profile.promoted_route.as_deref().unwrap_or(ledger.default_route_id.as_str());
+    let Some(selected_route_id) = profile.promoted_route.as_deref() else {
+        let (why_not_cpu, why_not_gpu, why_not_npu) =
+            route_selection_explanations(&ledger, profile, "");
+        bail!(
+            "no promoted Lunar Lake auto route for profile `{profile_id}`; candidates={}; why_not_cpu={}; why_not_gpu={}; why_not_npu={}",
+            join_or_none(&profile.candidate_routes),
+            join_or_none(&why_not_cpu),
+            join_or_none(&why_not_gpu),
+            join_or_none(&why_not_npu)
+        );
+    };
     let promotion = route_promotion(&ledger, selected_route_id)?;
     validate_auto_selected_promotion(promotion, profile_id)?;
     let profile_guard = if let Some(route_profile_comparison) = route_profile_comparison {
@@ -8744,6 +8753,10 @@ pub fn resolve_operator_ask_route_selection(
 fn normalize_auto_selector(value: &str, default_value: &str) -> String {
     let trimmed = value.trim();
     if trimmed.is_empty() { default_value.to_string() } else { trimmed.to_string() }
+}
+
+fn join_or_none(values: &[String]) -> String {
+    if values.is_empty() { "none".to_string() } else { values.join(" | ") }
 }
 
 fn validate_operator_ask_requested_device(
@@ -17156,6 +17169,35 @@ mod tests {
         .to_string();
 
         assert!(err.contains("profile `unlisted_profile` not found"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_no_promoted_profile_reports_route_blockers() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_auto_ask_selection_artifacts(temp.path())?;
+
+        let err = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "auto",
+            "auto",
+            "low_power",
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(
+            err.contains("no promoted Lunar Lake auto route for profile `low_power`"),
+            "got: {err}"
+        );
+        assert!(err.contains("why_not_cpu="), "got: {err}");
+        assert!(err.contains("why_not_gpu="), "got: {err}");
+        assert!(err.contains("why_not_npu="), "got: {err}");
+        assert!(err.contains("low_power_power_advantage_unproven"), "got: {err}");
+        assert!(err.contains("benchmark_qualified_speedup_or_power_advantage"), "got: {err}");
         Ok(())
     }
 

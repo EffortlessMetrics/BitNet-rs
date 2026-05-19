@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T13:00:00Z"
+event = "in_progress"
+item = "LNL258V-OP-008"
+branch = "codex/lunar-lake/LNL258V-OP-008-auto-route-blockers"
+actor = "codex"
+summary = "Started hardening Lunar Lake auto-route failure diagnostics for profiles with no promoted route."
+
+notes = [
+  "The operator ask path should remain fail-closed when a profile such as low_power has no promoted route.",
+  "The failure should explain candidate routes and why-not-CPU/GPU/NPU blockers from the route-promotion ledger instead of only reporting that the fallback default is not promoted.",
+  "The scope makes no route promotion, speedup, power-advantage, new-inference, acceleration, model/kernel, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]
