@@ -853,9 +853,10 @@ fn dense_gguf_qwen_repeated_comparator_rejects_duplicate_source_path() {
 }
 
 #[test]
-fn qwen3_cuda_repeated_comparator_receipt_validates() {
+fn qwen3_cuda_repeated_comparator_receipt_validates() -> Result<(), ReceiptError> {
     let receipt = sample_qwen3_cuda_repeated_comparator_receipt();
-    validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt).unwrap();
+    validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt)?;
+    Ok(())
 }
 
 #[test]
@@ -889,13 +890,14 @@ fn qwen3_cuda_repeated_comparator_rejects_bitnet_packed_proof() {
 }
 
 #[test]
-fn qwen3_cuda_repeated_comparator_rejects_missing_decode_128_profile() {
+fn qwen3_cuda_repeated_comparator_rejects_missing_decode_128_profile() -> Result<(), String> {
     let mut receipt = sample_qwen3_cuda_repeated_comparator_receipt();
-    receipt["profiles"].as_array_mut().unwrap().pop();
+    json_array_mut(&mut receipt, "/profiles")?.pop();
 
     let err =
-        validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt).unwrap_err().to_string();
+        expect_validation_error(validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt))?;
     assert!(err.contains("decode_128_from_warm_context"), "unexpected error: {err}");
+    Ok(())
 }
 
 #[test]
@@ -1670,7 +1672,7 @@ fn qwen3_generated_tokens(profile: &str) -> u64 {
         "short_decode_32" => 32,
         "warm_session_3_turns" => 24,
         "decode_128_from_warm_context" => 128,
-        other => panic!("unsupported qwen3 profile {other}"),
+        _ => 0,
     }
 }
 
