@@ -686,10 +686,9 @@ cargo nextest run -p bitnet-sampling --no-default-features --features cpu prop
 
 ### Fuzz Testing (cargo-fuzz)
 
-BitNet-rs has 13 fuzz targets covering parsers, kernels, and tokenizers. Two CI workflows handle fuzz testing:
+BitNet-rs has 13 fuzz targets covering parsers, kernels, and tokenizers. A single CI workflow handles fuzz testing:
 
-- **`.github/workflows/fuzz-ci.yml`** — runs on every push/PR (build check) and nightly (short run, all 13 targets).
-- **`.github/workflows/nightly-fuzz.yml`** — dedicated nightly scheduled run (02:00 UTC daily) or manual trigger via `workflow_dispatch`. Runs 7 core targets for 60 seconds each with `-rss_limit_mb=4096`, **caches the corpus** between runs (`fuzz-corpus-<target>` cache key), and uploads crash artifacts on failure.
+- **`.github/workflows/fuzz-ci.yml`** — runs a representative subset build on every push/PR (compile regression guard), and a per-target matrix on the nightly schedule (02:00 UTC) and manual `workflow_dispatch`. The nightly matrix runs each target for 60 seconds with `-rss_limit_mb` and `-timeout` limits, caches both the `cargo-fuzz` binary (keyed on `fuzz/Cargo.lock`) and the discovered corpus (`fuzz-corpus-<target>`), and uploads crash artifacts on failure.
 
 **Running fuzz tests manually:**
 
@@ -724,9 +723,9 @@ done
 | `prompt_template` | Prompt template formatting |
 | `receipt_json` | Receipt JSON deserialisation |
 
-**Corpus:** Seed corpora live in `fuzz/corpus/<target>/`. The nightly fuzz workflow (`.github/workflows/nightly-fuzz.yml`) caches the corpus between runs so each nightly session builds on prior coverage. CI uploads crash artifacts to GitHub Actions on failure.
+**Corpus:** Seed corpora live in `fuzz/corpus/<target>/`. The nightly fuzz workflow (`.github/workflows/fuzz-ci.yml`) caches the corpus between runs so each nightly session builds on prior coverage. CI uploads crash artifacts to GitHub Actions on failure.
 
-**Manual nightly fuzz run:** Trigger `.github/workflows/nightly-fuzz.yml` via `workflow_dispatch` on GitHub Actions to run the 7 core targets outside the normal schedule.
+**Manual nightly fuzz run:** Trigger `.github/workflows/fuzz-ci.yml` via `workflow_dispatch` on GitHub Actions to run the full target matrix outside the normal schedule.
 
 ### Enhanced Mock Infrastructure and Tokenizer Testing
 

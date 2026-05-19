@@ -15,6 +15,12 @@ on:
       - 'xtask/src/main.rs'
       - 'xtask/Cargo.toml'
 
+# Cheap PR validator: cancel superseded PR runs per
+# docs/ci/cost-and-verification-policy.md. Pushes to main always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check-yaml:
     runs-on: ubuntu-22.04
