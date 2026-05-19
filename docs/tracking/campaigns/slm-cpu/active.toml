@@ -3087,6 +3087,59 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-052"
+status = "ready"
+branch = "codex/slm-cpu-052-q8-sidecar-selector-update"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-051"]
+acceptance = "Implement the first behavior-preserving packed Q8_0 sidecar selector update after SLM-CPU-051. The slice may allow the dense-linear selector to choose a packed Q8_0 sidecar candidate only for the exact evidence-scoped Qwen3 Q8_0 appliance profile where generated-ID/text equivalence, strict tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false are proven against the eager F32 Candle oracle. If runtime sidecar execution remains blocked, the slice must record the blocker explicitly. Any before/after receipt must preserve prompt IDs, generated IDs, decoded text, loader/tokenizer provenance, backend/kernel identity, and fallback=false before claiming even a bounded improvement. It must not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-models --lib dense_gguf_q8 --no-default-features",
+  "cargo test --locked -p bitnet-models --no-default-features",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "SLM-CPU-052 is the next Qwen3 Q8_0 Kaby dense-linear selector update gate after the selector-readiness report.",
+  "Any packed Q8_0 sidecar selector update must preserve the eager F32 Candle behavior oracle before it can claim a bounded improvement.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecar runtime execution is enabled before generated-ID/text receipt equivalence and strict provenance are preserved.",
+  "A runtime speedup is proven without before/after receipts.",
+  "Sustained 8250U throughput is proven.",
+  "Generated IDs or decoded text changed.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-024"
 status = "merged"
 pr = 5342
