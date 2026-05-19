@@ -3814,7 +3814,12 @@ mod tests {
         assert!(qwen3.dense_regular_llm_cuda_proof);
         assert!(!qwen3.bitnet_packed_i2s_qk256_proof);
         assert!(!qwen3.speedup_claim);
-        assert!(!qwen3.server_ready);
+        assert!(qwen3.server_ready);
+        assert_eq!(qwen3.server_ready_scope.as_deref(), Some("exact_profile"));
+        assert_eq!(qwen3.server_endpoint.as_deref(), Some("/v1/chat/completions"));
+        assert_eq!(qwen3.server_streaming, Some(false));
+        assert!(qwen3.server_smoke);
+        assert_eq!(qwen3.server_reason, None);
         assert!(!qwen3.full_residency_claim);
         assert_eq!(qwen3.ask, "ready");
         assert_eq!(qwen3.one_token, "ready");
@@ -3822,7 +3827,7 @@ mod tests {
         assert_eq!(qwen3.warm_session, "ready");
         assert_eq!(qwen3.benchmark, "reviewed, speedup not accepted");
         assert_eq!(qwen3.tier, "product_cli_ready");
-        assert!(qwen3.next_proof.contains("current-source Qwen3 non-streaming"));
+        assert!(qwen3.next_proof.contains("Qwen3 exact-profile server readiness"));
         assert!(qwen3.claim_boundary.contains("dense_regular_llm_cuda RTX 5070 Ti route"));
         assert!(qwen3.claim_boundary.contains("does not inherit Qwen2.5 CUDA receipts"));
         Ok(())
@@ -3957,10 +3962,14 @@ mod tests {
         assert_eq!(qwen3["route"], "dense_regular_llm_cuda");
         assert_eq!(qwen3["accelerator_answer_ready"], true);
         assert_eq!(qwen3["speedup_claim"], false);
-        assert_eq!(qwen3["server_ready"], false);
-        assert!(qwen3["server_ready_scope"].is_null());
+        assert_eq!(qwen3["server_ready"], true);
+        assert_eq!(qwen3["server_ready_scope"], "exact_profile");
+        assert_eq!(qwen3["server_scope"], "exact_profile");
         assert_eq!(qwen3["full_residency_claim"], false);
-        assert_eq!(qwen3["server_smoke"], false);
+        assert_eq!(qwen3["server_endpoint"], "/v1/chat/completions");
+        assert_eq!(qwen3["server_streaming"], false);
+        assert_eq!(qwen3["server_smoke"], true);
+        assert!(qwen3["server_reason"].is_null());
         assert_eq!(qwen3["bitnet_packed_i2s_qk256_proof"], false);
         assert_eq!(qwen3["dense_regular_llm_cuda_proof"], true);
 

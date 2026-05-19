@@ -228,8 +228,8 @@ Rejected at the time of review because no current-source Qwen3 non-streaming
 `/v1/chat/completions` server-smoke receipt was committed. A later receipt now
 exists at
 `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json`,
-but `server_ready=false` remains correct until a separate exact-profile review
-accepts that receipt.
+and CUDA-MODEL-014B supersedes this rejected review for the exact-profile
+promotion decision.
 
 ### Non-goals
 
@@ -254,3 +254,52 @@ git diff --check
 
 Revert the review report and restore the previous Qwen3 next-proof text. No
 runtime rollback is required.
+
+## Work item: CUDA-MODEL-014B
+
+Status: in_progress
+Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
+Linked specs: `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md`
+Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
+Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
+Blocks: Qwen3 server status UX
+Blocked by: CUDA-MODEL-013
+
+### Goal
+
+Accept or reject Qwen3 exact-profile server readiness after reviewing the
+committed current-source non-streaming shared-engine server-smoke receipt.
+
+### Production delta
+
+Accept exact-profile server readiness for `qwen3-0.6b-instruct-q8_0` only for
+the Windows 9950X3D + RTX 5070 Ti `nvidia-rtx-5070-ti-cuda`
+`dense_regular_llm_cuda` non-streaming `/v1/chat/completions` profile recorded
+in
+`ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json`.
+
+### Non-goals
+
+No runtime change, speedup, benchmark-qualified speed, full-residency, broad
+dense GGUF, Qwen2.5-inheritance, or BitNet QK256 claim.
+
+### Acceptance
+
+The model coverage row promotes `server_ready=true` only for the exact Qwen3
+server profile, preserves speed/residency/benchmark/BitNet false claims, keeps
+the runtime receipt's `server_ready_claimed=false`, and updates model-status and
+receipt-explain contract tests to show `server_ready_scope=exact_profile`.
+
+### Proof commands
+
+```bash
+cargo run --locked -p xtask --no-default-features -- check-model-coverage
+cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli model_status_dashboard_lists_qwen3_as_product_cli_ready
+cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli receipts_explain_links_qwen3_dense_receipt_to_product_cli_coverage
+git diff --check
+```
+
+### Rollback
+
+Restore the previous Qwen3 model coverage `server_ready=false` state and remove
+the CUDA-MODEL-014B acceptance report. No runtime rollback is required.

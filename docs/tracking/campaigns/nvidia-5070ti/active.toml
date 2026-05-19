@@ -2935,6 +2935,55 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-MODEL-014B"
+status = "in_progress"
+branch = "codex/cuda-model-014-qwen3-server-ready-accept"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-MODEL-013"]
+acceptance = "Accept Qwen3 0.6B Q8_0 exact-profile server readiness only for the committed current-source non-streaming /v1/chat/completions RTX 5070 Ti shared-engine receipt. Promote server_ready=true in the model coverage row only for that exact profile while preserving speedup_claim=false, benchmark_qualified=false, full_residency_claim=false, broad dense GGUF readiness false, Qwen2.5 inheritance false, and BitNet QK256 proof false."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli model_status_dashboard_lists_qwen3_as_product_cli_ready",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli receipts_explain_links_qwen3_dense_receipt_to_product_cli_coverage",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "crates/bitnet-cli/src/model_cache.rs",
+  "crates/bitnet-cli/src/commands/receipts.rs",
+  "xtask/src/model_coverage.rs",
+  "docs/model-artifacts/**",
+  "docs/reports/CUDA_MODEL_014_QWEN3_EXACT_PROFILE_SERVER_READINESS_REVIEW.md",
+  "docs/reports/CUDA_MODEL_014B_QWEN3_EXACT_PROFILE_SERVER_READY.md",
+  "docs/status/**",
+  "plans/native-rust-inference/dense-qwen3.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  ".github/workflows/**",
+]
+may_claim = [
+  "Qwen3 has exact-profile server readiness only for the current-source RTX 5070 Ti non-streaming shared-engine /v1/chat/completions dense_regular_llm_cuda receipt.",
+  "The runtime server receipt still records server_ready_claimed=false; model coverage owns the exact-profile product claim.",
+]
+must_not_claim = [
+  "Qwen3 speedup exists.",
+  "Qwen3 benchmark-qualified speed exists.",
+  "Qwen3 full CUDA residency exists.",
+  "Qwen3 broad dense GGUF readiness exists.",
+  "Qwen3 proof inherits Qwen2.5 evidence.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+]
+
+[[work_item]]
 id = "CUDA-MODEL-SMOLLM2-001"
 status = "merged"
 branch = "model/cuda-smollm2-360m-artifact-contract"
