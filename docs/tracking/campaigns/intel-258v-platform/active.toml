@@ -8281,8 +8281,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-QUAL-013"
-status = "in_progress"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-QUAL-013-warm-resident-cpu-corpus"
+pr = 5855
+head_sha = "1b3edfe8e0f6caf031bbacf06bf3beaf4dd49fe8"
+merge_sha = "38f9bd1658d4d11f0c0b5abde93af5c352e81a4b"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T16:10:00Z"
+event = "merged"
+item = "LNL258V-QUAL-013"
+branch = "codex/lunar-lake/LNL258V-QUAL-013-warm-resident-cpu-corpus"
+pr = 5855
+head_sha = "1b3edfe8e0f6caf031bbacf06bf3beaf4dd49fe8"
+merge_sha = "38f9bd1658d4d11f0c0b5abde93af5c352e81a4b"
+actor = "codex"
+summary = "Merged LNL258V-QUAL-013 after refreshing warm_resident corpus-v2 evidence across CPU and OpenVINO routes."
+
+notes = [
+  "PR #5855 reran dense Qwen CPU corpus v2 and OpenVINO CPU/GPU/NPU corpus v2 with the updated warm_resident resident-session lens.",
+  "The refreshed receipts keep CPU and OpenVINO corpus-v2 evidence at 14/14 passing with fallback_used=false, while route-profile/regression/operator artifacts remain ready.",
+  "OpenVINO GPU remains promoted only for ask_short/ask_normal, NPU remains candidate-only, and the merge makes no broad-quality, route-promotion, speedup, power-advantage, acceleration, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]
