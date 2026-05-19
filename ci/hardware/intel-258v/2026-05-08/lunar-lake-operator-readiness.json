@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_readiness",
   "proof_stage": "operator_routes_indexed",
-  "created_utc": "2026-05-19T16:45:00Z",
+  "created_utc": "2026-05-19T06:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_ready": true,
@@ -85,7 +85,8 @@
     "profile_scoped_promotion_only": true,
     "openvino_gpu_promoted_profiles": [
       "ask_normal",
-      "ask_short"
+      "ask_short",
+      "warm_resident"
     ],
     "openvino_npu_promoted_profiles": [],
     "profile_promotions": [
@@ -184,13 +185,12 @@
       },
       {
         "profile_id": "warm_resident",
-        "promoted_route": null,
-        "profile_status": "candidate_only",
-        "promotion_decision": "warm_resident has no promoted route; candidate evidence is indexed without promotion",
+        "promoted_route": "dense_slm_openvino_gpu_candidate",
+        "profile_status": "promoted_route_ready",
+        "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for warm_resident",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile warm_resident",
-          "dense_slm_openvino_npu_candidate: route not promoted for profile warm_resident",
-          "dense_slm_openvino_gpu_candidate: route not promoted for profile warm_resident"
+          "dense_slm_openvino_npu_candidate: route not promoted for profile warm_resident"
         ]
       },
       {
@@ -204,8 +204,7 @@
     "blocked_profiles": [
       "prefill_heavy",
       "decode_heavy",
-      "low_power",
-      "warm_resident"
+      "low_power"
     ],
     "gaps": []
   },

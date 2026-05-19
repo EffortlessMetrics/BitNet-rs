@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-19T16:45:00Z",
+  "created_utc": "2026-05-19T06:05:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "d5853e033897776e18e793e0afa8280d7e4a4e09",
+  "source_revision": "da7dd263163019056e1cd4fd6583708cb209c5aa",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_explicit_unpromoted_profiles",
   "excellent_support_ready": false,
-  "reason": "The platform is operator-ready and profile-aware, with structured now promoted on the dense Qwen CPU control route, but excellent all-profile support is not complete while prefill_heavy, decode_heavy, low_power, and warm_resident have no promoted route and low_power lacks battery/energy power-advantage proof.",
+  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route and warm_resident promoted on the OpenVINO GPU route, but excellent all-profile support is not complete while prefill_heavy, decode_heavy, and low_power have no promoted route and low_power lacks battery/energy power-advantage proof.",
   "command_surface": {
     "ask": {
       "status": "ready_profile_scoped",
@@ -44,14 +44,14 @@
     "default_route_id": "dense_slm_default_cpu",
     "openvino_gpu_promoted_profiles": [
       "ask_normal",
-      "ask_short"
+      "ask_short",
+      "warm_resident"
     ],
     "openvino_npu_promoted_profiles": [],
     "blocked_profiles": [
       "prefill_heavy",
       "decode_heavy",
-      "low_power",
-      "warm_resident"
+      "low_power"
     ],
     "profile_scoped_promotion_only": true,
     "openvino_npu_remains_candidate": true,
@@ -168,13 +168,12 @@
       },
       {
         "profile_id": "warm_resident",
-        "profile_status": "candidate_only",
-        "promoted_route": null,
-        "promotion_decision": "warm_resident has no promoted route; candidate evidence is indexed without promotion",
+        "profile_status": "promoted_route_ready",
+        "promoted_route": "dense_slm_openvino_gpu_candidate",
+        "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for warm_resident",
         "candidate_routes": [
           "dense_slm_default_cpu",
-          "dense_slm_openvino_npu_candidate",
-          "dense_slm_openvino_gpu_candidate"
+          "dense_slm_openvino_npu_candidate"
         ],
         "blockers": [
           "route not promoted for profile warm_resident"
@@ -217,7 +216,8 @@
       "status": "profile_promoted_only",
       "promoted_profiles": [
         "ask_normal",
-        "ask_short"
+        "ask_short",
+        "warm_resident"
       ],
       "fallback_used": false,
       "generated_token_ids_available": true,
@@ -289,7 +289,7 @@
     ]
   },
   "remaining_gaps": [
-    "No promoted route for prefill_heavy, decode_heavy, low_power, or warm_resident.",
+    "No promoted route for prefill_heavy, decode_heavy, or low_power.",
     "OpenVINO NPU remains candidate-only; cold-start blockers are preserved for cold profiles.",
     "low_power lacks battery-mode sample, energy-proxy receipt, and benchmark-qualified power advantage.",
     "Thermal zone visibility is recorded, but temperature readings remain unavailable.",
@@ -297,9 +297,9 @@
     "BitNet accelerator inference and packed QK256 accelerator decode remain unclaimed."
   ],
   "next_recommended_work": [
-    "LNL258V-PROFILE-RUN follow-up for profile-specific prefill_heavy/decode_heavy evidence.",
+    "LNL258V-PROFILE-RUN follow-up for benchmark-qualified prefill_heavy/decode_heavy promotion evidence.",
     "LNL258V-POWER follow-up for battery and energy-proxy low_power evidence.",
-    "LNL258V-NPU follow-up for warm_resident promotion only after resident quality, latency stability, and power/latency advantage are benchmark-qualified.",
+    "Continue NPU resident and low-power follow-up before any NPU profile promotion.",
     "Continue BitNet semantic-intake reruns after shared A770/CUDA/CPU semantic fixes."
   ],
   "evidence_index": {
@@ -327,7 +327,7 @@
   "claim_boundary": {
     "new_inference_run": false,
     "route_promotion_changed": true,
-    "route_promotion_scope": "dense_qwen_cpu_structured_only",
+    "route_promotion_scope": "openvino_gpu_warm_resident_only",
     "speedup_claim": false,
     "power_advantage_claim": false,
     "arc_npu_acceleration_claim": false,

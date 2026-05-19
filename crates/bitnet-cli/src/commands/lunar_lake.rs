@@ -67,7 +67,8 @@ const OPENVINO_NPU_CACHE_EXPERIMENT: &str = "lunar-lake-openvino-npu-cache-exper
 const OPENVINO_GENERATION_BUDGET_SENSITIVITY: &str =
     "lunar-lake-openvino-generation-budget-sensitivity.json";
 const OPENVINO_PROFILE_RUN: &str = "lunar-lake-openvino-profile-run.json";
-const OPENVINO_GPU_PROFILE_PROMOTION_TARGETS: &[&str] = &["ask_short", "ask_normal"];
+const OPENVINO_GPU_PROFILE_PROMOTION_TARGETS: &[&str] =
+    &["ask_short", "ask_normal", "warm_resident"];
 const DENSE_PHASE_COMPARISON: &str = "slm-openvino-cpu-gpu-npu-phase-comparison.json";
 const DENSE_CPU_OPERATOR_ASK: &str = "lunar-lake-operator-ask-math-brief.json";
 const BLOCKED_AUTO_ASK_RECEIPT: &str = "lunar-lake-operator-ask-auto-low-power-blocked.json";
@@ -13037,6 +13038,7 @@ fn workload_profiles_with_openvino_gpu_promotions(
 ) -> Vec<WorkloadProfile> {
     let ask_short_gpu_promoted = openvino_gpu_promoted_profiles.contains("ask_short");
     let ask_normal_gpu_promoted = openvino_gpu_promoted_profiles.contains("ask_normal");
+    let warm_resident_gpu_promoted = openvino_gpu_promoted_profiles.contains("warm_resident");
     vec![
         WorkloadProfile {
             profile_id: "regression_tiny".to_string(),
@@ -13139,13 +13141,18 @@ fn workload_profiles_with_openvino_gpu_promotions(
             profile_id: "warm_resident".to_string(),
             prompt_tokens: "<=512".to_string(),
             output_tokens: "<=128".to_string(),
-            purpose: "same-process warm or resident ask where NPU must prove stable reuse without cold-start promotion".to_string(),
-            promoted_route: None,
-            candidate_routes: vec![
-                DEFAULT_ASK_ROUTE.to_string(),
-                "dense_slm_openvino_npu_candidate".to_string(),
-                "dense_slm_openvino_gpu_candidate".to_string(),
-            ],
+            purpose: "same-process warm or resident ask where GPU/NPU routes must prove stable reuse without cold-start promotion".to_string(),
+            promoted_route: warm_resident_gpu_promoted
+                .then(|| "dense_slm_openvino_gpu_candidate".to_string()),
+            candidate_routes: if warm_resident_gpu_promoted {
+                vec![DEFAULT_ASK_ROUTE.to_string(), "dense_slm_openvino_npu_candidate".to_string()]
+            } else {
+                vec![
+                    DEFAULT_ASK_ROUTE.to_string(),
+                    "dense_slm_openvino_npu_candidate".to_string(),
+                    "dense_slm_openvino_gpu_candidate".to_string(),
+                ]
+            },
         },
         WorkloadProfile {
             profile_id: "bitnet_strict_reference".to_string(),
@@ -14164,7 +14171,8 @@ mod tests {
                 "profile_comparison_ready": true,
                 "profiles": [
                     benchmark_qualified_gpu_profile("ask_short"),
-                    benchmark_qualified_gpu_profile("ask_normal")
+                    benchmark_qualified_gpu_profile("ask_normal"),
+                    benchmark_qualified_gpu_profile("warm_resident")
                 ]
             }),
         )?;
@@ -14194,7 +14202,10 @@ mod tests {
             .find(|route| route.route_id == "dense_slm_openvino_gpu_candidate")
             .context("missing GPU route")?;
         assert_eq!(gpu.status, "promoted");
-        assert_eq!(gpu.promoted_for, vec!["ask_normal".to_string(), "ask_short".to_string()]);
+        assert_eq!(
+            gpu.promoted_for,
+            vec!["ask_normal".to_string(), "ask_short".to_string(), "warm_resident".to_string()]
+        );
         assert!(gpu.missing_evidence.is_empty(), "{:?}", gpu.missing_evidence);
         assert!(
             gpu.present_evidence.iter().any(|item| item.ends_with("gpu-route-profile-ready.json"))

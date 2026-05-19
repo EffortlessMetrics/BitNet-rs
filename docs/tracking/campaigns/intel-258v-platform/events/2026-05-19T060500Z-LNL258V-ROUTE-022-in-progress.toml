@@ -1,0 +1,24 @@
+timestamp = "2026-05-19T06:05:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-022"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-022-warm-resident-gpu-route"
+summary = "Started LNL258V-ROUTE-022 to promote the OpenVINO GPU dense Qwen route for the warm_resident workload profile from existing benchmark-qualified profile evidence."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+]
+
+notes = [
+  "The existing warm_resident GPU route evidence has fallback_used=false, answer_gate_passed=true, direct-token/profile evidence, profile-matched timing, and benchmark_qualified_advantage=true.",
+  "This item must keep OpenVINO NPU candidate-only, low_power unpromoted, no power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]
