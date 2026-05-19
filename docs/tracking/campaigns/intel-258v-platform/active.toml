@@ -9150,6 +9150,8 @@ must_not_claim = [
 [[work_item]]
 id = "LNL258V-ASK-006"
 status = "in_progress"
+pr = 6038
+head_sha = "dfb08e3134cc8fbce1440124ae0d1748ce6a94f1"
 branch = "codex/lunar-lake/LNL258V-ASK-006-auto-gpu-ask-normal"
 stackable = false
 review_mode = "codex_premerge"
