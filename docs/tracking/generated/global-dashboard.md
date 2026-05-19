@@ -43,7 +43,7 @@
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
 | nvidia-5070ti | CUDA-DENSE-014 | #4216 | merged | none | CUDA visibility is not kernel execution. |
 | official-bitnet-2b | OFFICIAL-2B-000 | TBD | ready | OFFICIAL-2B-001 | Do not commit model binaries. |
-| qwen36 | QWEN36-DOCS-000 | TBD | ready | none | Qwen3.6 registration is not native BitNet-rs inference support. |
+| qwen36 | QWEN36-DOCS-000 | #5892 | merged | none | Qwen3.6 registration is not native BitNet-rs inference support. |
 | server-real-inference | SERVER-005 | #4490 | merged | none | Do not reintroduce simulated inference. |
 | slm-cpu | SLM-CPU-021 | #5133 | merged | none | Do not edit BitNet QK256/I2_S kernels. |
 | tl1 | TL1-PLAN-000 | TBD | ready | none | TL1 registration is not native BitNet-rs inference support. |

@@ -23,7 +23,10 @@ hard_constraints = [
 
 [[work_item]]
 id = "QWEN36-DOCS-000"
-status = "ready"
+status = "merged"
+pr = 5892
+head_sha = "f9fd728e3ac76ba853c7c0165641bcd238eff20f"
+merge_sha = "a2b374225d01908e96a5858d0268b8116b928da2"
 branch = "codex/add-qwen3.6-as-a-governed-model-family"
 stackable = false
 review_mode = "codex_premerge"
@@ -44,6 +47,7 @@ allowed_paths = [
   "docs/specs/**",
   "docs/status/**",
   "docs/tracking/campaigns/qwen36/**",
+  "docs/tracking/generated/**",
   "plans/qwen36/**",
 ]
 forbidden_paths = [

@@ -1,0 +1,32 @@
+schema_version = "1.0"
+campaign = "qwen36"
+item = "QWEN36-DOCS-000"
+event = "merged"
+timestamp = "2026-05-19T09:06:02Z"
+actor = "codex"
+pr = 5892
+head_sha = "f9fd728e3ac76ba853c7c0165641bcd238eff20f"
+merge_sha = "a2b374225d01908e96a5858d0268b8116b928da2"
+branch = "codex/add-qwen3.6-as-a-governed-model-family"
+
+summary = "Merged #5892 with Qwen3.6 governed-family documentation, proposal/spec placeholders, implementation plan, source map, and registered-only model coverage rows."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5892",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/qwen/qwen36/README.md",
+  "plans/qwen36/implementation-plan.md",
+  "docs/tracking/campaigns/qwen36/active.toml",
+  "docs/tracking/campaigns/qwen36/generated/status.md",
+  "docs/tracking/generated/global-dashboard.md",
+]
+
+notes = [
+  "QWEN36-DOCS-000 is documentation and coverage scaffolding only.",
+  "Qwen3.6 remains governed as reference-only or candidate-only until native BitNet-rs receipts exist.",
+  "No native runtime support, answer quality, server support, performance, GPU/NPU/OpenVINO/UHD 620 execution, Qwen3.5 support, BitNet QK256/I2_S kernel change, or proof inheritance claim is made.",
+]
+
+validation = [
+  "Hosted PR #5892 merged on 2026-05-19 with merge commit a2b374225d01908e96a5858d0268b8116b928da2.",
+]
