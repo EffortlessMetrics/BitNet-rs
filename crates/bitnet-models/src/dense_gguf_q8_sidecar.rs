@@ -74,6 +74,13 @@ impl DenseGgufQ8SidecarRegistry {
         self.descriptors.len()
     }
 
+    pub fn descriptor_for_tensor(
+        &self,
+        tensor_name: &str,
+    ) -> Option<&DenseGgufQ8SidecarDescriptor> {
+        self.descriptors.iter().find(|descriptor| descriptor.tensor_name == tensor_name)
+    }
+
     pub fn try_push_tensor(&mut self, info: &TensorInfo, data: &[u8]) -> Result<()> {
         let Some(descriptor) = DenseGgufQ8SidecarDescriptor::from_tensor(info, data)? else {
             return Ok(());

@@ -1,0 +1,17 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T05:32:00Z"
+event = "pr_open"
+item = "SLM-CPU-046"
+pr = 5860
+head_sha = "51fa63018fe0189777fcb596665e8bfcbe6a66ad"
+branch = "codex/slm-cpu-046-q8-sidecar-dispatch-selector"
+actor = "codex"
+summary = "Opened the Q8_0 sidecar dense-linear dispatch selector contract slice."
+
+notes = [
+  "PR #5860 adds a selector contract that explicitly selects the existing eager F32 Candle path.",
+  "Packed Q8_0 sidecar descriptors are visible as candidates but remain unavailable for runtime compute until generated-ID/text and strict-receipt equivalence gates pass.",
+  "The slice exposes selector reasons and fixture coverage without executing packed Q8_0 sidecar compute.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

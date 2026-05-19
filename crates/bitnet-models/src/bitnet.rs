@@ -1,5 +1,6 @@
 //! BitNet model implementation
 
+use crate::dense_gguf_q8_dispatch::{DenseQ8DispatchSelection, select_dense_q8_runtime};
 use crate::dense_gguf_q8_sidecar::DenseGgufQ8SidecarRegistry;
 use crate::transformer::{KVCache, TransformerModel};
 use bitnet_common::{
@@ -179,6 +180,15 @@ impl BitNetModel {
     /// Inert dense Q8_0 sidecar descriptors carried from GGUF loading.
     pub fn dense_q8_sidecars(&self) -> &DenseGgufQ8SidecarRegistry {
         &self.dense_q8_sidecars
+    }
+
+    /// Behavior-preserving dense Q8_0 dispatch selector.
+    ///
+    /// This currently always selects the eager F32 Candle path. Packed Q8_0
+    /// sidecar descriptors are exposed only as unavailable candidates until a
+    /// later slice proves generated-ID/text and strict-receipt equivalence.
+    pub fn dense_q8_dispatch_selection(&self, tensor_name: &str) -> DenseQ8DispatchSelection {
+        select_dense_q8_runtime(tensor_name, &self.dense_q8_sidecars)
     }
 
     /// Convert ConcreteTensor to Candle tensor
