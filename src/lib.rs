@@ -51,7 +51,7 @@
 /// Build metadata captured at compile time.
 pub mod build_info;
 mod constants;
-/// Convenient imports for common BitNet types and traits.
+/// Convenient imports for common `BitNet` types and traits.
 pub mod prelude;
 
 pub use build_info::*;
