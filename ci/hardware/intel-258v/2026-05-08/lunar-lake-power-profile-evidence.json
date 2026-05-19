@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_profile_evidence",
   "proof_stage": "low_power_evidence_indexed_no_promotion_change",
-  "created_utc": "2026-05-19T15:46:00Z",
+  "created_utc": "2026-05-19T18:25:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -38,10 +38,12 @@
       "throughput_tokens_per_s": 2.78,
       "benchmark_qualified_advantage": false,
       "power_related_blockers": [
+        "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile low_power",
         "power advantage evidence missing for low_power promotion",
         "route not promoted for profile low_power"
       ],
       "all_blockers": [
+        "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile low_power",
         "bounded math ask only; not expanded profile regression corpus",
         "power advantage evidence missing for low_power promotion",
         "route not promoted for profile low_power"
