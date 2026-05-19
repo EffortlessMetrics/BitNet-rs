@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:03:00Z"
+event = "merged"
+item = "LNL258V-BITNET-INTAKE-002"
+branch = "codex/lunar-lake/bitnet-intake-closed-source-status"
+pr = 5947
+head_sha = "0897cc0c05c0cde7479ff42c7533cf3160d4ede2"
+merge_sha = "94b1b2e7002fb4d2d23df51d0f1e9e58ad300f8d"
+actor = "codex"
+summary = "Merged LNL258V-BITNET-INTAKE-002 after classifying closed shared BitNet semantic source changes."
+
+notes = [
+  "PR #5947 records A770 #5020 as closed_unmerged and keeps it out of the active pending semantic-fix count.",
+  "Strict Lunar Lake semantic-intake/regression/comparison receipts now index closed_shared_change_count=1 and rerun_required=false.",
+  "The merge did not run inference, promote routes, claim speedup or power advantage, claim acceleration, treat dense SLM receipts as BitNet proof, or change BitNet QK256/I2_S behavior.",
+]
