@@ -10261,7 +10261,8 @@ async fn run_lunar_lake_ask(
     if !(1..=128).contains(&max_new_tokens) {
         anyhow::bail!("lunar-lake ask requires --max-new-tokens in 1..=128");
     }
-    let route_selection = commands::lunar_lake::resolve_operator_ask_route_selection(
+    let receipt_path = json_out.unwrap_or_else(default_lunar_lake_ask_receipt_path);
+    let route_selection = match commands::lunar_lake::resolve_operator_ask_route_selection(
         &artifact_root,
         &operator_receipt,
         &promotion_ledger,
@@ -10269,9 +10270,28 @@ async fn run_lunar_lake_ask(
         &route_id,
         requested_backend_label,
         &profile,
-    )?;
+    ) {
+        Ok(selection) => selection,
+        Err(err) => {
+            let error = err.to_string();
+            let blocked_receipt =
+                build_lunar_lake_operator_ask_blocked_receipt(LunarLakeAskBlockedReceiptContext {
+                    artifact_root: &artifact_root,
+                    operator_receipt: &operator_receipt,
+                    promotion_ledger: &promotion_ledger,
+                    route_profile_comparison: &route_profile_comparison,
+                    requested_device: requested_backend_label,
+                    requested_route: &route_id,
+                    profile_id: &profile,
+                    question: &question,
+                    max_new_tokens,
+                    error: &error,
+                });
+            write_json_output(Some(&receipt_path), &blocked_receipt)?;
+            anyhow::bail!("{error}");
+        }
+    };
     let route = route_selection.route.clone();
-    let receipt_path = json_out.unwrap_or_else(default_lunar_lake_ask_receipt_path);
     let source_run_path = source_run_receipt_path(&receipt_path);
 
     let operator_receipt_path = if operator_receipt.is_absolute() || operator_receipt.exists() {
@@ -10508,6 +10528,66 @@ struct LunarLakeAskReceiptContext<'a> {
     answer_gate: &'a LunarLakeAnswerGate,
     expect_contains: Option<&'a str>,
     source_run_receipt: &'a serde_json::Value,
+}
+
+#[cfg(feature = "full-cli")]
+struct LunarLakeAskBlockedReceiptContext<'a> {
+    artifact_root: &'a std::path::Path,
+    operator_receipt: &'a std::path::Path,
+    promotion_ledger: &'a std::path::Path,
+    route_profile_comparison: &'a std::path::Path,
+    requested_device: &'a str,
+    requested_route: &'a str,
+    profile_id: &'a str,
+    question: &'a str,
+    max_new_tokens: usize,
+    error: &'a str,
+}
+
+#[cfg(feature = "full-cli")]
+fn build_lunar_lake_operator_ask_blocked_receipt(
+    ctx: LunarLakeAskBlockedReceiptContext<'_>,
+) -> serde_json::Value {
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "lunar_lake_operator_ask_blocked",
+        "proof_stage": "operator_route_selection_blocked_no_inference",
+        "created_utc": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        "machine_id": "intel-258v",
+        "artifact_root": ctx.artifact_root.display().to_string(),
+        "operator_receipt": ctx.operator_receipt.display().to_string(),
+        "promotion_ledger": ctx.promotion_ledger.display().to_string(),
+        "route_profile_comparison": ctx.route_profile_comparison.display().to_string(),
+        "requested_device": ctx.requested_device,
+        "requested_route": ctx.requested_route,
+        "profile_id": ctx.profile_id,
+        "selected_route": serde_json::Value::Null,
+        "selected_backend": serde_json::Value::Null,
+        "runtime_api": serde_json::Value::Null,
+        "route_selection_status": "blocked",
+        "route_selection_error": ctx.error,
+        "question": ctx.question,
+        "max_new_tokens": ctx.max_new_tokens,
+        "fallback_used": false,
+        "answer_gate_passed": serde_json::Value::Null,
+        "new_inference_executed": false,
+        "speedup_claim": false,
+        "acceleration_claim": false,
+        "power_advantage_claim": false,
+        "bitnet_qk256_i2s_claim": false,
+        "claim_boundary": {
+            "route_selection_blocked": true,
+            "new_inference_executed": false,
+            "fallback_used": false,
+            "route_promotion_changed": false,
+            "default_route_changed": false,
+            "speedup_claim": false,
+            "power_advantage_claim": false,
+            "acceleration_claim": false,
+            "native_accelerator_claim": false,
+            "bitnet_qk256_i2s_claim": false,
+        },
+    })
 }
 
 #[cfg(feature = "full-cli")]
@@ -13418,6 +13498,44 @@ mod tests {
         let failed = evaluate_lunar_lake_answer_gate("not the expected answer", Some("4"));
         assert!(!failed.passed);
         assert_eq!(failed.failed_rules, vec!["expected_contains"]);
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_operator_ask_blocked_receipt_records_no_inference_boundary() {
+        let receipt = build_lunar_lake_operator_ask_blocked_receipt(
+            LunarLakeAskBlockedReceiptContext {
+                artifact_root: std::path::Path::new("ci/hardware/intel-258v/2026-05-08"),
+                operator_receipt: std::path::Path::new("lunar-lake-operator-readiness.json"),
+                promotion_ledger: std::path::Path::new("lunar-lake-route-promotion.json"),
+                route_profile_comparison: std::path::Path::new(
+                    "lunar-lake-route-profile-comparison.json",
+                ),
+                requested_device: "auto",
+                requested_route: "auto",
+                profile_id: "low_power",
+                question: "What is 2+2?",
+                max_new_tokens: 4,
+                error: "no promoted Lunar Lake auto route for profile `low_power`; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage",
+            },
+        );
+
+        assert_eq!(receipt["artifact_kind"], "lunar_lake_operator_ask_blocked");
+        assert_eq!(receipt["proof_stage"], "operator_route_selection_blocked_no_inference");
+        assert_eq!(receipt["requested_device"], "auto");
+        assert_eq!(receipt["requested_route"], "auto");
+        assert_eq!(receipt["profile_id"], "low_power");
+        assert_eq!(receipt["selected_route"], serde_json::Value::Null);
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["new_inference_executed"], false);
+        assert_eq!(receipt["claim_boundary"]["route_selection_blocked"], true);
+        assert_eq!(receipt["claim_boundary"]["new_inference_executed"], false);
+        assert_eq!(receipt["claim_boundary"]["route_promotion_changed"], false);
+        assert!(
+            receipt["route_selection_error"].as_str().is_some_and(
+                |error| error.contains("benchmark_qualified_speedup_or_power_advantage")
+            )
+        );
     }
 
     #[cfg(feature = "full-cli")]
