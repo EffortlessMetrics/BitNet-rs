@@ -13,7 +13,9 @@ pub mod runtimes;
 pub use apple_receipts::{
     APPLE_M3_AIR_MACHINE_ID, APPLE_M3_AIR_METAL_BACKEND, APPLE_M3_AIR_MPSGRAPH_BACKEND,
     APPLE_VISIBILITY_PREFLIGHT_KIND, AppleBackendReceipt, AppleBackendVisibilityPreflight,
-    AppleReceiptError, AppleResolvedDevice, AppleRuntimeVisibility, AppleVisibilityClaimBoundary,
+    AppleM3AirHostProfileContract, AppleM3AirProofLabel, AppleM3AirStoragePolicy,
+    AppleM3AirUnsupportedClaim, AppleReceiptError, AppleResolvedDevice, AppleRuntimeVisibility,
+    AppleVisibilityClaimBoundary,
 };
 
 #[cfg(feature = "metal")]

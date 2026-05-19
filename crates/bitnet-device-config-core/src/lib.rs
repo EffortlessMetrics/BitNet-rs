@@ -3,9 +3,14 @@
 mod backend;
 mod config;
 mod parse;
+mod profile;
 mod resolve;
 
 pub use config::DeviceConfig;
+pub use profile::{
+    DeviceProfileContract, DeviceProfileLabel, DeviceProfileStoragePolicy,
+    DeviceProfileUnsupportedClaim, ThermalPolicy,
+};
 
 #[cfg(test)]
 mod tests {
@@ -79,6 +84,41 @@ mod tests {
         assert_eq!(apple_m3_air_metal.resolve(), bitnet_common::Device::Cpu);
         assert_eq!(apple_m3_air_mpsgraph.resolve(), bitnet_common::Device::Cpu);
         assert_eq!(apple_m3_air_cpu.resolve(), bitnet_common::Device::Cpu);
+    }
+
+    #[test]
+    fn apple_m3_air_profile_contract_is_shared_across_lane_labels() {
+        let metal = DeviceConfig::AppleM3AirMetal.device_profile_contract();
+        let mpsgraph = DeviceConfig::AppleM3AirMpsGraph.device_profile_contract();
+        let cpu = DeviceConfig::AppleM3AirCpuNeon.device_profile_contract();
+        assert!(metal.is_some());
+        assert_eq!(metal, mpsgraph);
+        assert_eq!(metal, cpu);
+
+        let contract = metal.expect("M3 Air contract");
+        assert_eq!(contract.profile_id, "apple-m3-macbook-air");
+        assert_eq!(contract.soc_family, "Apple M3");
+        assert_eq!(contract.thermal_policy, super::ThermalPolicy::FanlessMobile);
+        assert_eq!(contract.storage.cache_root_required, true);
+        assert_eq!(contract.storage.large_artifact_sweep_allowed, true);
+        assert_eq!(contract.storage.model_binaries_committed, false);
+        assert_eq!(
+            contract.label("apple-m3-air-metal").map(|label| label.execution_available),
+            Some(false)
+        );
+        assert_eq!(
+            contract.label("apple-m3-air-mpsgraph").map(|label| label.execution_available),
+            Some(false)
+        );
+        assert_eq!(
+            contract.label("apple-m3-air-cpu-neon").map(|label| label.execution_available),
+            Some(true)
+        );
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::MetalModelInference));
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::MpsGraphModelInference));
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::NeuralEngineExecution));
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::Qk256AppleSilicon));
+        assert!(DeviceConfig::AppleM4CpuNeon.device_profile_contract().is_none());
     }
 
     #[test]
