@@ -238,7 +238,7 @@
 | cpu-proof | CPU-AVX512-000 | CPU-ANSWER-007 | in_progress |
 | cpu-proof | CPU-SCALAR-000 | CPU-ANSWER-007 | ready |
 | cpu-proof | CPU-AVX2-HOTPATH-000 | CPU-ANSWER-007 | merged |
-| cpu-proof | CPU-AVX2-HOTPATH-001 | CPU-AVX2-HOTPATH-000 | pr_open |
+| cpu-proof | CPU-AVX2-HOTPATH-001 | CPU-AVX2-HOTPATH-000 | merged |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | merged |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
 | falcon-e-family | FE-001 | FE-000 | proposed |

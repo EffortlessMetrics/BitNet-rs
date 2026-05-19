@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T15:33:28Z"
+campaign = "cpu-proof"
+item = "CPU-AVX2-HOTPATH-001"
+event = "merged"
+pr = 5963
+head_sha = "455ff1268289308b0da5b896524467160130d514"
+merge_sha = "0789396eb13476c576a9c4860353e5be13478e11"
+actor = "codex"
+
+notes = [
+  "Merged #5963 to expose QK256 hot-path counters in strict CPU BitNet run and answer-corpus receipts.",
+  "The merged surface records qk256_hot_path and execution_coverage evidence while preserving the math, routing, and claim boundaries.",
+  "No AVX2 promotion, speedup claim, GPU/NPU/OpenVINO/CUDA/dense SLM claim, or broad chat-quality claim was made.",
+]
