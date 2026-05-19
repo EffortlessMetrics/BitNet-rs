@@ -164,7 +164,7 @@ accepted ask/chat user-path receipts.
 
 ## Work item: CUDA-MODEL-013
 
-Status: merged
+Status: pr_open
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
@@ -174,15 +174,15 @@ Blocked by: CUDA-MODEL-012
 
 ### Goal
 
-Teach the shared-engine server receipt validator to recognize exact Qwen3
-dense CUDA server-smoke receipts.
+Record a current-source exact Qwen3 dense CUDA server-smoke receipt through the
+shared-engine server path.
 
 ### Production delta
 
-The server receipt path can bind exact Qwen3 model identity to
+The server receipt path binds exact Qwen3 model identity to
 `dense_qwen3_06b_q8_candidate` and `dense_regular_llm_cuda` for the RTX 5070 Ti
-backend. This is validator and routing support only; it is not a committed
-hardware receipt.
+backend. A current-source receipt is committed at
+`ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json`.
 
 ### Non-goals
 
@@ -191,9 +191,10 @@ dense GGUF, Qwen2.5-inheritance, or BitNet QK256 promotion.
 
 ### Acceptance
 
-Qwen3 dense server-smoke receipt fixtures validate when they use the exact
-model ID/SHA, route, backend, fallback, and claim booleans. Unknown dense model
-identities and wrong coverage rows are rejected.
+The Qwen3 dense server-smoke receipt uses the exact model ID/SHA, route,
+backend, fallback, endpoint profile, generation policy, quality gate, and claim
+booleans. Unknown dense model identities and wrong coverage rows are rejected by
+the validator support landed earlier.
 
 ### Proof commands
 
@@ -209,7 +210,7 @@ coverage unchanged unless user-path evidence is invalidated separately.
 
 ## Work item: CUDA-MODEL-014
 
-Status: in_progress
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0010-server-readiness-proof-boundary.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
@@ -223,9 +224,12 @@ Review whether Qwen3 has enough evidence for exact-profile server readiness.
 
 ### Production delta
 
-Rejected for now. Qwen3 remains `product_cli_ready` for bounded CLI ask/chat
-paths, but `server_ready=false` because no current-source Qwen3 non-streaming
-`/v1/chat/completions` server-smoke receipt is committed.
+Rejected at the time of review because no current-source Qwen3 non-streaming
+`/v1/chat/completions` server-smoke receipt was committed. A later receipt now
+exists at
+`ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json`,
+but `server_ready=false` remains correct until a separate exact-profile review
+accepts that receipt.
 
 ### Non-goals
 

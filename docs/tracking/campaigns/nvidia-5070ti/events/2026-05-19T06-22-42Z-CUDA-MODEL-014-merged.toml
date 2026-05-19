@@ -1,0 +1,12 @@
+timestamp = "2026-05-19T06:22:42Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-014"
+event = "merged"
+pr = 5866
+head_sha = "dd0e5d35555620091939d705004c504d6b87ad09"
+merge_sha = "ecae13be5aecdbb2e865dc26e1beec7a8deac019"
+actor = "codex"
+notes = [
+  "Merged PR #5866 with Qwen3 exact-profile server-readiness rejected because no committed current-source server-smoke receipt existed at review time.",
+  "The review preserved server_ready=false, speedup_claim=false, full_residency_claim=false, broad dense GGUF readiness false, Qwen2.5 inheritance false, and BitNet QK256 proof false.",
+]
