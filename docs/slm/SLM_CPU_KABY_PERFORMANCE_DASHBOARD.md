@@ -270,13 +270,27 @@ Readiness here means only that the next selector PR has the required proof
 inputs. It is not packed Q8_0 production execution and it is not a speedup
 claim.
 
-SLM-CPU-052 is that next selector-update gate. It must start from the
-SLM-CPU-051 readiness artifact and either keep the packed sidecar path blocked
-with a concrete blocker, or update the selector only where the eager F32 Candle
-oracle and the packed Q8_0 candidate preserve the same prompt IDs, generated
-IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel,
-model SHA, and `fallback=false`. Any timing statement remains bounded to the
-before/after receipts for the fixed Qwen3 Q8_0 appliance profile; it is not a
+SLM-CPU-052 is that next selector-update gate. It starts from the SLM-CPU-051
+readiness artifact and adds an explicit selector-update receipt plus an opt-in
+selector path for the packed Q8_0 sidecar candidate. The ordinary dense Q8_0
+selector still preserves eager F32 Candle unless the selector-update proof is
+supplied.
+
+```text
+artifact_kind = dense_gguf_q8_selector_update
+previous_selected_path = eager_f32_candle
+selected_path = packed_q8_sidecar | eager_f32_candle
+selected_kernel = dense-q8-sidecar-linear | dense-f32-candle-linear
+selector_update_applied = true | false
+sidecar_runtime_compute_allowed = true | false
+runtime_blockers = [] | ...
+speedup_claim = false
+```
+
+The update may select the packed sidecar only where the eager F32 Candle oracle
+and the packed Q8_0 candidate preserve the same prompt IDs, generated IDs,
+decoded text, strict tokenizer authority, selected CPU backend/kernel, model
+SHA, and `fallback=false`. It is a behavior-preserving selector update, not a
 sustained-throughput or portable CPU-performance claim.
 
 ## Greedy Sampler Fast Path
