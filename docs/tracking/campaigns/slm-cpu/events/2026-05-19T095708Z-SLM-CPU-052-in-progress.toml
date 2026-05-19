@@ -1,0 +1,11 @@
+timestamp = "2026-05-19T09:57:08Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-052"
+event = "in_progress"
+branch = "codex/slm-cpu-052-selector-update-impl"
+actor = "codex"
+notes = [
+  "Started the packed Q8_0 sidecar selector-update implementation after SLM-CPU-051 readiness.",
+  "Scope remains behavior-preserving: selector update requires generated-ID/text equivalence, production hook availability, strict provenance, and speedup_claim=false.",
+  "The ordinary eager F32 selector remains available unless the selector-update proof is supplied.",
+]
