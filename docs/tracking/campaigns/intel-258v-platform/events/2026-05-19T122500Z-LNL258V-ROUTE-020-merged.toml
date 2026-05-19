@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T12:25:00Z"
+event = "merged"
+item = "LNL258V-ROUTE-020"
+branch = "codex/lunar-lake/LNL258V-ROUTE-020-low-power-ledger"
+pr = 5831
+head_sha = "cb522ff1b5c32f2d56e69eccbc6ae59ea50d715a"
+merge_sha = "81e094105b40acee91cff17b705f698d4b8857ec"
+actor = "codex"
+summary = "Merged LNL258V-ROUTE-020 after hardening low_power and warm_resident route blockers in the promotion ledger."
+
+notes = [
+  "PR #5831 preserves attached route-profile comparison evidence on the OpenVINO NPU candidate route and no longer reports profile_regression_bundle as missing when that evidence is attached.",
+  "Auto-route why-not-NPU explanations can now surface low_power power-advantage, warm_resident, and cold-start blockers from the promotion ledger.",
+  "The merge keeps GPU promotion scoped to ask_short and ask_normal, keeps NPU and low_power unpromoted, and makes no speedup, power-advantage, native accelerator, acceleration, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]

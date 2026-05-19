@@ -8281,7 +8281,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-020"
-status = "in_progress"
+status = "merged"
+pr = 5831
+head_sha = "cb522ff1b5c32f2d56e69eccbc6ae59ea50d715a"
+merge_sha = "81e094105b40acee91cff17b705f698d4b8857ec"
 branch = "codex/lunar-lake/LNL258V-ROUTE-020-low-power-ledger"
 stackable = false
 review_mode = "codex_premerge"
