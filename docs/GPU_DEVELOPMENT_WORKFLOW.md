@@ -201,7 +201,7 @@ These run on a schedule regardless of PRs:
 |----------|----------|---------|
 | `gpu-smoke.yml` | Weekly | CUDA compile check + smoke test |
 | `rocm-smoke.yml` | Weekly | ROCm/HIP compile check |
-| `fuzz-ci.yml` | Nightly | Fuzz targets (36 targets × 60s) |
+| `fuzz-ci.yml` | Nightly | Selected fuzz targets (37 targets × 60s) |
 
 ### Pipeline Flow
 

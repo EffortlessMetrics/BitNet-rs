@@ -30,7 +30,7 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
-  # Always-on: build a representative fuzz subset on PR/push, and the full set on schedule/manual.
+  # Always-on: build a representative fuzz subset on PR/push, and the scheduled matrix on schedule/manual.
   fuzz-build:
     name: Fuzz targets build
     runs-on: ubuntu-22.04
@@ -125,7 +125,7 @@ jobs:
           RUSTUP_TOOLCHAIN: nightly
           RUSTFLAGS: -C debuginfo=0
 
-  # Scheduled only: run each fuzz target for a short time to catch new crashes
+  # Scheduled only: run each selected fuzz target for a short time to catch new crashes
   fuzz-run:
     name: "Fuzz run (${{ matrix.target }})"
     runs-on: ubuntu-22.04
@@ -135,8 +135,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Complete list of fuzz targets — must match fuzz/Cargo.toml [[bin]] entries.
-        # This list is the single source of truth for nightly fuzz coverage; the
+        # Selected nightly coverage matrix. fuzz/Cargo.toml has more registered
+        # targets; this list is the CI-cost-controlled scheduled subset. The
         # consolidated workflow replaces the former fuzz-nightly.yml and
         # nightly-fuzz.yml runs that fired at the same 02:00 UTC slot.
         target:
