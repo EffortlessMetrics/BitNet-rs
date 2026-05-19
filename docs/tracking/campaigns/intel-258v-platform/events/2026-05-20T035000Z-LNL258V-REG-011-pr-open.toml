@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T03:50:00Z"
+event = "pr_open"
+item = "LNL258V-REG-011"
+pr = 6027
+branch = "codex/lunar-lake/LNL258V-REG-011-route-model-identity-gate"
+head_sha = "ce041c59e417be5761d63c1704d19a2a5f5b5685"
+actor = "codex"
+summary = "Opened LNL258V-REG-011 to gate strict Lunar Lake regression on route/model identity coverage."
+
+notes = [
+  "PR #6027 makes strict regression and operator readiness fail closed if route-profile or cold/warm benchmark rows lack model identity, tokenizer/template identity, or model-hash-or-explicit-gap coverage.",
+  "OpenVINO IR rows preserve the explicit no-local-model-binary-SHA256 gap from the committed manifest instead of using a fake hash.",
+  "The PR preserves no new-inference, route-promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]

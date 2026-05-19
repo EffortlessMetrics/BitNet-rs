@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-20T02:10:00Z",
+  "created_utc": "2026-05-20T03:25:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -2485,6 +2485,34 @@
     "proxy_or_missing_routes": [],
     "promotion_eligible_proxy_or_missing_routes": [],
     "unblocked_proxy_or_missing_routes": []
+  },
+  "route_model_identity_coverage": {
+    "route_row_count": 23,
+    "route_rows_with_identity": 23,
+    "route_rows_with_model_hash": 9,
+    "route_rows_with_tokenizer_template": 23,
+    "route_rows_without_model_hash_with_known_gap": 14,
+    "all_route_rows_have_identity": true,
+    "all_route_rows_have_tokenizer_template": true,
+    "model_hash_or_explicit_gap_for_all_route_rows": true,
+    "routes_without_model_hash": [
+      "ask_normal:dense_slm_openvino_gpu_candidate",
+      "ask_normal:dense_slm_openvino_npu_candidate",
+      "ask_short:dense_slm_openvino_gpu_candidate",
+      "ask_short:dense_slm_openvino_npu_candidate",
+      "decode_heavy:dense_slm_openvino_gpu_candidate",
+      "decode_heavy:dense_slm_openvino_npu_candidate",
+      "low_power:dense_slm_openvino_gpu_candidate",
+      "low_power:dense_slm_openvino_npu_candidate",
+      "prefill_heavy:dense_slm_openvino_gpu_candidate",
+      "prefill_heavy:dense_slm_openvino_npu_candidate",
+      "regression_tiny:dense_slm_openvino_gpu_candidate",
+      "regression_tiny:dense_slm_openvino_npu_candidate",
+      "warm_resident:dense_slm_openvino_gpu_candidate",
+      "warm_resident:dense_slm_openvino_npu_candidate"
+    ],
+    "routes_without_model_hash_missing_known_gap": [],
+    "routes_without_tokenizer_template": []
   },
   "route_promotion_scope": {
     "openvino_gpu_promoted_profiles": [
