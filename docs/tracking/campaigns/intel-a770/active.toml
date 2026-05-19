@@ -67,10 +67,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/intel-a770/A770-003-backend-identity"
 pr = 5969
 head_sha = "f86bc087913a3c2251a8a97c730ac060b2ff7d18"
+merge_sha = "9deb49448c1884813a3d06d5ca6b2b73d1e7eda9"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
