@@ -4,7 +4,7 @@ event = "pr_open"
 item = "LNL258V-PROFILE-RUN-004"
 pr = 5898
 branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-004-cpu-heavy-profile-run"
-head_sha = "dd6e71750a925c6315327a01e8d8194f9f558af0"
+head_sha = "d1d656720b34c8731ffc70d03b2381790f957458"
 actor = "codex"
 summary = "Opened LNL258V-PROFILE-RUN-004 to add explicit Rust GGUF CPU heavy-profile baseline timing."
 
