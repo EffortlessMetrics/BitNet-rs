@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "dense_gguf_q8_sidecar_runtime_proof_validation",
+  "claim": "SLM-CPU-053 validates the first packed Q8_0 sidecar runtime proof gate while preserving the Qwen3 Q8_0 Kaby appliance behavior oracle",
+  "source_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-proof.json",
+  "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+  "selected_backend": "cpu-rust",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "strict": true,
+    "pretokenizer_authority": "present"
+  },
+  "generation": {
+    "prompt_template": "qwen",
+    "qwen_no_think": true,
+    "mode": "greedy",
+    "temperature": 0.0,
+    "deterministic": true,
+    "max_new_tokens": 8
+  },
+  "behavior_oracle": {
+    "prompt_count": 6,
+    "quality_passed": true,
+    "determinism_checked": true,
+    "determinism_passed": true,
+    "generated_outputs_repeat_stable": true,
+    "prompt_ids_recorded": true,
+    "generated_ids_recorded": true,
+    "decoded_text_recorded": true
+  },
+  "packed_q8_sidecar_runtime_gate": {
+    "library_artifact_kind": "dense_gguf_q8_runtime_execution_proof",
+    "focused_validation_command": "cargo test --locked -p bitnet-models --lib dense_gguf_q8 --no-default-features",
+    "focused_validation_passed": true,
+    "sidecar_matvec_execution_proof_available": true,
+    "sidecar_matvec_output_matches_eager_f32": true,
+    "selector_update_required": true,
+    "production_transformer_routing_enabled": false,
+    "production_transformer_routing_blocker": "production TransformerModel routing remains on eager F32 Candle until a non-cyclic dense-linear runtime API can pass the sidecar registry into transformer compute",
+    "eager_f32_runtime_preserved": true,
+    "dense_runtime_replaced": false
+  },
+  "claim_boundary": {
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "q4_q5_runtime_support_claim": false,
+    "server_claim": false,
+    "gpu_npu_openvino_uhd620_claim": false,
+    "qwen35_claim": false,
+    "bitnet_qk256_changed": false
+  },
+  "validation": {
+    "passed": true,
+    "notes": [
+      "The real warm-session receipt preserves the strict Qwen3 Q8_0 CPU behavior oracle with fallback_used=false.",
+      "The packed Q8_0 sidecar runtime proof is scoped to the exact selector-updated sidecar matvec proof gate.",
+      "Full production transformer routing remains disabled and is not claimed by this artifact."
+    ]
+  }
+}

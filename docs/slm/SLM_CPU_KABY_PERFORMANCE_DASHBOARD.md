@@ -303,6 +303,34 @@ specific blocker. This remains a behavior-preserving Kaby appliance slice, not
 a sustained-throughput, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256
 claim.
 
+The first SLM-CPU-053 implementation is deliberately narrower than production
+transformer replacement. It executes the packed Q8_0 sidecar matvec for the
+exact selector-updated tensor, checks that the sidecar output still matches the
+eager F32 fixture output, and checks that the before/after behavior receipts
+preserve model SHA, tokenizer authority, prompt IDs, generated IDs, decoded
+text, selected CPU backend/kernel identity, `fallback=false`, and
+`speedup_claim=false`.
+
+```text
+artifact_kind = dense_gguf_q8_runtime_execution_proof
+execution_status = executed_proof_only_production_route_disabled | blocked
+selected_path = packed_q8_sidecar | eager_f32_candle
+selected_kernel = dense-q8-sidecar-linear | dense-f32-candle-linear
+sidecar_matvec_executed = true | false
+sidecar_matvec_output_matches_eager_f32 = true | false
+production_transformer_routing_enabled = false
+eager_f32_runtime_preserved = true
+dense_runtime_replaced = false
+speedup_claim = false
+```
+
+Production `TransformerModel` routing remains disabled because the sidecar
+registry is owned by `bitnet-models` while transformer dense-linear compute is
+inside `bitnet-transformer`; replacing the eager Candle path safely requires a
+separate non-cyclic runtime API boundary. Until that boundary exists, this proof
+is execution evidence for the exact sidecar tensor, not a claim that the full
+Qwen3 runtime generally uses packed Q8_0 sidecar kernels.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when

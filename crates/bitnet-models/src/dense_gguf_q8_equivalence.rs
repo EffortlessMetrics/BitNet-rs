@@ -7,7 +7,7 @@
 //! only after the proof chain is ready.
 
 use crate::dense_gguf_descriptors::DenseGgufTensorRole;
-use crate::dense_gguf_linear_fixture::DenseGgufQ8LinearSidecarSummary;
+use crate::dense_gguf_linear_fixture::{DenseGgufQ8LinearSidecar, DenseGgufQ8LinearSidecarSummary};
 use crate::dense_gguf_q8_dispatch::{
     DenseQ8DispatchSelection, DenseQ8RuntimePath, DenseQ8SidecarCandidateStatus,
     select_dense_q8_runtime_with_selector_update,
@@ -25,6 +25,8 @@ pub const DENSE_GGUF_Q8_PRODUCTION_COMPUTE_HOOK_ARTIFACT_KIND: &str =
 pub const DENSE_GGUF_Q8_SELECTOR_READINESS_GATE_ARTIFACT_KIND: &str =
     "dense_gguf_q8_selector_readiness_gate";
 pub const DENSE_GGUF_Q8_SELECTOR_UPDATE_ARTIFACT_KIND: &str = "dense_gguf_q8_selector_update";
+pub const DENSE_GGUF_Q8_RUNTIME_EXECUTION_PROOF_ARTIFACT_KIND: &str =
+    "dense_gguf_q8_runtime_execution_proof";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -83,6 +85,23 @@ pub enum DenseQ8SelectorReadinessStatus {
 pub enum DenseQ8SelectorUpdateStatus {
     Blocked,
     AppliedToPackedSidecarCandidate,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DenseQ8RuntimeExecutionStatus {
+    ExecutedProofOnlyProductionRouteDisabled,
+    Blocked,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DenseQ8RuntimeExecutionBlocker {
+    SelectorUpdateMissingOrBlocked,
+    SelectorDidNotSelectPackedSidecar,
+    SidecarPayloadMismatch,
+    SidecarMatvecMismatch,
+    BehaviorReceiptMismatch,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -227,6 +246,32 @@ pub struct DenseQ8SelectorUpdate {
     pub speedup_claim: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DenseQ8RuntimeExecutionProof {
+    pub schema: u64,
+    pub artifact_kind: String,
+    pub tensor_name: String,
+    pub role: DenseGgufTensorRole,
+    pub sidecar_payload_sha256: Option<String>,
+    pub selected_path: DenseQ8RuntimePath,
+    pub selected_kernel: String,
+    pub execution_status: DenseQ8RuntimeExecutionStatus,
+    pub sidecar_matvec_executed: bool,
+    pub sidecar_matvec_output_matches_eager_f32: bool,
+    pub max_abs_diff_vs_eager_f32: f32,
+    pub fixture_abs_tolerance: f32,
+    pub baseline_receipt: DenseQ8BehaviorReceiptSummary,
+    pub candidate_receipt: DenseQ8BehaviorReceiptSummary,
+    pub generated_id_receipt_equivalence_passed: bool,
+    pub behavior_mismatches: Vec<DenseQ8GeneratedIdTextMismatch>,
+    pub runtime_blockers: Vec<DenseQ8RuntimeExecutionBlocker>,
+    pub production_transformer_routing_enabled: bool,
+    pub production_transformer_routing_blocker: Option<String>,
+    pub eager_f32_runtime_preserved: bool,
+    pub dense_runtime_replaced: bool,
+    pub speedup_claim: bool,
+}
+
 impl DenseQ8SidecarEquivalenceGate {
     pub fn runtime_still_blocked(&self) -> bool {
         !self.sidecar_runtime_compute_allowed
@@ -293,6 +338,21 @@ impl DenseQ8SelectorUpdate {
     }
 }
 
+impl DenseQ8RuntimeExecutionProof {
+    pub fn proof_executed_without_speed_claim(&self) -> bool {
+        self.execution_status
+            == DenseQ8RuntimeExecutionStatus::ExecutedProofOnlyProductionRouteDisabled
+            && self.sidecar_matvec_executed
+            && self.sidecar_matvec_output_matches_eager_f32
+            && self.generated_id_receipt_equivalence_passed
+            && self.runtime_blockers.is_empty()
+            && !self.production_transformer_routing_enabled
+            && self.eager_f32_runtime_preserved
+            && !self.dense_runtime_replaced
+            && !self.speedup_claim
+    }
+}
+
 pub fn build_dense_q8_sidecar_equivalence_gate(
     sidecar: &DenseGgufQ8LinearSidecarSummary,
     selection: &DenseQ8DispatchSelection,
@@ -354,6 +414,38 @@ pub fn build_dense_q8_generated_id_text_equivalence_gate(
     baseline_receipt: DenseQ8BehaviorReceiptSummary,
     candidate_receipt: DenseQ8BehaviorReceiptSummary,
 ) -> DenseQ8GeneratedIdTextEquivalenceGate {
+    let mut mismatches =
+        dense_q8_behavior_receipt_mismatches(&baseline_receipt, &candidate_receipt);
+    if !preflight.selects_eager_f32() {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::RuntimePreflightNotEagerF32);
+    }
+    if preflight.sidecar_runtime_compute_allowed {
+        mismatches.push(DenseQ8GeneratedIdTextMismatch::RuntimePreflightAllowsSidecarCompute);
+    }
+
+    DenseQ8GeneratedIdTextEquivalenceGate {
+        schema: 1,
+        artifact_kind: DENSE_GGUF_Q8_GENERATED_ID_TEXT_EQUIVALENCE_ARTIFACT_KIND.to_string(),
+        tensor_name: preflight.tensor_name.clone(),
+        role: preflight.role,
+        sidecar_payload_sha256: preflight.sidecar_payload_sha256.clone(),
+        selected_path: preflight.selected_path,
+        selected_kernel: preflight.selected_kernel.clone(),
+        baseline_receipt,
+        candidate_receipt,
+        generated_id_receipt_equivalence_passed: mismatches.is_empty(),
+        sidecar_runtime_compute_allowed: false,
+        mismatches,
+        eager_f32_runtime_preserved: true,
+        dense_runtime_replaced: false,
+        speedup_claim: false,
+    }
+}
+
+fn dense_q8_behavior_receipt_mismatches(
+    baseline_receipt: &DenseQ8BehaviorReceiptSummary,
+    candidate_receipt: &DenseQ8BehaviorReceiptSummary,
+) -> Vec<DenseQ8GeneratedIdTextMismatch> {
     let mut mismatches = Vec::new();
 
     if baseline_receipt.model_sha256 != candidate_receipt.model_sha256 {
@@ -398,30 +490,8 @@ pub fn build_dense_q8_generated_id_text_equivalence_gate(
     if candidate_receipt.speedup_claim {
         mismatches.push(DenseQ8GeneratedIdTextMismatch::CandidateSpeedupClaim);
     }
-    if !preflight.selects_eager_f32() {
-        mismatches.push(DenseQ8GeneratedIdTextMismatch::RuntimePreflightNotEagerF32);
-    }
-    if preflight.sidecar_runtime_compute_allowed {
-        mismatches.push(DenseQ8GeneratedIdTextMismatch::RuntimePreflightAllowsSidecarCompute);
-    }
 
-    DenseQ8GeneratedIdTextEquivalenceGate {
-        schema: 1,
-        artifact_kind: DENSE_GGUF_Q8_GENERATED_ID_TEXT_EQUIVALENCE_ARTIFACT_KIND.to_string(),
-        tensor_name: preflight.tensor_name.clone(),
-        role: preflight.role,
-        sidecar_payload_sha256: preflight.sidecar_payload_sha256.clone(),
-        selected_path: preflight.selected_path,
-        selected_kernel: preflight.selected_kernel.clone(),
-        baseline_receipt,
-        candidate_receipt,
-        generated_id_receipt_equivalence_passed: mismatches.is_empty(),
-        sidecar_runtime_compute_allowed: false,
-        mismatches,
-        eager_f32_runtime_preserved: true,
-        dense_runtime_replaced: false,
-        speedup_claim: false,
-    }
+    mismatches
 }
 
 pub fn build_dense_q8_production_compute_hook_availability(
@@ -586,6 +656,100 @@ pub fn select_dense_q8_runtime_after_selector_update(
     )
 }
 
+pub fn build_dense_q8_runtime_execution_proof(
+    sidecar: &DenseGgufQ8LinearSidecar,
+    registry: &DenseGgufQ8SidecarRegistry,
+    update: &DenseQ8SelectorUpdate,
+    baseline_receipt: DenseQ8BehaviorReceiptSummary,
+    candidate_receipt: DenseQ8BehaviorReceiptSummary,
+    fixture_abs_tolerance: f32,
+) -> Result<DenseQ8RuntimeExecutionProof> {
+    if !fixture_abs_tolerance.is_finite() || fixture_abs_tolerance < 0.0 {
+        return Err(BitNetError::Validation(format!(
+            "Q8_0 runtime execution proof tolerance must be finite and non-negative, got {fixture_abs_tolerance}"
+        )));
+    }
+
+    let sidecar_summary = &sidecar.summary;
+    let selection = select_dense_q8_runtime_after_selector_update(
+        &sidecar_summary.tensor_name,
+        registry,
+        update,
+    );
+    let behavior_mismatches =
+        dense_q8_behavior_receipt_mismatches(&baseline_receipt, &candidate_receipt);
+    let generated_id_receipt_equivalence_passed = behavior_mismatches.is_empty();
+    let selector_update_valid = update.selects_packed_sidecar_without_speed_claim()
+        && update.tensor_name == sidecar_summary.tensor_name
+        && update.role == sidecar_summary.role;
+    let selector_selected_sidecar = selection.selected_path == DenseQ8RuntimePath::PackedQ8Sidecar
+        && selection.selected_kernel == "dense-q8-sidecar-linear"
+        && selection.runtime_compute_enabled
+        && !selection.speedup_claim;
+    let payload_matches = update.sidecar_payload_sha256.as_deref()
+        == Some(sidecar_summary.packed_q8_bytes_sha256.as_str())
+        && selection.sidecar_payload_sha256.as_deref()
+            == Some(sidecar_summary.packed_q8_bytes_sha256.as_str());
+    let sidecar_matvec_output_matches_eager_f32 = sidecar_summary.dequantizes_inside_matvec
+        && !sidecar_summary.materializes_full_f32_weights
+        && sidecar_summary.compares_against_eager_f32_reference
+        && !sidecar_summary.speedup_claim
+        && !sidecar_summary.dense_runtime_replaced
+        && sidecar_summary.max_abs_diff_vs_eager_f32 <= fixture_abs_tolerance
+        && sidecar.fused_output == sidecar.eager_output;
+
+    let mut runtime_blockers = Vec::new();
+    if !selector_update_valid {
+        runtime_blockers.push(DenseQ8RuntimeExecutionBlocker::SelectorUpdateMissingOrBlocked);
+    }
+    if !selector_selected_sidecar {
+        runtime_blockers.push(DenseQ8RuntimeExecutionBlocker::SelectorDidNotSelectPackedSidecar);
+    }
+    if !payload_matches {
+        runtime_blockers.push(DenseQ8RuntimeExecutionBlocker::SidecarPayloadMismatch);
+    }
+    if !sidecar_matvec_output_matches_eager_f32 {
+        runtime_blockers.push(DenseQ8RuntimeExecutionBlocker::SidecarMatvecMismatch);
+    }
+    if !generated_id_receipt_equivalence_passed {
+        runtime_blockers.push(DenseQ8RuntimeExecutionBlocker::BehaviorReceiptMismatch);
+    }
+
+    let proof_executed = runtime_blockers.is_empty();
+
+    Ok(DenseQ8RuntimeExecutionProof {
+        schema: 1,
+        artifact_kind: DENSE_GGUF_Q8_RUNTIME_EXECUTION_PROOF_ARTIFACT_KIND.to_string(),
+        tensor_name: sidecar_summary.tensor_name.clone(),
+        role: sidecar_summary.role,
+        sidecar_payload_sha256: Some(sidecar_summary.packed_q8_bytes_sha256.clone()),
+        selected_path: selection.selected_path,
+        selected_kernel: selection.selected_kernel,
+        execution_status: if proof_executed {
+            DenseQ8RuntimeExecutionStatus::ExecutedProofOnlyProductionRouteDisabled
+        } else {
+            DenseQ8RuntimeExecutionStatus::Blocked
+        },
+        sidecar_matvec_executed: proof_executed,
+        sidecar_matvec_output_matches_eager_f32,
+        max_abs_diff_vs_eager_f32: sidecar_summary.max_abs_diff_vs_eager_f32,
+        fixture_abs_tolerance,
+        baseline_receipt,
+        candidate_receipt,
+        generated_id_receipt_equivalence_passed,
+        behavior_mismatches,
+        runtime_blockers,
+        production_transformer_routing_enabled: false,
+        production_transformer_routing_blocker: Some(
+            "production TransformerModel routing remains on eager F32 Candle until a non-cyclic dense-linear runtime API can pass the sidecar registry into transformer compute"
+                .to_string(),
+        ),
+        eager_f32_runtime_preserved: true,
+        dense_runtime_replaced: false,
+        speedup_claim: false,
+    })
+}
+
 pub fn build_dense_q8_sidecar_runtime_preflight(
     gate: &DenseQ8SidecarEquivalenceGate,
     production_compute_hook_available: bool,
@@ -699,6 +863,26 @@ mod tests {
             selected_kernel: "dense-f32-candle-linear".to_string(),
             fallback_used: false,
             speedup_claim: false,
+        }
+    }
+
+    fn sidecar_fixture_for_registry(
+        registry: &DenseGgufQ8SidecarRegistry,
+    ) -> DenseGgufQ8LinearSidecar {
+        let payload = registry
+            .descriptor_for_tensor("blk.0.attn_q.weight")
+            .expect("q proj descriptor")
+            .packed_q8_bytes_sha256
+            .clone();
+        let mut summary = sidecar_summary(0.0);
+        summary.packed_q8_bytes_sha256 = payload;
+        summary.fused_output_sha256 = "same-output".to_string();
+        summary.eager_output_sha256 = "same-output".to_string();
+        DenseGgufQ8LinearSidecar {
+            summary,
+            cpu_reference_input: vec![0.25, -0.25],
+            fused_output: vec![1.0, 2.0, 3.0, 4.0],
+            eager_output: vec![1.0, 2.0, 3.0, 4.0],
         }
     }
 
@@ -1149,6 +1333,134 @@ mod tests {
             &update,
         );
         assert!(selection.selects_eager_f32());
+        Ok(())
+    }
+
+    #[test]
+    fn q8_runtime_execution_proof_executes_exact_sidecar_after_selector_update() -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let candidate = behavior_receipt("q8-sidecar-candidate");
+        let gate = build_dense_q8_generated_id_text_equivalence_gate(
+            &preflight,
+            baseline.clone(),
+            candidate.clone(),
+        );
+        let availability = build_dense_q8_production_compute_hook_availability(
+            &gate,
+            Some("dense-q8-sidecar-linear-hook"),
+        );
+        let readiness = build_dense_q8_selector_readiness_gate(&availability);
+        let update = build_dense_q8_selector_update(&readiness);
+        let registry = registry_with_q_and_k_proj();
+        let sidecar = sidecar_fixture_for_registry(&registry);
+
+        let proof = build_dense_q8_runtime_execution_proof(
+            &sidecar, &registry, &update, baseline, candidate, 1e-6,
+        )?;
+
+        assert_eq!(proof.artifact_kind, DENSE_GGUF_Q8_RUNTIME_EXECUTION_PROOF_ARTIFACT_KIND);
+        assert_eq!(proof.selected_path, DenseQ8RuntimePath::PackedQ8Sidecar);
+        assert_eq!(proof.selected_kernel, "dense-q8-sidecar-linear");
+        assert_eq!(
+            proof.execution_status,
+            DenseQ8RuntimeExecutionStatus::ExecutedProofOnlyProductionRouteDisabled
+        );
+        assert!(proof.sidecar_matvec_executed);
+        assert!(proof.sidecar_matvec_output_matches_eager_f32);
+        assert!(proof.generated_id_receipt_equivalence_passed);
+        assert!(proof.behavior_mismatches.is_empty());
+        assert!(proof.runtime_blockers.is_empty());
+        assert!(proof.proof_executed_without_speed_claim());
+        assert!(!proof.production_transformer_routing_enabled);
+        assert!(proof.production_transformer_routing_blocker.is_some());
+        assert!(proof.eager_f32_runtime_preserved);
+        assert!(!proof.dense_runtime_replaced);
+        assert!(!proof.speedup_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn q8_runtime_execution_proof_blocks_when_behavior_receipts_differ() -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let candidate_for_update = behavior_receipt("q8-sidecar-candidate");
+        let gate = build_dense_q8_generated_id_text_equivalence_gate(
+            &preflight,
+            baseline.clone(),
+            candidate_for_update,
+        );
+        let availability = build_dense_q8_production_compute_hook_availability(
+            &gate,
+            Some("dense-q8-sidecar-linear-hook"),
+        );
+        let readiness = build_dense_q8_selector_readiness_gate(&availability);
+        let update = build_dense_q8_selector_update(&readiness);
+        let registry = registry_with_q_proj();
+        let sidecar = sidecar_fixture_for_registry(&registry);
+        let mut candidate = behavior_receipt("q8-sidecar-candidate");
+        candidate.generated_ids = vec![84644];
+        candidate.decoded_text = "htar".to_string();
+
+        let proof = build_dense_q8_runtime_execution_proof(
+            &sidecar, &registry, &update, baseline, candidate, 1e-6,
+        )?;
+
+        assert_eq!(proof.execution_status, DenseQ8RuntimeExecutionStatus::Blocked);
+        assert!(!proof.sidecar_matvec_executed);
+        assert!(proof.sidecar_matvec_output_matches_eager_f32);
+        assert!(!proof.generated_id_receipt_equivalence_passed);
+        assert!(proof.behavior_mismatches.contains(&DenseQ8GeneratedIdTextMismatch::GeneratedIds));
+        assert!(proof.behavior_mismatches.contains(&DenseQ8GeneratedIdTextMismatch::DecodedText));
+        assert!(
+            proof
+                .runtime_blockers
+                .contains(&DenseQ8RuntimeExecutionBlocker::BehaviorReceiptMismatch)
+        );
+        assert!(!proof.proof_executed_without_speed_claim());
+        assert!(!proof.production_transformer_routing_enabled);
+        assert!(!proof.dense_runtime_replaced);
+        assert!(!proof.speedup_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn q8_runtime_execution_proof_blocks_tampered_payload() -> Result<()> {
+        let preflight = runtime_preflight()?;
+        let baseline = behavior_receipt("eager-f32-baseline");
+        let candidate = behavior_receipt("q8-sidecar-candidate");
+        let gate = build_dense_q8_generated_id_text_equivalence_gate(
+            &preflight,
+            baseline.clone(),
+            candidate.clone(),
+        );
+        let availability = build_dense_q8_production_compute_hook_availability(
+            &gate,
+            Some("dense-q8-sidecar-linear-hook"),
+        );
+        let readiness = build_dense_q8_selector_readiness_gate(&availability);
+        let mut update = build_dense_q8_selector_update(&readiness);
+        update.sidecar_payload_sha256 = Some("different-payload".to_string());
+        let registry = registry_with_q_proj();
+        let sidecar = sidecar_fixture_for_registry(&registry);
+
+        let proof = build_dense_q8_runtime_execution_proof(
+            &sidecar, &registry, &update, baseline, candidate, 1e-6,
+        )?;
+
+        assert_eq!(proof.execution_status, DenseQ8RuntimeExecutionStatus::Blocked);
+        assert!(
+            proof
+                .runtime_blockers
+                .contains(&DenseQ8RuntimeExecutionBlocker::SelectorDidNotSelectPackedSidecar)
+        );
+        assert!(
+            proof
+                .runtime_blockers
+                .contains(&DenseQ8RuntimeExecutionBlocker::SidecarPayloadMismatch)
+        );
+        assert!(!proof.sidecar_matvec_executed);
+        assert!(!proof.speedup_claim);
         Ok(())
     }
 

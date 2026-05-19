@@ -102,6 +102,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-049 | merged | Added the generated-ID/text receipt equivalence gate before any packed Q8_0 sidecar runtime selection or speedup claim. |
 | SLM-CPU-050 | merged | Added the production-compute-hook availability surface while keeping eager F32 Candle selected until later behavior-preserving selector evidence exists. |
 | SLM-CPU-051 | merged | Add the selector-readiness gate that names the evidence required before a later packed Q8_0 runtime selector update. |
+| SLM-CPU-052 | merged | Added the behavior-preserving selector-update gate that can select the exact packed Q8_0 sidecar candidate only after receipt equivalence and hook availability are proven. |
+| SLM-CPU-053 | ready | Add the first packed Q8_0 runtime execution proof gate; execute only the exact selector-updated sidecar tensor proof and keep production transformer routing disabled unless a separate runtime API boundary is proven. |
 
 ## Review Policy
 
