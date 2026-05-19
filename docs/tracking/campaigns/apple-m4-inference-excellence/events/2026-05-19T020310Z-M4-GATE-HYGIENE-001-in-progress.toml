@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T02:03:10Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-GATE-HYGIENE-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-GATE-HYGIENE-001-no-panic-family"
+
+notes = [
+  "Started M4-GATE-HYGIENE-001 after M4-RECEIPT-001 closeout advanced apple-m4-inference-excellence to the no-panic-family hygiene item.",
+  "The initial check-no-panic-family report found ten unallowlisted test-only findings in the M4 receipt schema fixtures added by PR #5811.",
+  "Scope is limited to removing unallowlisted panic-family test debt without adding allowlist entries or changing runtime/model/backend claims.",
+]

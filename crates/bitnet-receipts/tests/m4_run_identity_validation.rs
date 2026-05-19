@@ -4,6 +4,8 @@ use bitnet_receipts::{
 };
 use serde_json::{Value, json};
 
+type TestResult = Result<(), Box<dyn std::error::Error>>;
+
 fn valid_receipt() -> Value {
     let run_identity = json!({
         "contract_version": M4_RUN_IDENTITY_CONTRACT_VERSION,
@@ -86,6 +88,14 @@ fn receipt_for_family(artifact_kind: &str, evidence_family: &str, command_class:
     receipt
 }
 
+fn remove_run_identity_field(receipt: &mut Value, section: &str, field: &str) -> TestResult {
+    receipt["run_identity"][section]
+        .as_object_mut()
+        .ok_or("run_identity section must be an object")?
+        .remove(field);
+    Ok(())
+}
+
 #[test]
 fn accepts_complete_m4_run_identity_contract() {
     let receipt = valid_receipt();
@@ -93,7 +103,7 @@ fn accepts_complete_m4_run_identity_contract() {
 }
 
 #[test]
-fn accepts_m4_excellence_receipt_family_contracts() {
+fn accepts_m4_excellence_receipt_family_contracts() -> TestResult {
     for (artifact_kind, evidence_family, command_class) in [
         ("apple_m4_slm_eval_summary", "dense_slm_eval_v2", "mac eval"),
         ("apple_m4_slm_benchmark_v2", "dense_slm_benchmark_v2", "mac benchmark"),
@@ -105,8 +115,9 @@ fn accepts_m4_excellence_receipt_family_contracts() {
     ] {
         let receipt = receipt_for_family(artifact_kind, evidence_family, command_class);
         validate_m4_run_identity_contract_json(&receipt)
-            .unwrap_or_else(|err| panic!("{artifact_kind} should validate: {err}"));
+            .map_err(|err| format!("{artifact_kind} should validate: {err}"))?;
     }
+    Ok(())
 }
 
 #[test]
@@ -143,23 +154,25 @@ fn rejects_invalid_model_sha() {
 }
 
 #[test]
-fn rejects_missing_tokenizer_authority() {
+fn rejects_missing_tokenizer_authority() -> TestResult {
     let mut receipt = valid_receipt();
-    receipt["run_identity"]["tokenizer"].as_object_mut().unwrap().remove("authority");
+    remove_run_identity_field(&mut receipt, "tokenizer", "authority")?;
     refresh_run_identity_digest(&mut receipt);
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("authority"), "got: {err}");
+    Ok(())
 }
 
 #[test]
-fn rejects_missing_tokenizer_sha() {
+fn rejects_missing_tokenizer_sha() -> TestResult {
     let mut receipt = valid_receipt();
-    receipt["run_identity"]["tokenizer"].as_object_mut().unwrap().remove("sha256");
+    remove_run_identity_field(&mut receipt, "tokenizer", "sha256")?;
     refresh_run_identity_digest(&mut receipt);
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("sha256"), "got: {err}");
+    Ok(())
 }
 
 #[test]
@@ -173,13 +186,14 @@ fn rejects_backend_mismatch() {
 }
 
 #[test]
-fn rejects_missing_identity_fallback_state() {
+fn rejects_missing_identity_fallback_state() -> TestResult {
     let mut receipt = valid_receipt();
-    receipt["run_identity"]["backend"].as_object_mut().unwrap().remove("fallback_used");
+    remove_run_identity_field(&mut receipt, "backend", "fallback_used")?;
     refresh_run_identity_digest(&mut receipt);
 
     let err = validate_m4_run_identity_contract_json(&receipt).unwrap_err().to_string();
     assert!(err.contains("fallback_used"), "got: {err}");
+    Ok(())
 }
 
 #[test]

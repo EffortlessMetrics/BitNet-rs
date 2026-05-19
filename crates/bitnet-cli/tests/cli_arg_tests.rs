@@ -24,6 +24,8 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 
+type TestResult = Result<(), Box<dyn std::error::Error>>;
+
 #[allow(deprecated)]
 fn bitnet() -> Command {
     Command::cargo_bin("bitnet").expect("bitnet binary must be buildable")
@@ -1432,8 +1434,8 @@ fn mac_ask_help_documents_positional_question() {
 }
 
 #[test]
-fn mac_ask_accepts_positional_question_and_progress_flags_before_cache_lookup() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_ask_accepts_positional_question_and_progress_flags_before_cache_lookup() -> TestResult {
+    let dir = tempfile::tempdir()?;
     let cache = dir.path().join("models");
     let cache_str = cache.to_string_lossy().into_owned();
 
@@ -1453,6 +1455,7 @@ fn mac_ask_accepts_positional_question_and_progress_flags_before_cache_lookup() 
         .stderr(predicate::str::contains("bitnet mac models --cache-dir"))
         .stderr(predicate::str::contains("Disk guidance:"))
         .stderr(predicate::str::contains("unexpected argument").not());
+    Ok(())
 }
 
 #[test]
@@ -2235,7 +2238,10 @@ fn mac_receipts_check_rejects_bitnet_serve_gate_missing_fallback_state()
 
     let mut receipt_json: serde_json::Value =
         serde_json::from_slice(&std::fs::read(&gate_receipt)?)?;
-    receipt_json.as_object_mut().unwrap().remove("fallback_used");
+    receipt_json
+        .as_object_mut()
+        .ok_or("serve gate receipt must be an object")?
+        .remove("fallback_used");
     std::fs::write(&gate_receipt, serde_json::to_vec_pretty(&receipt_json)?)?;
 
     bitnet()
@@ -3999,8 +4005,8 @@ fn mac_receipts_check_accepts_golden_smoke_receipt() -> Result<(), Box<dyn std::
 }
 
 #[test]
-fn mac_receipts_check_accepts_bitnet_warm_session_receipt() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_accepts_bitnet_warm_session_receipt() -> TestResult {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("bitnet-warm.json");
     let prompt = "Answer with a single digit: 2+2=";
     let prompts = serde_json::json!([
@@ -4168,10 +4174,8 @@ fn mac_receipts_check_accepts_bitnet_warm_session_receipt() {
             "bitnet_quality_claimed": false,
             "broad_performance_claim": false,
             "speedup_claim": false
-        }))
-        .expect("json"),
-    )
-    .expect("write receipt");
+        }))?,
+    )?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -4181,6 +4185,7 @@ fn mac_receipts_check_accepts_bitnet_warm_session_receipt() {
         .stdout(predicate::str::contains("bitnet_apple_m4_warm_session"))
         .stdout(predicate::str::contains("\"prompt_count\": 3"))
         .stdout(predicate::str::contains("\"passed\": true"));
+    Ok(())
 }
 
 #[test]
@@ -4810,14 +4815,16 @@ fn mac_receipts_check_accepts_dense_slm_quality_corpus_gate() {
 }
 
 #[test]
-fn mac_receipts_check_rejects_warm_session_missing_generated_token_ids() {
-    let dir = tempfile::tempdir().expect("tempdir");
+fn mac_receipts_check_rejects_warm_session_missing_generated_token_ids() -> TestResult {
+    let dir = tempfile::tempdir()?;
     let receipt_path = dir.path().join("warm-missing-generated-ids.json");
     let mut receipt = dense_quality_warm_session_receipt();
-    receipt["prompts"][0].as_object_mut().unwrap().remove("generated_token_ids");
-    receipt["prompts"][0].as_object_mut().unwrap().remove("tokens");
-    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt).expect("json"))
-        .expect("write receipt");
+    let first_prompt = receipt["prompts"][0]
+        .as_object_mut()
+        .ok_or("first warm-session prompt must be an object")?;
+    first_prompt.remove("generated_token_ids");
+    first_prompt.remove("tokens");
+    std::fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
     let receipt_str = receipt_path.to_string_lossy().into_owned();
 
     bitnet()
@@ -4825,6 +4832,7 @@ fn mac_receipts_check_rejects_warm_session_missing_generated_token_ids() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("generated token IDs"));
+    Ok(())
 }
 
 #[test]
