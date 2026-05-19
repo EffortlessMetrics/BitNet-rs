@@ -2641,9 +2641,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-044"
-status = "pr_open"
+status = "merged"
 pr = 5810
 head_sha = "9265ecf265f11035b0a7371844ad2809c0f0bc55"
+merge_sha = "3663cb0ad4e8b54460a0716d08ac676dbbb91f64"
 branch = "codex/slm-cpu-044-q8-sidecar-runtime-plan"
 stackable = false
 review_mode = "codex_premerge"
@@ -2680,6 +2681,58 @@ forbidden_paths = [
 may_claim = [
   "The next Q8_0 packed sidecar runtime-integration boundary is ready after the fixture-level prototype.",
   "Packed Q8_0 sidecar runtime use remains gated on preserving generated IDs/text, strict tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false against the Qwen3 Q8_0 Kaby behavior oracle.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecars replace the production dense runtime.",
+  "A runtime speedup is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-045"
+status = "ready"
+branch = "codex/slm-cpu-045-q8-sidecar-carrier"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-044"]
+acceptance = "Add the first production-facing Qwen3 Q8_0 packed sidecar carrier after SLM-CPU-044 by preserving packed Q8_0 block metadata from strict GGUF tensor loading into an inert model-side sidecar registry or descriptor while keeping the existing eager F32 Candle tensors as the only runtime compute path. The slice must prove the sidecar carrier is metadata-only/inert for generation, preserve prompt IDs, generated IDs, decoded text, model SHA, strict GGUF tokenizer authority, selected CPU backend/kernel, and fallback=false in behavior evidence or fixture-equivalent gates, and name the next runtime API hook needed before any dense-linear sidecar compute can be selected. It must not claim speedup, sustained throughput, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-models dense_gguf_q8",
+  "cargo test --locked -p bitnet-models --no-default-features",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "Packed Q8_0 sidecar metadata can be carried alongside the existing eager F32 dense tensors for the next runtime-integration slice.",
+  "The production runtime still uses the existing eager F32 Candle tensors unless a later sidecar compute selector preserves generated IDs/text and strict receipts.",
 ]
 must_not_claim = [
   "Packed Q8_0 sidecars replace the production dense runtime.",

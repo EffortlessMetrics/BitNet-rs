@@ -93,6 +93,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-040 | merged | #5715 classified the exact `FeedForward::down_proj` output boundary and recorded that reusable workspace-backed storage remains blocked by Candle's owned linear output path. |
 | SLM-CPU-041 | merged | #5754 narrowed the `FeedForward::down_proj` storage blocker to the exact Candle tensor API gap: linear weight/bias are readable, but matmul/bias-add still lack caller-provided output storage. |
 | SLM-CPU-042 | pr_open | #5773 starts the next dense-math performance slice by identifying and instrumenting the first behavior-preserving Q8_0 dense linear locality or matmul/dequant boundary after the Candle output-storage API blocker. |
+| SLM-CPU-044 | merged | #5810 defined the first production-integration boundary for carrying packed Q8_0 sidecar metadata toward runtime dense-linear use while keeping eager F32 Candle tensors as the behavior oracle. |
+| SLM-CPU-045 | ready | First production-facing packed Q8_0 sidecar carrier slice: preserve packed sidecar metadata from strict GGUF tensor loading into an inert model-side descriptor without changing generation behavior or claiming speedup. |
 
 ## Review Policy
 
