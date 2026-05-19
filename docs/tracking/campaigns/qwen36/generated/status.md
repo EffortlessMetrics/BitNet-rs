@@ -9,7 +9,7 @@
 
 | Item | State | PR | Branch | Review | Merge | Human gate | Acceptance |
 |---|---|---:|---|---|---|---|---|
-| QWEN36-DOCS-000 | ready | TBD | `codex/add-qwen3.6-as-a-governed-model-family` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Register the Qwen3.6 family governance lane as documentation and model-coverage scaffolding only. The slice must add the source map, implementation plan, proposal/spec placeholders, candidate coverage rows, and campaign tracker entry without claiming native runtime support, server inference, answer quality, performance, GPU/NPU execution, Qwen3.5 support, or BitNet QK256 changes. |
+| QWEN36-DOCS-000 | merged | #5892 | `codex/add-qwen3.6-as-a-governed-model-family` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Register the Qwen3.6 family governance lane as documentation and model-coverage scaffolding only. The slice must add the source map, implementation plan, proposal/spec placeholders, candidate coverage rows, and campaign tracker entry without claiming native runtime support, server inference, answer quality, performance, GPU/NPU execution, Qwen3.5 support, or BitNet QK256 changes. |
 
 ## Hard Constraints
 
