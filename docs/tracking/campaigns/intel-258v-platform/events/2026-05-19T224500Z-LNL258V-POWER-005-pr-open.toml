@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T22:45:00Z"
+event = "pr_open"
+item = "LNL258V-POWER-005"
+pr = 5924
+branch = "codex/lunar-lake/LNL258V-POWER-005-battery-telemetry-guard"
+head_sha = "4d853b0fe01224ae1831dab2b19d57fd6cf662c7"
+actor = "codex"
+summary = "Opened LNL258V-POWER-005 to add a fail-closed battery-mode telemetry guard for low_power evidence."
+
+notes = [
+  "PR #5924 adds telemetry-context --require-battery, records requirement status, and writes a blocked battery telemetry receipt when the current power context is AC.",
+  "The blocked battery telemetry receipt is wired into low_power power-profile, regression-v2, operator-comparison, and excellence-audit artifacts while low_power remains unpromoted.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim is added.",
+]

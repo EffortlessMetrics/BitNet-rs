@@ -8280,6 +8280,76 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-POWER-005"
+status = "pr_open"
+pr = 5924
+head_sha = "4d853b0fe01224ae1831dab2b19d57fd6cf662c7"
+branch = "codex/lunar-lake/LNL258V-POWER-005-battery-telemetry-guard"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-POWER-004", "LNL258V-ASK-005"]
+acceptance = "Add a fail-closed battery-mode telemetry guard for Lunar Lake low_power evidence so telemetry-context --require-battery records requirement status, writes a blocked receipt when the current machine is still on AC, fails strict mode after writing that receipt, and wires the blocked battery telemetry receipt into low_power power-profile/regression/comparison/audit artifacts while keeping low_power unpromoted and preserving no inference, speedup, power-advantage, route-promotion, native accelerator, acceleration, or BitNet QK256/I2_S behavior-change claims."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs crates/bitnet-cli/src/mac.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::telemetry_context_blocks_ac_sample_when_battery_required -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::telemetry_context_accepts_battery_sample_when_required -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe lunar-lake telemetry-context --artifact-root ci/hardware/intel-258v/2026-05-08 --require-battery --json-out lunar-lake-low-power-battery-telemetry-blocked.json --created-utc 2026-05-19T22:30:00Z",
+  "target/debug/bitnet.exe lunar-lake telemetry-context --artifact-root ci/hardware/intel-258v/2026-05-08 --require-battery --json-out %TEMP%/lnl258v-low-power-battery-strict-blocked.json --created-utc 2026-05-19T22:31:00Z --strict # expected failure on AC power after writing the blocked receipt",
+  "target/debug/bitnet.exe lunar-lake power-profile --artifact-root ci/hardware/intel-258v/2026-05-08 --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --telemetry-context lunar-lake-power-thermal-context.json --battery-telemetry-context lunar-lake-low-power-battery-telemetry-blocked.json --energy-proxy lunar-lake-low-power-energy-proxy.json --json-out lunar-lake-power-profile-evidence.json --created-utc 2026-05-19T22:35:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-19T22:40:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-19T22:40:00Z --strict",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/mac.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-telemetry-blocked.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "telemetry-context --require-battery records battery-mode requirement status for low_power evidence.",
+  "The current 258V AC-only sample is explicitly blocked as low_power battery evidence and is indexed by power-profile/regression/comparison artifacts.",
+  "low_power remains unpromoted until a real battery-mode sample plus benchmark-qualified power advantage exists.",
+]
+must_not_claim = [
+  "New model inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-ASK-005"
 status = "merged"
 pr = 5920

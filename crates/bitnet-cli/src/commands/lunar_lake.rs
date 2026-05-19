@@ -607,6 +607,10 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = POWER_THERMAL_CONTEXT_FILE)]
         json_out: PathBuf,
 
+        /// Require the captured sample to be a battery-mode sample for low_power evidence.
+        #[arg(long, default_value_t = false)]
+        require_battery: bool,
+
         /// Override the receipt creation timestamp for reproducible committed receipts.
         #[arg(long)]
         created_utc: Option<String>,
@@ -2108,6 +2112,7 @@ pub struct LunarLakeTelemetryContext {
     pub memory: TelemetryMemoryContext,
     pub power: TelemetryPowerContext,
     pub thermal: TelemetryThermalContext,
+    pub capture_requirements: TelemetryCaptureRequirements,
     pub sources: Vec<TelemetrySourceStatus>,
     pub gaps: Vec<String>,
     pub claim_boundary: TelemetryClaimBoundary,
@@ -2148,6 +2153,15 @@ pub struct TelemetrySourceStatus {
     pub source: String,
     pub available: bool,
     pub status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TelemetryCaptureRequirements {
+    pub battery_mode_required: bool,
+    pub battery_mode_sample_recorded: bool,
+    pub requirement_satisfied: bool,
+    pub status: String,
+    pub gaps: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -2794,12 +2808,22 @@ impl LunarLakeCommand {
                 }
                 Ok(())
             }
-            LunarLakeAction::TelemetryContext { artifact_root, json_out, created_utc, strict } => {
+            LunarLakeAction::TelemetryContext {
+                artifact_root,
+                json_out,
+                require_battery,
+                created_utc,
+                strict,
+            } => {
                 let created_utc = match created_utc {
                     Some(created_utc) => normalize_created_utc(created_utc)?,
                     None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 };
-                let receipt = build_telemetry_context_with_created_utc(artifact_root, created_utc);
+                let receipt = build_telemetry_context_with_created_utc_and_requirements(
+                    artifact_root,
+                    created_utc,
+                    *require_battery,
+                );
                 let json_out = resolve_receipt_path(artifact_root, json_out);
                 write_or_print_telemetry_context(&receipt, Some(&json_out))?;
                 if *strict
@@ -2809,6 +2833,15 @@ impl LunarLakeCommand {
                     bail!(
                         "Lunar Lake telemetry context capture failed required memory/power context: {}",
                         receipt.gaps.join("; ")
+                    );
+                }
+                if *strict
+                    && *require_battery
+                    && !receipt.capture_requirements.requirement_satisfied
+                {
+                    bail!(
+                        "Lunar Lake telemetry context capture failed battery-mode requirement: {}",
+                        receipt.capture_requirements.gaps.join("; ")
                     );
                 }
                 Ok(())
@@ -7427,14 +7460,32 @@ fn openvino_generated_token_visibility(device: &Value) -> OpenVinoGeneratedToken
     }
 }
 
+#[cfg(test)]
 pub fn build_telemetry_context_with_created_utc(
     _root: &Path,
     created_utc: String,
 ) -> LunarLakeTelemetryContext {
+    build_telemetry_context_with_created_utc_and_requirements(_root, created_utc, false)
+}
+
+pub fn build_telemetry_context_with_created_utc_and_requirements(
+    _root: &Path,
+    created_utc: String,
+    require_battery: bool,
+) -> LunarLakeTelemetryContext {
     let memory = collect_telemetry_memory_context();
     let power = collect_telemetry_power_context();
     let thermal = collect_telemetry_thermal_context();
+    build_telemetry_context_from_parts(created_utc, memory, power, thermal, require_battery)
+}
 
+fn build_telemetry_context_from_parts(
+    created_utc: String,
+    memory: TelemetryMemoryContext,
+    power: TelemetryPowerContext,
+    thermal: TelemetryThermalContext,
+    require_battery: bool,
+) -> LunarLakeTelemetryContext {
     let memory_context_recorded = memory.total_bytes.is_some() || memory.available_bytes.is_some();
     let power_context_recorded =
         power.active_scheme.as_ref().is_some_and(|value| !value.is_empty())
@@ -7462,6 +7513,8 @@ pub fn build_telemetry_context_with_created_utc(
         "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
             .to_string(),
     );
+    let capture_requirements = telemetry_capture_requirements(&power, require_battery);
+    gaps.extend(capture_requirements.gaps.iter().cloned());
 
     let availability = TelemetryAvailability {
         memory_context_recorded,
@@ -7501,13 +7554,28 @@ pub fn build_telemetry_context_with_created_utc(
         },
     ];
 
+    let proof_stage = if require_battery {
+        if capture_requirements.requirement_satisfied {
+            "battery_mode_telemetry_context_captured_no_promotion_change"
+        } else {
+            "battery_mode_telemetry_context_blocked_no_promotion_change"
+        }
+    } else {
+        "live_telemetry_context_captured_no_promotion_change"
+    };
+    let telemetry_scope = if require_battery {
+        "low_power_battery_mode_telemetry"
+    } else {
+        "current_machine_runtime_telemetry"
+    };
+
     LunarLakeTelemetryContext {
         schema_version: "1.0.0".to_string(),
         artifact_kind: "lunar_lake_power_thermal_context".to_string(),
-        proof_stage: "live_telemetry_context_captured_no_promotion_change".to_string(),
+        proof_stage: proof_stage.to_string(),
         created_utc,
         machine_id: "intel-258v".to_string(),
-        telemetry_scope: "current_machine_runtime_telemetry".to_string(),
+        telemetry_scope: telemetry_scope.to_string(),
         memory_context,
         power_context,
         thermal_context,
@@ -7515,6 +7583,7 @@ pub fn build_telemetry_context_with_created_utc(
         memory,
         power,
         thermal,
+        capture_requirements,
         sources,
         gaps,
         claim_boundary: TelemetryClaimBoundary {
@@ -7526,6 +7595,40 @@ pub fn build_telemetry_context_with_created_utc(
             acceleration_claim: false,
             hidden_fallback_allowed: false,
         },
+    }
+}
+
+fn telemetry_capture_requirements(
+    power: &TelemetryPowerContext,
+    require_battery: bool,
+) -> TelemetryCaptureRequirements {
+    let battery_mode_sample_recorded = power.ac_power_inferred == Some(false);
+    let mut gaps = Vec::new();
+    let (requirement_satisfied, status) = if !require_battery {
+        (true, "not_required")
+    } else if battery_mode_sample_recorded {
+        (true, "battery_mode_sample_recorded")
+    } else {
+        if power.ac_power_inferred == Some(true) {
+            gaps.push(
+                "battery-mode telemetry sample required but current power context indicates AC power"
+                    .to_string(),
+            );
+        } else {
+            gaps.push(
+                "battery-mode telemetry sample required but current power context cannot identify AC/battery state"
+                    .to_string(),
+            );
+        }
+        (false, "blocked")
+    };
+
+    TelemetryCaptureRequirements {
+        battery_mode_required: require_battery,
+        battery_mode_sample_recorded,
+        requirement_satisfied,
+        status: status.to_string(),
+        gaps,
     }
 }
 
@@ -17211,6 +17314,82 @@ mod tests {
         assert_eq!(receipt.memory.source, "sysinfo");
         assert!(receipt.sources.iter().any(|source| source.source == "sysinfo"));
         Ok(())
+    }
+
+    #[test]
+    fn telemetry_context_blocks_ac_sample_when_battery_required() {
+        let receipt = build_telemetry_context_from_parts(
+            "2026-05-19T22:30:00Z".to_string(),
+            TelemetryMemoryContext {
+                source: "test_memory".to_string(),
+                total_bytes: Some(16),
+                available_bytes: Some(8),
+                used_bytes: Some(8),
+            },
+            TelemetryPowerContext {
+                source: "test_power".to_string(),
+                active_scheme: Some("Balanced".to_string()),
+                battery_status: Some("BatteryStatus=2;EstimatedChargeRemaining=100".to_string()),
+                ac_power_inferred: Some(true),
+            },
+            TelemetryThermalContext {
+                source: "test_thermal".to_string(),
+                thermal_zones_visible: Some(1),
+                temperatures_celsius: Vec::new(),
+            },
+            true,
+        );
+
+        assert_eq!(
+            receipt.proof_stage,
+            "battery_mode_telemetry_context_blocked_no_promotion_change"
+        );
+        assert_eq!(receipt.telemetry_scope, "low_power_battery_mode_telemetry");
+        assert!(receipt.capture_requirements.battery_mode_required);
+        assert!(!receipt.capture_requirements.battery_mode_sample_recorded);
+        assert!(!receipt.capture_requirements.requirement_satisfied);
+        assert_eq!(receipt.capture_requirements.status, "blocked");
+        assert!(receipt.capture_requirements.gaps.iter().any(|gap| {
+            gap == "battery-mode telemetry sample required but current power context indicates AC power"
+        }));
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.power_advantage_claim);
+        assert!(!receipt.claim_boundary.acceleration_claim);
+    }
+
+    #[test]
+    fn telemetry_context_accepts_battery_sample_when_required() {
+        let receipt = build_telemetry_context_from_parts(
+            "2026-05-19T22:31:00Z".to_string(),
+            TelemetryMemoryContext {
+                source: "test_memory".to_string(),
+                total_bytes: Some(16),
+                available_bytes: Some(8),
+                used_bytes: Some(8),
+            },
+            TelemetryPowerContext {
+                source: "test_power".to_string(),
+                active_scheme: Some("Balanced".to_string()),
+                battery_status: Some("BatteryStatus=1;EstimatedChargeRemaining=96".to_string()),
+                ac_power_inferred: Some(false),
+            },
+            TelemetryThermalContext {
+                source: "test_thermal".to_string(),
+                thermal_zones_visible: Some(1),
+                temperatures_celsius: Vec::new(),
+            },
+            true,
+        );
+
+        assert_eq!(
+            receipt.proof_stage,
+            "battery_mode_telemetry_context_captured_no_promotion_change"
+        );
+        assert!(receipt.capture_requirements.battery_mode_required);
+        assert!(receipt.capture_requirements.battery_mode_sample_recorded);
+        assert!(receipt.capture_requirements.requirement_satisfied);
+        assert_eq!(receipt.capture_requirements.status, "battery_mode_sample_recorded");
+        assert!(receipt.capture_requirements.gaps.is_empty());
     }
 
     #[test]

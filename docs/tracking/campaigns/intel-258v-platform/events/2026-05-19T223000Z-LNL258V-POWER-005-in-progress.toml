@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T22:30:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-005"
+branch = "codex/lunar-lake/LNL258V-POWER-005-battery-telemetry-guard"
+actor = "codex"
+summary = "Started LNL258V-POWER-005 to add a fail-closed battery-mode telemetry guard for low_power evidence."
+
+notes = [
+  "Started fail-closed battery-mode telemetry guard for low_power evidence.",
+  "Scope is telemetry/power-profile/regression/comparison wiring only; no inference, route promotion, speedup, power-advantage, native accelerator, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]
