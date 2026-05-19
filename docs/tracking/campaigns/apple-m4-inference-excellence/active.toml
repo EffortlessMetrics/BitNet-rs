@@ -2008,7 +2008,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-RECEIPT-001"
-status = "in_progress"
+status = "pr_open"
+pr = 5811
 branch = "codex/apple-m4-inference-excellence/M4-RECEIPT-001-schema-compat"
 stackable = false
 review_mode = "codex_premerge"
