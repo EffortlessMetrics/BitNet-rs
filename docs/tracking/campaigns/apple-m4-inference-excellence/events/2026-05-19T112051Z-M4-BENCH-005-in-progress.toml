@@ -1,0 +1,15 @@
+timestamp = "2026-05-19T11:20:51Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-005"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-005-repeatability-variance"
+
+notes = [
+  "Started M4-BENCH-005 after M4-BENCH-010 merged and benchmark variance aggregation became timeout-aware.",
+  "Scope is live dense Qwen repeatability and variance envelopes over supported Apple M4 CPU/NEON dense SLM model identities.",
+  "BitNet one-shot and warm-session variance remains scoped to M4-BENCH-006.",
+  "No BitNet timing variance, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
