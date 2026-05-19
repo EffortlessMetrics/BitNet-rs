@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:20:00Z"
+event = "merged"
+item = "LNL258V-COMPARE-007"
+branch = "codex/lunar-lake/LNL258V-COMPARE-007-blocked-ask-summary"
+pr = 5846
+head_sha = "dc9dc98fc98a76a49718cad38284f04c1392d2b9"
+merge_sha = "0756ac5012b5d9c265b7dca8d8190e0dc0b817ca"
+actor = "codex"
+summary = "Merged LNL258V-COMPARE-007 after carrying blocked auto-route ask summaries into Lunar Lake operator comparison."
+
+notes = [
+  "PR #5846 carries the strict regression v2 blocked low_power auto-route ask summary into the operator comparison receipt.",
+  "The comparison receipt now exposes route_selection_blocked=true, new_inference_executed=false, fallback_used=false, and the route-selection error directly.",
+  "The merge makes no route promotion, speedup, power-advantage, new-inference, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]
