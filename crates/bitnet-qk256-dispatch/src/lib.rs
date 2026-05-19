@@ -18,6 +18,8 @@ use candle_core::Tensor;
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+mod cpu_hot_path;
+
 const NOT_CLAIMED_OPENCL_QK256: &[&str] = &[
     "a770_qk256_opencl_execution",
     "a770_qk256_opencl_performance",
@@ -202,68 +204,19 @@ pub fn qk256_cpu_hot_path_counters() -> Qk256CpuHotPathCounters {
         qk256_flat_bytes_extracted_count: QK256_FLAT_BYTES_EXTRACTED_COUNT.load(Ordering::Relaxed),
         input_rows_materialized_count: QK256_INPUT_ROWS_MATERIALIZED_COUNT.load(Ordering::Relaxed),
         output_rows_allocated_count: QK256_OUTPUT_ROWS_ALLOCATED_COUNT.load(Ordering::Relaxed),
-        requested_kernel: requested_cpu_kernel_label(),
-        selected_kernel: selected_cpu_hot_path_label(
+        requested_kernel: cpu_hot_path::requested_cpu_kernel_label(),
+        selected_kernel: cpu_hot_path::selected_cpu_hot_path_label(
             f32_scalar,
             f32_avx2,
             scaled_scalar,
             scaled_avx2,
         ),
-        qk256_execution_path: qk256_execution_path_label(
+        qk256_execution_path: cpu_hot_path::qk256_execution_path_label(
             f32_scalar,
             f32_avx2,
             scaled_scalar,
             scaled_avx2,
         ),
-    }
-}
-
-fn requested_cpu_kernel_label() -> Option<String> {
-    std::env::var("BITNET_CPU_KERNEL")
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-}
-
-fn selected_cpu_hot_path_label(
-    f32_scalar: u64,
-    f32_avx2: u64,
-    scaled_scalar: u64,
-    scaled_avx2: u64,
-) -> Option<String> {
-    let mut labels = Vec::new();
-    if f32_scalar > 0 {
-        labels.push("qk256-f32-scalar-gemv");
-    }
-    if f32_avx2 > 0 {
-        labels.push("qk256-f32-avx2-gemv");
-    }
-    if scaled_scalar > 0 {
-        labels.push("qk256-i2s-i8s-scaled-scalar-gemv");
-    }
-    if scaled_avx2 > 0 {
-        labels.push("qk256-i2s-i8s-scaled-avx2-gemv");
-    }
-    match labels.as_slice() {
-        [] => None,
-        [single] => Some((*single).to_string()),
-        _ => Some("mixed-qk256-cpu-hot-paths".to_string()),
-    }
-}
-
-fn qk256_execution_path_label(
-    f32_scalar: u64,
-    f32_avx2: u64,
-    scaled_scalar: u64,
-    scaled_avx2: u64,
-) -> &'static str {
-    let no_scale = f32_scalar + f32_avx2;
-    let scaled = scaled_scalar + scaled_avx2;
-    match (no_scale > 0, scaled > 0) {
-        (true, true) => "mixed_scaled_and_no_scale",
-        (true, false) => "no_scale_f32",
-        (false, true) => "scaled_i2s_i8s",
-        (false, false) => "not_observed",
     }
 }
 
