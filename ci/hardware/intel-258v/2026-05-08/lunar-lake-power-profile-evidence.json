@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_profile_evidence",
   "proof_stage": "low_power_evidence_indexed_no_promotion_change",
-  "created_utc": "2026-05-19T08:30:00Z",
+  "created_utc": "2026-05-19T09:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -11,11 +11,11 @@
   "telemetry": {
     "memory_context_recorded": true,
     "power_context_recorded": true,
-    "thermal_context_recorded": false,
+    "thermal_context_recorded": true,
     "active_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)",
     "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
     "ac_power_inferred": true,
-    "thermal_zones_visible": null,
+    "thermal_zones_visible": 1,
     "thermal_temperature_count": 0,
     "current_context_is_ac_only": true,
     "battery_mode_sample_recorded": false,
@@ -41,8 +41,7 @@
         "bounded math ask only; not expanded profile regression corpus",
         "corpus_v2 profile quality evidence missing",
         "power advantage evidence missing for low_power promotion",
-        "route not promoted for profile low_power",
-        "thermal sensor context unavailable in telemetry receipt"
+        "route not promoted for profile low_power"
       ],
       "power_promotion_ready": false
     },
@@ -115,13 +114,12 @@
     "current telemetry is AC-only; battery comparison evidence is missing",
     "battery-mode sample is missing for low_power promotion",
     "energy proxy evidence is missing for low_power promotion",
-    "thermal sensor context remains unavailable",
     "no low_power route has benchmark-qualified power evidence"
   ],
   "next_required_evidence": [
     "collect AC and battery samples for the same route/profile matrix",
     "record an energy or battery-drain proxy across repeated low_power runs",
-    "capture thermal context or keep thermal unavailable as an explicit blocker",
+    "record thermal temperatures if available; current thermal evidence is zone visibility only",
     "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
   ],
   "claim_boundary": {
