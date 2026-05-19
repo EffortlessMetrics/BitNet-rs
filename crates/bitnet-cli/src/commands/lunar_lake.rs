@@ -832,17 +832,22 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = DEFAULT_ASK_ROUTE)]
         route: String,
 
-        /// Dense Qwen model path. Use a GGUF file for the CPU route and an OpenVINO IR directory
-        /// for explicit OpenVINO candidate routes.
+        /// Dense Qwen model path. When omitted, the ask path resolves the local model path from
+        /// committed Lunar Lake artifact manifests or phase receipts after route selection.
         #[arg(long)]
-        model: PathBuf,
+        model: Option<PathBuf>,
 
         /// Optional explicit tokenizer path.
         #[arg(long)]
         tokenizer: Option<PathBuf>,
 
         /// User question to answer.
-        #[arg(long, value_name = "TEXT", conflicts_with = "question_arg")]
+        #[arg(
+            long,
+            visible_alias = "prompt",
+            value_name = "TEXT",
+            conflicts_with = "question_arg"
+        )]
         question: Option<String>,
 
         /// User question to answer (positional form).
@@ -1289,6 +1294,9 @@ pub struct BlockedAskRegressionSummary {
     pub requested_device: String,
     pub requested_route: String,
     pub route_selection_blocked: bool,
+    pub model_path_required: bool,
+    pub model_loaded: bool,
+    pub model_resolution: String,
     pub candidate_routes: Vec<String>,
     pub why_not_cpu: Vec<String>,
     pub why_not_gpu: Vec<String>,
@@ -5249,6 +5257,13 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
         &["route_selection_blocked", "claim_boundary.route_selection_blocked"],
     )
     .unwrap_or(false);
+    let model_path_required =
+        bool_at_any(&receipt, &["model_path_required", "route_selection.model_path_required"])
+            .unwrap_or(true);
+    let model_loaded = bool_at_any(&receipt, &["claim_boundary.model_loaded"]).unwrap_or(true);
+    let model_resolution =
+        string_at_any(&receipt, &["model_resolution", "route_selection.model_resolution"])
+            .unwrap_or_default();
     let candidate_routes = non_empty_string_array_at_any(
         &receipt,
         &["candidate_routes", "route_selection.candidate_routes"],
@@ -5279,6 +5294,20 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
             .unwrap_or(true);
     if !route_selection_blocked {
         gaps.push("blocked ask receipt does not prove route_selection_blocked=true".to_string());
+    }
+    if model_path_required {
+        gaps.push(
+            "blocked ask receipt should not require model path before blocked auto-route selection"
+                .to_string(),
+        );
+    }
+    if model_loaded {
+        gaps.push("blocked ask receipt must record model_loaded=false".to_string());
+    }
+    if model_resolution != "not_required_for_blocked_auto_route_before_execution" {
+        gaps.push(format!(
+            "blocked ask receipt has unexpected model_resolution={model_resolution}"
+        ));
     }
     if new_inference_executed {
         gaps.push("blocked ask receipt must record new_inference_executed=false".to_string());
@@ -5328,6 +5357,9 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
         requested_device,
         requested_route,
         route_selection_blocked,
+        model_path_required,
+        model_loaded,
+        model_resolution,
         candidate_routes,
         why_not_cpu,
         why_not_gpu,
@@ -5568,6 +5600,9 @@ fn blocked_ask_regression_notes(summary: &BlockedAskRegressionSummary) -> Vec<St
         format!("requested_device={}", summary.requested_device),
         format!("requested_route={}", summary.requested_route),
         format!("route_selection_blocked={}", summary.route_selection_blocked),
+        format!("model_path_required={}", summary.model_path_required),
+        format!("model_loaded={}", summary.model_loaded),
+        format!("model_resolution={}", summary.model_resolution),
         format!("candidate_routes={}", join_or_none(&summary.candidate_routes)),
         format!("why_not_cpu={}", join_or_none(&summary.why_not_cpu)),
         format!("why_not_gpu={}", join_or_none(&summary.why_not_gpu)),
@@ -15865,6 +15900,9 @@ mod tests {
             requested_device: "auto".to_string(),
             requested_route: "auto".to_string(),
             route_selection_blocked: true,
+            model_path_required: false,
+            model_loaded: false,
+            model_resolution: "not_required_for_blocked_auto_route_before_execution".to_string(),
             candidate_routes: vec![
                 DEFAULT_ASK_ROUTE.to_string(),
                 "dense_slm_openvino_gpu_candidate".to_string(),
@@ -15921,6 +15959,12 @@ mod tests {
         };
         assert_eq!(blocked.profile_id, "low_power");
         assert!(blocked.route_selection_blocked);
+        assert!(!blocked.model_path_required);
+        assert!(!blocked.model_loaded);
+        assert_eq!(
+            blocked.model_resolution,
+            "not_required_for_blocked_auto_route_before_execution"
+        );
         assert!(!blocked.new_inference_executed);
         assert!(blocked.route_selection_error.contains("why_not_npu="));
         Ok(())
