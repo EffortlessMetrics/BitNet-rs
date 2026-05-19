@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T11:30:00Z"
+event = "in_progress"
+item = "LNL258V-LOWPOWER-QUAL-001"
+branch = "codex/lunar-lake/LNL258V-LOWPOWER-QUAL-001"
+actor = "codex"
+summary = "Started refreshing Lunar Lake low_power corpus-v2 quality evidence across CPU and OpenVINO routes."
+
+notes = [
+  "The expanded low_power corpus-v2 fixture is executed on the dense Qwen CPU route and OpenVINO CPU/GPU/NPU candidate routes.",
+  "Dependent diagnosis, route-profile, benchmark, power-profile, regression-v2, and operator-comparison artifacts are refreshed from the new evidence.",
+  "The claim boundary remains evidence refresh only: no route promotion, speedup claim, power-advantage claim, native accelerator claim, model or kernel behavior change, or BitNet QK256/I2_S behavior change.",
+]

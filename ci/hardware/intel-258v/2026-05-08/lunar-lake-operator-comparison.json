@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-19T10:15:00Z",
+  "created_utc": "2026-05-19T11:55:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -25,7 +25,8 @@
       "ask_normal",
       "structured",
       "prefill_heavy",
-      "decode_heavy"
+      "decode_heavy",
+      "low_power"
     ],
     "required_answer_categories": [
       "math",
@@ -548,8 +549,8 @@
         "ci/quality/lunar-lake-answer-corpus-v2.yaml"
       ],
       "notes": [
-        "case_count=12",
-        "profiles=ask_normal,ask_short,decode_heavy,prefill_heavy,regression_tiny,structured",
+        "case_count=13",
+        "profiles=ask_normal,ask_short,decode_heavy,low_power,prefill_heavy,regression_tiny,structured",
         "categories=copy_exact,decode_heavy,instruction_following,long_prompt_summarization,math,prompt_history_sensitivity,short_factual,short_reasoning,stop_and_eos,structured_output,yes_no",
         "claim_boundary_preserved=true"
       ]
@@ -647,7 +648,7 @@
         "energy_proxy_source=none",
         "thermal_context_recorded=true",
         "claim_boundary_preserved=true",
-        "blocker_count=9"
+        "blocker_count=8"
       ]
     }
   ],

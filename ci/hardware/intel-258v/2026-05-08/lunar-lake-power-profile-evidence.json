@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_profile_evidence",
   "proof_stage": "low_power_evidence_indexed_no_promotion_change",
-  "created_utc": "2026-05-19T10:15:00Z",
+  "created_utc": "2026-05-19T11:47:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -43,7 +43,6 @@
       ],
       "all_blockers": [
         "bounded math ask only; not expanded profile regression corpus",
-        "corpus_v2 profile quality evidence missing",
         "power advantage evidence missing for low_power promotion",
         "route not promoted for profile low_power"
       ],
@@ -57,14 +56,13 @@
       "runtime_api": "openvino_genai",
       "fallback_used": false,
       "answer_gate_passed": true,
-      "total_response_ms": 32329.237800001632,
-      "throughput_tokens_per_s": 30.858579635620117,
+      "total_response_ms": 32196.446000010703,
+      "throughput_tokens_per_s": 26.974973678588867,
       "benchmark_qualified_advantage": false,
       "power_related_blockers": [
         "benchmark-qualified speedup or power advantage missing",
         "benchmark_qualified_speedup_or_power_advantage",
         "power advantage evidence missing for low_power promotion",
-        "profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power",
         "route not promoted for profile low_power"
       ],
       "all_blockers": [
@@ -73,12 +71,8 @@
         "benchmark-qualified speedup or power advantage missing",
         "benchmark_qualified_speedup_or_power_advantage",
         "candidate route requires benchmark-qualified profile evidence",
-        "corpus_v2 profile quality evidence missing",
         "power advantage evidence missing for low_power promotion",
-        "profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power",
-        "profile_regression_bundle",
-        "route not promoted for profile low_power",
-        "timing coverage has missing profile fields"
+        "route not promoted for profile low_power"
       ],
       "power_promotion_ready": false
     },
@@ -90,23 +84,19 @@
       "runtime_api": "openvino_genai",
       "fallback_used": false,
       "answer_gate_passed": true,
-      "total_response_ms": 4470.872499986319,
-      "throughput_tokens_per_s": 27.49641990661621,
+      "total_response_ms": 4057.755400015507,
+      "throughput_tokens_per_s": 34.3433723449707,
       "benchmark_qualified_advantage": false,
       "power_related_blockers": [
         "benchmark-qualified speedup or power advantage missing",
         "power advantage evidence missing for low_power promotion",
-        "profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power",
         "route not promoted for profile low_power"
       ],
       "all_blockers": [
         "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
         "benchmark-qualified speedup or power advantage missing",
-        "corpus_v2 profile quality evidence missing",
         "power advantage evidence missing for low_power promotion",
-        "profile timing borrowed from corpus_v2 profile regression_tiny for profile low_power",
-        "route not promoted for profile low_power",
-        "timing coverage has missing profile fields"
+        "route not promoted for profile low_power"
       ],
       "power_promotion_ready": false
     }
