@@ -8330,7 +8330,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-ROUTE-021"
-status = "in_progress"
+status = "merged"
+pr = 5862
+head_sha = "ae563b01b7bc94fe288f84fc0386a3ffe69789b1"
+merge_sha = "75cb7d227fd09d8d78e301289bc2d042c7eca63b"
 branch = "codex/lunar-lake/LNL258V-ROUTE-021-structured-cpu-route"
 stackable = false
 review_mode = "codex_premerge"
