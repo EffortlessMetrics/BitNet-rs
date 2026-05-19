@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T23:00:00Z"
+event = "blocked"
+item = "LNL258V-POWER-006"
+branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
+from = "proposed"
+to = "blocked"
+actor = "codex"
+summary = "Added the blocked LNL258V-POWER-006 follow-up for real battery-mode low_power power evidence."
+
+notes = [
+  "The current 258V telemetry is AC-only, so low_power remains blocked until telemetry-context --require-battery passes while the laptop is on battery power.",
+  "The follow-up requires before/after battery-mode telemetry, a rebuilt low_power energy-proxy receipt, refreshed power-profile/regression/comparison/excellence artifacts, and benchmark-qualified power advantage before any low_power promotion.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim is added by this tracker update.",
+]
