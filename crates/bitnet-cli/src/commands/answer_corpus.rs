@@ -4178,7 +4178,9 @@ cases:
     fn cpu_answer_receipt_rejects_missing_qk256_hot_path_counters() {
         let mut receipt =
             strict_answer_receipt_fixture("cpu", "cpu-rust", "cpu", "i2_s-avx2-reference");
-        receipt.as_object_mut().unwrap().remove("qk256_hot_path");
+        if let Some(receipt) = receipt.as_object_mut() {
+            receipt.remove("qk256_hot_path");
+        }
 
         let failed = answer_receipt_failed_rules(&receipt, "cpu");
 
