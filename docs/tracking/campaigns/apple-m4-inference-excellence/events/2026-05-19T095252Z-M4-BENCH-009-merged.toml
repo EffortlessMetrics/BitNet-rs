@@ -1,0 +1,18 @@
+timestamp = "2026-05-19T09:52:52Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-009"
+event = "merged"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "merged"
+pr = 5917
+merge_sha = "014885a85dc13c6c11b19e4afe9ce6fc24b89832"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-009-profile-timeout-enforcement"
+
+notes = [
+  "Merged PR #5917 with calibrated child-process timeout enforcement for M4 dense SLM benchmark profiles.",
+  "`bitnet mac benchmark` now keeps timed-out dense benchmark profiles invalid for envelope comparison and writes a profile timeout receipt.",
+  "The merge includes a short M4 harness smoke receipt for timeout-enforcement plumbing only; it does not publish the final dense variance envelope.",
+  "This closeout records tracker state only; M4-BENCH-005 remains responsible for live dense Qwen variance envelopes.",
+  "No BitNet timing variance, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

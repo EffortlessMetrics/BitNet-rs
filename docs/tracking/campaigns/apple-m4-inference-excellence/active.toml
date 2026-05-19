@@ -844,7 +844,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BENCH-009"
-status = "in_progress"
+status = "merged"
+pr = 5917
+merge_sha = "014885a85dc13c6c11b19e4afe9ce6fc24b89832"
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-009-profile-timeout-enforcement"
 stackable = false
 review_mode = "codex_premerge"
