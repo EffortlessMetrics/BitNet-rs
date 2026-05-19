@@ -32,3 +32,10 @@ human-facing map for the official 2B rows.
 4. Quality, performance, residency, server, and status-surface contracts.
 5. Route-specific receipts before any promotion beyond the current I2_S/QK256
    bounded product CLI state.
+
+
+## TL2 source-of-truth
+
+- TL2 x86 remains `registered`/candidate until artifact, layout, scalar oracle, reference-good, and strict CPU receipts pass.
+- ARM TL2 remains `unsupported_upstream` for tracked families.
+- TL2 does not inherit I2_S/QK256 or TL1 proof.

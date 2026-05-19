@@ -1,0 +1,70 @@
+id = "tl2"
+title = "TL2 x86 table lookup route"
+status = "active"
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+plan = "plans/tl2/implementation-plan.md"
+source_map = "docs/bitnet/tl2/README.md"
+
+objective = "Govern TL2 as a distinct x86-first table-lookup proof family with source-of-truth docs, draft specs, and campaign scaffolding before any runtime, model, or benchmark claim."
+
+end_state = [
+  "TL2 source map, implementation plan, proposal, and initial spec set exist.",
+  "TL2 proof work is sequenced through route contract, layout, scalar oracle, artifact gate, CPU, CUDA, reference-quality, and performance slices.",
+  "TL2 cannot inherit I2_S/QK256 or TL1 proof claims.",
+]
+
+hard_constraints = [
+  "TL2 registration is not native BitNet-rs inference support.",
+  "Do not edit runtime code, kernels, model binaries, server inference, GPU/NPU execution, or BitNet QK256/I2_S kernels.",
+  "Do not claim answer quality, performance, CPU/CUDA parity, or model compatibility until follow-up receipts prove them.",
+]
+
+[[work_item]]
+id = "TL2-DOCS-000"
+status = "ready"
+branch = "codex/define-tl2-as-x86-table-lookup-route"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Register the TL2 x86 table-lookup route as documentation and tracker scaffolding only. The slice must add the source map, proposal, draft spec set, implementation plan, campaign tracker entry, and status/index links without claiming native runtime support, model compatibility, answer quality, performance, CPU/CUDA proof, server support, GPU/NPU execution, TL1 proof inheritance, or BitNet QK256/I2_S changes."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check tl2",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-kernel-compatibility.toml",
+  "docs/bitnet/tl2/**",
+  "docs/proposals/**",
+  "docs/specs/**",
+  "docs/status/**",
+  "docs/tracking/campaigns/tl2/**",
+  "plans/native-rust-inference/bitnet-tl2.md",
+  "plans/tl2/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "TL1 proof inheritance",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "TL2 route scaffolding and draft proof contracts exist.",
+  "Future TL2 work has a source map, plan, and tracker lane.",
+]
+must_not_claim = [
+  "Native BitNet-rs TL2 inference works.",
+  "TL2 answer quality is proven.",
+  "TL2 CPU, CUDA, or server support is available.",
+  "TL2 performance is measured.",
+  "GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "TL2 inherits I2_S/QK256 or TL1 proof claims.",
+  "BitNet QK256/I2_S kernels are modified.",
+]

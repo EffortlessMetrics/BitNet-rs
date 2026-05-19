@@ -41,3 +41,8 @@ git diff --check
 ### Rollback
 
 Remove diagnostic lane additions and keep existing registered state.
+
+
+## Update 2026-05-19
+
+TL2 now has dedicated source-of-truth docs under `docs/bitnet/tl2/` and `plans/tl2/`.
