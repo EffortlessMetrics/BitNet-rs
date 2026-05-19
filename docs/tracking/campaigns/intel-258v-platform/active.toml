@@ -8834,9 +8834,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-001"
-status = "pr_open"
+status = "merged"
 pr = 5806
-head_sha = "e8827ef1d56ee9111f1fe7f12ea314be8dff33fd"
+head_sha = "987f75b4d75cc87666e04ecbe910be31af84bfea"
+merge_sha = "e43dfb485d406117891d15689016d615fe436ccb"
 branch = "codex/lunar-lake/LNL258V-POWER-001-power-profile-evidence"
 stackable = false
 review_mode = "codex_premerge"
