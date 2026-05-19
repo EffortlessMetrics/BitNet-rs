@@ -2081,7 +2081,7 @@ mod tests {
     #[test]
     fn simple_config_applies_bitnet_architecture_defaults() -> super::Result<()> {
         let data = build_metadata_only_gguf(vec![
-            ("general.architecture", GgufValue::String("bitnet".to_string())),
+            ("general.architecture", GgufValue::String("bitnet-b1.58".to_string())),
             (
                 "tokenizer.ggml.tokens",
                 GgufValue::Array(vec![
@@ -2109,6 +2109,100 @@ mod tests {
         assert_eq!(config.model.num_heads, 2);
         assert_eq!(config.model.num_key_value_heads, 1);
         assert_eq!(config.model.intermediate_size, 16);
+        Ok(())
+    }
+
+    #[test]
+    fn simple_config_metadata_dimensions_override_bitnet_defaults() -> super::Result<()> {
+        let data = build_metadata_only_gguf(vec![
+            ("general.architecture", GgufValue::String("bitnet".to_string())),
+            (
+                "tokenizer.ggml.tokens",
+                GgufValue::Array(vec![
+                    GgufValue::String("<s>".to_string()),
+                    GgufValue::String("</s>".to_string()),
+                    GgufValue::String("custom".to_string()),
+                ]),
+            ),
+            ("bitnet-b1.58.embedding_length", GgufValue::U32(12)),
+            ("bitnet-b1.58.block_count", GgufValue::U32(3)),
+            ("bitnet-b1.58.attention.head_count", GgufValue::U32(3)),
+            ("bitnet-b1.58.attention.head_count_kv", GgufValue::U32(1)),
+            ("bitnet-b1.58.feed_forward_length", GgufValue::U32(24)),
+            ("bitnet-b1.58.rope.freq_base", GgufValue::F32(500_000.0)),
+            ("bitnet-b1.58.attention.layer_norm_rms_epsilon", GgufValue::F32(1.0e-5)),
+        ])?;
+        let reader = GgufReader::new(&data)?;
+
+        let config = extract_config_from_gguf(&reader)?;
+
+        assert_eq!(config.model.norm_type, NormType::RmsNorm);
+        assert_eq!(config.model.activation_type, ActivationType::Relu2);
+        assert_eq!(config.model.vocab_size, 3);
+        assert_eq!(config.model.hidden_size, 12);
+        assert_eq!(config.model.num_layers, 3);
+        assert_eq!(config.model.num_heads, 3);
+        assert_eq!(config.model.num_key_value_heads, 1);
+        assert_eq!(config.model.intermediate_size, 24);
+        Ok(())
+    }
+
+    #[test]
+    fn simple_config_non_bitnet_architecture_stays_non_bitnet() -> super::Result<()> {
+        let data = build_metadata_only_gguf(vec![
+            ("general.architecture", GgufValue::String("llama".to_string())),
+            (
+                "tokenizer.ggml.tokens",
+                GgufValue::Array(vec![
+                    GgufValue::String("<s>".to_string()),
+                    GgufValue::String("</s>".to_string()),
+                ]),
+            ),
+            ("llama.embedding_length", GgufValue::U32(16)),
+            ("llama.block_count", GgufValue::U32(2)),
+            ("llama.attention.head_count", GgufValue::U32(4)),
+            ("llama.attention.head_count_kv", GgufValue::U32(4)),
+            ("llama.feed_forward_length", GgufValue::U32(32)),
+        ])?;
+        let reader = GgufReader::new(&data)?;
+
+        let config = extract_config_from_gguf(&reader)?;
+
+        assert_eq!(config.model.norm_type, NormType::RmsNorm);
+        assert_eq!(config.model.activation_type, ActivationType::Silu);
+        assert_ne!(config.model.activation_type, ActivationType::Relu2);
+        assert_eq!(config.model.hidden_size, 16);
+        assert_eq!(config.model.num_layers, 2);
+        assert_eq!(config.model.intermediate_size, 32);
+        Ok(())
+    }
+
+    #[test]
+    fn simple_config_missing_architecture_keeps_default_semantics() -> super::Result<()> {
+        let data = build_metadata_only_gguf(vec![
+            (
+                "tokenizer.ggml.tokens",
+                GgufValue::Array(vec![
+                    GgufValue::String("<s>".to_string()),
+                    GgufValue::String("</s>".to_string()),
+                ]),
+            ),
+            ("llama.embedding_length", GgufValue::U32(16)),
+            ("llama.block_count", GgufValue::U32(2)),
+            ("llama.attention.head_count", GgufValue::U32(4)),
+            ("llama.attention.head_count_kv", GgufValue::U32(4)),
+            ("llama.feed_forward_length", GgufValue::U32(32)),
+        ])?;
+        let reader = GgufReader::new(&data)?;
+
+        let config = extract_config_from_gguf(&reader)?;
+
+        assert_eq!(config.model.norm_type, NormType::LayerNorm);
+        assert_eq!(config.model.activation_type, ActivationType::Silu);
+        assert_eq!(config.model.max_position_embeddings, 2048);
+        assert_eq!(config.model.hidden_size, 16);
+        assert_eq!(config.model.num_layers, 2);
+        assert_eq!(config.model.intermediate_size, 32);
         Ok(())
     }
 }
