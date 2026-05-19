@@ -8545,9 +8545,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-EXCELLENCE-AUDIT-002"
-status = "ready"
+status = "merged"
 pr = 5999
-head_sha = "e51e8886d1ce1e63ef11141c1ea46c58f9d5af2e"
+head_sha = "fc21dda955a4d6721f8aba5b1b7f5e8023566e74"
+merge_sha = "22812a8e8639cfb652a2d2d21a0e81a9b16f2f8c"
 branch = "codex/lunar-lake/LNL258V-EXCELLENCE-AUDIT-002-current-audit"
 stackable = false
 review_mode = "codex_premerge"
