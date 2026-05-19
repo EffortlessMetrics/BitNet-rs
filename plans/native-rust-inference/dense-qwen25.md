@@ -5,13 +5,13 @@ server-ready. Speedup, full residency, and BitNet proof remain false.
 
 ## Work item: CUDA-DENSE-QWEN25-OPS-001
 
-Status: ready
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
 Blocks: CUDA-DENSE-QWEN25-OPS-002
-Blocked by: native inference plan
+Blocked by: none
 
 ### Goal
 
@@ -20,7 +20,7 @@ Produce `docs/reports/CUDA_DENSE_QWEN25_RESIDENCY_BOTTLENECKS.md`.
 ### Production delta
 
 Report ranks model load, H2D upload, D2H logits, launch count, KV movement,
-workspace reuse, and per-token wall-time blockers.
+workspace reuse, and per-token wall-time blockers. Landed in PR #5985.
 
 ### Non-goals
 
@@ -43,13 +43,13 @@ Revert the report.
 
 ## Work item: CUDA-DENSE-QWEN25-OPS-002
 
-Status: blocked
+Status: ready
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
 Blocks: CUDA-DENSE-QWEN25-OPS-003
-Blocked by: CUDA-DENSE-QWEN25-OPS-001
+Blocked by: none
 
 ### Goal
 
