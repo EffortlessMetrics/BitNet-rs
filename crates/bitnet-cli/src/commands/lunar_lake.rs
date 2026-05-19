@@ -145,6 +145,16 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = ROUTE_PROFILE_COMPARISON)]
         route_profile_comparison: Option<PathBuf>,
 
+        /// Low-power route power-profile evidence receipt to index in readiness.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = POWER_PROFILE_EVIDENCE_FILE)]
+        power_profile_evidence: Option<PathBuf>,
+
+        /// Thermal temperature availability diagnosis receipt to index in readiness.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = THERMAL_TEMPERATURE_AVAILABILITY_FILE)]
+        thermal_temperature_availability: Option<PathBuf>,
+
         /// Output JSON readiness receipt to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -864,6 +874,10 @@ pub struct LunarLakeOperatorReceipt {
     pub routes: Vec<OperatorRoute>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub route_policy: Option<OperatorRoutePolicySummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub power_profile_evidence: Option<PowerProfileRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thermal_temperature_availability: Option<ThermalTemperatureAvailabilityRegressionSummary>,
     pub evidence: Vec<EvidenceStatus>,
     pub gaps: Vec<String>,
     pub claim_boundary: ClaimBoundary,
@@ -2476,6 +2490,8 @@ impl LunarLakeCommand {
                 artifact_root,
                 route_promotion_ledger,
                 route_profile_comparison,
+                power_profile_evidence,
+                thermal_temperature_availability,
                 json_out,
                 created_utc,
                 strict,
@@ -2488,12 +2504,16 @@ impl LunarLakeCommand {
                             created_utc,
                             route_promotion_ledger.as_deref(),
                             route_profile_comparison.as_deref(),
+                            power_profile_evidence.as_deref(),
+                            thermal_temperature_availability.as_deref(),
                         )?
                     }
                     None => build_operator_readiness_receipt_with_route_policy(
                         artifact_root,
                         route_promotion_ledger.as_deref(),
                         route_profile_comparison.as_deref(),
+                        power_profile_evidence.as_deref(),
+                        thermal_temperature_availability.as_deref(),
                     )?,
                 };
                 write_or_print_receipt(&receipt, json_out.as_deref())?;
@@ -3032,12 +3052,16 @@ pub fn build_operator_readiness_receipt_with_route_policy(
     root: &Path,
     route_promotion_ledger: Option<&Path>,
     route_profile_comparison: Option<&Path>,
+    power_profile_evidence: Option<&Path>,
+    thermal_temperature_availability: Option<&Path>,
 ) -> Result<LunarLakeOperatorReceipt> {
     build_operator_readiness_receipt_with_created_utc_and_route_policy(
         root,
         chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         route_promotion_ledger,
         route_profile_comparison,
+        power_profile_evidence,
+        thermal_temperature_availability,
     )
 }
 
@@ -3051,6 +3075,8 @@ pub fn build_operator_readiness_receipt_with_created_utc(
         created_utc,
         None,
         None,
+        None,
+        None,
     )
 }
 
@@ -3059,6 +3085,8 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
     created_utc: String,
     route_promotion_ledger: Option<&Path>,
     route_profile_comparison: Option<&Path>,
+    power_profile_evidence: Option<&Path>,
+    thermal_temperature_availability: Option<&Path>,
 ) -> Result<LunarLakeOperatorReceipt> {
     let evidence = vec![
         inspect_receipt(
@@ -3222,6 +3250,57 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
         }
         (None, None) => None,
     };
+    let power_profile_evidence = if let Some(path) = power_profile_evidence {
+        let path = resolve_receipt_path(root, path);
+        if path.exists() {
+            let summary = inspect_power_profile_regression(&path)?;
+            if !summary.regression_ready {
+                gaps.push(format!(
+                    "power-profile evidence is not readiness-ready: {}",
+                    summary.gaps.join(", ")
+                ));
+            }
+            if summary.power_advantage_proven || summary.low_power_promotion_ready {
+                gaps.push(
+                    "power-profile evidence cannot claim low_power promotion or power advantage in readiness"
+                        .to_string(),
+                );
+            }
+            Some(summary)
+        } else {
+            gaps.push(format!("missing low-power power-profile evidence: {}", path.display()));
+            None
+        }
+    } else {
+        None
+    };
+    let thermal_temperature_availability = if let Some(path) = thermal_temperature_availability {
+        let path = resolve_receipt_path(root, path);
+        if path.exists() {
+            let summary = inspect_thermal_temperature_availability_regression(&path)?;
+            if !summary.regression_ready {
+                gaps.push(format!(
+                    "thermal temperature availability is not readiness-ready: {}",
+                    summary.gaps.join(", ")
+                ));
+            }
+            if summary.measured_temperature_claim && summary.usable_temperature_reading_count == 0 {
+                gaps.push(
+                        "thermal temperature availability claims measured temperatures without usable readings"
+                            .to_string(),
+                    );
+            }
+            Some(summary)
+        } else {
+            gaps.push(format!(
+                "missing thermal temperature availability evidence: {}",
+                path.display()
+            ));
+            None
+        }
+    } else {
+        None
+    };
 
     let default_route = dense_slm_cpu_route();
     let routes = vec![
@@ -3242,6 +3321,8 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
         default_route,
         routes,
         route_policy,
+        power_profile_evidence,
+        thermal_temperature_availability,
         evidence,
         gaps,
         claim_boundary: ClaimBoundary {
@@ -15022,6 +15103,8 @@ mod tests {
             "2026-05-19T14:30:00Z".to_string(),
             Some(Path::new(ROUTE_PROMOTION_LEDGER)),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            None,
+            None,
         )?;
 
         assert!(receipt.operator_ready, "{:?}", receipt.gaps);
@@ -15038,6 +15121,137 @@ mod tests {
         assert!(policy.blocked_profiles.contains(&"low_power".to_string()));
         assert!(policy.profile_promotions.iter().any(|profile| profile.profile_id == "ask_normal"
             && profile.promoted_route.as_deref() == Some("dense_slm_openvino_gpu_candidate")));
+        Ok(())
+    }
+
+    #[test]
+    fn operator_readiness_indexes_power_and_thermal_context() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_minimal_route_policy(temp.path())?;
+        write_json(
+            temp.path(),
+            POWER_PROFILE_EVIDENCE_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_profile_evidence",
+                "proof_stage": "low_power_profile_evidence_indexed",
+                "created_utc": "2026-05-20T01:05:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(temp.path()),
+                "route_profile_comparison_receipt": ROUTE_PROFILE_COMPARISON,
+                "cold_warm_benchmark_receipt": COLD_WARM_PROFILE_BENCHMARK_FILE,
+                "telemetry_context_receipt": POWER_THERMAL_CONTEXT_FILE,
+                "battery_telemetry_context_receipt": null,
+                "energy_proxy_receipt": null,
+                "telemetry": {
+                    "memory_context_recorded": true,
+                    "power_context_recorded": true,
+                    "thermal_context_recorded": true,
+                    "active_scheme": "Balanced",
+                    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+                    "ac_power_inferred": true,
+                    "thermal_zones_visible": 1,
+                    "thermal_temperature_count": 0,
+                    "current_context_is_ac_only": true,
+                    "battery_mode_sample_recorded": false,
+                    "battery_sample_source": null,
+                    "energy_proxy_recorded": false,
+                    "energy_proxy_source": null
+                },
+                "low_power_routes": [
+                    {
+                        "route_id": "dense_slm_openvino_npu_candidate",
+                        "route_status": "candidate",
+                        "ledger_route_status": "candidate",
+                        "selected_backend": "openvino-npu",
+                        "runtime_api": "openvino_genai",
+                        "fallback_used": false,
+                        "answer_gate_passed": true,
+                        "total_response_ms": null,
+                        "throughput_tokens_per_s": null,
+                        "benchmark_qualified_advantage": false,
+                        "power_related_blockers": [
+                            "battery-mode sample is missing for low_power promotion"
+                        ],
+                        "all_blockers": [
+                            "battery-mode sample is missing for low_power promotion"
+                        ],
+                        "power_promotion_ready": false
+                    }
+                ],
+                "power_profile_index_ready": true,
+                "low_power_promotion_ready": false,
+                "power_advantage_proven": false,
+                "gaps": [
+                    "battery-mode sample is missing for low_power promotion"
+                ],
+                "next_required_evidence": [
+                    "battery-mode low_power telemetry"
+                ],
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_npu_inference_claim": false,
+                    "bitnet_qk256_i2s_behavior_changed": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        write_json(
+            temp.path(),
+            THERMAL_TEMPERATURE_AVAILABILITY_FILE,
+            json!({
+                "schema_version": 1,
+                "artifact_kind": "lunar_lake_thermal_temperature_availability",
+                "proof_stage": "thermal_temperature_sources_probed_no_claim_change",
+                "machine_id": "intel-258v",
+                "decision": {
+                    "thermal_zone_visibility_available": true,
+                    "thermal_temperature_available": false,
+                    "usable_temperature_reading_count": 0
+                },
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "telemetry_probe_executed": true,
+                    "measured_temperature_claim": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_opencl_or_native_npu_claim": false,
+                    "bitnet_qk256_or_i2s_behavior_changed": false
+                }
+            }),
+        )?;
+
+        let receipt = build_operator_readiness_receipt_with_created_utc_and_route_policy(
+            temp.path(),
+            "2026-05-20T01:10:00Z".to_string(),
+            Some(Path::new(ROUTE_PROMOTION_LEDGER)),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            Some(Path::new(POWER_PROFILE_EVIDENCE_FILE)),
+            Some(Path::new(THERMAL_TEMPERATURE_AVAILABILITY_FILE)),
+        )?;
+
+        assert!(receipt.operator_ready, "{:?}", receipt.gaps);
+        let power = receipt.power_profile_evidence.as_ref().context("missing power summary")?;
+        assert!(power.power_profile_index_ready);
+        assert!(!power.low_power_promotion_ready);
+        assert!(!power.power_advantage_proven);
+        assert!(power.current_context_is_ac_only);
+        assert!(!power.battery_mode_sample_recorded);
+        assert!(power.thermal_context_recorded);
+        let thermal =
+            receipt.thermal_temperature_availability.as_ref().context("missing thermal summary")?;
+        assert!(thermal.thermal_zone_visibility_available);
+        assert!(!thermal.thermal_temperature_available);
+        assert_eq!(thermal.usable_temperature_reading_count, 0);
+        assert!(!thermal.measured_temperature_claim);
+        assert!(thermal.claim_boundary_preserved);
         Ok(())
     }
 
@@ -15236,6 +15450,8 @@ mod tests {
             "2026-05-19T14:30:00Z".to_string(),
             Some(Path::new(ROUTE_PROMOTION_LEDGER)),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            None,
+            None,
         )?;
         fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
         let regression = build_regression_bundle_with_created_utc(
