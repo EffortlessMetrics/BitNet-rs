@@ -7,9 +7,10 @@
 #[cfg(feature = "trace")]
 use super::BitNetError;
 use super::{
-    LayerKVCache, MultiHeadAttention, attention_f16_dot_input, dbg_finite, dbg_stats,
-    debug_attn_enabled, debug_attn_scale_enabled, debug_gqa_enabled, debug_rope_enabled,
-    qwen_trace_event, qwen_trace_layer_enabled, qwen_trace_tensor, trace_rms_enabled,
+    LayerKVCache, MultiHeadAttention, attention_f16_dot_input, attention_score_key_input,
+    dbg_finite, dbg_stats, debug_attn_enabled, debug_attn_scale_enabled, debug_gqa_enabled,
+    debug_rope_enabled, qwen_trace_event, qwen_trace_layer_enabled, qwen_trace_tensor,
+    trace_rms_enabled,
 };
 use bitnet_common::Result;
 use candle_core::{DType, Module, Tensor};
@@ -316,7 +317,7 @@ impl MultiHeadAttention {
         }
 
         let q_for_scores = attention_f16_dot_input(q)?;
-        let k_for_scores = attention_f16_dot_input(k_expanded)?;
+        let k_for_scores = attention_score_key_input(k_expanded)?;
         let scores = q_for_scores.matmul(&k_for_scores.transpose(2, 3)?)?;
 
         // Convert to fp32 for numerically stable computation
