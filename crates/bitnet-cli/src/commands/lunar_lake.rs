@@ -83,6 +83,7 @@ const REQUIRED_CORPUS_V2_PROFILES: &[&str] = &[
     "prefill_heavy",
     "decode_heavy",
     "low_power",
+    "warm_resident",
 ];
 const REQUIRED_CORPUS_V2_CATEGORIES: &[&str] = &[
     "math",
@@ -96,6 +97,7 @@ const REQUIRED_CORPUS_V2_CATEGORIES: &[&str] = &[
     "long_prompt_summarization",
     "short_reasoning",
     "decode_heavy",
+    "resident_session",
 ];
 const REQUIRED_ROUTE_PROFILES: &[&str] = &[
     "regression_tiny",
@@ -17188,8 +17190,9 @@ mod tests {
         let Some(corpus) = bundle.answer_corpus_v2.as_ref() else {
             bail!("missing answer_corpus_v2 summary");
         };
-        assert_eq!(corpus.case_count, 13);
+        assert_eq!(corpus.case_count, 14);
         assert!(corpus.profiles.contains(&"prefill_heavy".to_string()));
+        assert!(corpus.profiles.contains(&"warm_resident".to_string()));
         let Some(route_profiles) = bundle.route_profile_comparison.as_ref() else {
             bail!("missing route_profile_comparison summary");
         };
@@ -18784,6 +18787,10 @@ cases:
     category: copy_exact
     profile: low_power
     gate: {kind: contains_any}
+  - id: warm_resident_route_copy
+    category: resident_session
+    profile: warm_resident
+    gate: {kind: contains_any}
 "#,
         )?;
         Ok(())
@@ -18803,7 +18810,8 @@ cases:
             {"id": "long_prompt_summary_route_policy"},
             {"id": "short_reasoning_apples_left"},
             {"id": "decode_heavy_short_list"},
-            {"id": "low_power_route_evidence_copy"}
+            {"id": "low_power_route_evidence_copy"},
+            {"id": "warm_resident_route_copy"}
         ]);
         let stale_openvino_case_ids = json!([
             {
@@ -18855,7 +18863,8 @@ cases:
             {"id": "long_prompt_summary_route_policy", "profile": "prefill_heavy", "prompt_token_count": 97, "generated_token_count": 22, "timing": {"generation_wall_ms": 699.9}},
             {"id": "short_reasoning_heavier_object", "profile": "ask_normal", "prompt_token_count": 57, "generated_token_count": 19, "timing": {"generation_wall_ms": 369.7}},
             {"id": "decode_heavy_short_list", "profile": "decode_heavy", "prompt_token_count": 57, "generated_token_count": 19, "timing": {"generation_wall_ms": 369.7}},
-            {"id": "low_power_route_evidence_copy", "profile": "low_power", "prompt_token_count": 39, "generated_token_count": 2, "timing": {"generation_wall_ms": 120.0}}
+            {"id": "low_power_route_evidence_copy", "profile": "low_power", "prompt_token_count": 39, "generated_token_count": 2, "timing": {"generation_wall_ms": 120.0}},
+            {"id": "warm_resident_route_copy", "profile": "warm_resident", "prompt_token_count": 39, "generated_token_count": 2, "timing": {"generation_wall_ms": 118.0}}
         ]);
         write_json(
             root,

@@ -8280,6 +8280,64 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-QUAL-012"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-QUAL-012-warm-resident-corpus"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-ROUTE-019"]
+acceptance = "Extend the bounded Lunar Lake answer-corpus-v2 fixture with a warm_resident profile lens and make strict corpus-v2 inspection require that profile/category, so warm_resident route quality evidence has an explicit fixture target before any NPU resident promotion work. Validate the fixture with dry-run/inspection only and preserve no new inference, no broad quality claim, no route promotion, no speedup or power-advantage claim, no Arc/NPU acceleration claim, no native OpenCL/NPU claim, and no BitNet QK256/I2_S behavior change."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::regression_bundle_v2_indexes_corpus_fixture_and_profile_comparison -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe answer-corpus --dry-run --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml --model target/missing-qwen25.gguf --model-id qwen2.5-0.5b-instruct-q8_0 --device cpu --json-out target/bitnet/receipts/lunar-lake-answer-corpus-v2-warm-resident-dry-run.json",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out target/bitnet/receipts/lunar-lake-regression-v2-warm-resident-fixture.json --created-utc 2026-05-19T15:10:00Z --strict",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/hardware/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The Lunar Lake answer-corpus-v2 fixture now includes a warm_resident quality lens.",
+  "Strict corpus-v2 inspection requires warm_resident profile/category coverage before route promotion can use corpus-v2 as complete profile evidence.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-VALIDATE-001"
 status = "merged"
 pr = 5848
