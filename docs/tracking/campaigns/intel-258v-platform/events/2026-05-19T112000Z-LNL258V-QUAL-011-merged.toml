@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T11:20:00Z"
+event = "merged"
+item = "LNL258V-QUAL-011"
+branch = "codex/lunar-lake/LNL258V-QUAL-011-low-power-corpus-fixture"
+pr = 5827
+head_sha = "2e10aeba30cad4b2fcb35852129108d3a74e8f96"
+merge_sha = "f905c313d6b71f91d7756161532d138ea12ee0c0"
+actor = "codex"
+summary = "Merged LNL258V-QUAL-011 after adding a low_power answer-corpus-v2 fixture lens."
+
+notes = [
+  "PR #5827 adds low_power_route_evidence_copy to ci/quality/lunar-lake-answer-corpus-v2.yaml.",
+  "Strict corpus-v2 inspection now requires the low_power profile and the committed regression-v2 bundle records case_count=13.",
+  "The merge preserves fixture/inspection-only boundaries: no inference, no quality/speed/power claim, no route promotion, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]
