@@ -1193,6 +1193,8 @@ pub struct LunarLakeComparisonReceipt {
     pub regression_surface: RegressionSurfaceSummary,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blocked_ask_receipt: Option<BlockedAskRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route_policy: Option<OperatorRoutePolicySummary>,
     pub default_route_id: String,
     pub routes: Vec<RouteComparison>,
     pub evidence: Vec<EvidenceStatus>,
@@ -4747,6 +4749,11 @@ pub fn build_comparison_receipt_with_created_utc(
     if operator.claim_boundary != regression.claim_boundary {
         gaps.push("claim boundary mismatch between operator and regression receipts".to_string());
     }
+    if let Some(route_policy) = operator.route_policy.as_ref()
+        && !route_policy.policy_ready
+    {
+        gaps.push(format!("operator route policy not ready: {}", route_policy.gaps.join("; ")));
+    }
 
     let routes = operator
         .routes
@@ -4777,6 +4784,7 @@ pub fn build_comparison_receipt_with_created_utc(
         regression_passed: regression.regression_passed,
         regression_surface: regression.regression_surface,
         blocked_ask_receipt: regression.blocked_ask_receipt,
+        route_policy: operator.route_policy,
         default_route_id: operator.default_route.route_id.clone(),
         routes,
         evidence: operator.evidence,
@@ -13998,6 +14006,47 @@ mod tests {
         assert!(blocked.route_selection_blocked);
         assert!(!blocked.new_inference_executed);
         assert!(blocked.route_selection_error.contains("why_not_npu="));
+        Ok(())
+    }
+
+    #[test]
+    fn comparison_receipt_carries_operator_route_policy() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_minimal_route_policy(temp.path())?;
+        let operator = build_operator_readiness_receipt_with_created_utc_and_route_policy(
+            temp.path(),
+            "2026-05-19T14:30:00Z".to_string(),
+            Some(Path::new(ROUTE_PROMOTION_LEDGER)),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+        let regression = build_regression_bundle_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "2026-05-19T14:35:00Z".to_string(),
+        )?;
+        fs::write(temp.path().join(REGRESSION_BUNDLE), serde_json::to_vec_pretty(&regression)?)?;
+
+        let comparison = build_comparison_receipt_with_created_utc(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(REGRESSION_BUNDLE),
+            "2026-05-19T14:40:00Z".to_string(),
+        )?;
+
+        assert!(comparison.comparison_ready, "{:?}", comparison.gaps);
+        let Some(policy) = comparison.route_policy.as_ref() else {
+            bail!("comparison did not carry operator route policy");
+        };
+        assert!(policy.policy_ready, "{:?}", policy.gaps);
+        assert_eq!(
+            policy.openvino_gpu_promoted_profiles,
+            vec!["ask_normal".to_string(), "ask_short".to_string()]
+        );
+        assert!(policy.openvino_npu_promoted_profiles.is_empty());
+        assert!(policy.blocked_profiles.contains(&"low_power".to_string()));
+        assert!(!policy.hidden_fallback_allowed);
         Ok(())
     }
 

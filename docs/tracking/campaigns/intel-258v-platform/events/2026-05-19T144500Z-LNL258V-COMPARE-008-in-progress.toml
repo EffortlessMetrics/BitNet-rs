@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:45:00Z"
+event = "in_progress"
+item = "LNL258V-COMPARE-008"
+branch = "codex/lunar-lake/LNL258V-COMPARE-008-route-policy"
+actor = "codex"
+summary = "Started carrying profile-aware route policy into Lunar Lake operator comparison."
+
+notes = [
+  "LNL258V-VALIDATE-001 made readiness profile-policy-aware, but compare did not yet carry that route_policy summary directly.",
+  "This item makes comparison receipts self-contained for policy_ready, OpenVINO GPU ask_short/ask_normal promotion, NPU candidate-only status, blocked profiles, and hidden-fallback policy.",
+  "The scope makes no new-inference, route-promotion, speedup, power-advantage, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]
