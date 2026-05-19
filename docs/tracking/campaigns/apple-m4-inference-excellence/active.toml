@@ -1021,7 +1021,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-BENCH-006"
-status = "pr_open"
+status = "merged"
 pr = 6033
 branch = "codex/apple-m4-inference-excellence/M4-BENCH-006-bitnet-variance"
 stackable = false
