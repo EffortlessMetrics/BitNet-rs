@@ -2838,10 +2838,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-013"
-status = "pr_open"
+status = "merged"
 branch = "codex/cuda-model-013-qwen3-server-smoke-receipt"
 pr = 5896
-head_sha = "af37a56aade4357f72a5cd4b0e6291a1857f6a27"
+head_sha = "57dd69b55bb076ac80c532cee12ba4f1c7ea83f5"
+merge_sha = "996171bf192e10d77bd7dfb84aa1bb37254bc158"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
