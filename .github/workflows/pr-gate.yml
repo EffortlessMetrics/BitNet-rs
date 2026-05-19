@@ -121,13 +121,22 @@ jobs:
           echo "Selected advisory lanes from ci-plan.json (reported, not gating):"
           jq -r '.selected_lanes[] | select(.blocking == false) | "  - \(.id): \(.name)"' ci-plan.json
 
+          size_guard_exempt=false
+          if jq -e '.labels[]? | select(. == "ai-native" or . == "mechanical-change")' ci-plan.json >/dev/null; then
+            size_guard_exempt=true
+            echo "PR size guard exemption label present; Check PR Size may be skipped."
+          fi
+
           required_jobs=()
           unknown_lanes=()
           while IFS= read -r lane_id; do
             [ -n "$lane_id" ] || continue
             case "$lane_id" in
               always-on-guards)
-                required_jobs+=("Guards" "Check PR Size")
+                required_jobs+=("Guards")
+                if [ "$size_guard_exempt" != "true" ]; then
+                  required_jobs+=("Check PR Size")
+                fi
                 ;;
               bdd-grid-check)
                 required_jobs+=("BDD Grid Check")

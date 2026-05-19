@@ -23,7 +23,9 @@ Common selected blocking lanes map to these upstream checks:
   **Minimum Supported Rust Version**.
 * **`gpu-native`** -> the five **`native-check (...)`** GPU-matrix compile
   checks.
-* **`always-on-guards`** -> **Guards** and **Check PR Size**.
+* **`always-on-guards`** -> **Guards** and **Check PR Size**, except that
+  **Check PR Size** is not required when `mechanical-change` or `ai-native`
+  intentionally exempts the upstream size guard.
 
 Lanes that are **not** required by `PR Gate Success`:
 
@@ -83,7 +85,7 @@ any selected upstream lane plus rollup and status propagation cushion.
 | ------------------------- | --------------------- | ----------------------- |
 | Selected blocking         | `success`             | `success` when all selected blocking checks pass |
 | Selected blocking         | `failure`, `cancelled`, or `timed_out` | `failure` |
-| Selected blocking         | `skipped`             | `failure` |
+| Selected blocking         | `skipped`             | `failure`, except for the documented `Check PR Size` exemption labels |
 | Selected blocking         | Pending after 55 minutes | `failure` |
 | Selected advisory         | Any status            | Reported, not blocking |
 | Unselected                | `skipped` or missing  | Allowed |
