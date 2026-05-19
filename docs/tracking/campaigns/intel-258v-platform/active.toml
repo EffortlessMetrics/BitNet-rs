@@ -8281,9 +8281,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-005"
-status = "pr_open"
+status = "merged"
 pr = 5924
-head_sha = "4d853b0fe01224ae1831dab2b19d57fd6cf662c7"
+head_sha = "3d0bc0361074d5aa7fb237525abd312c6bffd957"
+merge_sha = "f8f52f7c256243305c63a4527b48dd4056473e28"
 branch = "codex/lunar-lake/LNL258V-POWER-005-battery-telemetry-guard"
 stackable = false
 review_mode = "codex_premerge"
