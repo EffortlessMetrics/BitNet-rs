@@ -1,0 +1,18 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T06:01:20Z"
+event = "merged"
+item = "SLM-CPU-047"
+pr = 5868
+head_sha = "632bd95ab5fc3ec1fae21129c6379d75723d42c7"
+merge_sha = "d0faced083c3ea119752a7f3a070c85469062ec4"
+branch = "codex/slm-cpu-047-q8-sidecar-equivalence-gate"
+actor = "codex"
+summary = "Merged the Q8_0 sidecar fixture equivalence gate."
+
+notes = [
+  "PR #5868 links the fixture-level packed Q8_0 sidecar prototype to the dense-linear dispatch selector.",
+  "The merged gate records fixture-vs-eager-F32 parity and keeps generated-ID/text receipt equivalence as the remaining runtime blocker.",
+  "Production runtime compute remains on the existing eager F32 Candle path.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
