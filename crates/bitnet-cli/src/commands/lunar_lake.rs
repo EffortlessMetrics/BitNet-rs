@@ -1223,6 +1223,10 @@ pub struct BlockedAskRegressionSummary {
     pub requested_device: String,
     pub requested_route: String,
     pub route_selection_blocked: bool,
+    pub candidate_routes: Vec<String>,
+    pub why_not_cpu: Vec<String>,
+    pub why_not_gpu: Vec<String>,
+    pub why_not_npu: Vec<String>,
     pub new_inference_executed: bool,
     pub fallback_used: bool,
     pub route_promotion_changed: bool,
@@ -4880,8 +4884,21 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
             "blocked ask receipt should cover auto/auto request; got device={requested_device} route={requested_route}"
         ));
     }
-    let route_selection_blocked =
-        bool_at_any(&receipt, &["claim_boundary.route_selection_blocked"]).unwrap_or(false);
+    let route_selection_blocked = bool_at_any(
+        &receipt,
+        &["route_selection_blocked", "claim_boundary.route_selection_blocked"],
+    )
+    .unwrap_or(false);
+    let candidate_routes = non_empty_string_array_at_any(
+        &receipt,
+        &["candidate_routes", "route_selection.candidate_routes"],
+    );
+    let why_not_cpu =
+        non_empty_string_array_at_any(&receipt, &["why_not_cpu", "route_selection.why_not_cpu"]);
+    let why_not_gpu =
+        non_empty_string_array_at_any(&receipt, &["why_not_gpu", "route_selection.why_not_gpu"]);
+    let why_not_npu =
+        non_empty_string_array_at_any(&receipt, &["why_not_npu", "route_selection.why_not_npu"]);
     let new_inference_executed =
         bool_at_any(&receipt, &["new_inference_executed", "claim_boundary.new_inference_executed"])
             .unwrap_or(true);
@@ -4929,6 +4946,18 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
             gaps.push(format!("route_selection_error is missing `{required}`"));
         }
     }
+    if candidate_routes.is_empty() {
+        gaps.push("blocked ask receipt is missing structured candidate_routes".to_string());
+    }
+    if why_not_cpu.is_empty() {
+        gaps.push("blocked ask receipt is missing structured why_not_cpu".to_string());
+    }
+    if why_not_gpu.is_empty() {
+        gaps.push("blocked ask receipt is missing structured why_not_gpu".to_string());
+    }
+    if why_not_npu.is_empty() {
+        gaps.push("blocked ask receipt is missing structured why_not_npu".to_string());
+    }
 
     gaps.sort();
     gaps.dedup();
@@ -4939,6 +4968,10 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
         requested_device,
         requested_route,
         route_selection_blocked,
+        candidate_routes,
+        why_not_cpu,
+        why_not_gpu,
+        why_not_npu,
         new_inference_executed,
         fallback_used,
         route_promotion_changed,
@@ -5138,6 +5171,10 @@ fn blocked_ask_regression_notes(summary: &BlockedAskRegressionSummary) -> Vec<St
         format!("requested_device={}", summary.requested_device),
         format!("requested_route={}", summary.requested_route),
         format!("route_selection_blocked={}", summary.route_selection_blocked),
+        format!("candidate_routes={}", join_or_none(&summary.candidate_routes)),
+        format!("why_not_cpu={}", join_or_none(&summary.why_not_cpu)),
+        format!("why_not_gpu={}", join_or_none(&summary.why_not_gpu)),
+        format!("why_not_npu={}", join_or_none(&summary.why_not_npu)),
         format!("new_inference_executed={}", summary.new_inference_executed),
         format!("fallback_used={}", summary.fallback_used),
         format!("blocked_receipt_ready={}", summary.blocked_receipt_ready),
@@ -9660,6 +9697,23 @@ pub struct OperatorAskRouteSelection {
     pub route: OperatorRoute,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BlockedOperatorAskRouteSelection {
+    pub requested_device: String,
+    pub requested_route: String,
+    pub profile_id: String,
+    pub route_selection_status: String,
+    pub promotion_status: String,
+    pub selection_source: String,
+    pub route_reason: String,
+    pub candidate_routes: Vec<String>,
+    pub why_not_cpu: Vec<String>,
+    pub why_not_gpu: Vec<String>,
+    pub why_not_npu: Vec<String>,
+    pub promotion_ledger: Option<String>,
+    pub route_profile_comparison: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct AutoRouteProfileGuard {
     comparison_path: String,
@@ -9780,6 +9834,59 @@ pub fn resolve_operator_ask_route_selection(
         route_profile_blockers: profile_guard.map(|guard| guard.blockers).unwrap_or_default(),
         route,
     })
+}
+
+pub fn explain_blocked_operator_ask_route_selection(
+    root: &Path,
+    promotion_ledger: &Path,
+    route_profile_comparison: Option<&Path>,
+    requested_route: &str,
+    requested_device: &str,
+    profile_id: &str,
+) -> Result<Option<BlockedOperatorAskRouteSelection>> {
+    let requested_route = normalize_auto_selector(requested_route, DEFAULT_ASK_ROUTE);
+    let requested_device = normalize_auto_selector(requested_device, "auto");
+    let route_auto = requested_route.eq_ignore_ascii_case("auto");
+    let device_auto = requested_device.eq_ignore_ascii_case("auto");
+    if !route_auto && !device_auto {
+        return Ok(None);
+    }
+
+    let ledger_path = resolve_receipt_path(root, promotion_ledger);
+    let ledger: LunarLakeRoutePromotionLedger = read_json_receipt(&ledger_path)?;
+    validate_auto_route_ledger(&ledger)?;
+    let profile = ledger
+        .workload_profiles
+        .iter()
+        .find(|profile| profile.profile_id == profile_id)
+        .with_context(|| format!("auto route profile `{profile_id}` not found in ledger"))?;
+    if profile.promoted_route.is_some() {
+        return Ok(None);
+    }
+
+    let (why_not_cpu, why_not_gpu, why_not_npu) =
+        route_selection_explanations(&ledger, profile, "");
+    let route_profile_comparison =
+        route_profile_comparison.map(|path| path_string(&resolve_receipt_path(root, path)));
+
+    Ok(Some(BlockedOperatorAskRouteSelection {
+        requested_device,
+        requested_route,
+        profile_id: profile.profile_id.clone(),
+        route_selection_status: "blocked".to_string(),
+        promotion_status: "no_promoted_route".to_string(),
+        selection_source: "promotion_ledger_auto_blocked".to_string(),
+        route_reason: format!(
+            "no promoted Lunar Lake auto route for profile `{}`",
+            profile.profile_id
+        ),
+        candidate_routes: profile.candidate_routes.clone(),
+        why_not_cpu,
+        why_not_gpu,
+        why_not_npu,
+        promotion_ledger: Some(path_string(&ledger_path)),
+        route_profile_comparison,
+    }))
 }
 
 fn normalize_auto_selector(value: &str, default_value: &str) -> String {
@@ -14311,6 +14418,14 @@ fn string_array_at(json: &Value, path: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
+fn non_empty_string_array_at_any(json: &Value, paths: &[&str]) -> Vec<String> {
+    paths
+        .iter()
+        .map(|path| string_array_at(json, path))
+        .find(|values| !values.is_empty())
+        .unwrap_or_default()
+}
+
 fn bool_at_any(json: &Value, paths: &[&str]) -> Option<bool> {
     paths.iter().find_map(|path| value_at(json, path).and_then(Value::as_bool))
 }
@@ -14849,6 +14964,19 @@ mod tests {
             requested_device: "auto".to_string(),
             requested_route: "auto".to_string(),
             route_selection_blocked: true,
+            candidate_routes: vec![
+                DEFAULT_ASK_ROUTE.to_string(),
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ],
+            why_not_cpu: vec!["route is not promoted for profile `low_power`".to_string()],
+            why_not_gpu: vec![
+                "route blocker for profile `low_power`: low_power_power_advantage_unproven"
+                    .to_string(),
+            ],
+            why_not_npu: vec![
+                "missing evidence: benchmark_qualified_speedup_or_power_advantage".to_string(),
+            ],
             new_inference_executed: false,
             fallback_used: false,
             route_promotion_changed: false,
@@ -18238,8 +18366,47 @@ mod tests {
                 "selected_route": null,
                 "selected_backend": null,
                 "runtime_api": null,
+                "promotion_status": "no_promoted_route",
                 "route_selection_status": "blocked",
+                "route_selection_blocked": true,
                 "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage",
+                "candidate_routes": [
+                    "dense_slm_default_cpu",
+                    "dense_slm_openvino_gpu_candidate",
+                    "dense_slm_openvino_npu_candidate"
+                ],
+                "why_not_cpu": ["route is not promoted for profile `low_power`"],
+                "why_not_gpu": [
+                    "route blocker for profile `low_power`: low_power_power_advantage_unproven"
+                ],
+                "why_not_npu": [
+                    "missing evidence: benchmark_qualified_speedup_or_power_advantage"
+                ],
+                "route_selection": {
+                    "requested_device": "auto",
+                    "requested_route": "auto",
+                    "profile_id": "low_power",
+                    "selected_route": null,
+                    "selected_backend": null,
+                    "runtime_api": null,
+                    "promotion_status": "no_promoted_route",
+                    "selection_source": "promotion_ledger_auto_blocked",
+                    "route_selection_status": "blocked",
+                    "route_selection_blocked": true,
+                    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage",
+                    "candidate_routes": [
+                        "dense_slm_default_cpu",
+                        "dense_slm_openvino_gpu_candidate",
+                        "dense_slm_openvino_npu_candidate"
+                    ],
+                    "why_not_cpu": ["route is not promoted for profile `low_power`"],
+                    "why_not_gpu": [
+                        "route blocker for profile `low_power`: low_power_power_advantage_unproven"
+                    ],
+                    "why_not_npu": [
+                        "missing evidence: benchmark_qualified_speedup_or_power_advantage"
+                    ]
+                },
                 "fallback_used": false,
                 "new_inference_executed": false,
                 "speedup_claim": false,
@@ -18995,6 +19162,36 @@ mod tests {
         assert!(err.contains("why_not_npu="), "got: {err}");
         assert!(err.contains("low_power_power_advantage_unproven"), "got: {err}");
         assert!(err.contains("benchmark_qualified_speedup_or_power_advantage"), "got: {err}");
+
+        let blocked = explain_blocked_operator_ask_route_selection(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "auto",
+            "auto",
+            "low_power",
+        )?
+        .context("missing blocked auto-route explanation")?;
+        assert_eq!(blocked.route_selection_status, "blocked");
+        assert_eq!(blocked.promotion_status, "no_promoted_route");
+        assert_eq!(blocked.selection_source, "promotion_ledger_auto_blocked");
+        assert!(blocked.candidate_routes.contains(&DEFAULT_ASK_ROUTE.to_string()));
+        assert!(
+            blocked
+                .why_not_cpu
+                .iter()
+                .any(|reason| { reason.contains("route is not promoted for profile `low_power`") })
+        );
+        assert!(blocked.why_not_gpu.iter().any(|reason| {
+            reason.contains("route is not promoted for profile `low_power`")
+                || reason.contains("low_power")
+        }));
+        assert!(
+            blocked
+                .why_not_npu
+                .iter()
+                .any(|reason| { reason.contains("low_power_power_advantage_unproven") })
+        );
         Ok(())
     }
 
