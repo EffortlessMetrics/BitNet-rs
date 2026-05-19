@@ -8282,6 +8282,8 @@ must_not_claim = [
 [[work_item]]
 id = "LNL258V-EXCELLENCE-AUDIT-001"
 status = "in_progress"
+pr = 5858
+head_sha = "27fc149419bff134ebea2cbbe7b6269df878f0ac"
 branch = "codex/lunar-lake/LNL258V-EXCELLENCE-AUDIT-001"
 stackable = false
 review_mode = "codex_premerge"

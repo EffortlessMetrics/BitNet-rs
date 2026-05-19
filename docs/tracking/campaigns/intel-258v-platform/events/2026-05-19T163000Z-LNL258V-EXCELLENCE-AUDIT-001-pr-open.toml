@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T16:30:00Z"
+event = "pr_open"
+item = "LNL258V-EXCELLENCE-AUDIT-001"
+pr = 5858
+head_sha = "27fc149419bff134ebea2cbbe7b6269df878f0ac"
+branch = "codex/lunar-lake/LNL258V-EXCELLENCE-AUDIT-001"
+actor = "codex"
+summary = "Opened PR #5858 for the no-inference Lunar Lake excellence audit."
+
+notes = [
+  "The PR adds a machine-readable audit that maps current operator, route, quality, telemetry, BitNet, Arc, and NPU evidence to the excellent-platform objective.",
+  "The audit records operator-ready/profile-aware status while keeping prefill_heavy, decode_heavy, structured, low_power, and warm_resident gaps explicit.",
+  "The PR makes no new-inference, route-promotion, speedup, power-advantage, acceleration, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]
