@@ -494,6 +494,13 @@ generated-dashboard freshness. Hardware receipt-only changes run changed-receipt
 JSON syntax checks inside CI Core. Pure docs and policy-docs changes rely on the
 dedicated docs, markdown, link, policy, and PR Gate lanes.
 
+For Rust-input PRs, CI Core uses `ci-plan.json` package selection for the
+Linux build/test surface. The selected package set is the union of changed
+workspace packages, direct dependents from `cargo metadata`, and risk-pack
+canaries. Manifest, toolchain, and shared-foundation changes still force the
+full core sweep because their blast radius is intentionally broader than a
+single package edge.
+
 ## Operating metric
 
 We optimize for:

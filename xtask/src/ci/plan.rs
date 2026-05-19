@@ -19,7 +19,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 #[derive(Debug, Clone, Serialize)]
@@ -79,6 +79,9 @@ pub struct Packages {
     pub changed: Vec<String>,
     pub direct_dependents: Vec<String>,
     pub canaries: Vec<String>,
+    pub selected: Vec<String>,
+    pub broad_sweep_required: bool,
+    pub selection_reason: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -631,14 +634,176 @@ fn package_name_for_path(path: &str) -> Option<String> {
     match parts.next()? {
         "crates" => parts.next().map(str::to_string),
         "xtask" => Some("xtask".to_string()),
+        "xtask-build-helper" => Some("xtask-build-helper".to_string()),
         "crossval" => Some("bitnet-crossval".to_string()),
+        "tests" => Some("bitnet-tests".to_string()),
+        "tests-new" => Some("bitnet-tests-new".to_string()),
+        "tools" => parts.next().map(str::to_string),
+        "fuzz" => Some("bitnet-fuzz".to_string()),
+        "src" | "examples" | "benches" => Some("bitnet".to_string()),
+        "build.rs" => Some("bitnet".to_string()),
         _ => None,
     }
 }
 
-fn build_packages(changed: &[String], risk_packs: &[String]) -> Packages {
+#[derive(Debug, Clone)]
+struct WorkspacePackageGraph {
+    packages: BTreeSet<String>,
+    direct_dependents_by_dependency: BTreeMap<String, BTreeSet<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CargoMetadata {
+    packages: Vec<CargoMetadataPackage>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CargoMetadataPackage {
+    name: String,
+    manifest_path: PathBuf,
+    #[serde(default)]
+    dependencies: Vec<CargoMetadataDependency>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CargoMetadataDependency {
+    path: Option<PathBuf>,
+}
+
+fn normalized_path_key(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/").trim_end_matches('/').to_ascii_lowercase()
+}
+
+fn workspace_package_graph() -> Result<WorkspacePackageGraph> {
+    let output = Command::new("cargo")
+        .args(["metadata", "--format-version", "1", "--no-deps"])
+        .output()
+        .context("running cargo metadata for CI package selection")?;
+    if !output.status.success() {
+        bail!(
+            "cargo metadata failed while computing CI package selection: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    let metadata: CargoMetadata =
+        serde_json::from_slice(&output.stdout).context("parsing cargo metadata")?;
+    let mut packages = BTreeSet::new();
+    let mut package_by_root = BTreeMap::new();
+    for package in &metadata.packages {
+        packages.insert(package.name.clone());
+        if let Some(root) = package.manifest_path.parent() {
+            package_by_root.insert(normalized_path_key(root), package.name.clone());
+        }
+    }
+
+    let mut direct_dependents_by_dependency: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for package in &metadata.packages {
+        for dep in &package.dependencies {
+            let Some(path) = dep.path.as_ref() else {
+                continue;
+            };
+            if let Some(dep_name) = package_by_root.get(&normalized_path_key(path)) {
+                if dep_name != &package.name {
+                    direct_dependents_by_dependency
+                        .entry(dep_name.clone())
+                        .or_default()
+                        .insert(package.name.clone());
+                }
+            }
+        }
+    }
+
+    Ok(WorkspacePackageGraph { packages, direct_dependents_by_dependency })
+}
+
+fn direct_dependents_for(
+    changed_packages: &BTreeSet<String>,
+    graph: Option<&WorkspacePackageGraph>,
+) -> BTreeSet<String> {
+    let Some(graph) = graph else {
+        return BTreeSet::new();
+    };
+    let mut out = BTreeSet::new();
+    for package in changed_packages {
+        if let Some(dependents) = graph.direct_dependents_by_dependency.get(package) {
+            out.extend(dependents.iter().filter(|dep| !changed_packages.contains(*dep)).cloned());
+        }
+    }
+    out
+}
+
+fn package_exists(package: &str, graph: Option<&WorkspacePackageGraph>) -> bool {
+    graph.map(|g| g.packages.contains(package)).unwrap_or(true)
+}
+
+fn broad_sweep_packages(graph: Option<&WorkspacePackageGraph>) -> Vec<String> {
+    [
+        "bitnet-common",
+        "bitnet-models",
+        "bitnet-tokenizers",
+        "bitnet-quantization",
+        "bitnet-kernels",
+        "bitnet-prompt-templates",
+        "bitnet-receipts",
+        "bitnet-sampling",
+        "bitnet-logits",
+        "bitnet-gguf",
+        "bitnet-generation",
+        "bitnet-device-probe",
+        "bitnet-engine-core",
+        "bitnet-bdd-grid-core",
+        "bitnet-bdd-grid",
+        "bitnet-feature-contract",
+        "bitnet-testing-policy-core",
+        "bitnet-testing-scenarios-core",
+        "bitnet-runtime-feature-flags-core",
+        "bitnet-runtime-feature-flags",
+        "bitnet-startup-contract-core",
+        "bitnet-startup-contract-diagnostics",
+        "bitnet-startup-contract-guard",
+        "bitnet-runtime-context-core",
+        "bitnet-testing-scenarios-profile-core",
+        "bitnet-runtime-profile-contract-core",
+        "bitnet-testing-policy-runtime",
+        "bitnet-testing-policy-tests",
+        "bitnet-testing-policy-kit",
+        "bitnet-testing-profile",
+        "bitnet-testing-policy-contract",
+        "bitnet-testing-policy-interop",
+        "bitnet-inference",
+    ]
+    .into_iter()
+    .filter(|package| package_exists(package, graph))
+    .map(str::to_string)
+    .collect()
+}
+
+fn broad_sweep_required(changed: &[String], changed_packages: &BTreeSet<String>) -> bool {
+    const SHARED_FOUNDATION_PACKAGES: &[&str] = &[
+        "bitnet",
+        "bitnet-common",
+        "bitnet-math",
+        "bitnet-simd",
+        "bitnet-kernels",
+        "xtask-build-helper",
+    ];
+
+    manifest_or_toolchain_changed(changed)
+        || changed.iter().any(|path| path.starts_with(".cargo/") || path == "build.rs")
+        || changed_packages
+            .iter()
+            .any(|package| SHARED_FOUNDATION_PACKAGES.contains(&package.as_str()))
+}
+
+fn build_packages(
+    changed: &[String],
+    risk_packs: &[String],
+    graph: Option<&WorkspacePackageGraph>,
+) -> Packages {
     let changed_packages: BTreeSet<String> =
         changed.iter().filter_map(|path| package_name_for_path(path)).collect();
+    let direct_dependents = direct_dependents_for(&changed_packages, graph);
     let risk_set: BTreeSet<&str> = risk_packs.iter().map(String::as_str).collect();
     let mut canaries = BTreeSet::new();
     if risk_set.contains("qk256") {
@@ -658,15 +823,59 @@ fn build_packages(changed: &[String], risk_packs: &[String]) -> Packages {
         canaries.insert("bitnet-bdd-grid".to_string());
     }
 
+    canaries.retain(|package| package_exists(package, graph));
+
+    let broad_sweep_required = broad_sweep_required(changed, &changed_packages);
+    let selected: BTreeSet<String> = if broad_sweep_required {
+        broad_sweep_packages(graph).into_iter().collect()
+    } else {
+        changed_packages
+            .iter()
+            .chain(direct_dependents.iter())
+            .chain(canaries.iter())
+            .filter(|package| package_exists(package, graph))
+            .cloned()
+            .collect()
+    };
+
+    let selection_reason = if broad_sweep_required {
+        "broad sweep required for manifest/toolchain/shared-foundation change"
+    } else if selected.is_empty() {
+        "no Rust package selection for changed files"
+    } else {
+        "changed packages plus direct dependents and canaries"
+    };
+
     Packages {
         changed: changed_packages.into_iter().collect(),
-        direct_dependents: Vec::new(),
+        direct_dependents: direct_dependents.into_iter().collect(),
         canaries: canaries.into_iter().collect(),
+        selected: selected.into_iter().collect(),
+        broad_sweep_required,
+        selection_reason: selection_reason.to_string(),
     }
 }
 
 /// Compute the plan from a list of changed files and labels.
+#[cfg(test)]
 pub fn build_plan(changed: &[String], labels: &[String]) -> Plan {
+    build_plan_with_package_graph(changed, labels, None)
+}
+
+fn build_plan_with_workspace_metadata(changed: &[String], labels: &[String]) -> Plan {
+    let graph = if changed.iter().any(|path| is_rust_input_path(path)) {
+        workspace_package_graph().ok()
+    } else {
+        None
+    };
+    build_plan_with_package_graph(changed, labels, graph.as_ref())
+}
+
+fn build_plan_with_package_graph(
+    changed: &[String],
+    labels: &[String],
+    graph: Option<&WorkspacePackageGraph>,
+) -> Plan {
     let touched = classify_areas(changed);
     let lanes = pick_lanes(&touched, labels, changed);
     let total: u64 = lanes.iter().map(|l| l.lem).sum();
@@ -674,7 +883,7 @@ pub fn build_plan(changed: &[String], labels: &[String]) -> Plan {
     let risk_packs = pick_risk_packs(changed);
     let (guard, override_labels_present) = guard_verdict(total, labels);
     let classification = build_classification(changed, &touched, labels);
-    let packages = build_packages(changed, &risk_packs);
+    let packages = build_packages(changed, &risk_packs, graph);
     let selected_lanes = selected_lanes(&lanes);
     let skipped_lanes = skipped_lanes(&lanes);
     Plan {
@@ -916,7 +1125,7 @@ pub fn run(
         changed_files(&base, &head)?
     };
 
-    let plan = build_plan(&changed, &labels);
+    let plan = build_plan_with_workspace_metadata(&changed, &labels);
 
     let json = serde_json::to_string_pretty(&plan)?;
     if print_stdout {
@@ -1104,6 +1313,50 @@ mod tests {
         assert!(value.get("labels").is_some());
         assert!(value.get("lanes").is_none());
         assert!(value.get("touched").is_none());
+        assert!(value.pointer("/packages/changed").is_some());
+        assert!(value.pointer("/packages/direct_dependents").is_some());
+        assert!(value.pointer("/packages/canaries").is_some());
+        assert!(value.pointer("/packages/selected").is_some());
+        assert!(value.pointer("/packages/broad_sweep_required").is_some());
+        assert!(value.pointer("/packages/selection_reason").is_some());
+        Ok(())
+    }
+
+    #[test]
+    fn ci_plan_packages_select_changed_dependents_and_canaries() -> Result<()> {
+        let changed = fixture_lines("quantization.txt")?;
+        let graph = workspace_package_graph()?;
+        let plan = build_plan_with_package_graph(&changed, &[], Some(&graph));
+        let selected: BTreeSet<&str> = plan.packages.selected.iter().map(String::as_str).collect();
+
+        assert_eq!(plan.packages.changed, vec!["bitnet-quantization".to_string()]);
+        assert!(!plan.packages.broad_sweep_required);
+        assert!(selected.contains("bitnet-quantization"));
+        assert!(selected.contains("bitnet-models"));
+        assert!(
+            plan.packages.direct_dependents.iter().any(|package| package == "bitnet-models"),
+            "bitnet-models directly depends on bitnet-quantization"
+        );
+        assert!(
+            plan.packages.canaries.iter().any(|package| package == "bitnet-models"),
+            "qk256 risk pack keeps bitnet-models as a canary"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn ci_plan_packages_manifest_requires_broad_sweep() -> Result<()> {
+        let changed = fixture_lines("manifest.txt")?;
+        let graph = workspace_package_graph()?;
+        let plan = build_plan_with_package_graph(&changed, &[], Some(&graph));
+
+        assert!(plan.packages.broad_sweep_required);
+        assert!(plan.packages.selected.iter().any(|package| package == "bitnet-common"));
+        assert!(plan.packages.selected.iter().any(|package| package == "bitnet-kernels"));
+        assert_eq!(
+            plan.packages.selection_reason,
+            "broad sweep required for manifest/toolchain/shared-foundation change"
+        );
         Ok(())
     }
 
