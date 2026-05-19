@@ -3951,6 +3951,10 @@ mod tests {
 
         let qwen3 = model_status_json_row_for(&value, "dense_qwen3_06b_q8_candidate")?;
         assert_eq!(qwen3["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+        assert_eq!(
+            qwen3["next_proof"],
+            "Qwen3 exact-profile server readiness is promoted only for the current-source non-streaming /v1/chat/completions RTX 5070 Ti shared-engine receipt at ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json. Separate exact-profile performance comparator evidence is still required before any speed, benchmark-qualified, or full-residency promotion."
+        );
         assert_eq!(qwen3["category"], "supported");
         assert_eq!(qwen3["current_tier"], "product_cli_ready");
         assert_eq!(qwen3["requested_backend"], "nvidia-rtx-5070-ti-cuda");
