@@ -2,13 +2,24 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-19T22:45:00Z",
+  "created_utc": "2026-05-19T23:45:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "e5cd635bda902284542d7242b8b352cd233a2856",
+  "source_revision": "85798820b3e92acfae12665a4b1b2b306d6dde04",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
   "excellent_support_ready": false,
-  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
+  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. OP-012 aligned operator-readiness route reasons with this profile-scoped policy. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
+  "tracker_state": {
+    "active_item": "LNL258V-POWER-006",
+    "active_item_status": "blocked",
+    "active_blocker": "battery-mode telemetry and low_power energy-proxy evidence are unavailable while the current power context indicates AC power",
+    "last_merged_operator_policy_item": "LNL258V-OP-012",
+    "last_merged_operator_policy_pr": 5990,
+    "last_merged_operator_policy_merge_sha": "5aedf1d241e4953c7b78f079f400097d320297da",
+    "last_closeout_pr": 5997,
+    "last_closeout_merge_sha": "85798820b3e92acfae12665a4b1b2b306d6dde04",
+    "audit_refresh_scope": "no_inference_current_state_refresh"
+  },
   "command_surface": {
     "ask": {
       "status": "ready_profile_scoped",
@@ -24,6 +35,7 @@
     "validate": {
       "status": "ready",
       "operator_ready": true,
+      "route_reason_surface": "profile_scoped_routes_and_low_power_blockers_explained",
       "evidence": "lunar-lake-operator-readiness.json"
     },
     "regress": {
@@ -307,6 +319,8 @@
     "operator_readiness": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-operator-readiness.json",
     "operator_comparison": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-operator-comparison.json",
     "regression_v2": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-regression-bundle-v2.json",
+    "op_012_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-19T185705Z-LNL258V-OP-012-merged.toml",
+    "power_006_blocked_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-19T230000Z-LNL258V-POWER-006-blocked.toml",
     "route_profile_comparison": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-route-profile-comparison.json",
     "route_promotion_ledger": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-route-promotion.json",
     "cpu_qwen_corpus_v2": "ci\\hardware\\intel-258v\\2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
@@ -330,14 +344,14 @@
   },
   "claim_boundary": {
     "new_inference_run": false,
-    "route_promotion_changed": true,
-    "route_promotion_scope": "OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy; OpenVINO NPU promoted only for warm_resident from existing fallback-free corpus-v2, resident-session timing, and benchmark-qualified latency evidence.",
+    "route_promotion_changed": false,
+    "route_promotion_scope": "Current audited policy: OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy; OpenVINO NPU promoted only for warm_resident from existing fallback-free corpus-v2, resident-session timing, and benchmark-qualified latency evidence.",
     "speedup_claim": false,
     "power_advantage_claim": false,
     "arc_npu_acceleration_claim": false,
     "native_opencl_or_native_npu_claim": false,
     "full_bitnet_accelerator_inference_claim": false,
     "bitnet_qk256_i2s_behavior_change": false,
-    "new_inference_scope": "no new inference; policy-only promotion from committed CPU/OpenVINO profile evidence"
+    "new_inference_scope": "no new inference; audit refresh from committed readiness, route-policy, power, regression, comparison, and tracker evidence"
   }
 }
