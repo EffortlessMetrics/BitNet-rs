@@ -357,10 +357,22 @@ counts, sample counts, timeout-stage accounting, variance bands, outlier
 handling, and advisory-vs-failure thresholds for the accepted BitNet artifact.
 
 `M4-BENCH-008` is the harness prerequisite for `M4-BENCH-005`. The current
-`bitnet mac benchmark` surface publishes single benchmark summaries and
-calibration/preflight receipts, but the live variance item requires a repeat-run
-receipt surface with `--repeat <n>` or an equivalent command. That harness must
-exist before the campaign can claim dense or BitNet timing variance envelopes.
+`bitnet mac benchmark --repeat <n>` surface writes an
+`apple_m4_benchmark_variance_v1` aggregate over repeated dense SLM benchmark v2
+child summaries. The aggregate records repeat count, completed count, profile
+count, sample count, model cache identity, backend/fallback state, variance
+band, outlier handling, invalid-comparison reasons, child summary receipts, and
+strict claim boundaries. The validator requires release-mode
+`apple-m4-cpu-neon`, `fallback_used=false`, a non-empty v2 profile set, one
+metric sample per completed repeat, matching repeat/profile counts, generated
+text/token-ID evidence flags, and no broad quality/performance, BitNet, Metal,
+QK256, Neural Engine, MPSGraph, MacBook, or speedup claim.
+
+The committed harness smoke at
+`ci/hardware/apple-m4-mac-mini/2026-05-19T0746Z/benchmark-variance/harness-smoke.json`
+uses `qwen2.5-0.5b-instruct-q8_0`, `short_prompt_16_out`, and `--repeat 2`.
+It is harness evidence only. `M4-BENCH-005` remains responsible for publishing
+live dense and BitNet variance envelopes.
 
 ## Drift Thresholds
 

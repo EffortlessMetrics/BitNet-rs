@@ -1084,6 +1084,10 @@ enum MacAction {
         #[arg(long, value_enum)]
         profile: Vec<MacBenchmarkProfile>,
 
+        /// Repeat the benchmark profile set and write a benchmark-variance receipt.
+        #[arg(long, default_value_t = 1)]
+        repeat: usize,
+
         /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
         #[arg(long, default_value_t = 0)]
         threads: usize,
@@ -1689,6 +1693,7 @@ impl MacCommand {
                 model_id,
                 cache_dir,
                 profile,
+                repeat,
                 threads,
                 allocation_audit,
                 progress,
@@ -1703,6 +1708,7 @@ impl MacCommand {
                     cache_dir,
                     requested_backend,
                     profiles: profile,
+                    repeat,
                     threads,
                     allocation_audit,
                     progress,
@@ -9789,11 +9795,24 @@ struct MacBenchmarkRun<'a> {
     cache_dir: Option<PathBuf>,
     requested_backend: &'static str,
     profiles: Vec<MacBenchmarkProfile>,
+    repeat: usize,
     threads: usize,
     allocation_audit: bool,
     progress: bool,
     quiet: bool,
     json_out: PathBuf,
+}
+
+struct MacBenchmarkSummaryRun<'a> {
+    model: &'a model_cache::VerifiedCachedModel,
+    requested_backend: &'static str,
+    profiles: Vec<MacBenchmarkProfile>,
+    threads: usize,
+    allocation_audit: bool,
+    progress: bool,
+    quiet: bool,
+    json_out: PathBuf,
+    operator_command: &'static str,
 }
 
 struct BenchmarkProfileSpec {
@@ -9880,6 +9899,7 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
         cache_dir,
         requested_backend,
         profiles,
+        repeat,
         threads,
         allocation_audit,
         progress,
@@ -9890,7 +9910,13 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
         if !profiles.is_empty() {
             anyhow::bail!("mac benchmark --calibrate cannot be combined with --profile");
         }
+        if repeat != 1 {
+            anyhow::bail!("mac benchmark --calibrate cannot be combined with --repeat");
+        }
         return run_benchmark_calibration(model_id, cache_dir, requested_backend, quiet, json_out);
+    }
+    if repeat == 0 {
+        anyhow::bail!("mac benchmark --repeat must be at least 1");
     }
     if cfg!(debug_assertions) {
         anyhow::bail!(
@@ -9899,6 +9925,50 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
     }
     let profiles = dedupe_benchmark_profiles(profiles)?;
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    if repeat > 1 {
+        return run_benchmark_variance(
+            MacBenchmarkSummaryRun {
+                model: &model,
+                requested_backend,
+                profiles,
+                threads,
+                allocation_audit,
+                progress,
+                quiet,
+                json_out,
+                operator_command: "mac benchmark",
+            },
+            repeat,
+        )
+        .await;
+    }
+    run_benchmark_once(MacBenchmarkSummaryRun {
+        model: &model,
+        requested_backend,
+        profiles,
+        threads,
+        allocation_audit,
+        progress,
+        quiet,
+        json_out,
+        operator_command: "mac benchmark",
+    })
+    .await
+    .map(|_| ())
+}
+
+async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde_json::Value> {
+    let MacBenchmarkSummaryRun {
+        model,
+        requested_backend,
+        profiles,
+        threads,
+        allocation_audit,
+        progress,
+        quiet,
+        json_out,
+        operator_command,
+    } = request;
     let receipt_dir =
         json_out.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from(".")).join(
             format!(
@@ -9954,7 +10024,7 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
             receipt_path.clone(),
         )
         .await?;
-        annotate_and_validate_mac_receipt(&receipt_path, &model, "mac benchmark")?;
+        annotate_and_validate_mac_receipt(&receipt_path, model, "mac benchmark")?;
         let receipt = read_json_receipt(&receipt_path)?;
         let summary =
             benchmark_profile_summary(&spec, &receipt_path, &receipt, profile_start_peak_mb)?;
@@ -10007,18 +10077,18 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
             "release_mode": !cfg!(debug_assertions),
         },
         "model_cache": {
-            "id": model.id,
-            "display_name": model.display_name,
-            "cache_root": model.cache_root,
-            "path": model.path,
-            "sha256": model.sha256,
+            "id": &model.id,
+            "display_name": &model.display_name,
+            "cache_root": &model.cache_root,
+            "path": &model.path,
+            "sha256": &model.sha256,
             "bytes": model.bytes,
-            "architecture": model.architecture,
-            "quantization": model.quantization,
-            "tokenizer_model": model.tokenizer_model,
-            "tokenizer_pre": model.tokenizer_pre,
+            "architecture": &model.architecture,
+            "quantization": &model.quantization,
+            "tokenizer_model": &model.tokenizer_model,
+            "tokenizer_pre": &model.tokenizer_pre,
             "chat_template": model.chat_template,
-            "support_note": model.support_note,
+            "support_note": &model.support_note,
         },
         "benchmark_contract": {
             "contract_version": "1.1.0",
@@ -10049,7 +10119,7 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
                 .collect::<Vec<_>>(),
             "generated_text_recorded": true,
             "generated_token_ids_recorded": true,
-            "operator_command": "mac benchmark"
+            "operator_command": operator_command
         },
         "mac_claim_boundary": {
             "dense_slm_only": true,
@@ -10075,6 +10145,163 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
         json_out.display(),
         profile_ids_display
     );
+    Ok(aggregate)
+}
+
+async fn run_benchmark_variance(request: MacBenchmarkSummaryRun<'_>, repeat: usize) -> Result<()> {
+    let MacBenchmarkSummaryRun {
+        model,
+        requested_backend,
+        profiles,
+        threads,
+        allocation_audit,
+        progress,
+        quiet,
+        json_out,
+        ..
+    } = request;
+    let receipt_dir =
+        json_out.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from(".")).join(
+            format!(
+                "{}-runs",
+                json_out.file_stem().and_then(|stem| stem.to_str()).unwrap_or("benchmark-variance")
+            ),
+        );
+    std::fs::create_dir_all(&receipt_dir)
+        .with_context(|| format!("failed to create {}", receipt_dir.display()))?;
+
+    let mut child_summaries = Vec::with_capacity(repeat);
+    let mut child_summary_paths = Vec::with_capacity(repeat);
+    for run_index in 0..repeat {
+        let run_number = run_index + 1;
+        let child_path = receipt_dir.join(format!("run-{run_number:02}.json"));
+        if progress && !quiet {
+            eprintln!("mac benchmark: repeat {run_number}/{repeat}");
+        }
+        let child_summary = run_benchmark_once(MacBenchmarkSummaryRun {
+            model,
+            requested_backend,
+            profiles: profiles.clone(),
+            threads,
+            allocation_audit,
+            progress,
+            quiet,
+            json_out: child_path.clone(),
+            operator_command: "mac benchmark",
+        })
+        .await?;
+        child_summary_paths.push(child_path.display().to_string());
+        child_summaries.push(child_summary);
+    }
+
+    let prompt_count_total =
+        child_summaries.iter().filter_map(|summary| summary["prompt_count"].as_u64()).sum::<u64>();
+    let generated_tokens_total = child_summaries
+        .iter()
+        .filter_map(|summary| summary["generated_tokens"].as_u64())
+        .sum::<u64>();
+    let profiles_required = child_summaries
+        .first()
+        .and_then(|summary| summary["profiles_required"].as_array())
+        .cloned()
+        .unwrap_or_default();
+    let profile_count = profiles_required.len();
+    let aggregate = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_benchmark_variance_v1",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": requested_backend,
+        "selected_backend": requested_backend,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "profile_set": "slm-benchmark-v2",
+        "profiles_required": profiles_required,
+        "prompt_count": prompt_count_total,
+        "generated_tokens": generated_tokens_total,
+        "repeat": {
+            "requested": repeat,
+            "completed": child_summaries.len(),
+            "profile_count": profile_count,
+            "sample_count": child_summaries.len() * profile_count,
+        },
+        "metrics": {
+            "speed": benchmark_variance_metric_json(
+                &child_summaries,
+                "speed",
+                M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS,
+            ),
+            "memory": benchmark_variance_metric_json(
+                &child_summaries,
+                "memory",
+                &["peak_memory_mb", "memory_drift_mb"],
+            ),
+        },
+        "variance_band": {
+            "method": "min/max and p50/p90/p99 over repeated child benchmark summary aggregate metrics",
+            "reported_stats": ["count", "p50", "p90", "p99", "min", "max", "samples"],
+            "threshold_derivation": "uses the M4 operator envelope drift thresholds; this harness records variance and does not decide final release failure",
+            "advisory_vs_failure": "timing and memory drift are advisory unless a later lane opts into fail-on-drift",
+        },
+        "outlier_handling": {
+            "method": "none",
+            "reason": "raw repeat samples are preserved; M4-BENCH-005 may define filtering policy for published envelopes",
+        },
+        "invalid_comparison_reasons": [],
+        "build": {
+            "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
+            "release_mode": !cfg!(debug_assertions),
+        },
+        "model_cache": {
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        },
+        "evidence": {
+            "child_summary_receipts": child_summary_paths,
+            "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "operator_command": "mac benchmark --repeat",
+        },
+        "mac_claim_boundary": {
+            "dense_slm_only": true,
+            "variance_harness_only": true,
+            "final_variance_envelope": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "bitnet_quality_claimed": false,
+            "bitnet_performance_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false
+        },
+        "speedup_claim": false,
+    });
+    std::fs::write(&json_out, serde_json::to_vec_pretty(&aggregate)?)
+        .with_context(|| format!("failed to write {}", json_out.display()))?;
+    validate_mac_receipt_value(&json_out, &aggregate)?;
+    if !quiet {
+        println!(
+            "Mac benchmark variance receipt written to {} (repeats: {}, profiles: {})",
+            json_out.display(),
+            repeat,
+            profile_count
+        );
+    }
     Ok(())
 }
 
@@ -11060,6 +11287,25 @@ fn benchmark_flat_metric_json(metrics: &[(&str, &[f64])]) -> serde_json::Value {
     serde_json::Value::Object(object)
 }
 
+fn benchmark_variance_metric_json(
+    summaries: &[serde_json::Value],
+    section: &str,
+    base_metrics: &[&str],
+) -> serde_json::Value {
+    let mut object = serde_json::Map::new();
+    for metric in base_metrics {
+        for percentile in ["p50", "p90", "p99"] {
+            let key = format!("{metric}_{percentile}");
+            let samples = summaries
+                .iter()
+                .filter_map(|summary| summary[section][&key].as_f64())
+                .collect::<Vec<_>>();
+            object.insert(key, benchmark_stat_json(&samples));
+        }
+    }
+    serde_json::Value::Object(object)
+}
+
 fn benchmark_stat_json(samples: &[f64]) -> serde_json::Value {
     let stats = benchmark_stats(samples);
     serde_json::json!({
@@ -11491,6 +11737,18 @@ fn read_json_receipt(path: &Path) -> Result<serde_json::Value> {
         &std::fs::read(path).with_context(|| format!("failed to read {}", path.display()))?,
     )
     .with_context(|| format!("invalid JSON receipt {}", path.display()))
+}
+
+fn resolve_child_receipt_path(parent_receipt: &Path, reference: &str) -> PathBuf {
+    let candidate = PathBuf::from(reference);
+    if candidate.is_absolute() || candidate.exists() {
+        return candidate;
+    }
+    parent_receipt
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .map(|parent| parent.join(reference))
+        .unwrap_or(candidate)
 }
 
 fn sibling_receipt_path(path: &Path, suffix: &str) -> PathBuf {
@@ -15498,6 +15756,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_larger_corpus_decision_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
         validate_slm_benchmark_v2_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_benchmark_variance_v1" {
+        validate_apple_m4_benchmark_variance_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_benchmark_calibration" {
         validate_apple_m4_benchmark_calibration_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_benchmark_preflight" {
@@ -18964,6 +19224,251 @@ fn validate_slm_benchmark_v2_receipt(
     Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
 }
 
+fn validate_apple_m4_benchmark_variance_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_benchmark_variance_v1")?;
+    require_exact_string_at(path, receipt, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    require_exact_string_at(path, receipt, &["profile_set"], "slm-benchmark-v2")?;
+    require_bool_at(path, receipt, &["build", "release_mode"], true)?;
+
+    let parent_model_id = require_non_empty_string_at(path, receipt, &["model_cache", "id"])?;
+    let parent_model_sha = require_non_empty_string_at(path, receipt, &["model_cache", "sha256"])?;
+    let parent_model_architecture =
+        require_non_empty_string_at(path, receipt, &["model_cache", "architecture"])?;
+    let parent_model_quantization =
+        require_non_empty_string_at(path, receipt, &["model_cache", "quantization"])?;
+    let parent_tokenizer_pre =
+        require_non_empty_string_at(path, receipt, &["model_cache", "tokenizer_pre"])?;
+
+    let repeat_requested = require_u64_at(path, receipt, &["repeat", "requested"], true)?;
+    let repeat_completed = require_u64_at(path, receipt, &["repeat", "completed"], true)?;
+    let profile_count = require_u64_at(path, receipt, &["repeat", "profile_count"], true)?;
+    let sample_count = require_u64_at(path, receipt, &["repeat", "sample_count"], true)?;
+    if repeat_requested < 2 || repeat_completed < 2 {
+        anyhow::bail!("{} benchmark variance repeat counts must be at least 2", path.display());
+    }
+    if repeat_completed != repeat_requested {
+        anyhow::bail!(
+            "{} benchmark variance completed repeats must match requested repeats",
+            path.display()
+        );
+    }
+    if sample_count != repeat_completed * profile_count {
+        anyhow::bail!(
+            "{} benchmark variance sample_count must equal completed repeats times profile_count",
+            path.display()
+        );
+    }
+
+    let profiles_required =
+        json_value_at(receipt, &["profiles_required"]).as_array().ok_or_else(|| {
+            anyhow!("{} benchmark variance receipt is missing profiles_required", path.display())
+        })?;
+    if profiles_required.is_empty() {
+        anyhow::bail!("{} benchmark variance profiles_required must not be empty", path.display());
+    }
+    if profile_count != profiles_required.len() as u64 {
+        anyhow::bail!(
+            "{} benchmark variance profile_count must match profiles_required length",
+            path.display()
+        );
+    }
+    for profile in profiles_required {
+        let Some(profile_id) = profile.as_str() else {
+            anyhow::bail!(
+                "{} benchmark variance profiles_required must contain strings",
+                path.display()
+            );
+        };
+        if !M4_SLM_BENCHMARK_V2_PROFILES.contains(&profile_id) {
+            anyhow::bail!(
+                "{} benchmark variance profile {profile_id:?} is not part of the v2 profile contract",
+                path.display()
+            );
+        }
+    }
+
+    for &metric in M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS {
+        for percentile in ["p50", "p90", "p99"] {
+            let key = format!("{metric}_{percentile}");
+            validate_benchmark_stat_object(
+                path,
+                receipt,
+                &["metrics", "speed", key.as_str()],
+                true,
+            )?;
+            require_benchmark_stat_count(
+                path,
+                receipt,
+                &["metrics", "speed", key.as_str()],
+                repeat_completed,
+            )?;
+        }
+    }
+    for &metric in ["peak_memory_mb", "memory_drift_mb"].iter() {
+        for percentile in ["p50", "p90", "p99"] {
+            let key = format!("{metric}_{percentile}");
+            validate_benchmark_stat_object(
+                path,
+                receipt,
+                &["metrics", "memory", key.as_str()],
+                metric == "peak_memory_mb",
+            )?;
+            require_benchmark_stat_count(
+                path,
+                receipt,
+                &["metrics", "memory", key.as_str()],
+                repeat_completed,
+            )?;
+        }
+    }
+
+    require_non_empty_string_at(path, receipt, &["variance_band", "method"])?;
+    require_non_empty_string_at(path, receipt, &["variance_band", "threshold_derivation"])?;
+    require_non_empty_string_at(path, receipt, &["variance_band", "advisory_vs_failure"])?;
+    require_non_empty_string_at(path, receipt, &["outlier_handling", "method"])?;
+    require_non_empty_string_at(path, receipt, &["outlier_handling", "reason"])?;
+    json_value_at(receipt, &["invalid_comparison_reasons"]).as_array().ok_or_else(|| {
+        anyhow!("{} benchmark variance invalid_comparison_reasons must be an array", path.display())
+    })?;
+
+    require_non_empty_string_array_at(path, receipt, &["evidence", "child_summary_receipts"])?;
+    let child_receipts = json_value_at(receipt, &["evidence", "child_summary_receipts"]);
+    let child_receipts_len = child_receipts.as_array().map(Vec::len).unwrap_or_default();
+    if child_receipts_len as u64 != repeat_completed {
+        anyhow::bail!(
+            "{} benchmark variance child_summary_receipts must match completed repeat count",
+            path.display()
+        );
+    }
+    require_exact_string_at(
+        path,
+        receipt,
+        &["evidence", "child_artifact_kind"],
+        "apple_m4_slm_benchmark_v2",
+    )?;
+    let mut child_prompt_count_total = 0_usize;
+    let mut child_generated_tokens_total = 0_usize;
+    for child_reference in child_receipts.as_array().into_iter().flatten() {
+        let Some(child_reference) = child_reference.as_str() else {
+            anyhow::bail!(
+                "{} benchmark variance child_summary_receipts must contain strings",
+                path.display()
+            );
+        };
+        let child_path = resolve_child_receipt_path(path, child_reference);
+        let child_receipt = read_json_receipt(&child_path)
+            .with_context(|| format!("failed to read child benchmark receipt {child_reference}"))?;
+        let (child_prompt_count, child_generated_tokens) =
+            validate_slm_benchmark_v2_receipt(&child_path, &child_receipt)?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "id"],
+            parent_model_id,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "sha256"],
+            parent_model_sha,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "architecture"],
+            parent_model_architecture,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "quantization"],
+            parent_model_quantization,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "tokenizer_pre"],
+            parent_tokenizer_pre,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["requested_backend"],
+            APPLE_M4_CPU_NEON,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["selected_backend"],
+            APPLE_M4_CPU_NEON,
+        )?;
+        require_exact_string_at(&child_path, &child_receipt, &["runtime_api"], "cpu")?;
+        require_bool_at(&child_path, &child_receipt, &["fallback_used"], false)?;
+        if json_value_at(&child_receipt, &["profiles_required"])
+            != json_value_at(receipt, &["profiles_required"])
+        {
+            anyhow::bail!(
+                "{} benchmark variance child {} profiles_required must match parent",
+                path.display(),
+                child_path.display()
+            );
+        }
+        child_prompt_count_total += child_prompt_count.unwrap_or_default();
+        child_generated_tokens_total += child_generated_tokens.unwrap_or_default();
+    }
+    if receipt["prompt_count"].as_u64() != Some(child_prompt_count_total as u64) {
+        anyhow::bail!(
+            "{} benchmark variance prompt_count must equal child prompt counts",
+            path.display()
+        );
+    }
+    if receipt["generated_tokens"].as_u64() != Some(child_generated_tokens_total as u64) {
+        anyhow::bail!(
+            "{} benchmark variance generated_tokens must equal child generated tokens",
+            path.display()
+        );
+    }
+    require_bool_at(path, receipt, &["evidence", "generated_text_recorded"], true)?;
+    require_bool_at(path, receipt, &["evidence", "generated_token_ids_recorded"], true)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["evidence", "operator_command"],
+        "mac benchmark --repeat",
+    )?;
+
+    require_bool_at(path, receipt, &["mac_claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "variance_harness_only"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "final_variance_envelope"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "speedup_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_performance_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "neural_engine_execution_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "macbook_evidence"], false)?;
+
+    Ok((
+        receipt["prompt_count"].as_u64().map(|value| value as usize),
+        receipt["generated_tokens"].as_u64().map(|value| value as usize),
+    ))
+}
+
 fn validate_apple_m4_benchmark_calibration_receipt(
     path: &Path,
     receipt: &serde_json::Value,
@@ -19418,6 +19923,49 @@ fn validate_benchmark_stat_object(
             path.display(),
             json_path_label(segments)
         );
+    }
+    Ok(())
+}
+
+fn require_benchmark_stat_count(
+    path: &Path,
+    receipt: &serde_json::Value,
+    segments: &[&str],
+    expected_count: u64,
+) -> Result<()> {
+    let count = require_u64_at(path, receipt, &[segments, &["count"]].concat(), true)?;
+    if count != expected_count {
+        anyhow::bail!(
+            "{} SLM benchmark v2 {} count must equal completed repeats",
+            path.display(),
+            json_path_label(segments)
+        );
+    }
+    let samples =
+        json_value_at(receipt, &[segments, &["samples"]].concat()).as_array().ok_or_else(|| {
+            anyhow!(
+                "{} SLM benchmark v2 {} samples must be an array",
+                path.display(),
+                json_path_label(segments)
+            )
+        })?;
+    require_number_at(path, receipt, &[segments, &["min"]].concat(), true)?;
+    require_number_at(path, receipt, &[segments, &["max"]].concat(), true)?;
+    if samples.len() as u64 != expected_count {
+        anyhow::bail!(
+            "{} SLM benchmark v2 {} samples length must equal completed repeats",
+            path.display(),
+            json_path_label(segments)
+        );
+    }
+    for sample in samples {
+        if sample.as_f64().filter(|value| value.is_finite()).is_none() {
+            anyhow::bail!(
+                "{} SLM benchmark v2 {} samples must contain finite numbers",
+                path.display(),
+                json_path_label(segments)
+            );
+        }
     }
     Ok(())
 }
