@@ -791,6 +791,7 @@ fn broad_sweep_required(changed: &[String], changed_packages: &BTreeSet<String>)
 
     manifest_or_toolchain_changed(changed)
         || changed.iter().any(|path| path.starts_with(".cargo/") || path == "build.rs")
+        || (changed.iter().any(|path| is_rust_input_path(path)) && changed_packages.is_empty())
         || changed_packages
             .iter()
             .any(|package| SHARED_FOUNDATION_PACKAGES.contains(&package.as_str()))
@@ -862,13 +863,13 @@ pub fn build_plan(changed: &[String], labels: &[String]) -> Plan {
     build_plan_with_package_graph(changed, labels, None)
 }
 
-fn build_plan_with_workspace_metadata(changed: &[String], labels: &[String]) -> Plan {
+fn build_plan_with_workspace_metadata(changed: &[String], labels: &[String]) -> Result<Plan> {
     let graph = if changed.iter().any(|path| is_rust_input_path(path)) {
-        workspace_package_graph().ok()
+        Some(workspace_package_graph()?)
     } else {
         None
     };
-    build_plan_with_package_graph(changed, labels, graph.as_ref())
+    Ok(build_plan_with_package_graph(changed, labels, graph.as_ref()))
 }
 
 fn build_plan_with_package_graph(
@@ -1125,7 +1126,7 @@ pub fn run(
         changed_files(&base, &head)?
     };
 
-    let plan = build_plan_with_workspace_metadata(&changed, &labels);
+    let plan = build_plan_with_workspace_metadata(&changed, &labels)?;
 
     let json = serde_json::to_string_pretty(&plan)?;
     if print_stdout {
@@ -1353,6 +1354,25 @@ mod tests {
         assert!(plan.packages.broad_sweep_required);
         assert!(plan.packages.selected.iter().any(|package| package == "bitnet-common"));
         assert!(plan.packages.selected.iter().any(|package| package == "bitnet-kernels"));
+        assert_eq!(
+            plan.packages.selection_reason,
+            "broad sweep required for manifest/toolchain/shared-foundation change"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn ci_plan_packages_unmapped_rust_input_requires_broad_sweep() -> Result<()> {
+        let graph = workspace_package_graph()?;
+        let plan = build_plan_with_package_graph(
+            &s(&["scripts/off-workspace-helper.rs"]),
+            &[],
+            Some(&graph),
+        );
+
+        assert!(plan.packages.changed.is_empty());
+        assert!(plan.packages.broad_sweep_required);
+        assert!(plan.packages.selected.iter().any(|package| package == "bitnet-common"));
         assert_eq!(
             plan.packages.selection_reason,
             "broad sweep required for manifest/toolchain/shared-foundation change"
