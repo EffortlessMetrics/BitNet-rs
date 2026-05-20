@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T05:30:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-009"
+branch = "codex/lunar-lake/LNL258V-POWER-009-power-profile-guidance"
+actor = "codex"
+summary = "Started low_power power-profile runbook and next-evidence guidance hardening."
+
+notes = [
+  "The work makes the low_power power-profile evidence carry the same POWER-006 battery runbook and telemetry-context --require-battery guidance as the blocked auto-ask path.",
+  "POWER-006 remains blocked because the current machine is on AC/charging and no real battery-mode low_power evidence exists.",
+  "No inference, model load, fallback change, route promotion, speedup claim, power-advantage claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, or BitNet QK256/I2_S behavior-change claim is made.",
+]

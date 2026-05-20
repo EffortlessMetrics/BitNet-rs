@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-20T05:20:00Z",
+  "created_utc": "2026-05-20T05:30:40Z",
   "machine_id": "intel-258v",
-  "source_revision": "0c8c01df2a3372c23e99f7c2d72438694b08447b",
+  "source_revision": "cef5e0ae90d78d1de62ae665b6d4630ea5eb57f2",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
-  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, merged BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run, and A770-005/#6072 selected-device OpenCL smoke closeout #6079 as non-semantic adjacent accelerator evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable.",
+  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009 power-profile indexing of the same runbook and telemetry-context --require-battery guidance, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, merged BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run, and A770-005/#6072 selected-device OpenCL smoke closeout #6079 as non-semantic adjacent accelerator evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-006",
     "status": "blocked",
@@ -109,6 +109,23 @@
       ]
     },
     {
+      "id": "low_power_power_profile_operator_guidance",
+      "status": "covered_no_evidence_claim",
+      "evidence": [
+        "lunar-lake-power-profile-evidence.json",
+        "lunar-lake-operator-readiness.json",
+        "lunar-lake-regression-bundle-v2.json",
+        "lunar-lake-operator-comparison.json",
+        "docs/hardware/intel-258v-low-power-battery-runbook.md",
+        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T053000Z-LNL258V-POWER-009-in-progress.toml"
+      ],
+      "notes": [
+        "POWER-009 makes low_power power-profile evidence carry operator_runbook and next_required_evidence for the POWER-006 battery-mode run.",
+        "Strict regression and operator readiness now fail closed if the low_power power-profile surface loses telemetry-context --require-battery guidance while battery-mode evidence is missing.",
+        "This remains operator guidance for a blocked low_power route; it does not add battery-mode telemetry, route promotion, speedup, power advantage, measured temperature, or new inference."
+      ]
+    },
+    {
       "id": "command_surface_ask_validate_regress_compare",
       "status": "covered_with_low_power_blocker",
       "evidence": [
@@ -125,6 +142,7 @@
       "notes": [
         "ask, validate, regress, and compare receipts exist for the committed route policy.",
         "validate and regress now index low_power power-profile evidence plus thermal temperature availability context by default.",
+        "power-profile evidence now carries the POWER-006 runbook plus telemetry-context --require-battery next evidence.",
         "validate, regress, and compare now index blocked low_power ask receipt guidance.",
         "validate, regress, and compare now index route/model identity readiness for route-profile and cold/warm benchmark evidence.",
         "strict regression and operator comparison index appliance-level auto ask receipts for ask_normal and ask_short.",
@@ -346,7 +364,7 @@
       ],
       "notes": [
         "The platform is well instrumented and profile-aware, but not yet excellent across all requested profiles.",
-        "The post-VALIDATE-003 closeout command surface carries appliance ask receipts, low_power blocked-ask runbook guidance through readiness/regression/comparison, route/model identity readiness, semantic-intake watchpoints, adjacent A770 OpenCL smoke status, runbook discoverability, and the current power and thermal gaps.",
+        "The post-POWER-009 command surface carries appliance ask receipts, low_power blocked-ask and power-profile runbook guidance through readiness/regression/comparison, route/model identity readiness, semantic-intake watchpoints, adjacent A770 OpenCL smoke status, runbook discoverability, and the current power and thermal gaps.",
         "Remaining gaps are low_power promotion, battery-mode power evidence, thermal readings, and full BitNet accelerator proof."
       ]
     }
