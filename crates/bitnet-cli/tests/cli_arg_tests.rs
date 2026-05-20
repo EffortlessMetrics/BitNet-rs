@@ -7282,6 +7282,64 @@ fn bench_cuda_benchmark_receipt_reports_json() -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
+/// Official BitNet PERF-005 governed receipts expose the full eight-profile matrix.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_bitnet_perf005_benchmark_receipt_reports_profile_matrix_json()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("cuda-bitnet-perf-005-profile-matrix-contract.json");
+    write_bitnet_perf005_governed_cuda_benchmark_receipt(&receipt)?;
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    let output = bitnet()
+        .args([
+            "bench",
+            "--device",
+            "nvidia-rtx-5070-ti-cuda",
+            "--cuda-benchmark-receipt",
+            receipt_str.as_str(),
+            "--format",
+            "json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let report: serde_json::Value = serde_json::from_slice(&output)?;
+    let profiles = report["profiles"].as_array().ok_or("profiles array")?;
+    let profile_names: Vec<&str> =
+        profiles.iter().filter_map(|entry| entry["profile"].as_str()).collect();
+
+    assert_eq!(report["artifact_kind"], "strict_cuda_benchmark_qualification_review");
+    assert_eq!(report["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+    assert_eq!(report["selected_route"], "bitnet_qk256_cuda");
+    assert_eq!(report["runtime_api"], "cuda");
+    assert_eq!(report["fallback_used"], false);
+    assert_eq!(report["speedup_claim"], false);
+    assert_eq!(report["benchmark_qualified_speedup"], false);
+    assert_eq!(report["full_cuda_residency_claimed"], false);
+    assert_eq!(report["qualification_status"], "not_accepted");
+    assert_eq!(report["profile_count"], 8);
+    assert_eq!(
+        profile_names,
+        vec![
+            "one_token",
+            "short_decode_8",
+            "short_decode_32",
+            "prefill_128_decode_16",
+            "prefill_512_decode_32",
+            "warm_session_3_turns",
+            "warm_session_10_turns",
+            "decode_128_from_warm_context",
+        ]
+    );
+    assert!(profiles.iter().all(|entry| entry["decision"] == "not_accepted"));
+    assert!(profiles.iter().all(|entry| entry["benchmark_qualified_speedup"] == false));
+    Ok(())
+}
+
 /// Governed CUDA benchmark receipt reports can be narrowed to one exact profile.
 #[cfg(feature = "full-cli")]
 #[test]
@@ -7315,6 +7373,46 @@ fn bench_cuda_benchmark_receipt_profile_filters_json() -> Result<(), Box<dyn std
     assert_eq!(report["profiles"][0]["profile"], "short_decode_8");
     assert_eq!(report["fallback_used"], false);
     assert_eq!(report["speedup_claim"], false);
+    Ok(())
+}
+
+/// Official BitNet PERF-005 reports can be narrowed to one long-profile entry.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_bitnet_perf005_benchmark_receipt_profile_filters_json()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("cuda-bitnet-perf-005-profile-matrix-contract.json");
+    write_bitnet_perf005_governed_cuda_benchmark_receipt(&receipt)?;
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    let output = bitnet()
+        .args([
+            "bench",
+            "--device",
+            "cuda",
+            "--cuda-benchmark-receipt",
+            receipt_str.as_str(),
+            "--profile",
+            "decode_128_from_warm_context",
+            "--format",
+            "json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let report: serde_json::Value = serde_json::from_slice(&output)?;
+
+    assert_eq!(report["profile_count"], 1);
+    assert_eq!(report["profiles"].as_array().ok_or("profiles array")?.len(), 1);
+    assert_eq!(report["profiles"][0]["profile"], "decode_128_from_warm_context");
+    assert_eq!(report["profiles"][0]["decision"], "not_accepted");
+    assert_eq!(report["profiles"][0]["benchmark_qualified_speedup"], false);
+    assert_eq!(report["fallback_used"], false);
+    assert_eq!(report["speedup_claim"], false);
+    assert_eq!(report["full_cuda_residency_claimed"], false);
     Ok(())
 }
 
@@ -7427,6 +7525,153 @@ fn write_governed_cuda_benchmark_receipt(path: &std::path::Path) -> std::io::Res
     "benchmark_qualified_speedup": false,
     "full_cuda_residency_claimed": false,
     "bitnet_packed_i2s_qk256_proof": false
+  }
+}"#,
+    )
+}
+
+#[cfg(feature = "full-cli")]
+fn write_bitnet_perf005_governed_cuda_benchmark_receipt(
+    path: &std::path::Path,
+) -> std::io::Result<()> {
+    std::fs::write(
+        path,
+        r#"{
+  "artifact_kind": "strict_cuda_benchmark_qualification_review",
+  "claim": "strict_cuda_benchmark_qualification_review",
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "selected_route": "bitnet_qk256_cuda",
+  "runtime_api": "cuda",
+  "fallback_used": false,
+  "speedup_claim": false,
+  "benchmark_qualified_speedup": false,
+  "full_cuda_residency_claimed": false,
+  "profile_matrix_id": "cuda-bitnet-perf-005",
+  "target_profiles": [
+    "one_token",
+    "short_decode_8",
+    "short_decode_32",
+    "prefill_128_decode_16",
+    "prefill_512_decode_32",
+    "warm_session_3_turns",
+    "warm_session_10_turns",
+    "decode_128_from_warm_context"
+  ],
+  "benchmark_policy": {
+    "profile_specific_decisions_only": true,
+    "global_speedup_claim": false,
+    "dense_cuda_evidence_used": false,
+    "bitnet_packed_i2s_qk256_only": true
+  },
+  "qualification_decision": {
+    "status": "not_accepted",
+    "speedup_claim_allowed": false,
+    "benchmark_qualified_speedup": false,
+    "accepted_profiles": [],
+    "blocked_profiles": [
+      "one_token",
+      "short_decode_8",
+      "short_decode_32",
+      "prefill_128_decode_16",
+      "prefill_512_decode_32",
+      "warm_session_3_turns",
+      "warm_session_10_turns",
+      "decode_128_from_warm_context"
+    ],
+    "reason": "The full CUDA-BITNET-PERF-005 matrix is visible but not accepted for speedup."
+  },
+  "profile_reviews": [
+    {
+      "profile": "one_token",
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "speedup_claim_allowed": false,
+      "benchmark_qualified_speedup": false,
+      "fallback_free": false,
+      "quality_passed": false,
+      "dense_cuda_evidence_used": false
+    },
+    {
+      "profile": "short_decode_8",
+      "decision": "not_accepted",
+      "evidence_status": "single_run_baseline",
+      "speedup_claim_allowed": false,
+      "benchmark_qualified_speedup": false,
+      "fallback_free": true,
+      "quality_passed": true,
+      "dense_cuda_evidence_used": false,
+      "cpu_total_ms_mean": 147593.0,
+      "cuda_total_ms_mean": 1866.0,
+      "host_to_device_ms": 0.0,
+      "device_to_host_ms": 0.0
+    },
+    {
+      "profile": "short_decode_32",
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "speedup_claim_allowed": false,
+      "benchmark_qualified_speedup": false,
+      "fallback_free": false,
+      "quality_passed": false,
+      "dense_cuda_evidence_used": false
+    },
+    {
+      "profile": "prefill_128_decode_16",
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "speedup_claim_allowed": false,
+      "benchmark_qualified_speedup": false,
+      "fallback_free": false,
+      "quality_passed": false,
+      "dense_cuda_evidence_used": false
+    },
+    {
+      "profile": "prefill_512_decode_32",
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "speedup_claim_allowed": false,
+      "benchmark_qualified_speedup": false,
+      "fallback_free": false,
+      "quality_passed": false,
+      "dense_cuda_evidence_used": false
+    },
+    {
+      "profile": "warm_session_3_turns",
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "speedup_claim_allowed": false,
+      "benchmark_qualified_speedup": false,
+      "fallback_free": false,
+      "quality_passed": false,
+      "dense_cuda_evidence_used": false
+    },
+    {
+      "profile": "warm_session_10_turns",
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "speedup_claim_allowed": false,
+      "benchmark_qualified_speedup": false,
+      "fallback_free": false,
+      "quality_passed": false,
+      "dense_cuda_evidence_used": false
+    },
+    {
+      "profile": "decode_128_from_warm_context",
+      "decision": "not_accepted",
+      "evidence_status": "missing",
+      "speedup_claim_allowed": false,
+      "benchmark_qualified_speedup": false,
+      "fallback_free": false,
+      "quality_passed": false,
+      "dense_cuda_evidence_used": false
+    }
+  ],
+  "claim_boundary": {
+    "speedup_claim": false,
+    "benchmark_qualified_speedup": false,
+    "full_cuda_residency_claimed": false,
+    "bitnet_packed_i2s_qk256_proof": true,
+    "dense_regular_llm_cuda_proof": false
   }
 }"#,
     )
