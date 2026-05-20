@@ -6,7 +6,7 @@ actor = "codex"
 previous_status = "in_progress"
 new_status = "pr_open"
 pr = 6154
-head_sha = "961e8255ae95fc07b645d8235a02a0d343d5c834"
+head_sha = "f64e3d55207bc67c5f33341d747e70ae059075e5"
 branch = "codex/apple-m4-inference-excellence/M4-RELIABILITY-001-recovery-drills"
 
 notes = [
