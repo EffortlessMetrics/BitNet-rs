@@ -3444,8 +3444,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-058"
-status = "pr_open"
+status = "merged"
 pr = 6070
+head_sha = "69c421955c05a2f16b21dffd0533cbf9dfcd80e9"
+merge_sha = "f27ec16ac9892f50d01e0530071d984ee891bf8c"
 branch = "codex/slm-cpu-058-dense-hook-before-after-receipts"
 stackable = false
 review_mode = "codex_premerge"

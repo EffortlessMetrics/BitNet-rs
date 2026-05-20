@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T02:51:22Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-058"
+event = "merged"
+actor = "codex"
+pr = 6070
+branch = "codex/slm-cpu-058-dense-hook-before-after-receipts"
+head_sha = "69c421955c05a2f16b21dffd0533cbf9dfcd80e9"
+merge_sha = "f27ec16ac9892f50d01e0530071d984ee891bf8c"
+summary = "Merged PR #6070, queueing the SLM-CPU-058 dense hook before/after receipt gate."
+notes = [
+  "SLM-CPU-058 is now recorded as the next receipt-equivalence gate after SLM-CPU-057.",
+  "Packed Q8_0 sidecar compute remains gated on before/after Qwen3 Q8_0 warm-session receipts proving identical generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, dense hook-selection identity, model SHA, and fallback=false.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
