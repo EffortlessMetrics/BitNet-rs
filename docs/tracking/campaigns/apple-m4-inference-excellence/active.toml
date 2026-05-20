@@ -1953,6 +1953,48 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-CONTEXT-HARNESS-001"
+status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-HARNESS-001-long-context-command-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-CONTEXT-001", "M4-BENCH-007", "M4-REPRO-003"]
+acceptance = "Align the tracker-facing long-context command surface before live proof: register `bitnet mac eval --suite m4-long-context` as a mechanical dry-run corpus contract with receipt validation and explicit no-proof boundaries, and make `bitnet mac benchmark --profile context` expand to the measured `context_1k` and `context_4k` benchmark profiles without creating a new benchmark contract profile."
+commands = [
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_eval_long_context -- --nocapture",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_eval_robustness -- --nocapture",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_benchmark_accepts_context_profile_alias_before_release_gate -- --nocapture",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_eval_help_documents_robustness_dry_run -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "ci/quality/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "ci/hardware/apple-m4-mac-mini/**/context/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+]
+may_claim = [
+  "The M4 long-context command contract and context benchmark alias are registered and receipt-checked for future proof runs.",
+]
+must_not_claim = [
+  "M4 long-context quality or timing proof has been produced.",
+  "Long-context proof applies to untested context lengths or model identities.",
+  "Dense SLM long-context evidence proves BitNet long-context behavior.",
+]
+
+[[work_item]]
 id = "M4-CONTEXT-002"
 status = "proposed"
 branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-002-long-context-proof"
@@ -1960,7 +2002,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-CONTEXT-001", "M4-BENCH-007", "M4-REPRO-003"]
+blocked_by = ["M4-CONTEXT-001", "M4-BENCH-007", "M4-REPRO-003", "M4-CONTEXT-HARNESS-001"]
 acceptance = "Run and publish long-context M4 quality and timing receipts for supported dense SLMs and the accepted BitNet artifact where supported, covering retrieval/copy, table extraction, late-context instruction following, truncation behavior, input throughput, TTFT, decode throughput, memory, fallback state, and explicit unsupported-context boundaries."
 commands = [
   "target/release/bitnet mac eval --suite m4-long-context --json-out ci/hardware/apple-m4-mac-mini/<date>/context/answer-corpus.json",

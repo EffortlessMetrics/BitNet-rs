@@ -579,6 +579,7 @@ fn mac_eval_help_documents_robustness_dry_run() {
         .success()
         .stdout(predicate::str::contains("--suite <SUITE>"))
         .stdout(predicate::str::contains("m4-robustness"))
+        .stdout(predicate::str::contains("m4-long-context"))
         .stdout(predicate::str::contains("--dry-run"))
         .stdout(predicate::str::contains("--json-out <PATH>"));
 }
@@ -656,6 +657,81 @@ fn mac_eval_robustness_requires_dry_run_until_live_gate() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("currently supports only --dry-run"));
+}
+
+#[test]
+fn mac_eval_long_context_dry_run_writes_contract_summary() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let corpus = workspace_path("ci/quality/apple-m4-long-context-corpus.yaml");
+    let receipt = dir.path().join("long-context-summary.json");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "eval",
+            "--suite",
+            "m4-long-context",
+            "--corpus",
+            corpus_str.as_str(),
+            "--dry-run",
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_long_context_eval_summary"))
+        .stdout(predicate::str::contains("\"suite\": \"m4-long-context\""))
+        .stdout(predicate::str::contains("unsupported_until_bitnet_long_context_receipts_exist"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_long_context_eval_summary");
+    assert_eq!(receipt_json["suite"], "m4-long-context");
+    assert_eq!(receipt_json["work_item"], "M4-CONTEXT-HARNESS-001");
+    assert_eq!(receipt_json["requested_backend"], "apple-m4-cpu-neon");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["dry_run"], true);
+    assert_eq!(receipt_json["corpus"]["mechanical_scoring_only"], true);
+    assert_eq!(receipt_json["corpus"]["required_llm_judge"], false);
+    assert_eq!(receipt_json["coverage"]["retrieval_copy"], true);
+    assert_eq!(receipt_json["coverage"]["table_extraction"], true);
+    assert_eq!(receipt_json["coverage"]["late_context_instruction_following"], true);
+    assert_eq!(receipt_json["coverage"]["truncation_behavior"], true);
+    assert_eq!(receipt_json["claim_boundary"]["live_long_context_quality_claim"], false);
+    assert_eq!(receipt_json["claim_boundary"]["dense_slm_evidence_proves_bitnet"], false);
+    assert_eq!(receipt_json["evidence_status"]["live_quality_receipts_published"], false);
+    let families = receipt_json["families"].as_array().ok_or("missing families")?;
+    assert_eq!(families.len(), 2);
+    assert!(families.iter().any(|family| {
+        family["model_family"] == "dense_slm"
+            && family["long_context_supported_for_live_run"] == true
+    }));
+    assert!(families.iter().any(|family| {
+        family["model_family"] == "bitnet"
+            && family["long_context_supported_for_live_run"] == false
+            && family["unsupported_boundary"]["dense_slm_evidence_proves_bitnet"] == false
+    }));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_long_context_eval_summary"))
+        .stdout(predicate::str::contains("\"prompt_count\": 8"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_eval_long_context_requires_dry_run_until_live_receipts_exist() {
+    bitnet()
+        .args(["mac", "eval", "--suite", "m4-long-context"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("currently supports only --dry-run contract receipts"));
 }
 
 #[test]
@@ -4742,6 +4818,15 @@ fn mac_benchmark_accepts_resident_100_profile_before_release_gate() {
 fn mac_benchmark_accepts_mixed_model_switch_profile_before_release_gate() {
     bitnet()
         .args(["mac", "benchmark", "--profile", "mixed_model_switch"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac benchmark must be run from a release build"));
+}
+
+#[test]
+fn mac_benchmark_accepts_context_profile_alias_before_release_gate() {
+    bitnet()
+        .args(["mac", "benchmark", "--profile", "context"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("mac benchmark must be run from a release build"));
