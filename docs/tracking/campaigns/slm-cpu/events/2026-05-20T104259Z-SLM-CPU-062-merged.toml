@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T10:42:59Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-062"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 31
+merge_sha = "6fc9c968f55f95e446f7ff61c975d2b088c6e2ae"
+branch = "codex/slm-cpu-062-swarm-artifact-export"
+summary = "Merged the swarm-side Qwen3 Q8_0 packed-sidecar candidate export package."
+notes = [
+  "The export package includes candidate summary, before receipt, after receipt, equivalence report, source commit pointer, and explicit timing-not-claimed report for BitNet-rs release-surface artifact-intake review.",
+  "The merged slice does not claim BitNet-rs release-surface acceptance, speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]
