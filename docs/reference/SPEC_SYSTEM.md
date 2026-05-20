@@ -181,3 +181,7 @@ What must we not claim?
 
 If the repo answers those questions without chat history, the source-of-truth
 system is working.
+
+## Companion reference
+
+For an expanded narrative walkthrough, see `docs/reference/SPEC_PROPOSAL_SYSTEM_FULLY_EXPLAINED.md`.
