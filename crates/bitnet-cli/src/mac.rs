@@ -24831,7 +24831,7 @@ mod tests {
     }
 
     #[test]
-    fn mac_benchmark_context_alias_expands_to_context_profiles() {
+    fn mac_benchmark_context_alias_expands_to_context_profiles() -> Result<()> {
         let expanded = expand_benchmark_profile_aliases(vec![
             MacBenchmarkProfile::ShortPrompt16Out,
             MacBenchmarkProfile::Context,
@@ -24847,7 +24847,7 @@ mod tests {
             ]
         );
 
-        let deduped = dedupe_benchmark_profiles(expanded).expect("dedupe profiles");
+        let deduped = dedupe_benchmark_profiles(expanded)?;
         assert_eq!(
             deduped,
             vec![
@@ -24856,6 +24856,7 @@ mod tests {
                 MacBenchmarkProfile::Context4k,
             ]
         );
+        Ok(())
     }
 
     fn test_verified_model(cache_root: &Path) -> VerifiedCachedModel {
