@@ -2,7 +2,7 @@
 
 Campaign item: CUDA-MODEL-016
 
-Status: in progress
+Status: merged in PR #5941
 
 ## Scope
 
@@ -82,7 +82,8 @@ writing it.
 
 ## Next Proof
 
-The next hardware step is to collect the repeated Qwen3 source receipts for all
-five profiles, generate the aggregate comparator receipt, and then run a
-separate benchmark qualification review. Until that review lands, Qwen3 speed,
-benchmark-qualified speed, full residency, and broader readiness remain false.
+The receipt contract and generator are landed. The next hardware step is to
+collect the repeated Qwen3 source receipts for all five profiles, generate the
+aggregate comparator receipt, and then run a separate benchmark qualification
+review. Until that review lands, Qwen3 speed, benchmark-qualified speed, full
+residency, and broader readiness remain false.

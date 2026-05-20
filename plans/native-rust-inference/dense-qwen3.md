@@ -377,12 +377,12 @@ server-ready state.
 
 ## Work item: CUDA-MODEL-016
 
-Status: in_progress
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
-Blocks: Qwen3 benchmark qualification review
+Blocks: Qwen3 repeated hardware comparator receipt and benchmark qualification review
 Blocked by: CUDA-MODEL-015
 
 ### Goal
@@ -393,9 +393,9 @@ five CUDA-MODEL-015 profiles.
 
 ### Production delta
 
-The `bitnet-bench-receipts` crate validates and can generate a
-`qwen3_cuda_repeated_comparator` receipt for repeated same-artifact CPU/CUDA
-Qwen3 runs across:
+PR #5941 landed `bitnet-bench-receipts` validation and generation for a
+`qwen3_cuda_repeated_comparator` receipt. The contract requires repeated
+same-artifact CPU/CUDA Qwen3 runs across:
 
 - `one_token`;
 - `short_decode_8`;
