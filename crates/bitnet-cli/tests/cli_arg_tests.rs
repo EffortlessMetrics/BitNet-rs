@@ -735,6 +735,70 @@ fn mac_eval_long_context_requires_dry_run_until_live_receipts_exist() {
 }
 
 #[test]
+fn mac_eval_long_context_rejects_duplicate_case_ids() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let corpus = dir.path().join("duplicate-long-context.yaml");
+    let receipt = dir.path().join("long-context-summary.json");
+    std::fs::write(
+        &corpus,
+        r#"schema: 1
+artifact_kind: apple_m4_long_context_corpus
+name: duplicate-long-context
+description: Duplicate case id fixture.
+defaults:
+  families: [dense_slm, bitnet]
+  family_prompt_templates:
+    dense_slm: qwen2.5
+    bitnet: bitnetcpp-answer
+cases:
+- id: duplicate
+  category: retrieval_copy
+  question: "What key?"
+  scoring:
+    kind: normalized_match
+    expected_normalized: alpha
+- id: duplicate
+  category: table_extraction
+  question: "What route?"
+  scoring:
+    kind: normalized_match
+    expected_normalized: beta
+- id: late
+  category: late_context_instruction_following
+  question: "Final code?"
+  scoring:
+    kind: required_keywords
+    required_keywords: [final]
+- id: truncation
+  category: truncation_behavior
+  question: "State?"
+  scoring:
+    kind: normalized_match
+    expected_normalized: unsupported_context
+"#,
+    )?;
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "eval",
+            "--suite",
+            "m4-long-context",
+            "--corpus",
+            corpus_str.as_str(),
+            "--dry-run",
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("case id `duplicate` is duplicated"));
+    Ok(())
+}
+
+#[test]
 fn mac_receipts_check_rejects_robustness_broad_safety_claim()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;

@@ -2158,10 +2158,18 @@ fn validate_mac_long_context_corpus(path: &Path, corpus: &MacLongContextCorpus) 
             );
         }
     }
+    let mut case_ids = std::collections::BTreeSet::new();
     let mut categories = std::collections::BTreeSet::new();
     for case in &corpus.cases {
         if case.id.trim().is_empty() {
             anyhow::bail!("{} long-context corpus case has empty id", path.display());
+        }
+        if !case_ids.insert(case.id.as_str()) {
+            anyhow::bail!(
+                "{} long-context corpus case id `{}` is duplicated",
+                path.display(),
+                case.id
+            );
         }
         if case.question.trim().is_empty() {
             anyhow::bail!(
@@ -24820,6 +24828,34 @@ mod tests {
         assert!(err.contains(APPLE_M3_AIR_CPU_NEON), "got: {err}");
         assert!(err.contains("hidden CPU fallback"), "got: {err}");
         Ok(())
+    }
+
+    #[test]
+    fn mac_benchmark_context_alias_expands_to_context_profiles() {
+        let expanded = expand_benchmark_profile_aliases(vec![
+            MacBenchmarkProfile::ShortPrompt16Out,
+            MacBenchmarkProfile::Context,
+            MacBenchmarkProfile::Context1k,
+        ]);
+        assert_eq!(
+            expanded,
+            vec![
+                MacBenchmarkProfile::ShortPrompt16Out,
+                MacBenchmarkProfile::Context1k,
+                MacBenchmarkProfile::Context4k,
+                MacBenchmarkProfile::Context1k,
+            ]
+        );
+
+        let deduped = dedupe_benchmark_profiles(expanded).expect("dedupe profiles");
+        assert_eq!(
+            deduped,
+            vec![
+                MacBenchmarkProfile::ShortPrompt16Out,
+                MacBenchmarkProfile::Context1k,
+                MacBenchmarkProfile::Context4k,
+            ]
+        );
     }
 
     fn test_verified_model(cache_root: &Path) -> VerifiedCachedModel {
