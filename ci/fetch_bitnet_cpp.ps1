@@ -10,6 +10,7 @@ param(
     [switch]$Force,
     [switch]$Clean,
     [switch]$SkipPatches,
+    [int]$ConfigureTimeoutMinutes = $(if ($env:BITNET_CPP_CONFIGURE_TIMEOUT_MINUTES) { [int]$env:BITNET_CPP_CONFIGURE_TIMEOUT_MINUTES } else { 0 }),
     [switch]$Help
 )
 
@@ -60,11 +61,15 @@ OPTIONS:
     -Force              Force rebuild even if already built
     -Clean              Clean build directory before building
     -SkipPatches        Use upstream C++ source as-is without applying local patches
+    -ConfigureTimeoutMinutes MIN
+                        Stop CMake configure after MIN minutes (default: 0, disabled)
     -Help               Show this help message
 
 ENVIRONMENT VARIABLES:
     BITNET_CPP_TAG      Override default tag/version
     BITNET_CPP_PATH     Override default cache directory
+    BITNET_CPP_CONFIGURE_TIMEOUT_MINUTES
+                        Optional CMake configure timeout in minutes
 
 EXAMPLES:
     .\fetch_bitnet_cpp.ps1                      # Use defaults
@@ -72,6 +77,8 @@ EXAMPLES:
     .\fetch_bitnet_cpp.ps1 -Force              # Force rebuild
     .\fetch_bitnet_cpp.ps1 -Clean -Force       # Clean rebuild
     .\fetch_bitnet_cpp.ps1 -SkipPatches        # Build upstream source without patches
+    .\fetch_bitnet_cpp.ps1 -ConfigureTimeoutMinutes 120
+                                                # Bound CMake configure without external cleanup
 
 After successful build, set environment variables:
     `$env:BITNET_CPP_PATH = "$CachePath"
@@ -154,6 +161,68 @@ function Invoke-Git {
     & git @Arguments
     if ($LASTEXITCODE -ne 0) {
         throw "git $($Arguments -join ' ') failed"
+    }
+}
+
+function Stop-ProcessTree {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Diagnostics.Process]$Process
+    )
+
+    if ($Process.HasExited) {
+        return
+    }
+
+    if (Test-IsWindows) {
+        & taskkill.exe /PID $Process.Id /T /F | ForEach-Object {
+            Write-Warn $_
+        }
+    } else {
+        Stop-Process -Id $Process.Id -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Invoke-NativeCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments,
+
+        [string]$Description = $FilePath,
+
+        [int]$TimeoutMinutes = 0
+    )
+
+    Write-Info "Running $Description"
+    Write-Debug "$FilePath $($Arguments -join ' ')"
+
+    $StartInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $StartInfo.FileName = $FilePath
+    $StartInfo.UseShellExecute = $false
+    foreach ($Argument in $Arguments) {
+        [void]$StartInfo.ArgumentList.Add($Argument)
+    }
+
+    $Process = [System.Diagnostics.Process]::new()
+    $Process.StartInfo = $StartInfo
+    [void]$Process.Start()
+
+    if ($TimeoutMinutes -gt 0) {
+        $TimeoutMs = [int64]$TimeoutMinutes * 60 * 1000
+        if (-not $Process.WaitForExit($TimeoutMs)) {
+            Write-Error "$Description exceeded timeout: $TimeoutMinutes minute(s)"
+            Stop-ProcessTree -Process $Process
+            throw "$Description timed out after $TimeoutMinutes minute(s)"
+        }
+    } else {
+        $Process.WaitForExit()
+    }
+
+    if ($Process.ExitCode -ne 0) {
+        throw "$Description failed with exit code $($Process.ExitCode)"
     }
 }
 
@@ -334,28 +403,20 @@ function Invoke-Build {
             }
 
             # Configure with CMake
-            Write-Info "Configuring build with CMake..."
-            cmake @CMakeArgs
-
-            if ($LASTEXITCODE -ne 0) {
-                throw "CMake configuration failed"
+            if ($ConfigureTimeoutMinutes -gt 0) {
+                Write-Info "CMake configure timeout: $ConfigureTimeoutMinutes minute(s)"
+            } else {
+                Write-Info "CMake configure timeout: disabled"
             }
+            Invoke-NativeCommand -FilePath "cmake" -Arguments $CMakeArgs -Description "CMake configuration" -TimeoutMinutes $ConfigureTimeoutMinutes
 
             # Build
             Write-Info "Building (this may take a few minutes)..."
-            cmake --build . --config Release --parallel
-
-            if ($LASTEXITCODE -ne 0) {
-                throw "Build failed"
-            }
+            Invoke-NativeCommand -FilePath "cmake" -Arguments @("--build", ".", "--config", "Release", "--parallel") -Description "CMake build"
 
             # Install to local directory
             Write-Info "Installing to local directory..."
-            cmake --install . --config Release
-
-            if ($LASTEXITCODE -ne 0) {
-                throw "Installation failed"
-            }
+            Invoke-NativeCommand -FilePath "cmake" -Arguments @("--install", ".", "--config", "Release") -Description "CMake install"
 
             Write-Info "Build completed successfully"
         }
@@ -456,6 +517,11 @@ function Main {
 
     Write-Info "BitNet C++ Fetch and Build Script"
     Write-Info "=================================="
+
+    if ($ConfigureTimeoutMinutes -lt 0) {
+        Write-Error "ConfigureTimeoutMinutes must be 0 or greater"
+        exit 1
+    }
 
     # Check if already built and not forcing rebuild
     if ((Test-Path $BuildDir) -and (Test-Path (Join-Path $BuildDir "install")) -and (-not $Force)) {
