@@ -10311,7 +10311,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-013"
-status = "in_progress"
+status = "merged"
+pr = 6106
+head_sha = "1670aac2979a81cb530f5702e9993fe7da5ffde5"
+merge_sha = "5fb87bbb38a8e27a7b2847c59e0f6be496f3d3c2"
 branch = "codex/lunar-lake/LNL258V-REG-013-bitnet-cpu-reference-surface"
 stackable = false
 review_mode = "codex_premerge"

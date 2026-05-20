@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T06:21:00Z"
+event = "pr_open"
+item = "LNL258V-REG-013"
+pr = 6106
+head_sha = "1670aac2979a81cb530f5702e9993fe7da5ffde5"
+branch = "codex/lunar-lake/LNL258V-REG-013-bitnet-cpu-reference-surface"
+actor = "codex"
+summary = "Opened PR #6106 for strict regression BitNet CPU reference surface hardening."
+
+notes = [
+  "PR #6106 exposes bitnet_cpu_reference_evidence_indexed and bitnet_cpu_reference_evidence_ready in the Lunar Lake strict regression surface.",
+  "The PR keeps BitNet CPU reference proof bounded to existing operator-readiness receipts and does not conflate dense SLM evidence with BitNet QK256/I2_S behavior.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, A770 semantic merged-to-main claim, stale BitNet claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]
