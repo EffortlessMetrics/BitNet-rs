@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "artifact_kind": "dense_gguf_q8_compute_kernel_proof_gate",
+  "work_item": "SLM-CPU-059",
+  "source_artifacts": [
+    "ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-dense-hook-receipt-gate.json",
+    "ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-production-dense-linear-hook-boundary.json",
+    "ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-proof.json"
+  ],
+  "model": {
+    "repo": "Qwen/Qwen3-0.6B-GGUF",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0"
+  },
+  "behavior_oracle": {
+    "selected_path": "eager_f32_candle",
+    "selected_kernel": "dense-f32-candle-linear",
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true,
+    "selected_backend": "cpu-rust",
+    "fallback_used": false,
+    "generated_ids_must_match_before_enablement": true,
+    "decoded_text_must_match_before_enablement": true
+  },
+  "candidate": {
+    "selected_path": "packed_q8_sidecar",
+    "selected_kernel": "dense-q8-sidecar-linear",
+    "evidence_scope": "single dense-linear Q8_0 sidecar tensor path before any broader dense runtime selection",
+    "runtime_compute_enabled": false,
+    "production_runtime_replaced": false,
+    "speedup_claim": false
+  },
+  "compute_kernel_gate": {
+    "status": "blocked",
+    "first_safe_kernel_boundary": "packed_q8_sidecar_dequant_fused_matvec",
+    "required_before_enablement": [
+      "payload-bearing sidecar runtime descriptor available at transformer dense-linear callsite",
+      "production dense-linear hook can call a packed Q8_0 dequant-fused matvec without materializing full F32 weights",
+      "output tensor shape and dtype match the eager F32 Candle linear output",
+      "before/after warm-session receipts preserve model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected backend/kernel identity, dense hook-selection identity, and fallback_used=false"
+    ],
+    "current_blockers": [
+      "runtime_hook_descriptor_is_metadata_only",
+      "packed_q8_payload_bytes_not_available_to_transformer_hook",
+      "packed_q8_compute_kernel_not_attached_to_production_dense_linear_hook",
+      "before_after_runtime_candidate_receipts_missing"
+    ],
+    "next_safe_step": "extend the dense-linear runtime hook contract with an evidence-scoped payload-bearing packed Q8_0 sidecar compute candidate, then prove one tensor path against the eager F32 Candle behavior oracle with before/after receipts before enabling broader runtime selection"
+  },
+  "claim_boundary": {
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "q4_q5_runtime_support": false,
+    "server_claim": false,
+    "accelerator_claim": false,
+    "openvino_or_uhd620_claim": false,
+    "qwen35_or_hybrid_claim": false,
+    "bitnet_qk256_claim": false
+  }
+}

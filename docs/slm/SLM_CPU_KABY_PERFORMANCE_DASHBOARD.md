@@ -407,14 +407,23 @@ records that packed Q8_0 sidecar compute is still disabled until a packed
 compute kernel exists and before/after Qwen3 Q8_0 warm-session receipts prove
 identical generated output and dense hook-selection identity.
 
-SLM-CPU-058 is the next proof gate, not a compute-enablement shortcut. It must
-capture or ingest a before/after Qwen3 Q8_0 warm-session receipt pack that
-compares the eager F32 Candle behavior oracle against the selected dense-hook
-path, or records that packed Q8_0 sidecar compute is still disabled. The
-receipts must match on model SHA, tokenizer source and strictness, prompt IDs,
-generated IDs, decoded text, selected CPU backend/kernel identity, dense
-hook-selection identity, and `fallback=false` before any packed sidecar compute
-can be enabled. A speedup or sustained-throughput claim remains out of scope.
+SLM-CPU-058 queued the before/after receipt gate. It records that packed Q8_0
+sidecar compute remains disabled until a selected dense-hook path can be
+compared against the eager F32 Candle behavior oracle by receipts that match on
+model SHA, tokenizer source and strictness, prompt IDs, generated IDs, decoded
+text, selected CPU backend/kernel identity, dense hook-selection identity, and
+`fallback=false`. A speedup or sustained-throughput claim remains out of scope.
+
+SLM-CPU-059 is the next compute-kernel proof gate. The committed blocker
+artifact
+`ci/slm-cpu/intel-i5-8250u/2026-05-20/qwen3-packed-q8-compute-kernel-proof-gate.json`
+names the current production gap: transformer dense-linear hooks still receive
+metadata-only sidecar descriptors, not payload-bearing packed Q8_0 blocks, so
+no production dense-linear call can safely execute a packed dequant-fused
+matvec yet. The next safe runtime slice is to extend the hook contract with an
+evidence-scoped payload-bearing sidecar candidate and prove one tensor path with
+before/after Qwen3 Q8_0 warm-session receipts before broader selection or
+timing claims.
 
 ## Greedy Sampler Fast Path
 
