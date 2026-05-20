@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T03:31:34Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-059"
+event = "in_progress"
+actor = "codex"
+branch = "codex/slm-cpu-059-packed-q8-kernel-proof-gate"
+previous_status = "untracked"
+new_status = "ready"
+summary = "Queued the packed Q8_0 sidecar compute-kernel proof gate after SLM-CPU-058."
+notes = [
+  "SLM-CPU-058 is merged and keeps packed Q8_0 sidecar compute disabled until behavior-preserving before/after receipts and a narrow compute proof exist.",
+  "SLM-CPU-059 is the next evidence-scoped gate for a packed Q8_0 dense-linear compute boundary or a concrete blocker artifact.",
+  "Any runtime candidate must preserve model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback=false before even a bounded timing claim.",
+  "No sustained throughput, broad answer quality, Q4/Q5 runtime, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
