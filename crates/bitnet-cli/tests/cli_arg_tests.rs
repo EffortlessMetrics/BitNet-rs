@@ -1020,6 +1020,16 @@ fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::er
         family["id"] == "bitnet_variable_warm"
             && family["expected_artifact_kind"] == "bitnet_apple_m4_warm_session"
     }));
+    assert!(families.iter().any(|family| {
+        family["id"] == "dense_slm_benchmark_variance"
+            && family["expected_artifact_kind"] == "apple_m4_benchmark_variance_v1"
+            && family["evidence_family"] == "dense_slm"
+    }));
+    assert!(families.iter().any(|family| {
+        family["id"] == "bitnet_benchmark_variance"
+            && family["expected_artifact_kind"] == "bitnet_apple_m4_benchmark_v1"
+            && family["evidence_family"] == "bitnet"
+    }));
 
     bitnet()
         .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
@@ -1115,6 +1125,8 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
     let markdown_body = std::fs::read_to_string(&markdown)?;
     assert!(markdown_body.contains("Apple M4 Inference Regression Dashboard"));
     assert!(markdown_body.contains("dense_slm_benchmark_v2"));
+    assert!(markdown_body.contains("dense_slm_benchmark_variance"));
+    assert!(markdown_body.contains("bitnet_benchmark_variance"));
     assert!(markdown_body.contains("bitnet_eval"));
 
     bitnet()
