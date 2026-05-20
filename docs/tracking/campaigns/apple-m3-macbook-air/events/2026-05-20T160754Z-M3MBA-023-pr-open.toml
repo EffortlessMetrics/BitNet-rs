@@ -1,0 +1,16 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+timestamp = "2026-05-20T16:07:54Z"
+item = "M3MBA-023"
+event = "pr_open"
+actor = "codex"
+pr = 57
+head_sha = "d31f3f63d5e0eefe06b8d4f6f7b5d2cc081d4a95"
+branch = "codex/apple-m3-macbook-air/M3MBA-023-bounded-performance-profile"
+summary = "Opened PR #57 for the bounded M3 Air performance profile."
+
+notes = [
+  "The PR exposes the manual M3 Air performance profile and records completed-run cap provenance before selected long jobs produce timing receipts.",
+  "The CLI aggregate receipt adds an M3-specific performance profile block for apple-m3-air-cpu-neon without changing M4 receipt semantics.",
+  "No model was run locally for this tracker event and no M4, broad Apple Silicon, Metal, MPSGraph, Neural Engine, QK256, BitNet quality, or speedup claim is made.",
+]

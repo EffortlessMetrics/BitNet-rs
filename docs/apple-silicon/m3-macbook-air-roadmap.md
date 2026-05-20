@@ -354,6 +354,16 @@ completion posture: preflight before expensive work, selected runs allowed to
 finish, phase evidence retained, and timeout caps based on successful completed
 runs plus cushion.
 
+`M3MBA-023` extends that staged workflow with an explicit `performance` profile
+shape. The profile records cold-load sample count, warm prompt sample count,
+token budget, storage state, power/thermal host context, and timeout-cap
+provenance in the retained artifact bundle before any timing value can be used.
+The cap provenance names completed healthy run evidence plus cushion; timed-out
+or cancelled attempts remain cap-failure actuals and are excluded from healthy
+runtime samples. A performance run may report timing only for the selected M3
+MacBook Air receipt it produced, not for M4 Mac mini, broad Apple Silicon,
+Metal, MPSGraph, Neural Engine, QK256, or BitNet answer-quality claims.
+
 If these rules make a live M3 job too expensive for ordinary PR CI, the correct
 design is to route it to a manual, labeled, scheduled, release, or campaign lane.
 It is not correct to start the job and cap it just short of receipt emission.

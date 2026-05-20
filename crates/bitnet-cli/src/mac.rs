@@ -12357,7 +12357,7 @@ async fn run_warm_profile_set(
     let build_profile = if cfg!(debug_assertions) { "debug" } else { "release" };
     let release_mode = !cfg!(debug_assertions);
 
-    let aggregate = serde_json::json!({
+    let mut aggregate = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": mac_profile_set_artifact_kind(requested_backend, spec.artifact_kind),
         "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -12437,6 +12437,14 @@ async fn run_warm_profile_set(
         ),
         "speedup_claim": false,
     });
+    if requested_backend == APPLE_M3_AIR_CPU_NEON && spec.name == "performance" {
+        if let Some(object) = aggregate.as_object_mut() {
+            object.insert(
+                "m3_air_performance_profile".to_string(),
+                m3_air_performance_profile_json(spec.tokens, &summaries),
+            );
+        }
+    }
     std::fs::write(&json_out, serde_json::to_vec_pretty(&aggregate)?)
         .with_context(|| format!("failed to write {}", json_out.display()))?;
     validate_mac_receipt_value(&json_out, &aggregate)?;
@@ -12535,6 +12543,9 @@ fn operator_profile_summary(
             "decode_generated_tok_s": receipt["speed"]["throughput"]["decode_generated_tok_s"].clone(),
         },
         "operator_ux": receipt["operator_ux"].clone(),
+        "power": receipt["power"].clone(),
+        "thermal": receipt["thermal"].clone(),
+        "storage": receipt["storage"].clone(),
         "memory": {
             "peak_memory_mb": peak_memory_mb(),
             "peak_memory_source": "getrusage.ru_maxrss",
@@ -12546,6 +12557,59 @@ fn operator_profile_summary(
         },
         "allocation_audit": receipt["allocation_audit"].clone(),
     }))
+}
+
+fn m3_air_performance_profile_json(
+    token_budgets: &[usize],
+    summaries: &[serde_json::Value],
+) -> serde_json::Value {
+    serde_json::json!({
+        "machine_id": "apple-m3-macbook-air",
+        "requested_backend": APPLE_M3_AIR_CPU_NEON,
+        "profile_set": "performance",
+        "profile_execution_model": "cold model/tokenizer load is separated from warm prompt timing for each token budget",
+        "token_budgets": token_budgets,
+        "cold_load": {
+            "sample_source": "per-profile warm-session timing.model_load_ms and timing.tokenizer_load_ms",
+            "profile_count": summaries.len(),
+            "model_loaded_once_per_profile": summaries
+                .iter()
+                .all(|summary| summary["model_loaded_once"].as_bool().unwrap_or(false)),
+            "tokenizer_loaded_once_per_profile": summaries
+                .iter()
+                .all(|summary| summary["tokenizer_loaded_once"].as_bool().unwrap_or(false)),
+        },
+        "warm_prompt": {
+            "sample_source": "per-profile speed timing warm_prompt_wall_ms and time_to_first_token_ms",
+            "profile_count": summaries.len(),
+            "prompt_counts": summaries
+                .iter()
+                .map(|summary| summary["prompt_count"].clone())
+                .collect::<Vec<_>>(),
+        },
+        "host_context": {
+            "power_recorded_per_profile": summaries.iter().all(|summary| !summary["power"].is_null()),
+            "thermal_recorded_per_profile": summaries.iter().all(|summary| !summary["thermal"].is_null()),
+            "storage_recorded_per_profile": summaries.iter().all(|summary| !summary["storage"].is_null()),
+            "missing_telemetry_policy": "record unavailable explicitly; do not infer",
+        },
+        "timeout_cap_provenance": {
+            "source": "selected workflow preflight or committed campaign report",
+            "healthy_cap_basis": "completed_healthy_runs_plus_cushion",
+            "timeouts_or_cancellations_are_healthy_samples": false,
+            "timeout_caps_are_performance_evidence": false,
+        },
+        "claim_boundary": {
+            "m3_air_selected_receipt_only": true,
+            "m4_mac_mini_performance_claimed": false,
+            "broad_apple_silicon_performance_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "bitnet_quality_claimed": false,
+            "speedup_claim": false,
+        },
+    })
 }
 
 fn profile_set_allocation_audit_json(
@@ -23975,6 +24039,32 @@ mod tests {
             profile_set_allocation_scope(APPLE_M3_AIR_CPU_NEON),
             "selected Apple M3 Air CPU/NEON SLM warm-session profile set"
         );
+    }
+
+    #[test]
+    fn m3_air_performance_profile_records_context_and_claim_boundary() {
+        let summaries = vec![serde_json::json!({
+            "prompt_count": 3,
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "power": {"source": "workflow_host_context"},
+            "thermal": {"source": "workflow_host_context"},
+            "storage": {"source": "workflow_host_context"},
+        })];
+
+        let profile = m3_air_performance_profile_json(&[16, 32, 64, 128], &summaries);
+
+        assert_eq!(profile["machine_id"], "apple-m3-macbook-air");
+        assert_eq!(profile["requested_backend"], APPLE_M3_AIR_CPU_NEON);
+        assert_eq!(profile["cold_load"]["model_loaded_once_per_profile"], true);
+        assert_eq!(profile["warm_prompt"]["prompt_counts"][0], 3);
+        assert_eq!(profile["host_context"]["power_recorded_per_profile"], true);
+        assert_eq!(
+            profile["timeout_cap_provenance"]["timeouts_or_cancellations_are_healthy_samples"],
+            false
+        );
+        assert_eq!(profile["claim_boundary"]["m4_mac_mini_performance_claimed"], false);
+        assert_eq!(profile["claim_boundary"]["speedup_claim"], false);
     }
 
     fn test_golden_token_canary_receipt() -> serde_json::Value {

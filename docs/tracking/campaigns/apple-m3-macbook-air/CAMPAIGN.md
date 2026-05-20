@@ -81,7 +81,7 @@ artifacts to separate strict proof items.
 | M3MBA-020 | merged | #5937 encodes the post-handoff execution queue as concrete follow-on work items instead of leaving the lane at a roadmap reset. |
 | M3MBA-021 | merged | #5952 extends the shared device/profile model with a structured M3 Air host profile contract and strict unsupported-backend claim boundaries. |
 | M3MBA-022 | merged | #6043 adds an M3 Air dense SLM accuracy comparison profile with prompt IDs, scoring policy, and comparable-evidence rules. |
-| M3MBA-023 | proposed | Add a bounded M3 Air performance profile that uses completed-run timeout provenance and phase artifact retention. |
+| M3MBA-023 | in progress | Add a bounded M3 Air performance profile that uses completed-run timeout provenance and phase artifact retention. |
 | M3MBA-024 | proposed | Unblock secondary BitNet artifacts through authority/storage preflight evidence before any new large download. |
 | M3MBA-025 | proposed | Align M3 accepted-artifact metadata with the separate M4 strict-proof checklist without manufacturing M4 proof. |
 | M3MBA-026 | merged | #30 hardens server shared-engine receipts so all three configured M3 Air labels survive CUDA-active model metadata without implying live M3 Metal, MPSGraph, M4 proof, or BitNet proof. |
@@ -126,8 +126,8 @@ work items so the next PRs have concrete ownership and validation surfaces.
 | 5 | `M3MBA-025` | M4 handoff alignment | Checklist mapping accepted M3 artifact metadata to separate M4 strict-proof requirements and unsupported claims. |
 | 6 | `M3MBA-026` | Server receipt label hardening | CUDA-active model metadata cannot collapse configured M3 Air Metal, MPSGraph, or CPU/NEON labels into generic active-model backend wording or proof claims. |
 
-`M3MBA-022` is merged. The current implementation PR is `M3MBA-026`; accuracy
-and performance follow-ups should remain scoped to the exact M3 Air host and
+`M3MBA-022` and `M3MBA-026` are merged. The current implementation slice is
+`M3MBA-023`; performance follow-ups should remain scoped to the exact M3 Air host and
 proof-lane labels now represented by the device/profile contract. Secondary
 BitNet artifact work can proceed in parallel with dense SLM accuracy only if it
 stays in preflight/reporting paths and does not start a new large local

@@ -1135,8 +1135,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-023"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m3-macbook-air/M3MBA-023-bounded-performance-profile"
+pr = 57
+head_sha = "d31f3f63d5e0eefe06b8d4f6f7b5d2cc081d4a95"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -1145,6 +1147,7 @@ blocked_by = ["M3MBA-022"]
 acceptance = "Add a bounded M3 Air performance profile that records cold load, warm prompt timing, token budget, power source, thermal availability, storage state, and timeout cap provenance from completed healthy runs plus cushion instead of near-completion cancellation."
 commands = [
   "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli m3_air_performance_profile_records_context_and_claim_boundary",
   "cargo run --locked -p xtask --no-default-features -- lint-workflows",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
   "cargo run --locked -p xtask --no-default-features -- campaign doctor",
@@ -1153,6 +1156,7 @@ commands = [
 ]
 allowed_paths = [
   ".github/workflows/apple-m3-air-dense-slm.yml",
+  "crates/bitnet-cli/**",
   "docs/apple-silicon/**",
   "docs/ci/**",
   "docs/tracking/campaigns/apple-m3-macbook-air/**",
