@@ -1,6 +1,6 @@
 {
   "artifact_kind": "inference_result",
-  "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\instruction_single_sentence_rust.json",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\instruction_single_sentence_rust.json",
   "counts": {
     "n_kv": 26,
     "n_tensors": 291,
@@ -36,7 +36,7 @@
     "fallback_used": false,
     "generated_tokens": 24,
     "phase": "decode",
-    "prompt_tokens": 35,
+    "prompt_tokens": 36,
     "requested_backend": "cpu",
     "runtime_api": "cpu",
     "selected_backend": "cpu-rust",
@@ -55,10 +55,14 @@
     "deterministic": true,
     "explicit_bos_requested": false,
     "greedy": true,
+    "max_new_tokens": 24,
     "parse_special": true,
     "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
     "seed": 0,
-    "temperature": 0.0
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
   },
   "kernel": {
     "dequantizes_before_compute": true,
@@ -68,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 8285,
-    "decode_first_ms": 8285,
-    "total_ms": 15916
+    "cmd_to_first_ms": 8692,
+    "decode_first_ms": 8692,
+    "total_ms": 16407
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -97,7 +101,7 @@
     "format": "gguf",
     "loader_mode": "real_gguf",
     "output_head_tensor": "output.weight",
-    "path": "C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "path": "C:/Users/szim9/AppData/Local/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
     "quant_format": "Q8_0",
     "repo": "Qwen/Qwen2.5-0.5B-Instruct",
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
@@ -266,82 +270,82 @@
     "decode": {
       "embed_ms": {
         "count": 24,
-        "max_ms": 0.046,
-        "mean_ms": 0.029,
+        "max_ms": 0.05,
+        "mean_ms": 0.027,
         "min_ms": 0.018,
         "p50_ms": 0.024,
-        "p95_ms": 0.042,
-        "total_ms": 0.689
+        "p95_ms": 0.043,
+        "total_ms": 0.642
       },
-      "first_token_decode_ms": 338.491,
+      "first_token_decode_ms": 352.085,
       "forward_ms": {
         "count": 24,
-        "max_ms": 259.172,
-        "mean_ms": 237.736,
-        "min_ms": 228.922,
-        "p50_ms": 235.824,
-        "p95_ms": 259.018,
-        "total_ms": 5705.666
+        "max_ms": 253.67,
+        "mean_ms": 242.197,
+        "min_ms": 233.64,
+        "p50_ms": 241.918,
+        "p95_ms": 252.089,
+        "total_ms": 5812.736
       },
       "generated_tokens": 24,
       "logits_ms": {
         "count": 24,
-        "max_ms": 96.426,
-        "mean_ms": 84.206,
-        "min_ms": 81.049,
-        "p50_ms": 83.702,
-        "p95_ms": 86.375,
-        "total_ms": 2020.945
+        "max_ms": 88.734,
+        "mean_ms": 84.661,
+        "min_ms": 81.26,
+        "p50_ms": 84.201,
+        "p95_ms": 88.371,
+        "total_ms": 2031.853
       },
       "per_token_ms": {
         "count": 24,
-        "max_ms": 354.947,
-        "mean_ms": 331.962,
-        "min_ms": 320.671,
-        "p50_ms": 329.233,
-        "p95_ms": 353.366,
-        "total_ms": 7967.08
+        "max_ms": 352.085,
+        "mean_ms": 336.043,
+        "min_ms": 324.306,
+        "p50_ms": 336.341,
+        "p95_ms": 346.811,
+        "total_ms": 8065.028
       },
       "sample_ms": {
         "count": 24,
-        "max_ms": 5.636,
-        "mean_ms": 2.968,
-        "min_ms": 2.4,
-        "p50_ms": 2.794,
-        "p95_ms": 4.047,
-        "total_ms": 71.233
+        "max_ms": 3.282,
+        "mean_ms": 2.256,
+        "min_ms": 1.92,
+        "p50_ms": 2.203,
+        "p95_ms": 3.169,
+        "total_ms": 54.141
       },
       "steady_per_token_ms": {
         "count": 23,
-        "max_ms": 354.947,
-        "mean_ms": 331.678,
-        "min_ms": 320.671,
-        "p50_ms": 329.233,
-        "p95_ms": 353.366,
-        "total_ms": 7628.589
+        "max_ms": 346.811,
+        "mean_ms": 335.345,
+        "min_ms": 324.306,
+        "p50_ms": 336.341,
+        "p95_ms": 340.711,
+        "total_ms": 7712.942
       },
-      "steady_state_tok_s": 3.015,
+      "steady_state_tok_s": 2.982,
       "steady_state_tokens": 23,
       "token_decode_ms": {
         "count": 24,
         "max_ms": 0.079,
-        "mean_ms": 0.036,
-        "min_ms": 0.021,
-        "p50_ms": 0.031,
-        "p95_ms": 0.052,
-        "total_ms": 0.859
+        "mean_ms": 0.03,
+        "min_ms": 0.019,
+        "p50_ms": 0.025,
+        "p95_ms": 0.054,
+        "total_ms": 0.714
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13478.019,
+    "model_load_ms": 13575.444,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 7946.361,
+      "ms": 8339.787,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -351,27 +355,75 @@
         "p95_ms": null,
         "total_ms": 0.0
       },
-      "tokens": 34
+      "tokens": 35
     },
-    "prompt_tokenize_ms": 416.433,
+    "prompt_tokenize_ms": 423.955,
     "requested": false,
-    "tokenizer_load_ms": 601.61
+    "tokenizer_load_ms": 575.362
   },
   "prompt": "Write one short sentence about Rust.",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 24,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "f58d2b52ee18607de4c21776b05058b4d733dec4a5b875edf32b13eb6c517979",
+    "identity_sha256": "77155783f6b596667b323c4255f825e87364c74bb3457cad189261c5d604e380",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        151645,
+        151644
+      ]
+    },
+    "stop_criteria_sha256": "51dbd89eb1b858882b35fc2340257e0c109c8261500f46ba8b5b6cd2687948ca",
+    "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+    "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+    "template": {
+      "family": "qwen25-chat",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "qwen25-chat",
+    "template_sha256": "be829f95ac1a95f9fd9b9641a7df864186594cde3285438f6f8fdddc89c428e3",
+    "tokenizer_authority": {
+      "authority": "present",
+      "sha256": null,
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
   "prompt_identity": {
     "bos_policy": false,
     "parse_special": true,
-    "prompt_token_count": 35,
-    "prompt_token_ids_sha256": "f1d35b16f83a9e62498fb50a461d5c5c7277b6c7a6319d3b040d41b538d3dc46",
-    "rendered_prompt_sha256": "9e64b9db155e5297c5b00b6789b38c305ef23e77248205a7eb238be4fcdf2dcd",
+    "prompt_token_count": 36,
+    "prompt_token_ids_sha256": "0c10648c4ade97db3650437c28eaa8f6fd14a6a0db070a236b5d0339b8e4ce90",
+    "rendered_prompt_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
     "template": "qwen25-chat"
   },
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
     "qwen_no_think": false,
-    "rendered_sha256": "9e64b9db155e5297c5b00b6789b38c305ef23e77248205a7eb238be4fcdf2dcd",
-    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant",
+    "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
     "stop_sequences": [
       "<|im_end|>",
       "<|im_start|>"
@@ -384,6 +436,8 @@
   },
   "proof_summary": {
     "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
     "claim_level": "diagnostic_cli_run",
     "execution_backend": "cpu-rust",
     "execution_backend_matched": false,
@@ -428,13 +482,13 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 24,
-    "decode_tps": 1.5079165619502388,
+    "decode_tps": 1.4627902724446882,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
     "model_family": "qwen",
     "phase": "decode",
-    "prompt_tokens": 35,
+    "prompt_tokens": 36,
     "provenance": "dense_slm_gguf_cpu_reference",
     "quant_format": "Q8_0",
     "requested_backend": "cpu",
@@ -445,25 +499,25 @@
     "tokenizer_source": "gguf_metadata",
     "tokenizer_strict": true
   },
-  "text": " Rust is a powerful, versatile programming language that has gained popularity in recent years for its simplicity and efficiency. It's known",
+  "text": "Rust is a powerful, safe, and efficient programming language that offers developers the ability to build high-performance applications with ease",
   "throughput": {
     "decoded_tokens": 24,
-    "tokens_per_second": 1.5079165619502388
+    "tokens_per_second": 1.4627902724446882
   },
-  "timestamp": "2026-05-16T15:21:17.330543900+00:00",
+  "timestamp": "2026-05-19T04:58:36.222094100+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.015,
-    "decode_total_ms": 7967.08,
+    "decode_steady_state_tok_s": 2.982,
+    "decode_total_ms": 8065.028,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 338.491,
-    "first_token_ms": 8285,
+    "first_token_decode_ms": 352.085,
+    "first_token_ms": 8692,
     "host_to_device_bytes": null,
-    "model_load_ms": 13478.019,
-    "prefill_ms": 7946.361,
-    "sampling_ms_per_token": 2.968,
-    "tokenize_ms": 416.433,
-    "tokenizer_load_ms": 601.61
+    "model_load_ms": 13575.444,
+    "prefill_ms": 8339.787,
+    "sampling_ms_per_token": 2.256,
+    "tokenize_ms": 423.955,
+    "tokenizer_load_ms": 575.362
   },
   "tokenizer": {
     "bos": 151643,
@@ -478,58 +532,58 @@
   "tokens": {
     "generated": 24,
     "generated_ids": [
-      33789,
+      49,
+      590,
       374,
       264,
       7988,
       11,
-      31945,
+      6092,
+      11,
+      323,
+      11050,
       15473,
       4128,
       429,
-      702,
-      18163,
-      22538,
-      304,
-      3213,
-      1635,
-      369,
-      1181,
-      38975,
-      323,
-      15024,
-      13,
-      1084,
-      594,
-      3881
+      6081,
+      13402,
+      279,
+      5726,
+      311,
+      1936,
+      1550,
+      57474,
+      8357,
+      448,
+      14219
     ],
     "ids": [
-      33789,
+      49,
+      590,
       374,
       264,
       7988,
       11,
-      31945,
+      6092,
+      11,
+      323,
+      11050,
       15473,
       4128,
       429,
-      702,
-      18163,
-      22538,
-      304,
-      3213,
-      1635,
-      369,
-      1181,
-      38975,
-      323,
-      15024,
-      13,
-      1084,
-      594,
-      3881
+      6081,
+      13402,
+      279,
+      5726,
+      311,
+      1936,
+      1550,
+      57474,
+      8357,
+      448,
+      14219
     ],
-    "prompt": 35,
+    "prompt": 36,
     "prompt_ids": [
       151644,
       8948,
@@ -565,8 +619,9 @@
       151645,
       198,
       151644,
-      77091
+      77091,
+      198
     ],
-    "total": 59
+    "total": 60
   }
 }

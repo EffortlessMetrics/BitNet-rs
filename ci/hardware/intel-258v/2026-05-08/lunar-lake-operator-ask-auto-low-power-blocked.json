@@ -1,0 +1,110 @@
+{
+  "acceleration_claim": false,
+  "answer_gate_passed": null,
+  "artifact_kind": "lunar_lake_operator_ask_blocked",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "bitnet_qk256_i2s_claim": false,
+  "candidate_routes": [
+    "dense_slm_default_cpu",
+    "dense_slm_openvino_npu_candidate",
+    "dense_slm_openvino_gpu_candidate"
+  ],
+  "claim_boundary": {
+    "acceleration_claim": false,
+    "bitnet_qk256_i2s_claim": false,
+    "default_route_changed": false,
+    "fallback_used": false,
+    "model_loaded": false,
+    "native_accelerator_claim": false,
+    "new_inference_executed": false,
+    "power_advantage_claim": false,
+    "route_promotion_changed": false,
+    "route_selection_blocked": true,
+    "speedup_claim": false
+  },
+  "created_utc": "2026-05-20T04:52:38Z",
+  "fallback_used": false,
+  "machine_id": "intel-258v",
+  "max_new_tokens": 4,
+  "model_path_required": false,
+  "model_resolution": "not_required_for_blocked_auto_route_before_execution",
+  "new_inference_executed": false,
+  "next_required_evidence": [
+    "rerun telemetry-context --require-battery on battery power before collecting low_power route samples",
+    "collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix",
+    "rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision"
+  ],
+  "operator_receipt": "lunar-lake-operator-readiness.json",
+  "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
+  "power_advantage_claim": false,
+  "profile_id": "low_power",
+  "promotion_ledger": "lunar-lake-route-promotion.json",
+  "promotion_status": "no_promoted_route",
+  "proof_stage": "operator_route_selection_blocked_no_inference",
+  "question": "What is 2+2?",
+  "requested_device": "auto",
+  "requested_route": "auto",
+  "route_profile_comparison": "lunar-lake-route-profile-comparison.json",
+  "route_reason": "no promoted Lunar Lake auto route for profile `low_power`",
+  "route_selection": {
+    "candidate_routes": [
+      "dense_slm_default_cpu",
+      "dense_slm_openvino_npu_candidate",
+      "dense_slm_openvino_gpu_candidate"
+    ],
+    "model_path_required": false,
+    "model_resolution": "not_required_for_blocked_auto_route_before_execution",
+    "next_required_evidence": [
+      "rerun telemetry-context --require-battery on battery power before collecting low_power route samples",
+      "collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix",
+      "rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision"
+    ],
+    "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
+    "profile_id": "low_power",
+    "promotion_ledger": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+    "promotion_status": "no_promoted_route",
+    "requested_device": "auto",
+    "requested_route": "auto",
+    "route_profile_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+    "route_reason": "no promoted Lunar Lake auto route for profile `low_power`",
+    "route_selection_blocked": true,
+    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile) | route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`; next_required_evidence=rerun telemetry-context --require-battery on battery power before collecting low_power route samples | collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix | rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision; operator_runbook=docs/hardware/intel-258v-low-power-battery-runbook.md",
+    "route_selection_status": "blocked",
+    "runtime_api": null,
+    "selected_backend": null,
+    "selected_route": null,
+    "selection_source": "promotion_ledger_auto_blocked",
+    "why_not_cpu": [
+      "route is not promoted for profile `low_power`"
+    ],
+    "why_not_gpu": [
+      "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
+      "route is not promoted for profile `low_power`"
+    ],
+    "why_not_npu": [
+      "route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile)",
+      "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
+      "route is not promoted for profile `low_power`"
+    ]
+  },
+  "route_selection_blocked": true,
+  "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile) | route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`; next_required_evidence=rerun telemetry-context --require-battery on battery power before collecting low_power route samples | collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix | rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision; operator_runbook=docs/hardware/intel-258v-low-power-battery-runbook.md",
+  "route_selection_status": "blocked",
+  "runtime_api": null,
+  "schema_version": "1.0.0",
+  "selected_backend": null,
+  "selected_route": null,
+  "speedup_claim": false,
+  "why_not_cpu": [
+    "route is not promoted for profile `low_power`"
+  ],
+  "why_not_gpu": [
+    "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
+    "route is not promoted for profile `low_power`"
+  ],
+  "why_not_npu": [
+    "route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile)",
+    "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
+    "route is not promoted for profile `low_power`"
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "lunar_lake_thermal_temperature_availability",
+  "proof_stage": "thermal_temperature_sources_probed_no_claim_change",
+  "created_utc": "2026-05-20T00:20:00Z",
+  "machine_id": "intel-258v",
+  "source_revision": "cb7604948f6a06c463c2624a2d89b46c854671a4",
+  "telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+  "goal_gap_addressed": "thermal temperature readings are unavailable",
+  "decision": {
+    "thermal_zone_visibility_available": true,
+    "thermal_temperature_available": false,
+    "usable_temperature_reading_count": 0,
+    "reason": "Windows exposes one thermal-zone counter object, but every probed temperature source is empty, null, or reports zero/sentinel values that do not qualify as measured thermal temperature readings."
+  },
+  "current_committed_context": {
+    "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
+    "thermal_source": "windows_perf_thermal_zone",
+    "thermal_zones_visible": 1,
+    "temperatures_celsius": []
+  },
+  "probe_results": [
+    {
+      "source": "windows_msacpi_thermal_zone_temperature",
+      "namespace": "root/wmi",
+      "class": "MSAcpi_ThermalZoneTemperature",
+      "command": "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object InstanceName,CurrentTemperature,CriticalTripPoint,PassiveTripPoint",
+      "objects_found": 0,
+      "raw_status": "empty_or_unavailable",
+      "usable_temperatures_celsius": [],
+      "classification": "not_available"
+    },
+    {
+      "source": "windows_perf_thermal_zone_information",
+      "namespace": "root/cimv2",
+      "class": "Win32_PerfFormattedData_Counters_ThermalZoneInformation",
+      "command": "Get-CimInstance -ClassName Win32_PerfFormattedData_Counters_ThermalZoneInformation | Select-Object Name,Temperature,HighPrecisionTemperature,PercentPassiveLimit,ThrottleReasons",
+      "objects_found": 1,
+      "zones": [
+        {
+          "name": "\\_TZ.TZ00",
+          "temperature_raw": 0,
+          "high_precision_temperature_raw": 0,
+          "percent_passive_limit": 100,
+          "throttle_reasons": 0
+        }
+      ],
+      "usable_temperatures_celsius": [],
+      "classification": "zone_visible_temperature_unavailable",
+      "notes": [
+        "Temperature=0 and HighPrecisionTemperature=0 are treated as unavailable telemetry, not as measured 0 C readings."
+      ]
+    },
+    {
+      "source": "windows_temperature_probe",
+      "namespace": "root/cimv2",
+      "class": "Win32_TemperatureProbe",
+      "command": "Get-CimInstance -ClassName Win32_TemperatureProbe | Select-Object Name,Status,CurrentReading,MinReadable,MaxReadable,NominalReading,Resolution,Tolerance",
+      "objects_found": 1,
+      "probes": [
+        {
+          "name": "Numeric Sensor",
+          "status": "Unknown",
+          "current_reading": null,
+          "min_readable": 32768,
+          "max_readable": 32768,
+          "nominal_reading": null,
+          "resolution": 32768,
+          "tolerance": 32768
+        }
+      ],
+      "usable_temperatures_celsius": [],
+      "classification": "probe_visible_current_reading_unavailable",
+      "notes": [
+        "CurrentReading is null and the 32768 readable/resolution/tolerance fields are preserved as raw sensor metadata, not thermal evidence."
+      ]
+    }
+  ],
+  "impact": {
+    "low_power_promotion_ready": false,
+    "power_advantage_proven": false,
+    "thermal_context_recorded": true,
+    "thermal_temperature_count": 0,
+    "route_promotion_changed": false,
+    "next_step": "Keep thermal temperature readings as an explicit unavailable gap unless a future probe source produces non-null, non-zero, physically plausible temperature readings."
+  },
+  "claim_boundary": {
+    "new_inference_executed": false,
+    "telemetry_probe_executed": true,
+    "measured_temperature_claim": false,
+    "route_promotion_changed": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "native_opencl_or_native_npu_claim": false,
+    "bitnet_qk256_or_i2s_behavior_changed": false
+  }
+}

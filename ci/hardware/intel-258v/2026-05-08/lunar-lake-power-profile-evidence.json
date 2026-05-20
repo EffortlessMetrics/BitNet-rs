@@ -1,0 +1,129 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_power_profile_evidence",
+  "proof_stage": "low_power_evidence_indexed_no_promotion_change",
+  "created_utc": "2026-05-20T05:30:00Z",
+  "machine_id": "intel-258v",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "cold_warm_benchmark_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+  "battery_telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-telemetry-blocked.json",
+  "energy_proxy_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-energy-proxy.json",
+  "telemetry": {
+    "memory_context_recorded": true,
+    "power_context_recorded": true,
+    "thermal_context_recorded": true,
+    "active_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)",
+    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+    "ac_power_inferred": true,
+    "thermal_zones_visible": 1,
+    "thermal_temperature_count": 0,
+    "current_context_is_ac_only": true,
+    "battery_mode_sample_recorded": false,
+    "battery_sample_source": null,
+    "energy_proxy_recorded": true,
+    "energy_proxy_source": "energy_proxy_receipt"
+  },
+  "low_power_routes": [
+    {
+      "route_id": "dense_slm_default_cpu",
+      "route_status": "candidate",
+      "ledger_route_status": "promoted",
+      "selected_backend": "cpu-rust",
+      "runtime_api": "cpu",
+      "fallback_used": false,
+      "answer_gate_passed": true,
+      "total_response_ms": 27986.539,
+      "throughput_tokens_per_s": 2.78,
+      "benchmark_qualified_advantage": false,
+      "power_related_blockers": [
+        "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile low_power",
+        "power advantage evidence missing for low_power promotion",
+        "route not promoted for profile low_power"
+      ],
+      "all_blockers": [
+        "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile low_power",
+        "bounded math ask only; not expanded profile regression corpus",
+        "power advantage evidence missing for low_power promotion",
+        "route not promoted for profile low_power"
+      ],
+      "power_promotion_ready": false
+    },
+    {
+      "route_id": "dense_slm_openvino_npu_candidate",
+      "route_status": "candidate",
+      "ledger_route_status": "promoted",
+      "selected_backend": "openvino-npu",
+      "runtime_api": "openvino_genai",
+      "fallback_used": false,
+      "answer_gate_passed": true,
+      "total_response_ms": 31516.546200046316,
+      "throughput_tokens_per_s": 33.0984992980957,
+      "benchmark_qualified_advantage": false,
+      "power_related_blockers": [
+        "benchmark-qualified speedup or power advantage missing",
+        "power advantage evidence missing for low_power promotion",
+        "route not promoted for profile low_power"
+      ],
+      "all_blockers": [
+        "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+        "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+        "benchmark-qualified speedup or power advantage missing",
+        "power advantage evidence missing for low_power promotion",
+        "route not promoted for profile low_power"
+      ],
+      "power_promotion_ready": false
+    },
+    {
+      "route_id": "dense_slm_openvino_gpu_candidate",
+      "route_status": "candidate",
+      "ledger_route_status": "promoted",
+      "selected_backend": "openvino-gpu",
+      "runtime_api": "openvino_genai",
+      "fallback_used": false,
+      "answer_gate_passed": true,
+      "total_response_ms": 3776.7631000312977,
+      "throughput_tokens_per_s": 29.35965347290039,
+      "benchmark_qualified_advantage": false,
+      "power_related_blockers": [
+        "benchmark-qualified speedup or power advantage missing",
+        "power advantage evidence missing for low_power promotion",
+        "route not promoted for profile low_power"
+      ],
+      "all_blockers": [
+        "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
+        "benchmark-qualified speedup or power advantage missing",
+        "power advantage evidence missing for low_power promotion",
+        "route not promoted for profile low_power"
+      ],
+      "power_promotion_ready": false
+    }
+  ],
+  "power_profile_index_ready": true,
+  "low_power_promotion_ready": false,
+  "power_advantage_proven": false,
+  "gaps": [
+    "current telemetry is AC-only; battery comparison evidence is missing",
+    "battery-mode sample is missing for low_power promotion",
+    "no low_power route has benchmark-qualified power evidence"
+  ],
+  "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
+  "next_required_evidence": [
+    "rerun telemetry-context --require-battery on battery power before collecting low_power route samples",
+    "collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix",
+    "rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision",
+    "record thermal temperatures if available; current thermal evidence is zone visibility only",
+    "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
+  ],
+  "claim_boundary": {
+    "new_inference_executed": false,
+    "route_promotion_changed": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "native_npu_inference_claim": false,
+    "bitnet_qk256_i2s_behavior_changed": false,
+    "hidden_fallback_allowed": false
+  }
+}

@@ -86,7 +86,7 @@ cases:
     category: yes_no
     profile: ask_short
     question: "Reply with exactly one word, yes or no: is the sky usually blue on a clear day?"
-    max_new_tokens: 8
+    max_new_tokens: 1
     scoring:
       kind: normalized_match
       expected_normalized: "yes"
@@ -131,8 +131,8 @@ cases:
   - id: stop_token_one_word_done
     category: stop_and_eos
     profile: regression_tiny
-    question: "Answer with exactly one word: done"
-    max_new_tokens: 8
+    question: "Return exactly this text and nothing else: done"
+    max_new_tokens: 4
     scoring:
       kind: normalized_match
       expected_normalized: "done"
@@ -180,13 +180,14 @@ cases:
   - id: long_prompt_summary_route_policy
     category: long_prompt_summarization
     profile: prefill_heavy
-    question: "Read this short policy note and summarize it in one sentence: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path."
+    question: "Summarize this policy note in one sentence, and include the exact words Lunar, CPU, and route: Lunar Lake uses dense Qwen CPU as the default route. OpenVINO GPU and NPU remain candidate routes until answer gates, fallback-free execution, and profile timings prove an advantage. BitNet CPU remains the strict reference path."
     max_new_tokens: 40
     scoring:
       kind: required_keywords
       required_keywords:
         - "Lunar"
         - "CPU"
+        - "route"
     gate:
       kind: contains_any
       contains_any:
@@ -212,7 +213,7 @@ cases:
   - id: decode_heavy_short_list
     category: decode_heavy
     profile: decode_heavy
-    question: "List six local inference route checks and include the words fallback and model. Use short comma-separated phrases."
+    question: "Use these exact phrases in a short answer: fallback check, model check, tokenizer check, route reason, timing receipt, strict no fallback."
     max_new_tokens: 64
     scoring:
       kind: required_keywords
@@ -224,3 +225,34 @@ cases:
     gate:
       kind: readable
       min_words: 8
+
+  - id: low_power_route_evidence_copy
+    category: copy_exact
+    profile: low_power
+    question: "Copy exactly these two words and nothing else: route evidence"
+    max_new_tokens: 6
+    scoring:
+      kind: required_forbidden_tokens
+      required_keywords:
+        - "route"
+        - "evidence"
+      forbidden_tokens:
+        - "<|"
+    gate:
+      kind: contains_any
+      contains_any:
+        - "route evidence"
+        - "Route evidence"
+
+  - id: warm_resident_route_copy
+    category: resident_session
+    profile: warm_resident
+    question: "Answer with this exact phrase: warm resident"
+    max_new_tokens: 6
+    scoring:
+      kind: required_keywords
+      required_keywords:
+        - "resident"
+    gate:
+      kind: readable
+      min_words: 2

@@ -4,8 +4,9 @@
   "created_utc": "2026-05-20T12:30:00Z",
   "source_repo": "EffortlessMetrics/BitNet-rs",
   "target_repo": "EffortlessMetrics/bitnet-rs-swarm",
-  "migration_pr": "SWARM-LNL258V-MIGRATE-001",
-  "scope": "inventory_only_no_runtime_receipts_copied",
+  "migration_pr": "SWARM-LNL258V-MIGRATE-002",
+  "last_updated_by": "SWARM-LNL258V-MIGRATE-002",
+  "scope": "artifact_carry_from_bitnet_rs_no_new_inference",
   "source_cutoff": {
     "primary_audit_item": "LNL258V-GOAL-AUDIT-013",
     "primary_audit_pr": 6116,
@@ -79,15 +80,19 @@
     "strict_regression": "corpus_v2 route_profile cold_warm durability telemetry_context and bitnet_semantic_intake",
     "active_blocker": "LNL258V-POWER-006 battery-mode low_power telemetry, energy-proxy, measured thermal readings, and benchmark-qualified power advantage are missing"
   },
-  "moved_in_this_pr": [
+  "moved_by_SWARM_LNL258V_MIGRATE_001": [
     "docs/migrations/lunar-lake-from-bitnet-rs.md",
     "ci/hardware/intel-258v/MIGRATION_MANIFEST.json"
   ],
-  "not_moved_in_this_pr": [
-    "runtime receipts",
-    "quality corpus run outputs",
-    "route-promotion artifacts",
-    "regression or comparison bundles",
+  "moved_by_SWARM_LNL258V_MIGRATE_002": [
+    "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-*.json",
+    "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+    "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+    "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+    "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2-runs/*.json"
+  ],
+  "not_moved_by_this_migration": [
     "A770 diagnostic runtime code",
     "model binaries or local caches",
     "old-repo tracker rows/events"
@@ -97,71 +102,71 @@
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
       "source_exists": true,
       "swarm_exists": true,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "refresh_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
       "source_exists": true,
       "swarm_exists": true,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "refresh_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
       "source_exists": true,
       "swarm_exists": true,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "refresh_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
       "source_exists": true,
       "swarm_exists": true,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "refresh_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
       "source_exists": true,
       "swarm_exists": true,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "refresh_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
       "source_exists": true,
       "swarm_exists": true,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "refresh_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
       "source_exists": true,
       "swarm_exists": true,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "refresh_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
       "source_exists": true,
       "swarm_exists": true,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "refresh_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
       "source_exists": true,
-      "swarm_exists": false,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "copy_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_exists": true,
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
       "source_exists": true,
-      "swarm_exists": false,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "copy_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_exists": true,
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
@@ -173,30 +178,30 @@
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cache-experiment.json",
       "source_exists": true,
-      "swarm_exists": false,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "copy_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_exists": true,
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
       "source_exists": true,
-      "swarm_exists": false,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "copy_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_exists": true,
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
       "source_exists": true,
-      "swarm_exists": false,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "copy_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_exists": true,
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     },
     {
       "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
       "source_exists": true,
-      "swarm_exists": false,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "copy_from_source_in_SWARM-LNL258V-MIGRATE-002"
+      "swarm_exists": true,
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "moved_from_source_in_SWARM-LNL258V-MIGRATE-002"
     }
   ],
   "claim_boundaries": [

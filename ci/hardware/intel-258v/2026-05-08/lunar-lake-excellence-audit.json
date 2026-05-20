@@ -1,0 +1,501 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "lunar_lake_excellence_audit",
+  "proof_stage": "completion_audit_no_inference",
+  "created_utc": "2026-05-20T06:45:00Z",
+  "machine_id": "intel-258v",
+  "source_revision": "c5560df6f01a3dffb34249244731427446b3a547",
+  "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
+  "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
+  "excellent_support_ready": false,
+  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness, REG-011 gates route/profile and cold/warm evidence on route/model identity, OP-013 makes blocked auto routes fail closed before model resolution, OP-014 makes the blocked low_power auto ask surface point to the POWER-006 battery runbook and next battery-mode evidence, VALIDATE-003 carries that blocked low_power ask receipt into operator readiness so validate, regress, and compare all index the same runbook guidance, POWER-009/#6097 plus closeout #6099 are merged and carry the same runbook plus telemetry-context --require-battery guidance through power-profile evidence, REG-012/#6102 plus closeout #6103 are merged with Arc/NPU bounded proof coverage exposed as strict regression-surface indexed/ready fields without changing claims, and REG-013/#6106 plus closeout #6107 are merged with BitNet CPU reference route evidence exposed as strict regression-surface indexed/ready fields without changing BitNet behavior. ASK-006/ASK-007 index appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-004 is merged and closed out with pending A770 shared BitNet semantic stack watchpoints #4756, #4757, #4767, #4853, and #5064 indexed, POWER-007/POWER-008 make the physical battery-mode low_power runbook discoverable, and A770-005/#6072 plus closeout #6079 and A770-006/#6110 plus closeout #6112 landed adjacent selected-device OpenCL smoke/parity evidence without changing Lunar Lake BitNet semantic rerun state. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
+  "tracker_state": {
+    "active_item": "LNL258V-POWER-006",
+    "active_item_status": "blocked",
+    "active_blocker": "battery-mode telemetry and low_power energy-proxy evidence are unavailable while the current power context indicates AC power",
+    "last_merged_operator_policy_item": "LNL258V-OP-014",
+    "last_merged_operator_policy_pr": 6087,
+    "last_merged_operator_policy_merge_sha": "050d1403e626b7c4cd91abd18ffa8054eb085c5a",
+    "last_merged_operator_policy_closeout_pr": 6088,
+    "last_merged_operator_policy_closeout_merge_sha": "b4f1d058c9b9de92495b86da455562defe23a67f",
+    "last_merged_regression_item": "LNL258V-REG-011",
+    "last_merged_regression_pr": 6027,
+    "last_merged_regression_merge_sha": "6985f5846f8bf1236bda89b399d7d2d4313c0579",
+    "last_merged_validate_item": "LNL258V-VALIDATE-003",
+    "last_merged_validate_pr": 6092,
+    "last_merged_validate_merge_sha": "0c9e8847f2145de4fe1efe33408e50aa83c8c463",
+    "last_merged_validate_closeout_pr": 6093,
+    "last_merged_validate_closeout_merge_sha": "0c8c01df2a3372c23e99f7c2d72438694b08447b",
+    "last_merged_route_model_identity_item": "LNL258V-REG-011",
+    "last_merged_route_model_identity_pr": 6027,
+    "last_merged_route_model_identity_merge_sha": "6985f5846f8bf1236bda89b399d7d2d4313c0579",
+    "last_merged_ask_normal_item": "LNL258V-ASK-006",
+    "last_merged_ask_normal_pr": 6038,
+    "last_merged_ask_normal_merge_sha": "403e2a8e287ab5782cc6f5d37b8e8cee70a8406f",
+    "last_merged_ask_short_item": "LNL258V-ASK-007",
+    "last_merged_ask_short_pr": 6041,
+    "last_merged_ask_short_merge_sha": "b08d5fe4081ae4e0ac83b8d5f9c8b0870c63b5eb",
+    "last_merged_bitnet_intake_item": "LNL258V-BITNET-INTAKE-004",
+    "last_merged_bitnet_intake_pr": 6064,
+    "last_merged_bitnet_intake_merge_sha": "28465b3b7824efc02c80d1dd6aa39d838ebb4aaa",
+    "last_merged_power_runbook_item": "LNL258V-POWER-007",
+    "last_merged_power_runbook_pr": 6055,
+    "last_merged_power_runbook_merge_sha": "91979d3e27fc95e1e2bd8dde4384b4ef017e9bf4",
+    "last_merged_power_runbook_links_item": "LNL258V-POWER-008",
+    "last_merged_power_runbook_links_pr": 6057,
+    "last_merged_power_runbook_links_merge_sha": "43db1ed843b2d6635c6f9cbb101691f38b02b9ae",
+    "last_closeout_pr": 6079,
+    "last_closeout_merge_sha": "70b79c78228a4da323aa216f74562e0c54ce005f",
+    "last_a770_opencl_smoke_pr": 6072,
+    "last_a770_opencl_smoke_merge_sha": "b995c5110866d1920538fff2d9019fcd3803e3c5",
+    "last_a770_opencl_smoke_closeout_pr": 6079,
+    "last_a770_opencl_smoke_closeout_merge_sha": "70b79c78228a4da323aa216f74562e0c54ce005f",
+    "last_a770_opencl_matmul_i2s_item": "A770-006",
+    "last_a770_opencl_matmul_i2s_pr": 6110,
+    "last_a770_opencl_matmul_i2s_merge_sha": "e98d4fb6574087a83ed47e6dae7316d9dc12f40d",
+    "last_a770_opencl_matmul_i2s_closeout_pr": 6112,
+    "last_a770_opencl_matmul_i2s_closeout_merge_sha": "c5560df6f01a3dffb34249244731427446b3a547",
+    "last_power_profile_guidance_item": "LNL258V-POWER-009",
+    "last_power_profile_guidance_pr": 6097,
+    "last_power_profile_guidance_merge_sha": "5b939434c69ba1e00b4543d9f27ef002735bd3b8",
+    "last_power_profile_guidance_closeout_pr": 6099,
+    "last_power_profile_guidance_closeout_merge_sha": "935554aadc69f333af5fc5018a4aef88d650717f",
+    "last_arc_npu_bounded_surface_item": "LNL258V-REG-012",
+    "last_arc_npu_bounded_surface_pr": 6102,
+    "last_arc_npu_bounded_surface_merge_sha": "14b5b47b1641f05de697a0eb35d8afaed1e72a45",
+    "last_arc_npu_bounded_surface_closeout_pr": 6103,
+    "last_arc_npu_bounded_surface_closeout_merge_sha": "db0f3d05a8584ea682e7cb06eeb2b443a5514f89",
+    "last_bitnet_cpu_reference_surface_item": "LNL258V-REG-013",
+    "last_bitnet_cpu_reference_surface_pr": 6106,
+    "last_bitnet_cpu_reference_surface_merge_sha": "5fb87bbb38a8e27a7b2847c59e0f6be496f3d3c2",
+    "last_bitnet_cpu_reference_surface_closeout_pr": 6107,
+    "last_bitnet_cpu_reference_surface_closeout_merge_sha": "72d86a72e7deaf8cdeed6a620f79dddf48ca5dd6",
+    "audit_refresh_scope": "no_inference_reg_013_closeout_refresh"
+  },
+  "command_surface": {
+    "ask": {
+      "status": "ready_profile_scoped_auto_ask_receipts_indexed",
+      "default_route": "dense_slm_default_cpu",
+      "hidden_fallback_allowed": false,
+      "evidence": [
+        "lunar-lake-operator-ask-math-brief.json",
+        "lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json",
+        "lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json",
+        "lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json",
+        "lunar-lake-operator-ask-auto-low-power-blocked.json"
+      ]
+    },
+    "validate": {
+      "status": "ready_power_thermal_route_model_identity_blocked_ask_indexed",
+      "operator_ready": true,
+      "route_reason_surface": "profile_scoped_routes_and_low_power_blockers_explained",
+      "power_profile_evidence_indexed": true,
+      "power_profile_runbook_guidance_indexed": true,
+      "thermal_temperature_availability_indexed": true,
+      "blocked_ask_receipt_indexed": true,
+      "route_model_identity_ready": true,
+      "route_model_identity_rows": "23/23",
+      "route_model_tokenizer_template_rows": "23/23",
+      "route_model_hash_or_explicit_gap_rows": "23/23",
+      "evidence": "lunar-lake-operator-readiness.json"
+    },
+    "regress": {
+      "status": "ready_strict_v2_route_model_identity_arc_npu_bitnet_cpu_surface_indexed",
+      "regression_passed": true,
+      "checks_indexed": 17,
+      "power_profile_evidence_indexed": true,
+      "power_profile_runbook_guidance_indexed": true,
+      "thermal_temperature_availability_indexed": true,
+      "blocked_ask_receipt_indexed": true,
+      "route_profile_model_identity_ready": true,
+      "cold_warm_model_identity_ready": true,
+      "bitnet_cpu_reference_evidence_indexed": true,
+      "bitnet_cpu_reference_evidence_ready": true,
+      "arc_npu_bounded_evidence_indexed": true,
+      "arc_npu_bounded_evidence_ready": true,
+      "route_model_identity_rows": "23/23",
+      "route_model_tokenizer_template_rows": "23/23",
+      "route_model_hash_or_explicit_gap_rows": "23/23",
+      "evidence": "lunar-lake-regression-bundle-v2.json"
+    },
+    "compare": {
+      "status": "ready",
+      "operator_ready": true,
+      "regression_passed": true,
+      "comparison_ready": true,
+      "power_profile_runbook_guidance_indexed": true,
+      "blocked_ask_receipt_indexed": true,
+      "route_profile_model_identity_ready": true,
+      "cold_warm_model_identity_ready": true,
+      "bitnet_cpu_reference_evidence_ready": true,
+      "arc_npu_bounded_evidence_ready": true,
+      "evidence": "lunar-lake-operator-comparison.json"
+    }
+  },
+  "route_policy": {
+    "policy_ready": true,
+    "default_route_id": "dense_slm_default_cpu",
+    "openvino_gpu_promoted_profiles": [
+      "ask_normal",
+      "ask_short",
+      "decode_heavy",
+      "prefill_heavy"
+    ],
+    "openvino_npu_promoted_profiles": [
+      "warm_resident"
+    ],
+    "blocked_profiles": [
+      "low_power"
+    ],
+    "profile_scoped_promotion_only": true,
+    "route_model_identity_ready": true,
+    "route_model_identity_rows": "23/23",
+    "route_model_tokenizer_template_rows": "23/23",
+    "route_model_hash_or_explicit_gap_rows": "23/23",
+    "openvino_npu_remains_candidate": false,
+    "profiles": [
+      {
+        "profile_id": "regression_tiny",
+        "profile_status": "promoted_route_ready",
+        "promoted_route": "dense_slm_default_cpu",
+        "promotion_decision": "dense_slm_default_cpu remains promoted for regression_tiny",
+        "candidate_routes": [
+          "dense_slm_openvino_gpu_candidate",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "blockers": [
+          "route not promoted for profile regression_tiny",
+          "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+          "benchmark_qualified_speedup_or_power_advantage",
+          "candidate route requires benchmark-qualified profile evidence"
+        ]
+      },
+      {
+        "profile_id": "ask_short",
+        "profile_status": "promoted_route_ready",
+        "promoted_route": "dense_slm_openvino_gpu_candidate",
+        "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for ask_short",
+        "candidate_routes": [
+          "dense_slm_default_cpu",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "blockers": [
+          "route not promoted for profile ask_short",
+          "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+          "benchmark_qualified_speedup_or_power_advantage",
+          "candidate route requires benchmark-qualified profile evidence"
+        ]
+      },
+      {
+        "profile_id": "ask_normal",
+        "profile_status": "promoted_route_ready",
+        "promoted_route": "dense_slm_openvino_gpu_candidate",
+        "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for ask_normal",
+        "candidate_routes": [
+          "dense_slm_default_cpu",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "blockers": [
+          "route not promoted for profile ask_normal",
+          "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+          "benchmark_qualified_speedup_or_power_advantage",
+          "candidate route requires benchmark-qualified profile evidence"
+        ]
+      },
+      {
+        "profile_id": "prefill_heavy",
+        "profile_status": "promoted_route_ready",
+        "promoted_route": "dense_slm_openvino_gpu_candidate",
+        "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for prefill_heavy",
+        "candidate_routes": [
+          "dense_slm_default_cpu",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "blockers": [
+          "route not promoted for profile prefill_heavy",
+          "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+          "benchmark_qualified_speedup_or_power_advantage",
+          "candidate route requires benchmark-qualified profile evidence"
+        ]
+      },
+      {
+        "profile_id": "decode_heavy",
+        "profile_status": "promoted_route_ready",
+        "promoted_route": "dense_slm_openvino_gpu_candidate",
+        "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for decode_heavy",
+        "candidate_routes": [
+          "dense_slm_default_cpu",
+          "dense_slm_openvino_npu_candidate"
+        ],
+        "blockers": [
+          "route not promoted for profile decode_heavy",
+          "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+          "benchmark_qualified_speedup_or_power_advantage",
+          "candidate route requires benchmark-qualified profile evidence"
+        ]
+      },
+      {
+        "profile_id": "structured",
+        "profile_status": "promoted_route_ready",
+        "promoted_route": "dense_slm_default_cpu",
+        "promotion_decision": "dense_slm_default_cpu remains promoted for structured",
+        "candidate_routes": [],
+        "blockers": []
+      },
+      {
+        "profile_id": "low_power",
+        "profile_status": "candidate_only",
+        "promoted_route": null,
+        "promotion_decision": "low_power has no promoted route; candidate evidence is indexed without promotion",
+        "candidate_routes": [
+          "dense_slm_default_cpu",
+          "dense_slm_openvino_npu_candidate",
+          "dense_slm_openvino_gpu_candidate"
+        ],
+        "blockers": [
+          "power advantage evidence missing for low_power promotion",
+          "route not promoted for profile low_power",
+          "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
+          "benchmark_qualified_speedup_or_power_advantage",
+          "candidate route requires benchmark-qualified profile evidence"
+        ]
+      },
+      {
+        "profile_id": "warm_resident",
+        "profile_status": "promoted_route_ready",
+        "promoted_route": "dense_slm_openvino_npu_candidate",
+        "promotion_decision": "dense_slm_openvino_npu_candidate remains promoted for warm_resident",
+        "candidate_routes": [
+          "dense_slm_default_cpu",
+          "dense_slm_openvino_gpu_candidate"
+        ],
+        "blockers": [
+          "route not promoted for profile warm_resident"
+        ]
+      },
+      {
+        "profile_id": "bitnet_strict_reference",
+        "profile_status": "promoted_route_ready",
+        "promoted_route": "bitnet_reference_cpu",
+        "promotion_decision": "bitnet_reference_cpu remains promoted for bitnet_strict_reference",
+        "candidate_routes": [],
+        "blockers": []
+      }
+    ]
+  },
+  "capability_matrix": {
+    "dense_qwen_cpu": {
+      "status": "promoted_control_and_structured_correctness_plate",
+      "fallback_used": false,
+      "promoted_profiles": [
+        "regression_tiny",
+        "structured"
+      ],
+      "quality_summary": {
+        "failed": 0,
+        "failure_categories": {},
+        "not_run": 0,
+        "passed": 14,
+        "timeout": 0,
+        "total": 14
+      },
+      "phase_and_durability_evidence": [
+        "slm-phase-warm-session-qwen25-cpu.json",
+        "lunar-lake-cpu-slm-phase-attribution.json",
+        "lunar-lake-cpu-slm-resident-session.json",
+        "lunar-lake-durability-bundle.json"
+      ]
+    },
+    "openvino_gpu": {
+      "status": "profile_promoted_only",
+      "promoted_profiles": [
+        "ask_normal",
+        "ask_short",
+        "decode_heavy",
+        "prefill_heavy"
+      ],
+      "fallback_used": false,
+      "generated_token_ids_available": true,
+      "appliance_auto_ask_receipts_indexed": [
+        "ask_normal",
+        "ask_short"
+      ],
+      "no_broad_acceleration_claim": true
+    },
+    "openvino_npu": {
+      "status": "warm_resident_profile_promoted_only",
+      "promoted_profiles": [
+        "warm_resident"
+      ],
+      "fallback_used": false,
+      "resident_and_cache_evidence_indexed": true,
+      "cold_start_blocker_retained": true,
+      "no_native_npu_claim": true
+    },
+    "bitnet_cpu": {
+      "status": "strict_reference_protected_by_semantic_intake_with_pending_a770_stack",
+      "semantic_intake_status": "ready",
+      "pending_shared_change_count": 5,
+      "stale_after_merged_count": 0,
+      "evidence": [
+        "cpu-reference-bundle-after-semantic-fix.json",
+        "cpu-bitnet-ref-001-external-boundary.json",
+        "first-token-divergence-classification-direct.json",
+        "lunar-lake-bitnet-semantic-intake.json",
+        "cpu-bitnet-perf-001-i2s-microbench.json"
+      ]
+    },
+    "bitnet_arc_npu": {
+      "status": "bounded_subgraph_or_kernel_evidence_only",
+      "full_bitnet_accelerator_inference_claim": false,
+      "qk256_accelerator_decode_claim": false,
+      "evidence": [
+        "arc-140v-opencl-parity.json",
+        "npu-bitnet-rmsnorm-subgraph-parity.json",
+        "npu-bitnet-linear-projection-subgraph-parity.json",
+        "npu-bitnet-ffn-subgraph-parity.json"
+      ],
+      "strict_regression_surface_indexed": true,
+      "strict_regression_surface_ready": true
+    }
+  },
+  "quality_and_regression": {
+    "answer_corpus_v2_fixture": "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+    "cpu_corpus_v2": {
+      "total": 14,
+      "passed": 14,
+      "failed": 0,
+      "fallback_used": false
+    },
+    "openvino_corpus_v2": {
+      "total": 42,
+      "passed": 42,
+      "failed": 0,
+      "fallback_used": false
+    },
+    "strict_regression_ready": true,
+    "semantic_intake_regression_indexed": true,
+    "semantic_intake_pending_shared_change_count": 5,
+    "semantic_intake_stale_after_merged_count": 0,
+    "power_profile_regression_indexed": true,
+    "thermal_temperature_availability_regression_indexed": true,
+    "bitnet_cpu_reference_evidence_indexed": true,
+    "bitnet_cpu_reference_evidence_ready": true,
+    "arc_npu_bounded_evidence_indexed": true,
+    "arc_npu_bounded_evidence_ready": true,
+    "durability_indexed": true
+  },
+  "telemetry_and_power": {
+    "telemetry_indexed": true,
+    "power_profile_index_ready": true,
+    "low_power_promotion_ready": false,
+    "power_advantage_proven": false,
+    "battery_telemetry_context_receipt": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-low-power-battery-telemetry-blocked.json",
+    "energy_proxy_receipt": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-low-power-energy-proxy.json",
+    "thermal_context_recorded": true,
+    "thermal_temperature_availability_indexed": true,
+    "thermal_temperature_available": false,
+    "thermal_temperature_count": 0,
+    "gaps": [
+      "current telemetry is AC-only; battery comparison evidence is missing",
+      "battery-mode telemetry guard receipt is present but blocked because current power context indicates AC power",
+      "battery-mode sample is missing for low_power promotion",
+      "no low_power route has benchmark-qualified power evidence",
+      "thermal-zone visibility is indexed but measured temperature readings remain unavailable"
+    ]
+  },
+  "remaining_gaps": [
+    "No promoted route for low_power.",
+    "prefill_heavy and decode_heavy now have profile-specific CPU baseline timing and OpenVINO GPU profile-scoped promotion, but low_power still lacks benchmark-qualified power evidence.",
+    "OpenVINO NPU is promoted only for warm_resident; cold-start blockers are preserved for cold profiles and no native NPU claim is made.",
+    "low_power has an AC-only energy-proxy receipt, but still lacks battery-mode sample and benchmark-qualified power advantage.",
+    "Thermal zone visibility is recorded, but temperature readings remain unavailable.",
+    "Pending A770 shared BitNet semantic PRs #4756, #4757, #4767, #4853, and #5064 are indexed; Lunar Lake BitNet reruns become required only when one reaches main.",
+    "A770-005/#6072 and closeout #6079 add selected-device OpenCL smoke evidence, and A770-006/#6110 plus closeout #6112 add selected-device OpenCL matmul_i2s CPU parity evidence; neither merges an indexed shared BitNet semantic fix and therefore neither stales Lunar Lake BitNet receipts.",
+    "BitNet CPU reference route evidence is now an explicit strict-regression-surface gate, separate from dense Qwen SLM evidence.",
+    "Arc/NPU bounded proof receipts are now explicit strict-regression-surface gates, but still remain bounded proof and not full accelerator inference.",
+    "BitNet accelerator inference and packed QK256 accelerator decode remain unclaimed."
+  ],
+  "next_recommended_work": [
+    "Follow docs/hardware/intel-258v-low-power-battery-runbook.md, rerun lunar-lake telemetry-context --require-battery while on battery power, then rebuild low_power power-profile evidence.",
+    "LNL258V-POWER follow-up for benchmark-qualified low_power power advantage.",
+    "Continue NPU low-power follow-up before any low_power NPU promotion.",
+    "Monitor pending A770 semantic PRs #4756, #4757, #4767, #4853, and #5064; if any reaches main, rerun Lunar Lake BitNet CPU answer, parity, phase, operator readiness, regression, and comparison evidence before route decisions change.",
+    "Continue BitNet semantic-intake reruns after shared A770/CUDA/CPU semantic fixes."
+  ],
+  "evidence_index": {
+    "operator_readiness": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-operator-readiness.json",
+    "operator_comparison": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-operator-comparison.json",
+    "regression_v2": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-regression-bundle-v2.json",
+    "op_012_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-19T185705Z-LNL258V-OP-012-merged.toml",
+    "op_013_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T055000Z-LNL258V-OP-013-merged.toml",
+    "op_014_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T045600Z-LNL258V-OP-014-merged.toml",
+    "op_014_closeout_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6088",
+    "ask_006_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T064000Z-LNL258V-ASK-006-merged.toml",
+    "ask_007_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T073000Z-LNL258V-ASK-007-merged.toml",
+    "bitnet_intake_004_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T020149Z-LNL258V-BITNET-INTAKE-004-merged.toml",
+    "bitnet_intake_004_closeout_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6066",
+    "a770_005_opencl_smoke_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6072",
+    "a770_005_closeout_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6079",
+    "a770_006_opencl_matmul_i2s_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6110",
+    "a770_006_closeout_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6112",
+    "reg_010_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T005500Z-LNL258V-REG-010-merged.toml",
+    "validate_002_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T012000Z-LNL258V-VALIDATE-002-merged.toml",
+    "validate_003_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T051600Z-LNL258V-VALIDATE-003-merged.toml",
+    "validate_003_closeout_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6093",
+    "reg_011_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T040000Z-LNL258V-REG-011-merged.toml",
+    "power_007_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
+    "power_007_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T103000Z-LNL258V-POWER-007-merged.toml",
+    "power_008_validation_link": "docs/hardware/intel-258v-validation.md",
+    "power_008_campaign_link": "docs/tracking/campaigns/intel-258v-platform/CAMPAIGN.md",
+    "power_008_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T110000Z-LNL258V-POWER-008-merged.toml",
+    "power_009_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T053600Z-LNL258V-POWER-009-merged.toml",
+    "power_009_closeout_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6099",
+    "reg_012_in_progress_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T055000Z-LNL258V-REG-012-in-progress.toml",
+    "reg_012_pr_open_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T060000Z-LNL258V-REG-012-pr-open.toml",
+    "reg_012_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T060403Z-LNL258V-REG-012-merged.toml",
+    "reg_012_closeout_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6103",
+    "reg_013_in_progress_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T062000Z-LNL258V-REG-013-in-progress.toml",
+    "reg_013_pr_open_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T062100Z-LNL258V-REG-013-pr-open.toml",
+    "reg_013_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T062601Z-LNL258V-REG-013-merged.toml",
+    "reg_013_closeout_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6107",
+    "power_006_blocked_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-19T230000Z-LNL258V-POWER-006-blocked.toml",
+    "route_profile_comparison": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-route-profile-comparison.json",
+    "route_promotion_ledger": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-route-promotion.json",
+    "ask_normal_auto_gpu_receipt": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json",
+    "ask_short_auto_gpu_receipt": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json",
+    "cpu_qwen_corpus_v2": "ci\\hardware\\intel-258v\\2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+    "openvino_corpus_v2": "ci\\hardware\\intel-258v\\2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+    "openvino_profile_run": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-openvino-profile-run.json",
+    "cold_warm_benchmark": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+    "durability_bundle": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-durability-bundle.json",
+    "power_profile_evidence": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-power-profile-evidence.json",
+    "thermal_temperature_availability": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-thermal-temperature-availability.json",
+    "low_power_battery_telemetry_blocked": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-low-power-battery-telemetry-blocked.json",
+    "low_power_blocked_auto_ask": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-operator-ask-auto-low-power-blocked.json",
+    "low_power_energy_proxy": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-low-power-energy-proxy.json",
+    "power_thermal_context": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-power-thermal-context.json",
+    "bitnet_reference_bundle": "ci\\hardware\\intel-258v\\2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+    "bitnet_semantic_intake": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+    "bitnet_external_boundary": "ci\\hardware\\intel-258v\\2026-05-08/cpu-bitnet-ref-001-external-boundary.json",
+    "bitnet_i2s_microbench": "ci\\hardware\\intel-258v\\2026-05-08/cpu-bitnet-perf-001-i2s-microbench.json",
+    "arc_opencl_parity": "ci\\hardware\\intel-258v\\2026-05-08/arc-140v-opencl-parity.json",
+    "npu_rmsnorm_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
+    "npu_linear_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
+    "npu_ffn_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-ffn-subgraph-parity.json",
+    "cpu_profile_run": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-cpu-profile-run.json"
+  },
+  "claim_boundary": {
+    "new_inference_run": false,
+    "route_promotion_changed": false,
+    "route_promotion_scope": "Current audited policy: OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy; OpenVINO NPU promoted only for warm_resident from existing fallback-free corpus-v2, resident-session timing, and benchmark-qualified latency evidence.",
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "arc_npu_acceleration_claim": false,
+    "native_opencl_or_native_npu_claim": false,
+    "measured_temperature_claim": false,
+    "full_bitnet_accelerator_inference_claim": false,
+    "bitnet_qk256_i2s_behavior_change": false,
+    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, Arc/NPU bounded proof surface flags, BitNet CPU reference surface flags, BitNet semantic-intake, BITNET-INTAKE-004 closeout, POWER-007/POWER-008 runbook discoverability, OP-014 low_power blocked-ask guidance, VALIDATE-003 blocked-ask readiness indexing, POWER-009/#6097 power-profile runbook guidance, POWER-009 closeout #6099, REG-012/#6102, REG-012 closeout #6103, REG-013/#6106, REG-013 closeout #6107, A770-006/#6110, A770-006 closeout #6112, and tracker evidence"
+  }
+}

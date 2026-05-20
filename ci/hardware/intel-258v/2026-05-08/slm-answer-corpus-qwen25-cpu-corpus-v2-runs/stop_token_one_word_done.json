@@ -1,6 +1,6 @@
 {
   "artifact_kind": "inference_result",
-  "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\stop_token_one_word_done.json",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\stop_token_one_word_done.json",
   "counts": {
     "n_kv": 26,
     "n_tensors": 291,
@@ -34,9 +34,9 @@
     "batch_size": 1,
     "fallback_reason": null,
     "fallback_used": false,
-    "generated_tokens": 3,
+    "generated_tokens": 2,
     "phase": "decode",
-    "prompt_tokens": 35,
+    "prompt_tokens": 38,
     "requested_backend": "cpu",
     "runtime_api": "cpu",
     "selected_backend": "cpu-rust",
@@ -55,10 +55,14 @@
     "deterministic": true,
     "explicit_bos_requested": false,
     "greedy": true,
+    "max_new_tokens": 4,
     "parse_special": true,
     "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
     "seed": 0,
-    "temperature": 0.0
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
   },
   "kernel": {
     "dequantizes_before_compute": true,
@@ -68,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 8133,
-    "decode_first_ms": 8133,
-    "total_ms": 8782
+    "cmd_to_first_ms": 8911,
+    "decode_first_ms": 8911,
+    "total_ms": 9234
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -97,7 +101,7 @@
     "format": "gguf",
     "loader_mode": "real_gguf",
     "output_head_tensor": "output.weight",
-    "path": "C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "path": "C:/Users/szim9/AppData/Local/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
     "quant_format": "Q8_0",
     "repo": "Qwen/Qwen2.5-0.5B-Instruct",
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
@@ -265,83 +269,83 @@
     "claim_scope": "selected CPU backend phase timing only",
     "decode": {
       "embed_ms": {
-        "count": 3,
-        "max_ms": 0.042,
-        "mean_ms": 0.03,
-        "min_ms": 0.022,
-        "p50_ms": 0.027,
-        "p95_ms": 0.042,
-        "total_ms": 0.091
+        "count": 2,
+        "max_ms": 0.03,
+        "mean_ms": 0.028,
+        "min_ms": 0.026,
+        "p50_ms": 0.026,
+        "p95_ms": 0.03,
+        "total_ms": 0.057
       },
-      "first_token_decode_ms": 325.892,
+      "first_token_decode_ms": 336.08,
       "forward_ms": {
-        "count": 3,
-        "max_ms": 244.744,
-        "mean_ms": 232.553,
-        "min_ms": 224.02,
-        "p50_ms": 228.895,
-        "p95_ms": 244.744,
-        "total_ms": 697.659
+        "count": 2,
+        "max_ms": 245.594,
+        "mean_ms": 239.534,
+        "min_ms": 233.475,
+        "p50_ms": 233.475,
+        "p95_ms": 245.594,
+        "total_ms": 479.069
       },
-      "generated_tokens": 3,
+      "generated_tokens": 2,
       "logits_ms": {
-        "count": 3,
-        "max_ms": 84.803,
-        "mean_ms": 82.391,
-        "min_ms": 80.751,
-        "p50_ms": 81.62,
-        "p95_ms": 84.803,
-        "total_ms": 247.173
+        "count": 2,
+        "max_ms": 80.303,
+        "mean_ms": 79.832,
+        "min_ms": 79.36,
+        "p50_ms": 79.36,
+        "p95_ms": 80.303,
+        "total_ms": 159.663
       },
       "per_token_ms": {
-        "count": 3,
-        "max_ms": 335.954,
-        "mean_ms": 324.774,
-        "min_ms": 312.476,
-        "p50_ms": 325.892,
-        "p95_ms": 335.954,
-        "total_ms": 974.322
+        "count": 2,
+        "max_ms": 336.08,
+        "mean_ms": 328.657,
+        "min_ms": 321.234,
+        "p50_ms": 321.234,
+        "p95_ms": 336.08,
+        "total_ms": 657.315
       },
       "sample_ms": {
-        "count": 3,
-        "max_ms": 3.14,
-        "mean_ms": 2.89,
-        "min_ms": 2.743,
-        "p50_ms": 2.787,
-        "p95_ms": 3.14,
-        "total_ms": 8.67
+        "count": 2,
+        "max_ms": 2.385,
+        "mean_ms": 2.224,
+        "min_ms": 2.063,
+        "p50_ms": 2.063,
+        "p95_ms": 2.385,
+        "total_ms": 4.448
       },
       "steady_per_token_ms": {
-        "count": 2,
-        "max_ms": 335.954,
-        "mean_ms": 324.215,
-        "min_ms": 312.476,
-        "p50_ms": 312.476,
-        "p95_ms": 335.954,
-        "total_ms": 648.43
+        "count": 1,
+        "max_ms": 321.234,
+        "mean_ms": 321.234,
+        "min_ms": 321.234,
+        "p50_ms": 321.234,
+        "p95_ms": 321.234,
+        "total_ms": 321.234
       },
-      "steady_state_tok_s": 3.084,
-      "steady_state_tokens": 2,
+      "steady_state_tok_s": 3.113,
+      "steady_state_tokens": 1,
       "token_decode_ms": {
-        "count": 3,
-        "max_ms": 0.071,
-        "mean_ms": 0.048,
-        "min_ms": 0.026,
-        "p50_ms": 0.048,
-        "p95_ms": 0.071,
-        "total_ms": 0.145
+        "count": 2,
+        "max_ms": 0.068,
+        "mean_ms": 0.046,
+        "min_ms": 0.025,
+        "p50_ms": 0.025,
+        "p95_ms": 0.068,
+        "total_ms": 0.093
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13526.771,
+    "model_load_ms": 13491.877,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 7806.519,
+      "ms": 8575.207,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -351,27 +355,75 @@
         "p95_ms": null,
         "total_ms": 0.0
       },
-      "tokens": 34
+      "tokens": 37
     },
-    "prompt_tokenize_ms": 463.517,
+    "prompt_tokenize_ms": 434.391,
     "requested": false,
-    "tokenizer_load_ms": 605.415
+    "tokenizer_load_ms": 576.202
   },
-  "prompt": "Answer with exactly one word: done",
+  "prompt": "Return exactly this text and nothing else: done",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 4,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "00b261527dacd7ea460d8dcba87057f37a91c328d7b64eedd4c73641e805c8d5",
+    "identity_sha256": "c4c25baecbf60fa496bf1a8e9aa3513fcccc9da8f30af6474693719bd6d1d5dc",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        151645,
+        151644
+      ]
+    },
+    "stop_criteria_sha256": "51dbd89eb1b858882b35fc2340257e0c109c8261500f46ba8b5b6cd2687948ca",
+    "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+    "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+    "template": {
+      "family": "qwen25-chat",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "qwen25-chat",
+    "template_sha256": "be829f95ac1a95f9fd9b9641a7df864186594cde3285438f6f8fdddc89c428e3",
+    "tokenizer_authority": {
+      "authority": "present",
+      "sha256": null,
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
   "prompt_identity": {
     "bos_policy": false,
     "parse_special": true,
-    "prompt_token_count": 35,
-    "prompt_token_ids_sha256": "b5c2311c1da291b693268532b70bda5e3beeb8e9069c3b11b60001be233a0426",
-    "rendered_prompt_sha256": "3ad2e1ef7cc780a431a22f50607ee25fcec9f7f2b6eb991273253c076734ee64",
+    "prompt_token_count": 38,
+    "prompt_token_ids_sha256": "bef5962837b96cb9396b09c39812f40dd0cc3c6453e2dd5f9969a6e9ce932c99",
+    "rendered_prompt_sha256": "cf8a17bd146e164f0566e6b40da4efc36274e5b6cce25862526e48f9c2f3225a",
     "template": "qwen25-chat"
   },
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
     "qwen_no_think": false,
-    "rendered_sha256": "3ad2e1ef7cc780a431a22f50607ee25fcec9f7f2b6eb991273253c076734ee64",
-    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nAnswer with exactly one word: done<|im_end|>\n<|im_start|>assistant",
+    "rendered_sha256": "cf8a17bd146e164f0566e6b40da4efc36274e5b6cce25862526e48f9c2f3225a",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nReturn exactly this text and nothing else: done<|im_end|>\n<|im_start|>assistant\n",
     "stop_sequences": [
       "<|im_end|>",
       "<|im_start|>"
@@ -384,6 +436,8 @@
   },
   "proof_summary": {
     "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
     "claim_level": "diagnostic_cli_run",
     "execution_backend": "cpu-rust",
     "execution_backend_matched": false,
@@ -427,14 +481,14 @@
       "sse2"
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
-    "decode_tokens": 3,
-    "decode_tps": 0.3416078342063311,
+    "decode_tokens": 2,
+    "decode_tps": 0.21659085986571366,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
     "model_family": "qwen",
     "phase": "decode",
-    "prompt_tokens": 35,
+    "prompt_tokens": 38,
     "provenance": "dense_slm_gguf_cpu_reference",
     "quant_format": "Q8_0",
     "requested_backend": "cpu",
@@ -445,25 +499,25 @@
     "tokenizer_source": "gguf_metadata",
     "tokenizer_strict": true
   },
-  "text": ": Done<|im_end|>",
+  "text": "done<|im_end|>",
   "throughput": {
-    "decoded_tokens": 3,
-    "tokens_per_second": 0.3416078342063311
+    "decoded_tokens": 2,
+    "tokens_per_second": 0.21659085986571366
   },
-  "timestamp": "2026-05-16T15:21:42.083531900+00:00",
+  "timestamp": "2026-05-19T04:59:01.320281700+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.084,
-    "decode_total_ms": 974.322,
+    "decode_steady_state_tok_s": 3.113,
+    "decode_total_ms": 657.315,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 325.892,
-    "first_token_ms": 8133,
+    "first_token_decode_ms": 336.08,
+    "first_token_ms": 8911,
     "host_to_device_bytes": null,
-    "model_load_ms": 13526.771,
-    "prefill_ms": 7806.519,
-    "sampling_ms_per_token": 2.89,
-    "tokenize_ms": 463.517,
-    "tokenizer_load_ms": 605.415
+    "model_load_ms": 13491.877,
+    "prefill_ms": 8575.207,
+    "sampling_ms_per_token": 2.224,
+    "tokenize_ms": 434.391,
+    "tokenizer_load_ms": 576.202
   },
   "tokenizer": {
     "bos": 151643,
@@ -476,18 +530,16 @@
     "type": "gguf_metadata"
   },
   "tokens": {
-    "generated": 3,
+    "generated": 2,
     "generated_ids": [
-      25,
-      27357,
+      10438,
       151645
     ],
     "ids": [
-      25,
-      27357,
+      10438,
       151645
     ],
-    "prompt": 35,
+    "prompt": 38,
     "prompt_ids": [
       151644,
       8948,
@@ -513,18 +565,21 @@
       151644,
       872,
       198,
-      16141,
-      448,
+      5598,
       6896,
-      825,
-      3409,
+      419,
+      1467,
+      323,
+      4302,
+      770,
       25,
       2814,
       151645,
       198,
       151644,
-      77091
+      77091,
+      198
     ],
-    "total": 38
+    "total": 40
   }
 }

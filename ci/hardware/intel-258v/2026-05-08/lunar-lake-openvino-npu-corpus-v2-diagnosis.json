@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_openvino_corpus_v2_diagnosis",
   "proof_stage": "openvino_candidate_quality_diagnosis_no_promotion_change",
-  "created_utc": "2026-05-17T15:05:00Z",
+  "created_utc": "2026-05-19T15:42:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "openvino_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
@@ -16,101 +16,75 @@
   "fallback_used": false,
   "promotion_status": "candidate_only_not_promoted",
   "quality_summary": {
-    "total": 12,
-    "passed": 7,
-    "failed": 5,
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
     "timeout": 0,
     "not_run": 0,
-    "failed_profiles": [
-      "ask_normal",
-      "ask_short",
-      "decode_heavy",
-      "prefill_heavy",
-      "regression_tiny"
-    ],
-    "failed_categories": [
-      "decode_heavy",
-      "long_prompt_summarization",
-      "short_reasoning",
-      "stop_and_eos",
-      "yes_no"
-    ],
-    "failure_classes": {
-      "answer_content_failed": 2,
-      "answer_content_missing_required_terms": 2,
-      "generation_budget_or_truncation": 1
-    }
+    "failed_profiles": [],
+    "failed_categories": [],
+    "failure_classes": {}
   },
   "profile_diagnoses": [
     {
       "profile_id": "ask_normal",
       "total": 3,
-      "passed": 2,
-      "failed": 1,
-      "blocked": true,
-      "failed_case_ids": [
-        "short_reasoning_heavier_object"
-      ],
+      "passed": 3,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
       "route_profile_status": "candidate_blocked_by_quality",
-      "route_blockers": [
-        "OpenVINO candidate profile has 1 answer-gate failure(s)"
-      ]
+      "route_blockers": []
     },
     {
       "profile_id": "ask_short",
       "total": 2,
-      "passed": 1,
-      "failed": 1,
-      "blocked": true,
-      "failed_case_ids": [
-        "yes_no_clear_sky"
-      ],
+      "passed": 2,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
       "route_profile_status": "candidate_blocked_by_quality",
-      "route_blockers": [
-        "OpenVINO candidate profile has 1 answer-gate failure(s)"
-      ]
+      "route_blockers": []
     },
     {
       "profile_id": "decode_heavy",
       "total": 1,
-      "passed": 0,
-      "failed": 1,
-      "blocked": true,
-      "failed_case_ids": [
-        "decode_heavy_short_list"
-      ],
+      "passed": 1,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
       "route_profile_status": "candidate_blocked_by_quality",
-      "route_blockers": [
-        "OpenVINO candidate profile has 1 answer-gate failure(s)"
-      ]
+      "route_blockers": []
+    },
+    {
+      "profile_id": "low_power",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
+      "route_profile_status": "candidate_blocked_by_quality",
+      "route_blockers": []
     },
     {
       "profile_id": "prefill_heavy",
       "total": 1,
-      "passed": 0,
-      "failed": 1,
-      "blocked": true,
-      "failed_case_ids": [
-        "long_prompt_summary_route_policy"
-      ],
+      "passed": 1,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
       "route_profile_status": "candidate_blocked_by_quality",
-      "route_blockers": [
-        "OpenVINO candidate profile has 1 answer-gate failure(s)"
-      ]
+      "route_blockers": []
     },
     {
       "profile_id": "regression_tiny",
       "total": 4,
-      "passed": 3,
-      "failed": 1,
-      "blocked": true,
-      "failed_case_ids": [
-        "stop_token_one_word_done"
-      ],
+      "passed": 4,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
       "route_profile_status": "candidate_blocked_by_quality",
-      "route_blockers": [
-        "OpenVINO candidate profile has 1 answer-gate failure(s)"
-      ]
+      "route_blockers": []
     },
     {
       "profile_id": "structured",
@@ -121,178 +95,37 @@
       "failed_case_ids": [],
       "route_profile_status": "candidate_blocked_by_quality",
       "route_blockers": []
+    },
+    {
+      "profile_id": "warm_resident",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "blocked": false,
+      "failed_case_ids": [],
+      "route_profile_status": "candidate_blocked_by_quality",
+      "route_blockers": []
     }
   ],
-  "failed_cases": [
-    {
-      "id": "yes_no_clear_sky",
-      "profile": "ask_short",
-      "category": "yes_no",
-      "task_family": null,
-      "status": "quality_failed",
-      "gate_kind": "starts_with_any",
-      "scoring_kind": "normalized_match",
-      "failed_rules": [
-        "normalized_match_failed"
-      ],
-      "failure_taxonomy": [
-        "normalized_match_failed"
-      ],
-      "missing_required_keywords": [],
-      "forbidden_tokens_observed": [],
-      "expected_normalized": "yes",
-      "observed_normalized": "yes, the sky on a clear day",
-      "answer_preview": "Yes, the sky on a clear day",
-      "generated_tokens": 8,
-      "prompt_tokens": 44,
-      "run_receipt_path": null,
-      "fallback_used": false,
-      "classification": "answer_content_failed",
-      "recommended_fix": "Keep this profile blocked until the case has a clean rerun or the corpus gate is intentionally revised."
-    },
-    {
-      "id": "stop_token_one_word_done",
-      "profile": "regression_tiny",
-      "category": "stop_and_eos",
-      "task_family": null,
-      "status": "quality_failed",
-      "gate_kind": "starts_with_any",
-      "scoring_kind": "normalized_match",
-      "failed_rules": [
-        "answer_gate",
-        "normalized_match_failed"
-      ],
-      "failure_taxonomy": [
-        "answer_gate_failed",
-        "normalized_match_failed"
-      ],
-      "missing_required_keywords": [],
-      "forbidden_tokens_observed": [],
-      "expected_normalized": "done",
-      "observed_normalized": "okay, understood",
-      "answer_preview": "Okay, understood.",
-      "generated_tokens": 4,
-      "prompt_tokens": 36,
-      "run_receipt_path": null,
-      "fallback_used": false,
-      "classification": "answer_content_failed",
-      "recommended_fix": "Keep this profile blocked until the case has a clean rerun or the corpus gate is intentionally revised."
-    },
-    {
-      "id": "long_prompt_summary_route_policy",
-      "profile": "prefill_heavy",
-      "category": "long_prompt_summarization",
-      "task_family": null,
-      "status": "quality_failed",
-      "gate_kind": "contains_any",
-      "scoring_kind": "required_keywords",
-      "failed_rules": [
-        "required_keywords_missing"
-      ],
-      "failure_taxonomy": [
-        "required_keyword_missing"
-      ],
-      "missing_required_keywords": [
-        "CPU"
-      ],
-      "forbidden_tokens_observed": [],
-      "answer_preview": "The Lunar Lake team is exploring different computing options to optimize their model training process based on specific performance metrics and benchmarks.",
-      "generated_tokens": 23,
-      "prompt_tokens": 87,
-      "run_receipt_path": null,
-      "fallback_used": false,
-      "classification": "answer_content_missing_required_terms",
-      "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen CPU control route; adjust prompt/gate only if the expected answer contract is too narrow."
-    },
-    {
-      "id": "short_reasoning_heavier_object",
-      "profile": "ask_normal",
-      "category": "short_reasoning",
-      "task_family": null,
-      "status": "quality_failed",
-      "gate_kind": "contains_any",
-      "scoring_kind": "required_keywords",
-      "failed_rules": [
-        "answer_gate",
-        "required_keywords_missing"
-      ],
-      "failure_taxonomy": [
-        "answer_gate_failed",
-        "required_keyword_missing"
-      ],
-      "missing_required_keywords": [
-        "full"
-      ],
-      "forbidden_tokens_observed": [],
-      "answer_preview": "An empty mug.",
-      "generated_tokens": 4,
-      "prompt_tokens": 47,
-      "run_receipt_path": null,
-      "fallback_used": false,
-      "classification": "generation_budget_or_truncation",
-      "recommended_fix": "Rerun this bounded case with either a tighter prompt or a slightly larger max_new_tokens budget; classify as output-budget drift before changing route policy."
-    },
-    {
-      "id": "decode_heavy_short_list",
-      "profile": "decode_heavy",
-      "category": "decode_heavy",
-      "task_family": null,
-      "status": "quality_failed",
-      "gate_kind": "readable",
-      "scoring_kind": "required_keywords",
-      "failed_rules": [
-        "required_keywords_missing"
-      ],
-      "failure_taxonomy": [
-        "required_keyword_missing"
-      ],
-      "missing_required_keywords": [
-        "fallback",
-        "model"
-      ],
-      "forbidden_tokens_observed": [],
-      "answer_preview": "1. Verify the route's availability and status.\n2. Ensure there is sufficient network bandwidth to support traffic on this path.\n3. Confirm that the destination IP address or domain name is reachable from your local machine.\n4. Check if any ...",
-      "generated_tokens": 64,
-      "prompt_tokens": 45,
-      "run_receipt_path": null,
-      "fallback_used": false,
-      "classification": "answer_content_missing_required_terms",
-      "recommended_fix": "Treat this as a bounded answer-content failure for the dense Qwen CPU control route; adjust prompt/gate only if the expected answer contract is too narrow."
-    }
-  ],
+  "failed_cases": [],
   "case_alignment": {
     "fixture_verified": true,
-    "expected_case_count": 12,
-    "observed_case_count": 12,
-    "missing_case_ids": [
-      "short_reasoning_apples_left"
-    ],
-    "stale_or_unexpected_case_ids": [
-      "short_reasoning_heavier_object"
-    ],
-    "aligned_with_active_fixture": false,
-    "blockers": [
-      "dense_slm_openvino_npu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
-      "dense_slm_openvino_npu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]"
-    ]
+    "expected_case_count": 14,
+    "observed_case_count": 14,
+    "missing_case_ids": [],
+    "stale_or_unexpected_case_ids": [],
+    "aligned_with_active_fixture": true,
+    "blockers": []
   },
   "generated_token_visibility": {
-    "direct_generated_token_ids_available": false,
-    "retokenized_generated_ids_used": true,
+    "direct_generated_token_ids_available": true,
+    "retokenized_generated_ids_used": false,
     "sources": [
-      "retokenized_generated_text_not_pipeline_internal_ids"
+      "openvino_genai_encoded_results_tokens"
     ]
   },
-  "route_blocked": true,
-  "blocker_summary": [
-    "1 failed case(s) classified as generation_budget_or_truncation",
-    "2 failed case(s) classified as answer_content_failed",
-    "2 failed case(s) classified as answer_content_missing_required_terms",
-    "5 of 12 corpus-v2 cases failed across profiles [ask_normal, ask_short, decode_heavy, prefill_heavy, regression_tiny]",
-    "dense_slm_openvino_npu_candidate corpus-v2 receipt has stale or unexpected cases [short_reasoning_heavier_object]",
-    "dense_slm_openvino_npu_candidate corpus-v2 receipt is missing active fixture cases [short_reasoning_apples_left]",
-    "generated token IDs are not directly available from OpenVINO GenAI pipeline internals"
-  ],
+  "route_blocked": false,
+  "blocker_summary": [],
   "recommended_next_actions": [
     "Keep OpenVINO GPU/NPU routes unpromoted until failed corpus-v2 cases are cleanly rerun or intentionally re-gated",
     "Classify yes/no, stop/EOS, long-prefill, short-reasoning, and decode-heavy failures separately before profile promotion",

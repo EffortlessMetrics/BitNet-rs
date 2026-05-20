@@ -1,6 +1,6 @@
 {
   "artifact_kind": "inference_result",
-  "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\transcript_context_code_word.json",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\transcript_context_code_word.json",
   "counts": {
     "n_kv": 26,
     "n_tensors": 291,
@@ -34,9 +34,9 @@
     "batch_size": 1,
     "fallback_reason": null,
     "fallback_used": false,
-    "generated_tokens": 3,
+    "generated_tokens": 2,
     "phase": "decode",
-    "prompt_tokens": 60,
+    "prompt_tokens": 61,
     "requested_backend": "cpu",
     "runtime_api": "cpu",
     "selected_backend": "cpu-rust",
@@ -55,10 +55,14 @@
     "deterministic": true,
     "explicit_bos_requested": false,
     "greedy": true,
+    "max_new_tokens": 12,
     "parse_special": true,
     "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
     "seed": 0,
-    "temperature": 0.0
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
   },
   "kernel": {
     "dequantizes_before_compute": true,
@@ -68,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 13988,
-    "decode_first_ms": 13988,
-    "total_ms": 14642
+    "cmd_to_first_ms": 14659,
+    "decode_first_ms": 14659,
+    "total_ms": 14997
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -97,7 +101,7 @@
     "format": "gguf",
     "loader_mode": "real_gguf",
     "output_head_tensor": "output.weight",
-    "path": "C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "path": "C:/Users/szim9/AppData/Local/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
     "quant_format": "Q8_0",
     "repo": "Qwen/Qwen2.5-0.5B-Instruct",
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
@@ -265,83 +269,83 @@
     "claim_scope": "selected CPU backend phase timing only",
     "decode": {
       "embed_ms": {
-        "count": 3,
-        "max_ms": 0.028,
-        "mean_ms": 0.024,
-        "min_ms": 0.022,
+        "count": 2,
+        "max_ms": 0.029,
+        "mean_ms": 0.026,
+        "min_ms": 0.023,
         "p50_ms": 0.023,
-        "p95_ms": 0.028,
-        "total_ms": 0.073
+        "p95_ms": 0.029,
+        "total_ms": 0.052
       },
-      "first_token_decode_ms": 352.433,
+      "first_token_decode_ms": 351.465,
       "forward_ms": {
-        "count": 3,
-        "max_ms": 252.894,
-        "mean_ms": 238.813,
-        "min_ms": 229.311,
-        "p50_ms": 234.234,
-        "p95_ms": 252.894,
-        "total_ms": 716.439
+        "count": 2,
+        "max_ms": 258.554,
+        "mean_ms": 252.506,
+        "min_ms": 246.458,
+        "p50_ms": 246.458,
+        "p95_ms": 258.554,
+        "total_ms": 505.012
       },
-      "generated_tokens": 3,
+      "generated_tokens": 2,
       "logits_ms": {
-        "count": 3,
-        "max_ms": 88.663,
-        "mean_ms": 85.282,
-        "min_ms": 83.02,
-        "p50_ms": 84.163,
-        "p95_ms": 88.663,
-        "total_ms": 255.846
+        "count": 2,
+        "max_ms": 83.339,
+        "mean_ms": 82.63,
+        "min_ms": 81.921,
+        "p50_ms": 81.921,
+        "p95_ms": 83.339,
+        "total_ms": 165.26
       },
       "per_token_ms": {
-        "count": 3,
-        "max_ms": 352.433,
-        "mean_ms": 335.152,
-        "min_ms": 324.295,
-        "p50_ms": 328.729,
-        "p95_ms": 352.433,
-        "total_ms": 1005.456
+        "count": 2,
+        "max_ms": 351.465,
+        "mean_ms": 344.185,
+        "min_ms": 336.905,
+        "p50_ms": 336.905,
+        "p95_ms": 351.465,
+        "total_ms": 688.371
       },
       "sample_ms": {
-        "count": 3,
-        "max_ms": 2.987,
-        "mean_ms": 2.877,
-        "min_ms": 2.804,
-        "p50_ms": 2.839,
-        "p95_ms": 2.987,
-        "total_ms": 8.63
+        "count": 2,
+        "max_ms": 2.233,
+        "mean_ms": 2.112,
+        "min_ms": 1.991,
+        "p50_ms": 1.991,
+        "p95_ms": 2.233,
+        "total_ms": 4.225
       },
       "steady_per_token_ms": {
-        "count": 2,
-        "max_ms": 328.729,
-        "mean_ms": 326.512,
-        "min_ms": 324.295,
-        "p50_ms": 324.295,
-        "p95_ms": 328.729,
-        "total_ms": 653.024
+        "count": 1,
+        "max_ms": 336.905,
+        "mean_ms": 336.905,
+        "min_ms": 336.905,
+        "p50_ms": 336.905,
+        "p95_ms": 336.905,
+        "total_ms": 336.905
       },
-      "steady_state_tok_s": 3.063,
-      "steady_state_tokens": 2,
+      "steady_state_tok_s": 2.968,
+      "steady_state_tokens": 1,
       "token_decode_ms": {
-        "count": 3,
-        "max_ms": 0.075,
-        "mean_ms": 0.044,
-        "min_ms": 0.025,
-        "p50_ms": 0.033,
-        "p95_ms": 0.075,
-        "total_ms": 0.133
+        "count": 2,
+        "max_ms": 0.088,
+        "mean_ms": 0.056,
+        "min_ms": 0.024,
+        "p50_ms": 0.024,
+        "p95_ms": 0.088,
+        "total_ms": 0.112
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13308.25,
+    "model_load_ms": 13619.472,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 13635.436,
+      "ms": 14306.778,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -351,27 +355,75 @@
         "p95_ms": null,
         "total_ms": 0.0
       },
-      "tokens": 59
+      "tokens": 60
     },
-    "prompt_tokenize_ms": 458.841,
+    "prompt_tokenize_ms": 515.335,
     "requested": false,
-    "tokenizer_load_ms": 624.13
+    "tokenizer_load_ms": 579.335
   },
   "prompt": "Transcript:\nUser: My code word is amber.\nAssistant: Noted.\nUser: What is the code word? Answer with one word.",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 12,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "d09a323b1c3e13a236e363182aab6f8739b912769d57a5e8f94018c87f1e64e3",
+    "identity_sha256": "98034df66c0e12c83ca3172a537e71f3a3c2a08f1e2434bc6da2a41bd4f106f3",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        151645,
+        151644
+      ]
+    },
+    "stop_criteria_sha256": "51dbd89eb1b858882b35fc2340257e0c109c8261500f46ba8b5b6cd2687948ca",
+    "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+    "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+    "template": {
+      "family": "qwen25-chat",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "qwen25-chat",
+    "template_sha256": "be829f95ac1a95f9fd9b9641a7df864186594cde3285438f6f8fdddc89c428e3",
+    "tokenizer_authority": {
+      "authority": "present",
+      "sha256": null,
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
   "prompt_identity": {
     "bos_policy": false,
     "parse_special": true,
-    "prompt_token_count": 60,
-    "prompt_token_ids_sha256": "828aa86fd3e297fe275b9c714d08b98db11b58f786675a868793715e586d3f68",
-    "rendered_prompt_sha256": "2357bf339e3a7a59f6183b9fc645bdf09ef69ad5b2d7e5a23287e7b0ec0ec3b8",
+    "prompt_token_count": 61,
+    "prompt_token_ids_sha256": "ea68374f8cae18d72cc41075b0ba8ff2a0aca0fcc05630d35c8b0ef10fde64a2",
+    "rendered_prompt_sha256": "5bf15a7e66624c01e42a8ed951b89086d2c72a12e6fac34da4b3e6fea80600ec",
     "template": "qwen25-chat"
   },
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
     "qwen_no_think": false,
-    "rendered_sha256": "2357bf339e3a7a59f6183b9fc645bdf09ef69ad5b2d7e5a23287e7b0ec0ec3b8",
-    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nTranscript:\nUser: My code word is amber.\nAssistant: Noted.\nUser: What is the code word? Answer with one word.<|im_end|>\n<|im_start|>assistant",
+    "rendered_sha256": "5bf15a7e66624c01e42a8ed951b89086d2c72a12e6fac34da4b3e6fea80600ec",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nTranscript:\nUser: My code word is amber.\nAssistant: Noted.\nUser: What is the code word? Answer with one word.<|im_end|>\n<|im_start|>assistant\n",
     "stop_sequences": [
       "<|im_end|>",
       "<|im_start|>"
@@ -384,6 +436,8 @@
   },
   "proof_summary": {
     "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
     "claim_level": "diagnostic_cli_run",
     "execution_backend": "cpu-rust",
     "execution_backend_matched": false,
@@ -427,14 +481,14 @@
       "sse2"
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
-    "decode_tokens": 3,
-    "decode_tps": 0.2048900423439421,
+    "decode_tokens": 2,
+    "decode_tps": 0.1333600053344002,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
     "model_family": "qwen",
     "phase": "decode",
-    "prompt_tokens": 60,
+    "prompt_tokens": 61,
     "provenance": "dense_slm_gguf_cpu_reference",
     "quant_format": "Q8_0",
     "requested_backend": "cpu",
@@ -445,25 +499,25 @@
     "tokenizer_source": "gguf_metadata",
     "tokenizer_strict": true
   },
-  "text": ": Amber<|im_end|>",
+  "text": "amber<|im_end|>",
   "throughput": {
-    "decoded_tokens": 3,
-    "tokens_per_second": 0.2048900423439421
+    "decoded_tokens": 2,
+    "tokens_per_second": 0.1333600053344002
   },
-  "timestamp": "2026-05-16T15:22:12.501774700+00:00",
+  "timestamp": "2026-05-19T04:59:32.444171700+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.063,
-    "decode_total_ms": 1005.456,
+    "decode_steady_state_tok_s": 2.968,
+    "decode_total_ms": 688.371,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 352.433,
-    "first_token_ms": 13988,
+    "first_token_decode_ms": 351.465,
+    "first_token_ms": 14659,
     "host_to_device_bytes": null,
-    "model_load_ms": 13308.25,
-    "prefill_ms": 13635.436,
-    "sampling_ms_per_token": 2.877,
-    "tokenize_ms": 458.841,
-    "tokenizer_load_ms": 624.13
+    "model_load_ms": 13619.472,
+    "prefill_ms": 14306.778,
+    "sampling_ms_per_token": 2.112,
+    "tokenize_ms": 515.335,
+    "tokenizer_load_ms": 579.335
   },
   "tokenizer": {
     "bos": 151643,
@@ -476,18 +530,16 @@
     "type": "gguf_metadata"
   },
   "tokens": {
-    "generated": 3,
+    "generated": 2,
     "generated_ids": [
-      25,
-      46664,
+      15221,
       151645
     ],
     "ids": [
-      25,
-      46664,
+      15221,
       151645
     ],
-    "prompt": 60,
+    "prompt": 61,
     "prompt_ids": [
       151644,
       8948,
@@ -548,7 +600,8 @@
       151645,
       198,
       151644,
-      77091
+      77091,
+      198
     ],
     "total": 63
   }

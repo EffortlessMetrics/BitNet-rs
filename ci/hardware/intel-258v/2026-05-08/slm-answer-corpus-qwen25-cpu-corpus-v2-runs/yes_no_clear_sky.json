@@ -1,6 +1,6 @@
 {
   "artifact_kind": "inference_result",
-  "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\yes_no_clear_sky.json",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\yes_no_clear_sky.json",
   "counts": {
     "n_kv": 26,
     "n_tensors": 291,
@@ -34,9 +34,9 @@
     "batch_size": 1,
     "fallback_reason": null,
     "fallback_used": false,
-    "generated_tokens": 3,
+    "generated_tokens": 1,
     "phase": "decode",
-    "prompt_tokens": 48,
+    "prompt_tokens": 49,
     "requested_backend": "cpu",
     "runtime_api": "cpu",
     "selected_backend": "cpu-rust",
@@ -55,10 +55,14 @@
     "deterministic": true,
     "explicit_bos_requested": false,
     "greedy": true,
+    "max_new_tokens": 1,
     "parse_special": true,
     "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
     "seed": 0,
-    "temperature": 0.0
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
   },
   "kernel": {
     "dequantizes_before_compute": true,
@@ -68,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 11312,
-    "decode_first_ms": 11312,
-    "total_ms": 11968
+    "cmd_to_first_ms": 11757,
+    "decode_first_ms": 11757,
+    "total_ms": 11759
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -97,7 +101,7 @@
     "format": "gguf",
     "loader_mode": "real_gguf",
     "output_head_tensor": "output.weight",
-    "path": "C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "path": "C:/Users/szim9/AppData/Local/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
     "quant_format": "Q8_0",
     "repo": "Qwen/Qwen2.5-0.5B-Instruct",
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
@@ -265,83 +269,83 @@
     "claim_scope": "selected CPU backend phase timing only",
     "decode": {
       "embed_ms": {
-        "count": 3,
-        "max_ms": 0.027,
-        "mean_ms": 0.023,
-        "min_ms": 0.021,
-        "p50_ms": 0.021,
-        "p95_ms": 0.027,
-        "total_ms": 0.069
+        "count": 1,
+        "max_ms": 0.029,
+        "mean_ms": 0.029,
+        "min_ms": 0.029,
+        "p50_ms": 0.029,
+        "p95_ms": 0.029,
+        "total_ms": 0.029
       },
-      "first_token_decode_ms": 334.26,
+      "first_token_decode_ms": 348.82,
       "forward_ms": {
-        "count": 3,
-        "max_ms": 237.783,
-        "mean_ms": 235.841,
-        "min_ms": 233.542,
-        "p50_ms": 236.198,
-        "p95_ms": 237.783,
-        "total_ms": 707.524
+        "count": 1,
+        "max_ms": 248.946,
+        "mean_ms": 248.946,
+        "min_ms": 248.946,
+        "p50_ms": 248.946,
+        "p95_ms": 248.946,
+        "total_ms": 248.946
       },
-      "generated_tokens": 3,
+      "generated_tokens": 1,
       "logits_ms": {
-        "count": 3,
-        "max_ms": 85.54,
-        "mean_ms": 83.923,
-        "min_ms": 81.417,
-        "p50_ms": 84.811,
-        "p95_ms": 85.54,
-        "total_ms": 251.768
+        "count": 1,
+        "max_ms": 90.461,
+        "mean_ms": 90.461,
+        "min_ms": 90.461,
+        "p50_ms": 90.461,
+        "p95_ms": 90.461,
+        "total_ms": 90.461
       },
       "per_token_ms": {
-        "count": 3,
-        "max_ms": 334.26,
-        "mean_ms": 329.674,
-        "min_ms": 324.151,
-        "p50_ms": 330.611,
-        "p95_ms": 334.26,
-        "total_ms": 989.022
+        "count": 1,
+        "max_ms": 348.82,
+        "mean_ms": 348.82,
+        "min_ms": 348.82,
+        "p50_ms": 348.82,
+        "p95_ms": 348.82,
+        "total_ms": 348.82
       },
       "sample_ms": {
-        "count": 3,
-        "max_ms": 3.031,
-        "mean_ms": 2.83,
-        "min_ms": 2.675,
-        "p50_ms": 2.785,
-        "p95_ms": 3.031,
-        "total_ms": 8.49
+        "count": 1,
+        "max_ms": 1.662,
+        "mean_ms": 1.662,
+        "min_ms": 1.662,
+        "p50_ms": 1.662,
+        "p95_ms": 1.662,
+        "total_ms": 1.662
       },
       "steady_per_token_ms": {
-        "count": 2,
-        "max_ms": 330.611,
-        "mean_ms": 327.381,
-        "min_ms": 324.151,
-        "p50_ms": 324.151,
-        "p95_ms": 330.611,
-        "total_ms": 654.762
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
       },
-      "steady_state_tok_s": 3.055,
-      "steady_state_tokens": 2,
+      "steady_state_tok_s": null,
+      "steady_state_tokens": 0,
       "token_decode_ms": {
-        "count": 3,
-        "max_ms": 0.076,
-        "mean_ms": 0.053,
-        "min_ms": 0.033,
-        "p50_ms": 0.05,
-        "p95_ms": 0.076,
-        "total_ms": 0.159
+        "count": 1,
+        "max_ms": 0.078,
+        "mean_ms": 0.078,
+        "min_ms": 0.078,
+        "p50_ms": 0.078,
+        "p95_ms": 0.078,
+        "total_ms": 0.078
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13460.541,
+    "model_load_ms": 13436.342,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 10977.968,
+      "ms": 11408.225,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -351,27 +355,75 @@
         "p95_ms": null,
         "total_ms": 0.0
       },
-      "tokens": 47
+      "tokens": 48
     },
-    "prompt_tokenize_ms": 510.243,
+    "prompt_tokenize_ms": 451.293,
     "requested": false,
-    "tokenizer_load_ms": 584.646
+    "tokenizer_load_ms": 561.639
   },
   "prompt": "Reply with exactly one word, yes or no: is the sky usually blue on a clear day?",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 1,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "e00de2dfaecfb5ac23e225b89e53457166cddb49006b47837731585faf07b048",
+    "identity_sha256": "782a5e6462b66c2441d8acfd8fa7e122f37844fd934fedf9d113b297cbd85622",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        151645,
+        151644
+      ]
+    },
+    "stop_criteria_sha256": "51dbd89eb1b858882b35fc2340257e0c109c8261500f46ba8b5b6cd2687948ca",
+    "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+    "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+    "template": {
+      "family": "qwen25-chat",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "qwen25-chat",
+    "template_sha256": "be829f95ac1a95f9fd9b9641a7df864186594cde3285438f6f8fdddc89c428e3",
+    "tokenizer_authority": {
+      "authority": "present",
+      "sha256": null,
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
   "prompt_identity": {
     "bos_policy": false,
     "parse_special": true,
-    "prompt_token_count": 48,
-    "prompt_token_ids_sha256": "b27f150d726ee16ff029cc1ba35d4da5d9c1072bccd9d2688d7c5298645c820c",
-    "rendered_prompt_sha256": "a0d3d36d08675f9d1d55ba3cce9a7fb7737ebc49a866020609dac38e4e8358b7",
+    "prompt_token_count": 49,
+    "prompt_token_ids_sha256": "e1e1e603f791b82a176d4d53a9d0a138a4a2c2bec0659d29e7eb27d56b64e598",
+    "rendered_prompt_sha256": "2972656907307c327ebd1f70ed815fb23d387535fb89c984bde23dd03e5017d2",
     "template": "qwen25-chat"
   },
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
     "qwen_no_think": false,
-    "rendered_sha256": "a0d3d36d08675f9d1d55ba3cce9a7fb7737ebc49a866020609dac38e4e8358b7",
-    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nReply with exactly one word, yes or no: is the sky usually blue on a clear day?<|im_end|>\n<|im_start|>assistant",
+    "rendered_sha256": "2972656907307c327ebd1f70ed815fb23d387535fb89c984bde23dd03e5017d2",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nReply with exactly one word, yes or no: is the sky usually blue on a clear day?<|im_end|>\n<|im_start|>assistant\n",
     "stop_sequences": [
       "<|im_end|>",
       "<|im_start|>"
@@ -384,6 +436,8 @@
   },
   "proof_summary": {
     "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
     "claim_level": "diagnostic_cli_run",
     "execution_backend": "cpu-rust",
     "execution_backend_matched": false,
@@ -427,14 +481,14 @@
       "sse2"
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
-    "decode_tokens": 3,
-    "decode_tps": 0.25066844919786097,
+    "decode_tokens": 1,
+    "decode_tps": 0.08504124500382686,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
     "model_family": "qwen",
     "phase": "decode",
-    "prompt_tokens": 48,
+    "prompt_tokens": 49,
     "provenance": "dense_slm_gguf_cpu_reference",
     "quant_format": "Q8_0",
     "requested_backend": "cpu",
@@ -445,25 +499,25 @@
     "tokenizer_source": "gguf_metadata",
     "tokenizer_strict": true
   },
-  "text": ": Yes<|im_end|>",
+  "text": "Yes",
   "throughput": {
-    "decoded_tokens": 3,
-    "tokens_per_second": 0.25066844919786097
+    "decoded_tokens": 1,
+    "tokens_per_second": 0.08504124500382686
   },
-  "timestamp": "2026-05-16T15:20:19.078176300+00:00",
+  "timestamp": "2026-05-19T04:57:37.435170500+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.055,
-    "decode_total_ms": 989.022,
+    "decode_steady_state_tok_s": null,
+    "decode_total_ms": 348.82,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 334.26,
-    "first_token_ms": 11312,
+    "first_token_decode_ms": 348.82,
+    "first_token_ms": 11757,
     "host_to_device_bytes": null,
-    "model_load_ms": 13460.541,
-    "prefill_ms": 10977.968,
-    "sampling_ms_per_token": 2.83,
-    "tokenize_ms": 510.243,
-    "tokenizer_load_ms": 584.646
+    "model_load_ms": 13436.342,
+    "prefill_ms": 11408.225,
+    "sampling_ms_per_token": 1.662,
+    "tokenize_ms": 451.293,
+    "tokenizer_load_ms": 561.639
   },
   "tokenizer": {
     "bos": 151643,
@@ -476,18 +530,14 @@
     "type": "gguf_metadata"
   },
   "tokens": {
-    "generated": 3,
+    "generated": 1,
     "generated_ids": [
-      25,
-      7414,
-      151645
+      9454
     ],
     "ids": [
-      25,
-      7414,
-      151645
+      9454
     ],
-    "prompt": 48,
+    "prompt": 49,
     "prompt_ids": [
       151644,
       8948,
@@ -536,8 +586,9 @@
       151645,
       198,
       151644,
-      77091
+      77091,
+      198
     ],
-    "total": 51
+    "total": 50
   }
 }

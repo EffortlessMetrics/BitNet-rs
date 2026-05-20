@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_durability_bundle",
   "proof_stage": "repeated_run_requirements_indexed_no_new_inference",
-  "created_utc": "2026-05-17T15:20:00Z",
+  "created_utc": "2026-05-18T16:25:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",

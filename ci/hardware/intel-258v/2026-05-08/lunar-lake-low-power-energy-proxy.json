@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_low_power_energy_proxy",
+  "proof_stage": "battery_drain_proxy_indexed_no_promotion_change",
+  "created_utc": "2026-05-19T19:30:00Z",
+  "machine_id": "intel-258v",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "before_telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+  "after_telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+  "route_id": "dense_slm_openvino_npu_candidate",
+  "profile_id": "low_power",
+  "sample_count": 10,
+  "before_battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+  "after_battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+  "before_charge_percent": 100,
+  "after_charge_percent": 100,
+  "charge_delta_percent": 0,
+  "before_ac_power_inferred": true,
+  "after_ac_power_inferred": true,
+  "battery_mode_sample_recorded": false,
+  "energy_proxy_recorded": true,
+  "gaps": [
+    "before and after telemetry must both be battery-mode samples for low_power evidence"
+  ],
+  "claim_boundary": {
+    "new_inference_executed": false,
+    "route_promotion_changed": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "native_npu_inference_claim": false,
+    "bitnet_qk256_i2s_behavior_changed": false,
+    "hidden_fallback_allowed": false
+  }
+}

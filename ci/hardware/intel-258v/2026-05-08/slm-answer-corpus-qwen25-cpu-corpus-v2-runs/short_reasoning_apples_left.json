@@ -1,6 +1,6 @@
 {
   "artifact_kind": "inference_result",
-  "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\short_reasoning_apples_left.json",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\short_reasoning_apples_left.json",
   "counts": {
     "n_kv": 26,
     "n_tensors": 291,
@@ -36,7 +36,7 @@
     "fallback_used": false,
     "generated_tokens": 3,
     "phase": "decode",
-    "prompt_tokens": 50,
+    "prompt_tokens": 51,
     "requested_backend": "cpu",
     "runtime_api": "cpu",
     "selected_backend": "cpu-rust",
@@ -55,10 +55,14 @@
     "deterministic": true,
     "explicit_bos_requested": false,
     "greedy": true,
+    "max_new_tokens": 16,
     "parse_special": true,
     "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
     "seed": 0,
-    "temperature": 0.0
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
   },
   "kernel": {
     "dequantizes_before_compute": true,
@@ -68,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 11664,
-    "decode_first_ms": 11664,
-    "total_ms": 12324
+    "cmd_to_first_ms": 12241,
+    "decode_first_ms": 12241,
+    "total_ms": 12921
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -97,7 +101,7 @@
     "format": "gguf",
     "loader_mode": "real_gguf",
     "output_head_tensor": "output.weight",
-    "path": "C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "path": "C:/Users/szim9/AppData/Local/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
     "quant_format": "Q8_0",
     "repo": "Qwen/Qwen2.5-0.5B-Instruct",
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
@@ -267,81 +271,81 @@
       "embed_ms": {
         "count": 3,
         "max_ms": 0.044,
-        "mean_ms": 0.031,
-        "min_ms": 0.024,
-        "p50_ms": 0.024,
+        "mean_ms": 0.028,
+        "min_ms": 0.016,
+        "p50_ms": 0.023,
         "p95_ms": 0.044,
-        "total_ms": 0.092
+        "total_ms": 0.083
       },
-      "first_token_decode_ms": 344.026,
+      "first_token_decode_ms": 342.451,
       "forward_ms": {
         "count": 3,
-        "max_ms": 247.464,
-        "mean_ms": 237.122,
-        "min_ms": 231.125,
-        "p50_ms": 232.778,
-        "p95_ms": 247.464,
-        "total_ms": 711.367
+        "max_ms": 247.989,
+        "mean_ms": 243.643,
+        "min_ms": 240.076,
+        "p50_ms": 242.863,
+        "p95_ms": 247.989,
+        "total_ms": 730.928
       },
       "generated_tokens": 3,
       "logits_ms": {
         "count": 3,
-        "max_ms": 86.049,
-        "mean_ms": 85.225,
-        "min_ms": 83.662,
-        "p50_ms": 85.964,
-        "p95_ms": 86.049,
-        "total_ms": 255.675
+        "max_ms": 92.314,
+        "mean_ms": 86.322,
+        "min_ms": 83.244,
+        "p50_ms": 83.41,
+        "p95_ms": 92.314,
+        "total_ms": 258.967
       },
       "per_token_ms": {
         "count": 3,
-        "max_ms": 344.026,
-        "mean_ms": 333.729,
-        "min_ms": 328.502,
-        "p50_ms": 328.658,
-        "p95_ms": 344.026,
-        "total_ms": 1001.186
+        "max_ms": 344.49,
+        "mean_ms": 339.631,
+        "min_ms": 331.951,
+        "p50_ms": 342.451,
+        "p95_ms": 344.49,
+        "total_ms": 1018.892
       },
       "sample_ms": {
         "count": 3,
-        "max_ms": 2.976,
-        "mean_ms": 2.841,
-        "min_ms": 2.742,
-        "p50_ms": 2.805,
-        "p95_ms": 2.976,
-        "total_ms": 8.522
+        "max_ms": 2.543,
+        "mean_ms": 2.201,
+        "min_ms": 1.996,
+        "p50_ms": 2.065,
+        "p95_ms": 2.543,
+        "total_ms": 6.603
       },
       "steady_per_token_ms": {
         "count": 2,
-        "max_ms": 328.658,
-        "mean_ms": 328.58,
-        "min_ms": 328.502,
-        "p50_ms": 328.502,
-        "p95_ms": 328.658,
-        "total_ms": 657.16
+        "max_ms": 344.49,
+        "mean_ms": 338.22,
+        "min_ms": 331.951,
+        "p50_ms": 331.951,
+        "p95_ms": 344.49,
+        "total_ms": 676.441
       },
-      "steady_state_tok_s": 3.043,
+      "steady_state_tok_s": 2.957,
       "steady_state_tokens": 2,
       "token_decode_ms": {
         "count": 3,
-        "max_ms": 0.092,
-        "mean_ms": 0.057,
-        "min_ms": 0.024,
-        "p50_ms": 0.054,
-        "p95_ms": 0.092,
-        "total_ms": 0.17
+        "max_ms": 0.072,
+        "mean_ms": 0.059,
+        "min_ms": 0.049,
+        "p50_ms": 0.056,
+        "p95_ms": 0.072,
+        "total_ms": 0.177
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 13795.911,
+    "model_load_ms": 13408.083,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 11321.154,
+      "ms": 11900.415,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -351,27 +355,75 @@
         "p95_ms": null,
         "total_ms": 0.0
       },
-      "tokens": 49
+      "tokens": 50
     },
-    "prompt_tokenize_ms": 435.337,
+    "prompt_tokenize_ms": 403.432,
     "requested": false,
-    "tokenizer_load_ms": 591.107
+    "tokenizer_load_ms": 629.793
   },
   "prompt": "Tom has two apples and gives away one apple. Does Tom have one apple left? Reply yes or no.",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 16,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "5d337a15a41db8a891e99f4ea468644539b1e03a8924831e66c260c9336f4bf1",
+    "identity_sha256": "c21b83cb7feb447b2bd94a7abe5213f0d3e7c42ad891bf3294fd7b6f908148c9",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        151645,
+        151644
+      ]
+    },
+    "stop_criteria_sha256": "51dbd89eb1b858882b35fc2340257e0c109c8261500f46ba8b5b6cd2687948ca",
+    "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+    "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+    "template": {
+      "family": "qwen25-chat",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "qwen25-chat",
+    "template_sha256": "be829f95ac1a95f9fd9b9641a7df864186594cde3285438f6f8fdddc89c428e3",
+    "tokenizer_authority": {
+      "authority": "present",
+      "sha256": null,
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
   "prompt_identity": {
     "bos_policy": false,
     "parse_special": true,
-    "prompt_token_count": 50,
-    "prompt_token_ids_sha256": "12894895ffd59e81f8783749b2ecd338d1a9a503dcda3b501fc1da1b5b7a5ace",
-    "rendered_prompt_sha256": "bdf1aa79b5f5233df5a31462d8ea1ff73eb19255d1997ce987829caa5faac334",
+    "prompt_token_count": 51,
+    "prompt_token_ids_sha256": "1e6f2052015787fb9d4d38fb9013bc2bd39d6501595bbffa0d415301a46e5d27",
+    "rendered_prompt_sha256": "7b8ad5b1af3c40e811c8455aabc48848567872470bf5ddfc69383ca2c2655856",
     "template": "qwen25-chat"
   },
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
     "qwen_no_think": false,
-    "rendered_sha256": "bdf1aa79b5f5233df5a31462d8ea1ff73eb19255d1997ce987829caa5faac334",
-    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nTom has two apples and gives away one apple. Does Tom have one apple left? Reply yes or no.<|im_end|>\n<|im_start|>assistant",
+    "rendered_sha256": "7b8ad5b1af3c40e811c8455aabc48848567872470bf5ddfc69383ca2c2655856",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nTom has two apples and gives away one apple. Does Tom have one apple left? Reply yes or no.<|im_end|>\n<|im_start|>assistant\n",
     "stop_sequences": [
       "<|im_end|>",
       "<|im_start|>"
@@ -384,6 +436,8 @@
   },
   "proof_summary": {
     "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
     "claim_level": "diagnostic_cli_run",
     "execution_backend": "cpu-rust",
     "execution_backend_matched": false,
@@ -428,13 +482,13 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 3,
-    "decode_tps": 0.24342745861733203,
+    "decode_tps": 0.23218017181332715,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
     "model_family": "qwen",
     "phase": "decode",
-    "prompt_tokens": 50,
+    "prompt_tokens": 51,
     "provenance": "dense_slm_gguf_cpu_reference",
     "quant_format": "Q8_0",
     "requested_backend": "cpu",
@@ -445,25 +499,25 @@
     "tokenizer_source": "gguf_metadata",
     "tokenizer_strict": true
   },
-  "text": " Yes.<|im_end|>",
+  "text": "Yes.<|im_end|>",
   "throughput": {
     "decoded_tokens": 3,
-    "tokens_per_second": 0.24342745861733203
+    "tokens_per_second": 0.23218017181332715
   },
-  "timestamp": "2026-05-16T15:24:00.109863400+00:00",
+  "timestamp": "2026-05-19T05:01:23.969483800+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.043,
-    "decode_total_ms": 1001.186,
+    "decode_steady_state_tok_s": 2.957,
+    "decode_total_ms": 1018.892,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 344.026,
-    "first_token_ms": 11664,
+    "first_token_decode_ms": 342.451,
+    "first_token_ms": 12241,
     "host_to_device_bytes": null,
-    "model_load_ms": 13795.911,
-    "prefill_ms": 11321.154,
-    "sampling_ms_per_token": 2.841,
-    "tokenize_ms": 435.337,
-    "tokenizer_load_ms": 591.107
+    "model_load_ms": 13408.083,
+    "prefill_ms": 11900.415,
+    "sampling_ms_per_token": 2.201,
+    "tokenize_ms": 403.432,
+    "tokenizer_load_ms": 629.793
   },
   "tokenizer": {
     "bos": 151643,
@@ -478,16 +532,16 @@
   "tokens": {
     "generated": 3,
     "generated_ids": [
-      7414,
+      9454,
       13,
       151645
     ],
     "ids": [
-      7414,
+      9454,
       13,
       151645
     ],
-    "prompt": 50,
+    "prompt": 51,
     "prompt_ids": [
       151644,
       8948,
@@ -538,8 +592,9 @@
       151645,
       198,
       151644,
-      77091
+      77091,
+      198
     ],
-    "total": 53
+    "total": 54
   }
 }

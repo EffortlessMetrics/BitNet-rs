@@ -1,0 +1,4284 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_openvino_npu_resident_session",
+  "campaign": "intel-258v-platform",
+  "item": "LNL258V-NPU-RESIDENT-002",
+  "created_utc": "2026-05-18T23:10:00Z",
+  "machine_id": "intel-258v",
+  "proof_stage": "candidate_route_resident_warm_stability_evidence_no_promotion_change",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "comparison_scope": "same_process_openvino_genai_npu_cold_construct_plus_repeated_warm_asks",
+  "requested_backend": "openvino-npu",
+  "selected_backend": "openvino-npu",
+  "runtime_api": "openvino_genai",
+  "runtime_device": "NPU",
+  "resolved_device": "Intel(R) AI Boost",
+  "backend_lane": "dense_slm_openvino_npu",
+  "route_id": "dense_slm_openvino_npu_candidate",
+  "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+  "fallback_used": false,
+  "fallback_status": "no_fallback_used_npu_device_requested_and_llmpipeline_constructed",
+  "model": {
+    "source": "Qwen/Qwen2.5-0.5B-Instruct",
+    "local_path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "architecture": "qwen2",
+    "openvino_ir": {
+      "xml": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
+        "exists": true,
+        "bytes": 2167169,
+        "sha256": "92079df4e311238df5a3cd94848fc84730eefbce08e59f053d8a0aeaa7fb39f4"
+      },
+      "bin": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
+        "exists": true,
+        "bytes": 321326157,
+        "sha256": "a15e9535aaf4c8286b7b45f0490dca593cc751450c3b832416ad377bb190b2a9"
+      }
+    }
+  },
+  "tokenizer": {
+    "source": "openvino_ir_folder_hf_tokenizer_files",
+    "family": "qwen2",
+    "prompt_template": "qwen2.5",
+    "tokenizer_json": {
+      "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer.json",
+      "exists": true,
+      "bytes": 11421896,
+      "sha256": "9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa"
+    },
+    "tokenizer_config_json": {
+      "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer_config.json",
+      "exists": true,
+      "bytes": 4893,
+      "sha256": "5fd4cea2574beb6b70ba31582179880d331b723f5b5119ee67c29d45b983f7be"
+    }
+  },
+  "source_receipts": {
+    "manifest": {
+      "path": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+      "exists": true,
+      "bytes": 4555,
+      "sha256": "832ac94ec7c58fa4657de9c7e55c29a92976c41cd63c4a5a3c8ff0a2c467c1fc"
+    },
+    "openvino_corpus_v2": {
+      "path": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+      "exists": true,
+      "bytes": 281916,
+      "sha256": "b6d47a8b22cb5af6548fc1d2ec04dfaad3dc10e7d23801ed586788e606c6a0e6"
+    },
+    "npu_cold_start_diagnosis": {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+      "exists": true,
+      "bytes": 8364,
+      "sha256": "0b38ef7db1ab499efb900bf563f03b2e19802f0fd42bf99fc0f2c27734f49130"
+    }
+  },
+  "cache_context": {
+    "cache_dir": "target/openvino-cache/lnl258v-npu-resident",
+    "cache_requested": true,
+    "cache_config_status": "requested",
+    "cache_config_error": null,
+    "cache_dir_exists": true
+  },
+  "pipeline": {
+    "pipeline_construct_wall_ms": 1470.0505000073463,
+    "cache_config_status": "requested"
+  },
+  "resident_session": {
+    "resident_session_ready": true,
+    "cold_first_ask": {
+      "ask_count": 1,
+      "passed": 1,
+      "failed": 0,
+      "fallback_used": false,
+      "generation_wall_ms": {
+        "min": 1004.7099000075832,
+        "mean": 1004.7099000075832,
+        "p95": 1004.7099000075832,
+        "max": 1004.7099000075832
+      },
+      "first_streamed_text_chunk_ms": {
+        "min": 719.9693999718875,
+        "mean": 719.9693999718875,
+        "p95": 719.9693999718875,
+        "max": 719.9693999718875
+      },
+      "openvino_time_to_first_token_ms": {
+        "min": 294.2611083984375,
+        "mean": 294.2611083984375,
+        "p95": 294.2611083984375,
+        "max": 294.2611083984375
+      },
+      "throughput_tokens_per_s": {
+        "min": 10.00827693939209,
+        "mean": 10.00827693939209,
+        "p95": 10.00827693939209,
+        "max": 10.00827693939209
+      },
+      "generated_tokens": 8
+    },
+    "warm_repeats_requested": 30,
+    "warm_resident_asks": {
+      "ask_count": 30,
+      "passed": 30,
+      "failed": 0,
+      "fallback_used": false,
+      "generation_wall_ms": {
+        "min": 571.8864999944344,
+        "mean": 764.1479400044773,
+        "p95": 1171.061400033068,
+        "max": 1244.6471000439487
+      },
+      "first_streamed_text_chunk_ms": {
+        "min": 318.15419998019934,
+        "mean": 347.26613000772585,
+        "p95": 409.55600002780557,
+        "max": 456.63089997833595
+      },
+      "openvino_time_to_first_token_ms": {
+        "min": 200.2917022705078,
+        "mean": 220.5839635213216,
+        "p95": 257.2967834472656,
+        "max": 309.6111755371094
+      },
+      "throughput_tokens_per_s": {
+        "min": 14.572853088378906,
+        "mean": 18.510822296142578,
+        "p95": 19.844392776489258,
+        "max": 19.926876068115234
+      },
+      "generated_tokens": 320
+    },
+    "same_process_pipeline_reused": true,
+    "proof_limitations": [
+      "resident proof does not remove the cold one-off NPU startup blocker",
+      "power advantage is not measured by this receipt",
+      "route promotion is unchanged"
+    ]
+  },
+  "stability": {
+    "warm_resident_ask_count": 30,
+    "answer_drift_detected": false,
+    "generated_token_drift_detected": false,
+    "fallback_drift_detected": false,
+    "route_drift_detected": false,
+    "unique_outputs_by_case": {
+      "instruction_single_sentence_rust": [
+        "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      ],
+      "math_2_plus_2_brief": [
+        "2 + 2 equals 4."
+      ],
+      "short_factual_capital_france": [
+        "The capital of France is Paris."
+      ]
+    },
+    "unique_generated_token_sequences_by_case": {
+      "instruction_single_sentence_rust": 1,
+      "math_2_plus_2_brief": 1,
+      "short_factual_capital_france": 1
+    },
+    "memory_samples": {
+      "before_pipeline_construct_bytes": 64737280,
+      "after_pipeline_construct_bytes": 827830272,
+      "after_cold_first_ask_bytes": 1519443968,
+      "after_warm_loop_bytes": 1520078848
+    },
+    "resident_memory_growth_bytes": 692248576
+  },
+  "asks": [
+    {
+      "sequence_index": 0,
+      "phase": "cold_first_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 1004.7099000075832,
+      "first_streamed_text_chunk_ms": 719.9693999718875,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 994.4840087890625,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 991.56201171875,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 294.2611083984375,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 99.91729736328125,
+          "std_ms": 90.71701049804688
+        },
+        "inter_token_latency": {
+          "mean_ms": 123.94525146484375,
+          "std_ms": 106.43097686767578
+        },
+        "throughput": {
+          "mean_ms": 10.00827693939209,
+          "std_ms": 9.086724281311035
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 1,
+      "phase": "warm_resident_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 671.9631000305526,
+      "first_streamed_text_chunk_ms": 377.82350002089515,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 655.0900268554688,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 651.9010009765625,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 243.13511657714844,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 58.72678756713867,
+          "std_ms": 0.6851952075958252
+        },
+        "inter_token_latency": {
+          "mean_ms": 81.48762512207031,
+          "std_ms": 60.97161102294922
+        },
+        "throughput": {
+          "mean_ms": 17.028003692626953,
+          "std_ms": 0.19867435097694397
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 2,
+      "phase": "warm_resident_ask",
+      "case_id": "short_factual_capital_france",
+      "question": "Name the capital of France.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "e88a7281fd8faeb2875e92cb05ced2cf32e9f6ed6082b733d58ab9aa98658e8e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        675,
+        279,
+        6722,
+        315,
+        9625,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 35,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "The capital of France is Paris.",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 675.8537000278011,
+      "first_streamed_text_chunk_ms": 378.32120002713054,
+      "first_streamed_text_chunk": "The",
+      "streamed_chunks_count": 7,
+      "streamed_text": "The capital of France is Paris.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 658.135986328125,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 654.6959838867188,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 240.9665985107422,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 59.472129821777344,
+          "std_ms": 1.2205705642700195
+        },
+        "inter_token_latency": {
+          "mean_ms": 81.83699798583984,
+          "std_ms": 60.00166702270508
+        },
+        "throughput": {
+          "mean_ms": 16.814598083496094,
+          "std_ms": 0.3450928032398224
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 35,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Paris",
+          "paris"
+        ],
+        "matched": [
+          "Paris"
+        ],
+        "passed": true,
+        "normalized": "The capital of France is Paris."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 3,
+      "phase": "warm_resident_ask",
+      "case_id": "instruction_single_sentence_rust",
+      "question": "Write one short sentence about Rust.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        7985,
+        825,
+        2805,
+        11652,
+        911,
+        33789,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 36,
+      "max_new_tokens": 16,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 16
+      },
+      "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "generated_token_ids": [
+        49,
+        590,
+        374,
+        458,
+        1787,
+        30774,
+        15473,
+        4128,
+        6188,
+        311,
+        387,
+        6092,
+        323,
+        11050,
+        1393,
+        20337
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 16,
+      "generation_wall_ms": 1171.061400033068,
+      "first_streamed_text_chunk_ms": 373.9544000127353,
+      "first_streamed_text_chunk": "R",
+      "streamed_chunks_count": 15,
+      "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 1156.5810546875,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 1150.041015625,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 241.3105010986328,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 60.91697311401367,
+          "std_ms": 3.8085174560546875
+        },
+        "inter_token_latency": {
+          "mean_ms": 71.8775634765625,
+          "std_ms": 43.80615997314453
+        },
+        "throughput": {
+          "mean_ms": 16.415786743164062,
+          "std_ms": 1.0263117551803589
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 36,
+        "num_generated_tokens": 16
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Rust",
+          "rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "matched": [
+          "Rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "passed": true,
+        "normalized": "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 4,
+      "phase": "warm_resident_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 726.5196000225842,
+      "first_streamed_text_chunk_ms": 406.6007999936119,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 697.1699829101562,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 690.6420288085938,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 247.5878143310547,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 64.03644561767578,
+          "std_ms": 3.400458812713623
+        },
+        "inter_token_latency": {
+          "mean_ms": 86.33025360107422,
+          "std_ms": 60.301849365234375
+        },
+        "throughput": {
+          "mean_ms": 15.616106986999512,
+          "std_ms": 0.829245388507843
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 5,
+      "phase": "warm_resident_ask",
+      "case_id": "short_factual_capital_france",
+      "question": "Name the capital of France.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "e88a7281fd8faeb2875e92cb05ced2cf32e9f6ed6082b733d58ab9aa98658e8e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        675,
+        279,
+        6722,
+        315,
+        9625,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 35,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "The capital of France is Paris.",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 820.879899954889,
+      "first_streamed_text_chunk_ms": 456.63089997833595,
+      "first_streamed_text_chunk": "The",
+      "streamed_chunks_count": 7,
+      "streamed_text": "The capital of France is Paris.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 793.1439819335938,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 786.8800048828125,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 309.6111755371094,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 68.62074279785156,
+          "std_ms": 6.225760459899902
+        },
+        "inter_token_latency": {
+          "mean_ms": 98.36000061035156,
+          "std_ms": 79.87693786621094
+        },
+        "throughput": {
+          "mean_ms": 14.572853088378906,
+          "std_ms": 1.3221526145935059
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 35,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Paris",
+          "paris"
+        ],
+        "matched": [
+          "Paris"
+        ],
+        "passed": true,
+        "normalized": "The capital of France is Paris."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 6,
+      "phase": "warm_resident_ask",
+      "case_id": "instruction_single_sentence_rust",
+      "question": "Write one short sentence about Rust.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        7985,
+        825,
+        2805,
+        11652,
+        911,
+        33789,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 36,
+      "max_new_tokens": 16,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 16
+      },
+      "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "generated_token_ids": [
+        49,
+        590,
+        374,
+        458,
+        1787,
+        30774,
+        15473,
+        4128,
+        6188,
+        311,
+        387,
+        6092,
+        323,
+        11050,
+        1393,
+        20337
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 16,
+      "generation_wall_ms": 1244.6471000439487,
+      "first_streamed_text_chunk_ms": 399.9321000301279,
+      "first_streamed_text_chunk": "R",
+      "streamed_chunks_count": 15,
+      "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 1225.6600341796875,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 1218.241943359375,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 257.2351989746094,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 64.48068237304688,
+          "std_ms": 2.434856653213501
+        },
+        "inter_token_latency": {
+          "mean_ms": 76.14012145996094,
+          "std_ms": 46.69614791870117
+        },
+        "throughput": {
+          "mean_ms": 15.50852108001709,
+          "std_ms": 0.5856176614761353
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 36,
+        "num_generated_tokens": 16
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Rust",
+          "rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "matched": [
+          "Rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "passed": true,
+        "normalized": "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 7,
+      "phase": "warm_resident_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 717.0577000360936,
+      "first_streamed_text_chunk_ms": 409.55600002780557,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 685.0059814453125,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 680.97900390625,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 257.2967834472656,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 60.9747428894043,
+          "std_ms": 3.933957576751709
+        },
+        "inter_token_latency": {
+          "mean_ms": 85.12237548828125,
+          "std_ms": 64.97813415527344
+        },
+        "throughput": {
+          "mean_ms": 16.400232315063477,
+          "std_ms": 1.0581073760986328
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 8,
+      "phase": "warm_resident_ask",
+      "case_id": "short_factual_capital_france",
+      "question": "Name the capital of France.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "e88a7281fd8faeb2875e92cb05ced2cf32e9f6ed6082b733d58ab9aa98658e8e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        675,
+        279,
+        6722,
+        315,
+        9625,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 35,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "The capital of France is Paris.",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 664.5766999572515,
+      "first_streamed_text_chunk_ms": 376.1678999871947,
+      "first_streamed_text_chunk": "The",
+      "streamed_chunks_count": 7,
+      "streamed_text": "The capital of France is Paris.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 646.0230102539062,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 642.1300048828125,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 242.3166046142578,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 57.56156921386719,
+          "std_ms": 1.6492769718170166
+        },
+        "inter_token_latency": {
+          "mean_ms": 80.26625061035156,
+          "std_ms": 60.91009521484375
+        },
+        "throughput": {
+          "mean_ms": 17.37270164489746,
+          "std_ms": 0.4977695643901825
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 35,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Paris",
+          "paris"
+        ],
+        "matched": [
+          "Paris"
+        ],
+        "passed": true,
+        "normalized": "The capital of France is Paris."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 9,
+      "phase": "warm_resident_ask",
+      "case_id": "instruction_single_sentence_rust",
+      "question": "Write one short sentence about Rust.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        7985,
+        825,
+        2805,
+        11652,
+        911,
+        33789,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 36,
+      "max_new_tokens": 16,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 16
+      },
+      "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "generated_token_ids": [
+        49,
+        590,
+        374,
+        458,
+        1787,
+        30774,
+        15473,
+        4128,
+        6188,
+        311,
+        387,
+        6092,
+        323,
+        11050,
+        1393,
+        20337
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 16,
+      "generation_wall_ms": 1048.2643999857828,
+      "first_streamed_text_chunk_ms": 356.43779998645186,
+      "first_streamed_text_chunk": "R",
+      "streamed_chunks_count": 15,
+      "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 1030.4239501953125,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 1024.9320068359375,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 225.18319702148438,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 53.6340446472168,
+          "std_ms": 1.6457103490829468
+        },
+        "inter_token_latency": {
+          "mean_ms": 64.0582504272461,
+          "std_ms": 41.552490234375
+        },
+        "throughput": {
+          "mean_ms": 18.644874572753906,
+          "std_ms": 0.5721004605293274
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 36,
+        "num_generated_tokens": 16
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Rust",
+          "rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "matched": [
+          "Rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "passed": true,
+        "normalized": "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 10,
+      "phase": "warm_resident_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 596.9390999525785,
+      "first_streamed_text_chunk_ms": 335.39109997218475,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 580.989990234375,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 578.2340087890625,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 209.26339721679688,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 53.001426696777344,
+          "std_ms": 1.781450867652893
+        },
+        "inter_token_latency": {
+          "mean_ms": 72.27925109863281,
+          "std_ms": 51.66984939575195
+        },
+        "throughput": {
+          "mean_ms": 18.867416381835938,
+          "std_ms": 0.6341598629951477
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 11,
+      "phase": "warm_resident_ask",
+      "case_id": "short_factual_capital_france",
+      "question": "Name the capital of France.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "e88a7281fd8faeb2875e92cb05ced2cf32e9f6ed6082b733d58ab9aa98658e8e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        675,
+        279,
+        6722,
+        315,
+        9625,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 35,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "The capital of France is Paris.",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 593.0561000132002,
+      "first_streamed_text_chunk_ms": 333.3852000068873,
+      "first_streamed_text_chunk": "The",
+      "streamed_chunks_count": 7,
+      "streamed_text": "The capital of France is Paris.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 576.9520263671875,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 573.7310180664062,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 210.46200561523438,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 52.26029968261719,
+          "std_ms": 1.1458265781402588
+        },
+        "inter_token_latency": {
+          "mean_ms": 71.71637725830078,
+          "std_ms": 52.28957748413086
+        },
+        "throughput": {
+          "mean_ms": 19.134984970092773,
+          "std_ms": 0.4195416569709778
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 35,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Paris",
+          "paris"
+        ],
+        "matched": [
+          "Paris"
+        ],
+        "passed": true,
+        "normalized": "The capital of France is Paris."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 12,
+      "phase": "warm_resident_ask",
+      "case_id": "instruction_single_sentence_rust",
+      "question": "Write one short sentence about Rust.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        7985,
+        825,
+        2805,
+        11652,
+        911,
+        33789,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 36,
+      "max_new_tokens": 16,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 16
+      },
+      "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "generated_token_ids": [
+        49,
+        590,
+        374,
+        458,
+        1787,
+        30774,
+        15473,
+        4128,
+        6188,
+        311,
+        387,
+        6092,
+        323,
+        11050,
+        1393,
+        20337
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 16,
+      "generation_wall_ms": 1049.5708000380546,
+      "first_streamed_text_chunk_ms": 340.98120004637167,
+      "first_streamed_text_chunk": "R",
+      "streamed_chunks_count": 15,
+      "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 1034.58203125,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 1028.9110107421875,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 207.62049865722656,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 55.0784912109375,
+          "std_ms": 4.587174892425537
+        },
+        "inter_token_latency": {
+          "mean_ms": 64.30693817138672,
+          "std_ms": 37.154640197753906
+        },
+        "throughput": {
+          "mean_ms": 18.155908584594727,
+          "std_ms": 1.512102484703064
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 36,
+        "num_generated_tokens": 16
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Rust",
+          "rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "matched": [
+          "Rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "passed": true,
+        "normalized": "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 13,
+      "phase": "warm_resident_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 597.5469999830239,
+      "first_streamed_text_chunk_ms": 338.50040001561865,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 583.9249877929688,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 580.5029907226562,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 218.85520935058594,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 52.022830963134766,
+          "std_ms": 0.8364006876945496
+        },
+        "inter_token_latency": {
+          "mean_ms": 72.56287384033203,
+          "std_ms": 55.14794158935547
+        },
+        "throughput": {
+          "mean_ms": 19.22233009338379,
+          "std_ms": 0.3090483248233795
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 14,
+      "phase": "warm_resident_ask",
+      "case_id": "short_factual_capital_france",
+      "question": "Name the capital of France.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "e88a7281fd8faeb2875e92cb05ced2cf32e9f6ed6082b733d58ab9aa98658e8e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        675,
+        279,
+        6722,
+        315,
+        9625,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 35,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "The capital of France is Paris.",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 580.9638000209816,
+      "first_streamed_text_chunk_ms": 324.29369998862967,
+      "first_streamed_text_chunk": "The",
+      "streamed_chunks_count": 7,
+      "streamed_text": "The capital of France is Paris.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 567.0999755859375,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 564.0490112304688,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 205.23480224609375,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.59351348876953,
+          "std_ms": 0.6359517574310303
+        },
+        "inter_token_latency": {
+          "mean_ms": 70.5061264038086,
+          "std_ms": 50.77937698364258
+        },
+        "throughput": {
+          "mean_ms": 19.382282257080078,
+          "std_ms": 0.23890981078147888
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 35,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Paris",
+          "paris"
+        ],
+        "matched": [
+          "Paris"
+        ],
+        "passed": true,
+        "normalized": "The capital of France is Paris."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 15,
+      "phase": "warm_resident_ask",
+      "case_id": "instruction_single_sentence_rust",
+      "question": "Write one short sentence about Rust.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        7985,
+        825,
+        2805,
+        11652,
+        911,
+        33789,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 36,
+      "max_new_tokens": 16,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 16
+      },
+      "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "generated_token_ids": [
+        49,
+        590,
+        374,
+        458,
+        1787,
+        30774,
+        15473,
+        4128,
+        6188,
+        311,
+        387,
+        6092,
+        323,
+        11050,
+        1393,
+        20337
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 16,
+      "generation_wall_ms": 1036.2681000260636,
+      "first_streamed_text_chunk_ms": 360.79180001979694,
+      "first_streamed_text_chunk": "R",
+      "streamed_chunks_count": 15,
+      "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 1020.7990112304688,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 1015.2100219726562,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 240.05511474609375,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.99992752075195,
+          "std_ms": 1.033170461654663
+        },
+        "inter_token_latency": {
+          "mean_ms": 63.450626373291016,
+          "std_ms": 45.50807189941406
+        },
+        "throughput": {
+          "mean_ms": 19.230796813964844,
+          "std_ms": 0.3820907175540924
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 36,
+        "num_generated_tokens": 16
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Rust",
+          "rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "matched": [
+          "Rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "passed": true,
+        "normalized": "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 16,
+      "phase": "warm_resident_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 581.7194999544881,
+      "first_streamed_text_chunk_ms": 324.8200999805704,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 565.260986328125,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 562.2969970703125,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 205.60079956054688,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.26105880737305,
+          "std_ms": 0.5584191679954529
+        },
+        "inter_token_latency": {
+          "mean_ms": 70.28712463378906,
+          "std_ms": 51.01539611816406
+        },
+        "throughput": {
+          "mean_ms": 19.507986068725586,
+          "std_ms": 0.21251285076141357
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 17,
+      "phase": "warm_resident_ask",
+      "case_id": "short_factual_capital_france",
+      "question": "Name the capital of France.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "e88a7281fd8faeb2875e92cb05ced2cf32e9f6ed6082b733d58ab9aa98658e8e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        675,
+        279,
+        6722,
+        315,
+        9625,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 35,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "The capital of France is Paris.",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 591.9563000206836,
+      "first_streamed_text_chunk_ms": 329.22600000165403,
+      "first_streamed_text_chunk": "The",
+      "streamed_chunks_count": 7,
+      "streamed_text": "The capital of France is Paris.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 575.6220092773438,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 571.8590087890625,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 205.46380615234375,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 52.76044464111328,
+          "std_ms": 0.9578789472579956
+        },
+        "inter_token_latency": {
+          "mean_ms": 71.48237609863281,
+          "std_ms": 50.432823181152344
+        },
+        "throughput": {
+          "mean_ms": 18.95359230041504,
+          "std_ms": 0.34410718083381653
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 35,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Paris",
+          "paris"
+        ],
+        "matched": [
+          "Paris"
+        ],
+        "passed": true,
+        "normalized": "The capital of France is Paris."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 18,
+      "phase": "warm_resident_ask",
+      "case_id": "instruction_single_sentence_rust",
+      "question": "Write one short sentence about Rust.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        7985,
+        825,
+        2805,
+        11652,
+        911,
+        33789,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 36,
+      "max_new_tokens": 16,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 16
+      },
+      "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "generated_token_ids": [
+        49,
+        590,
+        374,
+        458,
+        1787,
+        30774,
+        15473,
+        4128,
+        6188,
+        311,
+        387,
+        6092,
+        323,
+        11050,
+        1393,
+        20337
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 16,
+      "generation_wall_ms": 992.8652999806218,
+      "first_streamed_text_chunk_ms": 325.68250002805144,
+      "first_streamed_text_chunk": "R",
+      "streamed_chunks_count": 15,
+      "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 977.9099731445312,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 972.8309936523438,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 206.9152069091797,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.34858703613281,
+          "std_ms": 1.1890923976898193
+        },
+        "inter_token_latency": {
+          "mean_ms": 60.801937103271484,
+          "std_ms": 37.66022872924805
+        },
+        "throughput": {
+          "mean_ms": 19.474733352661133,
+          "std_ms": 0.45098134875297546
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 36,
+        "num_generated_tokens": 16
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Rust",
+          "rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "matched": [
+          "Rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "passed": true,
+        "normalized": "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 19,
+      "phase": "warm_resident_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 577.991500031203,
+      "first_streamed_text_chunk_ms": 323.0900000198744,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 561.7009887695312,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 558.6010131835938,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 203.5167999267578,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.06898498535156,
+          "std_ms": 0.46525654196739197
+        },
+        "inter_token_latency": {
+          "mean_ms": 69.82512664794922,
+          "std_ms": 50.40785217285156
+        },
+        "throughput": {
+          "mean_ms": 19.581356048583984,
+          "std_ms": 0.17839308083057404
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 20,
+      "phase": "warm_resident_ask",
+      "case_id": "short_factual_capital_france",
+      "question": "Name the capital of France.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "e88a7281fd8faeb2875e92cb05ced2cf32e9f6ed6082b733d58ab9aa98658e8e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        675,
+        279,
+        6722,
+        315,
+        9625,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 35,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "The capital of France is Paris.",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 583.3134999847971,
+      "first_streamed_text_chunk_ms": 324.3789999978617,
+      "first_streamed_text_chunk": "The",
+      "streamed_chunks_count": 7,
+      "streamed_text": "The capital of France is Paris.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 567.5819702148438,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 564.291015625,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 203.79071044921875,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.86981201171875,
+          "std_ms": 1.3234925270080566
+        },
+        "inter_token_latency": {
+          "mean_ms": 70.536376953125,
+          "std_ms": 50.226009368896484
+        },
+        "throughput": {
+          "mean_ms": 19.279035568237305,
+          "std_ms": 0.49191737174987793
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 35,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Paris",
+          "paris"
+        ],
+        "matched": [
+          "Paris"
+        ],
+        "passed": true,
+        "normalized": "The capital of France is Paris."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 21,
+      "phase": "warm_resident_ask",
+      "case_id": "instruction_single_sentence_rust",
+      "question": "Write one short sentence about Rust.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        7985,
+        825,
+        2805,
+        11652,
+        911,
+        33789,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 36,
+      "max_new_tokens": 16,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 16
+      },
+      "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "generated_token_ids": [
+        49,
+        590,
+        374,
+        458,
+        1787,
+        30774,
+        15473,
+        4128,
+        6188,
+        311,
+        387,
+        6092,
+        323,
+        11050,
+        1393,
+        20337
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 16,
+      "generation_wall_ms": 992.6633999566548,
+      "first_streamed_text_chunk_ms": 328.8172999746166,
+      "first_streamed_text_chunk": "R",
+      "streamed_chunks_count": 15,
+      "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 969.3519897460938,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 962.8499755859375,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 202.24098205566406,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.0860595703125,
+          "std_ms": 1.1872947216033936
+        },
+        "inter_token_latency": {
+          "mean_ms": 60.178123474121094,
+          "std_ms": 36.58694076538086
+        },
+        "throughput": {
+          "mean_ms": 19.574811935424805,
+          "std_ms": 0.4549395740032196
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 36,
+        "num_generated_tokens": 16
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Rust",
+          "rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "matched": [
+          "Rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "passed": true,
+        "normalized": "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 22,
+      "phase": "warm_resident_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 574.3636999977753,
+      "first_streamed_text_chunk_ms": 322.2200999734923,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 559.0599975585938,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 555.9089965820312,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 203.25830078125,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 50.719085693359375,
+          "std_ms": 0.9681258797645569
+        },
+        "inter_token_latency": {
+          "mean_ms": 69.4886245727539,
+          "std_ms": 50.42074203491211
+        },
+        "throughput": {
+          "mean_ms": 19.71644401550293,
+          "std_ms": 0.37634748220443726
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 23,
+      "phase": "warm_resident_ask",
+      "case_id": "short_factual_capital_france",
+      "question": "Name the capital of France.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "e88a7281fd8faeb2875e92cb05ced2cf32e9f6ed6082b733d58ab9aa98658e8e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        675,
+        279,
+        6722,
+        315,
+        9625,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 35,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "The capital of France is Paris.",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 578.0589000205509,
+      "first_streamed_text_chunk_ms": 324.541500012856,
+      "first_streamed_text_chunk": "The",
+      "streamed_chunks_count": 7,
+      "streamed_text": "The capital of France is Paris.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 563.843017578125,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 560.8939819335938,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 207.33749389648438,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 50.84845733642578,
+          "std_ms": 0.8544445037841797
+        },
+        "inter_token_latency": {
+          "mean_ms": 70.11174774169922,
+          "std_ms": 51.70758056640625
+        },
+        "throughput": {
+          "mean_ms": 19.66628074645996,
+          "std_ms": 0.330467164516449
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 35,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Paris",
+          "paris"
+        ],
+        "matched": [
+          "Paris"
+        ],
+        "passed": true,
+        "normalized": "The capital of France is Paris."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 24,
+      "phase": "warm_resident_ask",
+      "case_id": "instruction_single_sentence_rust",
+      "question": "Write one short sentence about Rust.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        7985,
+        825,
+        2805,
+        11652,
+        911,
+        33789,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 36,
+      "max_new_tokens": 16,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 16
+      },
+      "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "generated_token_ids": [
+        49,
+        590,
+        374,
+        458,
+        1787,
+        30774,
+        15473,
+        4128,
+        6188,
+        311,
+        387,
+        6092,
+        323,
+        11050,
+        1393,
+        20337
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 16,
+      "generation_wall_ms": 971.354000037536,
+      "first_streamed_text_chunk_ms": 319.70760005060583,
+      "first_streamed_text_chunk": "R",
+      "streamed_chunks_count": 15,
+      "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 958.1790161132812,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 952.2869873046875,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 204.5980987548828,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 50.18347930908203,
+          "std_ms": 1.2266643047332764
+        },
+        "inter_token_latency": {
+          "mean_ms": 59.51793670654297,
+          "std_ms": 37.36240005493164
+        },
+        "throughput": {
+          "mean_ms": 19.926876068115234,
+          "std_ms": 0.48708435893058777
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 36,
+        "num_generated_tokens": 16
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Rust",
+          "rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "matched": [
+          "Rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "passed": true,
+        "normalized": "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 25,
+      "phase": "warm_resident_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 575.422800029628,
+      "first_streamed_text_chunk_ms": 323.7815000466071,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 558.0029907226562,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 554.656005859375,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 204.57440185546875,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 50.39207077026367,
+          "std_ms": 0.8542512655258179
+        },
+        "inter_token_latency": {
+          "mean_ms": 69.33200073242188,
+          "std_ms": 50.87797546386719
+        },
+        "throughput": {
+          "mean_ms": 19.844392776489258,
+          "std_ms": 0.33640405535697937
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 26,
+      "phase": "warm_resident_ask",
+      "case_id": "short_factual_capital_france",
+      "question": "Name the capital of France.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "e88a7281fd8faeb2875e92cb05ced2cf32e9f6ed6082b733d58ab9aa98658e8e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        675,
+        279,
+        6722,
+        315,
+        9625,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 35,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "The capital of France is Paris.",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 578.2733000232838,
+      "first_streamed_text_chunk_ms": 321.10960001591593,
+      "first_streamed_text_chunk": "The",
+      "streamed_chunks_count": 7,
+      "streamed_text": "The capital of France is Paris.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 563.5260009765625,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 560.5419921875,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 203.71820068359375,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.29438400268555,
+          "std_ms": 0.9803957939147949
+        },
+        "inter_token_latency": {
+          "mean_ms": 70.0677490234375,
+          "std_ms": 50.37247848510742
+        },
+        "throughput": {
+          "mean_ms": 19.495311737060547,
+          "std_ms": 0.3726162612438202
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 35,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Paris",
+          "paris"
+        ],
+        "matched": [
+          "Paris"
+        ],
+        "passed": true,
+        "normalized": "The capital of France is Paris."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 27,
+      "phase": "warm_resident_ask",
+      "case_id": "instruction_single_sentence_rust",
+      "question": "Write one short sentence about Rust.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        7985,
+        825,
+        2805,
+        11652,
+        911,
+        33789,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 36,
+      "max_new_tokens": 16,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 16
+      },
+      "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "generated_token_ids": [
+        49,
+        590,
+        374,
+        458,
+        1787,
+        30774,
+        15473,
+        4128,
+        6188,
+        311,
+        387,
+        6092,
+        323,
+        11050,
+        1393,
+        20337
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 16,
+      "generation_wall_ms": 991.8591000023298,
+      "first_streamed_text_chunk_ms": 320.3374000149779,
+      "first_streamed_text_chunk": "R",
+      "streamed_chunks_count": 15,
+      "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 978.2550048828125,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 972.5490112304688,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 202.86061096191406,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.648067474365234,
+          "std_ms": 1.6156121492385864
+        },
+        "inter_token_latency": {
+          "mean_ms": 60.7843132019043,
+          "std_ms": 36.59778594970703
+        },
+        "throughput": {
+          "mean_ms": 19.36180877685547,
+          "std_ms": 0.605660080909729
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 36,
+        "num_generated_tokens": 16
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Rust",
+          "rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "matched": [
+          "Rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "passed": true,
+        "normalized": "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 28,
+      "phase": "warm_resident_ask",
+      "case_id": "math_2_plus_2_brief",
+      "question": "What is 2+2? Answer briefly.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        26753,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 39,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "2 + 2 equals 4.",
+      "generated_token_ids": [
+        17,
+        488,
+        220,
+        17,
+        16819,
+        220,
+        19,
+        13
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 571.8864999944344,
+      "first_streamed_text_chunk_ms": 318.15419998019934,
+      "first_streamed_text_chunk": "2",
+      "streamed_chunks_count": 7,
+      "streamed_text": "2 + 2 equals 4.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 558.114990234375,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 554.8829956054688,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 200.2917022705078,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 50.99867248535156,
+          "std_ms": 0.753451406955719
+        },
+        "inter_token_latency": {
+          "mean_ms": 69.3603744506836,
+          "std_ms": 49.30406951904297
+        },
+        "throughput": {
+          "mean_ms": 19.608352661132812,
+          "std_ms": 0.2896926701068878
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 39,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "4",
+          "four"
+        ],
+        "matched": [
+          "4"
+        ],
+        "passed": true,
+        "normalized": "2 + 2 equals 4."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 29,
+      "phase": "warm_resident_ask",
+      "case_id": "short_factual_capital_france",
+      "question": "Name the capital of France.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nName the capital of France.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "e88a7281fd8faeb2875e92cb05ced2cf32e9f6ed6082b733d58ab9aa98658e8e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        675,
+        279,
+        6722,
+        315,
+        9625,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 35,
+      "max_new_tokens": 8,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 8
+      },
+      "generated_text": "The capital of France is Paris.",
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        12095,
+        13,
+        151645
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 8,
+      "generation_wall_ms": 575.5129999597557,
+      "first_streamed_text_chunk_ms": 319.68650000635535,
+      "first_streamed_text_chunk": "The",
+      "streamed_chunks_count": 7,
+      "streamed_text": "The capital of France is Paris.",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 561.5889892578125,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 558.2769775390625,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 202.14158630371094,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.23365783691406,
+          "std_ms": 0.5933657884597778
+        },
+        "inter_token_latency": {
+          "mean_ms": 69.78462219238281,
+          "std_ms": 49.88819122314453
+        },
+        "throughput": {
+          "mean_ms": 19.51841926574707,
+          "std_ms": 0.22605377435684204
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 35,
+        "num_generated_tokens": 8
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Paris",
+          "paris"
+        ],
+        "matched": [
+          "Paris"
+        ],
+        "passed": true,
+        "normalized": "The capital of France is Paris."
+      },
+      "fallback_used": false
+    },
+    {
+      "sequence_index": 30,
+      "phase": "warm_resident_ask",
+      "case_id": "instruction_single_sentence_rust",
+      "question": "Write one short sentence about Rust.",
+      "prompt_template": "qwen2.5",
+      "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWrite one short sentence about Rust.<|im_end|>\n<|im_start|>assistant\n",
+      "rendered_sha256": "d1ccd52298dd83fa53efc426878f94300606a14d70e2c27a542d40f145469a3e",
+      "prompt_token_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        7985,
+        825,
+        2805,
+        11652,
+        911,
+        33789,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "prompt_token_count": 36,
+      "max_new_tokens": 16,
+      "greedy": true,
+      "generation_config": {
+        "do_sample": false,
+        "num_beams": 1,
+        "apply_chat_template": true,
+        "max_new_tokens": 16
+      },
+      "generated_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "generated_token_ids": [
+        49,
+        590,
+        374,
+        458,
+        1787,
+        30774,
+        15473,
+        4128,
+        6188,
+        311,
+        387,
+        6092,
+        323,
+        11050,
+        1393,
+        20337
+      ],
+      "generated_token_ids_available_from_pipeline": true,
+      "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+      "generated_token_count": 16,
+      "generation_wall_ms": 992.0289000147022,
+      "first_streamed_text_chunk_ms": 323.66260001435876,
+      "first_streamed_text_chunk": "R",
+      "streamed_chunks_count": 15,
+      "streamed_text": "Rust is an open-source programming language designed to be safe and efficient while maintaining",
+      "openvino_perf_metrics": {
+        "load_time_ms": 1434.0,
+        "tokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "generate": {
+          "mean_ms": 977.1090087890625,
+          "std_ms": 0.0
+        },
+        "inference": {
+          "mean_ms": 971.6420288085938,
+          "std_ms": 0.0
+        },
+        "time_to_first_token": {
+          "mean_ms": 205.07618713378906,
+          "std_ms": 0.0
+        },
+        "time_per_output_token": {
+          "mean_ms": 51.41951370239258,
+          "std_ms": 0.9105223417282104
+        },
+        "inter_token_latency": {
+          "mean_ms": 60.72762680053711,
+          "std_ms": 37.1513557434082
+        },
+        "throughput": {
+          "mean_ms": 19.4478702545166,
+          "std_ms": 0.34437742829322815
+        },
+        "detokenization": {
+          "mean_ms": -1.0,
+          "std_ms": -1.0
+        },
+        "num_input_tokens": 36,
+        "num_generated_tokens": 16
+      },
+      "answer_gate": {
+        "kind": "contains_any",
+        "contains_any": [
+          "Rust",
+          "rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "matched": [
+          "Rust",
+          "programming",
+          "language",
+          "safe",
+          "efficient"
+        ],
+        "passed": true,
+        "normalized": "Rust is an open-source programming language designed to be safe and efficient while maintaining"
+      },
+      "fallback_used": false
+    }
+  ],
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "openvino_available_devices": [
+      "CPU",
+      "GPU",
+      "NPU"
+    ],
+    "openvino_version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+    "openvino_genai_version": "2026.1.0.0-2957-1dabb8c2255"
+  },
+  "generated_token_visibility": {
+    "direct_generated_token_ids_available": true,
+    "generated_token_ids_source": "openvino_genai_encoded_results_tokens"
+  },
+  "claim_boundary": {
+    "new_inference_executed": true,
+    "route_promotion_changed": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "native_npu_inference_claim": false,
+    "bitnet_qk256_i2s_behavior_changed": false,
+    "must_not_claim": [
+      "OpenVINO NPU is promoted for any route profile",
+      "OpenVINO NPU speedup is proven",
+      "OpenVINO NPU power advantage is proven",
+      "Intel NPU acceleration is proven",
+      "Native NPU inference outside OpenVINO GenAI is proven",
+      "Full BitNet inference works on Arc or NPU",
+      "Packed QK256 decode works on Arc or NPU",
+      "Dense SLM receipts prove BitNet QK256/I2_S behavior"
+    ]
+  }
+}

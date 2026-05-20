@@ -1,6 +1,6 @@
 {
   "artifact_kind": "inference_result",
-  "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\math_2_plus_2_brief.json",
+  "artifact_path": "ci/hardware/intel-258v/2026-05-08\\slm-answer-corpus-qwen25-cpu-corpus-v2-runs\\math_2_plus_2_brief.json",
   "counts": {
     "n_kv": 26,
     "n_tensors": 291,
@@ -36,7 +36,7 @@
     "fallback_used": false,
     "generated_tokens": 8,
     "phase": "decode",
-    "prompt_tokens": 38,
+    "prompt_tokens": 39,
     "requested_backend": "cpu",
     "runtime_api": "cpu",
     "selected_backend": "cpu-rust",
@@ -55,10 +55,14 @@
     "deterministic": true,
     "explicit_bos_requested": false,
     "greedy": true,
+    "max_new_tokens": 8,
     "parse_special": true,
     "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
     "seed": 0,
-    "temperature": 0.0
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
   },
   "kernel": {
     "dequantizes_before_compute": true,
@@ -68,9 +72,9 @@
     "layout": "gguf_dense_q8_0"
   },
   "latency": {
-    "cmd_to_first_ms": 9018,
-    "decode_first_ms": 9018,
-    "total_ms": 11326
+    "cmd_to_first_ms": 9349,
+    "decode_first_ms": 9349,
+    "total_ms": 11685
   },
   "loader": {
     "minimal_fallback_allowed": false,
@@ -97,7 +101,7 @@
     "format": "gguf",
     "loader_mode": "real_gguf",
     "output_head_tensor": "output.weight",
-    "path": "C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "path": "C:/Users/szim9/AppData/Local/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
     "quant_format": "Q8_0",
     "repo": "Qwen/Qwen2.5-0.5B-Instruct",
     "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
@@ -266,82 +270,82 @@
     "decode": {
       "embed_ms": {
         "count": 8,
-        "max_ms": 0.05,
-        "mean_ms": 0.03,
-        "min_ms": 0.02,
-        "p50_ms": 0.027,
-        "p95_ms": 0.05,
-        "total_ms": 0.244
+        "max_ms": 0.048,
+        "mean_ms": 0.026,
+        "min_ms": 0.021,
+        "p50_ms": 0.023,
+        "p95_ms": 0.048,
+        "total_ms": 0.212
       },
-      "first_token_decode_ms": 332.194,
+      "first_token_decode_ms": 330.648,
       "forward_ms": {
         "count": 8,
-        "max_ms": 285.194,
-        "mean_ms": 236.909,
-        "min_ms": 224.207,
-        "p50_ms": 230.099,
-        "p95_ms": 285.194,
-        "total_ms": 1895.271
+        "max_ms": 246.756,
+        "mean_ms": 239.619,
+        "min_ms": 233.2,
+        "p50_ms": 237.58,
+        "p95_ms": 246.756,
+        "total_ms": 1916.953
       },
       "generated_tokens": 8,
       "logits_ms": {
         "count": 8,
-        "max_ms": 86.533,
-        "mean_ms": 83.069,
-        "min_ms": 81.43,
-        "p50_ms": 82.5,
-        "p95_ms": 86.533,
-        "total_ms": 664.556
+        "max_ms": 88.702,
+        "mean_ms": 84.619,
+        "min_ms": 81.517,
+        "p50_ms": 84.198,
+        "p95_ms": 88.702,
+        "total_ms": 676.956
       },
       "per_token_ms": {
         "count": 8,
-        "max_ms": 381.047,
-        "mean_ms": 329.839,
-        "min_ms": 314.781,
-        "p50_ms": 322.632,
-        "p95_ms": 381.047,
-        "total_ms": 2638.711
+        "max_ms": 338.943,
+        "mean_ms": 333.139,
+        "min_ms": 325.357,
+        "p50_ms": 330.648,
+        "p95_ms": 338.943,
+        "total_ms": 2665.111
       },
       "sample_ms": {
         "count": 8,
-        "max_ms": 4.977,
-        "mean_ms": 3.083,
-        "min_ms": 2.654,
-        "p50_ms": 2.756,
-        "p95_ms": 4.977,
-        "total_ms": 24.663
+        "max_ms": 2.364,
+        "mean_ms": 2.143,
+        "min_ms": 1.977,
+        "p50_ms": 2.107,
+        "p95_ms": 2.364,
+        "total_ms": 17.143
       },
       "steady_per_token_ms": {
         "count": 7,
-        "max_ms": 381.047,
-        "mean_ms": 329.502,
-        "min_ms": 314.781,
-        "p50_ms": 322.632,
-        "p95_ms": 381.047,
-        "total_ms": 2306.517
+        "max_ms": 338.943,
+        "mean_ms": 333.495,
+        "min_ms": 325.357,
+        "p50_ms": 337.023,
+        "p95_ms": 338.943,
+        "total_ms": 2334.463
       },
-      "steady_state_tok_s": 3.035,
+      "steady_state_tok_s": 2.999,
       "steady_state_tokens": 7,
       "token_decode_ms": {
         "count": 8,
-        "max_ms": 0.116,
-        "mean_ms": 0.045,
-        "min_ms": 0.021,
-        "p50_ms": 0.023,
-        "p95_ms": 0.116,
-        "total_ms": 0.36
+        "max_ms": 0.083,
+        "mean_ms": 0.04,
+        "min_ms": 0.022,
+        "p50_ms": 0.026,
+        "p95_ms": 0.083,
+        "total_ms": 0.32
       },
       "warmup_tokens": 1
     },
     "id": "default",
     "kind": "steady_decode_prefill",
     "machine_context_recorded": true,
-    "model_load_ms": 14904.392,
+    "model_load_ms": 13964.986,
     "phase": "decode",
     "prompt_prefill": {
       "exercised": true,
       "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
-      "ms": 8685.707,
+      "ms": 9017.752,
       "per_token_ms": {
         "count": 0,
         "max_ms": null,
@@ -351,27 +355,75 @@
         "p95_ms": null,
         "total_ms": 0.0
       },
-      "tokens": 37
+      "tokens": 38
     },
-    "prompt_tokenize_ms": 450.668,
+    "prompt_tokenize_ms": 477.944,
     "requested": false,
-    "tokenizer_load_ms": 582.743
+    "tokenizer_load_ms": 598.325
   },
   "prompt": "What is 2+2? Answer briefly.",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 8,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "3e323f0d547b84415ad67df1f3c39717f1ed531fa05107348e67411eb45c2eaf",
+    "identity_sha256": "b7c2b1c33e751e2fbaac61c242b9ece7495f79feb320ceaea4ef5d21438f2ccf",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        151645,
+        151644
+      ]
+    },
+    "stop_criteria_sha256": "51dbd89eb1b858882b35fc2340257e0c109c8261500f46ba8b5b6cd2687948ca",
+    "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+    "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+    "template": {
+      "family": "qwen25-chat",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "qwen25-chat",
+    "template_sha256": "be829f95ac1a95f9fd9b9641a7df864186594cde3285438f6f8fdddc89c428e3",
+    "tokenizer_authority": {
+      "authority": "present",
+      "sha256": null,
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
   "prompt_identity": {
     "bos_policy": false,
     "parse_special": true,
-    "prompt_token_count": 38,
-    "prompt_token_ids_sha256": "75ddf826412d17d58cc690bc9a0f30d04285eaf100ab353d9298a7be3564aefd",
-    "rendered_prompt_sha256": "b961868779bafb2031363ff50341023c271a6e7a7d1a56cf56e6d9eb9f803306",
+    "prompt_token_count": 39,
+    "prompt_token_ids_sha256": "fa826367581ab8bd5378aeb3a196b048fa24123ff868adac8aafe11f2cd6a0b7",
+    "rendered_prompt_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
     "template": "qwen25-chat"
   },
   "prompt_render": {
     "add_bos": false,
     "parse_special": true,
     "qwen_no_think": false,
-    "rendered_sha256": "b961868779bafb2031363ff50341023c271a6e7a7d1a56cf56e6d9eb9f803306",
-    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant",
+    "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
     "stop_sequences": [
       "<|im_end|>",
       "<|im_start|>"
@@ -384,6 +436,8 @@
   },
   "proof_summary": {
     "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
     "claim_level": "diagnostic_cli_run",
     "execution_backend": "cpu-rust",
     "execution_backend_matched": false,
@@ -428,13 +482,13 @@
     ],
     "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
     "decode_tokens": 8,
-    "decode_tps": 0.7063393960798163,
+    "decode_tps": 0.6846384253316217,
     "fallback_reason": null,
     "fallback_used": false,
     "loader_mode": "real_gguf",
     "model_family": "qwen",
     "phase": "decode",
-    "prompt_tokens": 38,
+    "prompt_tokens": 39,
     "provenance": "dense_slm_gguf_cpu_reference",
     "quant_format": "Q8_0",
     "requested_backend": "cpu",
@@ -445,25 +499,25 @@
     "tokenizer_source": "gguf_metadata",
     "tokenizer_strict": true
   },
-  "text": "\n2+2 equals 4.",
+  "text": "2+2 equals 4.<|im_end|>",
   "throughput": {
     "decoded_tokens": 8,
-    "tokens_per_second": 0.7063393960798163
+    "tokens_per_second": 0.6846384253316217
   },
-  "timestamp": "2026-05-16T15:18:55.647623700+00:00",
+  "timestamp": "2026-05-19T04:56:14.901788300+00:00",
   "timing": {
     "cuda_kernel_time_ms": null,
-    "decode_steady_state_tok_s": 3.035,
-    "decode_total_ms": 2638.711,
+    "decode_steady_state_tok_s": 2.999,
+    "decode_total_ms": 2665.111,
     "device_to_host_bytes": null,
-    "first_token_decode_ms": 332.194,
-    "first_token_ms": 9018,
+    "first_token_decode_ms": 330.648,
+    "first_token_ms": 9349,
     "host_to_device_bytes": null,
-    "model_load_ms": 14904.392,
-    "prefill_ms": 8685.707,
-    "sampling_ms_per_token": 3.083,
-    "tokenize_ms": 450.668,
-    "tokenizer_load_ms": 582.743
+    "model_load_ms": 13964.986,
+    "prefill_ms": 9017.752,
+    "sampling_ms_per_token": 2.143,
+    "tokenize_ms": 477.944,
+    "tokenizer_load_ms": 598.325
   },
   "tokenizer": {
     "bos": 151643,
@@ -478,26 +532,26 @@
   "tokens": {
     "generated": 8,
     "generated_ids": [
-      198,
       17,
       10,
       17,
       16819,
       220,
       19,
-      13
+      13,
+      151645
     ],
     "ids": [
-      198,
       17,
       10,
       17,
       16819,
       220,
       19,
-      13
+      13,
+      151645
     ],
-    "prompt": 38,
+    "prompt": 39,
     "prompt_ids": [
       151644,
       8948,
@@ -536,8 +590,9 @@
       151645,
       198,
       151644,
-      77091
+      77091,
+      198
     ],
-    "total": 46
+    "total": 47
   }
 }

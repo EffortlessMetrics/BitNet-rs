@@ -3,7 +3,7 @@
   "artifact_kind": "lunar_lake_openvino_operator_ask",
   "campaign": "intel-258v-platform",
   "item": "LNL258V-ASK-004",
-  "created_utc": "2026-05-19T02:31:00Z",
+  "created_utc": "2026-05-18T19:45:22Z",
   "machine_id": "intel-258v",
   "proof_stage": "operator_candidate_route_executed",
   "requested_backend": "openvino-npu",
@@ -172,7 +172,7 @@
     "generated_token_ids_available_from_pipeline": true,
     "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
     "generated_token_count": 9,
-    "first_streamed_text_chunk_ms": 342.5390999764204,
+    "first_streamed_text_chunk_ms": 644.2006999859586,
     "first_streamed_text_chunk": "2",
     "streamed_chunks_count": 8,
     "streamed_text": "2 + 2 equals 4."
@@ -184,37 +184,37 @@
     "failed_rules": []
   },
   "timing": {
-    "pipeline_construct_wall_ms": 29396.27910000854,
-    "generation_wall_ms": 510.03449998097494,
+    "pipeline_construct_wall_ms": 29129.048800008604,
+    "generation_wall_ms": 913.3272999897599,
     "openvino_perf_metrics": {
-      "load_time_ms": 29373.0,
+      "load_time_ms": 29105.0,
       "tokenization": {
         "mean_ms": -1.0,
         "std_ms": -1.0
       },
       "generate": {
-        "mean_ms": 502.3110046386719,
+        "mean_ms": 894.625,
         "std_ms": 0.0
       },
       "inference": {
-        "mean_ms": 499.3179931640625,
+        "mean_ms": 889.833984375,
         "std_ms": 0.0
       },
       "time_to_first_token": {
-        "mean_ms": 241.01649475097656,
+        "mean_ms": 334.3456726074219,
         "std_ms": 0.0
       },
       "time_per_output_token": {
-        "mean_ms": 32.59922409057617,
-        "std_ms": 12.345602035522461
+        "mean_ms": 69.94927215576172,
+        "std_ms": 54.59255599975586
       },
       "inter_token_latency": {
-        "mean_ms": 55.47977828979492,
-        "std_ms": 66.42837524414062
+        "mean_ms": 98.87044525146484,
+        "std_ms": 97.62153625488281
       },
       "throughput": {
-        "mean_ms": 30.67557716369629,
-        "std_ms": 11.617100715637207
+        "mean_ms": 14.296074867248535,
+        "std_ms": 11.157503128051758
       },
       "detokenization": {
         "mean_ms": -1.0,

@@ -1,0 +1,420 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_openvino_npu_cache_experiment",
+  "campaign": "intel-258v-platform",
+  "item": "LNL258V-NPU-CACHE-001",
+  "created_utc": "2026-05-19T02:30:00Z",
+  "machine_id": "intel-258v",
+  "proof_stage": "candidate_route_cache_hit_miss_experiment_no_promotion_change",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "comparison_scope": "two_separate_openvino_genai_npu_processes_with_one_cache_dir",
+  "route_id": "dense_slm_openvino_npu_candidate",
+  "requested_backend": "openvino-npu",
+  "selected_backend": "openvino-npu",
+  "runtime_api": "openvino_genai",
+  "runtime_device": "NPU",
+  "backend_lane": "dense_slm_openvino_npu",
+  "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+  "fallback_used": false,
+  "model": {
+    "source": "Qwen/Qwen2.5-0.5B-Instruct",
+    "local_path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+    "architecture": "qwen2",
+    "openvino_ir": {
+      "xml": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
+        "exists": true,
+        "bytes": 2167169,
+        "sha256": "92079df4e311238df5a3cd94848fc84730eefbce08e59f053d8a0aeaa7fb39f4"
+      },
+      "bin": {
+        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
+        "exists": true,
+        "bytes": 321326157,
+        "sha256": "a15e9535aaf4c8286b7b45f0490dca593cc751450c3b832416ad377bb190b2a9"
+      }
+    }
+  },
+  "cache": {
+    "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
+    "cache_enabled": true,
+    "cache_writable": true,
+    "cache_hit_evidence": "cache_files_created_then_second_process_timing_improved",
+    "cache_hit_runtime_metric_available": false,
+    "cache_files_created": true,
+    "cache_files_reused_or_stable": true,
+    "material_improvement_ratio_threshold": 0.75,
+    "material_improvement_ms_threshold": 2000.0,
+    "cache_effective_by_timing": true,
+    "initial_snapshot": {
+      "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
+      "exists": true,
+      "file_count": 0,
+      "total_bytes": 0,
+      "files": []
+    },
+    "after_first_process_snapshot": {
+      "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
+      "exists": true,
+      "file_count": 1,
+      "total_bytes": 154693720,
+      "files": [
+        {
+          "path": "8993114486211131037.blob",
+          "bytes": 154693720,
+          "mtime_ns": 1779129075212284000,
+          "sha256": null
+        }
+      ]
+    },
+    "after_second_process_snapshot": {
+      "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
+      "exists": true,
+      "file_count": 1,
+      "total_bytes": 154693720,
+      "files": [
+        {
+          "path": "8993114486211131037.blob",
+          "bytes": 154693720,
+          "mtime_ns": 1779129075212284000,
+          "sha256": null
+        }
+      ]
+    }
+  },
+  "process_runs": [
+    {
+      "iteration": "first_process",
+      "command": [
+        "C:\\Code\\Rust\\BitNet-rs\\.venv\\Scripts\\python.exe",
+        "C:\\Code\\Rust\\BitNet-rs\\scripts\\openvino_genai_npu_cache_probe.py",
+        "--child-run",
+        "--child-iteration",
+        "first_process",
+        "--model-dir",
+        "models\\openvino\\qwen2.5-0.5b-instruct-int4-sym",
+        "--cache-dir",
+        "target\\openvino-cache\\lnl258v-ov-token-npu-cache-fresh",
+        "--json-out",
+        "target\\openvino-cache\\lnl258v-ov-token-npu-cache-probe-runs\\first-process.json",
+        "--device",
+        "NPU",
+        "--question",
+        "What is 2+2? Answer briefly.",
+        "--expect-contains",
+        "4",
+        "--max-new-tokens",
+        "8"
+      ],
+      "process_returncode": 0,
+      "process_wall_ms": 29286.901900020894,
+      "stdout_tail": "",
+      "stderr_tail": "C:\\Code\\Rust\\BitNet-rs\\scripts\\openvino_genai_npu_cache_probe.py:152: DeprecationWarning: 'config' parameters is deprecated, please use kwargs to pass config properties instead.\n  pipe = ov_genai.LLMPipeline(str(args.model_dir), args.device, {\"CACHE_DIR\": str(args.cache_dir)})\n",
+      "child_receipt": {
+        "iteration": "first_process",
+        "runtime_api": "openvino_genai",
+        "runtime_device": "NPU",
+        "resolved_device": "Intel(R) AI Boost",
+        "selected_backend": "openvino-npu",
+        "fallback_used": false,
+        "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
+        "pipeline_construct_wall_ms": 28103.867300000275,
+        "prompt": {
+          "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+          "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+          "prompt_token_ids": [
+            151644,
+            8948,
+            198,
+            2610,
+            525,
+            1207,
+            16948,
+            11,
+            3465,
+            553,
+            54364,
+            14817,
+            13,
+            1446,
+            525,
+            264,
+            10950,
+            17847,
+            13,
+            151645,
+            198,
+            151644,
+            872,
+            198,
+            3838,
+            374,
+            220,
+            17,
+            10,
+            17,
+            30,
+            21806,
+            26753,
+            13,
+            151645,
+            198,
+            151644,
+            77091,
+            198
+          ],
+          "prompt_token_count": 39
+        },
+        "question": "What is 2+2? Answer briefly.",
+        "max_new_tokens": 8,
+        "generated_text": "2 + 2 equals 4.",
+        "generated_token_ids": [
+          17,
+          488,
+          220,
+          17,
+          16819,
+          220,
+          19,
+          13
+        ],
+        "generated_token_ids_available_from_pipeline": true,
+        "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+        "generated_token_count": 8,
+        "generation_wall_ms": 469.54329998698086,
+        "first_streamed_text_chunk_ms": 331.8116999871563,
+        "streamed_chunks_count": 7,
+        "streamed_text": "2 + 2 equals 4.",
+        "openvino_perf_metrics": {
+          "load_time_ms": 28083.0,
+          "tokenization": {
+            "mean_ms": -1.0,
+            "std_ms": -1.0
+          },
+          "generate": {
+            "mean_ms": 450.6629943847656,
+            "std_ms": 0.0
+          },
+          "inference": {
+            "mean_ms": 448.2550048828125,
+            "std_ms": 0.0
+          },
+          "time_to_first_token": {
+            "mean_ms": 229.32159423828125,
+            "std_ms": 0.0
+          },
+          "time_per_output_token": {
+            "mean_ms": 31.55044174194336,
+            "std_ms": 9.563253402709961
+          },
+          "inter_token_latency": {
+            "mean_ms": 56.03187561035156,
+            "std_ms": 65.90382385253906
+          },
+          "throughput": {
+            "mean_ms": 31.69527816772461,
+            "std_ms": 9.60715389251709
+          },
+          "detokenization": {
+            "mean_ms": -1.0,
+            "std_ms": -1.0
+          },
+          "num_input_tokens": 39,
+          "num_generated_tokens": 8
+        },
+        "answer_gate": {
+          "kind": "contains",
+          "expected": "4",
+          "passed": true,
+          "normalized": "2 + 2 equals 4."
+        }
+      }
+    },
+    {
+      "iteration": "second_process",
+      "command": [
+        "C:\\Code\\Rust\\BitNet-rs\\.venv\\Scripts\\python.exe",
+        "C:\\Code\\Rust\\BitNet-rs\\scripts\\openvino_genai_npu_cache_probe.py",
+        "--child-run",
+        "--child-iteration",
+        "second_process",
+        "--model-dir",
+        "models\\openvino\\qwen2.5-0.5b-instruct-int4-sym",
+        "--cache-dir",
+        "target\\openvino-cache\\lnl258v-ov-token-npu-cache-fresh",
+        "--json-out",
+        "target\\openvino-cache\\lnl258v-ov-token-npu-cache-probe-runs\\second-process.json",
+        "--device",
+        "NPU",
+        "--question",
+        "What is 2+2? Answer briefly.",
+        "--expect-contains",
+        "4",
+        "--max-new-tokens",
+        "8"
+      ],
+      "process_returncode": 0,
+      "process_wall_ms": 1821.1383000016212,
+      "stdout_tail": "",
+      "stderr_tail": "C:\\Code\\Rust\\BitNet-rs\\scripts\\openvino_genai_npu_cache_probe.py:152: DeprecationWarning: 'config' parameters is deprecated, please use kwargs to pass config properties instead.\n  pipe = ov_genai.LLMPipeline(str(args.model_dir), args.device, {\"CACHE_DIR\": str(args.cache_dir)})\n",
+      "child_receipt": {
+        "iteration": "second_process",
+        "runtime_api": "openvino_genai",
+        "runtime_device": "NPU",
+        "resolved_device": "Intel(R) AI Boost",
+        "selected_backend": "openvino-npu",
+        "fallback_used": false,
+        "cache_dir": "target/openvino-cache/lnl258v-ov-token-npu-cache-fresh",
+        "pipeline_construct_wall_ms": 872.6620000088587,
+        "prompt": {
+          "rendered_prompt": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer briefly.<|im_end|>\n<|im_start|>assistant\n",
+          "rendered_sha256": "ebbdae27cd6294724f8d7e1568c236ed907b5d9346da1e6d6e80e7f0f296c99a",
+          "prompt_token_ids": [
+            151644,
+            8948,
+            198,
+            2610,
+            525,
+            1207,
+            16948,
+            11,
+            3465,
+            553,
+            54364,
+            14817,
+            13,
+            1446,
+            525,
+            264,
+            10950,
+            17847,
+            13,
+            151645,
+            198,
+            151644,
+            872,
+            198,
+            3838,
+            374,
+            220,
+            17,
+            10,
+            17,
+            30,
+            21806,
+            26753,
+            13,
+            151645,
+            198,
+            151644,
+            77091,
+            198
+          ],
+          "prompt_token_count": 39
+        },
+        "question": "What is 2+2? Answer briefly.",
+        "max_new_tokens": 8,
+        "generated_text": "2 + 2 equals 4.",
+        "generated_token_ids": [
+          17,
+          488,
+          220,
+          17,
+          16819,
+          220,
+          19,
+          13
+        ],
+        "generated_token_ids_available_from_pipeline": true,
+        "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+        "generated_token_count": 8,
+        "generation_wall_ms": 443.70689999777824,
+        "first_streamed_text_chunk_ms": 307.4178999813739,
+        "streamed_chunks_count": 7,
+        "streamed_text": "2 + 2 equals 4.",
+        "openvino_perf_metrics": {
+          "load_time_ms": 853.0,
+          "tokenization": {
+            "mean_ms": -1.0,
+            "std_ms": -1.0
+          },
+          "generate": {
+            "mean_ms": 438.3030090332031,
+            "std_ms": 0.0
+          },
+          "inference": {
+            "mean_ms": 436.7879943847656,
+            "std_ms": 0.0
+          },
+          "time_to_first_token": {
+            "mean_ms": 230.22381591796875,
+            "std_ms": 0.0
+          },
+          "time_per_output_token": {
+            "mean_ms": 29.67557144165039,
+            "std_ms": 5.514401912689209
+          },
+          "inter_token_latency": {
+            "mean_ms": 54.5984992980957,
+            "std_ms": 66.48574829101562
+          },
+          "throughput": {
+            "mean_ms": 33.697750091552734,
+            "std_ms": 6.261815071105957
+          },
+          "detokenization": {
+            "mean_ms": -1.0,
+            "std_ms": -1.0
+          },
+          "num_input_tokens": 39,
+          "num_generated_tokens": 8
+        },
+        "answer_gate": {
+          "kind": "contains",
+          "expected": "4",
+          "passed": true,
+          "normalized": "2 + 2 equals 4."
+        }
+      }
+    }
+  ],
+  "comparison": {
+    "first_pipeline_construct_wall_ms": 28103.867300000275,
+    "second_pipeline_construct_wall_ms": 872.6620000088587,
+    "second_to_first_construct_ratio": 0.03105131371043907,
+    "construct_improvement_ms": 27231.205299991416,
+    "first_answer_gate_passed": true,
+    "second_answer_gate_passed": true,
+    "cache_experiment_ready": true,
+    "classification": "cache_materially_reduces_pipeline_construct"
+  },
+  "environment": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "openvino_version": "2026.1.0-21367-63e31528c62-releases/2026/1",
+    "openvino_genai_version": "2026.1.0.0-2957-1dabb8c2255"
+  },
+  "generated_token_visibility": {
+    "direct_generated_token_ids_available": true,
+    "generated_token_ids_source": "openvino_genai_encoded_results_tokens"
+  },
+  "claim_boundary": {
+    "route_promotion_changed": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "native_npu_inference_claim": false,
+    "bitnet_qk256_i2s_behavior_changed": false,
+    "must_not_claim": [
+      "OpenVINO NPU is promoted for any route profile",
+      "OpenVINO NPU speedup is proven",
+      "OpenVINO NPU power advantage is proven",
+      "Intel NPU acceleration is proven",
+      "Native NPU inference outside OpenVINO GenAI is proven",
+      "OpenVINO runtime cache hit is directly exposed by a metric",
+      "Full BitNet inference works on Arc or NPU",
+      "Packed QK256 decode works on Arc or NPU",
+      "Dense SLM receipts prove BitNet QK256/I2_S behavior"
+    ]
+  }
+}

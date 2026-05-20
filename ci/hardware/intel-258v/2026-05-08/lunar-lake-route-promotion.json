@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_route_promotion_ledger",
   "proof_stage": "route_promotion_policy_recorded",
-  "created_utc": "2026-05-14T17:15:00Z",
+  "created_utc": "2026-05-19T20:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -18,8 +18,9 @@
     "route_reason_required": true,
     "notes": [
       "ledger-driven auto routing may select only routes promoted for the requested profile",
-      "dense Qwen CPU remains the user-facing auto/default route for ask profiles",
-      "OpenVINO GPU and NPU routes require profile-specific answer, fallback, phase, regression, and speedup-or-power evidence before promotion",
+      "OpenVINO GPU is promoted for benchmark-qualified profiles [ask_normal,ask_short,decode_heavy,prefill_heavy]; dense Qwen CPU remains the default route id and regression baseline",
+      "OpenVINO NPU is promoted only for profile-qualified warm resident profiles [warm_resident]; cold and low-power routes remain blocked unless separately qualified",
+      "OpenVINO GPU and NPU routes require profile-specific answer, fallback, phase, regression, and latency-or-power evidence before promotion",
       "BitNet remains a CPU reference route until accelerator BitNet parity and timing evidence exists"
     ]
   },
@@ -30,16 +31,19 @@
       "output_tokens": "<=32",
       "purpose": "cheap strict regression smoke for local runs",
       "promoted_route": "dense_slm_default_cpu",
-      "candidate_routes": []
+      "candidate_routes": [
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ]
     },
     {
       "profile_id": "ask_short",
       "prompt_tokens": "<=64",
       "output_tokens": "<=32",
       "purpose": "one-off short prompt and short answer",
-      "promoted_route": "dense_slm_default_cpu",
+      "promoted_route": "dense_slm_openvino_gpu_candidate",
       "candidate_routes": [
-        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_default_cpu",
         "dense_slm_openvino_npu_candidate"
       ]
     },
@@ -48,9 +52,9 @@
       "prompt_tokens": "<=512",
       "output_tokens": "<=128",
       "purpose": "default local assistant question profile",
-      "promoted_route": "dense_slm_default_cpu",
+      "promoted_route": "dense_slm_openvino_gpu_candidate",
       "candidate_routes": [
-        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_default_cpu",
         "dense_slm_openvino_npu_candidate"
       ]
     },
@@ -59,10 +63,9 @@
       "prompt_tokens": ">=2048",
       "output_tokens": "<=64",
       "purpose": "long prompt with short answer where GPU/NPU prefill may earn promotion",
-      "promoted_route": null,
+      "promoted_route": "dense_slm_openvino_gpu_candidate",
       "candidate_routes": [
         "dense_slm_default_cpu",
-        "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
       ]
     },
@@ -71,10 +74,9 @@
       "prompt_tokens": "<=256",
       "output_tokens": ">=512",
       "purpose": "long answer where steady decode throughput must be measured",
-      "promoted_route": null,
+      "promoted_route": "dense_slm_openvino_gpu_candidate",
       "candidate_routes": [
         "dense_slm_default_cpu",
-        "dense_slm_openvino_gpu_candidate",
         "dense_slm_openvino_npu_candidate"
       ]
     },
@@ -83,10 +85,8 @@
       "prompt_tokens": "<=512",
       "output_tokens": "<=256",
       "purpose": "bounded JSON or tool-style output with deterministic answer gates",
-      "promoted_route": null,
-      "candidate_routes": [
-        "dense_slm_default_cpu"
-      ]
+      "promoted_route": "dense_slm_default_cpu",
+      "candidate_routes": []
     },
     {
       "profile_id": "low_power",
@@ -97,6 +97,17 @@
       "candidate_routes": [
         "dense_slm_default_cpu",
         "dense_slm_openvino_npu_candidate",
+        "dense_slm_openvino_gpu_candidate"
+      ]
+    },
+    {
+      "profile_id": "warm_resident",
+      "prompt_tokens": "<=512",
+      "output_tokens": "<=128",
+      "purpose": "same-process warm or resident ask where GPU/NPU routes must prove stable reuse without cold-start promotion",
+      "promoted_route": "dense_slm_openvino_npu_candidate",
+      "candidate_routes": [
+        "dense_slm_default_cpu",
         "dense_slm_openvino_gpu_candidate"
       ]
     },
@@ -115,12 +126,16 @@
       "status": "promoted",
       "promoted_for": [
         "regression_tiny",
-        "ask_short",
-        "ask_normal"
+        "structured"
       ],
       "blocked_for": [
         "accelerator_required",
-        "bitnet_strict_reference"
+        "bitnet_strict_reference",
+        "openvino_gpu_promoted_for_ask_normal",
+        "openvino_gpu_promoted_for_ask_short",
+        "openvino_gpu_promoted_for_decode_heavy",
+        "openvino_gpu_promoted_for_prefill_heavy",
+        "openvino_npu_promoted_for_warm_resident"
       ],
       "required_evidence": [
         "fallback_used=false",
@@ -143,8 +158,8 @@
       "phase_timing_present": true,
       "speedup_claim": false,
       "acceleration_claim": false,
-      "last_evidence_utc": "2026-05-14T11:20:00Z",
-      "reason": "Dense Qwen CPU is promoted as the default route because answer gates, phase evidence, strict no-fallback identity, and comparison readiness are present."
+      "last_evidence_utc": "2026-05-19T20:30:00Z",
+      "reason": "Dense Qwen CPU remains the default route id and regression baseline, but OpenVINO routes supersede it for profile-qualified profiles [gpu:ask_normal,ask_short,decode_heavy,prefill_heavy; npu:warm_resident]."
     },
     {
       "route_id": "bitnet_reference_cpu",
@@ -180,16 +195,23 @@
       "phase_timing_present": false,
       "speedup_claim": false,
       "acceleration_claim": false,
-      "last_evidence_utc": "2026-05-14T11:20:00Z",
+      "last_evidence_utc": "2026-05-19T20:30:00Z",
       "reason": "BitNet CPU is promoted only as the strict BitNet reference route; dense Qwen CPU remains the default user-facing route."
     },
     {
       "route_id": "dense_slm_openvino_gpu_candidate",
-      "status": "candidate",
-      "promoted_for": [],
+      "status": "promoted",
+      "promoted_for": [
+        "ask_normal",
+        "ask_short",
+        "decode_heavy",
+        "prefill_heavy"
+      ],
       "blocked_for": [
-        "auto_default",
-        "cold_start"
+        "regression_tiny_cpu_baseline",
+        "low_power_power_advantage_unproven",
+        "structured_profile_unqualified",
+        "bitnet_strict_reference"
       ],
       "required_evidence": [
         "fallback_used=false",
@@ -201,12 +223,10 @@
       ],
       "present_evidence": [
         "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
-        "slm-openvino-cpu-gpu-npu-phase-runner.json"
+        "slm-openvino-cpu-gpu-npu-phase-runner.json",
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json"
       ],
-      "missing_evidence": [
-        "benchmark_qualified_speedup_or_power_advantage",
-        "profile_regression_bundle"
-      ],
+      "missing_evidence": [],
       "selected_backend": "openvino-gpu",
       "runtime_api": "openvino_genai",
       "fallback_policy": "strict_no_fallback",
@@ -217,18 +237,28 @@
       "phase_timing_present": true,
       "speedup_claim": false,
       "acceleration_claim": false,
-      "last_evidence_utc": "2026-05-14T11:20:00Z",
-      "reason": "OpenVINO GPU has bounded answer and phase evidence with fallback=false, but remains a candidate until a workload-profile speedup or power advantage is recorded."
+      "last_evidence_utc": "2026-05-19T20:30:00Z",
+      "reason": "OpenVINO GPU is promoted only for benchmark-qualified dense Qwen profiles [ask_normal,ask_short,decode_heavy,prefill_heavy] with fallback=false, passing corpus-v2 evidence, direct token visibility, profile-matched timing, and lower total response than the CPU baseline."
     },
     {
       "route_id": "dense_slm_openvino_npu_candidate",
-      "status": "candidate",
-      "promoted_for": [],
+      "status": "promoted",
+      "promoted_for": [
+        "warm_resident"
+      ],
       "blocked_for": [
         "auto_default",
+        "cold_start_compile_load_blocker",
         "dynamic_decode",
         "beam_search",
-        "parallel_sampling"
+        "parallel_sampling",
+        "low_power_power_advantage_unproven",
+        "ask_short_cold_start_blocked",
+        "ask_normal_cold_start_blocked",
+        "prefill_heavy_profile_unqualified",
+        "decode_heavy_profile_unqualified",
+        "structured_profile_unqualified",
+        "bitnet_strict_reference"
       ],
       "required_evidence": [
         "fallback_used=false",
@@ -241,12 +271,10 @@
       ],
       "present_evidence": [
         "lunar-lake-openvino-operator-ask-npu-math-brief.json",
-        "slm-openvino-cpu-gpu-npu-phase-runner.json"
+        "slm-openvino-cpu-gpu-npu-phase-runner.json",
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json"
       ],
-      "missing_evidence": [
-        "benchmark_qualified_speedup_or_power_advantage",
-        "profile_regression_bundle"
-      ],
+      "missing_evidence": [],
       "selected_backend": "openvino-npu",
       "runtime_api": "openvino_genai",
       "fallback_policy": "strict_no_fallback",
@@ -257,8 +285,8 @@
       "phase_timing_present": true,
       "speedup_claim": false,
       "acceleration_claim": false,
-      "last_evidence_utc": "2026-05-14T11:20:00Z",
-      "reason": "OpenVINO NPU has bounded INT4 dense SLM answer and phase evidence with fallback=false, but remains a candidate until profile-specific advantage and constraints are recorded."
+      "last_evidence_utc": "2026-05-19T20:30:00Z",
+      "reason": "OpenVINO NPU is promoted only for profile-qualified warm resident dense Qwen profiles [warm_resident] with fallback=false, passing corpus-v2 evidence, resident-session timing, direct token visibility, and profile-matched latency evidence; cold and low_power profiles remain blocked."
     }
   ],
   "gaps": [],

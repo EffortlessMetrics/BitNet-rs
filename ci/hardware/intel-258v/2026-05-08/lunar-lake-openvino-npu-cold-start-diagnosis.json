@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_openvino_npu_cold_start_diagnosis",
   "proof_stage": "candidate_route_cold_start_diagnosis_no_inference_no_promotion",
-  "created_utc": "2026-05-17T12:00:00Z",
+  "created_utc": "2026-05-19T02:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "source_receipts": {
@@ -30,16 +30,16 @@
       {
         "source": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-operator-ask-npu-math-brief.json",
         "evidence_scope": "single_operator_ask",
-        "pipeline_construct_wall_ms": 40312.40950000938,
-        "openvino_load_time_ms": 40263.0,
-        "generation_wall_ms": 943.2322999928148,
+        "pipeline_construct_wall_ms": 29396.27910000854,
+        "openvino_load_time_ms": 29373.0,
+        "generation_wall_ms": 510.03449998097494,
         "case_elapsed_ms_sum": null,
         "first_streamed_text_chunk_ms": null,
-        "openvino_time_to_first_token_ms": 323.50177001953125,
-        "openvino_generate_ms": 942.9669799804688,
-        "openvino_inference_ms": 919.8629760742188,
-        "openvino_tokenization_ms": 17.43000030517578,
-        "throughput_tokens_per_s": 12.93805694580078,
+        "openvino_time_to_first_token_ms": 241.01649475097656,
+        "openvino_generate_ms": 502.3110046386719,
+        "openvino_inference_ms": 499.3179931640625,
+        "openvino_tokenization_ms": -1.0,
+        "throughput_tokens_per_s": 30.67557716369629,
         "generated_tokens": 9,
         "notes": [
           "Operator ask includes OpenVINO PerfMetrics and wall timings for one bounded prompt"
@@ -48,16 +48,16 @@
       {
         "source": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-phase-runner.json",
         "evidence_scope": "three_case_phase_runner",
-        "pipeline_construct_wall_ms": 37652.005700045265,
-        "openvino_load_time_ms": 37651.0,
-        "generation_wall_ms": 856.3618333234141,
-        "case_elapsed_ms_sum": 2569.0854999702424,
-        "first_streamed_text_chunk_ms": 492.73573331690085,
-        "openvino_time_to_first_token_ms": 325.6900990804036,
-        "openvino_generate_ms": 856.2116495768229,
-        "openvino_inference_ms": 835.2863362630209,
-        "openvino_tokenization_ms": 16.684000333150227,
-        "throughput_tokens_per_s": 18.50960318247477,
+        "pipeline_construct_wall_ms": 33375.62949999119,
+        "openvino_load_time_ms": 33375.0,
+        "generation_wall_ms": 489.8775666661095,
+        "case_elapsed_ms_sum": 1469.6326999983285,
+        "first_streamed_text_chunk_ms": 272.3985999958434,
+        "openvino_time_to_first_token_ms": 188.80256144205728,
+        "openvino_generate_ms": 474.2486572265625,
+        "openvino_inference_ms": 471.86533610026044,
+        "openvino_tokenization_ms": -1.0,
+        "throughput_tokens_per_s": 33.89432271321615,
         "generated_tokens": 32,
         "notes": [
           "Phase runner averages per-case OpenVINO PerfMetrics for the NPU device"
@@ -84,17 +84,17 @@
       {
         "source": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
         "evidence_scope": "corpus_v2_profile_quality_receipt",
-        "pipeline_construct_wall_ms": 32127.467700000125,
-        "openvino_load_time_ms": 32127.0,
-        "generation_wall_ms": 799.9175249994247,
-        "case_elapsed_ms_sum": 9599.010299993097,
-        "first_streamed_text_chunk_ms": 329.4919833336583,
-        "openvino_time_to_first_token_ms": 246.4651870727539,
-        "openvino_generate_ms": 799.6993408203125,
-        "openvino_inference_ms": 783.8103256225586,
-        "openvino_tokenization_ms": 11.62500011920929,
-        "throughput_tokens_per_s": 24.76148223876953,
-        "generated_tokens": 177,
+        "pipeline_construct_wall_ms": 31834.785100014415,
+        "openvino_load_time_ms": 31834.0,
+        "generation_wall_ms": 516.9259083365129,
+        "case_elapsed_ms_sum": 6203.110900038155,
+        "first_streamed_text_chunk_ms": 235.78614167005676,
+        "openvino_time_to_first_token_ms": 170.1412811279297,
+        "openvino_generate_ms": 501.71457926432294,
+        "openvino_inference_ms": 498.22266387939453,
+        "openvino_tokenization_ms": -1.0,
+        "throughput_tokens_per_s": -54.90928554534912,
+        "generated_tokens": 133,
         "notes": [
           "Corpus-v2 timing is profile-quality context; failed cases still block promotion"
         ]
@@ -102,30 +102,30 @@
     ],
     "pipeline_or_load_ms": {
       "sample_count": 4,
-      "min": 32127.0,
-      "mean": 36377.6925,
-      "max": 40263.0
+      "min": 29373.0,
+      "mean": 32512.942499999997,
+      "max": 35469.77
     },
     "generation_wall_ms": {
       "sample_count": 4,
-      "min": 799.9175249994247,
-      "mean": 1178.9821645789134,
+      "min": 489.8775666661095,
+      "mean": 908.3137437458993,
       "max": 2116.417
     },
     "first_token_or_text_chunk_ms": {
       "sample_count": 3,
-      "min": 323.50177001953125,
-      "mean": 381.90982889003016,
-      "max": 492.73573331690085
+      "min": 235.78614167005676,
+      "mean": 249.7337454722922,
+      "max": 272.3985999958434
     },
     "throughput_tokens_per_s": {
       "sample_count": 3,
-      "min": 12.93805694580078,
-      "mean": 18.736380789015026,
-      "max": 24.76148223876953
+      "min": -54.90928554534912,
+      "mean": 3.2202047771877744,
+      "max": 33.89432271321615
     },
-    "operator_load_to_generation_ratio": 42.686197239329815,
-    "phase_runner_load_to_generation_ratio": 43.966228450282536,
+    "operator_load_to_generation_ratio": 57.5902218400827,
+    "phase_runner_load_to_generation_ratio": 68.12926794573494,
     "notes": [
       "Diagnosis is derived from committed receipts only; it does not run OpenVINO or inference",
       "OpenVINO NPU load_time_ms/pipeline_construct_wall_ms is treated as pipeline load, device compile, model transfer, or cache-miss time until cache/resident experiments split it further",
@@ -137,33 +137,33 @@
     "fallback_used": false,
     "generation_wall_ms": {
       "sample_count": 3,
-      "min": 799.9175249994247,
-      "mean": 866.5038861052179,
-      "max": 943.2322999928148
+      "min": 489.8775666661095,
+      "mean": 505.61265832786574,
+      "max": 516.9259083365129
     },
     "first_text_chunk_ms": {
       "sample_count": 2,
-      "min": 329.4919833336583,
-      "mean": 411.1138583252796,
-      "max": 492.73573331690085
+      "min": 235.78614167005676,
+      "mean": 254.0923708329501,
+      "max": 272.3985999958434
     },
     "openvino_time_to_first_token_ms": {
       "sample_count": 3,
-      "min": 246.4651870727539,
-      "mean": 298.5523520575629,
-      "max": 325.6900990804036
+      "min": 170.1412811279297,
+      "mean": 199.98677910698783,
+      "max": 241.01649475097656
     },
     "throughput_tokens_per_s": {
       "sample_count": 3,
-      "min": 12.93805694580078,
-      "mean": 18.736380789015026,
-      "max": 24.76148223876953
+      "min": -54.90928554534912,
+      "mean": 3.2202047771877744,
+      "max": 33.89432271321615
     },
     "generated_tokens": {
       "sample_count": 3,
       "min": 9.0,
-      "mean": 72.66666666666667,
-      "max": 177.0
+      "mean": 58.0,
+      "max": 133.0
     },
     "hot_path_interesting": true,
     "notes": [
@@ -173,34 +173,21 @@
   },
   "corpus_v2_context": {
     "cases_total": 12,
-    "passed": 7,
-    "failed": 5,
-    "route_blocked_by_quality": true,
-    "failed_profiles": [
-      "ask_normal",
-      "ask_short",
-      "decode_heavy",
-      "prefill_heavy",
-      "regression_tiny"
-    ],
-    "failed_categories": [
-      "decode_heavy",
-      "long_prompt_summarization",
-      "short_reasoning",
-      "stop_and_eos",
-      "yes_no"
-    ],
-    "direct_generated_token_ids_available": false,
-    "generated_token_id_source": "retokenized_generated_text_not_pipeline_internal_ids"
+    "passed": 12,
+    "failed": 0,
+    "route_blocked_by_quality": false,
+    "failed_profiles": [],
+    "failed_categories": [],
+    "direct_generated_token_ids_available": true,
+    "generated_token_id_source": "openvino_genai_encoded_results_tokens"
   },
   "diagnosis_ready": true,
   "findings": [
-    "npu_pipeline_or_load_mean_ms=36377.692",
-    "npu_pipeline_or_load_max_ms=40263.000",
-    "npu_generation_wall_mean_ms=1178.982",
-    "npu_hot_path_throughput_mean_tokens_per_s=18.736",
-    "operator_load_to_generation_ratio=42.686",
-    "npu_corpus_v2_blocked_by_5_failed_cases"
+    "npu_pipeline_or_load_mean_ms=32512.942",
+    "npu_pipeline_or_load_max_ms=35469.770",
+    "npu_generation_wall_mean_ms=908.314",
+    "npu_hot_path_throughput_mean_tokens_per_s=3.220",
+    "operator_load_to_generation_ratio=57.590"
   ],
   "recommended_next_items": [
     "LNL258V-NPU-CACHE-001: run OpenVINO cache hit/miss experiment with a stable cache directory",
