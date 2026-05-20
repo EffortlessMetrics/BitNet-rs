@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T21:22:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-067"
+event = "in_progress"
+previous_status = "proposed"
+new_status = "ready"
+actor = "codex"
+summary = "Queue the exact-tensor packed Q8_0 runtime hook candidate after SLM-CPU-066."
+notes = [
+  "SLM-CPU-067 follows the release-gate handoff and stays scoped to layers.0.attention.q_proj.weight.",
+  "Eager F32 Candle remains the default path unless an opt-in candidate returns before/after strict CPU receipts proving unchanged model SHA, tokenizer authority, prompt IDs, generated IDs, decoded text, selected backend/kernel identity, dense hook-selection identity, and fallback_used=false.",
+  "A blocker artifact is acceptable if the current runtime API still cannot safely select packed Q8_0 compute for the exact tensor.",
+  "No default packed Q8_0 compute, speedup, sustained throughput, broad answer-quality, Q4/Q5 runtime support, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is allowed.",
+]
