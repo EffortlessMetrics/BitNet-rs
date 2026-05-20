@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T11:30:00Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-005"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-005-post-power-runbook"
+actor = "codex"
+summary = "Started a no-inference goal-audit refresh after POWER-007 and POWER-008."
+
+notes = [
+  "POWER-007 added the no-evidence low_power battery-mode runbook and POWER-008 linked it from the validation profile and campaign overview.",
+  "The audit refresh records runbook discoverability while preserving POWER-006 as blocked until real battery-mode telemetry and route/profile evidence exist.",
+  "The slice makes no inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, A770 #5064 merged, stale BitNet, or BitNet QK256/I2_S behavior-change claim.",
+]
