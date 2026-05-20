@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T15:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-065"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+pr = 6155
+head_sha = "0e7f9902d"
+summary = "Open the BitNet-rs release-surface packed Q8 runtime-promotion gate."
+notes = [
+  "PR #6155 records a blocked release-surface runtime-promotion decision for the accepted layers.0.attention.q_proj.weight packed Q8_0 sidecar candidate.",
+  "The gate keeps selected_path=eager_f32_candle, selected_kernel=dense-f32-candle-linear, runtime_compute_enabled=false, dense_runtime_replaced=false, fallback_used=false, and speedup_claim=false.",
+  "No packed Q8 runtime execution, speedup, sustained throughput, broad answer-quality, Q4/Q5 runtime support, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
