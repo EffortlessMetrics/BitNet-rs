@@ -341,7 +341,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_gguf_q8_sidecar_can_carry_exact_payload_candidate() {
+    fn dense_gguf_q8_sidecar_can_carry_exact_payload_candidate() -> Result<()> {
         let info = q8_info("blk.0.attn_q.weight", vec![2, 64], 136);
         let mut data = vec![0u8; 136];
         data.extend_from_slice(&[1, 2, 3, 4]);
@@ -351,19 +351,25 @@ mod tests {
             &data,
             Some("blk.0.attn_q.weight"),
         )
-        .expect("descriptor")
-        .expect("q8 descriptor");
+        .and_then(|descriptor| {
+            descriptor.ok_or_else(|| {
+                BitNetError::Validation("expected dense Q8 sidecar descriptor".to_string())
+            })
+        })?;
 
-        let payload = descriptor.packed_q8_bytes.as_ref().expect("payload bytes");
+        let Some(payload) = descriptor.packed_q8_bytes.as_ref() else {
+            return Err(BitNetError::Validation("expected packed payload bytes".to_string()));
+        };
         assert_eq!(payload.len(), 136);
         assert_eq!(&payload[..], &data[..136]);
         assert_eq!(descriptor.packed_q8_bytes_sha256, bytes_sha256(payload));
         assert!(descriptor.eager_f32_runtime_preserved);
         assert!(!descriptor.runtime_compute_enabled);
+        Ok(())
     }
 
     #[test]
-    fn dense_gguf_q8_sidecar_payload_candidate_requires_exact_tensor_name() {
+    fn dense_gguf_q8_sidecar_payload_candidate_requires_exact_tensor_name() -> Result<()> {
         let info = q8_info("blk.0.attn_q.weight", vec![2, 64], 136);
         let data = vec![0u8; 136];
 
@@ -372,9 +378,13 @@ mod tests {
             &data,
             Some("blk.0.attn_k.weight"),
         )
-        .expect("descriptor")
-        .expect("q8 descriptor");
+        .and_then(|descriptor| {
+            descriptor.ok_or_else(|| {
+                BitNetError::Validation("expected dense Q8 sidecar descriptor".to_string())
+            })
+        })?;
 
         assert!(descriptor.packed_q8_bytes.is_none());
+        Ok(())
     }
 }
