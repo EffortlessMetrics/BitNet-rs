@@ -2,7 +2,7 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-20T13:10:00Z",
+  "created_utc": "2026-05-20T04:17:12Z",
   "machine_id": "intel-258v",
   "source_revision": "5265445b4e9a5cd4f70679ec62c9bdd47036a5a8",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
