@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T06:30:00Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-012"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-012-post-reg013-closeout"
+actor = "codex"
+summary = "Started the no-inference Lunar Lake completion-audit refresh after REG-013 closeout."
+
+notes = [
+  "The audit refresh records REG-013/#6106 and closeout #6107 as merged strict-regression BitNet CPU reference surface hardening.",
+  "POWER-006 remains blocked because the current machine is on AC/charging and no real battery-mode low_power evidence exists.",
+  "No inference, model load, fallback change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, stale BitNet claim, A770 semantic PR merged-to-main claim, or BitNet QK256/I2_S behavior-change claim is made.",
+]

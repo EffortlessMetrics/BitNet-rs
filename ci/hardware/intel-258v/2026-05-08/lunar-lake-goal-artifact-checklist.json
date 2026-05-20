@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-20T06:20:20Z",
+  "created_utc": "2026-05-20T06:30:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "8db4a398f6257ee126dc13de962ed64715dd59b6",
+  "source_revision": "72d86a72e7deaf8cdeed6a620f79dddf48ca5dd6",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
-  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013 strict-regression-surface fields for BitNet CPU reference route evidence, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, merged BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run, and A770-005/#6072 selected-device OpenCL smoke closeout #6079 as non-semantic adjacent accelerator evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable.",
+  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013/#6106 strict-regression-surface fields for BitNet CPU reference route evidence with closeout #6107 merged, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, merged BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run, and A770-005/#6072 selected-device OpenCL smoke closeout #6079 as non-semantic adjacent accelerator evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-006",
     "status": "blocked",
@@ -291,11 +291,14 @@
         "lunar-lake-bitnet-semantic-intake.json",
         "lunar-lake-regression-bundle-v2.json",
         "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T062000Z-LNL258V-REG-013-in-progress.toml",
+        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T062100Z-LNL258V-REG-013-pr-open.toml",
+        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T062601Z-LNL258V-REG-013-merged.toml",
+        "https://github.com/EffortlessMetrics/BitNet-rs/pull/6107",
         "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T020149Z-LNL258V-BITNET-INTAKE-004-merged.toml"
       ],
       "notes": [
         "BitNet CPU reference evidence is tracked separately from dense Qwen SLM success.",
-        "REG-013 exposes bitnet_cpu_reference_evidence_indexed=true and bitnet_cpu_reference_evidence_ready=true in the strict regression surface.",
+        "REG-013/#6106 plus closeout #6107 expose bitnet_cpu_reference_evidence_indexed=true and bitnet_cpu_reference_evidence_ready=true in the strict regression surface.",
         "Strict regression indexes semantic-intake state so shared BitNet fixes can stale Lunar Lake evidence.",
         "BITNET-INTAKE-004 records pending A770 shared BitNet semantic PRs #4756, #4757, #4767, #4853, and #5064 as rerun triggers with pending_shared_change_count=5 and stale_after_merged_count=0."
       ]
@@ -374,7 +377,7 @@
       ],
       "notes": [
         "The platform is well instrumented and profile-aware, but not yet excellent across all requested profiles.",
-        "The post-REG-013 command surface carries appliance ask receipts, low_power blocked-ask and power-profile runbook guidance through readiness/regression/comparison, route/model identity readiness, BitNet CPU reference surface gates, Arc/NPU bounded proof surface gates, semantic-intake watchpoints, adjacent A770 OpenCL smoke status, runbook discoverability, and the current power and thermal gaps.",
+        "The post-REG-013-closeout command surface carries appliance ask receipts, low_power blocked-ask and power-profile runbook guidance through readiness/regression/comparison, route/model identity readiness, BitNet CPU reference surface gates, Arc/NPU bounded proof surface gates, semantic-intake watchpoints, adjacent A770 OpenCL smoke status, runbook discoverability, and the current power and thermal gaps.",
         "Remaining gaps are low_power promotion, battery-mode power evidence, thermal readings, and full BitNet accelerator proof."
       ]
     }
