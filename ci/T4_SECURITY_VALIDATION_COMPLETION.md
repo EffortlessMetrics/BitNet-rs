@@ -1,4 +1,13 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
 # T4 Safety Validation Completion Report - PR #475
+
+> Historical CI artifact only. This report records a 2025 PR/gate decision and
+> must not be read as a current BitNet-rs support, speedup, CUDA/GPU,
+> server-readiness, residency, reference-parity, quality, or product-readiness
+> claim. Current claims must come from active model coverage, receipts, specs,
+> status docs, and claim gates.
 
 **Agent**: Safety Scanner (Neural Network Security Expert)
 **Date**: 2025-10-30T08:03:00Z

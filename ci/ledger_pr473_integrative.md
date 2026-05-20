@@ -1,3 +1,12 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
+> Historical CI artifact only. This file records a past PR, gate, check run,
+> review, or agent handoff and must not be read as a current BitNet-rs support,
+> speedup, CUDA/GPU, server-readiness, residency, reference-parity, quality,
+> or product-readiness claim. Current claims must come from active model
+> coverage, receipts, specs, status docs, and claim gates.
+
 # PR #473 Integrative Flow Ledger
 
 **Date**: 2025-10-21T23:45:00Z

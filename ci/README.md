@@ -1,16 +1,45 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI archive index formatting intentionally preserved. -->
+
 # CI Directory: Validation, Analysis & Automation
 
 **Purpose**: This directory contains CI/CD infrastructure, test analysis, validation reports, and implementation solutions for the BitNet-rs project.
 
 ---
 
+## Claim Authority And Historical Artifacts
+
+Most Markdown files in this directory are archived PR, gate, check-run, or agent
+handoff artifacts from earlier validation waves. They preserve evidence for past
+decisions, but they are **not** current BitNet-rs support, speedup, CUDA/GPU,
+server-readiness, residency, quality, reference-parity, or product-readiness
+claims.
+
+Current claims must come from active source-of-truth surfaces:
+
+- `ci/model-artifacts/model-coverage-matrix.toml` for model support state;
+- active hardware receipts and receipt validators for backend, route, fallback,
+  speed, and residency claims;
+- `docs/status/**`, `docs/specs/**`, and active campaign manifests for current
+  claim policy and work-item state;
+- the live GitHub PR queue and refreshed PR ledgers for queue disposition.
+
+When an archived artifact below says "production-ready", "speedup", "GPU
+validated", "server ready", or similar, read that phrase only in the context of
+the original dated PR/gate. It does not override current receipt gates.
+
 ## Quick Start
 
 **Find what you need in 3 steps:**
 
-1. **Need implementation guidance?** → Start with [`solutions/00_NAVIGATION_INDEX.md`](solutions/00_NAVIGATION_INDEX.md)
-2. **Looking for PR/merge status?** → See [`PR_475_FINAL_SUMMARY.md`](PR_475_FINAL_SUMMARY.md)
-3. **Want test results?** → Check [`receipts/`](receipts/) for validation artifacts
+1. **Need current implementation authority?** → Start with
+   [`../docs/reference/SPEC_SYSTEM.md`](../docs/reference/SPEC_SYSTEM.md) and the
+   active campaign manifest named by the task.
+2. **Looking for current PR/merge status?** → Use the live GitHub PR queue and
+   [`../docs/tracking/codex-web-pr-ledger.md`](../docs/tracking/codex-web-pr-ledger.md).
+3. **Want archived test results?** → Check [`receipts/`](receipts/) and the
+   PR-specific reports here, treating them as dated evidence rather than current
+   support claims.
 
 ---
 
@@ -139,15 +168,19 @@ cargo nextest run --workspace --profile ci --features cpu
 
 ---
 
-## Latest Test Results
+## Archived PR #475 Test Snapshot
 
-### PR #475 Status (2025-10-23)
+### PR #475 Status (historical snapshot from 2025-10-23)
+
+The following section is preserved for provenance. It does not describe the
+current queue, current model support, or current performance/support claims.
 
 **Branch**: `feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2`
 
-**Achievements**:
+**Historical gate achievements recorded at the time**:
 - ✅ Issue #439 Resolved (Feature gate unification)
-- ✅ QK256 AVX2 Foundation (~1.2× uplift, targeting ≥3×)
+- ✅ QK256 AVX2 foundation recorded a local uplift note; this is not a current
+  accepted speedup claim
 - ✅ GGUF Fixtures (12/12 passing)
 - ✅ EnvGuard Pattern (7/7 passing)
 - ✅ Receipt Verification (25/25 passing)
@@ -157,7 +190,8 @@ cargo nextest run --workspace --profile ci --features cpu
 - ❌ QK256 Integration (3 tests failing - pre-existing)
 - ⚠️ Test Timeouts (~17 tests - known QK256 scalar performance)
 
-**Merge Status**: ⚠️ **NEEDS ATTENTION** - 3 QK256 test failures require investigation
+**Historical merge status**: ⚠️ **NEEDS ATTENTION** - 3 QK256 test failures
+required investigation in that dated snapshot
 
 See [`PR_475_FINAL_SUMMARY.md`](PR_475_FINAL_SUMMARY.md) for complete analysis.
 
@@ -267,8 +301,11 @@ BITNET_SKIP_SLOW_TESTS=1 cargo nextest run --workspace --features cpu
 
 - **General CI questions**: See this README
 - **Test implementation**: `solutions/00_NAVIGATION_INDEX.md`
-- **PR status**: `PR_475_FINAL_SUMMARY.md`
-- **Performance**: `receipts/` directory
+- **Current PR status**: live GitHub PR queue and
+  `../docs/tracking/codex-web-pr-ledger.md`
+- **Archived PR status**: `PR_475_FINAL_SUMMARY.md`
+- **Archived performance evidence**: `receipts/` directory; current speed claims
+  require active receipt gates
 - **Security**: `security/` directory
 
 ---
@@ -290,11 +327,13 @@ BITNET_SKIP_SLOW_TESTS=1 cargo nextest run --workspace --features cpu
 
 ## Status
 
-**Last Updated**: 2025-10-23
-**PR #475 Status**: ⚠️ NEEDS ATTENTION (3 QK256 test failures)
-**CI Pass Rate**: 96.8% (541/559 enabled tests)
-**Documentation**: ✅ Complete (32+ solution guides, 11,700+ lines)
-**Next Action**: Investigate QK256 test failures (see `PR_475_FINAL_SUMMARY.md` lines 305-380)
+**Last Updated**: 2026-05-20
+**Archive Scope**: PR/gate/check-run artifacts and implementation notes from
+earlier validation waves.
+**Current Claim Authority**: model coverage, active receipts, specs, status
+docs, campaign manifests, and the live PR queue.
+**Historical PR #475 Status**: NEEDS ATTENTION in the 2025-10-23 snapshot
+(3 QK256 test failures).
 
 ---
 
