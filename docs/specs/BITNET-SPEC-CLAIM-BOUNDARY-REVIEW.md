@@ -9,6 +9,7 @@ Linked specs:
 [BITNET-SPEC-MODEL-READINESS-STATUS-SURFACE](BITNET-SPEC-MODEL-READINESS-STATUS-SURFACE.md),
 [BITNET-SPEC-RECEIPT-EXPLAIN-SCHEMA](BITNET-SPEC-RECEIPT-EXPLAIN-SCHEMA.md),
 [BITNET-SPEC-SUPPORT-BUNDLE](BITNET-SPEC-SUPPORT-BUNDLE.md),
+[BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE](BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE.md),
 [BITNET-SPEC-0013](BITNET-SPEC-0013-model-onboarding-proof-ladder.md),
 [BITNET-SPEC-0014](BITNET-SPEC-0014-runtime-performance-contract.md)
 Linked ADRs:
@@ -41,6 +42,8 @@ Claim-boundary truth is owned by:
   [BITNET-SPEC-RECEIPT-EXPLAIN-SCHEMA](BITNET-SPEC-RECEIPT-EXPLAIN-SCHEMA.md);
 - support bundles governed by
   [BITNET-SPEC-SUPPORT-BUNDLE](BITNET-SPEC-SUPPORT-BUNDLE.md);
+- proof-family non-inheritance governed by
+  [BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE](BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE.md);
 - proof-family rules in
   [BITNET-ADR-0005](../adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md);
 - backend, model-family, and performance specs for the exact lane being
