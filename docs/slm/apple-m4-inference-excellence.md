@@ -1125,6 +1125,30 @@ scheduled trend retention
 stale-identity aging
 ```
 
+`M4-STABILITY-001` records the first live mixed dense-model switch soak:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch.json
+```
+
+The release-mode run exercises the three supported dense Qwen M4 identities in
+sequence with `resident_25` child summaries per model:
+
+| Model | Prompts | Generated tokens | Peak memory |
+|---|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 25 | 195 | 3756.375 MB |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 25 | 217 | 3615.313 MB |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 25 | 195 | 6416.563 MB |
+
+The aggregate receipt validates with `bitnet mac receipts-check`, records
+`prompt_count=75`, `generated_tokens=607`,
+`requested_backend=selected_backend=apple-m4-cpu-neon`, `runtime_api=cpu`,
+`fallback_used=false`, child receipt separation for each model identity, and
+parent process peak drift of `1.922 MB`. This is bounded dense SLM stability
+evidence for the recorded identities only. It is not BitNet evidence, not a
+broad benchmark, and not a Metal, QK256, Neural Engine, MPSGraph, MacBook,
+speedup, broad quality, or broad performance claim.
+
 `M4-CONTEXT-001` implements long-context guardrails for the M4 operator routes.
 Dense SLM `mac ask`, dense `mac chat`, dense `mac chat-smoke`, and dense
 `mac serve` classify requests against the recorded short, `context_1k`, and
