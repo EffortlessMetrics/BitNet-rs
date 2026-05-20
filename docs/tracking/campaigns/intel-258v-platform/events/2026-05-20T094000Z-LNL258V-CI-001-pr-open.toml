@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T09:40:00Z"
+event = "pr_open"
+item = "LNL258V-CI-001"
+pr = 6052
+head_sha = "0986cd7d728848132d29d586a2e9343dc4f1eeb3"
+branch = "codex/lunar-lake/LNL258V-CI-001-pr-plan-timeout"
+actor = "codex"
+summary = "Opened PR #6052 to bound Lunar Lake PR Plan/Gate controller plan construction."
+
+notes = [
+  "PR #6052 adds 10-minute step timeouts to the PR Plan and PR Gate `xtask ci plan` construction steps.",
+  "Local validation covered workflow linting, timeout presence, GOAL-AUDIT-004 tracker-only planner reproduction, campaign check, generated check, and diff whitespace.",
+  "The PR preserves no new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, stale-BitNet-evidence, or BitNet QK256/I2_S behavior-change claims.",
+]

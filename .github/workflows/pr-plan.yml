@@ -64,6 +64,7 @@ jobs:
 
       - name: Build PR plan (xtask ci plan)
         id: plan
+        timeout-minutes: 10
         env:
           LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: |
