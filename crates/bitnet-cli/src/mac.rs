@@ -49,6 +49,9 @@ const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
+const MAC_SERVE_CONTEXT_GUARDRAIL_ERROR_PREFIX: &str =
+    "mac serve context guardrail blocked request:";
+const MAC_SERVE_CONTEXT_GUARDRAIL_RECEIPT_MARKER: &str = "; receipt written to ";
 const MAC_BITNET_PROOF_DEFAULT_RECEIPT: &str =
     "target/apple-m4-continuity/mac-bitnet-proof-preflight.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
@@ -9619,6 +9622,9 @@ async fn mac_serve_completion_http_reply(
         match generator.complete(state, completion_request) {
             Ok(completion) => completion,
             Err(error) => {
+                if let Some(reply) = mac_serve_context_guardrail_error_reply(&error)? {
+                    return Ok(reply);
+                }
                 return MacServeHttpReply::json(
                     500,
                     "Internal Server Error",
@@ -9642,6 +9648,59 @@ async fn mac_serve_completion_http_reply(
     } else {
         MacServeHttpReply::json(200, "OK", mac_serve_completion_json(&completion))
     }
+}
+
+fn mac_serve_context_guardrail_error_reply(
+    error: &anyhow::Error,
+) -> Result<Option<MacServeHttpReply>> {
+    let message = error.to_string();
+    if !message.starts_with(MAC_SERVE_CONTEXT_GUARDRAIL_ERROR_PREFIX) {
+        return Ok(None);
+    }
+
+    let receipt_path = message
+        .split_once(MAC_SERVE_CONTEXT_GUARDRAIL_RECEIPT_MARKER)
+        .map(|(_, path)| path.trim())
+        .filter(|path| !path.is_empty());
+    let receipt = receipt_path.and_then(|path| read_json_receipt(Path::new(path)).ok());
+    let request_id = receipt
+        .as_ref()
+        .and_then(|receipt| receipt["request_id"].as_str())
+        .map(str::to_string)
+        .or_else(|| {
+            receipt_path
+                .and_then(|path| Path::new(path).file_stem())
+                .and_then(|stem| stem.to_str())
+                .map(str::to_string)
+        });
+    let context_envelope = receipt
+        .as_ref()
+        .map(|receipt| receipt["context_envelope"].clone())
+        .filter(|envelope| !envelope.is_null());
+
+    let mut body = serde_json::json!({
+        "status": "error",
+        "error": "context_guardrail_blocked",
+        "message": message,
+        "claim_boundary": {
+            "guardrail_only": true,
+            "new_context_quality_claim": false,
+            "unsupported_context_supported": false,
+            "openai_compatibility_claimed": false,
+            "production_readiness_claimed": false,
+        },
+    });
+    if let Some(path) = receipt_path {
+        body["receipt_path"] = serde_json::Value::String(path.to_string());
+    }
+    if let Some(request_id) = request_id {
+        body["request_id"] = serde_json::Value::String(request_id);
+    }
+    if let Some(context_envelope) = context_envelope {
+        body["context_envelope"] = context_envelope;
+    }
+
+    Ok(Some(MacServeHttpReply::json(413, "Payload Too Large", body)?))
 }
 
 fn mac_serve_request_method_path(request: &str) -> (&str, &str) {
@@ -17566,6 +17625,14 @@ fn validate_mac_receipt_value(
     validate_prompt_generation_identity_contract(path, receipt)?;
     if !receipt["context_envelope"].is_null() {
         validate_mac_context_envelope(path, &receipt["context_envelope"])?;
+        if artifact_kind != "apple_m4_context_guardrail"
+            && receipt["context_envelope"]["allowed"].as_bool() == Some(false)
+        {
+            anyhow::bail!(
+                "{} records a blocked context_envelope on {artifact_kind}; blocked context requests must write apple_m4_context_guardrail receipts",
+                path.display()
+            );
+        }
     }
 
     let (prompt_count, generated_tokens) = if artifact_kind == "slm_apple_m4_warm_session"
@@ -24542,6 +24609,34 @@ mod tests {
     }
 
     #[test]
+    fn dense_slm_chat_smoke_receipt_rejects_blocked_context_envelope()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut receipt = test_dense_slm_chat_smoke_receipt();
+        receipt["context_envelope"] = mac_context_envelope_json(
+            MacContextModelFamily::DenseSlm,
+            MacContextRoute::ChatSmoke,
+            "qwen2.5-0.5b-instruct-q8_0",
+            M4_CONTEXT_4K_PROMPT_TOKENS + 1,
+            true,
+            8,
+        );
+
+        let err = match validate_mac_receipt_value(Path::new("dense-chat-smoke.json"), &receipt) {
+            Ok(summary) => {
+                return Err(format!(
+                    "blocked context envelope on a successful chat smoke receipt should fail, got {summary:?}"
+                )
+                .into());
+            }
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains("blocked context_envelope"), "got: {err}");
+        assert!(err.contains("apple_m4_context_guardrail"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
     fn dense_slm_chat_smoke_receipt_rejects_missing_turn_receipts()
     -> Result<(), Box<dyn std::error::Error>> {
         let mut receipt = test_dense_slm_chat_smoke_receipt();
@@ -26392,6 +26487,45 @@ mod tests {
         assert_eq!(reply.status, 400);
         let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
         assert_eq!(body["error"], "unsupported_model");
+        Ok(())
+    }
+
+    #[test]
+    fn mac_serve_context_guardrail_error_maps_to_payload_too_large()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("m4srv-context-blocked.json");
+        let context_envelope = mac_context_envelope_json(
+            MacContextModelFamily::DenseSlm,
+            MacContextRoute::Serve,
+            "qwen2.5-0.5b-instruct-q8_0",
+            M4_CONTEXT_4K_PROMPT_TOKENS + 1,
+            true,
+            8,
+        );
+        std::fs::write(
+            &receipt_path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "request_id": "m4srv-context-blocked",
+                "context_envelope": context_envelope,
+            }))?,
+        )?;
+        let error = anyhow!(
+            "mac serve context guardrail blocked request: context_guardrail_blocked: prompt exceeds recorded envelope; receipt written to {}",
+            receipt_path.display()
+        );
+
+        let reply = mac_serve_context_guardrail_error_reply(&error)?
+            .ok_or_else(|| std::io::Error::other("expected guardrail reply"))?;
+        let body: serde_json::Value = serde_json::from_slice(&reply.body)?;
+
+        assert_eq!(reply.status, 413);
+        assert_eq!(reply.reason, "Payload Too Large");
+        assert_eq!(body["error"], "context_guardrail_blocked");
+        assert_eq!(body["request_id"], "m4srv-context-blocked");
+        assert_eq!(body["receipt_path"], receipt_path.display().to_string());
+        assert_eq!(body["context_envelope"]["allowed"], false);
+        assert_eq!(body["claim_boundary"]["unsupported_context_supported"], false);
         Ok(())
     }
 
