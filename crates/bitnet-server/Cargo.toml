@@ -81,8 +81,8 @@ hyper = "1.9.0"
 proptest.workspace = true
 serial_test = "3.2.0"
 tempfile.workspace = true
-uselesskey = { version = "0.2.0", default-features = false, features = ["hmac"] }
-uselesskey-jsonwebtoken = { version = "0.2.0", default-features = false, features = ["hmac"] }
+uselesskey = { version = "0.4.0", default-features = false, features = ["hmac"] }
+uselesskey-jsonwebtoken = { version = "0.4.0", default-features = false, features = ["hmac"] }
 walkdir = "2.5.0"
 insta.workspace = true
 
