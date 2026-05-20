@@ -11309,9 +11309,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SWARM-LNL258V-POWER-006-RUNBOOK-002"
-status = "in_progress"
+status = "merged"
 pr = 86
-head_sha = "ba558fd3d8307951de5588afa083268b513fbe6f"
+head_sha = "25c70065f0bfcd8cdc2ee6e9b17545f72e4f469b"
+merge_sha = "1e13cf52d6004da4f9f2a11730e77fcb9122e98c"
 branch = "codex/swarm-lnl258v-power006-runbook-matrix-commands"
 stackable = false
 review_mode = "codex_premerge"
