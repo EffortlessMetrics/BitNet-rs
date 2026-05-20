@@ -18,6 +18,7 @@
 | A770-006R | merged | #43 | `codex/intel-a770/A770-006R-matmul-i2s-operand-contract` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Refresh the selected-device OpenCL matmul_i2s parity harness so operand A is explicit int8 activations and operand B is explicit packed I2_S weights, without promoting benchmark, QK256, or inference claims. |
 | A770-008 | merged | #53 | `codex/intel-a770/A770-008-benchmark-baseline` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record a diagnostic benchmark baseline for the selected-device A770 OpenCL matmul_i2s parity fixture without promoting speedup, official QK256, BitNet inference, or residency claims. |
 | A770-009 | merged | #62 | `codex/intel-a770/A770-009-qk256-scaled-opencl-fixture` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add selected-device A770 OpenCL parity for a grouped QK256 I2_S x prequantized I8_S scaled fixture, without promoting official BitNet QK256 dispatch, inference, activation-quantization residency, speed, or residency claims. |
+| A770-010 | in_progress | #80 | `codex/intel-a770/A770-010-strict-qk256-fallback-guard` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Make strict Intel Arc A770 OpenCL QK256 requests fail closed while the OpenCL QK256 runtime is not wired, and record non-strict A770 requests as CPU fallback/not-routed evidence without promoting inference or performance claims. |
 
 ## Hard Constraints
 

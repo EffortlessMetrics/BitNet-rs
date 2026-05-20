@@ -376,3 +376,47 @@ must_not_claim = [
   "Full A770 residency is proven.",
   "Performance speedup is proven.",
 ]
+
+[[work_item]]
+id = "A770-010"
+status = "in_progress"
+pr = 80
+head_sha = "aa1af2b5229f3cb73798cc35916fdeb11605e9fc"
+branch = "codex/intel-a770/A770-010-strict-qk256-fallback-guard"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-009"]
+acceptance = "Make strict Intel Arc A770 OpenCL QK256 requests fail closed while the OpenCL QK256 runtime is not wired, and record non-strict A770 requests as CPU fallback/not-routed evidence without promoting inference or performance claims."
+commands = [
+  "cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features opencl --test cuda_coverage -- --nocapture",
+  "cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features opencl --test forward_qk256 -- --nocapture",
+  "cargo fmt -p bitnet-qk256-dispatch -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-kernels/src/a770_opencl_fixture.rs",
+  "crates/bitnet-kernels/src/bin/a770_opencl_parity.rs",
+]
+may_claim = [
+  "Strict A770 OpenCL QK256 dispatch requests fail closed instead of silently using CPU while the OpenCL runtime is not wired.",
+  "Non-strict A770 OpenCL QK256 requests record CPU fallback/not-routed evidence.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are fully proven.",
+  "BitNet inference works on A770.",
+  "Transformer QK256 dispatch is wired to OpenCL.",
+  "A770 trusted partial acceleration is claim-grade.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+]

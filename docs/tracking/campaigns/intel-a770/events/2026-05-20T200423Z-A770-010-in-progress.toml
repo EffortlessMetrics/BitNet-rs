@@ -1,0 +1,10 @@
+timestamp = "2026-05-20T20:04:23Z"
+campaign = "intel-a770"
+item = "A770-010"
+event = "in_progress"
+branch = "codex/intel-a770/A770-010-strict-qk256-fallback-guard"
+actor = "Codex"
+notes = [
+  "Started the strict QK256 fallback guard after A770-009 landed selected-device grouped QK256 fixture parity.",
+  "This slice keeps the production OpenCL QK256 runtime unwired and claim-closed, but prevents strict A770 OpenCL requests from silently using CPU QK256 fallback.",
+]

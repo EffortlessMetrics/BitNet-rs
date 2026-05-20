@@ -37,6 +37,8 @@ static BITNET_LINEAR_TOTAL: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_ON_CUDA: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_CPU_FALLBACK: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_UNSUPPORTED: AtomicU64 = AtomicU64::new(0);
+static BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK: AtomicU64 = AtomicU64::new(0);
+static BITNET_LINEAR_A770_OPENCL_UNSUPPORTED: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_HOST_TO_DEVICE_BYTES: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_DEVICE_TO_HOST_BYTES: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_KERNEL_TIME_MICROS: AtomicU64 = AtomicU64::new(0);
@@ -166,9 +168,14 @@ pub fn qk256_dispatch_coverage() -> Qk256DispatchCoverageCounters {
     let cpu_fallback = BITNET_LINEAR_CPU_FALLBACK.load(Ordering::Relaxed);
     let unsupported = BITNET_LINEAR_UNSUPPORTED.load(Ordering::Relaxed);
     let on_cuda = BITNET_LINEAR_ON_CUDA.load(Ordering::Relaxed);
+    let a770_cpu_fallback = BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK.load(Ordering::Relaxed);
+    let a770_unsupported = BITNET_LINEAR_A770_OPENCL_UNSUPPORTED.load(Ordering::Relaxed);
     let mut unsupported_ops = Vec::new();
     if cpu_fallback > 0 {
         unsupported_ops.push("qk256_cpu_fallback".to_string());
+    }
+    if a770_cpu_fallback > 0 || a770_unsupported > 0 {
+        unsupported_ops.push("qk256_a770_opencl_runtime_not_wired".to_string());
     }
     if unsupported > 0 {
         unsupported_ops.push("qk256_strict_cuda_unsupported".to_string());
@@ -181,6 +188,8 @@ pub fn qk256_dispatch_coverage() -> Qk256DispatchCoverageCounters {
         unsupported_ops,
         execution_claim: if on_cuda > 0 {
             "cuda_inference_contribution"
+        } else if a770_cpu_fallback > 0 || a770_unsupported > 0 || a770_opencl_backend_requested() {
+            "a770_opencl_not_routed"
         } else if cuda_bitnet_backend_requested() {
             "cuda_bitnet_not_routed"
         } else {
@@ -229,6 +238,8 @@ pub fn reset_qk256_dispatch_coverage() {
     BITNET_LINEAR_ON_CUDA.store(0, Ordering::Relaxed);
     BITNET_LINEAR_CPU_FALLBACK.store(0, Ordering::Relaxed);
     BITNET_LINEAR_UNSUPPORTED.store(0, Ordering::Relaxed);
+    BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK.store(0, Ordering::Relaxed);
+    BITNET_LINEAR_A770_OPENCL_UNSUPPORTED.store(0, Ordering::Relaxed);
     CUDA_QK256_HOST_TO_DEVICE_BYTES.store(0, Ordering::Relaxed);
     CUDA_QK256_DEVICE_TO_HOST_BYTES.store(0, Ordering::Relaxed);
     CUDA_QK256_KERNEL_TIME_MICROS.store(0, Ordering::Relaxed);
@@ -266,25 +277,46 @@ pub fn record_bitnet_linear_cpu_fallback() {
     if cuda_bitnet_backend_requested() {
         BITNET_LINEAR_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
     }
+    if a770_opencl_backend_requested() {
+        BITNET_LINEAR_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+        BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 /// Record a BitNet linear dispatch point that strict CUDA cannot support.
 pub fn record_bitnet_linear_unsupported() {
     BITNET_LINEAR_TOTAL.fetch_add(1, Ordering::Relaxed);
-    BITNET_LINEAR_UNSUPPORTED.fetch_add(1, Ordering::Relaxed);
+    if a770_opencl_backend_requested() {
+        BITNET_LINEAR_A770_OPENCL_UNSUPPORTED.fetch_add(1, Ordering::Relaxed);
+    } else {
+        BITNET_LINEAR_UNSUPPORTED.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 /// True when the run selected or requested the RTX 5070 Ti CUDA BitNet lane.
 pub fn cuda_bitnet_backend_requested() -> bool {
-    backend_env_matches("BITNET_SELECTED_BACKEND")
-        || backend_env_matches("BITNET_REQUESTED_BACKEND")
-        || backend_env_matches("BITNET_BACKEND")
+    cuda_backend_env_matches("BITNET_SELECTED_BACKEND")
+        || cuda_backend_env_matches("BITNET_REQUESTED_BACKEND")
+        || cuda_backend_env_matches("BITNET_BACKEND")
 }
 
 /// True when strict mode forbids CPU fallback for the CUDA BitNet lane.
 pub fn strict_cuda_bitnet_backend_requested() -> bool {
     (cuda_bitnet_backend_requested() && env_truthy("BITNET_STRICT_MODE"))
         || env_truthy("BITNET_STRICT_CUDA_BACKEND")
+}
+
+/// True when the run selected or requested the Intel Arc A770 OpenCL BitNet lane.
+pub fn a770_opencl_backend_requested() -> bool {
+    a770_opencl_backend_env_matches("BITNET_SELECTED_BACKEND")
+        || a770_opencl_backend_env_matches("BITNET_REQUESTED_BACKEND")
+        || a770_opencl_backend_env_matches("BITNET_BACKEND")
+}
+
+/// True when strict mode forbids CPU fallback for the A770 OpenCL BitNet lane.
+pub fn strict_a770_opencl_backend_requested() -> bool {
+    (a770_opencl_backend_requested() && env_truthy("BITNET_STRICT_MODE"))
+        || env_truthy("BITNET_STRICT_A770_OPENCL_BACKEND")
 }
 
 /// Runs I2_S QK256 forward pass for input tensor shapes [B, T, H] or [B, H].
@@ -300,6 +332,21 @@ pub fn forward_qk256_with_scale(
     inline_scale: Option<f32>,
 ) -> Result<Tensor> {
     BITNET_LINEAR_TOTAL.fetch_add(1, Ordering::Relaxed);
+
+    if a770_opencl_backend_requested() {
+        if strict_a770_opencl_backend_requested() {
+            BITNET_LINEAR_A770_OPENCL_UNSUPPORTED.fetch_add(1, Ordering::Relaxed);
+            return Err(BitNetError::Validation(format!(
+                "strict A770 OpenCL BitNet linear dispatch requested for {weight_name}, but OpenCL QK256 runtime is not wired"
+            )));
+        }
+        BITNET_LINEAR_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+        BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+        tracing::warn!(
+            "A770 OpenCL QK256 dispatch requested for {}; using CPU fallback because OpenCL QK256 runtime is not wired",
+            weight_name
+        );
+    }
 
     if cuda_bitnet_backend_requested() {
         #[cfg(feature = "cuda")]
@@ -635,9 +682,18 @@ fn record_cuda_qk256_runtime_stats(stats: &bitnet_kernels::cuda::CudaBitnetKerne
     }
 }
 
-fn backend_env_matches(name: &str) -> bool {
+fn cuda_backend_env_matches(name: &str) -> bool {
     std::env::var(name).is_ok_and(|value| {
         matches!(value.to_ascii_lowercase().as_str(), "nvidia-rtx-5070-ti-cuda" | "cuda")
+    })
+}
+
+fn a770_opencl_backend_env_matches(name: &str) -> bool {
+    std::env::var(name).is_ok_and(|value| {
+        matches!(
+            value.to_ascii_lowercase().as_str(),
+            "intel-a770-opencl" | "intel-arc-a770-opencl" | "a770-opencl"
+        )
     })
 }
 
