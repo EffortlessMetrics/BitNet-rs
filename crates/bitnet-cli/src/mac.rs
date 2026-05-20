@@ -49,6 +49,7 @@ const MAC_BITNET_SERVE_GATE_DEFAULT_RECEIPT: &str =
     "target/apple-m4-bitnet-productization/bitnet-serve-gate.json";
 const MAC_SERVE_DEFAULT_RECEIPT_DIR: &str = "target/apple-m4-local-server/receipts";
 const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-serve-check.json";
+const MAC_SERVE_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/serve-smoke.json";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
@@ -1030,6 +1031,41 @@ enum MacAction {
         json_out: PathBuf,
     },
 
+    /// Run an in-process dense M4 local-server conformance smoke and write one aggregate receipt.
+    ServeSmoke {
+        /// Supported dense SLM model id. Defaults to the validated Apple M4 SLM runtime artifact.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// M4 server device route. Only apple-m4-cpu-neon is supported for dense serve smoke.
+        #[arg(long, default_value = APPLE_M4_CPU_NEON)]
+        device: String,
+
+        /// Prompt for one-shot and streaming completion probes.
+        #[arg(long, default_value = "What is 2+2? Answer with one digit.")]
+        prompt: String,
+
+        /// Maximum new tokens for each completion probe.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 4)]
+        max_new_tokens: usize,
+
+        /// Optional operator timeout boundary recorded in the smoke receipt.
+        #[arg(long)]
+        timeout_seconds: Option<u64>,
+
+        /// Directory where per-request receipts are exported during the smoke.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_DEFAULT_RECEIPT_DIR)]
+        receipt_dir: PathBuf,
+
+        /// Output the aggregate dense serve smoke receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_SMOKE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
     /// Run multiple prompts in one resident Apple M4 CPU/NEON SLM session.
     Chat {
         /// Model family for the resident chat route. BitNet requires --bitnet-chat-gate-receipt.
@@ -1709,6 +1745,29 @@ impl MacCommand {
             }
             MacAction::ServeCheck { url, completion, prompt, max_new_tokens, json_out } => {
                 run_mac_serve_check(&url, completion, &prompt, max_new_tokens, json_out)
+            }
+            MacAction::ServeSmoke {
+                model_id,
+                cache_dir,
+                device,
+                prompt,
+                max_new_tokens,
+                timeout_seconds,
+                receipt_dir,
+                json_out,
+            } => {
+                ensure_supported_mac_serve_device(explicit_device_label)?;
+                run_mac_serve_smoke(
+                    &model_id,
+                    cache_dir,
+                    &device,
+                    &prompt,
+                    max_new_tokens,
+                    timeout_seconds,
+                    receipt_dir,
+                    json_out,
+                )
+                .await
             }
             MacAction::Chat {
                 model_family,
@@ -10142,6 +10201,311 @@ fn run_mac_serve_check(
     } else {
         anyhow::bail!("mac serve-check failed; receipt written to {}", json_out.display())
     }
+}
+
+async fn run_mac_serve_smoke(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    device: &str,
+    prompt: &str,
+    max_new_tokens: usize,
+    timeout_seconds: Option<u64>,
+    receipt_dir: PathBuf,
+    json_out: PathBuf,
+) -> Result<()> {
+    if device != APPLE_M4_CPU_NEON {
+        anyhow::bail!(
+            "mac serve-smoke routes the supported dense Mac local service path through --device {APPLE_M4_CPU_NEON}; requested --device {device}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+        );
+    }
+    if max_new_tokens == 0 {
+        anyhow::bail!("mac serve-smoke max_tokens/max_new_tokens must be greater than zero");
+    }
+    std::fs::create_dir_all(&receipt_dir).with_context(|| {
+        format!("failed to create serve-smoke receipt directory {}", receipt_dir.display())
+    })?;
+    ensure_mac_serve_receipt_dir_ready(&receipt_dir)?;
+
+    let cache_status =
+        model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir.clone(), true)?;
+    if !cache_status["ready"].as_bool().unwrap_or(false) {
+        let next_step = cache_status["next_step"]
+            .as_str()
+            .unwrap_or("run `bitnet model fetch qwen2.5-0.5b-instruct-q8_0`");
+        anyhow::bail!(
+            "mac serve-smoke cannot start because the model cache is not ready: {next_step}"
+        );
+    }
+    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    let generator = MacServeGenerator::load_dense(&model)?;
+    let defaults = MacServeGenerationDefaults {
+        max_new_tokens,
+        temperature: 0.0,
+        top_k: 1,
+        top_p: 1.0,
+        repetition_penalty: 1.1,
+        seed: Some(0),
+    };
+    let state = MacServeState::new_with_route(
+        model,
+        MacServeModelFamily::DenseSlm,
+        cache_status,
+        None,
+        MAC_SERVE_DEFAULT_HOST.to_string(),
+        0,
+        true,
+        defaults,
+        receipt_dir.clone(),
+        Some(generator),
+    );
+
+    let health = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /health HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_health",
+    )
+    .await?;
+    let ready = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /ready HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_ready",
+    )
+    .await?;
+    let models = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /models HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_models",
+    )
+    .await?;
+    let one_shot =
+        mac_serve_smoke_completion(&state, prompt, false, max_new_tokens, timeout_seconds).await?;
+    let streaming =
+        mac_serve_smoke_completion(&state, prompt, true, max_new_tokens, timeout_seconds).await?;
+
+    let passed = health["passed"].as_bool().unwrap_or(false)
+        && ready["passed"].as_bool().unwrap_or(false)
+        && models["passed"].as_bool().unwrap_or(false)
+        && one_shot["passed"].as_bool().unwrap_or(false)
+        && streaming["passed"].as_bool().unwrap_or(false);
+    let timeout_reached = one_shot["timeout_boundary"]["reached"].as_bool().unwrap_or(false)
+        || streaming["timeout_boundary"]["reached"].as_bool().unwrap_or(false);
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "operator_command": "mac serve-smoke",
+        "result": if passed { "pass" } else { "fail" },
+        "model_family": "dense-slm",
+        "model_id": &state.model.id,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "receipt_dir": receipt_dir.display().to_string(),
+        "timeout_boundary": {
+            "configured_seconds": timeout_seconds,
+            "enforced": false,
+            "reached": timeout_reached,
+            "status": "not_enforced_in_process_smoke",
+            "scope": "metadata_only",
+            "deferred_to": "M4-SERVE-EX-002",
+        },
+        "checks": {
+            "health": health,
+            "ready": ready,
+            "models": models,
+            "one_shot_completion": one_shot,
+            "streaming_completion": streaming,
+        },
+        "claim_boundary": {
+            "server_health_checked": true,
+            "server_readiness_checked": true,
+            "model_catalog_checked": true,
+            "one_shot_completion_checked": true,
+            "streaming_completion_checked": true,
+            "receipt_export_checked": true,
+            "dense_slm_only": true,
+            "bitnet_serve_claimed": false,
+            "production_readiness_claimed": false,
+            "openai_compatibility_claimed": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    });
+    write_json_receipt(&json_out, &receipt)?;
+    if passed {
+        println!("mac serve-smoke passed: {}", json_out.display());
+        Ok(())
+    } else {
+        anyhow::bail!("mac serve-smoke failed; receipt written to {}", json_out.display())
+    }
+}
+
+async fn mac_serve_smoke_json_endpoint(
+    state: &MacServeState,
+    request: &str,
+    expected_artifact_kind: &str,
+) -> Result<serde_json::Value> {
+    let started = Instant::now();
+    let reply = mac_serve_http_reply(request, state).await?;
+    let body = mac_serve_reply_json(&reply)?;
+    let passed = reply.status == 200
+        && body["artifact_kind"].as_str() == Some(expected_artifact_kind)
+        && body["generation_executed"].as_bool().unwrap_or(false) == false
+        && body["claim_boundary"]["full_metal_inference_claimed"].as_bool() == Some(false);
+    Ok(serde_json::json!({
+        "executed": true,
+        "status": reply.status,
+        "passed": passed,
+        "artifact_kind": body["artifact_kind"],
+        "generation_executed": body["generation_executed"],
+        "elapsed_ms": crate::rounded_ms(crate::elapsed_ms(started)),
+    }))
+}
+
+async fn mac_serve_smoke_completion(
+    state: &MacServeState,
+    prompt: &str,
+    stream: bool,
+    max_new_tokens: usize,
+    timeout_seconds: Option<u64>,
+) -> Result<serde_json::Value> {
+    let started = Instant::now();
+    let request_body = serde_json::json!({
+        "prompt": prompt,
+        "max_tokens": max_new_tokens,
+        "stream": stream,
+    });
+    let request_body = serde_json::to_string(&request_body)?;
+    let request = format!(
+        "POST /v1/chat/completions HTTP/1.1\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+        request_body.len(),
+        request_body
+    );
+    let reply_result = mac_serve_http_reply(&request, state).await;
+    let reply = reply_result?;
+    let body = if stream {
+        mac_serve_smoke_sse_metadata(&reply.body).unwrap_or_else(|| serde_json::json!({}))
+    } else {
+        mac_serve_reply_json(&reply)?
+    };
+    let request_id = &body["id"];
+    let receipt_path = body["receipt_path"].clone();
+    let receipt_id = receipt_path
+        .as_str()
+        .and_then(|path| path.rsplit('/').next())
+        .and_then(mac_serve_normalize_receipt_id);
+    let receipt_export = if let Some(receipt_id) = receipt_id.as_deref() {
+        mac_serve_smoke_receipt_export(state, receipt_id, request_id.as_str()).await?
+    } else {
+        serde_json::json!({
+            "executed": false,
+            "passed": false,
+            "error": "missing_receipt_id",
+        })
+    };
+    let generated_tokens = if stream {
+        body["generated_token_ids"].as_array().map(|tokens| tokens.len()).unwrap_or(0)
+    } else {
+        body["receipt"]["generation"]["generated_token_ids"]
+            .as_array()
+            .map(|tokens| tokens.len())
+            .unwrap_or(0)
+    };
+    let generated_text_non_empty = if stream {
+        receipt_export["generated_text_non_empty"].as_bool().unwrap_or(false)
+    } else {
+        body["receipt"]["generation"]["text"].as_str().is_some_and(|text| !text.trim().is_empty())
+    };
+    let backend_ok = if stream {
+        receipt_export["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
+            && receipt_export["fallback_used"].as_bool() == Some(false)
+    } else {
+        body["receipt"]["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
+            && body["receipt"]["fallback_used"].as_bool() == Some(false)
+    };
+    let passed = reply.status == 200
+        && backend_ok
+        && generated_tokens > 0
+        && generated_text_non_empty
+        && receipt_export["passed"].as_bool() == Some(true);
+    Ok(serde_json::json!({
+        "executed": true,
+        "stream": stream,
+        "status": reply.status,
+        "content_type": reply.content_type,
+        "passed": passed,
+        "request_id": request_id,
+        "receipt_path": receipt_path,
+        "generated_tokens": generated_tokens,
+        "generated_text_non_empty": generated_text_non_empty,
+        "finish_reason": if stream { receipt_export["finish_reason"].clone() } else { body["choices"][0]["finish_reason"].clone() },
+        "receipt_export": receipt_export,
+        "elapsed_ms": crate::rounded_ms(crate::elapsed_ms(started)),
+        "timeout_boundary": {
+            "configured_seconds": timeout_seconds,
+            "enforced": false,
+            "reached": false,
+            "status": "not_enforced_in_process_smoke",
+            "deferred_to": "M4-SERVE-EX-002",
+        },
+    }))
+}
+
+async fn mac_serve_smoke_receipt_export(
+    state: &MacServeState,
+    receipt_id: &str,
+    expected_request_id: Option<&str>,
+) -> Result<serde_json::Value> {
+    let path = format!("GET /receipts/{receipt_id} HTTP/1.1\r\n\r\n");
+    let reply = mac_serve_http_reply(&path, state).await?;
+    let receipt = mac_serve_reply_json(&reply)?;
+    let passed = reply.status == 200
+        && receipt["request_id"].as_str() == expected_request_id
+        && receipt["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
+        && receipt["fallback_used"].as_bool() == Some(false)
+        && receipt["generation"]["generated_token_ids"]
+            .as_array()
+            .is_some_and(|tokens| !tokens.is_empty())
+        && receipt["claim_boundary"]["production_readiness_claimed"].as_bool() == Some(false)
+        && receipt["claim_boundary"]["openai_compatibility_claimed"].as_bool() == Some(false);
+    Ok(serde_json::json!({
+        "executed": true,
+        "status": reply.status,
+        "passed": passed,
+        "request_id": receipt["request_id"],
+        "artifact_kind": receipt["artifact_kind"],
+        "selected_backend": receipt["selected_backend"],
+        "fallback_used": receipt["fallback_used"],
+        "generated_text_non_empty": receipt["generation"]["text"]
+            .as_str()
+            .is_some_and(|text| !text.trim().is_empty()),
+        "generated_tokens": receipt["generation"]["generated_tokens"],
+        "finish_reason": receipt["generation"]["finish_reason"],
+    }))
+}
+
+fn mac_serve_reply_json(reply: &MacServeHttpReply) -> Result<serde_json::Value> {
+    serde_json::from_slice(&reply.body).context("M4 local server response was not valid JSON")
+}
+
+fn mac_serve_smoke_sse_metadata(body: &[u8]) -> Option<serde_json::Value> {
+    let body = std::str::from_utf8(body).ok()?;
+    body.lines().find_map(|line| {
+        let data = line.strip_prefix("data: ")?;
+        let data = data.trim();
+        if data == "[DONE]" || !data.starts_with('{') {
+            return None;
+        }
+        let value: serde_json::Value = serde_json::from_str(data).ok()?;
+        if value["receipt_path"].as_str().is_some() { Some(value) } else { None }
+    })
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -18781,6 +19145,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_serve_failure_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_serve_completion" {
         validate_bitnet_serve_completion_receipt(path, receipt)?
+    } else if artifact_kind == "bitnet_apple_m4_dense_local_server_smoke" {
+        validate_dense_local_server_smoke_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_local_server_check" {
         validate_bitnet_local_server_check_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_inference_status" {
@@ -20428,6 +20794,75 @@ fn validate_bitnet_local_server_check_receipt(
     require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
     let generated_tokens = receipt["checks"]["completion"]["generated_tokens"].as_u64();
     Ok((Some(0), generated_tokens.map(|tokens| tokens as usize)))
+}
+
+fn validate_dense_local_server_smoke_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "bitnet_apple_m4_dense_local_server_smoke",
+    )?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac serve-smoke")?;
+    require_exact_string_at(path, receipt, &["model_family"], "dense-slm")?;
+    require_exact_string_at(path, receipt, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    let result = require_non_empty_string_at(path, receipt, &["result"])?;
+    if !matches!(result, "pass" | "fail") {
+        anyhow::bail!("{} dense local-server smoke result must be pass or fail", path.display());
+    }
+    for endpoint in ["health", "ready", "models", "one_shot_completion", "streaming_completion"] {
+        require_bool_at(path, receipt, &["checks", endpoint, "executed"], true)?;
+    }
+    if result == "pass" {
+        require_bool_at(path, receipt, &["checks", "health", "passed"], true)?;
+        require_bool_at(path, receipt, &["checks", "ready", "passed"], true)?;
+        require_bool_at(path, receipt, &["checks", "models", "passed"], true)?;
+        require_bool_at(path, receipt, &["checks", "one_shot_completion", "passed"], true)?;
+        require_bool_at(path, receipt, &["checks", "streaming_completion", "passed"], true)?;
+        require_bool_at(
+            path,
+            receipt,
+            &["checks", "one_shot_completion", "receipt_export", "passed"],
+            true,
+        )?;
+        require_bool_at(
+            path,
+            receipt,
+            &["checks", "streaming_completion", "receipt_export", "passed"],
+            true,
+        )?;
+    }
+    require_bool_at(path, receipt, &["timeout_boundary", "enforced"], false)?;
+    require_bool_at(path, receipt, &["timeout_boundary", "reached"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "server_health_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "server_readiness_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "model_catalog_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "one_shot_completion_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "streaming_completion_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "receipt_export_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "production_readiness_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "openai_compatibility_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    let one_shot_tokens =
+        receipt["checks"]["one_shot_completion"]["generated_tokens"].as_u64().unwrap_or(0);
+    let streaming_tokens =
+        receipt["checks"]["streaming_completion"]["generated_tokens"].as_u64().unwrap_or(0);
+    Ok((Some(0), Some((one_shot_tokens + streaming_tokens) as usize)))
 }
 
 fn validate_apple_m4_inference_status_receipt(
@@ -28677,5 +29112,76 @@ mod tests {
         assert!(MacServeCheckEndpoint::parse("https://127.0.0.1:8080").is_err());
         assert!(MacServeCheckEndpoint::parse("http://127.0.0.1").is_err());
         assert!(MacServeCheckEndpoint::parse("http://127.0.0.1:8080/path").is_err());
+    }
+
+    #[test]
+    fn dense_local_server_smoke_receipt_validates_claim_boundaries()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("serve-smoke.json");
+        let mut receipt = serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+            "operator_command": "mac serve-smoke",
+            "result": "pass",
+            "model_family": "dense-slm",
+            "model_id": "qwen2.5-0.5b-instruct-q8_0",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "timeout_boundary": {
+                "configured_seconds": 300,
+                "enforced": false,
+                "reached": false,
+            },
+            "checks": {
+                "health": {"executed": true, "passed": true},
+                "ready": {"executed": true, "passed": true},
+                "models": {"executed": true, "passed": true},
+                "one_shot_completion": {
+                    "executed": true,
+                    "passed": true,
+                    "generated_tokens": 1,
+                    "receipt_export": {"executed": true, "passed": true}
+                },
+                "streaming_completion": {
+                    "executed": true,
+                    "passed": true,
+                    "generated_tokens": 1,
+                    "receipt_export": {"executed": true, "passed": true}
+                }
+            },
+            "claim_boundary": {
+                "server_health_checked": true,
+                "server_readiness_checked": true,
+                "model_catalog_checked": true,
+                "one_shot_completion_checked": true,
+                "streaming_completion_checked": true,
+                "receipt_export_checked": true,
+                "dense_slm_only": true,
+                "bitnet_serve_claimed": false,
+                "production_readiness_claimed": false,
+                "openai_compatibility_claimed": false,
+                "bitnet_quality_claimed": false,
+                "full_metal_inference_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+            },
+        });
+
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+        assert_eq!(summary.artifact_kind, "bitnet_apple_m4_dense_local_server_smoke");
+        assert_eq!(summary.generated_tokens, Some(2));
+
+        receipt["claim_boundary"]["bitnet_serve_claimed"] = serde_json::json!(true);
+        let err = validate_mac_receipt_value(&receipt_path, &receipt)
+            .expect_err("BitNet serve claim must be rejected")
+            .to_string();
+        assert!(err.contains("bitnet_serve_claimed"));
+        Ok(())
     }
 }
