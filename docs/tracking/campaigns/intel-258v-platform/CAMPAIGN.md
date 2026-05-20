@@ -15,6 +15,11 @@ Validate Core Ultra 7 258V as the BitNet CPU lead and tri-device platform while 
 - Arc 140V OpenCL, OpenVINO GPU, and OpenVINO NPU evidence are not conflated.
 - Receipts record OS, drivers, memory, power, thermal, and WSL/native visibility context.
 
+Current `low_power` battery-mode evidence collection is tracked by
+`LNL258V-POWER-006`. The operator runbook is
+`docs/hardware/intel-258v-low-power-battery-runbook.md`. It is a checklist and
+claim-boundary document, not battery evidence by itself.
+
 ## Hard Constraints
 
 - 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims.

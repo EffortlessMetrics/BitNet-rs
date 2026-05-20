@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T10:40:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-008"
+branch = "codex/lunar-lake/LNL258V-POWER-008-runbook-links"
+actor = "codex"
+summary = "Started a docs-only runbook discoverability slice for the blocked POWER-006 low_power battery run."
+
+notes = [
+  "POWER-006 remains blocked because the current 258V machine is on AC power and lacks real battery-mode low_power telemetry.",
+  "This slice links the POWER-006 battery-mode runbook from the main 258V validation profile and campaign overview.",
+  "The slice preserves no new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]
