@@ -2055,6 +2055,72 @@ fn dense_gguf_qwen_short_decode_rejects_malformed_full_logits_byte_accounting()
     Ok(())
 }
 
+fn mark_short_decode_transfer_reduced(
+    receipt: &mut Value,
+    actual_device_to_host_bytes: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let full_logits_download_bytes =
+        receipt["logits_transfer_reduction"]["full_logits_download_bytes"].as_u64().ok_or_else(
+            || {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "test fixture full logits bytes must be a u64",
+                )
+            },
+        )?;
+    if actual_device_to_host_bytes >= full_logits_download_bytes {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "test fixture must model a reduced D2H transfer",
+        )
+        .into());
+    }
+    receipt["kernel_stats"][0]["device_to_host_bytes"] = json!(actual_device_to_host_bytes);
+    receipt["timing"]["device_to_host_bytes"] = json!(actual_device_to_host_bytes);
+    receipt["tensor_residency"]["transfer_accounting"]["device_to_host_bytes"] =
+        json!(actual_device_to_host_bytes);
+    receipt["logits_transfer_reduction"]["actual_device_to_host_bytes"] =
+        json!(actual_device_to_host_bytes);
+    receipt["logits_transfer_reduction"]["device_to_host_bytes_reduced"] = json!(true);
+    receipt["logits_transfer_reduction"]["bytes_saved_vs_full_logits"] =
+        json!(full_logits_download_bytes - actual_device_to_host_bytes);
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_rejects_reduced_transfer_without_device_sampler()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    mark_short_decode_transfer_reduced(&mut receipt, 192)?;
+
+    let err = match validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted reduced D2H bytes with the CPU full-logits sampler",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
+
+    assert!(err.contains("transfer_mode"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_accepts_device_top_k_reduced_transfer_contract()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    mark_short_decode_transfer_reduced(&mut receipt, 192)?;
+    receipt["logits_transfer_reduction"]["transfer_mode"] = json!("device_top_k_cuda_sampler");
+    receipt["logits_transfer_reduction"]["sampling_location"] = json!("cuda_device");
+    receipt["logits_transfer_reduction"]["reduction_blocker"] = Value::Null;
+
+    validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)?;
+    Ok(())
+}
+
 #[test]
 fn dense_gguf_qwen_short_decode_rejects_chat_speedup_full_residency_and_bitnet_claims() {
     let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();

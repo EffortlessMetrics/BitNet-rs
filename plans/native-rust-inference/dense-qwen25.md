@@ -9,7 +9,7 @@ Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
-Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
+Campaign: `nvidia-5070ti`
 Blocks: CUDA-DENSE-QWEN25-OPS-002
 Blocked by: none
 
@@ -173,3 +173,54 @@ git diff --check
 
 Revert the review report and restore the previous next-proof text. No claim
 booleans were promoted by this work item.
+
+## Work item: CUDA-DENSE-QWEN25-OPS-004
+
+Status: in_progress
+Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
+Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
+Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
+Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
+Blocks: device top-k implementation and refreshed exact-profile comparator
+Blocked by: CUDA-DENSE-QWEN25-PERF-007
+
+### Goal
+
+Harden the Qwen2.5 logits-transfer reduction contract before runtime work can
+claim reduced D2H bytes.
+
+### Production delta
+
+Dense Qwen short-decode and warm-session receipt validation must reject a
+`device_to_host_bytes_reduced=true` claim unless the receipt also proves a
+CUDA device-side top-k or greedy sampler path, `sampling_location=cuda_device`,
+measured D2H bytes below the full-logits envelope, selected-token equality,
+top-k evidence preservation, and unchanged quality receipts.
+
+### Non-goals
+
+No runtime sampler, CUDA kernel, benchmark requalification, speedup promotion,
+full-residency promotion, server-readiness change, or BitNet proof change.
+
+### Acceptance
+
+Reduced-transfer receipts with the CPU full-logits sampler fail validation.
+Reduced-transfer receipts with `device_top_k_cuda_sampler` or
+`device_greedy_cuda_sampler`, `sampling_location=cuda_device`, correct byte
+math, selected-token equality, top-k evidence, and unchanged quality receipts
+can validate.
+
+### Proof commands
+
+```bash
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features dense_gguf_qwen_short_decode
+cargo run --locked -p xtask --no-default-features -- check-model-coverage
+cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti
+cargo run --locked -p xtask --no-default-features -- campaign generate --check
+git diff --check
+```
+
+### Rollback
+
+Revert the receipt-validator tightening and this work item. Existing Qwen2.5
+product CLI and exact-profile server readiness evidence remains unchanged.
