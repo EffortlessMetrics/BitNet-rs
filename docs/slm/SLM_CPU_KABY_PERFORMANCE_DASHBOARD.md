@@ -407,6 +407,15 @@ records that packed Q8_0 sidecar compute is still disabled until a packed
 compute kernel exists and before/after Qwen3 Q8_0 warm-session receipts prove
 identical generated output and dense hook-selection identity.
 
+SLM-CPU-058 is the next proof gate, not a compute-enablement shortcut. It must
+capture or ingest a before/after Qwen3 Q8_0 warm-session receipt pack that
+compares the eager F32 Candle behavior oracle against the selected dense-hook
+path, or records that packed Q8_0 sidecar compute is still disabled. The
+receipts must match on model SHA, tokenizer source and strictness, prompt IDs,
+generated IDs, decoded text, selected CPU backend/kernel identity, dense
+hook-selection identity, and `fallback=false` before any packed sidecar compute
+can be enabled. A speedup or sustained-throughput claim remains out of scope.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when

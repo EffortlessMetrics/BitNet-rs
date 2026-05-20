@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T02:33:28Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-058"
+event = "in_progress"
+actor = "codex"
+previous_status = "untracked"
+new_status = "ready"
+summary = "Queued the dense hook before/after receipt pack after SLM-CPU-057."
+notes = [
+  "Added SLM-CPU-058 as the next receipt-equivalence gate after PR #6045 made dense hook-selection identity visible in Qwen3 Q8_0 warm-session receipts.",
+  "The item requires before/after Qwen3 Q8_0 warm-session receipts to prove identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback=false before packed sidecar compute can be enabled.",
+  "If packed Q8_0 sidecar compute remains disabled, the slice must record that as the current safe state instead of claiming speedup.",
+  "No sustained throughput, broad answer quality, Q4/Q5 runtime, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
