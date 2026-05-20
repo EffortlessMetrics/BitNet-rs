@@ -8557,6 +8557,48 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SWARM-LNL258V-POWER-006-PREFLIGHT-001"
+status = "pr_open"
+pr = 37
+branch = "codex/swarm-lnl258v-power006-blocked-telemetry-refresh"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+acceptance = "Refresh the committed Lunar Lake low_power battery telemetry blocked receipt in swarm by rerunning telemetry-context --require-battery on the current machine, record that the strict command still exits blocked because AC power is inferred, and keep POWER-006, low_power route status, route promotion, inference, speedup, power-advantage, measured-temperature, native accelerator, broad quality, and BitNet QK256/I2_S behavior claims unchanged."
+commands = [
+  "target/debug/bitnet.exe lunar-lake telemetry-context --artifact-root ci/hardware/intel-258v/2026-05-08 --require-battery --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-telemetry-blocked.json --created-utc 2026-05-20T11:09:44Z --strict (expected exit code 1 while AC power is inferred)",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-telemetry-blocked.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-telemetry-blocked.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "models/**",
+  "ci/model-artifacts/**",
+  "ci/quality/**",
+]
+may_claim = [
+  "The committed low_power battery telemetry blocked receipt was refreshed in swarm.",
+  "The strict preflight remains blocked because the current machine reports AC power.",
+  "POWER-006 remains blocked until real battery-mode telemetry and energy-proxy evidence exist.",
+]
+must_not_claim = [
+  "New inference was run.",
+  "Battery-mode low_power evidence was collected.",
+  "POWER-006 is complete.",
+  "Any route promotion changed.",
+  "A speedup, power advantage, native accelerator, acceleration, broad quality, measured-temperature, or BitNet QK256/I2_S behavior-change claim was added.",
+]
+
+[[work_item]]
 id = "LNL258V-BITNET-INTAKE-002"
 status = "merged"
 pr = 5947

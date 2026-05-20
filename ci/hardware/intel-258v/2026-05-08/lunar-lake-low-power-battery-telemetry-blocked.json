@@ -2,10 +2,10 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_thermal_context",
   "proof_stage": "battery_mode_telemetry_context_blocked_no_promotion_change",
-  "created_utc": "2026-05-19T22:30:00Z",
+  "created_utc": "2026-05-20T11:09:44Z",
   "machine_id": "intel-258v",
   "telemetry_scope": "low_power_battery_mode_telemetry",
-  "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=10529366016;used_bytes=23344414720",
+  "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=12392529920;used_bytes=21481250816",
   "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
   "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
   "availability": {
@@ -16,8 +16,8 @@
   "memory": {
     "source": "sysinfo",
     "total_bytes": 33873780736,
-    "available_bytes": 10529366016,
-    "used_bytes": 23344414720
+    "available_bytes": 12392529920,
+    "used_bytes": 21481250816
   },
   "power": {
     "source": "os_power_probe",
