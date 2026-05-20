@@ -2444,7 +2444,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-RELIABILITY-001"
-status = "pr_open"
+status = "merged"
+pr = 6154
 branch = "codex/apple-m4-inference-excellence/M4-RELIABILITY-001-recovery-drills"
 stackable = false
 review_mode = "codex_premerge"
