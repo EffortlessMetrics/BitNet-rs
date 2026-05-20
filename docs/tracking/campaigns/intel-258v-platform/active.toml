@@ -8280,6 +8280,72 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SWARM-LNL258V-BITNET-INTAKE-009"
+status = "pr_open"
+pr = 66
+head_sha = "67839b5eef0f7a88a2946fa8c8b668b5ec14a1fc"
+branch = "codex/swarm-lnl258v-bitnet-prompt-009-direct-ref-bos"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SWARM-LNL258V-BITNET-INTAKE-008"]
+acceptance = "Correct the Lunar Lake first-token divergence classifier for direct BitNet.cpp references that preserve raw llama-server prompt token IDs with BOS while also supplying expected_prompt_token_ids_without_local_bos as the canonical local comparison boundary. Preserve the raw reference prompt IDs in the receipt, compare local scalar/AVX2 prompt IDs against the explicit expected no-local-BOS field, rerun the after-A770-43 offline first-token classifier, refresh the CPU reference bundle, BitNet semantic intake, operator readiness, strict regression-v2, and operator comparison so the current evidence records prompt-token exact matches and no divergence at the first generated token boundary. Preserve no new model inference, route promotion, speedup, power-advantage, measured-temperature, battery-mode evidence, native accelerator, acceleration, first-token logits parity, full generated-sequence parity, broad quality, or BitNet QK256/I2_S behavior-change claims."
+commands = [
+  "cargo test -p bitnet-cli --no-default-features --features cpu,full-cli commands::first_token_divergence::tests::direct_reference_can_compare_expected_prompt_ids_without_local_bos -- --exact --nocapture",
+  "target/debug/bitnet.exe first-token-divergence --external-reference ci/hardware/intel-258v/2026-05-08/external-first-token-reference-direct.json --prompt-audit ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json --scalar-answer-corpus ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-a770-43.json --avx2-answer-corpus ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-a770-43.json --answer-parity ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-a770-43.json --json-out ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-after-a770-43.json",
+  "target/debug/bitnet.exe lunar-lake bitnet-intake --artifact-root ci/hardware/intel-258v/2026-05-08 --source-changes lunar-lake-bitnet-semantic-source-changes.json --cpu-reference-bundle cpu-reference-bundle-after-semantic-fix.json --operator-comparison lunar-lake-operator-comparison.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json --created-utc 2026-05-20T18:07:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake validate --artifact-root ci/hardware/intel-258v/2026-05-08 --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json --created-utc 2026-05-20T18:05:30Z --strict",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-20T18:07:30Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-20T18:08:00Z --strict",
+  "python -m json.tool each changed JSON artifact",
+  "target/debug/xtask.exe campaign check intel-258v-platform",
+  "target/debug/xtask.exe campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/first_token_divergence.rs",
+  "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-after-a770-43.json",
+  "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/hardware/a770/**",
+  "ci/quality/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "models/**",
+]
+may_claim = [
+  "The direct BitNet.cpp reference raw prompt IDs are preserved in the classifier receipt while expected_prompt_token_ids_without_local_bos is used as the canonical prompt-token comparison boundary.",
+  "After the classifier correction, the after-A770-43 direct reference classifier records prompt-token exact matches for the fixed prompt corpus and no divergence at the first generated token boundary.",
+  "The refreshed semantic intake reports intake_ready=true and rerun_required=false, and strict regression-v2 plus operator comparison remain ready.",
+]
+must_not_claim = [
+  "New model inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "A measured thermal temperature is available.",
+  "Battery-mode low_power evidence is available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "First-token logits parity with BitNet.cpp is proven.",
+  "Full generated-token sequence parity beyond the recorded first generated token boundary is proven.",
+  "Broad BitNet quality is proven.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "SWARM-LNL258V-BITNET-INTAKE-008"
 status = "merged"
 pr = 61

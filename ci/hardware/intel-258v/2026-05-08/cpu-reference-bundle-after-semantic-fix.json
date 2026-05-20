@@ -2,9 +2,9 @@
   "schema": 3,
   "artifact_kind": "intel_258v_cpu_reference_bundle",
   "machine_id": "intel-258v",
-  "captured_at_utc": "2026-05-20T17:12:19Z",
-  "proof_stage": "corrected_cpu_reference_bundled_after_a770_43_intake_rerun",
-  "reference_scope": "same_machine_cpu_reference_after_a770_43_semantic_intake_rerun",
+  "captured_at_utc": "2026-05-20T18:03:57Z",
+  "proof_stage": "corrected_cpu_reference_bundled_after_a770_43_direct_prompt_boundary",
+  "reference_scope": "same_machine_cpu_reference_after_a770_43_direct_reference_prompt_boundary_refresh",
   "supersedes": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json",
   "source_artifacts": {
     "platform_probe": "ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json",
@@ -141,7 +141,14 @@
     "first_token_divergence_classifier": {
       "artifact": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-after-a770-43.json",
       "proof_stage": "first_token_divergence_classified",
-      "classification": "prompt_token_policy_mismatch"
+      "classification": "no_divergence_at_first_generated_token",
+      "first_divergence_stage": "none",
+      "evidence_boundary": "all_available_reference_first_generated_token_ids_match_local_cpu",
+      "prompt_token_exact_matches": 4,
+      "reference_generated_token_ids_available": true,
+      "reference_logits_available": true,
+      "scalar_avx2_parity_passed": true,
+      "next_required_evidence": "none_for_first_generated_token_boundary; use deeper sequence, logits, or layer evidence only if needed"
     },
     "external_reference_instrumentation": {
       "artifact": "ci/hardware/intel-258v/2026-05-08/external-reference-instrumentation.json",
@@ -177,11 +184,14 @@
     "first_token_divergence_classifier_after_a770_43": {
       "artifact": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-after-a770-43.json",
       "proof_stage": "first_token_divergence_classified",
-      "classification": "prompt_token_policy_mismatch",
+      "classification": "no_divergence_at_first_generated_token",
       "reference_generated_token_ids_available": true,
       "reference_logits_available": true,
       "scalar_avx2_parity_passed": true,
-      "next_required_evidence": "fix the classified earlier divergence before deeper token or logits evidence"
+      "next_required_evidence": "none_for_first_generated_token_boundary; use deeper sequence, logits, or layer evidence only if needed",
+      "first_divergence_stage": "none",
+      "evidence_boundary": "all_available_reference_first_generated_token_ids_match_local_cpu",
+      "prompt_token_exact_matches": 4
     }
   },
   "phase_evidence_after_prompt_fix": {
@@ -231,13 +241,14 @@
     "cpu_fallback_can_satisfy_accelerator_proof": false
   },
   "remaining_gaps": [
-    "After-A770-43 first-token divergence rerun classifies a prompt-token policy mismatch against the direct external BitNet.cpp reference; this refresh records the gap and does not claim external first-token parity.",
-    "Direct external reference generated-token IDs and first-token logits/top-k are available, but the after-A770-43 classifier records a prompt-token policy mismatch before external first-token parity can be claimed.",
+    "After-A770-43 first-token divergence now uses the direct reference expected_prompt_token_ids_without_local_bos boundary; prompt-token exact matches are 4/4 and direct reference first generated token IDs match local scalar/AVX2 for the fixed prompt corpus.",
+    "Direct external reference first-token logits/top-k are recorded, but this bundle still does not claim local-vs-reference logits parity or full generated-sequence parity beyond the first generated token boundary.",
     "Phase receipts are timing evidence only and do not claim speedup or sustained throughput.",
     "The fixed tiny corpus passing does not claim broad chat quality or full model correctness.",
     "Arc 140V and Intel NPU must cite independent receipts for their own execution/parity claims."
   ],
   "may_claim": [
+    "The after-A770-43 direct-reference classifier records prompt-token exact matches and no divergence at the first generated token boundary for the fixed prompt corpus, using expected_prompt_token_ids_without_local_bos while preserving raw BitNet.cpp server prompt IDs.",
     "The after-A770-43 rerun refreshed 258V BitNet CPU scalar and AVX2 answer corpus receipts, scalar-vs-AVX2 parity, first-token divergence classification, and CPU phase receipts with fallback_used=false.",
     "The corrected 258V CPU reference bundle links the prompt-policy fix, post-fix prompt/token parity, post-fix scalar and AVX2 answer corpus, scalar-vs-AVX2 answer parity, and corrected warm-session phase receipts.",
     "The referenced CPU receipts used real GGUF loading, explicit strict tokenizer resolution, selected i2_s scalar/AVX2 CPU kernels, corrected BitNet prompt policy, and fallback_used=false.",
@@ -245,7 +256,8 @@
   ],
   "must_not_claim": [
     "The after-A770-43 rerun changes BitNet QK256/I2_S behavior.",
-    "The after-A770-43 rerun proves external first-token parity.",
+    "The after-A770-43 rerun proves first-token logits parity.",
+    "The after-A770-43 rerun proves full generated-token sequence parity beyond the recorded first generated token boundary.",
     "New runtime behavior is added by this bundle refresh.",
     "General BitNet answer quality is proven beyond the fixed tiny corpus.",
     "External first-token logits parity is proven.",

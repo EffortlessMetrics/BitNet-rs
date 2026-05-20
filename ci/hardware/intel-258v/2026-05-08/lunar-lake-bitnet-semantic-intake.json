@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_bitnet_semantic_intake",
   "proof_stage": "shared_bitnet_semantic_intake_no_new_inference",
-  "created_utc": "2026-05-20T17:17:30Z",
+  "created_utc": "2026-05-20T18:07:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "source_changes_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
@@ -35,9 +35,9 @@
     ]
   },
   "lunar_lake_evidence": {
-    "cpu_reference_bundle_created_utc": "2026-05-20T17:12:19Z",
-    "operator_comparison_created_utc": "2026-05-20T17:17:00Z",
-    "evidence_cutoff_utc": "2026-05-20T17:12:19Z",
+    "cpu_reference_bundle_created_utc": "2026-05-20T18:03:57Z",
+    "operator_comparison_created_utc": "2026-05-20T18:06:30Z",
+    "evidence_cutoff_utc": "2026-05-20T18:03:57Z",
     "cpu_reference_bundle_path": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
     "operator_comparison_path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
     "evidence_paths": [

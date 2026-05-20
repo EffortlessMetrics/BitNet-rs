@@ -58,16 +58,16 @@
       "case_id": "math_2_plus_2",
       "classification": {
         "case_id": "math_2_plus_2",
-        "classification": "prompt_token_policy_mismatch",
-        "evidence_boundary": "external_reference_prompt_ids_do_not_match_local_ids_or_single_local_bos_prefix",
-        "first_divergence_stage": "prompt_token_ids"
+        "classification": "first_generated_token_matches",
+        "evidence_boundary": "reference_and_local_first_generated_token_ids_match",
+        "first_divergence_stage": "none"
       },
       "comparisons": {
         "reference_avx2_generated_text_trimmed_match": true,
         "reference_scalar_generated_text_trimmed_match": true,
-        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_exact_match": true,
         "reference_vs_avx2_prompt_local_bos_prefix_match": false,
-        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_exact_match": true,
         "reference_vs_scalar_prompt_local_bos_prefix_match": false,
         "scalar_avx2_generated_match": true,
         "scalar_avx2_prompt_match": true
@@ -119,6 +119,28 @@
         "missing_reference_fields": [],
         "prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant: ",
         "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "prompt_token_ids_source": "expected_prompt_token_ids_without_local_bos",
+        "raw_prompt_token_ids": [
           128000,
           1502,
           25,
@@ -243,16 +265,16 @@
       "case_id": "say_ok",
       "classification": {
         "case_id": "say_ok",
-        "classification": "prompt_token_policy_mismatch",
-        "evidence_boundary": "external_reference_prompt_ids_do_not_match_local_ids_or_single_local_bos_prefix",
-        "first_divergence_stage": "prompt_token_ids"
+        "classification": "first_generated_token_matches",
+        "evidence_boundary": "reference_and_local_first_generated_token_ids_match",
+        "first_divergence_stage": "none"
       },
       "comparisons": {
         "reference_avx2_generated_text_trimmed_match": true,
         "reference_scalar_generated_text_trimmed_match": true,
-        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_exact_match": true,
         "reference_vs_avx2_prompt_local_bos_prefix_match": false,
-        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_exact_match": true,
         "reference_vs_scalar_prompt_local_bos_prefix_match": false,
         "scalar_avx2_generated_match": true,
         "scalar_avx2_prompt_match": true
@@ -304,6 +326,19 @@
         "missing_reference_fields": [],
         "prompt": "User: Say exactly: OK<|eot_id|>Assistant: ",
         "prompt_token_ids": [
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "prompt_token_ids_source": "expected_prompt_token_ids_without_local_bos",
+        "raw_prompt_token_ids": [
           128000,
           1502,
           25,
@@ -418,16 +453,16 @@
       "case_id": "capital_france",
       "classification": {
         "case_id": "capital_france",
-        "classification": "prompt_token_policy_mismatch",
-        "evidence_boundary": "external_reference_prompt_ids_do_not_match_local_ids_or_single_local_bos_prefix",
-        "first_divergence_stage": "prompt_token_ids"
+        "classification": "first_generated_token_matches",
+        "evidence_boundary": "reference_and_local_first_generated_token_ids_match",
+        "first_divergence_stage": "none"
       },
       "comparisons": {
         "reference_avx2_generated_text_trimmed_match": true,
         "reference_scalar_generated_text_trimmed_match": true,
-        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_exact_match": true,
         "reference_vs_avx2_prompt_local_bos_prefix_match": false,
-        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_exact_match": true,
         "reference_vs_scalar_prompt_local_bos_prefix_match": false,
         "scalar_avx2_generated_match": true,
         "scalar_avx2_prompt_match": true
@@ -479,6 +514,27 @@
         "missing_reference_fields": [],
         "prompt": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant: ",
         "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "prompt_token_ids_source": "expected_prompt_token_ids_without_local_bos",
+        "raw_prompt_token_ids": [
           128000,
           1502,
           25,
@@ -608,16 +664,16 @@
       "case_id": "yes_no_water",
       "classification": {
         "case_id": "yes_no_water",
-        "classification": "prompt_token_policy_mismatch",
-        "evidence_boundary": "external_reference_prompt_ids_do_not_match_local_ids_or_single_local_bos_prefix",
-        "first_divergence_stage": "prompt_token_ids"
+        "classification": "first_generated_token_matches",
+        "evidence_boundary": "reference_and_local_first_generated_token_ids_match",
+        "first_divergence_stage": "none"
       },
       "comparisons": {
         "reference_avx2_generated_text_trimmed_match": false,
         "reference_scalar_generated_text_trimmed_match": false,
-        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_exact_match": true,
         "reference_vs_avx2_prompt_local_bos_prefix_match": false,
-        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_exact_match": true,
         "reference_vs_scalar_prompt_local_bos_prefix_match": false,
         "scalar_avx2_generated_match": true,
         "scalar_avx2_prompt_match": true
@@ -671,6 +727,24 @@
         "missing_reference_fields": [],
         "prompt": "User: Answer yes or no: is water wet?<|eot_id|>Assistant: ",
         "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "prompt_token_ids_source": "expected_prompt_token_ids_without_local_bos",
+        "raw_prompt_token_ids": [
           128000,
           1502,
           25,
@@ -748,7 +822,8 @@
       "The receipt classifies the first available evidence boundary between external BitNet reference text and 258V scalar/AVX2 CPU receipts.",
       "When the external reference supplies direct generated-token IDs, the receipt classifies first-generated-token matches or mismatches against the local CPU receipts.",
       "Scalar-vs-AVX2 agreement can be kept separate from missing external generated-token/logit evidence.",
-      "Prompt-token comparisons distinguish exact matches from local BOS-prefix policy deltas."
+      "Prompt-token comparisons distinguish exact matches from local BOS-prefix policy deltas.",
+      "Direct reference artifacts can supply expected_prompt_token_ids_without_local_bos as the canonical prompt-token comparison boundary while preserving raw reference prompt IDs."
     ],
     "must_not_claim": [
       "first-token logits parity",
@@ -807,24 +882,23 @@
     "cases_total": 4,
     "cases_with_reference_first_token_topk_logits": 4,
     "cases_with_reference_generated_token_ids": 4,
-    "classification": "prompt_token_policy_mismatch",
+    "classification": "no_divergence_at_first_generated_token",
     "first_divergence": {
-      "case_id": "math_2_plus_2",
-      "classification": "prompt_token_policy_mismatch",
-      "evidence_boundary": "external_reference_prompt_ids_do_not_match_local_ids_or_single_local_bos_prefix",
-      "first_divergence_stage": "prompt_token_ids"
+      "classification": "no_divergence_at_first_generated_token",
+      "evidence_boundary": "all_available_reference_first_generated_token_ids_match_local_cpu",
+      "first_divergence_stage": "none"
     },
     "generated_text_trimmed_avx2_matches": 3,
     "generated_text_trimmed_scalar_avx2_matches": 3,
     "generated_text_trimmed_scalar_matches": 3,
-    "next_required_evidence": "fix the classified earlier divergence before deeper token or logits evidence",
-    "prompt_token_exact_matches": 0,
+    "next_required_evidence": "none_for_first_generated_token_boundary; use deeper sequence, logits, or layer evidence only if needed",
+    "prompt_token_exact_matches": 4,
     "prompt_token_local_bos_prefix_matches": 0,
     "reference_generated_token_ids_available": true,
     "reference_logits_available": true,
     "scalar_avx2_parity_passed": true
   },
-  "timestamp": "2026-05-20T16:47:38.667460200+00:00",
+  "timestamp": "2026-05-20T18:03:57.606095500+00:00",
   "tokenizer": {
     "bos_token": "<|begin_of_text|>",
     "bos_token_id": 128000,
