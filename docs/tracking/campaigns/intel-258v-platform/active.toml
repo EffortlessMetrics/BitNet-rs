@@ -8509,8 +8509,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SWARM-LNL258V-GOAL-AUDIT-001"
-status = "pr_open"
+status = "merged"
 pr = 34
+head_sha = "c858d9542c66bf29831d90bb4fb68fb2fdc7ca64"
+merge_sha = "e1d2015bc357dae95d08400a296196ce9b91b942"
 branch = "codex/swarm-lnl258v-goal-audit-current"
 stackable = false
 review_mode = "codex_premerge"
