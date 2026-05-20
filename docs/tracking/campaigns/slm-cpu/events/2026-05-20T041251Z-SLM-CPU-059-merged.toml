@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T04:12:51Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-059"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6078
+head_sha = "223f87e471f43911bb5757f934c0a3151352eb7f"
+merge_sha = "5265445b4e9a5cd4f70679ec62c9bdd47036a5a8"
+summary = "Merged PR #6078 with the packed Q8_0 compute-kernel proof-gate blocker artifact."
+notes = [
+  "The SLM-CPU-059 artifact records that production transformer dense-linear hooks still receive metadata-only sidecar descriptors, so payload-bearing packed Q8_0 blocks are not available at the production dense-linear callsite.",
+  "Packed Q8_0 sidecar runtime compute remains disabled until a payload-bearing hook candidate is proved against the eager F32 Candle behavior oracle with before/after Qwen3 Q8_0 warm-session receipts.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
