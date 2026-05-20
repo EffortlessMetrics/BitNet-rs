@@ -6,7 +6,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PATCHES_DIR="$REPO_ROOT/patches"
+PATCHES_DIR="$REPO_ROOT/patches/bitnet_cpp"
 
 # Default C++ path
 CPP_PATH="${BITNET_CPP_PATH:-$HOME/.cache/bitnet_cpp}"
@@ -43,7 +43,8 @@ if [[ ! -d "$PATCHES_DIR" ]]; then
 fi
 
 # Count patches
-PATCH_COUNT=$(find "$PATCHES_DIR" -name "*.patch" | wc -l)
+mapfile -t PATCH_FILES < <(find "$PATCHES_DIR" -type f \( -name "*.patch" -o -name "*.diff" \) | sort)
+PATCH_COUNT="${#PATCH_FILES[@]}"
 
 if [[ $PATCH_COUNT -eq 0 ]]; then
     log_info "No patches found - C++ implementation will be used as-is"
@@ -75,11 +76,7 @@ fi
 APPLIED_COUNT=0
 FAILED_COUNT=0
 
-for patch_file in "$PATCHES_DIR"/*.patch; do
-    if [[ ! -f "$patch_file" ]]; then
-        continue
-    fi
-
+for patch_file in "${PATCH_FILES[@]}"; do
     patch_name=$(basename "$patch_file")
     log_info "Applying patch: $patch_name"
 

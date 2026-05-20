@@ -1,6 +1,11 @@
 # BitNet-rs Patch Policy
 
-This directory contains minimal patches applied to external dependencies, primarily BitNet.cpp for cross-validation purposes.
+This directory contains patch source material. Only patches under `patches/bitnet_cpp/` are applied to the external BitNet.cpp checkout by the fetch helpers.
+
+## Directory Layout
+
+- `patches/bitnet_cpp/*.patch` and `patches/bitnet_cpp/*.diff`: patches applied to the external BitNet.cpp checkout by `ci/apply_patches.ps1` and `ci/apply_patches.sh`.
+- `patches/*.patch`: source material for this repository. These files are not applied to the external BitNet.cpp checkout unless they are deliberately moved into `patches/bitnet_cpp/`.
 
 ## 🎯 Policy Overview
 
@@ -75,10 +80,10 @@ If no upstream issue exists, create one:
 cd /path/to/bitnet_cpp
 
 # Create the patch
-git diff > ../patches/001-fix-arm64-compilation.patch
+git diff > ../patches/bitnet_cpp/001-fix-arm64-compilation.patch
 
 # Add required metadata to the patch header
-cat > ../patches/001-fix-arm64-compilation.patch << 'EOF'
+cat > ../patches/bitnet_cpp/001-fix-arm64-compilation.patch << 'EOF'
 # Upstream-Issue: https://github.com/microsoft/BitNet/issues/123
 # Reason: Fix compilation error on ARM64 platforms
 # Status: temporary
@@ -89,7 +94,7 @@ cat > ../patches/001-fix-arm64-compilation.patch << 'EOF'
 EOF
 
 # Append the actual diff
-git diff >> ../patches/001-fix-arm64-compilation.patch
+git diff >> ../patches/bitnet_cpp/001-fix-arm64-compilation.patch
 ```
 
 ### 4. Test the Patch
@@ -97,7 +102,7 @@ git diff >> ../patches/001-fix-arm64-compilation.patch
 ```bash
 # Test patch application
 cd /path/to/clean/bitnet_cpp
-patch -p1 --dry-run < ../patches/001-fix-arm64-compilation.patch
+patch -p1 --dry-run < ../patches/bitnet_cpp/001-fix-arm64-compilation.patch
 
 # Test that it fixes the issue
 make test

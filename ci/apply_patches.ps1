@@ -3,7 +3,7 @@
 
 param(
     [string]$CppPath = "$env:USERPROFILE\.cache\bitnet_cpp",
-    [string]$PatchesDir = "$PSScriptRoot\..\patches"
+    [string]$PatchesDir = "$PSScriptRoot\..\patches\bitnet_cpp"
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,7 +37,9 @@ if (-not (Test-Path $PatchesDir)) {
 }
 
 # Count patches
-$PatchFiles = Get-ChildItem -Path $PatchesDir -Filter "*.patch" -File
+$PatchFiles = Get-ChildItem -Path $PatchesDir -File |
+    Where-Object { $_.Extension -in @(".patch", ".diff") } |
+    Sort-Object Name
 $PatchCount = $PatchFiles.Count
 
 if ($PatchCount -eq 0) {
@@ -72,7 +74,7 @@ try {
     $AppliedCount = 0
     $FailedCount = 0
 
-    foreach ($PatchFile in ($PatchFiles | Sort-Object Name)) {
+    foreach ($PatchFile in $PatchFiles) {
         $PatchName = $PatchFile.Name
         Write-Info "Applying patch: $PatchName"
 
