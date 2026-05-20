@@ -202,7 +202,7 @@ unsafe fn process_full_block_avx2(
 
 /// Partial-block tail path: handles a final block where `take < 256`.
 ///
-/// Mirrors the original MVP's per-lane decode but uses the faster VPERMPS LUT.
+/// Mirrors the original MVP's per-lane decode while using the VPERMPS LUT.
 /// Only invoked when `cols` is not a multiple of 256, which is rare in
 /// production model dimensions.
 #[cfg(target_arch = "x86_64")]
@@ -611,23 +611,21 @@ mod tests {
         );
     }
 
-    /// Benchmark AVX2 speedup vs scalar (manual timing test)
+    /// Timing probe for AVX2 vs scalar (manual, non-claiming test).
     ///
-    /// This test measures the performance improvement of the AVX2 implementation
-    /// compared to the scalar reference. It's not a rigorous benchmark but provides
-    /// a quick validation that AVX2 is actually faster.
-    ///
-    /// Target: ≥3× speedup for typical matrix dimensions
+    /// This test records a rough scalar/AVX2 timing ratio while also checking
+    /// parity. It is not a rigorous benchmark and does not establish a speedup
+    /// claim.
     ///
     /// Note: Run with --release for accurate measurements:
     /// ```bash
-    /// cargo test --release -p bitnet-models bench_avx2 -- --nocapture --ignored
+    /// cargo test --release -p bitnet-quantization bench_avx2_timing_probe --no-default-features --features cpu,avx2 -- --nocapture
     /// ```
     #[test]
     #[cfg(target_arch = "x86_64")]
-    fn bench_avx2_speedup() {
+    fn bench_avx2_timing_probe() {
         if std::env::var("BITNET_RUN_SLOW_TESTS").ok().as_deref() != Some("1") {
-            eprintln!("⏭️  Skipping benchmark test; set BITNET_RUN_SLOW_TESTS=1 to enable");
+            eprintln!("Skipping timing probe; set BITNET_RUN_SLOW_TESTS=1 to enable");
             return;
         }
         use crate::i2s_qk256::gemv_qk256_row;
@@ -637,7 +635,7 @@ mod tests {
 
         // Skip if AVX2/FMA not available
         if !avx2_fma_runtime_available() {
-            eprintln!("Skipping AVX2 benchmark: AVX2/FMA not available");
+            eprintln!("Skipping AVX2 timing probe: AVX2/FMA not available");
             return;
         }
 
@@ -665,7 +663,7 @@ mod tests {
         gemv_qk256_avx2(&qs_data, &x, &mut y_warmup, rows, cols, row_stride_bytes)
             .expect("AVX2 warmup should succeed");
 
-        // Benchmark scalar implementation (using the actual scalar row function)
+        // Time scalar implementation (using the actual scalar row function)
         const SCALAR_ITERS: usize = 10;
         let mut y_scalar = vec![0.0f32; rows];
         let scalar_start = Instant::now();
@@ -679,7 +677,7 @@ mod tests {
         }
         let scalar_elapsed = scalar_start.elapsed();
 
-        // Benchmark AVX2 implementation
+        // Time AVX2 implementation
         const AVX2_ITERS: usize = 10;
         let mut y_avx2 = vec![0.0f32; rows];
         let avx2_start = Instant::now();
@@ -689,15 +687,15 @@ mod tests {
         }
         let avx2_elapsed = avx2_start.elapsed();
 
-        // Compute speedup
+        // Compute a local timing ratio. This is diagnostic only.
         let scalar_ms = scalar_elapsed.as_secs_f64() * 1000.0 / SCALAR_ITERS as f64;
         let avx2_ms = avx2_elapsed.as_secs_f64() * 1000.0 / AVX2_ITERS as f64;
-        let speedup = scalar_ms / avx2_ms;
+        let timing_ratio = scalar_ms / avx2_ms;
 
-        println!("\n📊 AVX2 Benchmark Results ({}×{} matrix):", rows, cols);
+        println!("\nAVX2 timing probe ({}x{} matrix):", rows, cols);
         println!("   Scalar: {:.3} ms/iter", scalar_ms);
         println!("   AVX2:   {:.3} ms/iter", avx2_ms);
-        println!("   Speedup: {:.2}×", speedup);
+        println!("   Scalar/AVX2 timing ratio: {:.2}x", timing_ratio);
 
         // Verify correctness
         for (i, (&scalar, &avx2)) in y_scalar.iter().zip(y_avx2.iter()).enumerate() {
@@ -714,19 +712,11 @@ mod tests {
             );
         }
 
-        // NOTE: Current MVP implementation does not achieve target speedup
-        // This is expected and documented in the module-level docs
-        // The correctness tests pass, validating the implementation is correct
-
-        if speedup >= 3.0 {
-            println!("✅ AVX2 speedup {:.2}× meets ≥3× target", speedup);
-        } else if speedup >= 1.0 {
-            println!("⚠️  AVX2 speedup {:.2}× is below 3× target (MVP limitation)", speedup);
-            println!("    See module docs for optimization opportunities");
+        println!("   Timing probe is diagnostic only; it does not promote a speedup claim.");
+        if timing_ratio >= 1.0 {
+            println!("   AVX2 was faster in this local timing probe.");
         } else {
-            println!("⚠️  AVX2 {:.2}× slower than scalar (MVP limitation)", 1.0 / speedup);
-            println!("    Scalar unpacking + LUT overhead exceeds SIMD FMA gains");
-            println!("    See module docs for optimization roadmap");
+            println!("   AVX2 was slower in this local timing probe.");
         }
     }
 }
