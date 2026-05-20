@@ -422,7 +422,19 @@ pub fn gemv_qk256_avx2(
         bail!("AVX2: x length {} < cols {}", x.len(), cols);
     }
 
-    let expected_total = rows * row_stride_bytes;
+    let expected_stride = cols.div_ceil(QK256_BLOCK) * QK256_PACKED_BYTES;
+    if row_stride_bytes != expected_stride {
+        bail!(
+            "AVX2: row_stride_bytes {} != expected {} for cols={}",
+            row_stride_bytes,
+            expected_stride,
+            cols
+        );
+    }
+
+    let expected_total = rows
+        .checked_mul(row_stride_bytes)
+        .ok_or_else(|| anyhow::anyhow!("AVX2: rows * row_stride_bytes overflow for rows={rows}"))?;
     if qs_data.len() < expected_total {
         bail!("AVX2: data too short: {} < {}", qs_data.len(), expected_total);
     }
@@ -593,6 +605,22 @@ mod tests {
         }
 
         println!("✅ AVX2 smoke test passed: {}×{} (seed={})", rows, cols, seed);
+    }
+
+    #[test]
+    #[cfg(target_arch = "x86_64")]
+    fn test_gemv_qk256_avx2_rejects_wrong_row_stride_before_unsafe_path() {
+        let cols = QK256_BLOCK;
+        let wrong_stride = QK256_PACKED_BYTES / 2;
+        let qs_data = vec![0u8; wrong_stride];
+        let x = vec![0.0f32; cols];
+        let mut y_out = vec![0.0f32; 1];
+
+        let err = gemv_qk256_avx2(&qs_data, &x, &mut y_out, 1, cols, wrong_stride)
+            .expect_err("wrong row stride must be rejected before AVX2 row reads")
+            .to_string();
+        assert!(err.contains("row_stride_bytes"), "unexpected error: {err}");
+        assert!(err.contains("expected"), "unexpected error: {err}");
     }
 
     /// Test that AVX2 stub returns error on non-x86_64 architectures
