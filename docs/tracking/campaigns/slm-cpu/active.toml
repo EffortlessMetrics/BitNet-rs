@@ -2099,9 +2099,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-060"
-status = "pr_open"
+status = "merged"
 pr = 6085
 head_sha = "cca8b5385672f8150021a88ab9ffca078fe5e561"
+merge_sha = "6e2f7837e0f90317122ffe34eca355fe285f4abe"
 branch = "codex/slm-cpu-060-payload-bearing-q8-sidecar-hook"
 stackable = false
 review_mode = "codex_premerge"
@@ -2140,6 +2141,61 @@ may_claim = [
   "SLM-CPU-060 is the next evidence-scoped hook-contract slice after SLM-CPU-059 identified the metadata-only sidecar blocker.",
   "A valid SLM-CPU-060 slice may add a payload-bearing packed Q8_0 sidecar hook contract for one dense-linear tensor path, or may emit a concrete blocker if the current model/transformer API cannot safely carry packed payload bytes.",
   "Runtime compute remains gated on before/after receipts that preserve generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, dense hook-selection identity, model SHA, and fallback=false.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "Generated IDs or decoded text changed.",
+  "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, dense hook-selection identity, or fallback=false provenance changed.",
+  "A sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-061"
+status = "ready"
+branch = "codex/slm-cpu-061-real-q8-sidecar-payload-candidate"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-060"]
+acceptance = "Wire one exact Qwen3 Q8_0 dense-linear tensor from real GGUF sidecar bytes into DenseLinearPackedQ8Payload behind an explicit opt-in gate, then emit before/after warm-session receipts proving model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false are unchanged. Packed Q8 runtime compute must remain disabled unless the before/after evidence is present and selected only for the single candidate tensor. The item must not claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-20/qwen3-real-q8-sidecar-payload-candidate.json",
+  "cargo test --locked -p bitnet-models --no-default-features --features cpu dense_gguf_q8",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu dense_linear_runtime_hook",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-061 is the next evidence-scoped slice after SLM-CPU-060 added the payload-bearing hook contract.",
+  "One exact Qwen3 Q8_0 dense-linear tensor may carry real sidecar payload bytes into DenseLinearPackedQ8Payload behind an explicit opt-in gate.",
+  "Any runtime selection remains gated on before/after receipts that preserve generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, dense hook-selection identity, model SHA, and fallback=false.",
 ]
 must_not_claim = [
   "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
