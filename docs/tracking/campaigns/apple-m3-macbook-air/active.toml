@@ -1181,7 +1181,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-024"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m3-macbook-air/M3MBA-024-artifact-unblock-preflight"
 pr = 67
 stackable = false
@@ -1228,7 +1228,7 @@ stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M3MBA-021", "M3MBA-024"]
+blocked_by = ["M3MBA-021"]
 acceptance = "Align M3 Air accepted-artifact metadata with the separate M4 strict Apple CPU/NEON proof campaign by producing a handoff checklist that names source revision, hash, tokenizer authority, runner route, required fresh M4 receipts, and claims that remain explicitly unsupported."
 commands = [
   "cargo fmt --all -- --check",

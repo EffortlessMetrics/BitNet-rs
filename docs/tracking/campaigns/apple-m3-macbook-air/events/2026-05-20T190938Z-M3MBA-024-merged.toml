@@ -1,0 +1,17 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+timestamp = "2026-05-20T19:09:38Z"
+item = "M3MBA-024"
+event = "merged"
+actor = "codex"
+pr = 67
+head_sha = "feecf2b8c7ca30f3afd47aedd5b8f054bf6e8f56"
+merge_sha = "972f29439df9b55c4bd32888da55decb511bd784"
+branch = "codex/apple-m3-macbook-air/M3MBA-024-artifact-unblock-preflight"
+summary = "Merged PR #67, recording the no-download secondary BitNet artifact unblock preflight for the M3 Air lane."
+
+notes = [
+  "The preflight records that the official 1bitLLM 0.7B and 3B repositories still do not expose the required GGUF artifacts for the blocked M3 Air candidate command shapes.",
+  "The report captures tokenizer authority, storage footprint, preferred free-space gating, conversion or third-party approval needs, and cleanup expectations before any new large local download.",
+  "The merge does not accept the blocked secondary BitNet candidates, does not retain a new model artifact, and does not approve third-party artifacts without a separate policy decision.",
+]
