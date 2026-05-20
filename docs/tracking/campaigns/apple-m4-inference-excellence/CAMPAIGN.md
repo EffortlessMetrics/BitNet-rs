@@ -124,7 +124,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-OPS-UX-001 | merged | Add an operator-facing M4 evidence summary. |
 | M4-OPS-UX-002 | merged | Add explain/open affordances for report-refresh and regression-dashboard outputs. |
 | M4-OPS-UX-003 | merged | Extend doctor/status UX to report dense SLM and BitNet readiness separately. |
-| M4-OPS-SLO-001 | proposed | Translate receipts into local operator envelope classes. |
+| M4-OPS-SLO-001 | in_progress | Translate receipts into local operator envelope classes. |
 | M4-CONTEXT-001 | proposed | Add long-context guardrails against recorded dense SLM and BitNet evidence envelopes. |
 | M4-CONTEXT-002 | proposed | Publish long-context quality and timing receipts where supported. |
 | M4-REPRO-001 | merged | Define the reusable M4 run-identity contract for all evidence families. |
