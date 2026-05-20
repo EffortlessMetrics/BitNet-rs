@@ -4,22 +4,24 @@
 //!
 //! ## Optimization Strategy
 //!
-//! The full-block hot path uses several techniques for throughput:
+//! The full-block hot path is an AVX2/FMA optimization candidate. It must be
+//! treated as a local F32/no-scale QK256 kernel until receipt/counter evidence
+//! and exact-profile benchmarks accept any broader performance claim.
+//!
+//! It uses several mechanical changes that are validated by scalar/AVX2 parity
+//! tests, but are not themselves proof of speedup:
 //!
 //! - **Single-load multi-lane decode**: Each 8-byte read produces codes for all
-//!   four BitNet.cpp lanes (shifts 6/4/2/0), eliminating the 4× redundant byte
-//!   loads of the lane-by-lane MVP.
+//!   four BitNet.cpp lanes (shifts 6/4/2/0).
 //!
 //! - **VPERMPS table lookup**: `_mm256_permutevar8x32_ps` maps the 2-bit
-//!   codes `{0,1,2,3}` directly to weights `{-1, 0, +1, 0}` in a single op,
-//!   replacing the cmpeq+and+add decode chain (4 ops -> 1 op per lane).
+//!   codes `{0,1,2,3}` directly to weights `{-1, 0, +1, 0}`.
 //!
 //! - **Immediate shifts**: `_mm256_srli_epi32` with const-immediate shifts is
-//!   ~3x cheaper than `_mm256_srlv_epi32` on Haswell/Skylake.
+//!   used for the full-block lane decode.
 //!
 //! - **8-wide accumulator bank**: Four lane accumulators x two pipeline banks
-//!   keep eight independent FMA dependency chains in flight, saturating the
-//!   4-cycle FMA latency on Haswell+.
+//!   keep eight independent FMA dependency chains in flight.
 //!
 //! - **Software prefetch**: `_mm_prefetch(..., _MM_HINT_T0)` pulls the next
 //!   block's quantized data and input vector into L1 before they're needed.
@@ -71,15 +73,13 @@ unsafe fn decode_8_codes_all_lanes_avx2(
         let eight_bytes = _mm_loadl_epi64(bytes as *const __m128i);
         let byte_lanes = _mm256_cvtepu8_epi32(eight_bytes);
 
-        // Per-lane codes via const-immediate shifts. `_mm256_srli_epi32` retires
-        // in 1 cycle vs ~3 for `_mm256_srlv_epi32` on Haswell/Skylake.
+        // Per-lane codes via const-immediate shifts for the full-block path.
         let codes0 = _mm256_and_si256(_mm256_srli_epi32::<6>(byte_lanes), mask_03);
         let codes1 = _mm256_and_si256(_mm256_srli_epi32::<4>(byte_lanes), mask_03);
         let codes2 = _mm256_and_si256(_mm256_srli_epi32::<2>(byte_lanes), mask_03);
         let codes3 = _mm256_and_si256(byte_lanes, mask_03);
 
-        // VPERMPS table lookup: codes ∈ {0,1,2,3} → weights ∈ {-1, 0, +1, 0}.
-        // Replaces the (cmpeq×2, and×2, add) chain with one VPERMPS per lane.
+        // VPERMPS table lookup: codes in {0,1,2,3} -> weights in {-1, 0, +1, 0}.
         let w0 = _mm256_permutevar8x32_ps(lut, codes0);
         let w1 = _mm256_permutevar8x32_ps(lut, codes1);
         let w2 = _mm256_permutevar8x32_ps(lut, codes2);
@@ -299,8 +299,7 @@ unsafe fn gemv_qk256_row_avx2(qs_row: &[u8], x: &[f32], cols: usize) -> f32 {
         let lut = _mm256_loadu_ps(QK256_WEIGHT_LUT.as_ptr());
 
         // 8 independent FMA accumulators: 4 lanes × 2 banks. Two banks shorten
-        // the critical-path FMA dependency chain enough to keep the pipe full
-        // even on Haswell-class FMAs with 4-cycle latency / 1-cycle throughput.
+        // the critical-path FMA dependency chain while preserving scalar parity.
         let mut acc_a0 = _mm256_setzero_ps();
         let mut acc_a1 = _mm256_setzero_ps();
         let mut acc_a2 = _mm256_setzero_ps();
