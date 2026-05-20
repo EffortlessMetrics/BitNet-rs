@@ -330,3 +330,46 @@ must_not_claim = [
   "Performance speedup is proven.",
   "The diagnostic toy fixture proves production answer quality.",
 ]
+
+[[work_item]]
+id = "A770-009"
+status = "ready"
+branch = "codex/intel-a770/A770-009-qk256-scaled-opencl-fixture"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-008"]
+acceptance = "Add selected-device A770 OpenCL parity for a grouped QK256 I2_S x prequantized I8_S scaled fixture, without promoting official BitNet QK256 dispatch, inference, activation-quantization residency, speed, or residency claims."
+commands = [
+  "cargo test --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity qk256 -- --nocapture",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features opencl a770_qk256 -- --nocapture",
+  "cargo run --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity -- --fixture qk256-i8s-scaled --receipt ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-qk256-i8s-scaled-fixture.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/a770_opencl_fixture.rs",
+  "crates/bitnet-kernels/src/bin/a770_opencl_parity.rs",
+  "crates/bitnet-kernels/src/kernels.rs",
+  "ci/hardware/amd-5700x-intel-a770/**",
+  "docs/specs/intel-arc-a770-gpu-roadmap.md",
+  "docs/tracking/campaigns/intel-a770/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A selected-device A770 OpenCL fixture matches CPU for grouped QK256 I2_S bytes with prequantized I8_S activation scale/sum correction.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are fully proven.",
+  "BitNet inference works on A770.",
+  "Activation quantization is GPU-resident.",
+  "Transformer QK256 dispatch is wired to OpenCL.",
+  "A770 trusted partial acceleration is claim-grade.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+]

@@ -8,7 +8,11 @@ use std::{
 
 use bitnet_kernels::a770_opencl_fixture::{
     A770_MATMUL_I2S_ACTIVATIONS, A770_MATMUL_I2S_K, A770_MATMUL_I2S_M, A770_MATMUL_I2S_N,
-    a770_matmul_i2s_cpu_reference, pack_a770_matmul_i2s_weights,
+    A770_QK256_SCALED_ACT_SCALE, A770_QK256_SCALED_COLS, A770_QK256_SCALED_ROW_STRIDE_BYTES,
+    A770_QK256_SCALED_ROWS, A770_QK256_SCALED_WEIGHT_SCALE, a770_matmul_i2s_cpu_reference,
+    a770_qk256_scaled_activation_sum, a770_qk256_scaled_cpu_reference,
+    a770_qk256_scaled_i8s_activations, pack_a770_matmul_i2s_weights,
+    pack_a770_qk256_scaled_weights,
 };
 use opencl3::command_queue::{CL_QUEUE_PROFILING_ENABLE, CommandQueue};
 use opencl3::context::Context;
@@ -24,21 +28,38 @@ const TOLERANCE: f32 = 1.0e-6;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = parse_args()?;
-    let receipt = run_a770_matmul_i2s(args.mode)?;
+    let receipt = match args.fixture {
+        FixtureContract::MatmulI2s => run_a770_matmul_i2s(args.mode)?.to_json(),
+        FixtureContract::Qk256I8sScaled => {
+            if matches!(args.mode, RunMode::Benchmark(_)) {
+                return Err(io_error(
+                    "--benchmark is only supported for the matmul-i2s fixture today",
+                ));
+            }
+            run_a770_qk256_i8s_scaled()?.to_json()
+        }
+    };
     if let Some(path) = args.receipt_path {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(&path, receipt.to_json())?;
+        std::fs::write(&path, &receipt)?;
     }
-    println!("{}", receipt.to_json());
+    println!("{receipt}");
     Ok(())
 }
 
 #[derive(Debug)]
 struct CliArgs {
     receipt_path: Option<PathBuf>,
+    fixture: FixtureContract,
     mode: RunMode,
+}
+
+#[derive(Debug)]
+enum FixtureContract {
+    MatmulI2s,
+    Qk256I8sScaled,
 }
 
 #[derive(Debug)]
@@ -57,6 +78,7 @@ fn parse_args() -> Result<CliArgs, Box<dyn Error>> {
     let mut args = env::args().skip(1);
     let mut receipt = env::var_os(RECEIPT_ENV).map(PathBuf::from);
     let mut benchmark = false;
+    let mut fixture = FixtureContract::MatmulI2s;
     let mut iterations = 30usize;
     let mut warmup_iterations = 5usize;
     while let Some(arg) = args.next() {
@@ -65,6 +87,10 @@ fn parse_args() -> Result<CliArgs, Box<dyn Error>> {
                 let path =
                     args.next().ok_or_else(|| io_error("--receipt requires a path argument"))?;
                 receipt = Some(PathBuf::from(path));
+            }
+            "--fixture" => {
+                let value = args.next().ok_or_else(|| io_error("--fixture requires a value"))?;
+                fixture = parse_fixture_contract(&value)?;
             }
             "--benchmark" => benchmark = true,
             "--iterations" => {
@@ -77,9 +103,10 @@ fn parse_args() -> Result<CliArgs, Box<dyn Error>> {
             }
             "--help" | "-h" => {
                 println!(concat!(
-                    "Usage: a770-opencl-parity [--receipt <path>] [--benchmark] ",
+                    "Usage: a770-opencl-parity [--receipt <path>] ",
+                    "[--fixture matmul-i2s|qk256-i8s-scaled] [--benchmark] ",
                     "[--iterations <N>] [--warmup <N>]\n\n",
-                    "Runs selected Intel Arc A770 OpenCL matmul_i2s parity against a CPU reference.\n",
+                    "Runs selected Intel Arc A770 OpenCL parity fixtures against CPU references.\n",
                     "With --benchmark, records a diagnostic kernel baseline receipt without speed claims."
                 ));
                 std::process::exit(0);
@@ -92,7 +119,17 @@ fn parse_args() -> Result<CliArgs, Box<dyn Error>> {
     } else {
         RunMode::Parity
     };
-    Ok(CliArgs { receipt_path: receipt, mode })
+    Ok(CliArgs { receipt_path: receipt, fixture, mode })
+}
+
+fn parse_fixture_contract(value: &str) -> Result<FixtureContract, Box<dyn Error>> {
+    match value {
+        "matmul-i2s" => Ok(FixtureContract::MatmulI2s),
+        "qk256-i8s-scaled" => Ok(FixtureContract::Qk256I8sScaled),
+        other => Err(io_error(format!(
+            "unsupported --fixture {other:?}; expected matmul-i2s or qk256-i8s-scaled"
+        ))),
+    }
 }
 
 fn parse_positive_usize(flag: &str, value: &str) -> Result<usize, Box<dyn Error>> {
@@ -138,6 +175,26 @@ struct BenchmarkSummary {
     initial_host_to_device_bytes: usize,
     device_to_host_bytes: usize,
     kernel_invocations: usize,
+}
+
+#[derive(Debug)]
+struct A770OpenClQk256ScaledReceipt {
+    runtime_device: String,
+    platform_index: usize,
+    device_index: usize,
+    platform_name: String,
+    vendor: String,
+    driver_version: String,
+    rows: usize,
+    cols: usize,
+    row_stride_bytes: usize,
+    packed_weight_bytes: usize,
+    activation_values: usize,
+    activation_sum: i32,
+    activation_scale: f32,
+    weight_scale: f32,
+    max_abs_error: f32,
+    mean_abs_error: f32,
 }
 
 impl A770OpenClParityReceipt {
@@ -279,6 +336,91 @@ impl A770OpenClParityReceipt {
     }
 }
 
+impl A770OpenClQk256ScaledReceipt {
+    fn to_json(&self) -> String {
+        format!(
+            concat!(
+                "{{\n",
+                "  \"campaign\": \"intel-a770\",\n",
+                "  \"work_item\": \"A770-009\",\n",
+                "  \"proof_family\": \"a770_opencl_qk256_i2s_i8s_scaled_fixture\",\n",
+                "  \"proof_stage\": \"qk256_operand_parity_candidate\",\n",
+                "  \"requested_backend\": \"intel-arc-a770\",\n",
+                "  \"selected_backend\": \"intel-arc-a770-opencl\",\n",
+                "  \"runtime_api\": \"opencl\",\n",
+                "  \"runtime_device\": \"{}\",\n",
+                "  \"platform_index\": {},\n",
+                "  \"device_index\": {},\n",
+                "  \"platform_name\": \"{}\",\n",
+                "  \"vendor\": \"{}\",\n",
+                "  \"driver_version\": \"{}\",\n",
+                "  \"kernel_source\": \"bitnet_kernels::kernels::QK256_I2S_I8S_SCALED_GEMV_SRC\",\n",
+                "  \"kernel_name\": \"qk256_i2s_i8s_scaled_gemv\",\n",
+                "  \"fixture_contract\": \"ggml_grouped_qk256_i2s_bytes_with_prequantized_i8s_activation_scale_sum\",\n",
+                "  \"operand_a\": \"prequantized_i8s_activation_row_cpu_fixture\",\n",
+                "  \"operand_b\": \"ggml_grouped_qk256_i2s_weight_rows\",\n",
+                "  \"rows\": {},\n",
+                "  \"cols\": {},\n",
+                "  \"row_stride_bytes\": {},\n",
+                "  \"packed_weight_bytes\": {},\n",
+                "  \"activation_values\": {},\n",
+                "  \"activation_sum\": {},\n",
+                "  \"activation_scale\": {},\n",
+                "  \"weight_scale\": {},\n",
+                "  \"tolerance\": {},\n",
+                "  \"max_abs_error\": {},\n",
+                "  \"mean_abs_error\": {},\n",
+                "  \"passed\": true,\n",
+                "  \"opencl_execution\": true,\n",
+                "  \"cpu_reference\": true,\n",
+                "  \"cpu_opencl_parity\": true,\n",
+                "  \"fallback_used\": false,\n",
+                "  \"cpu_fallback_allowed\": false,\n",
+                "  \"bitnet_inference\": false,\n",
+                "  \"qk256_decode\": false,\n",
+                "  \"official_model_artifact\": false,\n",
+                "  \"activation_quantization_on_gpu\": false,\n",
+                "  \"transformer_dispatch_wired\": false,\n",
+                "  \"claim_allowed\": false,\n",
+                "  \"diagnostic_only\": true,\n",
+                "  \"benchmark_candidate\": false,\n",
+                "  \"benchmark_claim_allowed\": false,\n",
+                "  \"speedup_claim\": false,\n",
+                "  \"performance_claim\": false,\n",
+                "  \"full_residency_claim\": false,\n",
+                "  \"model_family\": null,\n",
+                "  \"must_not_claim\": [\n",
+                "    \"Official BitNet QK256 production semantics are proven\",\n",
+                "    \"BitNet inference works on A770\",\n",
+                "    \"A770 trusted partial acceleration is claim-grade\",\n",
+                "    \"Activation quantization is GPU-resident\",\n",
+                "    \"Transformer QK256 dispatch is wired to OpenCL\",\n",
+                "    \"Full A770 residency is proven\",\n",
+                "    \"A770 performance speedup is proven\"\n",
+                "  ]\n",
+                "}}\n"
+            ),
+            json_escape(&self.runtime_device),
+            self.platform_index,
+            self.device_index,
+            json_escape(&self.platform_name),
+            json_escape(&self.vendor),
+            json_escape(&self.driver_version),
+            self.rows,
+            self.cols,
+            self.row_stride_bytes,
+            self.packed_weight_bytes,
+            self.activation_values,
+            self.activation_sum,
+            self.activation_scale,
+            self.weight_scale,
+            TOLERANCE,
+            self.max_abs_error,
+            self.mean_abs_error,
+        )
+    }
+}
+
 fn run_a770_matmul_i2s(mode: RunMode) -> Result<A770OpenClParityReceipt, Box<dyn Error>> {
     let selected = find_a770_device()?;
     let context = Context::from_device(&selected.device)
@@ -400,6 +542,117 @@ fn run_a770_matmul_i2s(mode: RunMode) -> Result<A770OpenClParityReceipt, Box<dyn
         max_abs_error,
         mean_abs_error,
         benchmark,
+    })
+}
+
+fn run_a770_qk256_i8s_scaled() -> Result<A770OpenClQk256ScaledReceipt, Box<dyn Error>> {
+    let selected = find_a770_device()?;
+    let context = Context::from_device(&selected.device)
+        .map_err(|err| io_error(format!("failed to create OpenCL context: {err}")))?;
+    let queue =
+        CommandQueue::create_default_with_properties(&context, CL_QUEUE_PROFILING_ENABLE, 0)
+            .map_err(|err| io_error(format!("failed to create OpenCL command queue: {err}")))?;
+    let program = Program::create_and_build_from_source(
+        &context,
+        bitnet_kernels::kernels::QK256_I2S_I8S_SCALED_GEMV_SRC,
+        "",
+    )
+    .map_err(|err| {
+        io_error(format!("failed to build bitnet-kernels QK256_I2S_I8S_SCALED_GEMV_SRC: {err}"))
+    })?;
+    let kernel = Kernel::create(&program, "qk256_i2s_i8s_scaled_gemv").map_err(|err| {
+        io_error(format!("failed to create qk256_i2s_i8s_scaled_gemv kernel: {err}"))
+    })?;
+
+    let activations = a770_qk256_scaled_i8s_activations();
+    let packed_weights = pack_a770_qk256_scaled_weights().map_err(io_error)?;
+    let expected = a770_qk256_scaled_cpu_reference().map_err(io_error)?;
+    let activation_sum = a770_qk256_scaled_activation_sum();
+    let mut actual = vec![0.0f32; expected.len()];
+
+    let mut buf_q = unsafe {
+        Buffer::<i8>::create(&context, CL_MEM_READ_ONLY, activations.len(), std::ptr::null_mut())
+            .map_err(|err| io_error(format!("failed to create QK256 activation buffer: {err}")))?
+    };
+    let mut buf_qs = unsafe {
+        Buffer::<u8>::create(&context, CL_MEM_READ_ONLY, packed_weights.len(), std::ptr::null_mut())
+            .map_err(|err| io_error(format!("failed to create QK256 weight buffer: {err}")))?
+    };
+    let buf_out = unsafe {
+        Buffer::<f32>::create(&context, CL_MEM_WRITE_ONLY, actual.len(), std::ptr::null_mut())
+            .map_err(|err| io_error(format!("failed to create QK256 output buffer: {err}")))?
+    };
+
+    unsafe {
+        queue
+            .enqueue_write_buffer(&mut buf_q, CL_BLOCKING, 0, &activations, &[])
+            .map_err(|err| io_error(format!("failed to write QK256 activation buffer: {err}")))?;
+        queue
+            .enqueue_write_buffer(&mut buf_qs, CL_BLOCKING, 0, &packed_weights, &[])
+            .map_err(|err| io_error(format!("failed to write QK256 weight buffer: {err}")))?;
+    }
+
+    let rows = A770_QK256_SCALED_ROWS as u32;
+    let cols = A770_QK256_SCALED_COLS as u32;
+    let row_stride_bytes = A770_QK256_SCALED_ROW_STRIDE_BYTES as u32;
+    let event = unsafe {
+        ExecuteKernel::new(&kernel)
+            .set_arg(&buf_q.get())
+            .set_arg(&buf_qs.get())
+            .set_arg(&buf_out.get())
+            .set_arg(&rows)
+            .set_arg(&cols)
+            .set_arg(&row_stride_bytes)
+            .set_arg(&activation_sum)
+            .set_arg(&A770_QK256_SCALED_ACT_SCALE)
+            .set_arg(&A770_QK256_SCALED_WEIGHT_SCALE)
+            .set_global_work_sizes(&[A770_QK256_SCALED_ROWS])
+            .enqueue_nd_range(&queue)
+            .map_err(|err| {
+                io_error(format!("failed to enqueue qk256_i2s_i8s_scaled_gemv kernel: {err}"))
+            })?
+    };
+    event
+        .wait()
+        .map_err(|err| io_error(format!("qk256_i2s_i8s_scaled_gemv kernel wait failed: {err}")))?;
+
+    unsafe {
+        queue
+            .enqueue_read_buffer(&buf_out, CL_BLOCKING, 0, &mut actual, &[])
+            .map_err(|err| io_error(format!("failed to read QK256 output buffer: {err}")))?;
+    }
+
+    let mut max_abs_error = 0.0f32;
+    let mut sum_abs_error = 0.0f32;
+    for (expected_value, actual_value) in expected.iter().zip(&actual) {
+        let delta = (expected_value - actual_value).abs();
+        max_abs_error = max_abs_error.max(delta);
+        sum_abs_error += delta;
+    }
+    let mean_abs_error = sum_abs_error / expected.len() as f32;
+    if max_abs_error > TOLERANCE {
+        return Err(io_error(format!(
+            "A770 OpenCL QK256 scaled fixture parity exceeded tolerance: {max_abs_error}"
+        )));
+    }
+
+    Ok(A770OpenClQk256ScaledReceipt {
+        runtime_device: selected.device_name,
+        platform_index: selected.platform_index,
+        device_index: selected.device_index,
+        platform_name: selected.platform_name,
+        vendor: selected.vendor,
+        driver_version: selected.driver_version,
+        rows: A770_QK256_SCALED_ROWS,
+        cols: A770_QK256_SCALED_COLS,
+        row_stride_bytes: A770_QK256_SCALED_ROW_STRIDE_BYTES,
+        packed_weight_bytes: packed_weights.len(),
+        activation_values: activations.len(),
+        activation_sum,
+        activation_scale: A770_QK256_SCALED_ACT_SCALE,
+        weight_scale: A770_QK256_SCALED_WEIGHT_SCALE,
+        max_abs_error,
+        mean_abs_error,
     })
 }
 
@@ -634,5 +887,55 @@ mod tests {
     fn benchmark_iterations_must_be_positive() {
         let err = parse_positive_usize("--iterations", "0").expect_err("zero rejected");
         assert!(err.to_string().contains("--iterations must be greater than zero"));
+    }
+
+    #[test]
+    fn qk256_scaled_receipt_stays_claim_closed() {
+        let receipt = A770OpenClQk256ScaledReceipt {
+            runtime_device: "Intel(R) Arc(TM) A770 Graphics".to_string(),
+            platform_index: 0,
+            device_index: 1,
+            platform_name: "Intel OpenCL".to_string(),
+            vendor: "Intel(R) Corporation".to_string(),
+            driver_version: "test".to_string(),
+            rows: A770_QK256_SCALED_ROWS,
+            cols: A770_QK256_SCALED_COLS,
+            row_stride_bytes: A770_QK256_SCALED_ROW_STRIDE_BYTES,
+            packed_weight_bytes: A770_QK256_SCALED_ROWS * A770_QK256_SCALED_ROW_STRIDE_BYTES,
+            activation_values: A770_QK256_SCALED_COLS,
+            activation_sum: 4043,
+            activation_scale: A770_QK256_SCALED_ACT_SCALE,
+            weight_scale: A770_QK256_SCALED_WEIGHT_SCALE,
+            max_abs_error: 0.0,
+            mean_abs_error: 0.0,
+        };
+        let json = receipt.to_json();
+
+        assert!(json.contains("\"work_item\": \"A770-009\""));
+        assert!(json.contains("\"proof_stage\": \"qk256_operand_parity_candidate\""));
+        assert!(json.contains("\"fallback_used\": false"));
+        assert!(json.contains("\"bitnet_inference\": false"));
+        assert!(json.contains("\"qk256_decode\": false"));
+        assert!(json.contains("\"official_model_artifact\": false"));
+        assert!(json.contains("\"activation_quantization_on_gpu\": false"));
+        assert!(json.contains("\"transformer_dispatch_wired\": false"));
+        assert!(json.contains("\"claim_allowed\": false"));
+        assert!(json.contains("\"benchmark_claim_allowed\": false"));
+        assert!(json.contains("\"speedup_claim\": false"));
+        assert!(json.contains("\"Official BitNet QK256 production semantics are proven\""));
+    }
+
+    #[test]
+    fn fixture_parser_selects_qk256_scaled_fixture() -> Result<(), Box<dyn Error>> {
+        assert!(matches!(
+            parse_fixture_contract("qk256-i8s-scaled")?,
+            FixtureContract::Qk256I8sScaled
+        ));
+        let err = match parse_fixture_contract("qk256") {
+            Ok(_) => return Err(io_error("unknown fixture accepted")),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("unsupported --fixture"));
+        Ok(())
     }
 }

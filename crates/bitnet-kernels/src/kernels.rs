@@ -56,6 +56,47 @@ __kernel void matmul_i2s(
 }
 "#;
 
+/// OpenCL kernel source for a QK256 grouped-layout I2_S × I8_S scaled GEMV
+/// fixture.
+///
+/// This fixture consumes already-quantized I8_S activations plus activation
+/// scale/sum metadata and GGML grouped QK256 I2_S weight bytes. It exercises
+/// the production BitNet scale/sum formula, but it does not prove GPU-resident
+/// activation quantization, transformer dispatch, or full BitNet inference.
+pub const QK256_I2S_I8S_SCALED_GEMV_SRC: &str = r#"
+__kernel void qk256_i2s_i8s_scaled_gemv(
+    __global const char* q,
+    __global const uchar* qs,
+    __global float* y,
+    const uint rows,
+    const uint cols,
+    const uint row_stride_bytes,
+    const int activation_sum,
+    const float activation_scale,
+    const float weight_scale
+) {
+    const uint row = get_global_id(0);
+    if (row >= rows) return;
+
+    int int_dot = 0;
+    const uint row_base = row * row_stride_bytes;
+
+    for (uint col = 0; col < cols; col++) {
+        const uint block = col / 256;
+        const uint offset = col - block * 256;
+        const uint chunk = offset / 128;
+        const uint lane = (offset - chunk * 128) / 32;
+        const uint gp = offset & 31;
+        const uint byte_index = row_base + block * 64 + chunk * 32 + gp;
+        const uchar packed = qs[byte_index];
+        const uchar code = (packed >> (6 - lane * 2)) & 0x03;
+        int_dot += ((int)code) * ((int)q[col]);
+    }
+
+    y[row] = (((float)(int_dot - activation_sum)) / activation_scale) * weight_scale;
+}
+"#;
+
 /// OpenCL kernel source for I2_S quantization.
 ///
 /// Quantizes `float` activations into 2-bit ternary values packed 4-per-byte,

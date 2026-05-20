@@ -259,11 +259,18 @@ Record runtime identity, selected device, fallback status, driver, PCI ID, VRAM,
 
 Compare CPU scalar/AVX2 against A770 OpenCL for the validated kernel/subgraph.
 
-### A770-009 - OpenVINO GPU Smoke
+### A770-009 - QK256 Scaled Fixture Parity
+
+Run a selected-device OpenCL fixture over GGML grouped QK256 I2_S bytes with a
+prequantized I8_S activation row and BitNet scale/sum correction. This is still
+fixture parity only: it does not prove official model dispatch, GPU-resident
+activation quantization, answer quality, residency, or speed.
+
+### A770-010 - OpenVINO GPU Smoke
 
 Run a tiny fixed-shape OpenVINO graph on the resolved A770 `GPU.X` device.
 
-### A770-010 - OpenVINO llama.cpp GGUF Reference
+### A770-011 - OpenVINO llama.cpp GGUF Reference
 
 Evaluate one OpenVINO-validated GGUF through llama.cpp/OpenVINO on A770. This is a reference lane, not proof of native bitnet-rs GPU inference.
 

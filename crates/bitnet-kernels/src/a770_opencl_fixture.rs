@@ -6,6 +6,12 @@
 pub const A770_MATMUL_I2S_M: usize = 2;
 pub const A770_MATMUL_I2S_N: usize = 3;
 pub const A770_MATMUL_I2S_K: usize = 8;
+pub const A770_QK256_SCALED_ROWS: usize = 2;
+pub const A770_QK256_SCALED_COLS: usize = 256;
+pub const A770_QK256_PACKED_BYTES_PER_BLOCK: usize = 64;
+pub const A770_QK256_SCALED_ROW_STRIDE_BYTES: usize = A770_QK256_PACKED_BYTES_PER_BLOCK;
+pub const A770_QK256_SCALED_ACT_SCALE: f32 = 1.0;
+pub const A770_QK256_SCALED_WEIGHT_SCALE: f32 = 0.25;
 
 /// Int8 activation matrix in row-major `[M, K]` order.
 pub const A770_MATMUL_I2S_ACTIVATIONS: [i8; A770_MATMUL_I2S_M * A770_MATMUL_I2S_K] = [
@@ -24,6 +30,66 @@ pub const A770_MATMUL_I2S_WEIGHTS: [i8; A770_MATMUL_I2S_K * A770_MATMUL_I2S_N] =
     -1, 1, 1, //
     0, -1, 1,
 ];
+
+/// Pre-quantized I8_S activation row for the QK256 scaled fixture.
+///
+/// This fixture starts after activation quantization. It exercises the official
+/// grouped QK256 byte layout and `(dot - activation_sum) / activation_scale *
+/// weight_scale` correction, but it does not prove GPU-resident activation
+/// quantization or full BitNet inference.
+pub fn a770_qk256_scaled_i8s_activations() -> Vec<i8> {
+    let pattern = [-127, -13, -3, -1, 0, 1, 7, 31, 64, 96, 127];
+    (0..A770_QK256_SCALED_COLS).map(|idx| pattern[idx % pattern.len()]).collect()
+}
+
+pub fn a770_qk256_scaled_activation_sum() -> i32 {
+    a770_qk256_scaled_i8s_activations().iter().map(|&value| value as i32).sum()
+}
+
+pub fn a770_qk256_scaled_codes() -> Vec<u8> {
+    let mut codes = Vec::with_capacity(A770_QK256_SCALED_ROWS * A770_QK256_SCALED_COLS);
+    for row in 0..A770_QK256_SCALED_ROWS {
+        for col in 0..A770_QK256_SCALED_COLS {
+            let code = match (row, col % 8) {
+                (0, 0 | 5) => 0,
+                (0, 1 | 6) => 1,
+                (0, 2 | 7) => 2,
+                (0, _) => 3,
+                (_, 0 | 4) => 2,
+                (_, 1 | 5) => 0,
+                (_, 2 | 6) => 3,
+                (_, _) => 1,
+            };
+            codes.push(code);
+        }
+    }
+    codes
+}
+
+pub fn pack_a770_qk256_scaled_weights() -> Result<Vec<u8>, String> {
+    pack_qk256_grouped_codes(
+        &a770_qk256_scaled_codes(),
+        A770_QK256_SCALED_ROWS,
+        A770_QK256_SCALED_COLS,
+    )
+}
+
+pub fn a770_qk256_scaled_cpu_reference() -> Result<Vec<f32>, String> {
+    let q = a770_qk256_scaled_i8s_activations();
+    let act_sum = a770_qk256_scaled_activation_sum();
+    let packed = pack_a770_qk256_scaled_weights()?;
+    let mut output = Vec::with_capacity(A770_QK256_SCALED_ROWS);
+    for row in 0..A770_QK256_SCALED_ROWS {
+        let row_start = row * A770_QK256_SCALED_ROW_STRIDE_BYTES;
+        let row_end = row_start + A770_QK256_SCALED_ROW_STRIDE_BYTES;
+        let int_dot = qk256_i8s_int_dot(&packed[row_start..row_end], &q, A770_QK256_SCALED_COLS);
+        output.push(
+            ((int_dot - act_sum) as f32 / A770_QK256_SCALED_ACT_SCALE)
+                * A770_QK256_SCALED_WEIGHT_SCALE,
+        );
+    }
+    Ok(output)
+}
 
 pub fn pack_a770_matmul_i2s_weights() -> Result<Vec<u8>, String> {
     pack_i2s_k_by_n_weights(&A770_MATMUL_I2S_WEIGHTS, A770_MATMUL_I2S_N, A770_MATMUL_I2S_K)
@@ -73,6 +139,75 @@ pub fn pack_i2s_k_by_n_weights(weights: &[i8], n: usize, k: usize) -> Result<Vec
         }
     }
     Ok(packed)
+}
+
+pub fn pack_qk256_grouped_codes(codes: &[u8], rows: usize, cols: usize) -> Result<Vec<u8>, String> {
+    if rows == 0 || cols == 0 {
+        return Err("QK256 fixture dimensions must be non-zero".to_string());
+    }
+    if !cols.is_multiple_of(256) {
+        return Err(format!("QK256 fixture cols must be a multiple of 256, got {cols}"));
+    }
+    if codes.len() != rows * cols {
+        return Err(format!(
+            "QK256 fixture has {} codes, expected {} for rows={rows}, cols={cols}",
+            codes.len(),
+            rows * cols
+        ));
+    }
+
+    let row_stride = (cols / 256) * A770_QK256_PACKED_BYTES_PER_BLOCK;
+    let mut packed = vec![0u8; rows * row_stride];
+    for row in 0..rows {
+        for block in 0..(cols / 256) {
+            let code_base = row * cols + block * 256;
+            let byte_base = row * row_stride + block * A770_QK256_PACKED_BYTES_PER_BLOCK;
+            pack_qk256_block(
+                &codes[code_base..code_base + 256],
+                &mut packed[byte_base..byte_base + 64],
+            )?;
+        }
+    }
+    Ok(packed)
+}
+
+fn pack_qk256_block(codes: &[u8], out: &mut [u8]) -> Result<(), String> {
+    debug_assert_eq!(codes.len(), 256);
+    debug_assert_eq!(out.len(), A770_QK256_PACKED_BYTES_PER_BLOCK);
+    for chunk in 0..2 {
+        let byte_base = chunk * 32;
+        let elem_base = chunk * 128;
+        for gp in 0..32 {
+            let mut byte = 0u8;
+            for lane in 0..4 {
+                let code = codes[elem_base + lane * 32 + gp];
+                if code > 3 {
+                    return Err(format!("unsupported QK256 code {code}"));
+                }
+                byte |= code << (6 - lane * 2);
+            }
+            out[byte_base + gp] = byte;
+        }
+    }
+    Ok(())
+}
+
+pub fn qk256_grouped_code(row_bytes: &[u8], col: usize) -> u8 {
+    let block = col / 256;
+    let offset = col % 256;
+    let chunk = offset / 128;
+    let lane = (offset % 128) / 32;
+    let gp = offset % 32;
+    let byte_index = block * A770_QK256_PACKED_BYTES_PER_BLOCK + chunk * 32 + gp;
+    (row_bytes[byte_index] >> (6 - lane * 2)) & 0x03
+}
+
+fn qk256_i8s_int_dot(row_bytes: &[u8], q: &[i8], cols: usize) -> i32 {
+    let mut int_dot = 0i32;
+    for (col, &activation) in q.iter().enumerate().take(cols) {
+        int_dot += qk256_grouped_code(row_bytes, col) as i32 * activation as i32;
+    }
+    int_dot
 }
 
 pub fn cpu_matmul_i2s_reference(
@@ -154,5 +289,38 @@ mod tests {
         let err =
             pack_i2s_k_by_n_weights(&[0, 1, -1, 0, 1], 1, 5).expect_err("non-multiple K rejected");
         assert!(err.contains("K must be a multiple of 4"));
+    }
+
+    #[test]
+    fn a770_qk256_fixture_packs_grouped_bitnet_layout() -> Result<(), String> {
+        let codes = a770_qk256_scaled_codes();
+        let packed = pack_a770_qk256_scaled_weights()?;
+        assert_eq!(packed.len(), A770_QK256_SCALED_ROWS * A770_QK256_SCALED_ROW_STRIDE_BYTES);
+
+        for row in 0..A770_QK256_SCALED_ROWS {
+            let row_start = row * A770_QK256_SCALED_ROW_STRIDE_BYTES;
+            let row_bytes = &packed[row_start..row_start + A770_QK256_SCALED_ROW_STRIDE_BYTES];
+            for col in 0..A770_QK256_SCALED_COLS {
+                assert_eq!(
+                    qk256_grouped_code(row_bytes, col),
+                    codes[row * A770_QK256_SCALED_COLS + col]
+                );
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn a770_qk256_scaled_cpu_reference_locks_scale_sum_formula() -> Result<(), String> {
+        let expected = vec![510.75, 506.0];
+        assert_eq!(a770_qk256_scaled_activation_sum(), 4043);
+        assert_eq!(a770_qk256_scaled_cpu_reference()?, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn a770_qk256_fixture_rejects_bad_codes() {
+        let err = pack_qk256_grouped_codes(&[4; 256], 1, 256).expect_err("bad code rejected");
+        assert!(err.contains("unsupported QK256 code 4"));
     }
 }
