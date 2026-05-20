@@ -2377,7 +2377,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-065"
-status = "in_progress"
+status = "pr_open"
+pr = 6155
+head_sha = "0e7f9902d"
 branch = "codex/slm-cpu-065-single-tensor-runtime-promotion-gate"
 stackable = false
 review_mode = "codex_premerge"
