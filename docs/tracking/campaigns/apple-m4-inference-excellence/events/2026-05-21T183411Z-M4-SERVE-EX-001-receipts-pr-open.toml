@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T18:34:11Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "pr_open"
+pr = 6165
+head_sha = "e9d1ce8abfaeb145bbf8e060570f9e48eff08f1e"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-closeout"
+
+notes = [
+  "Opened PR #6165 to carry the live M4 dense serve-smoke receipts collected after the PR #6162 harness landed.",
+  "The evidence PR adds committed receipts under ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/ and updates the local-server command/config doc with those receipt paths.",
+  "M4-SERVE-EX-001 remains pr_open until the receipt PR merges and a merged closeout event records the final merge SHA.",
+  "No BitNet serve enablement, service production readiness, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]
