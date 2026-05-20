@@ -51,6 +51,7 @@ const OPERATOR_COMPARISON: &str = "lunar-lake-operator-comparison.json";
 const ROUTE_PROMOTION_LEDGER: &str = "lunar-lake-route-promotion.json";
 const ROUTE_PROFILE_COMPARISON: &str = "lunar-lake-route-profile-comparison.json";
 const REGRESSION_BUNDLE_V2: &str = "lunar-lake-regression-bundle-v2.json";
+pub const LOW_POWER_BATTERY_RUNBOOK: &str = "docs/hardware/intel-258v-low-power-battery-runbook.md";
 const COLD_WARM_PROFILE_BENCHMARK: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json";
 const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
@@ -1331,6 +1332,10 @@ pub struct BlockedAskRegressionSummary {
     pub why_not_cpu: Vec<String>,
     pub why_not_gpu: Vec<String>,
     pub why_not_npu: Vec<String>,
+    #[serde(default)]
+    pub operator_runbook: Option<String>,
+    #[serde(default)]
+    pub next_required_evidence: Vec<String>,
     pub new_inference_executed: bool,
     pub fallback_used: bool,
     pub route_promotion_changed: bool,
@@ -5519,6 +5524,12 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
         non_empty_string_array_at_any(&receipt, &["why_not_gpu", "route_selection.why_not_gpu"]);
     let why_not_npu =
         non_empty_string_array_at_any(&receipt, &["why_not_npu", "route_selection.why_not_npu"]);
+    let operator_runbook =
+        string_at_any(&receipt, &["operator_runbook", "route_selection.operator_runbook"]);
+    let next_required_evidence = non_empty_string_array_at_any(
+        &receipt,
+        &["next_required_evidence", "route_selection.next_required_evidence"],
+    );
     let new_inference_executed =
         bool_at_any(&receipt, &["new_inference_executed", "claim_boundary.new_inference_executed"])
             .unwrap_or(true);
@@ -5580,6 +5591,27 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
             gaps.push(format!("route_selection_error is missing `{required}`"));
         }
     }
+    if profile_id == "low_power" {
+        if operator_runbook.as_deref() != Some(LOW_POWER_BATTERY_RUNBOOK) {
+            gaps.push(format!(
+                "low_power blocked ask receipt must point to {LOW_POWER_BATTERY_RUNBOOK}"
+            ));
+        }
+        if !next_required_evidence
+            .iter()
+            .any(|item| item.contains("telemetry-context --require-battery"))
+        {
+            gaps.push(
+                "low_power blocked ask receipt must name telemetry-context --require-battery as next evidence".to_string(),
+            );
+        }
+        if !route_selection_error.contains(LOW_POWER_BATTERY_RUNBOOK) {
+            gaps.push(
+                "low_power blocked ask route_selection_error must include the battery runbook path"
+                    .to_string(),
+            );
+        }
+    }
     if candidate_routes.is_empty() {
         gaps.push("blocked ask receipt is missing structured candidate_routes".to_string());
     }
@@ -5609,6 +5641,8 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
         why_not_cpu,
         why_not_gpu,
         why_not_npu,
+        operator_runbook,
+        next_required_evidence,
         new_inference_executed,
         fallback_used,
         route_promotion_changed,
@@ -5852,6 +5886,8 @@ fn blocked_ask_regression_notes(summary: &BlockedAskRegressionSummary) -> Vec<St
         format!("why_not_cpu={}", join_or_none(&summary.why_not_cpu)),
         format!("why_not_gpu={}", join_or_none(&summary.why_not_gpu)),
         format!("why_not_npu={}", join_or_none(&summary.why_not_npu)),
+        format!("operator_runbook={}", summary.operator_runbook.as_deref().unwrap_or("none")),
+        format!("next_required_evidence={}", join_or_none(&summary.next_required_evidence)),
         format!("new_inference_executed={}", summary.new_inference_executed),
         format!("fallback_used={}", summary.fallback_used),
         format!("blocked_receipt_ready={}", summary.blocked_receipt_ready),
@@ -10407,6 +10443,8 @@ pub struct BlockedOperatorAskRouteSelection {
     pub why_not_cpu: Vec<String>,
     pub why_not_gpu: Vec<String>,
     pub why_not_npu: Vec<String>,
+    pub operator_runbook: Option<String>,
+    pub next_required_evidence: Vec<String>,
     pub promotion_ledger: Option<String>,
     pub route_profile_comparison: Option<String>,
 }
@@ -10485,12 +10523,14 @@ pub fn resolve_operator_ask_route_selection(
     let Some(selected_route_id) = profile.promoted_route.as_deref() else {
         let (why_not_cpu, why_not_gpu, why_not_npu) =
             route_selection_explanations(&ledger, profile, "");
+        let guidance = blocked_operator_ask_error_guidance(&profile.profile_id);
         bail!(
-            "no promoted Lunar Lake auto route for profile `{profile_id}`; candidates={}; why_not_cpu={}; why_not_gpu={}; why_not_npu={}",
+            "no promoted Lunar Lake auto route for profile `{profile_id}`; candidates={}; why_not_cpu={}; why_not_gpu={}; why_not_npu={}{}",
             join_or_none(&profile.candidate_routes),
             join_or_none(&why_not_cpu),
             join_or_none(&why_not_gpu),
-            join_or_none(&why_not_npu)
+            join_or_none(&why_not_npu),
+            guidance
         );
     };
     let promotion = route_promotion(&ledger, selected_route_id)?;
@@ -10581,9 +10621,45 @@ pub fn explain_blocked_operator_ask_route_selection(
         why_not_cpu,
         why_not_gpu,
         why_not_npu,
+        operator_runbook: blocked_operator_ask_runbook(&profile.profile_id).map(str::to_string),
+        next_required_evidence: blocked_operator_ask_next_required_evidence(&profile.profile_id),
         promotion_ledger: Some(path_string(&ledger_path)),
         route_profile_comparison,
     }))
+}
+
+pub fn blocked_operator_ask_runbook(profile_id: &str) -> Option<&'static str> {
+    match profile_id {
+        "low_power" => Some(LOW_POWER_BATTERY_RUNBOOK),
+        _ => None,
+    }
+}
+
+pub fn blocked_operator_ask_next_required_evidence(profile_id: &str) -> Vec<String> {
+    match profile_id {
+        "low_power" => vec![
+            "rerun telemetry-context --require-battery on battery power before collecting low_power route samples".to_string(),
+            "collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix".to_string(),
+            "rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision".to_string(),
+        ],
+        _ => Vec::new(),
+    }
+}
+
+fn blocked_operator_ask_error_guidance(profile_id: &str) -> String {
+    let next_required_evidence = blocked_operator_ask_next_required_evidence(profile_id);
+    let operator_runbook = blocked_operator_ask_runbook(profile_id);
+    if next_required_evidence.is_empty() && operator_runbook.is_none() {
+        return String::new();
+    }
+    let mut parts = Vec::new();
+    if !next_required_evidence.is_empty() {
+        parts.push(format!("next_required_evidence={}", join_or_none(&next_required_evidence)));
+    }
+    if let Some(runbook) = operator_runbook {
+        parts.push(format!("operator_runbook={runbook}"));
+    }
+    format!("; {}", parts.join("; "))
 }
 
 fn normalize_auto_selector(value: &str, default_value: &str) -> String {
@@ -16178,6 +16254,8 @@ mod tests {
             why_not_npu: vec![
                 "missing evidence: benchmark_qualified_speedup_or_power_advantage".to_string(),
             ],
+            operator_runbook: Some(LOW_POWER_BATTERY_RUNBOOK.to_string()),
+            next_required_evidence: blocked_operator_ask_next_required_evidence("low_power"),
             new_inference_executed: false,
             fallback_used: false,
             route_promotion_changed: false,
@@ -16185,7 +16263,9 @@ mod tests {
             power_advantage_claim: false,
             acceleration_claim: false,
             bitnet_qk256_i2s_claim: false,
-            route_selection_error: "no promoted Lunar Lake auto route for profile `low_power`; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage".to_string(),
+            route_selection_error: format!(
+                "no promoted Lunar Lake auto route for profile `low_power`; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage; operator_runbook={LOW_POWER_BATTERY_RUNBOOK}"
+            ),
             regression_ready: true,
             gaps: Vec::new(),
         });
@@ -20735,6 +20815,8 @@ mod tests {
         assert!(err.contains("auto routing only selects routes explicitly promoted"), "got: {err}");
         assert!(err.contains("benchmark_qualified_speedup_or_power_advantage"), "got: {err}");
         assert!(err.contains("benchmark-qualified latency or power advantage"), "got: {err}");
+        assert!(err.contains("telemetry-context --require-battery"), "got: {err}");
+        assert!(err.contains(LOW_POWER_BATTERY_RUNBOOK), "got: {err}");
 
         let blocked = explain_blocked_operator_ask_route_selection(
             temp.path(),
@@ -20769,6 +20851,13 @@ mod tests {
             reason.contains("auto_default")
                 && reason.contains("auto routing only selects routes explicitly promoted")
         }));
+        assert_eq!(blocked.operator_runbook.as_deref(), Some(LOW_POWER_BATTERY_RUNBOOK));
+        assert!(
+            blocked
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("telemetry-context --require-battery"))
+        );
         Ok(())
     }
 

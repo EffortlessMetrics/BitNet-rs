@@ -9801,6 +9801,71 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-OP-014"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-OP-014-low-power-blocked-guidance"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+acceptance = "Make the fail-closed `bitnet lunar-lake ask --device auto --profile low_power` path point operators at the POWER-006 battery runbook and exact next evidence required. The blocked-route error and machine-readable receipt must carry the runbook path plus telemetry-context --require-battery/battery-mode route-matrix/energy-proxy refresh guidance, strict regression must require those low_power blocked-ask guidance fields, and refreshed blocked ask/regression/comparison artifacts must preserve no inference, no model load, no fallback, no route promotion, no speedup, no power-advantage, no native accelerator or acceleration claim, and no BitNet QK256/I2_S behavior change."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::auto_ask_no_promoted_profile_reports_route_blockers -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet tests::lunar_lake_operator_ask_blocked_receipt_records_no_inference_boundary -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe lunar-lake ask --artifact-root ci/hardware/intel-258v/2026-05-08 --device auto --route auto --profile low_power --question \"What is 2+2?\" --max-new-tokens 4 --expect-contains 4 --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-low-power-blocked.json # expected failure before model resolution",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-20T04:52:45Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-20T04:52:50Z --strict",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-low-power-blocked.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Blocked low_power auto ask receipts now point operators at the POWER-006 runbook and next battery-mode evidence required.",
+  "Strict regression now fails closed if the low_power blocked ask receipt omits the runbook or telemetry-context --require-battery guidance.",
+  "low_power remains blocked until real battery-mode route/profile evidence and benchmark-qualified power advantage exist.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any model was loaded for the blocked low_power ask path.",
+  "Battery-mode low_power evidence is available while the 258V remains on AC power.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-006"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
