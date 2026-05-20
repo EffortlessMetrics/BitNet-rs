@@ -4,6 +4,7 @@ item = "A770-005"
 event = "pr_open"
 pr = 6072
 branch = "codex/intel-a770/A770-005-opencl-smoke"
+head_sha = "619455c16dda9b1859ba69d1e4eeb6b70db48a13"
 actor = "codex"
 
 notes = [
