@@ -2377,9 +2377,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-065"
-status = "pr_open"
+status = "merged"
 pr = 6155
-head_sha = "0e7f9902d"
+head_sha = "545c7ba19"
+merge_sha = "67918be87a31b5733b0c5340e65c8e31f86a7f44"
 branch = "codex/slm-cpu-065-single-tensor-runtime-promotion-gate"
 stackable = false
 review_mode = "codex_premerge"
@@ -2420,6 +2421,50 @@ must_not_claim = [
   "Runtime promotion is enabled by default without matching before/after generated-ID and decoded-text receipts.",
   "Generated IDs or decoded text changed.",
   "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, dense hook-selection identity, or fallback=false provenance changed.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-066"
+status = "ready"
+branch = "codex/slm-cpu-066-swarm-runtime-hook-handoff"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-065"]
+acceptance = "Define the next bitnet-rs-swarm handoff after the BitNet-rs SLM-CPU-065 release-surface gate blocked packed Q8_0 runtime promotion. The item should preserve the accepted single-tensor sidecar evidence for `layers.0.attention.q_proj.weight`, direct exact-tensor runtime hook implementation back to bitnet-rs-swarm, and require future return evidence to include before/after strict CPU receipts proving unchanged model SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false. The slice must not implement release-surface runtime compute or claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+  "ci/slm-cpu/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-066 is the next bitnet-rs-swarm handoff after the SLM-CPU-065 release-surface runtime-promotion gate blocked exact-tensor packed Q8_0 promotion.",
+  "Future runtime-hook work must return with before/after strict CPU receipts before BitNet-rs enables release-surface promotion.",
+]
+must_not_claim = [
+  "BitNet-rs release surface has enabled packed Q8_0 runtime compute.",
+  "Runtime promotion is enabled by default without matching before/after generated-ID and decoded-text receipts.",
   "A speedup or sustained 8250U throughput claim is proven.",
   "Broad answer quality is proven.",
   "Q4_K_M or Q4_K_S runtime support exists.",

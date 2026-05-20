@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T20:36:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-065"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 6155
+head_sha = "545c7ba19"
+merge_sha = "67918be87a31b5733b0c5340e65c8e31f86a7f44"
+summary = "Merge the BitNet-rs release-surface packed Q8 runtime-promotion gate."
+notes = [
+  "PR #6155 accepted the single-tensor packed Q8_0 sidecar candidate as release evidence but blocked runtime promotion on the BitNet-rs release surface.",
+  "The gate kept selected_path=eager_f32_candle, selected_kernel=dense-f32-candle-linear, runtime_compute_enabled=false, dense_runtime_replaced=false, fallback_used=false, and speedup_claim=false.",
+  "No packed Q8 runtime execution, speedup, sustained throughput, broad answer-quality, Q4/Q5 runtime support, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim was made.",
+]
