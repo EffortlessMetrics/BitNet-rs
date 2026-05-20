@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T18:42:40Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-003"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-003-trend-retention"
+pr = 6148
+head_sha = "bfd3a1725772b84fe2efa7723a085c376130f63b"
+
+notes = [
+  "Opened PR #6148 to define scheduled M4 trend-retention and stale-identity policy.",
+  "The PR documents retained dense SLM and BitNet receipt families, regenerated summaries, stale identity aging, and operator-envelope refresh triggers.",
+  "Scope remains policy, docs, and tracker metadata only; no live runtime evidence or route enablement is claimed.",
+  "No BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

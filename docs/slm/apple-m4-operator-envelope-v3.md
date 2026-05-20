@@ -3,8 +3,9 @@
 This envelope refreshes the M4 Mac mini operator contract after the durable
 evidence campaign added matching-history reports. It extends the command map in
 `docs/slm/apple-m4-operator-envelope-v2.md` with refresh cadence, regression
-thresholds, `resident_100` status, disk/cache guidance, and claim boundaries
-from the committed dense SLM and BitNet report history.
+thresholds, trend-retention and stale-identity rules, `resident_100` status,
+disk/cache guidance, and claim boundaries from the committed dense SLM and
+BitNet report history.
 
 It is a local M4 Mac mini evidence envelope. It is not a broad Apple Silicon
 benchmark and it is not a broad model-quality claim.
@@ -222,6 +223,45 @@ target/release/bitnet mac regression <new-eval-or-benchmark.json> --baseline <ma
 target/release/bitnet mac report-refresh --json
 target/release/bitnet mac regression-dashboard --json
 ```
+
+## Trend Retention
+
+Scheduled trend reports are derived from committed receipts, not from
+previously generated dashboard output. Keep the current and previous matching
+baseline for each dense SLM and BitNet dashboard group so the dashboard can
+rebuild `ready`, `warning`, `failure`, or `insufficient_history` status from
+source evidence.
+
+Retained source receipts include committed dense SLM eval, benchmark, chat,
+context, smoke, and stability summaries; committed BitNet eval, benchmark,
+variance, one-shot, and warm-session summaries; any BitNet chat or serve gate
+receipt after those routes are enabled; and setup, status, doctor, prune, or
+cache-repair receipts that the envelope uses for operator guidance. Large child
+receipts are retained only when the accepted evidence bundle needs them for
+receipt validation, generated text/token-ID audit, or failure taxonomy. Local
+model files, cache copies, and intermediate `target/` outputs are not retained
+as evidence.
+
+Regenerate the report-refresh manifest, regression-dashboard JSON and Markdown,
+operator evidence summary, status tables, and open-target explanations from the
+retained receipts. Generated outputs may be committed only when the campaign
+item explicitly calls for that artifact; otherwise they remain local refresh
+products under `target/apple-m4-inference-excellence/`.
+
+An identity ages out of current operator claims when the model SHA, tokenizer
+authority or SHA, prompt/template/stop/generation identity, corpus version,
+benchmark profile set, backend, runtime API, fallback state, machine ID, route
+gate receipt, or required receipt schema no longer matches the retained
+baseline. It also ages out when a newer accepted identity has two matching
+refreshes, the supported-model matrix deprecates or removes it, or it misses two
+scheduled M4 refresh cycles while the envelope still depends on it.
+
+Stale identities remain historical evidence. They must not be used for current
+trend claims until a fresh matching-history pair exists and the dashboard group
+is `ready` or accepted with documented warnings. Refresh this operator envelope
+whenever stale aging changes a route class, default model, supported-model
+state, BitNet artifact/tokenizer identity, route enablement, threshold result,
+context boundary, disk/cache floor, dashboard status, or claim-boundary wording.
 
 ## Regression Thresholds
 
@@ -465,8 +505,9 @@ Allowed claim:
 
 ```text
 The M4 operator envelope describes the durable evidence refresh process,
-matching-history regression boundaries, resident_100 dense SLM status, disk and
-cache guidance, and claim boundaries for the recorded M4 Mac mini receipts.
+matching-history regression boundaries, trend-retention and stale-identity
+policy, resident_100 dense SLM status, disk and cache guidance, and claim
+boundaries for the recorded M4 Mac mini receipts.
 ```
 
 Still not allowed:

@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T18:35:48Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-003-trend-retention"
+
+notes = [
+  "Started the scheduled M4 trend-retention and stale-identity policy item after M4-CONTEXT-002 closeout selected M4-STABILITY-003 as next.",
+  "Scope is docs and tracker policy only: retained receipts, regenerated summaries, stale identity aging, and operator-envelope refresh triggers.",
+  "No live runtime, model, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claim is made by this policy item.",
+]
