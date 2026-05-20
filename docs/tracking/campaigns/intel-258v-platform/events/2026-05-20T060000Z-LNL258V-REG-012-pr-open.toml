@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T06:00:00Z"
+event = "pr_open"
+item = "LNL258V-REG-012"
+pr = 6102
+head_sha = "b776b171f30ff2c32681f69095ca27019344da39"
+branch = "codex/lunar-lake/LNL258V-REG-012-arc-npu-bounded-surface"
+actor = "codex"
+summary = "Opened PR #6102 for strict regression Arc/NPU bounded proof surface hardening."
+
+notes = [
+  "PR #6102 exposes arc_npu_bounded_evidence_indexed and arc_npu_bounded_evidence_ready in the Lunar Lake strict regression surface.",
+  "The PR keeps Arc/NPU proof bounded to existing OpenCL parity and NPU static subgraph receipts, not full accelerator inference.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, native accelerator claim, acceleration claim, broad quality claim, A770 semantic merged-to-main claim, stale BitNet claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]

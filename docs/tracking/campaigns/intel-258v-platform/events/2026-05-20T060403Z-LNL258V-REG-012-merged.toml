@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T06:04:03Z"
+event = "merged"
+item = "LNL258V-REG-012"
+pr = 6102
+head_sha = "b776b171f30ff2c32681f69095ca27019344da39"
+merge_sha = "14b5b47b1641f05de697a0eb35d8afaed1e72a45"
+branch = "codex/lunar-lake/LNL258V-REG-012-arc-npu-bounded-surface"
+actor = "codex"
+summary = "Merged strict regression Arc/NPU bounded proof surface hardening."
+
+notes = [
+  "Strict Lunar Lake regression now exposes Arc/NPU bounded proof indexed/ready fields and fails closed if the required operator-readiness evidence disappears.",
+  "POWER-006 remains blocked because real battery-mode low_power telemetry and energy-proxy evidence are still unavailable.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, native accelerator claim, acceleration claim, broad quality claim, A770 semantic merged-to-main claim, stale BitNet claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]

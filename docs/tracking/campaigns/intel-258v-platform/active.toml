@@ -10180,7 +10180,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-012"
-status = "in_progress"
+status = "merged"
+pr = 6102
+head_sha = "b776b171f30ff2c32681f69095ca27019344da39"
+merge_sha = "14b5b47b1641f05de697a0eb35d8afaed1e72a45"
 branch = "codex/lunar-lake/LNL258V-REG-012-arc-npu-bounded-surface"
 stackable = false
 review_mode = "codex_premerge"
