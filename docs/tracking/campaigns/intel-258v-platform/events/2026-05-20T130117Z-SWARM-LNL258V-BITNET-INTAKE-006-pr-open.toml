@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T13:01:17Z"
+event = "pr_open"
+item = "SWARM-LNL258V-BITNET-INTAKE-006"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/swarm-lnl258v-bitnet-intake-006-a770-006r-watchpoint"
+pr = 45
+head_sha = "5db079d1eab41625f08ef962763167d359780de8"
+summary = "Opened PR #45 for the native swarm Lunar Lake A770 #43 pending semantic watchpoint refresh."
+
+notes = [
+  "PR #45 records open swarm A770 #43 as a pending matmul_i2s operand-contract watchpoint.",
+  "The refreshed semantic-intake receipt reports pending_shared_change_count=1, closed_shared_change_count=6, merged_to_main_count=0, stale_after_merged_count=0, and rerun_required=false.",
+  "Strict regression and operator comparison remain ready after the semantic-intake refresh.",
+  "The PR preserves no inference, route promotion, speedup, power-advantage, measured-temperature, battery-mode evidence, stale-BitNet, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_bitnet_semantic_source_changes",
-  "created_utc": "2026-05-20T12:20:00Z",
+  "created_utc": "2026-05-20T12:55:00Z",
   "machine_id": "intel-258v",
   "changes": [
     {
@@ -92,6 +92,21 @@
       ],
       "requires_lunar_lake_rerun_when_merged_to_main": false,
       "claim_boundary": "shared CPU/A770 runtime correctness fix candidate was closed without main merge; no Lunar Lake rerun, route promotion, speedup, acceleration, or BitNet QK256/I2_S behavior-change claim is made"
+    },
+    {
+      "source_lane": "a770",
+      "source_pr": 43,
+      "title": "fix(a770): align matmul_i2s operand contract",
+      "status": "pending_stack",
+      "base_ref": "main",
+      "head_sha": "3959476049f53116276ebab4b5ca1366ca99fbd8",
+      "semantic_scope": [
+        "opencl_matmul_i2s_operand_contract",
+        "i2s_packed_weight_operand_order",
+        "a770_selected_device_parity_fixture"
+      ],
+      "requires_lunar_lake_rerun_when_merged_to_main": true,
+      "claim_boundary": "live GitHub check found swarm A770 PR #43 open; this is tracked as a pending operand-contract watchpoint only and does not trigger a Lunar Lake rerun until it merges to main; no inference, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, native OpenCL/NPU, or BitNet QK256/I2_S behavior-change claim is made"
     }
   ]
 }

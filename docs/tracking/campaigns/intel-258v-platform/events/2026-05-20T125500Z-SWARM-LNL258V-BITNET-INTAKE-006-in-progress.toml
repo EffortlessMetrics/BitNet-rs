@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T12:55:00Z"
+event = "in_progress"
+item = "SWARM-LNL258V-BITNET-INTAKE-006"
+branch = "codex/swarm-lnl258v-bitnet-intake-006-a770-006r-watchpoint"
+actor = "codex"
+summary = "Started a no-inference Lunar Lake semantic-intake refresh for the open swarm A770 #43 matmul_i2s operand-contract watchpoint."
+
+notes = [
+  "Live GitHub verification found swarm PR #43 open with changes to the A770 OpenCL matmul_i2s operand-contract fixture and kernel surface.",
+  "The intended state is pending watchpoint only: no Lunar Lake rerun is required unless #43 merges to main.",
+  "This work preserves no inference, route promotion, speedup, power-advantage, measured-temperature, battery-mode evidence, stale-BitNet, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]

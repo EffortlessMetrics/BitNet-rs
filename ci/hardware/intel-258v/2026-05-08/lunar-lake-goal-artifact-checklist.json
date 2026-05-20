@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "swarm_objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-20T12:25:00Z",
+  "created_utc": "2026-05-20T12:55:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "548c8ceef64dc217e8a27e37b817873aca318f2c",
+  "source_revision": "9dfc263c24e26e2cc9cb0c2f777b3eab1a7d9d9d",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
-  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013/#6106 strict-regression-surface fields for BitNet CPU reference route evidence with closeout #6107 merged, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, refreshed semantic-intake ledger recording formerly pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064 as closed unmerged, POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run, A770-005/#6072 selected-device OpenCL smoke closeout #6079, and A770-006/#6110 selected-device OpenCL matmul_i2s CPU parity closeout #6112 as non-semantic adjacent accelerator evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable. In swarm, SWARM-LNL258V-REG-001/#29 proved strict regress and compare against the migrated receipts with no content drift, and tracker closeout #32 recorded that native swarm proof in the campaign tracker. This audit remains not_complete because a live telemetry-context --require-battery preflight still reports AC power and cannot satisfy POWER-006.",
+  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013/#6106 strict-regression-surface fields for BitNet CPU reference route evidence with closeout #6107 merged, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, refreshed semantic-intake ledger recording formerly pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064 as closed unmerged, and swarm A770 PR #43 as a pending matmul_i2s operand-contract watchpoint that does not require Lunar Lake reruns until it merges to main. POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run, A770-005/#6072 selected-device OpenCL smoke closeout #6079, and A770-006/#6110 selected-device OpenCL matmul_i2s CPU parity closeout #6112 remain non-semantic adjacent accelerator evidence at the prior cutoff. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable. In swarm, SWARM-LNL258V-REG-001/#29 proved strict regress and compare against the migrated receipts with no content drift, and tracker closeout #32 recorded that native swarm proof in the campaign tracker. This audit remains not_complete because a live telemetry-context --require-battery preflight still reports AC power and cannot satisfy POWER-006.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-006",
     "status": "blocked",
@@ -320,7 +320,7 @@
         "BitNet CPU reference evidence is tracked separately from dense Qwen SLM success.",
         "REG-013/#6106 plus closeout #6107 expose bitnet_cpu_reference_evidence_indexed=true and bitnet_cpu_reference_evidence_ready=true in the strict regression surface.",
         "Strict regression indexes semantic-intake state so shared BitNet fixes can stale Lunar Lake evidence.",
-        "The refreshed semantic-intake ledger records A770 shared BitNet semantic PRs #4756, #4757, #4767, #4853, and #5064 as closed unmerged with pending_shared_change_count=0 and stale_after_merged_count=0."
+        "The refreshed semantic-intake ledger records A770 shared BitNet semantic PRs #4756, #4757, #4767, #4853, and #5064 as closed unmerged, and swarm A770 PR #43 as a pending matmul_i2s operand-contract watchpoint with pending_shared_change_count=1 and stale_after_merged_count=0."
       ]
     },
     {
@@ -355,6 +355,7 @@
         "A770-005 adds selected-device OpenCL smoke evidence and its tracker closeout, which is adjacent accelerator proof.",
         "A770-006 adds selected-device OpenCL matmul_i2s CPU parity evidence and its tracker closeout, which is adjacent accelerator proof.",
         "A770-005 and A770-006 are not indexed shared BitNet semantic watchpoints and do not require Lunar Lake BitNet reruns.",
+        "Swarm A770 PR #43 is indexed separately as a pending matmul_i2s operand-contract watchpoint and does not require Lunar Lake BitNet reruns until it merges.",
         "The previously indexed shared BitNet semantic watchpoints #4756, #4757, #4767, #4853, and #5064 are now closed unmerged and do not require Lunar Lake reruns."
       ]
     },
@@ -382,7 +383,7 @@
       ],
       "notes": [
         "Strict regression indexes answer corpus v2, route profile comparison, cold/warm benchmark, durability, BitNet semantic intake, power profile evidence, thermal temperature availability, and operator ask receipts.",
-        "Strict regression records ask_normal_auto_ask_ready=true, ask_short_auto_ask_ready=true, and closed-unmerged A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064 with pending_shared_change_count=0 and stale_after_merged_count=0.",
+        "Strict regression records ask_normal_auto_ask_ready=true, ask_short_auto_ask_ready=true, closed-unmerged A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, and pending swarm A770 PR #43 with pending_shared_change_count=1 and stale_after_merged_count=0.",
         "Strict regression now fails closed if route-profile or cold/warm benchmark evidence lacks route/model identity, tokenizer/template identity, or model SHA256-or-explicit-gap coverage.",
         "Strict regression now fails closed if BitNet CPU reference route evidence disappears from operator readiness.",
         "Strict regression now fails closed if Arc OpenCL parity or NPU bounded subgraph proof receipts disappear from operator readiness.",
@@ -428,9 +429,9 @@
       "reason": "No benchmark-qualified low_power power advantage exists from battery-mode evidence."
     },
     {
-      "id": "closed_a770_semantic_stack",
-      "status": "closed_unmerged_watchpoints",
-      "reason": "A770 #4756, #4757, #4767, #4853, and #5064 are indexed as closed unmerged shared BitNet semantic work, so they do not require Lunar Lake reruns. A770-005/#6072 and A770-006/#6110 are selected-device OpenCL smoke/parity evidence, not shared BitNet semantic triggers."
+      "id": "a770_semantic_watchpoints",
+      "status": "pending_and_closed_watchpoints",
+      "reason": "A770 #4756, #4757, #4767, #4853, and #5064 are indexed as closed unmerged shared BitNet semantic work, so they do not require Lunar Lake reruns. Swarm A770 PR #43 is indexed as a pending matmul_i2s operand-contract watchpoint; no rerun is required unless it merges to main. A770-005/#6072 and A770-006/#6110 are selected-device OpenCL smoke/parity evidence, not broad acceleration claims."
     },
     {
       "id": "bitnet_accelerator_inference",
@@ -456,5 +457,5 @@
     "bitnet_accelerator_full_inference_claim_added": false,
     "packed_qk256_accelerator_decode_claim_added": false
   },
-  "swarm_revision": "f5acd924399b9d101fbc8936e70347bce11a3f75"
+  "swarm_revision": "9dfc263c24e26e2cc9cb0c2f777b3eab1a7d9d9d"
 }

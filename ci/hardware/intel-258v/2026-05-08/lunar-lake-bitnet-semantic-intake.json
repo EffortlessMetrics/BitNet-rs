@@ -2,22 +2,24 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_bitnet_semantic_intake",
   "proof_stage": "shared_bitnet_semantic_intake_no_new_inference",
-  "created_utc": "2026-05-20T12:25:00Z",
+  "created_utc": "2026-05-20T12:55:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "source_changes_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
   "cpu_reference_bundle": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
   "operator_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
   "source_change_summary": {
-    "total_change_count": 6,
-    "pending_shared_change_count": 0,
+    "total_change_count": 7,
+    "pending_shared_change_count": 1,
     "closed_shared_change_count": 6,
     "merged_to_main_count": 0,
     "stale_after_merged_count": 0,
     "source_lanes": [
       "a770"
     ],
-    "pending_changes": [],
+    "pending_changes": [
+      "a770#43 fix(a770): align matmul_i2s operand contract"
+    ],
     "closed_changes": [
       "a770#4756 transformer(bitnet): wire sub-layernorms",
       "a770#4757 transformer(bitnet): apply architecture norm and activation defaults",
@@ -28,13 +30,14 @@
     ],
     "merged_changes": [],
     "notes": [
+      "pending shared changes are indexed but do not invalidate Lunar Lake receipts until they merge to main",
       "closed or superseded shared changes are indexed for audit but do not require Lunar Lake reruns",
       "no merged-to-main shared semantic change currently stales Lunar Lake evidence"
     ]
   },
   "lunar_lake_evidence": {
     "cpu_reference_bundle_created_utc": "2026-05-12T18:43:14Z",
-    "operator_comparison_created_utc": "2026-05-20T12:20:00Z",
+    "operator_comparison_created_utc": "2026-05-20T12:55:00Z",
     "evidence_cutoff_utc": "2026-05-12T18:43:14Z",
     "cpu_reference_bundle_path": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
     "operator_comparison_path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
@@ -159,6 +162,25 @@
       "lunar_lake_rerun_required": false,
       "notes": [
         "shared semantic change is closed or superseded without main merge; no Lunar Lake rerun is required"
+      ]
+    },
+    {
+      "source_lane": "a770",
+      "source_pr": 43,
+      "title": "fix(a770): align matmul_i2s operand contract",
+      "status": "pending_stack",
+      "semantic_scope": [
+        "opencl_matmul_i2s_operand_contract",
+        "i2s_packed_weight_operand_order",
+        "a770_selected_device_parity_fixture"
+      ],
+      "requires_lunar_lake_rerun_when_merged_to_main": true,
+      "merged_at_utc": null,
+      "stale_after_cpu_reference": false,
+      "stale_after_operator_comparison": false,
+      "lunar_lake_rerun_required": false,
+      "notes": [
+        "pending shared semantic change will require Lunar Lake reruns after main merge"
       ]
     }
   ],
