@@ -168,6 +168,8 @@ const M4_ROBUSTNESS_MODEL_FAMILIES: &[&str] = &["dense_slm", "bitnet"];
 enum MacValidateProfileSet {
     /// Run the deterministic smoke corpus once.
     Smoke,
+    /// Run the deterministic quality corpus as an M3 accuracy comparison profile.
+    Accuracy,
     /// Run bounded 16/32/64 warm-answer timing profiles and write an aggregate summary.
     Operator,
     /// Run release-mode 16/32/64/128 warm-answer timing profiles.
@@ -1011,7 +1013,7 @@ enum MacAction {
         #[arg(long, default_value_t = 2)]
         corpus_repeat_runs: usize,
 
-        /// Validation profile set. Use operator for 16/32/64 profiles or performance for release-mode 16/32/64/128 profiles.
+        /// Validation profile set. Use accuracy for M3 comparison metadata, operator for 16/32/64 profiles, or performance for release-mode 16/32/64/128 profiles.
         #[arg(long, value_enum, default_value_t = MacValidateProfileSet::Smoke)]
         profile_set: MacValidateProfileSet,
 
@@ -9655,7 +9657,14 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
             "mac validate --profile-set performance must be run from a release build; use `cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set performance ...`"
         );
     }
+    if profile_set == MacValidateProfileSet::Accuracy && requested_backend != APPLE_M3_AIR_CPU_NEON
+    {
+        anyhow::bail!(
+            "mac validate --profile-set accuracy is currently scoped to --device {APPLE_M3_AIR_CPU_NEON}"
+        );
+    }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    let accuracy_profile = profile_set == MacValidateProfileSet::Accuracy;
     if profile_set == MacValidateProfileSet::Operator {
         if metal_prefill_qkv_phase {
             anyhow::bail!(
@@ -9695,7 +9704,7 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
         model.path.clone(),
         "auto".to_string(),
         None,
-        Some(corpus),
+        Some(corpus.clone()),
         corpus_repeat_runs,
         Vec::new(),
         max_new_tokens,
@@ -9726,6 +9735,133 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
     )
     .await?;
     annotate_and_validate_mac_receipt(&json_out, &model, "mac validate")?;
+    if accuracy_profile {
+        annotate_m3_accuracy_comparison_profile(
+            &json_out,
+            requested_backend,
+            &corpus,
+            corpus_repeat_runs,
+            max_new_tokens,
+        )?;
+    }
+    Ok(())
+}
+
+fn annotate_m3_accuracy_comparison_profile(
+    path: &Path,
+    requested_backend: &str,
+    corpus: &Path,
+    corpus_repeat_runs: usize,
+    max_new_tokens: usize,
+) -> Result<()> {
+    if requested_backend != APPLE_M3_AIR_CPU_NEON {
+        anyhow::bail!(
+            "mac validate --profile-set accuracy is currently scoped to --device {APPLE_M3_AIR_CPU_NEON}"
+        );
+    }
+
+    let bytes = std::fs::read(path)
+        .with_context(|| format!("failed to read Mac receipt {}", path.display()))?;
+    let mut receipt: serde_json::Value = serde_json::from_slice(&bytes)
+        .with_context(|| format!("invalid Mac receipt {}", path.display()))?;
+    let summary = validate_mac_receipt_value(path, &receipt)?;
+    if summary.artifact_kind != "slm_apple_m3_air_warm_session" {
+        anyhow::bail!(
+            "{} M3 accuracy profile must annotate an M3 Air warm-session receipt, got {}",
+            path.display(),
+            summary.artifact_kind
+        );
+    }
+
+    let corpus_bytes =
+        std::fs::read(corpus).with_context(|| format!("failed to read {}", corpus.display()))?;
+    let corpus_sha256 = sha256_hex(&corpus_bytes);
+    let prompts = receipt["prompts"].as_array().ok_or_else(|| {
+        anyhow!("{} M3 accuracy profile requires prompt summaries", path.display())
+    })?;
+
+    let mut seen_case_ids = std::collections::BTreeSet::new();
+    let mut prompt_ids = Vec::with_capacity(prompts.len());
+    for (index, prompt) in prompts.iter().enumerate() {
+        let case_id = prompt["case_id"].as_str().ok_or_else(|| {
+            anyhow!("{} M3 accuracy prompt {index} is missing case_id", path.display())
+        })?;
+        seen_case_ids.insert(case_id.to_string());
+        prompt_ids.push(serde_json::json!({
+            "case_id": case_id,
+            "prompt_index": prompt["prompt_index"].clone(),
+            "repeat_index": prompt["repeat_index"].clone(),
+            "generated_token_ids_recorded": prompt["generated_token_ids"]
+                .as_array()
+                .is_some_and(|ids| !ids.is_empty()),
+            "decoded_text_recorded": prompt["text"]
+                .as_str()
+                .is_some_and(|text| !text.trim().is_empty()),
+        }));
+    }
+
+    let profile = serde_json::json!({
+        "work_item": "M3MBA-022",
+        "profile_set": "accuracy",
+        "device": APPLE_M3_AIR_CPU_NEON,
+        "corpus": {
+            "path": corpus.display().to_string(),
+            "sha256": corpus_sha256,
+            "name": receipt["corpus"]["name"].clone(),
+            "artifact_kind": receipt["corpus"]["artifact_kind"].clone(),
+            "case_count": seen_case_ids.len(),
+            "repeat_runs": corpus_repeat_runs,
+            "max_new_tokens": max_new_tokens,
+        },
+        "prompt_ids": prompt_ids,
+        "prompt_identity_contract": {
+            "case_id_required": true,
+            "prompt_index_required": true,
+            "repeat_index_required": true,
+            "generated_token_ids_required": true,
+            "decoded_text_required": true,
+            "tokenizer_authority_required": true,
+            "fallback_status_required": true,
+        },
+        "scoring_policy": {
+            "source": "ci/quality/apple-m4-slm-quality-corpus.yaml gate rules",
+            "mechanical_scoring_only": true,
+            "llm_judge_required": false,
+            "accepted_gate_kinds": ["contains_any", "starts_with_any"],
+            "broad_answer_quality_claim": false,
+        },
+        "comparison_readiness": {
+            "status": "m3_accuracy_profile_ready",
+            "comparison_grade_claim_made": false,
+            "m3_air_dense_slm_receipt": true,
+            "m4_mac_mini_comparable_without_fresh_matching_receipt": false,
+            "slm_cpu_comparable_without_fresh_matching_receipt": false,
+            "non_comparable_evidence": [
+                "M4 Mac mini receipts use a different machine identity and must remain separate until a matching-profile receipt is selected.",
+                "SLM CPU receipts use a different hardware/backend context and must remain separate until a matching-profile receipt is selected."
+            ]
+        },
+        "claim_boundary": {
+            "dense_slm_accuracy_profile": true,
+            "bitnet_quality_claimed": false,
+            "m4_performance_claimed": false,
+            "slm_cpu_equivalence_claimed": false,
+            "broad_quality_claim": false,
+            "broad_performance_claim": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false
+        }
+    });
+
+    let object = receipt
+        .as_object_mut()
+        .ok_or_else(|| anyhow!("Mac receipt {} is not a JSON object", path.display()))?;
+    object.insert("accuracy_comparison_profile".to_string(), profile);
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)
+        .with_context(|| format!("failed to update Mac receipt {}", path.display()))?;
+    validate_mac_receipt_value(path, &receipt)?;
     Ok(())
 }
 
@@ -21304,7 +21440,140 @@ fn validate_warm_session_receipt(
     if dense_quality_corpus {
         validate_dense_slm_quality_corpus_determinism(path, receipt, prompts)?;
     }
+    if !receipt["accuracy_comparison_profile"].is_null() {
+        validate_m3_accuracy_comparison_profile(path, receipt, expected_backend, prompts)?;
+    }
     Ok((Some(prompts.len()), Some(generated_total)))
+}
+
+fn validate_m3_accuracy_comparison_profile(
+    path: &Path,
+    receipt: &serde_json::Value,
+    expected_backend: &str,
+    prompts: &[serde_json::Value],
+) -> Result<()> {
+    if expected_backend != APPLE_M3_AIR_CPU_NEON {
+        anyhow::bail!(
+            "{} accuracy_comparison_profile is only valid for {APPLE_M3_AIR_CPU_NEON}",
+            path.display()
+        );
+    }
+    let profile = &receipt["accuracy_comparison_profile"];
+    require_exact_string_at(path, profile, &["work_item"], "M3MBA-022")?;
+    require_exact_string_at(path, profile, &["profile_set"], "accuracy")?;
+    require_exact_string_at(path, profile, &["device"], APPLE_M3_AIR_CPU_NEON)?;
+    require_exact_string_at(
+        path,
+        profile,
+        &["corpus", "artifact_kind"],
+        "apple_m4_slm_quality_corpus",
+    )?;
+    require_non_empty_string_at(path, profile, &["corpus", "path"])?;
+    let corpus_sha = require_non_empty_string_at(path, profile, &["corpus", "sha256"])?;
+    if !is_sha256_hex(corpus_sha) {
+        anyhow::bail!("{} accuracy corpus sha256 must be a SHA256 hex digest", path.display());
+    }
+    let case_count = require_u64_at(path, profile, &["corpus", "case_count"], true)?;
+    let repeat_runs = require_u64_at(path, profile, &["corpus", "repeat_runs"], true)?;
+    if case_count == 0 || repeat_runs < 2 {
+        anyhow::bail!(
+            "{} accuracy profile requires at least one case and repeated runs",
+            path.display()
+        );
+    }
+    let prompt_ids = profile["prompt_ids"].as_array().ok_or_else(|| {
+        anyhow!("{} accuracy_comparison_profile.prompt_ids must be an array", path.display())
+    })?;
+    if prompt_ids.len() != prompts.len() {
+        anyhow::bail!(
+            "{} accuracy prompt_ids length must match warm-session prompts",
+            path.display()
+        );
+    }
+    if prompt_ids.len() as u64 != case_count.saturating_mul(repeat_runs) {
+        anyhow::bail!(
+            "{} accuracy prompt_ids length must equal corpus.case_count * corpus.repeat_runs",
+            path.display()
+        );
+    }
+    let mut seen_case_ids = std::collections::BTreeSet::new();
+    for (index, prompt_id) in prompt_ids.iter().enumerate() {
+        let case_id = require_non_empty_string_at(path, prompt_id, &["case_id"])?;
+        seen_case_ids.insert(case_id.to_string());
+        if prompt_id["prompt_index"].as_u64().is_none()
+            || prompt_id["repeat_index"].as_u64().is_none()
+        {
+            anyhow::bail!(
+                "{} accuracy prompt_ids[{index}] must record prompt_index and repeat_index",
+                path.display()
+            );
+        }
+        require_bool_at(path, prompt_id, &["generated_token_ids_recorded"], true)?;
+        require_bool_at(path, prompt_id, &["decoded_text_recorded"], true)?;
+    }
+    if seen_case_ids.len() as u64 != case_count {
+        anyhow::bail!(
+            "{} accuracy corpus.case_count must match distinct prompt case IDs",
+            path.display()
+        );
+    }
+    for field in [
+        "case_id_required",
+        "prompt_index_required",
+        "repeat_index_required",
+        "generated_token_ids_required",
+        "decoded_text_required",
+        "tokenizer_authority_required",
+        "fallback_status_required",
+    ] {
+        require_bool_at(path, profile, &["prompt_identity_contract", field], true)?;
+    }
+    require_bool_at(path, profile, &["scoring_policy", "mechanical_scoring_only"], true)?;
+    require_bool_at(path, profile, &["scoring_policy", "llm_judge_required"], false)?;
+    require_bool_at(path, profile, &["scoring_policy", "broad_answer_quality_claim"], false)?;
+    require_exact_string_at(
+        path,
+        profile,
+        &["comparison_readiness", "status"],
+        "m3_accuracy_profile_ready",
+    )?;
+    require_bool_at(
+        path,
+        profile,
+        &["comparison_readiness", "comparison_grade_claim_made"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        profile,
+        &["comparison_readiness", "m4_mac_mini_comparable_without_fresh_matching_receipt"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        profile,
+        &["comparison_readiness", "slm_cpu_comparable_without_fresh_matching_receipt"],
+        false,
+    )?;
+    require_non_empty_string_array_at(
+        path,
+        profile,
+        &["comparison_readiness", "non_comparable_evidence"],
+    )?;
+    for field in [
+        "bitnet_quality_claimed",
+        "m4_performance_claimed",
+        "slm_cpu_equivalence_claimed",
+        "broad_quality_claim",
+        "broad_performance_claim",
+        "full_metal_inference_claimed",
+        "mpsgraph_inference_claimed",
+        "neural_engine_execution_claimed",
+        "qk256_apple_claimed",
+    ] {
+        require_bool_at(path, profile, &["claim_boundary", field], false)?;
+    }
+    Ok(())
 }
 
 fn validate_dense_slm_quality_corpus_header(
@@ -22329,6 +22598,21 @@ mod tests {
     }
 
     #[test]
+    fn mac_receipts_check_accepts_apple_m3_accuracy_comparison_profile()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = test_m3_accuracy_comparison_profile_receipt();
+
+        let summary = validate_mac_receipt_value(Path::new("m3-accuracy.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "slm_apple_m3_air_warm_session");
+        assert_eq!(summary.requested_backend, APPLE_M3_AIR_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M3_AIR_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(2));
+        assert_eq!(summary.generated_tokens, Some(4));
+        Ok(())
+    }
+
+    #[test]
     fn mac_receipts_check_accepts_bitnet_eval_answer_corpus()
     -> Result<(), Box<dyn std::error::Error>> {
         let receipt = test_bitnet_eval_answer_corpus_receipt();
@@ -23140,6 +23424,129 @@ mod tests {
                     }
                 }
             ]
+        })
+    }
+
+    fn test_m3_accuracy_comparison_profile_receipt() -> serde_json::Value {
+        let prompt = |repeat_index: u64| {
+            serde_json::json!({
+                "case_id": "math_2_plus_2",
+                "prompt_index": 0,
+                "repeat_index": repeat_index,
+                "backend": {
+                    "requested_backend": APPLE_M3_AIR_CPU_NEON,
+                    "selected_backend": APPLE_M3_AIR_CPU_NEON,
+                    "runtime_api": "cpu",
+                    "fallback_used": false
+                },
+                "text": "4",
+                "generated_tokens": 2,
+                "generated_token_ids": [1, 2],
+                "quality": {
+                    "passed": true,
+                    "valid_utf8": true,
+                    "non_empty": true,
+                    "non_degenerate": true,
+                    "failed_rules": [],
+                    "distinct_generated_tokens": 2
+                }
+            })
+        };
+        serde_json::json!({
+            "artifact_kind": "slm_apple_m3_air_warm_session",
+            "requested_backend": APPLE_M3_AIR_CPU_NEON,
+            "selected_backend": APPLE_M3_AIR_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "backend": {
+                "requested_backend": APPLE_M3_AIR_CPU_NEON,
+                "selected_backend": APPLE_M3_AIR_CPU_NEON,
+                "runtime_api": "cpu",
+                "fallback_used": false
+            },
+            "session": {
+                "model_loaded_once": true,
+                "tokenizer_loaded_once": true
+            },
+            "corpus": {
+                "artifact_kind": "test_warm_session"
+            },
+            "quality_summary": {
+                "passed": true
+            },
+            "prompts": [
+                prompt(0),
+                prompt(1)
+            ],
+            "accuracy_comparison_profile": {
+                "work_item": "M3MBA-022",
+                "profile_set": "accuracy",
+                "device": APPLE_M3_AIR_CPU_NEON,
+                "corpus": {
+                    "path": "ci/quality/apple-m4-slm-quality-corpus.yaml",
+                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "name": "apple-m4-slm-quality-determinism-v2",
+                    "artifact_kind": "apple_m4_slm_quality_corpus",
+                    "case_count": 1,
+                    "repeat_runs": 2,
+                    "max_new_tokens": 32
+                },
+                "prompt_ids": [
+                    {
+                        "case_id": "math_2_plus_2",
+                        "prompt_index": 0,
+                        "repeat_index": 0,
+                        "generated_token_ids_recorded": true,
+                        "decoded_text_recorded": true
+                    },
+                    {
+                        "case_id": "math_2_plus_2",
+                        "prompt_index": 0,
+                        "repeat_index": 1,
+                        "generated_token_ids_recorded": true,
+                        "decoded_text_recorded": true
+                    }
+                ],
+                "prompt_identity_contract": {
+                    "case_id_required": true,
+                    "prompt_index_required": true,
+                    "repeat_index_required": true,
+                    "generated_token_ids_required": true,
+                    "decoded_text_required": true,
+                    "tokenizer_authority_required": true,
+                    "fallback_status_required": true
+                },
+                "scoring_policy": {
+                    "source": "ci/quality/apple-m4-slm-quality-corpus.yaml gate rules",
+                    "mechanical_scoring_only": true,
+                    "llm_judge_required": false,
+                    "accepted_gate_kinds": ["contains_any", "starts_with_any"],
+                    "broad_answer_quality_claim": false
+                },
+                "comparison_readiness": {
+                    "status": "m3_accuracy_profile_ready",
+                    "comparison_grade_claim_made": false,
+                    "m3_air_dense_slm_receipt": true,
+                    "m4_mac_mini_comparable_without_fresh_matching_receipt": false,
+                    "slm_cpu_comparable_without_fresh_matching_receipt": false,
+                    "non_comparable_evidence": [
+                        "M4 Mac mini receipts use a different machine identity.",
+                        "SLM CPU receipts use a different hardware/backend context."
+                    ]
+                },
+                "claim_boundary": {
+                    "dense_slm_accuracy_profile": true,
+                    "bitnet_quality_claimed": false,
+                    "m4_performance_claimed": false,
+                    "slm_cpu_equivalence_claimed": false,
+                    "broad_quality_claim": false,
+                    "broad_performance_claim": false,
+                    "full_metal_inference_claimed": false,
+                    "mpsgraph_inference_claimed": false,
+                    "neural_engine_execution_claimed": false,
+                    "qk256_apple_claimed": false
+                }
+            }
         })
     }
 
