@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T09:48:12Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CONTEXT-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-001-long-context-guardrails"
+pr = 6130
+merge_sha = "ecd95c40bc155a64e1c7e8b3f85e982a2495f11d"
+
+notes = [
+  "Merged PR #6130, adding long-context envelope guardrails for M4 dense SLM and BitNet operator routes.",
+  "The merged work adds context_envelope classification and apple_m4_context_guardrail receipts for blocked dense ask/chat/chat-smoke/serve and BitNet ask/warm/chat/serve contexts beyond recorded evidence.",
+  "This is route guardrail and overclaim-prevention evidence only.",
+  "No long-context quality proof, unsupported-context support, BitNet chat/serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]
