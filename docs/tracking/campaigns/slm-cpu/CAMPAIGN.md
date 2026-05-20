@@ -113,7 +113,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-060 | merged | #6085 added the payload-bearing packed Q8_0 sidecar hook contract while keeping runtime compute gated by before/after behavior receipts. |
 | SLM-CPU-061 | merged | #6111 wired one exact real Qwen3 Q8_0 dense-linear tensor payload candidate behind an explicit opt-in gate while preserving the eager F32 behavior oracle. |
 | SLM-CPU-062 | merged | #6122 added the release-surface checkpoint for moving further Kaby SLM packed-Q8 compute-candidate development to bitnet-rs-swarm while BitNet-rs remains the audited release/evidence surface. |
-| SLM-CPU-063 | ready | Define the BitNet-rs release-surface intake gate for audited Kaby SLM artifacts produced by bitnet-rs-swarm. |
+| SLM-CPU-063 | merged | #6127 defined the BitNet-rs release-surface intake gate for audited Kaby SLM artifacts produced by bitnet-rs-swarm. |
+| SLM-CPU-064 | ready | Review the first audited Kaby SLM artifact package returned from bitnet-rs-swarm under the SLM-CPU-063 release-surface intake gate. |
 
 ## Review Policy
 

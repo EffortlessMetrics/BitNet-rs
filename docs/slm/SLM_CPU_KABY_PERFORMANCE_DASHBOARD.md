@@ -864,3 +864,6 @@ speedup_claim=false unless a separate bounded timing receipt proves otherwise
 This boundary does not claim a new runtime compute path, speedup, sustained
 throughput, broad answer quality, Q4/Q5 runtime support, server execution,
 accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
+
+The intake rules for those returned artifacts are defined in
+`docs/slm/SLM_CPU_SWARM_ARTIFACT_INTAKE.md`.

@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T08:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-064"
+event = "in_progress"
+previous_status = "none"
+new_status = "ready"
+actor = "codex"
+summary = "Queue the first BitNet-rs release-surface review gate for an audited Kaby SLM artifact package returned from bitnet-rs-swarm."
+notes = [
+  "The item reviews a returned package against the SLM-CPU-063 intake gate before any runtime promotion item can open in BitNet-rs.",
+  "The required package includes candidate_summary.json, before_receipt.json, after_receipt.json, equivalence_report.json, timing_report.json or timing_not_claimed.json, and source_commit.txt.",
+  "The review must preserve model SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false.",
+  "No runtime compute, speedup, sustained throughput, broad answer-quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
