@@ -739,29 +739,26 @@ fn run_intel_arc_tiny_vector_add_smoke(
         }
     };
 
-    let Some((
-        platform_id,
-        device_id,
-        platform_index,
-        device_index,
-        platform_name,
-        device_name,
-        vendor,
-        driver_version,
-    )) = find_matching_intel_arc_gpu_device(&funcs, device_name_matches)
+    let Some(selected_device) = find_matching_intel_arc_gpu_device(&funcs, device_name_matches)
     else {
         result.error = Some(missing_device_error.to_owned());
         return result;
     };
 
-    result.platform_index = Some(platform_index);
-    result.device_index = Some(device_index);
-    result.platform_name = Some(platform_name);
-    result.device_name = Some(device_name);
-    result.vendor = Some(vendor);
-    result.driver_version = Some(driver_version);
+    result.platform_index = Some(selected_device.platform_index);
+    result.device_index = Some(selected_device.device_index);
+    result.platform_name = Some(selected_device.platform_name.clone());
+    result.device_name = Some(selected_device.device_name.clone());
+    result.vendor = Some(selected_device.vendor.clone());
+    result.driver_version = Some(selected_device.driver_version.clone());
 
-    match run_vector_add_on_device(&funcs, platform_id, device_id, INPUT_LEN, TOLERANCE) {
+    match run_vector_add_on_device(
+        &funcs,
+        selected_device.platform_id,
+        selected_device.device_id,
+        INPUT_LEN,
+        TOLERANCE,
+    ) {
         Ok(metrics) => {
             result.proof_stage = "kernel_smoke_tested".to_owned();
             result.passed = metrics.passed;
@@ -793,10 +790,21 @@ struct VectorAddMetrics {
     readback_ms: f64,
 }
 
+struct MatchedIntelArcGpuDevice {
+    platform_id: usize,
+    device_id: usize,
+    platform_index: usize,
+    device_index: usize,
+    platform_name: String,
+    device_name: String,
+    vendor: String,
+    driver_version: String,
+}
+
 fn find_matching_intel_arc_gpu_device(
     funcs: &OpenClExecutionFunctions,
     device_name_matches: fn(&str) -> bool,
-) -> Option<(usize, usize, usize, usize, String, String, String, String)> {
+) -> Option<MatchedIntelArcGpuDevice> {
     let mut num_platforms: u32 = 0;
     let rc = unsafe { (funcs.get_platform_ids)(0, ptr::null_mut(), &mut num_platforms) };
     if rc != CL_SUCCESS || num_platforms == 0 {
@@ -849,7 +857,7 @@ fn find_matching_intel_arc_gpu_device(
             }
             let driver_version =
                 query_device_string(funcs.get_device_info, device_id, CL_DRIVER_VERSION);
-            return Some((
+            return Some(MatchedIntelArcGpuDevice {
                 platform_id,
                 device_id,
                 platform_index,
@@ -858,7 +866,7 @@ fn find_matching_intel_arc_gpu_device(
                 device_name,
                 vendor,
                 driver_version,
-            ));
+            });
         }
     }
 
