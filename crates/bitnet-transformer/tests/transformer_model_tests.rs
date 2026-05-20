@@ -372,6 +372,47 @@ fn dense_linear_runtime_hook_boundary_can_carry_payload_without_enabling_compute
 }
 
 #[test]
+fn dense_linear_runtime_hook_boundary_rejects_payload_tensor_mismatch() -> anyhow::Result<()> {
+    let config = tiny_config(8, 16, 2);
+    let device = Device::Cpu;
+    let vb = VarBuilder::zeros(DType::F32, &device);
+    let payload_bytes = vec![0_u8; 68];
+    let mut hooks = DenseLinearRuntimeHookRegistry::default();
+    hooks.insert(
+        "layers.0.attention.q_proj.weight".to_string(),
+        DenseLinearRuntimeHookDescriptor {
+            tensor_name: "blk.0.attn_q.weight".to_string(),
+            role: "AttentionQ".to_string(),
+            sidecar_payload_sha256: Some("sha256:payload".to_string()),
+            packed_q8_payload: Some(DenseLinearPackedQ8Payload {
+                tensor_name: "blk.0.attn_k.weight".to_string(),
+                packed_q8_bytes: std::sync::Arc::from(payload_bytes.into_boxed_slice()),
+                q8_block_size: 32,
+                q8_block_count: 2,
+                matrix_rows: 8,
+                matrix_cols: 8,
+            }),
+            runtime_compute_enabled: true,
+        },
+    );
+    let model = TransformerModel::new_with_tensors_and_dense_linear_hooks(
+        config,
+        vb,
+        Default::default(),
+        hooks,
+    )?;
+
+    let boundary = model.dense_linear_runtime_hook_boundary("layers.0.attention.q_proj.weight");
+
+    assert!(boundary.sidecar_payload_bytes_available);
+    assert_eq!(boundary.sidecar_payload_bytes, Some(68));
+    assert!(!boundary.sidecar_payload_contract_valid);
+    assert!(!boundary.runtime_compute_enabled);
+    assert!(boundary.preserves_eager_f32());
+    Ok(())
+}
+
+#[test]
 fn dense_linear_runtime_hook_boundaries_report_sorted_receipt_identity() -> anyhow::Result<()> {
     let config = tiny_config(8, 16, 2);
     let device = Device::Cpu;

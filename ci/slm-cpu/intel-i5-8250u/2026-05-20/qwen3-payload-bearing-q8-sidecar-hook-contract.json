@@ -33,6 +33,7 @@
       "sidecar_payload_contract_valid"
     ],
     "payload_contract_valid_requires": [
+      "payload tensor_name matches descriptor tensor_name",
       "q8_block_size = 32",
       "q8_block_count = ceil(matrix_rows * matrix_cols / q8_block_size)",
       "packed_q8_bytes.len = q8_block_count * (2 + q8_block_size)",
