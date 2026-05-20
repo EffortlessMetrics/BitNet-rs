@@ -9407,6 +9407,61 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-CI-001"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-CI-001-pr-plan-timeout"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-004"]
+acceptance = "Harden the PR Plan and PR Gate controller path after Lunar Lake tracker-only PRs #6049/#6050 showed long-running `xtask ci plan` steps even though local reproduction finished quickly. Add bounded timeouts to the PR-plan construction steps so controller jobs fail closed instead of hanging indefinitely, without changing route evidence, route promotion, regression semantics, inference behavior, speedup, power-advantage, native accelerator, acceleration, broad quality, measured-temperature, or BitNet QK256/I2_S behavior claims."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- lint-workflows",
+  "powershell -NoProfile -Command \"Get-Content .github/workflows/pr-plan.yml -Raw | Select-String 'timeout-minutes: 10' | Out-Null; Get-Content .github/workflows/pr-gate.yml -Raw | Select-String 'timeout-minutes: 10' | Out-Null\"",
+  "powershell -NoProfile -Command \"@('docs/tracking/campaigns/intel-258v-platform/active.toml','docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T091000Z-LNL258V-GOAL-AUDIT-004-pr-open.toml','docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T092000Z-LNL258V-GOAL-AUDIT-004-merged.toml','docs/tracking/campaigns/intel-258v-platform/generated/status.md','docs/tracking/generated/blocked-items.md','docs/tracking/generated/global-dashboard.md','docs/tracking/generated/lane-dashboard.md') | Set-Content -Path (Join-Path $env:TEMP 'bitnet-pr6050-changed.txt') -Encoding ascii\"",
+  "powershell -NoProfile -Command \"cargo run --locked -p xtask --no-default-features -- ci plan --changed-file (Join-Path $env:TEMP 'bitnet-pr6050-changed.txt') --labels-json '[]' --json-out (Join-Path $env:TEMP 'bitnet-pr6050-ci-plan.json') --print\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".github/workflows/pr-plan.yml",
+  ".github/workflows/pr-gate.yml",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "PR Plan and PR Gate now bound the `xtask ci plan` construction step so controller jobs fail closed instead of hanging indefinitely.",
+  "The local `xtask ci plan` reproduction for the GOAL-AUDIT-004 closeout tracker-only file set succeeds quickly.",
+  "The active Lunar Lake route evidence remains unchanged and LNL258V-POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "A measured thermal temperature is available.",
+  "Battery-mode low_power evidence is available while the 258V remains on AC power.",
+  "A770 #5064 has merged to main.",
+  "Current Lunar Lake BitNet evidence is stale before #5064 merges to main.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-006"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"

@@ -89,6 +89,7 @@ jobs:
           sed -n '1,200p' changed.txt
 
       - name: Build PR gate CI plan
+        timeout-minutes: 10
         env:
           LABELS: ${{ github.event_name == 'pull_request' && toJson(github.event.pull_request.labels.*.name) || '[]' }}
         run: |
