@@ -7180,15 +7180,17 @@ fn bench_rtx5070ti_dispatches_prefill_512_perf005_profile_without_cpu_fallback()
     Ok(())
 }
 
-/// Warm-context PERF-005 stays fail-closed until its dedicated runner shape exists.
+/// The warm-context PERF-005 profile enters the live strict CUDA dispatcher.
 #[cfg(feature = "full-cli")]
 #[test]
-fn bench_rtx5070ti_blocks_defined_perf005_profile_without_dispatch()
+fn bench_rtx5070ti_dispatches_decode_128_warm_context_perf005_profile_without_cpu_fallback()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let model = dir.path().join("placeholder.gguf");
+    let receipt = dir.path().join("decode-128-from-warm-context.json");
     std::fs::write(&model, b"placeholder")?;
     let model_str = model.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
 
     let profile = "decode_128_from_warm_context";
     bitnet()
@@ -7200,14 +7202,20 @@ fn bench_rtx5070ti_blocks_defined_perf005_profile_without_dispatch()
             "nvidia-rtx-5070-ti-cuda",
             "--profile",
             profile,
+            "--output",
+            receipt_str.as_str(),
         ])
         .assert()
         .failure()
         .stderr(predicate::str::contains(format!(
-            "PERF-005 profile `{profile}` is defined but does not yet have a live dispatcher"
+            "PERF-005 profile `{profile}` dispatches through strict RTX 5070 Ti CUDA generation"
         )))
+        .stderr(predicate::str::contains("profile_kind=warm_context_decode"))
+        .stderr(predicate::str::contains("min_prefill_tokens=512"))
+        .stderr(predicate::str::contains("max_new_tokens=128"))
         .stderr(predicate::str::contains("speedup_claim=false"))
-        .stderr(predicate::str::contains("full_residency_claim=false"));
+        .stderr(predicate::str::contains("full_residency_claim=false"))
+        .stderr(predicate::str::contains("legacy benchmark simulates benchmark work").not());
     Ok(())
 }
 

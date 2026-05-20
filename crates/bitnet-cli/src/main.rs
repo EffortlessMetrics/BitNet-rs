@@ -4088,6 +4088,7 @@ where
 #[derive(Debug, Clone, Copy)]
 enum CudaBitnetPerf005ProfileKind {
     SingleDecode { max_new_tokens: usize, min_prefill_tokens: Option<usize> },
+    WarmContextDecode { max_new_tokens: usize, min_prefill_tokens: usize },
     WarmSession { turns: usize, max_new_tokens: usize },
 }
 
@@ -4140,6 +4141,11 @@ async fn run_cuda_bitnet_perf005_benchmark_profile(
                 .unwrap_or_default();
             format!("profile_kind=single_decode{prefill_detail}, max_new_tokens={max_new_tokens}")
         }
+        CudaBitnetPerf005ProfileKind::WarmContextDecode { max_new_tokens, min_prefill_tokens } => {
+            format!(
+                "profile_kind=warm_context_decode, min_prefill_tokens={min_prefill_tokens}, max_new_tokens={max_new_tokens}"
+            )
+        }
         CudaBitnetPerf005ProfileKind::WarmSession { turns, max_new_tokens } => {
             format!("profile_kind=warm_session, turns={turns}, max_new_tokens={max_new_tokens}")
         }
@@ -4150,7 +4156,8 @@ async fn run_cuda_bitnet_perf005_benchmark_profile(
     );
 
     match plan.kind {
-        CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens, .. } => {
+        CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens, .. }
+        | CudaBitnetPerf005ProfileKind::WarmContextDecode { max_new_tokens, .. } => {
             run_simple_generation(
                 requested_backend_label,
                 model_path,
@@ -4277,14 +4284,16 @@ fn cuda_bitnet_perf005_profile_plan(profile: &str) -> Result<CudaBitnetPerf005Pr
             profile_id: "warm_session_10_turns",
             kind: CudaBitnetPerf005ProfileKind::WarmSession { turns: 10, max_new_tokens: 16 },
         }),
-        "decode_128_from_warm_context" => {
-            anyhow::bail!(
-                "PERF-005 profile `{profile}` is defined but does not yet have a live dispatcher; next proof requires a dedicated warm-context runner receipt. speedup_claim=false, full_residency_claim=false"
-            );
-        }
+        "decode_128_from_warm_context" => Ok(CudaBitnetPerf005ProfilePlan {
+            profile_id: "decode_128_from_warm_context",
+            kind: CudaBitnetPerf005ProfileKind::WarmContextDecode {
+                max_new_tokens: 128,
+                min_prefill_tokens: 512,
+            },
+        }),
         _ => {
             anyhow::bail!(
-                "unknown CUDA-BITNET-PERF-005 profile `{profile}`; live profiles: one_token, short_decode_8, short_decode_32, prefill_128_decode_16, prefill_512_decode_32, warm_session_3_turns, warm_session_10_turns; blocked profiles: decode_128_from_warm_context"
+                "unknown CUDA-BITNET-PERF-005 profile `{profile}`; live profiles: one_token, short_decode_8, short_decode_32, prefill_128_decode_16, prefill_512_decode_32, warm_session_3_turns, warm_session_10_turns, decode_128_from_warm_context"
             );
         }
     }
@@ -4334,6 +4343,7 @@ fn perf005_prompt_for_profile(profile_id: &str) -> String {
         }
         "prefill_128_decode_16" => perf005_repeated_prefill_prompt(128),
         "prefill_512_decode_32" => perf005_repeated_prefill_prompt(512),
+        "decode_128_from_warm_context" => perf005_repeated_prefill_prompt(512),
         _ => "Define entropy.".to_string(),
     }
 }
@@ -4358,6 +4368,7 @@ fn validate_cuda_bitnet_perf005_single_decode_shape(
         "short_decode_32" => Some((None, 32)),
         "prefill_128_decode_16" => Some((Some(128), 16)),
         "prefill_512_decode_32" => Some((Some(512), 32)),
+        "decode_128_from_warm_context" => Some((Some(512), 128)),
         _ => None,
     }) else {
         return Ok(());
@@ -13138,6 +13149,32 @@ mod tests {
 
         assert!(err_text.contains("requires at least 512 prefill tokens"));
         assert!(err_text.contains("speedup_claim=false"));
+    }
+
+    #[test]
+    fn perf005_shape_accepts_decode_128_warm_context_floor() {
+        assert!(
+            validate_cuda_bitnet_perf005_single_decode_shape(
+                "decode_128_from_warm_context",
+                512,
+                128
+            )
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn perf005_shape_rejects_short_decode_128_warm_context() {
+        let result = validate_cuda_bitnet_perf005_single_decode_shape(
+            "decode_128_from_warm_context",
+            512,
+            127,
+        );
+        assert!(result.is_err(), "short warm-context decode should be rejected");
+        let err_text = result.err().map(|err| err.to_string()).unwrap_or_default();
+
+        assert!(err_text.contains("requires at least 128 generated tokens"));
+        assert!(err_text.contains("full_residency_claim=false"));
     }
 
     #[test]
