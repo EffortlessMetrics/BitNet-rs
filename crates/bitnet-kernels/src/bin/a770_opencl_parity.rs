@@ -1,5 +1,9 @@
 use std::{env, error::Error, io, path::PathBuf};
 
+use bitnet_kernels::a770_opencl_fixture::{
+    A770_MATMUL_I2S_ACTIVATIONS, A770_MATMUL_I2S_K, A770_MATMUL_I2S_M, A770_MATMUL_I2S_N,
+    a770_matmul_i2s_cpu_reference, pack_a770_matmul_i2s_weights,
+};
 use opencl3::command_queue::{CL_QUEUE_PROFILING_ENABLE, CommandQueue};
 use opencl3::context::Context;
 use opencl3::device::{CL_DEVICE_TYPE_GPU, Device};
@@ -70,7 +74,7 @@ impl A770OpenClParityReceipt {
             concat!(
                 "{{\n",
                 "  \"campaign\": \"intel-a770\",\n",
-                "  \"work_item\": \"A770-006\",\n",
+                "  \"work_item\": \"A770-006R\",\n",
                 "  \"proof_family\": \"a770_opencl_matmul_i2s_cpu_parity\",\n",
                 "  \"proof_stage\": \"cpu_opencl_parity_tested\",\n",
                 "  \"requested_backend\": \"intel-arc-a770\",\n",
@@ -84,6 +88,9 @@ impl A770OpenClParityReceipt {
                 "  \"driver_version\": \"{}\",\n",
                 "  \"kernel_source\": \"bitnet_kernels::kernels::MATMUL_I2S_SRC\",\n",
                 "  \"kernel_name\": \"matmul_i2s\",\n",
+                "  \"fixture_contract\": \"a770_matmul_i2s_explicit_activation_and_packed_weight_operands\",\n",
+                "  \"operand_a\": \"int8_activations_row_major_m_by_k\",\n",
+                "  \"operand_b\": \"packed_i2s_weights_k_by_n_four_weights_per_byte\",\n",
                 "  \"matrix_m\": {},\n",
                 "  \"matrix_n\": {},\n",
                 "  \"matrix_k\": {},\n",
@@ -152,30 +159,25 @@ fn run_a770_matmul_i2s_parity() -> Result<A770OpenClParityReceipt, Box<dyn Error
     const N: usize = 3;
     const K: usize = 8;
 
-    let weights = [
-        1i8, 0, -1, 1, 0, -1, 1, 0, //
-        -1, 1, 0, 0, 1, -1, 0, 1,
-    ];
-    let activations = [
-        1u8, 2, 3, //
-        4, 5, 6, //
-        7, 8, 9, //
-        2, 4, 6, //
-        3, 6, 9, //
-        5, 7, 11, //
-        13, 17, 19, //
-        23, 29, 31,
-    ];
-    let packed_weights = pack_i2s_weights(&weights)?;
-    let expected = cpu_matmul_i2s_reference(&weights, &activations, M, N, K);
+    debug_assert_eq!(M, A770_MATMUL_I2S_M);
+    debug_assert_eq!(N, A770_MATMUL_I2S_N);
+    debug_assert_eq!(K, A770_MATMUL_I2S_K);
+
+    let packed_weights = pack_a770_matmul_i2s_weights().map_err(io_error)?;
+    let expected = a770_matmul_i2s_cpu_reference();
     let mut actual = vec![0.0f32; expected.len()];
 
     let mut buf_a = unsafe {
-        Buffer::<i8>::create(&context, CL_MEM_READ_ONLY, packed_weights.len(), std::ptr::null_mut())
-            .map_err(|err| io_error(format!("failed to create input A buffer: {err}")))?
+        Buffer::<i8>::create(
+            &context,
+            CL_MEM_READ_ONLY,
+            A770_MATMUL_I2S_ACTIVATIONS.len(),
+            std::ptr::null_mut(),
+        )
+        .map_err(|err| io_error(format!("failed to create input A buffer: {err}")))?
     };
     let mut buf_b = unsafe {
-        Buffer::<u8>::create(&context, CL_MEM_READ_ONLY, activations.len(), std::ptr::null_mut())
+        Buffer::<u8>::create(&context, CL_MEM_READ_ONLY, packed_weights.len(), std::ptr::null_mut())
             .map_err(|err| io_error(format!("failed to create input B buffer: {err}")))?
     };
     let buf_out = unsafe {
@@ -185,10 +187,10 @@ fn run_a770_matmul_i2s_parity() -> Result<A770OpenClParityReceipt, Box<dyn Error
 
     unsafe {
         queue
-            .enqueue_write_buffer(&mut buf_a, CL_BLOCKING, 0, &packed_weights, &[])
+            .enqueue_write_buffer(&mut buf_a, CL_BLOCKING, 0, &A770_MATMUL_I2S_ACTIVATIONS, &[])
             .map_err(|err| io_error(format!("failed to write input A buffer: {err}")))?;
         queue
-            .enqueue_write_buffer(&mut buf_b, CL_BLOCKING, 0, &activations, &[])
+            .enqueue_write_buffer(&mut buf_b, CL_BLOCKING, 0, &packed_weights, &[])
             .map_err(|err| io_error(format!("failed to write input B buffer: {err}")))?;
     }
 
@@ -240,54 +242,10 @@ fn run_a770_matmul_i2s_parity() -> Result<A770OpenClParityReceipt, Box<dyn Error
         matrix_n: N,
         matrix_k: K,
         packed_weight_bytes: packed_weights.len(),
-        activation_values: activations.len(),
+        activation_values: A770_MATMUL_I2S_ACTIVATIONS.len(),
         max_abs_error,
         mean_abs_error,
     })
-}
-
-fn pack_i2s_weights(weights: &[i8]) -> Result<Vec<i8>, Box<dyn Error>> {
-    weights
-        .chunks(4)
-        .map(|chunk| -> Result<i8, Box<dyn Error>> {
-            let mut packed = 0u8;
-            for (sub, value) in chunk.iter().enumerate() {
-                packed |= encode_i2s_weight(*value)? << (sub * 2);
-            }
-            Ok(packed as i8)
-        })
-        .collect()
-}
-
-fn encode_i2s_weight(value: i8) -> Result<u8, Box<dyn Error>> {
-    match value {
-        1 => Ok(0x01),
-        -1 => Ok(0x03),
-        0 => Ok(0x00),
-        other => Err(io_error(format!("unsupported i2s fixture weight {other}"))),
-    }
-}
-
-fn cpu_matmul_i2s_reference(
-    weights: &[i8],
-    activations: &[u8],
-    m: usize,
-    n: usize,
-    k: usize,
-) -> Vec<f32> {
-    let mut output = vec![0.0f32; m * n];
-    for row in 0..m {
-        for col in 0..n {
-            let mut sum = 0.0f32;
-            for depth in 0..k {
-                let weight = weights[row * k + depth] as f32;
-                let activation = activations[depth * n + col] as f32;
-                sum += weight * activation;
-            }
-            output[row * n + col] = sum;
-        }
-    }
-    output
 }
 
 #[derive(Debug)]

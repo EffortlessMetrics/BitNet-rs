@@ -34,8 +34,9 @@ Make the Intel Arc A770 a receipt-backed OpenCL-first BitNet acceleration lane. 
 | A770-003 | merged | Preserve selected-device identity after reconciliation. |
 | A770-004 | merged | Add runtime probe. |
 | A770-005 | merged | Tiny selected-device OpenCL smoke on real A770 DEV_56A0, without BitNet inference claims. |
-| A770-006 | proposed | Add CPU/OpenCL parity. |
-| A770-007 | proposed | Record receipt identity. |
+| A770-006 | merged | Add selected-device OpenCL `matmul_i2s` CPU parity. |
+| A770-007 | merged | Record receipt identity. |
+| A770-006R | in progress | Refresh the `matmul_i2s` parity fixture with explicit activation and packed-weight operand ordering before benchmark-baseline work. |
 
 ## Current Claim Boundary
 

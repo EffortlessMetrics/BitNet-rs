@@ -6,9 +6,9 @@
 
 /// OpenCL kernel source for ternary (I2_S) matrix multiplication.
 ///
-/// Computes C = A × B where:
-/// - A is packed 2-bit ternary weights (`char`, 4 values per byte)
-/// - B is activation vectors (`uchar`)
+/// Computes C = A x B where:
+/// - A is an [M x K] matrix of int8 activations (`char`)
+/// - B is a [K/4 x N] matrix of packed 2-bit I2_S weights (`uchar`)
 /// - C is the `float` output
 ///
 /// Ternary encoding: 0b00 = 0, 0b01 = +1, 0b11 = -1.
@@ -21,30 +21,35 @@ __kernel void matmul_i2s(
     const uint N,
     const uint K
 ) {
-    uint row = get_global_id(0);
-    uint col = get_global_id(1);
+    const uint row = get_global_id(0);
+    const uint col = get_global_id(1);
 
     if (row >= M || col >= N) return;
 
     float sum = 0.0f;
-    for (uint i = 0; i < K; i++) {
-        // A is packed: 4 ternary values per byte
-        uint byte_idx = (row * K + i) / 4;
-        uint sub = (row * K + i) % 4;
-        uchar packed = (uchar)A[byte_idx];
-        uchar bits = (packed >> (sub * 2)) & 0x03;
+    const uint k_packed = K / 4;
 
-        // Decode ternary: 0x01 -> +1, 0x03 -> -1, else 0
-        int w;
-        if (bits == 0x01) {
-            w = 1;
-        } else if (bits == 0x03) {
-            w = -1;
-        } else {
-            w = 0;
+    for (uint kp = 0; kp < k_packed; kp++) {
+        uchar packed = B[kp * N + col];
+
+        for (uint sub = 0; sub < 4; sub++) {
+            uint k_idx = kp * 4 + sub;
+            if (k_idx >= K) break;
+
+            uchar bits = (packed >> (sub * 2)) & 0x03;
+
+            int w;
+            if (bits == 0x01) {
+                w = 1;
+            } else if (bits == 0x03) {
+                w = -1;
+            } else {
+                w = 0;
+            }
+
+            char a_val = A[row * K + k_idx];
+            sum += (float)a_val * (float)w;
         }
-
-        sum += (float)w * (float)B[i * N + col];
     }
 
     C[row * N + col] = sum;
