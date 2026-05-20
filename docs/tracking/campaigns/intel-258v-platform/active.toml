@@ -10050,7 +10050,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-009"
-status = "in_progress"
+status = "merged"
+pr = 6097
+head_sha = "71b480467c512d731dd07f3c2fddad92b0578879"
+merge_sha = "5b939434c69ba1e00b4543d9f27ef002735bd3b8"
 branch = "codex/lunar-lake/LNL258V-POWER-009-power-profile-guidance"
 stackable = false
 review_mode = "codex_premerge"
