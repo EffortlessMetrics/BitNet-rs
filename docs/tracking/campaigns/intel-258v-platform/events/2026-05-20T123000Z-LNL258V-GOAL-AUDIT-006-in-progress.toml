@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T12:30:00Z"
+campaign = "intel-258v-platform"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-006"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-006-post-bitnet-closeout"
+summary = "Started a no-inference Lunar Lake goal audit refresh after BITNET-INTAKE-004 closeout."
+notes = [
+  "The refresh updates audit source revision and tracker-state fields after PR #6064 and closeout PR #6066 merged.",
+  "A live PR check showed A770 #4756, #4757, #4767, #4853, and #5064 still open and not merged to main.",
+  "POWER-006 remains blocked because the current battery context is AC/charging, so no battery-mode low_power evidence or power advantage is claimed.",
+]
