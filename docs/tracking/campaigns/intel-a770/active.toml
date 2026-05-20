@@ -179,7 +179,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-006"
-status = "in_progress"
+status = "merged"
+pr = 6110
+head_sha = "65aeb1a7dda1a18d7fad3e09b644c31321749c78"
+merge_sha = "e98d4fb6574087a83ed47e6dae7316d9dc12f40d"
 branch = "codex/intel-a770/A770-006-opencl-parity"
 stackable = false
 review_mode = "codex_premerge"
