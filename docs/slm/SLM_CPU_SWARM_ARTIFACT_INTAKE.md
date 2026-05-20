@@ -194,3 +194,25 @@ itself.
 
 If the package passes, the follow-up runtime promotion item must still be
 separate and must repeat the same before/after receipt discipline.
+
+## SLM-CPU-064 Review
+
+The first returned package is committed under:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-062-swarm-export/
+```
+
+The release-surface review is:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-064-swarm-intake-review.json
+```
+
+The package is accepted as release-surface evidence only. It preserves model
+SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text,
+selected CPU backend/kernel identity, dense hook-selection identity, and
+`fallback_used=false`; it also keeps packed Q8_0 runtime compute disabled and
+records `speedup_claim=false`.
+
+Runtime promotion remains a separate follow-up item.
