@@ -2,7 +2,7 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-20T13:10:00Z",
+  "created_utc": "2026-05-20T04:17:12Z",
   "machine_id": "intel-258v",
   "source_revision": "5265445b4e9a5cd4f70679ec62c9bdd47036a5a8",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
