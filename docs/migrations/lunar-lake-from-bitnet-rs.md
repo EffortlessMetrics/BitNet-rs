@@ -132,20 +132,62 @@ This migration inventory makes no new technical claim:
 - no BitNet QK256/I2_S behavior change;
 - no A770 selected-device proof treated as a Lunar Lake semantic rerun trigger.
 
+## Swarm Strict Regression Proof
+
+`SWARM-LNL258V-REG-001` reran the migrated strict validation surface in the
+swarm checkout at revision `30fc1c4c1b93a720884281b36641542684dc50cf`.
+
+The proof commands were:
+
+```powershell
+target\debug\bitnet.exe lunar-lake regress `
+  --artifact-root ci\hardware\intel-258v\2026-05-08 `
+  --answer-corpus-v2 ci\quality\lunar-lake-answer-corpus-v2.yaml `
+  --route-profile-comparison lunar-lake-route-profile-comparison.json `
+  --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json `
+  --durability-bundle lunar-lake-durability-bundle.json `
+  --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json `
+  --power-profile-evidence lunar-lake-power-profile-evidence.json `
+  --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json `
+  --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json `
+  --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json `
+  --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json `
+  --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json `
+  --json-out ci\hardware\intel-258v\2026-05-08\lunar-lake-regression-bundle-v2.json `
+  --created-utc 2026-05-20T06:20:00Z `
+  --strict
+
+target\debug\bitnet.exe lunar-lake compare `
+  --artifact-root ci\hardware\intel-258v\2026-05-08 `
+  --operator-receipt lunar-lake-operator-readiness.json `
+  --regression-bundle lunar-lake-regression-bundle-v2.json `
+  --json-out ci\hardware\intel-258v\2026-05-08\lunar-lake-operator-comparison.json `
+  --created-utc 2026-05-20T06:20:10Z `
+  --strict
+```
+
+Both commands passed. The rerun produced no content drift in the committed
+regression or comparison receipts:
+
+- `regression_passed = true`;
+- `comparison_ready = true`;
+- `operator_ready = true`;
+- `bitnet_semantic_intake.intake_ready = true`;
+- `bitnet_semantic_intake.rerun_required = false`;
+- `strict_ready = true`.
+
+This proof still makes no new inference, route promotion, speedup,
+power-advantage, acceleration, broad-quality, or BitNet QK256/I2_S behavior
+claim.
+
 ## Next Swarm Work
 
 Recommended next PRs:
 
-1. `SWARM-LNL258V-MIGRATE-002`: copy the latest accepted Lunar Lake operating
-   artifacts and corpus fixtures from the old repo, then validate every moved
-   JSON.
-2. `SWARM-LNL258V-MIGRATE-003`: port only missing CLI surfaces needed to read
-   those receipts, especially BitNet semantic intake and strict regression v2
-   fail-closed behavior.
-3. `SWARM-LNL258V-MIGRATE-004`: reconcile the swarm tracker with
-   `migrated_from_bitnet_rs` events instead of synthetic swarm merge history.
-4. `SWARM-LNL258V-REG-001`: prove the migrated state by running strict
-   `lunar-lake regress` and `lunar-lake compare` in swarm.
-5. Resume evidence work from `SWARM-LNL258V-POWER-006` / low-power battery-mode
-   telemetry, then recompute route policy only from migrated and newly generated
-   swarm evidence.
+1. Resume evidence work from `LNL258V-POWER-006`: real battery-mode
+   `low_power` telemetry, usable energy-proxy evidence, measured thermal
+   readings, and benchmark-qualified power advantage.
+2. Recompute route policy only from migrated and newly generated swarm
+   evidence.
+3. Keep A770 selected-device evidence adjacent unless a later Lunar Lake audit
+   explicitly indexes it without changing route or semantic claims.

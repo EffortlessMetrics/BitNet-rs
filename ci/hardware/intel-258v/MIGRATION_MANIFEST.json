@@ -5,7 +5,7 @@
   "source_repo": "EffortlessMetrics/BitNet-rs",
   "target_repo": "EffortlessMetrics/bitnet-rs-swarm",
   "migration_pr": "SWARM-LNL258V-MIGRATE-002",
-  "last_updated_by": "SWARM-LNL258V-MIGRATE-002",
+  "last_updated_by": "SWARM-LNL258V-REG-001",
   "scope": "artifact_carry_from_bitnet_rs_no_new_inference",
   "source_cutoff": {
     "primary_audit_item": "LNL258V-GOAL-AUDIT-013",
@@ -79,6 +79,24 @@
     "bitnet_policy": "BitNet CPU reference is separate from dense SLM proof and protected by semantic-intake regression",
     "strict_regression": "corpus_v2 route_profile cold_warm durability telemetry_context and bitnet_semantic_intake",
     "active_blocker": "LNL258V-POWER-006 battery-mode low_power telemetry, energy-proxy, measured thermal readings, and benchmark-qualified power advantage are missing"
+  },
+  "validated_by_SWARM_LNL258V_REG_001": {
+    "target_revision": "30fc1c4c1b93a720884281b36641542684dc50cf",
+    "validated_utc": "2026-05-20T09:25:10Z",
+    "strict_regression_command": "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-20T06:20:00Z --strict",
+    "strict_compare_command": "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-20T06:20:10Z --strict",
+    "regression_passed": true,
+    "operator_ready": true,
+    "comparison_ready": true,
+    "bitnet_semantic_intake_ready": true,
+    "bitnet_semantic_rerun_required": false,
+    "artifact_content_drift_after_rerun": false,
+    "claim_boundary_preserved": true,
+    "notes": [
+      "Strict regression and comparison were executed in the swarm checkout against the migrated receipts.",
+      "The commands rewrote the committed regression and comparison receipts without content drift.",
+      "This proof did not run model inference and did not change route promotion, speedup, power, acceleration, broad quality, or BitNet QK256/I2_S claims."
+    ]
   },
   "moved_by_SWARM_LNL258V_MIGRATE_001": [
     "docs/migrations/lunar-lake-from-bitnet-rs.md",
@@ -221,7 +239,6 @@
     "SWARM-LNL258V-MIGRATE-002 carry latest Lunar Lake artifacts and corpus fixtures",
     "SWARM-LNL258V-MIGRATE-003 port missing CLI regression and BitNet semantic-intake surfaces",
     "SWARM-LNL258V-MIGRATE-004 reconcile tracker state with migrated_from_bitnet_rs events",
-    "SWARM-LNL258V-REG-001 prove strict regression and comparison in swarm",
-    "SWARM-LNL258V-POWER-006 collect real battery-mode low_power telemetry and energy-proxy evidence"
+    "LNL258V-POWER-006 collect real battery-mode low_power telemetry and energy-proxy evidence"
   ]
 }
