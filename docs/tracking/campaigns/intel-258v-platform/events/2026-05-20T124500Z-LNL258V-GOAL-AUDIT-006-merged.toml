@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T12:45:00Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-006"
+pr = 6067
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-006-post-bitnet-closeout"
+head_sha = "46afcba3bacb4bd7bd6be1b6710a91a859931dbd"
+merge_sha = "6f8ca7859e202194a923c717d7530f759d5cee08"
+actor = "codex"
+summary = "Merged PR #6067, refreshing the Lunar Lake goal audit after BITNET-INTAKE-004 closeout."
+
+notes = [
+  "The merged audit now records BITNET-INTAKE-004 as the latest semantic-intake watchpoint refresh and links closeout PR #6066.",
+  "A770 #4756, #4757, #4767, #4853, and #5064 remain pending watchpoints; no Lunar Lake BitNet rerun is required until one reaches main.",
+  "POWER-006 remains blocked on real battery-mode low_power telemetry, energy-proxy, and benchmark-qualified power-advantage evidence.",
+]
