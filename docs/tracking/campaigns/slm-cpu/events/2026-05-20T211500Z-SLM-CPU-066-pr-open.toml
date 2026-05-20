@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T21:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-066"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+actor = "codex"
+pr = 87
+head_sha = "52c1024f4125c7a24901af58821c97456e22f3b3"
+branch = "codex/slm-cpu-066-swarm-runtime-hook-handoff"
+summary = "Opened the swarm-side SLM-CPU-066 runtime-hook handoff PR."
+notes = [
+  "PR #87 records the BitNet-rs SLM-CPU-065 release-gate result back in bitnet-rs-swarm.",
+  "The slice is tracker and evidence handoff only; it does not implement packed Q8_0 runtime compute.",
+  "Future runtime-hook candidates must return as audited packages with before/after strict CPU receipts before release-surface promotion is reconsidered.",
+]

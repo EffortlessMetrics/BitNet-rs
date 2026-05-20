@@ -2269,6 +2269,58 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-066"
+status = "pr_open"
+pr = 87
+head_sha = "52c1024f4125c7a24901af58821c97456e22f3b3"
+branch = "codex/slm-cpu-066-swarm-runtime-hook-handoff"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-062"]
+acceptance = "Record the bitnet-rs-swarm handoff after the BitNet-rs SLM-CPU-065 release-surface gate accepted the single-tensor sidecar evidence but blocked packed Q8_0 runtime promotion. The item must preserve the accepted evidence for `layers.0.attention.q_proj.weight`, direct exact-tensor runtime hook implementation back to bitnet-rs-swarm, and require future return evidence with before/after strict CPU receipts proving unchanged model SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false. This slice must not implement runtime compute or claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-066-release-gate-handoff.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/slm-cpu/**",
+  "docs/swarm/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-066 records the swarm-side handoff after the BitNet-rs SLM-CPU-065 release gate blocked exact-tensor packed Q8_0 runtime promotion.",
+  "The accepted sidecar evidence remains scoped to `layers.0.attention.q_proj.weight` and payload `a8e16a232ea8c19a5c5d2eb5f21bfdf5c297eba0ac90e74b0afc052577179c24`.",
+  "Future runtime-hook candidates must return as audited evidence packages with before/after strict CPU receipts before release-surface promotion is reconsidered.",
+]
+must_not_claim = [
+  "Packed Q8_0 runtime compute is implemented or enabled.",
+  "BitNet-rs release surface has enabled packed Q8_0 runtime compute.",
+  "Runtime promotion is enabled by default without matching before/after generated-ID and decoded-text receipts.",
+  "Generated IDs or decoded text changed.",
+  "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, dense hook-selection identity, or fallback=false provenance changed.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-033"
 status = "merged"
 pr = 5603

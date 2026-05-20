@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T21:10:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-066"
+event = "in_progress"
+previous_status = "proposed"
+new_status = "ready"
+actor = "codex"
+summary = "Queue the swarm-side runtime hook handoff after the BitNet-rs SLM-CPU-065 release gate."
+notes = [
+  "The BitNet-rs release surface accepted the single-tensor sidecar evidence for layers.0.attention.q_proj.weight but blocked runtime promotion because packed Q8_0 compute was not selected in a strict before/after behavior receipt.",
+  "The next implementation work remains in bitnet-rs-swarm and must return as an audited candidate package before release-surface promotion is reconsidered.",
+  "The handoff preserves model SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false as required receipt invariants.",
+  "No runtime compute, speedup, sustained throughput, broad answer-quality, Q4/Q5 runtime support, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is allowed.",
+]
