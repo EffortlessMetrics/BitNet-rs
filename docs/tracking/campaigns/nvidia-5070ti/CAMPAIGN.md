@@ -128,6 +128,12 @@ with model/tokenizer/context loaded once and upload-once QK256 handles. These
 remain scoped measurements. `CUDA-BITNET-PERF-004` reviews that evidence and
 keeps `speedup_claim=false` until decode-profile repetitions, transfer timing,
 power/thermal context, and profile-specific acceptance thresholds are complete.
+`CUDA-BITNET-PERF-005` is the next executable official BitNet performance
+slice: repeated current-source profiles for one-token, short decode,
+prefill/decode, warm-session, and warm-context decode. It must preserve
+`speedup_claim=false`, `full_residency_claim=false`, `server_ready=false`, and
+`dense_regular_llm_cuda_proof=false` while it gathers the missing profile
+evidence.
 `CUDA-PLANNER-001` adds the next contract layer: model-aware dispatch planning
 that keeps BitNet QK256 CUDA and dense regular-LLM CUDA routes separate and
 records unsupported strict CUDA routes instead of silently selecting CPU
@@ -166,7 +172,7 @@ the claim boundary before new runtime work.
 
 | Lane | Current state | Last real receipt | Next missing proof |
 |---|---|---|---|
-| BitNet official 2B I2_S CUDA | product CLI ready, speed false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json` | profile-specific benchmark qualification |
+| BitNet official 2B I2_S CUDA | product CLI ready, speed false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-003-warm-session-benchmark.json` | `CUDA-BITNET-PERF-005`: current-source repeated one-token, short-decode, prefill/decode, warm-session, and warm-context decode profiles before any speed, residency, or broad server promotion |
 | Dense Qwen2.5 0.5B Q8_0 CUDA | product CLI ready in model coverage; strict one-token, short-decode, warm-session, benchmark-review, and exact-profile server-readiness receipts exist; persistent-handle receipt aliases now expose model/context/weight reuse; speed, full residency, broad dense GGUF, and broad server readiness remain false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json` | logits/top-k transfer reduction, then governed speedup/full-residency review only with later exact-profile receipts |
 | Qwen3 0.6B | product CLI ready for bounded ask/chat user paths after artifact, CPU sanity, all-layer plan, one-token, short-decode, warm-session, benchmark-review, ask user-path, chat user-path, and product-promotion review evidence; current-source non-streaming server-smoke evidence exists, but server_ready remains false until a separate exact-profile review accepts it; speed, server, full-residency, broad dense GGUF, Qwen2.5 inheritance, and BitNet QK256 claims remain false | `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json` | exact-profile server-readiness review; exact-profile performance comparator evidence before speed, benchmark-qualified, or full-residency promotion |
 | SmolLM2 360M | structurally valid artifact contract; strict CPU retry reached one-token generation with `fallback_used=false` but failed the math quality gate; wrong-first-token diagnosis and comparator contract are recorded | `ci/slm-cpu/windows-9950x3d-rtx5070ti/2026-05-16/smollm2-360m-reference-comparator-contract.json` | same-prompt first-token/top-k or checkpoint comparator capture before CPU answer readiness, all-layer planning, or CUDA |
@@ -208,6 +214,7 @@ receipt resolves it to `nvidia-rtx-5070-ti-cuda`.
 | CUDA-BITNET-PERF-002 | merged | Repeated strict ask benchmark receipts with same-model CPU AVX-512 and RTX 5070 Ti CUDA runs; `speedup_claim=false`. |
 | CUDA-BITNET-PERF-003 | merged | Repeated strict CUDA warm-session benchmark receipts with load/context/upload reuse and measured QK256 timing/transfer counters; `speedup_claim=false`. |
 | CUDA-BITNET-PERF-004 | merged | Benchmark qualification review for repeated strict ask and warm-session evidence; no profile upgraded, `speedup_claim=false`. |
+| CUDA-BITNET-PERF-005 | ready | Next official BitNet performance slice: collect current-source repeated profiles for one-token, short-decode, prefill/decode, warm-session, and warm-context decode with strict `bitnet_qk256_cuda` routing, fallback false, QK256 kernel counters, timing/transfer/VRAM/power context, and all speed/full-residency/server/dense-proof claims still false. |
 | CUDA-DENSE-001 | merged | Dense regular-LLM CUDA receipt boundary; not part of BitNet packed proof completion. |
 | CUDA-DENSE-002 | merged | First dense CUDA FP16 GEMM smoke/parity fixture after the dense receipt boundary. |
 | CUDA-DENSE-003 | merged | Dense regular-LLM CUDA tensor-residency receipt for the FP16 GEMM fixture; still no BitNet packed, dense GGUF inference, speedup, persistent session, or full-residency claim. |

@@ -50,6 +50,25 @@ exists:
 - dense regular-LLM CUDA proof does not satisfy BitNet packed proof
 - exact-profile server smoke does not imply broad production server readiness
 
+## RTX 5070 Ti I2_S CUDA Status
+
+The 9950X3D + RTX 5070 Ti lane currently treats the official I2_S/QK256 row as
+the BitNet CUDA product proof lane, not as a generic CUDA or dense-SLM claim.
+
+| Surface | Current state | Boundary |
+|---|---|---|
+| CLI ask/chat | Product CLI-ready for the exact official I2_S/QK256 row | Does not imply speedup, full residency, or broad server readiness. |
+| Route | `bitnet_qk256_cuda` on `nvidia-rtx-5070-ti-cuda` | Dense `dense_regular_llm_cuda` evidence remains a separate proof family. |
+| Kernel evidence | QK256 CUDA receipts record `qk256_gemv_cuda` invocation counts and zero BitNet linear CPU fallback | Diagnostic F32/no-scale QK256 probes are not production packed I2_S proof. |
+| Server | Strict server smoke evidence exists | Broad `server_ready` remains false until a separate readiness review accepts a scope. |
+| Speed/residency | Existing benchmark reviews keep speedup and full residency false | `CUDA-BITNET-PERF-005` must gather current-source repeated profiles before any later exact-profile review. |
+
+The next official BitNet proof is `CUDA-BITNET-PERF-005`: repeated
+current-source one-token, short-decode, prefill/decode, warm-session, and
+warm-context decode profiles with strict `bitnet_qk256_cuda` routing, fallback
+false, QK256 kernel counters, transfer/timing fields, and no speed,
+full-residency, broad server, or dense proof promotion.
+
 ## Route Split
 
 The official model family is not one vague `BitNet works` claim. Each route has
