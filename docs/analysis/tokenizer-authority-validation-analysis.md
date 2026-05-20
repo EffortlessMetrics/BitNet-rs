@@ -1,5 +1,10 @@
 # TokenizerAuthority Cross-Lane Validation Analysis
 
+> Claim boundary: this is a historical validation analysis snapshot. Complete,
+> production-ready, and working-status wording records that older analysis
+> context only. Current tokenizer authority, quality, and product-readiness
+> claims must come from active receipts, status docs, specs, and claim gates.
+
 **Document**: Comprehensive analysis of TokenizerAuthority structure, computation flow, dual-lane receipt integration, validation logic, and exit code handling for the parity-both command.
 
 **Status**: Complete implementation with exit code 2 mismatch handling in place
@@ -936,4 +941,3 @@ The TokenizerAuthority cross-lane validation system is **complete and production
 8. **Tests**: 44 unit + 6 integration tests (100% coverage)
 
 **No gaps found** - implementation is ready for use.
-

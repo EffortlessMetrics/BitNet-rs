@@ -5,6 +5,11 @@
 **Context**: Issue #465 (v0.1.0-mvp Release Polish)
 **Related**: AC3/AC4 (CPU Baseline Receipt Generation and Verification)
 
+> Claim boundary: this ADR records a historical schema-stability decision.
+> Throughput and performance fields/examples in this file describe receipt
+> structure and validation intent only. Current speed, product, and backend
+> claims must come from active receipts, status docs, specs, and claim gates.
+
 ---
 
 ## Context

@@ -4,6 +4,11 @@ This document defines validation authority across scalar CPU code, architecture
 CPU references, Apple Silicon lanes, x86 lanes, and accelerator lanes. It exists
 to keep correctness, product UX, and hardware acceleration claims separate.
 
+> Claim boundary: this topology defines validation authority and required
+> comparison relationships. It does not assert that every listed accelerator is
+> currently validated or product-ready. Current hardware/model support must come
+> from active receipts, model coverage, status docs, specs, and claim gates.
+
 ## Core Rule
 
 Scalar is the smallest correctness oracle. AVX2 and NEON are the architecture
@@ -38,14 +43,14 @@ the CPU reference nearest to their platform.
 |---|---|
 | Scalar | Minimal correctness oracle for CPU reference implementations. |
 | Kaby Lake / AVX2 | x86 SLM and BitNet reference lane for x86 CPU and accelerator validation. |
-| AVX-512 | High-end x86 CPU acceleration validated against AVX2 behavior. |
-| CUDA | NVIDIA acceleration validated against the x86 CPU reference. |
-| Intel A770 | Intel GPU acceleration validated against the x86 CPU reference. |
-| Lunar Lake | Intel CPU/GPU/NPU platform validated against local x86 CPU and AVX2 behavior. |
+| AVX-512 | High-end x86 CPU acceleration that must validate against AVX2 behavior before support claims. |
+| CUDA | NVIDIA acceleration that must validate against the x86 CPU reference before support claims. |
+| Intel A770 | Intel GPU acceleration that must validate against the x86 CPU reference before support claims. |
+| Lunar Lake | Intel CPU/GPU/NPU platform that must validate against local x86 CPU and AVX2 behavior before support claims. |
 | NEON | Apple/ARM CPU reference for Apple Silicon and constrained ARM validation. |
 | M4 Mac mini | Stable Apple Silicon dense SLM product, reference, and performance lane. |
 | MacBook Apple Silicon | Mobile Apple Silicon cross-reference and larger-artifact exploration lane. |
-| Apple Metal | Apple acceleration path validated against NEON and scoped receipts. |
+| Apple Metal | Apple acceleration path that must validate against NEON and scoped receipts before support claims. |
 | MPSGraph | Apple graph/reference evidence unless target resolution proves more. |
 | Future ANE | Requires explicit resolved-target proof; MPSGraph visibility alone is insufficient. |
 
