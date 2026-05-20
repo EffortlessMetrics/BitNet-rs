@@ -1,0 +1,21 @@
+timestamp = "2026-05-20T17:52:35Z"
+campaign = "intel-258v-platform"
+item = "SWARM-LNL258V-BITNET-INTAKE-008"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/swarm-lnl258v-bitnet-intake-008-rerun-a770-43"
+pr = 61
+head_sha = "42cf0eb41907eb141ac0af6596b12d158ebeab67"
+merge_sha = "a9703a2916e89b87ede4b8e95b0350a93e9099ef"
+merged_at = "2026-05-20T17:52:35Z"
+summary = "Merged PR #61, refreshing Lunar Lake BitNet semantic-intake evidence after swarm A770 #43."
+
+notes = [
+  "PR #61 reran Lunar Lake BitNet CPU scalar and AVX2 answer-corpus evidence, answer parity, first-token divergence classification, and CPU phase warm-session receipts after A770 #43 merged.",
+  "Semantic intake now reports intake_ready=true, rerun_required=false, and no stale merged shared BitNet change requiring a Lunar Lake rerun.",
+  "Strict regression-v2 and operator comparison are ready after the refreshed semantic-intake cycle.",
+  "The refreshed first-token divergence classifier records prompt_token_policy_mismatch against the direct external BitNet.cpp reference; external first-token parity remains unclaimed.",
+  "The PR preserved no route promotion, speedup, power-advantage, measured-temperature, battery-mode evidence, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]
