@@ -2,6 +2,7 @@ schema = 1
 campaign = "slm-cpu"
 item = "SLM-CPU-057"
 event = "merged"
+actor = "codex"
 timestamp = "2026-05-20T01:10:00Z"
 pr = 6045
 head_sha = "80d707d65973a884066d607fd04f07cc18dbd0c2"
