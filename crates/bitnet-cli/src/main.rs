@@ -4235,21 +4235,22 @@ fn cuda_bitnet_perf005_profile_plan(profile: &str) -> Result<CudaBitnetPerf005Pr
             profile_id: "short_decode_32",
             kind: CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens: 32 },
         }),
+        "prefill_128_decode_16" => Ok(CudaBitnetPerf005ProfilePlan {
+            profile_id: "prefill_128_decode_16",
+            kind: CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens: 16 },
+        }),
         "warm_session_3_turns" => Ok(CudaBitnetPerf005ProfilePlan {
             profile_id: "warm_session_3_turns",
             kind: CudaBitnetPerf005ProfileKind::WarmSession3Turns,
         }),
-        "prefill_128_decode_16"
-        | "prefill_512_decode_32"
-        | "warm_session_10_turns"
-        | "decode_128_from_warm_context" => {
+        "prefill_512_decode_32" | "warm_session_10_turns" | "decode_128_from_warm_context" => {
             anyhow::bail!(
-                "PERF-005 profile `{profile}` is defined but does not yet have a live dispatcher; next proof requires a dedicated prefill/warm-context runner receipt. speedup_claim=false, full_residency_claim=false"
+                "PERF-005 profile `{profile}` is defined but does not yet have a live dispatcher; next proof requires a dedicated long-prefill, ten-turn, or warm-context runner receipt. speedup_claim=false, full_residency_claim=false"
             );
         }
         _ => {
             anyhow::bail!(
-                "unknown CUDA-BITNET-PERF-005 profile `{profile}`; live profiles: one_token, short_decode_8, short_decode_32, warm_session_3_turns; blocked profiles: prefill_128_decode_16, prefill_512_decode_32, warm_session_10_turns, decode_128_from_warm_context"
+                "unknown CUDA-BITNET-PERF-005 profile `{profile}`; live profiles: one_token, short_decode_8, short_decode_32, prefill_128_decode_16, warm_session_3_turns; blocked profiles: prefill_512_decode_32, warm_session_10_turns, decode_128_from_warm_context"
             );
         }
     }
@@ -4261,6 +4262,9 @@ fn perf005_prompt_for_profile(profile_id: &str) -> &'static str {
         "one_token" => "Define entropy.",
         "short_decode_8" => "Define entropy in one sentence.",
         "short_decode_32" => "Explain why verified local inference needs fallback rejection.",
+        "prefill_128_decode_16" => {
+            "Explain how proof-carrying local inference separates artifact identity, tokenizer authority, prompt policy, backend selection, fallback rejection, route identity, answer quality, and benchmark qualification before making a CUDA claim."
+        }
         _ => "Define entropy.",
     }
 }
