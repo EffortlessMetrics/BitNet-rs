@@ -29,7 +29,7 @@ pub struct OpenClRuntimeProbe {
     pub error: Option<String>,
 }
 
-/// Native OpenCL tiny kernel smoke result for Arc 140V.
+/// Native OpenCL tiny kernel smoke result for a selected Intel GPU lane.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OpenClTinyKernelSmoke {
     /// Whether kernel dispatch/readback executed and matched CPU expected output.
@@ -44,6 +44,10 @@ pub struct OpenClTinyKernelSmoke {
     pub runtime_api: Option<String>,
     /// Runtime device name selected for execution.
     pub runtime_device: Option<String>,
+    /// OpenCL platform index selected for execution.
+    pub platform_index: Option<usize>,
+    /// OpenCL device index selected for execution within the platform.
+    pub device_index: Option<usize>,
     /// OpenCL platform name.
     pub platform_name: Option<String>,
     /// OpenCL device vendor.
@@ -66,7 +70,7 @@ pub struct OpenClTinyKernelSmoke {
     pub readback_ms: Option<f64>,
     /// Whether a native kernel executed.
     pub kernel_execution: bool,
-    /// Always false; CPU fallback cannot satisfy Arc proof.
+    /// Always false; CPU fallback cannot satisfy selected Intel GPU proof.
     pub fallback_used: bool,
     /// Always false for this smoke.
     pub cpu_fallback_allowed: bool,
@@ -135,6 +139,8 @@ pub fn run_arc140v_opencl_tiny_kernel_smoke() -> OpenClTinyKernelSmoke {
             selected_backend,
             runtime_api: Some("opencl".to_owned()),
             runtime_device: raw.device_name,
+            platform_index: raw.platform_index,
+            device_index: raw.device_index,
             platform_name: raw.platform_name,
             vendor: raw.vendor,
             driver_version: raw.driver_version,
@@ -156,40 +162,105 @@ pub fn run_arc140v_opencl_tiny_kernel_smoke() -> OpenClTinyKernelSmoke {
 
     #[cfg(not(feature = "opencl"))]
     {
+        unavailable_tiny_kernel_smoke("intel-arc-140v")
+    }
+}
+
+/// Run a tiny native OpenCL vector-add kernel on Arc A770 when compiled with
+/// OpenCL support.
+pub fn run_a770_opencl_tiny_kernel_smoke() -> OpenClTinyKernelSmoke {
+    #[cfg(feature = "opencl")]
+    {
+        let raw = crate::opencl::run_intel_arc_a770_tiny_vector_add_smoke();
+        let selected_backend = raw.passed.then(|| "intel-arc-a770-opencl".to_owned());
         OpenClTinyKernelSmoke {
-            passed: false,
-            proof_stage: "runtime_detected".to_owned(),
-            requested_backend: "intel-arc-140v".to_owned(),
-            selected_backend: None,
+            passed: raw.passed,
+            proof_stage: raw.proof_stage,
+            requested_backend: "intel-arc-a770".to_owned(),
+            selected_backend,
             runtime_api: Some("opencl".to_owned()),
-            runtime_device: None,
-            platform_name: None,
-            vendor: None,
-            driver_version: None,
-            kernel_name: "tiny_vector_add".to_owned(),
-            input_len: 16,
-            tolerance: 1.0e-6,
-            max_abs_error: None,
-            mean_abs_error: None,
-            enqueue_ms: None,
-            readback_ms: None,
-            kernel_execution: false,
-            fallback_used: false,
+            runtime_device: raw.device_name,
+            platform_index: raw.platform_index,
+            device_index: raw.device_index,
+            platform_name: raw.platform_name,
+            vendor: raw.vendor,
+            driver_version: raw.driver_version,
+            kernel_name: raw.kernel_name,
+            input_len: raw.input_len,
+            tolerance: raw.tolerance,
+            max_abs_error: raw.max_abs_error,
+            mean_abs_error: raw.mean_abs_error,
+            enqueue_ms: raw.enqueue_ms,
+            readback_ms: raw.readback_ms,
+            kernel_execution: raw.kernel_execution,
+            fallback_used: raw.fallback_used,
             cpu_fallback_allowed: false,
             bitnet_inference: false,
             qk256_decode: false,
-            error: Some("compiled without opencl feature".to_owned()),
+            error: raw.error,
         }
+    }
+
+    #[cfg(not(feature = "opencl"))]
+    {
+        unavailable_tiny_kernel_smoke("intel-arc-a770")
+    }
+}
+
+#[cfg(not(feature = "opencl"))]
+fn unavailable_tiny_kernel_smoke(requested_backend: &str) -> OpenClTinyKernelSmoke {
+    OpenClTinyKernelSmoke {
+        passed: false,
+        proof_stage: "runtime_detected".to_owned(),
+        requested_backend: requested_backend.to_owned(),
+        selected_backend: None,
+        runtime_api: Some("opencl".to_owned()),
+        runtime_device: None,
+        platform_index: None,
+        device_index: None,
+        platform_name: None,
+        vendor: None,
+        driver_version: None,
+        kernel_name: "tiny_vector_add".to_owned(),
+        input_len: 16,
+        tolerance: 1.0e-6,
+        max_abs_error: None,
+        mean_abs_error: None,
+        enqueue_ms: None,
+        readback_ms: None,
+        kernel_execution: false,
+        fallback_used: false,
+        cpu_fallback_allowed: false,
+        bitnet_inference: false,
+        qk256_decode: false,
+        error: Some("compiled without opencl feature".to_owned()),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::run_arc140v_opencl_tiny_kernel_smoke;
+    use super::{run_a770_opencl_tiny_kernel_smoke, run_arc140v_opencl_tiny_kernel_smoke};
 
     #[test]
     fn opencl_tiny_kernel_smoke_reports_unavailable_without_feature() {
         let smoke = run_arc140v_opencl_tiny_kernel_smoke();
+        assert!(!smoke.fallback_used);
+        assert!(!smoke.cpu_fallback_allowed);
+        assert!(!smoke.bitnet_inference);
+        assert!(!smoke.qk256_decode);
+
+        #[cfg(not(feature = "opencl"))]
+        {
+            assert!(!smoke.passed);
+            assert!(!smoke.kernel_execution);
+            assert_eq!(smoke.error.as_deref(), Some("compiled without opencl feature"));
+        }
+    }
+
+    #[test]
+    fn a770_opencl_tiny_kernel_smoke_reports_unavailable_without_feature() {
+        let smoke = run_a770_opencl_tiny_kernel_smoke();
+        assert_eq!(smoke.requested_backend, "intel-arc-a770");
         assert!(!smoke.fallback_used);
         assert!(!smoke.cpu_fallback_allowed);
         assert!(!smoke.bitnet_inference);
