@@ -8558,8 +8558,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SWARM-LNL258V-POWER-006-PREFLIGHT-001"
-status = "pr_open"
+status = "merged"
 pr = 37
+head_sha = "0e5ff3d99aecc07595c6424bf1e6b37a77d78043"
+merge_sha = "c0a4991d71598a79dc59c90f03e6e9c163cc01fa"
 branch = "codex/swarm-lnl258v-power006-blocked-telemetry-refresh"
 stackable = false
 review_mode = "codex_premerge"

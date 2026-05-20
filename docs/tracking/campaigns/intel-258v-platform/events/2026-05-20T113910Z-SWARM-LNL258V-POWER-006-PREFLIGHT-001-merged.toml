@@ -1,0 +1,19 @@
+timestamp = "2026-05-20T11:39:10Z"
+campaign = "intel-258v-platform"
+item = "SWARM-LNL258V-POWER-006-PREFLIGHT-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/swarm-lnl258v-power006-blocked-telemetry-refresh"
+pr = 37
+head_sha = "0e5ff3d99aecc07595c6424bf1e6b37a77d78043"
+merge_sha = "c0a4991d71598a79dc59c90f03e6e9c163cc01fa"
+merged_at = "2026-05-20T11:38:51Z"
+summary = "Closed out the blocked low_power battery telemetry refresh after automerge."
+
+notes = [
+  "PR #37 refreshed the committed low_power battery telemetry blocked receipt in swarm.",
+  "The refreshed receipt still records ac_power_inferred=true and requirement_satisfied=false.",
+  "POWER-006 remains blocked and no inference, model load, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, battery-mode evidence, or BitNet QK256/I2_S behavior-change claim was added.",
+]
