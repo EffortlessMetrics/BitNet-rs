@@ -38,10 +38,15 @@ PR queue state:
 2. [PR Write-Action CI Economics](BITNET-SPEC-PR-CI-ECONOMICS.md)
    - Defines queue write actions, no-CI-for-archaeology, bulk-write limits,
      rerun rules, and allowed CI spend during burn-down.
+3. [Generated Tracking](BITNET-SPEC-GENERATED-TRACKING.md)
+   - Defines generated dashboard ownership, conflict handling, source-first
+     regeneration, and no hand-authored status edits.
 
 Wrong base, stale stack, closed parent, and needs-restack are routing states,
 not close reasons. Queue writes should follow content review and should spend
 CI only on current merge candidates, clean ports, or required proof.
+Generated tracking conflicts should be fixed in campaign manifests, events,
+generators, or checkers before regenerating output.
 
 ## TL1 ARM-First Table-Lookup Route
 
