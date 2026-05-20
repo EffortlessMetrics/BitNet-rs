@@ -1954,8 +1954,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CONTEXT-HARNESS-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-HARNESS-001-long-context-command-contract"
+pr = 6137
+head_sha = "6091d70518a8e7d44db381072b4b9220379406f8"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
