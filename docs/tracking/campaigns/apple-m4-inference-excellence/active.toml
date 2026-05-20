@@ -1875,9 +1875,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OPS-SLO-001"
-status = "pr_open"
+status = "merged"
 pr = 6123
 head_sha = "4f8504e2c0bdaee3f22384457893713dde244548"
+merge_sha = "e2213309360ff8af4689035f02d09f90ed2af316"
 branch = "codex/apple-m4-inference-excellence/M4-OPS-SLO-001-envelope-classes"
 stackable = false
 review_mode = "codex_premerge"
