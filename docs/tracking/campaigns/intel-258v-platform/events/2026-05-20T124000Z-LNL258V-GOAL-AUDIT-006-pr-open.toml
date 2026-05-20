@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T12:40:00Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-006"
+pr = 6067
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-006-post-bitnet-closeout"
+head_sha = "46afcba3bacb4bd7bd6be1b6710a91a859931dbd"
+actor = "codex"
+summary = "Opened PR #6067 refreshing the Lunar Lake goal audit after BITNET-INTAKE-004 closeout."
+
+notes = [
+  "The PR updates audit source revision, BITNET-INTAKE-004 tracker-state fields, and the goal checklist event evidence.",
+  "It preserves completion_decision=not_complete because POWER-006 still lacks battery-mode low_power evidence.",
+  "No inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, stale BitNet, A770 semantic PR merged-to-main, or BitNet QK256/I2_S behavior-change claim is made.",
+]
