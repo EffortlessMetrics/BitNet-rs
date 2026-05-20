@@ -1,3 +1,5 @@
+#![allow(clippy::items_after_test_module)]
+
 use bitnet_bench_receipts::validate_strict_cpu_benchmark_receipt_json;
 use bitnet_quantization::i2s_qk256::{
     QK256_BLOCK, QK256_PACKED_BYTES, QK256_SCALAR_GEMM_KERNEL_ID, QK256_SCALAR_GEMV_KERNEL_ID,

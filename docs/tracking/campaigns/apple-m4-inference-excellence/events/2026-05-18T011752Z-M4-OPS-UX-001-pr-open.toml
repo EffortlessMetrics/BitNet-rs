@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T01:17:52Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OPS-UX-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5460
+head_sha = "07800ad56285432fc87363fb2244214099fba54c"
+branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-001-evidence-command"
+
+notes = [
+  "Opened PR #5460 to add `bitnet mac evidence` as a model-free operator summary over cache/disk state and committed M4 evidence.",
+  "The PR adds an `apple_m4_operator_evidence_summary` receipt validator and CLI test for the M4-OPS-UX-001 acceptance command.",
+  "The PR does not run live inference, download models, reuse dense SLM evidence as BitNet proof, or claim BitNet chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance.",
+]

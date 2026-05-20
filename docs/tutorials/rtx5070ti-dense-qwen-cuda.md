@@ -12,12 +12,12 @@ The claim is intentionally narrow:
 - route: `dense_regular_llm_cuda`
 - fallback: rejected in strict CUDA receipts
 - speed: reviewed, not accepted
-- server readiness: not broadly ready
+- server readiness: exact-profile only
 - BitNet proof: false
 
 Official BitNet I2_S/QK256 receipts do not prove this dense lane. This dense
 lane also does not prove BitNet packed I2_S/QK256 behavior, QK256 kernels,
-global dense GGUF support, full CUDA residency, accepted speedup, or production
+global dense GGUF support, full CUDA residency, accepted speedup, or broad
 server readiness.
 
 ## Prerequisites
@@ -55,7 +55,10 @@ bitnet model status --device nvidia-rtx-5070-ti-cuda --format json
 ```
 
 The dense Qwen row should show `product_cli_ready`, route
-`dense_regular_llm_cuda`, `speedup_claim=false`, and `server_ready=false`.
+`dense_regular_llm_cuda`, `speedup_claim=false`, `server_ready=true`,
+`server_scope=exact_profile`, endpoint `/v1/chat/completions`, and
+`server_streaming=false`. That readiness is scoped only to the exact
+shared-engine profile named by the model coverage matrix.
 
 ## Verify The Model Artifact
 
@@ -110,7 +113,8 @@ For a bounded chat-style session:
 
 The committed warm-session proof is a bounded CLI/session proof. It records
 model, tokenizer, and CUDA context reuse for the proof run, but it does not
-claim full CUDA residency, broad chat quality, server readiness, or speedup.
+itself claim full CUDA residency, broad chat quality, server readiness, or
+speedup.
 
 ## Explain Dense Receipts
 
@@ -144,6 +148,20 @@ The useful fields to paste into an issue are:
 - server readiness state
 - claim boundary
 
+For support issues, collect the status row and latest receipt explanation in one
+artifact:
+
+```powershell
+bitnet support bundle --latest --device nvidia-rtx-5070-ti-cuda --format json
+```
+
+For Qwen2.5, the bundle should show `selected_route =
+dense_regular_llm_cuda`, `server_ready = true`,
+`server_ready_scope = exact_profile`, `speedup_claim = false`,
+`full_residency_claim = false`, `bitnet_packed_i2s_qk256_proof = false`, and
+`dense_regular_llm_cuda_proof = true`. Those Qwen2.5 claims do not transfer to
+Qwen3 or any other dense model row.
+
 ## Read The Governed Benchmark Receipt
 
 The current dense Qwen benchmark qualification review is committed as:
@@ -165,17 +183,20 @@ accepted_profiles = []
 Speed remains unqualified until a later governed review accepts an exact
 same-artifact, fallback-free profile.
 
-## Server Smoke Is Not Broad Readiness
+## Server Readiness Is Exact-Profile Only
 
-The bounded server-smoke receipt exists for the exact dense Qwen profile:
+The refreshed bounded server-smoke receipt promotes readiness only for the exact
+dense Qwen non-streaming shared-engine chat-completions profile:
 
 ```powershell
-bitnet receipts explain ci\hardware\windows-9950x3d-rtx5070ti\2026-05-15\server-strict-dense-qwen25-q8-smoke.json
+bitnet receipts explain ci\hardware\windows-9950x3d-rtx5070ti\2026-05-17\server-strict-dense-qwen25-q8-smoke.json
 ```
 
-That receipt is useful server evidence, but the model coverage row still keeps
-`server_ready=false`. Do not turn one bounded server smoke into broad dense
-server readiness or production-serving readiness.
+That receipt carries the model SHA-256, `/v1/chat/completions` endpoint
+profile, non-streaming request profile, greedy generation policy, strict
+`nvidia-rtx-5070-ti-cuda` backend, dense route, and non-empty UTF-8 response
+quality gate. Do not turn this exact-profile readiness into broad dense server
+readiness or production-serving readiness.
 
 ## What This Guide Does Not Claim
 
@@ -184,7 +205,7 @@ This guide does not claim:
 - BitNet I2_S, QK256, 1-bit, or packed-kernel proof
 - Qwen3, SmolLM2, Llama, Gemma, or Phi support
 - accepted CUDA speedup
-- broad server readiness
+- broad server readiness beyond the exact dense Qwen profile
 - full CUDA residency
 - global dense GGUF support
 - generic `cuda`, WGPU, Vulkan, or CPU fallback as strict RTX 5070 Ti proof

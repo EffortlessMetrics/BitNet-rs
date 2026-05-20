@@ -1,19 +1,9 @@
 name: PR Gate
 
 # PR Gate Success — the single required check that branch protection
-# should gate merges on (PR 19 of the strict policy / CI economics
-# rollout). The job aggregates the conclusions of the upstream
-# default-PR workflows that this rollout treats as authoritative:
-#
-#   * CI Core      (ci-core-success aggregator inside ci-core.yml)
-#   * Feature Matrix PR
-#   * Policy       (added in PR 04)
-#
-# The aggregator does *not* require ripr-advisory (PR 13), the
-# macOS / GPU / Docker / Coverage / Crossval / Property lanes, or
-# any deep / nightly / labelled lane. Those run only when the
-# planner or labels select them; making them required would defeat
-# the rollout's LEM-economics goal.
+# should gate merges on. The job consumes `xtask ci plan` and waits for
+# the selected blocking lanes instead of maintaining its own path
+# classifier.
 #
 # Posture in this PR:
 #
@@ -62,6 +52,16 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
+        with:
+          toolchain: "1.95.0"
+
       - name: Determine head SHA
         id: head
         env:
@@ -73,89 +73,144 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "Head SHA: $sha"
 
+      - name: Compute changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ steps.head.outputs.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "${BASE_SHA:-}" ] && git cat-file -e "$BASE_SHA" 2>/dev/null; then
+            git diff --name-only "$BASE_SHA"..."$HEAD_SHA" > changed.txt || true
+          else
+            git diff --name-only HEAD~1..HEAD > changed.txt || true
+          fi
+          count=$(wc -l < changed.txt | tr -d ' ')
+          echo "Changed files ($count) considered by PR Gate:"
+          sed -n '1,200p' changed.txt
+
+      - name: Build PR gate CI plan
+        timeout-minutes: 10
+        env:
+          LABELS: ${{ github.event_name == 'pull_request' && toJson(github.event.pull_request.labels.*.name) || '[]' }}
+        run: |
+          set -euo pipefail
+          labels="${LABELS:-[]}"
+          if [ "$labels" = "null" ]; then
+            labels="[]"
+          fi
+          cargo run --locked -p xtask --no-default-features -- ci plan \
+            --changed-file changed.txt \
+            --labels-json "$labels" \
+            --json-out ci-plan.json \
+            --github-summary "$GITHUB_STEP_SUMMARY" \
+            --print
+
       - name: Wait for upstream lanes
         env:
           GH_TOKEN: ${{ github.token }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           HEAD_SHA: ${{ steps.head.outputs.sha }}
-          EVENT_NAME: ${{ github.event_name }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          LABELS: ${{ github.event_name == 'pull_request' && toJson(github.event.pull_request.labels.*.name) || '[]' }}
         run: |
           set -euo pipefail
 
-          ci_core_required=false
-          policy_required=false
-          feature_matrix_required=false
+          test -f ci-plan.json
 
-          if [ "${EVENT_NAME}" = "pull_request" ] && [ -n "${PR_NUMBER:-}" ]; then
-            changed_files=$(gh api --paginate \
-              "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/files" \
-              --jq '.[].filename')
-            echo "Changed files considered by PR gate:"
-            printf '%s\n' "$changed_files"
-
-            while IFS= read -r path; do
-              [ -n "$path" ] || continue
-
-              case "$path" in
-                crates/*|crossval/*|tests/*|tools/bitnet-task/*|xtask/*|docs/tracking/*|.codex/campaigns/*|fuzz/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|.github/workflows/ci-core.yml)
-                  ci_core_required=true
-                  ;;
-              esac
-
-              case "$path" in
-                policy/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|clippy.toml|.github/workflows/policy.yml|xtask/*|*.rs)
-                  policy_required=true
-                  ;;
-              esac
-
-              case "$path" in
-                crates/*|Cargo.toml|Cargo.lock|rust-toolchain.toml)
-                  feature_matrix_required=true
-                  ;;
-              esac
-            done <<< "$changed_files"
-          else
-            # Manual runs have no PR path filter context, so require all default lanes.
-            ci_core_required=true
-            policy_required=true
-            feature_matrix_required=true
+          labels="${LABELS:-[]}"
+          if [ "$labels" = "null" ]; then
+            labels="[]"
+          fi
+          pr_size_acknowledged=false
+          if printf '%s' "$labels" | jq -e 'index("mechanical-change") or index("ai-native")' >/dev/null; then
+            pr_size_acknowledged=true
           fi
 
-          # Required upstream lanes that gate the PR. Names must match
-          # the `name:` field of each upstream job *exactly*. Only add
-          # lanes whose workflows are expected to run for this PR's
-          # changed paths; otherwise path-filtered workflows appear as
-          # permanently missing and the gate times out on docs/tracker PRs.
+          echo "Selected blocking lanes from ci-plan.json:"
+          jq -r '.selected_lanes[] | select(.blocking == true) | "  - \(.id): \(.name)"' ci-plan.json
+
+          echo "Selected advisory lanes from ci-plan.json (reported, not gating):"
+          jq -r '.selected_lanes[] | select(.blocking == false) | "  - \(.id): \(.name)"' ci-plan.json
+
           required_jobs=()
-          if [ "$ci_core_required" = true ]; then
-            required_jobs+=("CI Core Success")
+          unknown_lanes=()
+          while IFS= read -r lane_id; do
+            [ -n "$lane_id" ] || continue
+            case "$lane_id" in
+              always-on-guards)
+                required_jobs+=("Guards")
+                if [ "$pr_size_acknowledged" = "true" ]; then
+                  echo "Check PR Size is intentionally skipped by PR label; not adding it as a required upstream lane."
+                else
+                  required_jobs+=("Check PR Size")
+                fi
+                ;;
+              bdd-grid-check)
+                required_jobs+=("BDD Grid Check")
+                ;;
+              ci-core-build-test)
+                required_jobs+=("CI Core Success")
+                ;;
+              compatibility-ffi-abi)
+                required_jobs+=("ABI Stability Check")
+                ;;
+              compatibility-msrv)
+                required_jobs+=("Route MSRV Compatibility" "Minimum Supported Rust Version")
+                ;;
+              compatibility-tokenizer)
+                required_jobs+=("Tokenizer Compatibility Tests")
+                ;;
+              feature-matrix-pr)
+                required_jobs+=(
+                  "pr-check (no-features)"
+                  "pr-check (cpu)"
+                )
+                ;;
+              feature-matrix-full-cli)
+                required_jobs+=("pr-check (cpu+full-cli)")
+                ;;
+              gpu-native)
+                required_jobs+=(
+                  "native-check (cpu)"
+                  "native-check (gpu)"
+                  "native-check (cpu+gpu)"
+                  "native-check (oneapi)"
+                  "native-check (cpu+oneapi)"
+                )
+                ;;
+              policy)
+                required_jobs+=("Policy")
+                ;;
+              *)
+                unknown_lanes+=("$lane_id")
+                ;;
+            esac
+          done < <(jq -r '.selected_lanes[] | select(.blocking == true) | .id' ci-plan.json)
+
+          if [ ${#unknown_lanes[@]} -gt 0 ]; then
+            echo "::error::PR Gate has no check mapping for selected blocking lane(s): ${unknown_lanes[*]}"
+            exit 1
           fi
-          if [ "$policy_required" = true ]; then
-            required_jobs+=("Policy")
-          fi
-          if [ "$feature_matrix_required" = true ]; then
-            required_jobs+=(
-              "pr-check (no-features)"
-              "pr-check (cpu)"
-              "pr-check (cpu+full-cli)"
-            )
+
+          if [ ${#required_jobs[@]} -gt 0 ]; then
+            deduped=()
+            declare -A seen=()
+            for job in "${required_jobs[@]}"; do
+              if [ -z "${seen[$job]+x}" ]; then
+                deduped+=("$job")
+                seen[$job]=1
+              fi
+            done
+            required_jobs=("${deduped[@]}")
           fi
 
           if [ ${#required_jobs[@]} -eq 0 ]; then
-            echo "No path-filtered upstream lanes are required for this PR."
+            echo "No selected blocking upstream lanes are required for this PR."
             exit 0
           fi
 
           echo "Required upstream lanes:"
           printf '  - %s\n' "${required_jobs[@]}"
-
-          # Optional lanes whose `skipped` is acceptable but `failure`
-          # is not. (Empty in this PR; PR 17's risk-pack routing is the
-          # right place to enforce gating on conditionally-required
-          # lanes.)
-          optional_jobs=()
 
           # Poll for up to 55 minutes (110 * 30s). The gate must exceed
           # the healthy cap of the selected upstream lanes plus rollup and
@@ -166,8 +221,9 @@ jobs:
           missing="${required_jobs[*]}"
 
           while [ $SECONDS -lt $deadline ]; do
-            payload=$(gh api -H 'Accept: application/vnd.github+json' \
-              "${api}?per_page=100" || true)
+            payload=$(gh api --paginate -H 'Accept: application/vnd.github+json' \
+              "${api}?per_page=100" --jq '.check_runs[]' \
+              | jq -s '{check_runs: .}' || true)
             if [ -z "$payload" ]; then
               echo "Empty API response; retrying"
               sleep 30
@@ -218,13 +274,21 @@ jobs:
           {
             echo "## PR Gate Success"
             echo ""
-            echo "| Required upstream lane | Status |"
-            echo "|---|---|"
-            echo "| CI Core Success | gate input |"
-            echo "| Policy | gate input |"
-            echo "| Feature Matrix PR | gate input |"
+            echo "Gate outcome: \`${OUTCOME}\`"
+            echo ""
+            if [ -f ci-plan.json ]; then
+              echo "### Selected blocking lanes"
+              echo ""
+              jq -r '.selected_lanes[] | select(.blocking == true) | "- `\(.id)` - \(.name)"' ci-plan.json
+              echo ""
+              echo "### Selected advisory lanes"
+              echo ""
+              jq -r '.selected_lanes[] | select(.blocking == false) | "- `\(.id)` - \(.name)"' ci-plan.json
+            else
+              echo "No ci-plan.json was produced."
+            fi
             echo ""
             echo "_PR Gate Success is **not yet branch-protection-required**;"
-            echo "it ships in observation mode in PR 19 of the rollout. See"
+            echo "it is consuming \`ci-plan.json\` in observation mode. See"
             echo "\`docs/ci/pr-gate-success.md\`._"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T00:50:00Z"
+event = "pr_open"
+item = "LNL258V-REG-010"
+pr = 6012
+branch = "codex/lunar-lake/LNL258V-REG-010-thermal-availability"
+head_sha = "d31b6080c9d9c9eeec44896f8043c227f5ac2356"
+actor = "codex"
+summary = "Opened the strict regression PR for Lunar Lake thermal temperature availability evidence."
+
+notes = [
+  "PR #6012 wires the thermal temperature availability receipt into regression v2 and refreshes regression/operator comparison artifacts.",
+  "The PR keeps measured thermal temperature unavailable because the receipt records thermal-zone visibility without usable measured temperature readings.",
+  "The PR preserves no new-inference, route-promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]

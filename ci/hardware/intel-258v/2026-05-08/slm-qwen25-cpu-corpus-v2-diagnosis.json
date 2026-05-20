@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_qwen_cpu_corpus_v2_diagnosis",
   "proof_stage": "corpus_v2_failures_classified_no_inference",
-  "created_utc": "2026-05-16T16:06:00Z",
+  "created_utc": "2026-05-19T15:42:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "cpu_corpus_v2_receipt": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
@@ -16,8 +16,8 @@
   "runtime_api": "cpu",
   "fallback_used": false,
   "quality_summary": {
-    "total": 12,
-    "passed": 12,
+    "total": 14,
+    "passed": 14,
     "failed": 0,
     "timeout": 0,
     "not_run": 0,
@@ -35,7 +35,8 @@
       "failed_case_ids": [],
       "route_profile_status": "promoted_route_ready",
       "route_blockers": [
-        "dense_slm_default_cpu remains promoted for ask_normal"
+        "dense_slm_openvino_gpu_candidate remains promoted for ask_normal",
+        "route not promoted for profile ask_normal"
       ]
     },
     {
@@ -47,7 +48,8 @@
       "failed_case_ids": [],
       "route_profile_status": "promoted_route_ready",
       "route_blockers": [
-        "dense_slm_default_cpu remains promoted for ask_short"
+        "dense_slm_openvino_gpu_candidate remains promoted for ask_short",
+        "route not promoted for profile ask_short"
       ]
     },
     {
@@ -60,21 +62,21 @@
       "route_profile_status": "candidate_only",
       "route_blockers": [
         "decode_heavy has no promoted route; candidate evidence is indexed without promotion",
-        "route not promoted for profile decode_heavy"
+        "route not promoted for profile decode_heavy",
+        "timing evidence is not profile-specific for profile decode_heavy"
       ]
     },
     {
       "profile_id": "low_power",
-      "total": 0,
-      "passed": 0,
+      "total": 1,
+      "passed": 1,
       "failed": 0,
       "blocked": true,
       "failed_case_ids": [],
       "route_profile_status": "candidate_only",
       "route_blockers": [
-        "corpus_v2 profile quality evidence missing",
         "low_power has no promoted route; candidate evidence is indexed without promotion",
-        "power telemetry receipt missing for low_power promotion",
+        "power advantage evidence missing for low_power promotion",
         "route not promoted for profile low_power"
       ]
     },
@@ -88,7 +90,8 @@
       "route_profile_status": "candidate_only",
       "route_blockers": [
         "prefill_heavy has no promoted route; candidate evidence is indexed without promotion",
-        "route not promoted for profile prefill_heavy"
+        "route not promoted for profile prefill_heavy",
+        "timing evidence is not profile-specific for profile prefill_heavy"
       ]
     },
     {
@@ -110,10 +113,23 @@
       "failed": 0,
       "blocked": true,
       "failed_case_ids": [],
-      "route_profile_status": "unqualified_gap",
+      "route_profile_status": "candidate_only",
       "route_blockers": [
         "route not promoted for profile structured",
         "structured has no promoted route; candidate evidence is indexed without promotion"
+      ]
+    },
+    {
+      "profile_id": "warm_resident",
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "blocked": true,
+      "failed_case_ids": [],
+      "route_profile_status": "candidate_only",
+      "route_blockers": [
+        "route not promoted for profile warm_resident",
+        "warm_resident has no promoted route; candidate evidence is indexed without promotion"
       ]
     }
   ],

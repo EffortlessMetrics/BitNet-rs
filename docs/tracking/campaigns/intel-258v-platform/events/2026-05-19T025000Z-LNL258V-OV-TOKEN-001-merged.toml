@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T02:50:00Z"
+event = "merged"
+item = "LNL258V-OV-TOKEN-001"
+branch = "codex/lunar-lake/LNL258V-OV-TOKEN-001"
+pr = 5742
+head_sha = "aa016ec247dd660460c05927b90dd3cf89daf648"
+merge_sha = "de85a1aa7d6362faa5d7ff24837f51b99e6165b1"
+actor = "codex"
+summary = "Merged LNL258V-OV-TOKEN-001 after adding direct OpenVINO GenAI generated-token ID evidence to dense Qwen candidate receipts."
+
+notes = [
+  "OpenVINO GenAI candidate scripts now generate from TokenizedInputs and record EncodedResults.tokens as direct generated-token IDs.",
+  "The refreshed route-profile and regression-v2 artifacts remove the direct-token blocker while retaining benchmark-qualified speedup, power-advantage, cold-start, and route-promotion blockers.",
+  "GPU and NPU routes remain unpromoted; the merge does not claim speedup, power advantage, Arc/NPU acceleration, native OpenCL/NPU execution, or BitNet QK256/I2_S behavior.",
+]

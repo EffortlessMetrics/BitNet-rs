@@ -102,7 +102,7 @@ fn capability_check_finds_embedded_capability() {
     let mut spv = build_test_spirv(1, 5);
     // Append an OpCapability instruction: word-count 2, opcode 17 →
     // header word = (2 << 16) | 17 = 0x0002_0011
-    let op_cap: u32 = (2 << 16) | 17;
+    let op_cap: u32 = (2 << 16) | 0x0011;
     spv.extend_from_slice(&op_cap.to_le_bytes());
     // Operand: capability ID 22 (Image1D).
     spv.extend_from_slice(&22u32.to_le_bytes());

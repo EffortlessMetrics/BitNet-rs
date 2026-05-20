@@ -1,0 +1,70 @@
+{
+  "artifact_kind": "apple_m4_slm_benchmark_profile_timeout",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q4_k_m/summary-runs/run-02-profiles/context_4k.json",
+  "child_process": {
+    "exit_code": null,
+    "killed_on_timeout": true,
+    "mode": "slm-warm-session subprocess"
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generated_tokens": 0,
+  "invalid_comparison_reasons": [
+    "profile_timeout_exceeded:context_4k:720s"
+  ],
+  "mac_claim_boundary": {
+    "benchmark_profile_timeout": true,
+    "bitnet_performance_claimed": false,
+    "bitnet_quality_claimed": false,
+    "bounded_benchmark_profiles_only": true,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dense_slm_only": true,
+    "final_variance_envelope": false,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false
+  },
+  "memory": {
+    "peak_memory_mb": 3650.016,
+    "source": "parent-polled child RSS before timeout kill"
+  },
+  "model_cache": {
+    "architecture": "qwen2",
+    "bytes": 491400032,
+    "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+    "chat_template": true,
+    "display_name": "Qwen2.5 0.5B Instruct Q4_K_M",
+    "id": "qwen2.5-0.5b-instruct-q4_k_m",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q4_k_m/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "quantization": "Q4_K_M",
+    "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+    "support_note": "Rust-native Apple M4 CPU/NEON storage-conscious SLM artifact.",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "qwen2"
+  },
+  "operator_command": "mac benchmark",
+  "profile_id": "context_4k",
+  "profile_set": "slm-benchmark-v2",
+  "prompt_count": 3,
+  "requested_backend": "apple-m4-cpu-neon",
+  "requested_max_new_tokens": 16,
+  "runtime_api": "cpu",
+  "scenario": "synthetic_context",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "speedup_claim": false,
+  "status": "invalid_for_comparison",
+  "target_context_tokens": 4000,
+  "timeout_boundary": {
+    "behavior": "child warm-session process killed; profile marked invalid for envelope comparison",
+    "configured_seconds": 720,
+    "elapsed_ms": 720169.612,
+    "enforced": true,
+    "reached": true
+  },
+  "timestamp": "2026-05-19T15:00:17.222575+00:00"
+}

@@ -1,0 +1,90 @@
+name: CUDA Support
+description: File a receipt-backed CUDA inference support report
+labels: ["support", "cuda"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for CUDA model-status, receipt, server-readiness, fallback, or answer-quality issues.
+
+        Before filing, generate a support bundle:
+
+        ```powershell
+        bitnet support bundle --latest --device nvidia-rtx-5070-ti-cuda --format json
+        ```
+
+        Do not paste private paths, secrets, tokens, credentials, or model files.
+
+  - type: textarea
+    id: support-bundle
+    attributes:
+      label: Support Bundle JSON
+      description: Paste the JSON from `bitnet support bundle --latest --device nvidia-rtx-5070-ti-cuda --format json`.
+      placeholder: |
+        {
+          "kind": "bitnet_support_bundle",
+          "summary": {
+            "model_coverage_row": "...",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_route": "...",
+            "fallback_used": false,
+            "speedup_claim": false,
+            "claim_boundary": "..."
+          }
+        }
+      render: json
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What happened?
+      description: Describe the user-visible problem and what you expected instead.
+      placeholder: |
+        Expected:
+
+        Actual:
+
+        Command run:
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: claim-boundaries
+    attributes:
+      label: Claim Boundary Checks
+      description: Check the boundaries that apply to this report.
+      options:
+        - label: "The selected backend is `nvidia-rtx-5070-ti-cuda`, not generic `cuda`."
+        - label: "`fallback_used=false` in the relevant receipt."
+        - label: "`speedup_claim=false` unless an exact-profile benchmark qualification receipt accepts speedup."
+        - label: "Qwen2.5 exact-profile server readiness is not being treated as broad dense GGUF server readiness."
+        - label: "Dense CUDA proof is not being treated as BitNet I2_S/QK256 proof."
+        - label: "Qwen2.5 evidence is not being treated as Qwen3 evidence."
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: OS and version.
+      placeholder: "Windows 11, Ubuntu 24.04, etc."
+    validations:
+      required: false
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU / Driver
+      description: GPU model and driver/runtime version if the support bundle did not capture it.
+      placeholder: "RTX 5070 Ti, NVIDIA driver version, CUDA runtime version"
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any extra commands, logs, model paths with private parts removed, or receipt paths.
+    validations:
+      required: false

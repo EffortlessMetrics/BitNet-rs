@@ -1,0 +1,18 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T03:15:00Z"
+event = "merged"
+item = "SLM-CPU-044"
+pr = 5810
+head_sha = "9265ecf265f11035b0a7371844ad2809c0f0bc55"
+merge_sha = "3663cb0ad4e8b54460a0716d08ac676dbbb91f64"
+branch = "codex/slm-cpu-044-q8-sidecar-runtime-plan"
+actor = "codex"
+summary = "Recorded SLM-CPU-044 as merged and queued SLM-CPU-045 as the next Q8_0 packed sidecar carrier slice."
+
+notes = [
+  "PR #5810 defined the production-integration boundary after the fixture-level Q8_0 packed sidecar prototype without changing runtime code or claiming speedup.",
+  "SLM-CPU-045 is ready to carry packed Q8_0 sidecar metadata from strict GGUF tensor loading toward an inert model-side descriptor while keeping eager F32 Candle tensors as the runtime behavior oracle.",
+  "The next implementation must preserve prompt IDs, generated IDs, decoded text, model SHA, strict GGUF tokenizer authority, selected CPU backend/kernel, and fallback=false before any later runtime sidecar compute selector can be considered.",
+  "No sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

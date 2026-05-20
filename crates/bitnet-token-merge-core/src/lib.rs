@@ -137,6 +137,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
 
     #[test]
     fn test_token_span_creation() {
@@ -154,12 +155,13 @@ mod tests {
     }
 
     #[test]
-    fn test_merge_spans() {
+    fn test_merge_spans() -> Result<(), &'static str> {
         let spans = vec![TokenSpan::new(1, "hel", 0, 3), TokenSpan::new(2, "lo", 3, 5)];
-        let merged = merge_spans(&spans).expect("non-empty input should merge");
+        let merged = merge_spans(&spans).ok_or("non-empty input should merge")?;
         assert_eq!(merged.text, "hello");
         assert_eq!(merged.start, 0);
         assert_eq!(merged.end, 5);
+        Ok(())
     }
 
     #[test]
@@ -184,6 +186,78 @@ mod tests {
         assert_eq!(spans[0].text, "hello");
         assert_eq!(spans[1].text, "world");
         assert_eq!(spans[2].text, "foo");
+    }
+
+    #[test]
+    fn test_merge_preserves_first_id_and_outer_bounds_for_non_contiguous_spans() {
+        let spans = vec![TokenSpan::new(7, "he", 10, 12), TokenSpan::new(8, "llo", 20, 23)];
+
+        let merged = merge_spans(&spans).expect("non-empty input should merge");
+
+        assert_eq!(merged.token_id, 7);
+        assert_eq!(merged.text, "hello");
+        assert_eq!(merged.start, 10);
+        assert_eq!(merged.end, 23);
+    }
+
+    #[test]
+    fn test_char_split_uses_utf8_byte_offsets() {
+        let spans = char_split("aé🦀", 5);
+
+        assert_eq!(
+            spans,
+            vec![
+                TokenSpan::new(0, "a", 5, 6),
+                TokenSpan::new(1, "é", 6, 8),
+                TokenSpan::new(2, "🦀", 8, 12),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_word_split_handles_unicode_whitespace_and_offsets() {
+        let spans = word_split("hi\u{2003}there\nfriend", 30);
+
+        assert_eq!(
+            spans,
+            vec![
+                TokenSpan::new(0, "hi", 30, 32),
+                TokenSpan::new(1, "there", 35, 40),
+                TokenSpan::new(2, "friend", 41, 47),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_overlapping_spans_uses_half_open_ranges() {
+        let spans = vec![
+            TokenSpan::new(0, "aa", 0, 2),
+            TokenSpan::new(1, "bb", 2, 4),
+            TokenSpan::new(2, "cc", 4, 6),
+        ];
+
+        assert_eq!(overlapping_spans(&spans, 2, 4), vec![&spans[1]]);
+        assert!(overlapping_spans(&spans, 6, 8).is_empty());
+        assert!(overlapping_spans(&spans, 0, 0).is_empty());
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn char_split_round_trips_and_covers_utf8_byte_ranges(text in ".*", offset in 0usize..1024) {
+            let spans = char_split(&text, offset);
+
+            prop_assert_eq!(detokenize(&spans), text.as_str());
+            prop_assert_eq!(spans.len(), text.chars().count());
+
+            let mut expected_start = offset;
+            for (idx, span) in spans.iter().enumerate() {
+                prop_assert_eq!(span.token_id, idx as u32);
+                prop_assert_eq!(span.start, expected_start);
+                expected_start += span.text.len();
+                prop_assert_eq!(span.end, expected_start);
+            }
+            prop_assert_eq!(expected_start, offset + text.len());
+        }
     }
 
     #[test]

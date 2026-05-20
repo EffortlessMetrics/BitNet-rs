@@ -1,0 +1,22 @@
+timestamp = "2026-05-19T00:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-010"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-QUAL-010-long-decode-fixtures"
+summary = "Started LNL258V-QUAL-010 to tighten the remaining prefill_heavy and decode_heavy corpus-v2 fixtures to cross-runtime wording and rerun CPU/OpenVINO route-quality evidence."
+
+artifacts = [
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "Local probes identified cross-runtime passing wording for long_prompt_summary_route_policy and decode_heavy_short_list.",
+  "This item must keep OpenVINO GPU/NPU candidate-only and make no route promotion, speedup, power advantage, native accelerator, or BitNet QK256/I2_S claim.",
+]

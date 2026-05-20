@@ -1,0 +1,23 @@
+timestamp = "2026-05-18T13:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5583
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-002-dense-slm-contract"
+head_sha = "63e5d3056bb08d4ec59271e426a250c50b5c0ed0"
+merge_sha = "a6b9cf51e8b67f9ec158bb8281b12795177ae28b"
+summary = "Merged LNL258V-OPENVINO-DOCS-002, adding the OpenVINO dense SLM model/export contract spec."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5583",
+  "docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The merged spec defines dense SLM model/export contract fields and the manifest, smoke, operator ask, corpus-v2, phase profile, route profile, promotion review, model status, and exact-profile server proof ladder.",
+  "The closeout is tracker-only and preserves the no route-promotion, no speedup, no power-advantage, no broad dense SLM quality, no BitNet QK256/I2_S, no native OpenCL, no cold one-off NPU, no model-binary, and no server-readiness claim boundary.",
+]

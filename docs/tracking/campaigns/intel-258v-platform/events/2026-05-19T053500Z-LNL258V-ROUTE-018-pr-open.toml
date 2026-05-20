@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T05:35:00Z"
+event = "pr_open"
+item = "LNL258V-ROUTE-018"
+branch = "codex/lunar-lake/LNL258V-ROUTE-018-claim-boundary-clarity"
+pr = 5780
+head_sha = "4c116525bc12b18d0b76730ce796ba8c9fe84bb0"
+actor = "codex"
+summary = "Opened LNL258V-ROUTE-018 to make route-promotion scope explicit in Lunar Lake receipts."
+
+notes = [
+  "The PR records OpenVINO GPU promoted profiles directly in profile comparison, cold/warm benchmark, regression, and operator-comparison receipts.",
+  "OpenVINO NPU remains candidate-only and unexpected OpenVINO profile promotions fail closed.",
+  "The PR does not run new inference, promote NPU, claim power advantage, claim native OpenCL/NPU execution, or change BitNet QK256/I2_S behavior.",
+]

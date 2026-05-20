@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T20:05:00Z"
+event = "in_progress"
+item = "LNL258V-ROUTE-024"
+branch = "codex/lunar-lake/LNL258V-ROUTE-024-npu-warm-resident"
+actor = "codex"
+summary = "Started LNL258V-ROUTE-024 to promote OpenVINO NPU only for the warm_resident profile from existing resident-session evidence."
+
+notes = [
+  "OpenVINO GPU remains profile-promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy.",
+  "OpenVINO NPU warm_resident promotion is based on existing fallback-free corpus-v2, resident-session timing, direct token visibility, and benchmark-qualified latency evidence.",
+  "low_power and cold one-off NPU profiles remain blocked; no inference, speedup, power-advantage, native NPU, acceleration, or BitNet QK256/I2_S behavior claim is added.",
+]

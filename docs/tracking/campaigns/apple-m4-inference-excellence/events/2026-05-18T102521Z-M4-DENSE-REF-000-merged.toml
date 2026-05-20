@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T10:25:21Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-DENSE-REF-000"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-000-reference-receipt-contract"
+pr = 5640
+head_sha = "7f3736afb8b435dfba7d124704fc505b6a0f4149"
+merge_sha = "8938b70f6e4a20c7164de7acbd2e21a46360021a"
+
+notes = [
+  "PR #5640 merged the dense SLM reference-vs-Rust comparison receipt validator and schema-only fixture.",
+  "This closeout records the final PR head SHA and merge SHA so the campaign manifest no longer reports the item as pr_open.",
+  "No live dense reference-runner output, live Rust M4 comparison receipt, BitNet proof, BitNet chat or serve enablement, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claim.",
+]

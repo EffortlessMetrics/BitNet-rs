@@ -1,0 +1,13 @@
+timestamp = "2026-05-20T04:17:12Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-GOAL-AUDIT-007"
+event = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-007-post-a770-opencl-smoke"
+actor = "codex"
+summary = "Started a no-inference Lunar Lake completion-audit refresh after A770-005 selected-device OpenCL smoke closeout."
+
+notes = [
+  "A770-005/#6072 and closeout #6079 landed selected-device OpenCL smoke evidence, but that evidence is adjacent accelerator proof rather than a shared BitNet semantic fix.",
+  "The refresh keeps pending A770 shared BitNet semantic watchpoints #4756, #4757, #4767, #4853, and #5064 as pending-only rerun triggers.",
+  "POWER-006 remains blocked because the current battery context is AC/charging, so no battery-mode low_power evidence, power advantage, route promotion, speedup, measured-temperature, native accelerator, acceleration, broad quality, stale BitNet, or BitNet QK256/I2_S behavior-change claim is made.",
+]

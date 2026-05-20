@@ -11,7 +11,7 @@ This matrix defines which BitNet kernel formats are valid targets for each hardw
 | `i2_s` | Portable packed baseline | x86, ARM | Performance claim without receipt |
 | `tl1` | ARM lookup-table path | M4 / ARM64 | x86 |
 | `tl2` | x86 lookup-table path | 8250U, 258V CPU, 5700X, 9950X3D | ARM |
-| `qk256` | Repo-local packed/dispatch path | CPU first, GPU later | Unproven accelerator claims |
+| `qk256` | Repo-local packed/dispatch path with precise scalar F32/no-scale and scaled I8_S IDs | CPU first, GPU later | Unproven accelerator claims or ambiguous scalar receipts |
 | `openvino_graph` | Converted/static graph path | OpenVINO GPU/NPU references | Native packed kernel proof |
 
 ## Hard Rules
@@ -43,10 +43,21 @@ Kernel family and kernel implementation are different fields. For example:
 
 | Kernel family | Example requested kernel | Meaning |
 |---|---|---|
-| `qk256` | `qk256-scalar-gemv` | Scalar packed decode truth kernel |
-| `qk256` | `qk256-scalar-gemm` | Scalar packed prefill truth kernel |
+| `qk256` | `qk256-scalar-f32-gemv` | Scalar no-scale F32 decode diagnostic/reference kernel; compatibility alias: `qk256-scalar-gemv`. |
+| `qk256` | `qk256-scalar-f32-gemm` | Scalar no-scale F32 prefill diagnostic/reference kernel; compatibility alias: `qk256-scalar-gemm`. |
+| `qk256` | `qk256-scalar-i8s-scaled-gemv` | Scalar BitNet.cpp-style scaled I2_S x I8_S decode oracle. |
+| `qk256` | `qk256-scalar-i8s-scaled-gemm` | Scalar BitNet.cpp-style scaled I2_S x I8_S prefill oracle. |
 | `qk256` | `qk256-avx2-gemv` | AVX2 decode-first packed GEMV |
+| `qk256` | `qk256-avx512-f32-gemv` | AVX-512 no-scale F32-style decode GEMV |
+| `qk256` | `qk256-avx512-i8s-scaled-gemv` | AVX-512 BitNet I2_S × I8_S inline-scale decode GEMV |
+| `qk256` | `qk256-avx512-i8s-scaled-gemm` | AVX-512 BitNet I2_S × I8_S inline-scale prefill GEMM |
 | `qk256` | `qk256-neon-gemv` | ARM64 NEON decode-first packed GEMV |
+
+AVX-512 is a wider x86 lane, not a separate proof family. It must inherit
+scalar packed parity and compare against AVX2 before speed claims. AVX-512
+detection or an AVX-512 receipt label is not optimized AVX-512 kernel proof;
+strict receipts must prove selected kernel ID, fallback status, and AVX-512
+hot-path invocation counters.
 
 Strict receipts must record both `kernel_family` and requested/selected kernel IDs.
 
@@ -146,3 +157,7 @@ Every kernel proof must record:
 
 - `docs/bitnet/BITNET_CPU_PATH_PLAN.md`
 - `docs/bitnet/BITNET_RECEIPT_FIELDS.md`
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-KERNEL-CONTRACT.md`
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-HOTPATH.md`
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-PARITY.md`
+- `docs/specs/BITNET-SPEC-CPU-SCALAR-PERFORMANCE.md`

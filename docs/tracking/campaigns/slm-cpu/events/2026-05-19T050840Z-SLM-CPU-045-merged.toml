@@ -1,0 +1,18 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T05:08:40Z"
+event = "merged"
+item = "SLM-CPU-045"
+pr = 5845
+head_sha = "bd8cae5c28771202169b9f4551de1988bfe4a5fb"
+merge_sha = "78fe24de69bb8ac320869927009e0b6ff2200669"
+branch = "codex/slm-cpu-045-q8-sidecar-carrier"
+actor = "codex"
+summary = "Merged the inert Qwen3 Q8_0 packed sidecar carrier slice."
+
+notes = [
+  "PR #5845 carries packed Q8_0 sidecar metadata from strict GGUF tensor loading onto BitNetModel as an inert registry.",
+  "The eager F32 Candle tensors remain the only runtime compute path; sidecar descriptors keep runtime_compute_enabled=false, dense_runtime_replaced=false, and speedup_claim=false.",
+  "The final PR head pins the sidecar payload hash to the packed Q8_0 payload bytes so trailing GGUF storage bytes do not affect descriptor identity.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

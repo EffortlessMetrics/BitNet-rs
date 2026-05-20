@@ -51,7 +51,7 @@ thiserror = { workspace = true }
 log = "0.4.28"
 async-stream = "0.3.6"
 wasm-bindgen-futures = { version = "0.4.55", optional = true }
-gloo-timers = { version = "0.3.0", features = ["futures"], optional = true }
+gloo-timers = { version = "0.4.0", features = ["futures"], optional = true }
 rustc_version_runtime = "0.3.0"
 chrono = "0.4.42"
 
@@ -84,8 +84,8 @@ rocm = ["bitnet-kernels/rocm"]
 metal = ["bitnet-common/metal", "bitnet-models/metal"]
 npu-backend = ["bitnet-kernels/npu-backend", "metal"]
 gpu = ["cuda"]
-oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi", "bitnet-quantization/oneapi"]
-opencl = ["bitnet-common/opencl", "bitnet-kernels/opencl", "bitnet-quantization/opencl"]
+oneapi = ["bitnet-common/oneapi", "bitnet-kernels/oneapi", "bitnet-models/oneapi", "bitnet-quantization/oneapi"]
+opencl = ["bitnet-common/opencl", "bitnet-kernels/opencl", "bitnet-models/opencl", "bitnet-quantization/opencl"]
 ffi = ["dep:bitnet-sys", "bitnet-sys/ffi"]
 streaming = []
 bench = []  # Enable Criterion benchmarks

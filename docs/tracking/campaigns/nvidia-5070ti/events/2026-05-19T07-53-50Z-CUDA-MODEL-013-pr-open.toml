@@ -1,0 +1,11 @@
+timestamp = "2026-05-19T07:53:50Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-013"
+event = "pr_open"
+pr = 5896
+head_sha = "af37a56aade4357f72a5cd4b0e6291a1857f6a27"
+actor = "codex"
+notes = [
+  "Opened PR #5896 for the Qwen3 0.6B Q8_0 non-streaming /v1/chat/completions RTX 5070 Ti shared-engine server-smoke receipt.",
+  "The receipt preserves server_ready=false, speedup_claim=false, full_residency_claim=false, broad dense GGUF readiness false, Qwen2.5 inheritance false, and BitNet QK256 proof false.",
+]

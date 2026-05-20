@@ -1,0 +1,18 @@
+timestamp = "2026-05-17T17:25:35Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-010"
+event = "pr_open"
+actor = "codex"
+pr = 5395
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-010-bitnet-250-corpus"
+head_sha = "cb9081d505b6bdacd3173cdd2a4141148357d57a"
+summary = "Opened the deterministic 250-case BitNet corpus definition PR."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5395",
+  "ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml",
+]
+notes = [
+  "The PR is corpus/schema/dry-run only and does not run or claim fresh M4 BitNet quality.",
+  "The corpus keeps accepted Microsoft I2_S GGUF identity, external tokenizer authority, bitnetcpp-answer prompt template, mechanical scoring, and false runtime quality/performance/chat/serve claim boundaries.",
+  "No live M4 inference, model artifact, BitNet runtime pass-rate, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is made.",
+]

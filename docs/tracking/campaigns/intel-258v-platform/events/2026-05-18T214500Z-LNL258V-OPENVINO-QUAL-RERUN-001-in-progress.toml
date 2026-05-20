@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T21:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-QUAL-RERUN-001"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-QUAL-RERUN-001"
+summary = "Started rerunning Lunar Lake corpus-v2 evidence after the accepted exact-answer fixture-policy update."
+
+artifacts = [
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "docs/reports/OPENVINO_LUNAR_LAKE_CORPUS_V2_FAILURES.md",
+]
+
+notes = [
+  "The rerun aligns Rust Qwen2.5 prompt rendering with the exported tokenizer assistant-generation newline and refreshes CPU/OpenVINO corpus-v2 evidence after yes_no_clear_sky moved to a one-token budget.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted; this work does not claim speedup, power advantage, native Arc/NPU acceleration, or BitNet QK256/I2_S behavior.",
+]

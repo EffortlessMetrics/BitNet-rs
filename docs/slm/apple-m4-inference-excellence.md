@@ -203,6 +203,65 @@ Small golden-token canaries stay separate from the full corpus. They record
 prompt text, template identity, input token IDs, generated token IDs and text,
 stop reason, sampler config, backend, fallback state, and artifact/tokenizer
 identity so drift can be localized before running hundreds of cases.
+`M4-CANARY-001` adds the `apple_m4_golden_token_canaries` receipt kind for a
+compact dense SLM plus BitNet fixture. It is drift-localization evidence only,
+not a fresh live runtime proof, broad quality claim, broad performance claim,
+BitNet chat/serve enablement, or full Metal inference claim.
+
+## Robustness And Negative Cases
+
+`M4-ROBUSTNESS-001` adds a model-free dry-run lane for negative and robustness
+fixtures before any live robustness claim is made:
+
+```bash
+bitnet mac eval --suite m4-robustness --dry-run --json
+```
+
+The suite is defined in `ci/quality/apple-m4-robustness-corpus.yaml` and covers
+false-premise, ambiguous, instruction-conflict, prompt-injection-style,
+format-trap, and unsupported-request cases. The receipt expands the same
+fixtures into separate dense SLM and BitNet families with their own prompt
+template, model identity scope, category summary, and mechanical scoring plan.
+
+This lane is deliberately narrow. It proves that the M4 evidence system can
+track robustness cases separately by model family, validate the corpus
+contract, and reject overclaims through `bitnet mac receipts-check`. It does
+not prove broad safety, alignment, factuality, dense-to-BitNet transfer,
+BitNet chat, BitNet serve, Metal inference, QK256, Neural Engine, MPSGraph, or
+speedup.
+
+## Reproducible Run Identity
+
+`M4-REPRO-001` introduces the shared `m4-run-identity-v1` contract in
+`bitnet-receipts-core`. Receipts that opt into the contract carry a
+top-level `run_identity` object and a matching `run_identity_sha256` digest.
+The validator checks the reproducibility fields needed before dashboard,
+regression, and release comparisons can trust that two reports are the same
+kind of run:
+
+| Field group | Requirement |
+|---|---|
+| Machine | M4 machine ID, SoC, OS name, OS version, and OS-version source. |
+| Source and binary | Git commit plus source, crate version, and either build profile or binary SHA256. |
+| Command | Command class and whether the receipt came from a live model run. |
+| Model and tokenizer | Model ID/SHA or explicit model-free scope, tokenizer authority/SHA or explicit model-free scope. |
+| Prompt template | Template ID and SHA256, even when the command is model-free. |
+| Backend | Requested backend, selected backend, runtime API, and `fallback_used=false`; selected must match requested. |
+| Evidence identity | Scope, seed, corpus ID, and profile ID. |
+| Timing | Timing source used by the receipt family. |
+
+The first schema-`1.2.0` model-free operator receipts using the contract are
+`apple_m4_inference_status`, `apple_m4_operator_evidence_summary`,
+`apple_m4_report_refresh_manifest`, and `apple_m4_regression_dashboard`.
+`bitnet mac receipts-check` validates `run_identity` for schema `1.2.0`
+receipts and for any receipt that includes `run_identity_sha256`.
+
+Older committed M4 receipts remain valid with their existing schemas while
+the excellence campaign refreshes eval, benchmark, warm-session, chat-gate,
+serve-gate, and dashboard artifacts through later items. This is identity
+infrastructure and operator receipt hardening only: it does not create a new
+live model run, BitNet chat or serve proof, Metal route, QK256 route, broad
+quality claim, broad performance claim, or speedup claim.
 
 ## Benchmark Depth
 
@@ -249,10 +308,175 @@ outlier handling
 threshold derivation
 ```
 
+`M4-BENCH-004` adds `bitnet mac benchmark-preflight`, a preflight receipt that
+does not run model inference and does not record timing results. The receipt
+captures the environment fields needed before timing drift can be interpreted:
+git commit, crate/build profile, macOS product/build version, expected M4 SoC
+and observed hardware probe, memory pressure snapshot, thermal pressure snapshot
+when available, power state, supported model cache state, disk headroom, model
+cache root, operator background-load notes, and explicit
+`invalid_comparison_reasons`.
+
+The preflight is a comparison gate, not a speed claim. A release benchmark can
+only interpret timing drift when the benchmark receipt and preflight identity
+match and `comparison_readiness.can_compare_timing=true`. Missing cache,
+low-disk headroom, missing macOS build evidence, or missing git identity turn
+the preflight into `invalid_for_comparison`; unavailable thermal/power/memory
+pressure probes and missing background-load notes remain advisory warnings.
+
+`M4-BENCH-007` adds `bitnet mac benchmark --calibrate`, a synthetic harness
+calibration receipt that does not load a model and does not claim model speed.
+The receipt records the `std::time::Instant` clock source and observed
+resolution, runner overhead, warm-up and sample-discard policy, synthetic timing
+fixtures, profile timeout rules, and invalid-comparison reasons. It is a
+precondition for interpreting later benchmark envelopes, not a benchmark
+envelope itself.
+
+`M4-BENCH-002` publishes the committed dense SLM `slm-benchmark-v2` summaries
+from `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/` as the
+current full-profile benchmark envelope for the supported Qwen model set. Each
+summary is a release-mode `apple_m4_slm_benchmark_v2` receipt with the nine
+required profiles, 201 prompt runs, exact model SHA identity,
+`selected_backend=apple-m4-cpu-neon`, `fallback_used=false`, p50/p90/p99 plus
+min/max profile stats, and dense-only claim boundaries. The release
+`mac receipts-check ... --json` validator passes for all three summaries.
+
+| Model | TTFT p50 | Input tok/s p50 | Output tok/s p50 | Decode tok/s p50 | Peak memory p50 |
+|---|---:|---:|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 2150 ms | 21.701 | 1.708 | 15.652 | 4051.297 MB |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 2150 ms | 21.698 | 3.079 | 15.653 | 4053.719 MB |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 8184 ms | 5.773 | 0.357 | 4.808 | 8395.047 MB |
+
+These are bounded M4 Mac mini dense SLM benchmark receipts only. They do not
+prove BitNet performance, broad Apple Silicon performance, MacBook behavior,
+Metal inference, QK256, Neural Engine, MPSGraph, or a speedup.
+
 `M4-BENCH-006` keeps BitNet timing variance explicit instead of relying on the
 shared benchmark envelope alone. It records one-shot and warm-session run
 counts, sample counts, timeout-stage accounting, variance bands, outlier
 handling, and advisory-vs-failure thresholds for the accepted BitNet artifact.
+
+`M4-BENCH-008` is the harness prerequisite for `M4-BENCH-005`. The current
+`bitnet mac benchmark --repeat <n>` surface writes an
+`apple_m4_benchmark_variance_v1` aggregate over repeated dense SLM benchmark v2
+child summaries. The aggregate records repeat count, completed count, profile
+count, sample count, model cache identity, backend/fallback state, variance
+band, outlier handling, invalid-comparison reasons, child summary receipts, and
+strict claim boundaries. The validator requires release-mode
+`apple-m4-cpu-neon`, `fallback_used=false`, a non-empty v2 profile set, one
+metric sample per completed repeat, matching repeat/profile counts, generated
+text/token-ID evidence flags, and no broad quality/performance, BitNet, Metal,
+QK256, Neural Engine, MPSGraph, MacBook, or speedup claim.
+
+The committed harness smoke at
+`ci/hardware/apple-m4-mac-mini/2026-05-19T0746Z/benchmark-variance/harness-smoke.json`
+uses `qwen2.5-0.5b-instruct-q8_0`, `short_prompt_16_out`, and `--repeat 2`.
+It is harness evidence only. `M4-BENCH-005` remains responsible for publishing
+live dense Qwen variance envelopes for the supported M4 dense SLM identities.
+BitNet one-shot and warm-session timing variance stays in `M4-BENCH-006`,
+using the accepted BitNet artifact and external tokenizer authority.
+
+`M4-BENCH-009` closes the timeout-policy gap found while starting the live
+dense variance run. The calibration receipt already declared per-profile
+timeout rules, including `context_4k=720s`, but `mac benchmark` did not enforce
+them. A local diagnostic run of the default dense model produced a first
+`context_4k` prompt at roughly 1,032.7s, so that attempt is non-comparable and
+must not be published as a variance envelope. The benchmark now runs each dense
+profile through a child `slm-warm-session` process, kills the child when the
+calibrated profile timeout is reached, writes an
+`apple_m4_slm_benchmark_profile_timeout` receipt, and keeps that profile
+invalid for envelope comparison. The committed enforcement smoke at
+`ci/hardware/apple-m4-mac-mini/2026-05-19T0939Z/benchmark-timeout-enforcement/harness-smoke.json`
+uses `qwen2.5-0.5b-instruct-q8_0`, `short_prompt_16_out`, and `--repeat 2` to
+prove the child-process benchmark path still validates for a bounded profile.
+
+`M4-BENCH-010` is the timeout-aware aggregation prerequisite found by the first
+live `M4-BENCH-005` attempt. The default Q8 dense model reached the enforced
+`context_4k` boundary at 720 seconds, wrote a valid
+`apple_m4_slm_benchmark_profile_timeout` receipt with
+`status=invalid_for_comparison`, `fallback_used=false`, and
+`profile_timeout_exceeded:context_4k:720s`, then the variance command aborted
+instead of writing a parent aggregate. The aggregate path now treats timed-out
+profiles as invalid profile entries, skips them from timing and throughput
+samples, propagates invalid-comparison reasons into child
+`apple_m4_slm_benchmark_v2` and parent `apple_m4_benchmark_variance_v1`
+receipts, and validates those receipts without converting timeout evidence into
+a successful timing sample. This is still a prerequisite only:
+`M4-BENCH-005` remains responsible for the live dense Qwen variance envelopes,
+and BitNet variance remains `M4-BENCH-006`.
+
+`M4-BENCH-005` publishes the first live dense Qwen repeatability receipts from
+`ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/`. Each
+supported dense Qwen identity was checked with `bitnet mac benchmark-preflight`
+and then run through release-mode
+`bitnet --device apple-m4-cpu-neon mac benchmark --repeat 2` over the nine
+required profiles. The aggregate receipts validate as
+`apple_m4_benchmark_variance_v1`, record `fallback_used=false`, preserve raw
+repeat samples with no outlier filtering, and carry dense-only claim
+boundaries.
+
+| Model | Repeats | Samples | Prompt runs | Generated tokens | Comparison status | Invalid-comparison reasons |
+|---|---:|---:|---:|---:|---|---|
+| `qwen2.5-0.5b-instruct-q8_0` | 2 | 18 | 402 | 4300 | `invalid_for_comparison` | `profile_timeout_exceeded:context_4k:720s` |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 2 | 18 | 402 | 4780 | `invalid_for_comparison` | `profile_timeout_exceeded:context_4k:720s` |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 2 | 18 | 402 | 3586 | `invalid_for_comparison` | `profile_timeout_exceeded:long_prompt_128_out:420s`; `profile_timeout_exceeded:context_1k:360s`; `profile_timeout_exceeded:context_4k:720s` |
+
+These receipts are useful repeatability and timeout-behavior evidence, not
+final comparable timing envelopes. Because at least one calibrated profile
+timed out for every model, `comparison_readiness.can_compare_timing=false` and
+timing drift must not be interpreted from these aggregates. BitNet one-shot and
+warm-session variance remains scoped to `M4-BENCH-006`; this evidence does not
+claim BitNet timing variance, BitNet chat or serve behavior, Metal, QK256,
+Neural Engine, MPSGraph, MacBook evidence, speedup, broad model quality, or
+broad Apple Silicon performance.
+
+`M4-BENCH-006` publishes the first explicit BitNet repeatability and variance
+receipt for the accepted Microsoft I2_S artifact/tokenizer identity:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json
+```
+
+The release-mode command repeats the full `mac bitnet-benchmark` contract twice.
+Each repeat runs one `mac ask` prompt and one fixed three-prompt warm session,
+then the parent aggregate records repeat count, completed count, path count,
+sample count, child summary receipts, timeout-stage accounting, raw p50/p90/p99
+bands, min/max samples, outlier policy, and advisory-vs-failure threshold
+language. The aggregate and all child receipts validate through
+`target/release/bitnet mac receipts-check ... --json`.
+
+| Field | Value |
+|---|---:|
+| Repeats requested/completed | 2 / 2 |
+| Path samples | 4 |
+| Prompt runs | 8 |
+| Generated tokens | 16 |
+| Timeouts | 0 |
+| TTFT p50/p90/p99 | 7491 / 8486 / 8486 ms |
+| Input tok/s p50/p90/p99 | 2.422 / 2.428 / 2.428 |
+| Output tok/s p50/p90/p99 | 0.251 / 0.251 / 0.251 |
+| Decode tok/s p50/p90/p99 | 2.082 / 2.083 / 2.083 |
+| Peak memory p50/p90/p99 | 4322.875 / 4327.438 / 4327.438 MB |
+
+The receipt preserves model SHA
+`4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162`, tokenizer
+SHA `e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7`,
+`selected_backend=apple-m4-cpu-neon`, and `fallback_used=false`. It is bounded
+BitNet one-shot and fixed warm-session variance evidence only; it does not
+enable BitNet chat or serve, prove dense SLM behavior, claim broad BitNet
+quality, claim broad Apple Silicon performance, or widen Metal, QK256, Neural
+Engine, MPSGraph, or MacBook support.
+
+`M4-BENCH-003` wires benchmark receipts into the direct
+`bitnet mac regression <current.json> --baseline <matching-baseline.json>`
+path after the dense and BitNet variance lanes. Direct regression now accepts
+`apple_m4_benchmark_variance_v1` baselines when the dense variance receipt is
+valid for timing comparison, continues to compare `apple_m4_slm_benchmark_v2`
+and `bitnet_apple_m4_benchmark_v1`, and labels drift warnings by category so
+timing, memory, and quality signals stay separate from identity failures. A
+dense variance receipt with `comparison_readiness.can_compare_timing=false`
+or non-empty `invalid_comparison_reasons` remains a comparison blocker, not a
+zero-warning timing result.
 
 ## Drift Thresholds
 
@@ -316,9 +540,50 @@ redistribution boundary, file size, SHA256, tokenizer authority, prompt
 template identity, local cache path, symlink target when used, and repair
 command.
 
+`M4-REPRO-002` publishes that manifest through `bitnet model verify <model-id>
+--json` and the local `bitnet-model-cache.json` written after successful cache
+verification. The manifest artifact kind is `m4_supported_model_provenance`;
+it records upstream repo/revision/URL, license or redistribution boundary,
+artifact size and SHA256, tokenizer authority and SHA status, prompt-template
+identity, cache path, explicit verify path, symlink target when present, and
+structured fetch/verify/prune repair commands. Dense Qwen tokenizer SHA is
+recorded as embedded GGUF metadata bound to the model SHA; the accepted BitNet
+artifact records the external tokenizer JSON SHA from the artifact authority
+lane.
+
+`M4-REPRO-003` adds runtime prompt-generation identity to the receipt surface.
+Dense SLM and BitNet eval, ask, warm/chat, and serve receipts should carry a
+`prompt_generation_identity` object with template family/source/hash, tokenizer
+authority, stop criteria and stop hashes, generation parameters and parameter
+hash, plus an overall identity hash. Receipt validation treats those hashes as
+comparison hygiene only: they make mismatched templates, stop rules, or sampling
+parameters visible before regression comparison, but they do not prove improved
+quality, speed, chat enablement, serve readiness, or acceleration.
+`M4-REPRO-004` tightens that validation by comparing canonical prompt-template
+families instead of raw labels, so aliases for the same Qwen2.5 ChatML template
+such as `qwen2.5` and `qwen25-chat` do not block otherwise valid dense M4
+receipts while genuinely different template families still fail.
+
 Dense SLMs also get a bounded reference-vs-Rust control so reference runner,
 template, tokenizer, and Rust behavior can be distinguished without using that
 control as broad model-quality evidence.
+`M4-DENSE-REF-000` must land before live dense comparison receipts: it defines
+the `apple_m4_slm_reference_vs_rust_comparison_v1` receipt contract and
+validator for supported Qwen identities, reference-runner command identity,
+prompt/template/tokenizer authority, Rust token IDs, mechanical-score deltas,
+summary totals, token-ID availability, and claim-boundary flags. `M4-DENSE-REF-001`
+then records the bounded live comparison evidence against that validator.
+The validator is exercised by
+`crates/bitnet-cli/tests/fixtures/apple-m4-dense-reference-vs-rust-comparison.json`;
+that fixture is schema evidence only and does not stand in for reference-runner
+or live Rust M4 output.
+`M4-DENSE-REF-001` records the bounded live comparison under
+`ci/hardware/apple-m4-mac-mini/2026-05-18T1115Z/slm-reference-vs-rust/` for
+the three supported Qwen identities. The receipts compare 7 deterministic
+quality prompts against `llama-cli` CPU-only `-ngl 0` reference output and Rust
+`apple-m4-cpu-neon` `mac validate` output. Reference generated token IDs are
+recorded as unavailable because the reference runner does not expose them in
+this path; Rust generated token IDs remain recorded.
 
 ## BitNet Ladder
 
@@ -476,6 +741,171 @@ identity and publishes bounded receipts, and `M4-BITNET-EX-012` decides whether
 the next honest step is a 500-case BitNet expansion or corpus/scoring repair.
 Trend and release gates depend on that decision instead of treating the
 100-case larger-corpus recommendation as sufficient.
+
+`M4-BITNET-EX-010` adds
+`ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml`, preserving the
+accepted Microsoft I2_S GGUF identity, external tokenizer authority,
+`bitnetcpp-answer` prompt template, mechanical scorer contract, and false
+runtime/quality/performance/chat/serve claim boundaries. The 250-case
+distribution is weighted toward weak or variable families from the 100-case
+history: arithmetic_exact=15, numeric_tolerance=35, fixed_table_qa=35,
+format_constrained_json=20, closed_label_classification=20,
+synthetic_extraction=25, ordering_sorting=20, rewrite_normalized=20,
+constrained_summary=30, and required_forbidden_tokens=30. This is corpus
+definition and dry-run validation only; runtime pass rates wait for
+`M4-BITNET-EX-011`.
+
+`M4-BITNET-EX-011` runs that 250-case BitNet corpus on the M4 Mac mini through
+the accepted Microsoft I2_S GGUF, accepted external tokenizer, and
+`apple-m4-cpu-neon` backend:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus-runs/*.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/receipts-check.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/regression-vs-2026-05-17T1417Z.json
+ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/larger-corpus-decision.json
+```
+
+The receipt records 250 mechanically scored cases, 196 passes, 54
+quality-failed cases, zero timeouts, `fallback_used=false`, generated token IDs
+for every case, and 2,086 generated tokens. The compact summary records timing
+and throughput p50/p90/p99 from per-case receipts; first-token p50 is 17,087 ms,
+input tok/s p50 is 1.601, output tok/s p50 is 0.231, and decode steady-state
+tok/s p50 is 1.423. These numbers describe this bounded run only, not a
+performance envelope.
+
+| Task family | Current Rust pass rate | Main failure categories |
+|---|---:|---|
+| arithmetic_exact | 14 / 15 | `answer_content=1` |
+| numeric_tolerance | 24 / 35 | `answer_content=11`, `format_only=2` |
+| fixed_table_qa | 23 / 35 | `factual_table=12` |
+| format_constrained_json | 20 / 20 | none |
+| closed_label_classification | 18 / 20 | `answer_content=2` |
+| synthetic_extraction | 19 / 25 | `extraction=6` |
+| ordering_sorting | 17 / 20 | `answer_content=3` |
+| rewrite_normalized | 15 / 20 | `answer_content=5` |
+| constrained_summary | 24 / 30 | `answer_content=6` |
+| required_forbidden_tokens | 22 / 30 | `answer_content=8` |
+
+Strict regression against the 100-case `2026-05-17T1417Z` baseline is blocked
+by design because the corpus name, case count, and selected case IDs differ.
+The context-mismatch artifact records `matched_context=false` instead of
+pretending the two runs are comparable. This is bounded 250-case BitNet runtime
+evidence only; it does not use dense Qwen evidence, does not make a broad
+BitNet quality or performance claim, and does not enable chat, serve, Metal,
+QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon performance, or
+speedup claims.
+
+`M4-BITNET-EX-012` records the larger-corpus decision from the 100-case and
+250-case evidence. The decision is repair-first, not 500-case expansion:
+`larger-corpus-decision.json` keeps `expand_to_500_cases_now=false` and
+`repair_corpus_scorer_template_first=true`. The reason is not runtime failure;
+the 250-case run completed with zero timeouts, zero `not_run` cases, 2,086
+generated tokens, and `fallback_used=false`. The blocker is evidence quality:
+numeric tolerance still has format-only failures, fixed-table QA records twelve
+factual-table misses, rewrite-normalized drops to 15/20, and no comparable
+250-case reference-vs-Rust output exists. The next BitNet eval work should
+repair scorer/template/normalization issues and rerun the 250-case receipt
+before approving a 500-case runtime campaign.
+
+The tracker keeps that repair-first decision explicit: `M4-BITNET-EX-013`
+repairs the 250-case scorer, template, normalization, and reference-comparison
+path without a runtime claim. `M4-BITNET-EX-014` now records the repaired
+250-case runtime refresh:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/receipts-check.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/regression-vs-2026-05-17T1903Z.json
+```
+
+The repaired run completed all 250 cases with `fallback_used=false`, zero
+timeouts, zero `not_run` cases, 2,086 generated tokens, and receipt validation
+over 251 receipts: 250 child receipts plus the aggregate. It passed 205/250
+quality gates and 210/250 mechanical scoring gates. The remaining quality
+failures are still bounded evidence, not a broad BitNet quality claim:
+
+| Family | Passed / Total | Notes |
+| --- | ---: | --- |
+| arithmetic_exact | 14 / 15 | `answer_content=1` |
+| numeric_tolerance | 24 / 35 | `answer_content=10`, `format_only=4` |
+| fixed_table_qa | 30 / 35 | `factual_table=5` |
+| format_constrained_json | 20 / 20 | all schema checks passed |
+| closed_label_classification | 18 / 20 | `answer_content=2` |
+| synthetic_extraction | 19 / 25 | `extraction=6` |
+| ordering_sorting | 17 / 20 | `answer_content=3` |
+| rewrite_normalized | 15 / 20 | quality gate 15/20; scoring gate 19/20 |
+| constrained_summary | 26 / 30 | `answer_content=4` |
+| required_forbidden_tokens | 22 / 30 | `answer_content=8` |
+
+The strict regression command against
+`2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json` correctly reports a
+context mismatch because corpus version `2.1.0` adds `contains_expected` and
+revised normalization while the prior receipt used corpus version `2.0.0`. The
+context-only operator deltas are +9 quality passes, -9 quality failures, zero
+timeout delta, +7 fixed-table passes, +2 constrained-summary passes, unchanged
+numeric-tolerance quality passes, and +4 rewrite scoring passes. Treat this as
+the first repaired 250-case baseline until a second repaired receipt exists.
+`M4-BITNET-EX-015` repeats that repaired run for matching history and records
+whether the next honest step is 500-case expansion, continued repair, or
+freezing the current BitNet quality envelope.
+
+`M4-BITNET-EX-015` now adds the second repaired 250-case BitNet CPU/NEON
+receipt:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T0133Z/bitnet-eval-250-repaired/answer-corpus.json
+```
+
+The run used the same accepted Microsoft I2_S GGUF SHA
+`4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162`,
+external tokenizer SHA
+`e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7`,
+`bitnetcpp-answer` prompt template, strict tokenizer, greedy deterministic
+generation, and `apple-m4-cpu-neon` backend with `fallback_used=false`.
+`mac receipts-check` passed for both the aggregate receipt and receipt
+directory. The aggregate records 250/250 child receipts, 2,043 generated
+tokens, and zero timeouts.
+
+Matched-context regression against
+`2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus.json` is advisory and
+`matched_context=true`, but it reports quality regressions: quality summary
+199/250 versus 205/250 baseline, scoring summary 202/250 versus 210/250
+baseline, and 26 quality/task-family warnings. The next decision is therefore
+**keep repairing**, not 500-case expansion and not freezing a stronger BitNet
+quality envelope.
+
+| Family | Current Passed / Total | Baseline Passed / Total | Delta |
+| --- | ---: | ---: | ---: |
+| arithmetic_exact | 14 / 15 | 14 / 15 | 0 |
+| numeric_tolerance | 21 / 35 | 24 / 35 | -3 |
+| fixed_table_qa | 30 / 35 | 30 / 35 | 0 |
+| format_constrained_json | 19 / 20 | 20 / 20 | -1 |
+| closed_label_classification | 17 / 20 | 18 / 20 | -1 |
+| synthetic_extraction | 19 / 25 | 19 / 25 | 0 |
+| ordering_sorting | 16 / 20 | 17 / 20 | -1 |
+| rewrite_normalized | 15 / 20 | 15 / 20 | 0 |
+| constrained_summary | 27 / 30 | 26 / 30 | +1 |
+| required_forbidden_tokens | 21 / 30 | 22 / 30 | -1 |
+
+The observed wall run lasted about 5h08m from harness start to aggregate
+timestamp. Case latency distribution was p50 20.2s, p90 58.2s, p99 105.2s, and
+max 117.7s; the slowest cases were constrained-summary and
+required/forbidden-token prompts. This is timing evidence for this repaired
+BitNet eval run only, not a broad BitNet performance claim.
+
+`M4-BITNET-EX-013` now stages the repair as a dry-run-only corpus/scorer
+contract update. The repaired 250-case corpus is version `2.1.0` and keeps the
+same accepted Microsoft I2_S GGUF identity, external tokenizer authority, and
+`bitnetcpp-answer` prompt template. It records closed-form YAML expected
+answers as authority, uses `contains_expected` for fixed-table prose answers,
+uses final-answer numeric extraction for numeric tolerance, keeps rewrite
+normalization limited to casing, punctuation, and whitespace, and records the
+reference-vs-Rust 250-case sidecar as not yet supplied. This does not refresh
+approve the 500-case expansion.
 
 `M4-BITNET-EX-003` publishes the first BitNet one-shot benchmark envelope for
 the accepted artifact/tokenizer identity through the `mac bitnet-benchmark`
@@ -700,6 +1130,32 @@ multi-turn history, timeout/cancel behavior, per-turn receipts, generated text,
 token IDs, backend, fallback state, and model/tokenizer identity before the CLI
 surface is treated as excellent.
 
+`M4-DENSE-CHAT-001` adds `bitnet mac chat-smoke` as a dense-only conformance
+route for that proof. The command runs a bounded two-prompt resident session
+through the same dense chat path, writes per-turn receipts plus an aggregate
+`apple_m4_slm_chat_smoke` receipt, and validates prompt-template identity, stop
+behavior, timeout/cancel metadata, generated text, token IDs, backend,
+fallback state, model SHA, and tokenizer authority.
+
+Current M4 evidence is recorded under:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/
+```
+
+It covers the supported dense identities:
+
+```text
+qwen2.5-0.5b-instruct-q8_0
+qwen2.5-0.5b-instruct-q4_k_m
+qwen2.5-1.5b-instruct-q4_k_m
+```
+
+This is bounded dense SLM chat-route conformance. It is not BitNet chat
+evidence, broad model-quality evidence, a server claim, a full Metal inference
+claim, a QK256 claim, Neural Engine or MPSGraph execution, MacBook evidence, a
+speedup claim, or a broad Apple Silicon performance envelope.
+
 Service proof is separate from CLI proof. Dense SLM serve and later BitNet
 serve need receipts for:
 
@@ -738,9 +1194,24 @@ recommended next command
 route envelope class
 ```
 
-`bitnet mac status`, `doctor`, `report-refresh`, and
-`regression-dashboard` remain model-free by default. Live model runs belong in
-local, advisory, scheduled, or release lanes.
+`bitnet mac evidence` is the operator-facing summary for that view. It reads
+the model catalog, disk/cache state, committed report inventory, and regression
+dashboard groups, then writes an `apple_m4_operator_evidence_summary` receipt
+without running live inference or downloading models. `bitnet mac status`,
+`doctor`, `report-refresh`, and `regression-dashboard` remain model-free by
+default. Live model runs belong in local, advisory, scheduled, or release lanes.
+`bitnet mac report-refresh --explain --open-targets` and
+`bitnet mac regression-dashboard --explain --open-targets` expose the same
+model-free operator contract in a more navigable form: status meanings,
+per-family or per-group reasons, receipt/Markdown/report targets, and the
+command to run next. `comparable` means matching-history comparison can proceed;
+`warning` requires operator review; `failed` blocks claims until the receipt is
+repaired; `insufficient_history` means a second matching report is needed.
+`bitnet mac status` and `bitnet mac doctor` also keep dense SLM and BitNet
+readiness separate: dense routes report default-model cache repair, BitNet
+routes report one-shot/warm readiness, BitNet chat and serve remain disabled
+until their gates pass, and both surfaces point at the latest matching receipt
+families used for operator context.
 
 Envelope classes should translate evidence into local user expectations:
 
@@ -758,6 +1229,37 @@ Before the public M4 expectation envelope changes, a go/no-go matrix should say
 which dense SLM, BitNet, benchmark, stability, service, operator, and
 claim-boundary gates passed. A missing BitNet chat or serve gate remains a
 missing feature, not a documentation issue.
+
+`M4-CLAIM-LINT-001` adds static publication hygiene for M4 docs, generated
+status, operator envelope text, and operator-facing command strings. It should
+reject unsupported broad Apple Silicon, MacBook, full Metal, Neural Engine,
+MPSGraph, QK256, dense-as-BitNet, broad quality/performance, or speedup wording
+unless the wording is tied to a matching accepted receipt gate.
+
+`M4-GATE-HYGIENE-001` keeps the code-health gate surface honest for this lane:
+`check-no-panic-family` must be clean or explicitly justified before the M4 CI
+and release-gate items are treated as ready. This is gate hygiene only; it does
+not prove runtime quality, speed, BitNet behavior, or any Apple backend support.
+
+`M4-STABILITY-002` keeps operator repair flows explicit and non-destructive:
+`bitnet mac doctor --json --include-bitnet` records dense SLM cache state, BitNet
+ask/warm readiness, stale-symlink state, disk pressure, and repair guidance, and
+`bitnet model prune --dry-run --json` records what supported model-cache entries
+would be removed before any deletion is attempted. These are cache and disk
+repair receipts only; they do not run live inference by default or prove model
+quality, speed, BitNet chat/serve readiness, or any wider backend support.
+
+`M4-SETUP-001` records the first-run operator path as setup evidence under
+`ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/`. The setup bundle
+captures `bitnet mac models` before and after fetching the accepted BitNet
+artifact, `bitnet model verify` JSON for the dense default and Microsoft I2_S
+BitNet artifact, `bitnet mac doctor --include-bitnet` with live inference
+skipped by default, and a dense `bitnet mac smoke --model-id
+qwen2.5-0.5b-instruct-q8_0` aggregate plus answer receipt. Its
+`apple_m4_first_run_setup_summary` receipt is a setup summary only: BitNet chat
+and serve remain disabled, BitNet live smoke is not claimed by that summary, and
+broad quality, performance, speedup, full Metal, QK256, Neural Engine,
+MPSGraph, or MacBook claims remain out of scope.
 
 ## Metal Boundary
 

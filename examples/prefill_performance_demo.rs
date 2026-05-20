@@ -14,7 +14,7 @@ use std::env;
 use std::time::Instant;
 
 #[cfg(feature = "examples")]
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
 
@@ -188,7 +188,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(not(feature = "examples"))]
-fn main() {
+pub fn main() {
     println!("This example requires the 'examples' feature to be enabled.");
     println!("Run with: cargo run --example prefill_performance_demo --features examples");
 }

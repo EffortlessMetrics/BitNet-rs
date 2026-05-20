@@ -1,0 +1,22 @@
+timestamp = "2026-05-19T10:29:54Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-014B"
+event = "merged"
+pr = 5918
+head_sha = "369c8e933ba52d3a576afc7dac89b55261f152e2"
+merge_sha = "e525ef3a364b8592bf0de9314139b9629aac7318"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "codex/cuda-model-014-qwen3-server-ready-accept"
+summary = "Merged PR #5918 accepting Qwen3 exact-profile server readiness."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5918",
+  "docs/reports/CUDA_MODEL_014B_QWEN3_EXACT_PROFILE_SERVER_READY.md",
+]
+
+notes = [
+  "Qwen3 server_ready=true is exact-profile only for the committed RTX 5070 Ti non-streaming shared-engine /v1/chat/completions dense_regular_llm_cuda receipt.",
+  "Speedup, benchmark-qualified speed, full CUDA residency, broad dense GGUF readiness, Qwen2.5 inheritance, and BitNet packed I2_S/QK256 proof remain false/non-claims.",
+]

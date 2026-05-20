@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T22:59:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-019"
+event = "merged"
+pr = 5792
+branch = "codex/lunar-lake/LNL258V-ROUTE-019-warm-resident"
+head_sha = "0ed82d80922cd21448b6e335da7bf68a3e490755"
+merge_sha = "9e87497e9422dac010410fdbd4ac0b1146c4397e"
+actor = "codex"
+summary = "Merged LNL258V-ROUTE-019 after adding warm-resident route-profile evidence."
+
+notes = [
+  "PR #5792 added warm_resident to the Lunar Lake route promotion/profile comparison and regression surfaces.",
+  "The refreshed artifacts index existing OpenVINO NPU resident-session/cache evidence as warm-route context while preserving candidate-only NPU status.",
+  "Cold-start blockers remain scoped to cold NPU profiles.",
+  "The merge did not run inference, promote routes, claim speedup or power advantage, claim Arc/NPU acceleration, claim native OpenCL/NPU execution, or change BitNet QK256/I2_S behavior.",
+]

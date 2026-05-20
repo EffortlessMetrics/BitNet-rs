@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T04:45:00Z"
+event = "merged"
+item = "LNL258V-ROUTE-016"
+branch = "codex/lunar-lake/LNL258V-ROUTE-016-openvino-gpu-profile-promotion"
+pr = 5774
+head_sha = "3fc68acb4b440ee1113685972cc9f297a5c229f3"
+merge_sha = "46e4cadf00e752f5ff7ae008c006ac1dafdf4524"
+actor = "codex"
+summary = "Merged LNL258V-ROUTE-016 after promoting dense Qwen OpenVINO GPU for benchmark-qualified ask_short and ask_normal profiles."
+
+notes = [
+  "The merged receipts keep regression_tiny on the dense Qwen CPU baseline and keep NPU candidate-only.",
+  "The auto ask receipt selected the OpenVINO GPU ask_short route with fallback_used=false and a bounded answer gate pass.",
+  "The merge does not claim NPU promotion, power advantage, native OpenCL/NPU execution, broad accelerator acceleration, full BitNet accelerator inference, or BitNet QK256/I2_S behavior changes.",
+]

@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 #[cfg(feature = "examples")]
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
 
@@ -159,4 +159,4 @@ fn create_tokenizer() -> Result<impl Tokenizer, Box<dyn std::error::Error>> {
 }
 
 #[cfg(not(feature = "examples"))]
-fn main() {}
+pub fn main() {}

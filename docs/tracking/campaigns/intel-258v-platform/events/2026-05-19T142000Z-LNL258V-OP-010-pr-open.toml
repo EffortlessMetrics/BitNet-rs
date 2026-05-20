@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:20:00Z"
+event = "pr_open"
+item = "LNL258V-OP-010"
+branch = "codex/lunar-lake/LNL258V-OP-010-structured-blocked-ask"
+pr = 5953
+head_sha = "01eb1789cd1bad42b5e955ab06541a4728cbdc5b"
+actor = "codex"
+summary = "Opened LNL258V-OP-010 to structure fail-closed blocked auto-route ask receipts."
+
+notes = [
+  "PR #5953 exposes low_power blocked auto-route candidate_routes and why_not_cpu/why_not_gpu/why_not_npu fields at top level and in route_selection.",
+  "Strict regression and operator comparison now carry the structured blocked ask evidence instead of relying only on the route_selection_error string.",
+  "The PR preserves no inference, no route promotion, no speedup, no power-advantage, no native accelerator, no acceleration, and no BitNet QK256/I2_S behavior-change claims.",
+]

@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T06:00:00Z"
+event = "superseded"
+item = "SLM-CPU-027"
+branch = "codex/slm-cpu-027-second-dense-sanity"
+actor = "codex"
+summary = "Superseded the duplicate second-dense-model sanity item after SLM-CPU-017 and SLM-CPU-017A provided the blocker and positive Qwen2.5 Q8_0 evidence."
+
+notes = [
+  "SLM-CPU-027 was retained as a blocked duplicate and should not be implemented as a new runtime slice.",
+  "The second-model sanity requirement is covered by SLM-CPU-017 and SLM-CPU-017A.",
+  "Superseding this duplicate lets the SLM CPU dashboard point at the next non-duplicative Kaby performance item.",
+]

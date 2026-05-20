@@ -1,0 +1,317 @@
+{
+  "allocation_audit": {
+    "enabled": false,
+    "method": "not_requested",
+    "scope": "not_requested"
+  },
+  "artifact_kind": "slm_apple_m4_warm_session_prompt",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark-prompts/03-answer-with-a-single-digit-22.json",
+  "case_id": "prompt_03",
+  "execution": {
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 2,
+    "phase": "warm_session_decode",
+    "prompt_tokens": 17,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon",
+    "thread_count": 1
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "kernel": {
+    "family": "i2_s",
+    "implementation": "scalar",
+    "kernel_id": "i2_s-scalar-reference"
+  },
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "sha256_rehash_skipped": true,
+    "sha256_source": "verified_mac_model_cache",
+    "tokenizer": "llama3"
+  },
+  "operator_ux": {
+    "aggregate_receipt_at_exit": true,
+    "clear_failure_messages": true,
+    "interactive_prompt_collection": false,
+    "model_tokenizer_loaded_once_status": "recorded_in_session_receipt",
+    "per_turn_receipts_enabled": true,
+    "progress_enabled": true,
+    "quiet_default_logs": false,
+    "quiet_requested": false,
+    "status_stream": "stderr",
+    "stdout_token_stream": false,
+    "stream_tokens_requested": false,
+    "time_to_first_token_receipt": true,
+    "token_stream": "disabled"
+  },
+  "prompt": "Answer with a single digit: 2+2=",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 8,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": false,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 1,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "20c52c04fcec40994be744252a3251ce1af63fcb655d29dbb1a624a609b87007",
+    "identity_sha256": "cdb268d5de82b8a5b8413a5a2e7e78d6d0ae0a97a043bf1db57095396087b03a",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "stop_string_window": null,
+      "stop_token_ids": [
+        128009,
+        128001
+      ]
+    },
+    "stop_criteria_sha256": "9505ad092f87c0177008daa89e0d653eef300fcf917191e74ba043805b5247c6",
+    "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+    "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+    "template": {
+      "family": "bitnetcpp-answer",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "bitnetcpp-answer",
+    "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+    "tokenizer_authority": {
+      "authority": "llama-bpe",
+      "sha256": null,
+      "source": "explicit",
+      "strict": true
+    }
+  },
+  "prompt_index": 2,
+  "prompt_policy": {
+    "qwen_no_think": false,
+    "template": "bitnetcpp-answer"
+  },
+  "prompt_prefill": {
+    "exercised": true,
+    "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+    "tokens": 16
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "rendered_sha256": "c792f6d2ca636d51e3af5c515ec1395a68be9922a9c15e1f974a412cfc6c986b",
+    "rendered_text": "User: Answer with a single digit: 2+2=<|eot_id|>Assistant: ",
+    "stop_sequences": [
+      "<|eot_id|>",
+      "<|end_of_text|>"
+    ],
+    "stop_token_ids": [
+      128009,
+      128001
+    ],
+    "template_family": "bitnetcpp-answer"
+  },
+  "quality": {
+    "distinct_generated_tokens": 2,
+    "failed_rules": [],
+    "gate_kind": null,
+    "gate_passed": true,
+    "generated_tokens": 2,
+    "min_distinct_generated_tokens": 1,
+    "min_generated_tokens": 1,
+    "mostly_text": true,
+    "no_replacement_chars": true,
+    "non_degenerate": true,
+    "non_empty": true,
+    "normalized_text": "4",
+    "passed": true,
+    "printable_utf8": true,
+    "valid_utf8": true
+  },
+  "repeat_index": 0,
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "session_artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/receipts/bitnet-mac-bitnet-warm-benchmark.json",
+  "session_reuse": {
+    "allocation_audit_buffers_reused": true,
+    "buffer_reuse_evidence": {
+      "buffers_cleared_without_reallocation": true,
+      "capacity_sufficient_for_prompt": true,
+      "decode_allocation_sample_capacity": 8,
+      "decode_timing_capacity": 8,
+      "generated_token_capacity": 8,
+      "generated_token_capacity_grew": false,
+      "generated_token_capacity_needed": 8,
+      "logits_capacity": 128256,
+      "logits_capacity_grew": false,
+      "logits_capacity_needed": 128256,
+      "prefill_allocation_sample_capacity": 16,
+      "previous_generated_token_capacity": 8,
+      "previous_logits_capacity": 128256,
+      "previous_stop_tail_capacity": 31,
+      "previous_token_capacity": 25,
+      "reset_reused_existing_capacity": true,
+      "stop_tail_capacity": 31,
+      "stop_tail_capacity_grew": false,
+      "stop_tail_capacity_needed": 31,
+      "token_capacity": 25,
+      "token_capacity_grew": false,
+      "token_capacity_needed": 25
+    },
+    "direct_greedy_logits_steps": 1,
+    "generated_token_buffer_reused": true,
+    "kv_cache_cleared_per_prompt": true,
+    "kv_cache_recreated_per_prompt": false,
+    "kv_cache_reuse_policy": "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+    "kv_cache_reused_across_prompts": true,
+    "logits_buffer_reuse_policy": "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer",
+    "logits_scratch_reuse_steps": 1,
+    "logits_vec_extraction_bypassed": true,
+    "logits_vec_extraction_steps": 0,
+    "model_loaded_once": true,
+    "prompt_token_buffer_reused": true,
+    "prompt_token_cache_enabled": true,
+    "prompt_token_cache_entry_count": 2,
+    "prompt_token_cache_hit": true,
+    "prompt_token_cache_policy": "rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts",
+    "reuse_scope": "resident_session",
+    "sampler_recreated_per_prompt": false,
+    "sampler_reuse_policy": "single_sampler_reused_for_temperature_zero_prompt_independence",
+    "sampler_reused_across_prompts": true,
+    "session_owned_buffers": true,
+    "stop_policy_precomputed_once": true,
+    "stop_sequence_count": 2,
+    "stop_tail_buffer_reused": true,
+    "stop_token_id_count": 2,
+    "timing_buffers_reused": true,
+    "tokenizer_loaded_once": true
+  },
+  "speedup_claim": false,
+  "text": "4",
+  "timestamp": "2026-05-19T22:47:07.733953+00:00",
+  "timing": {
+    "decode_steady_state_tok_s": 1.936,
+    "decode_total_ms": 1032.75,
+    "embed_ms": {
+      "count": 2,
+      "max_ms": 0.004,
+      "mean_ms": 0.003,
+      "min_ms": 0.002,
+      "p50_ms": 0.002,
+      "p95_ms": 0.004,
+      "total_ms": 0.006
+    },
+    "first_token_decode_ms": 516.329,
+    "first_token_ms": 8486,
+    "forward_ms": {
+      "count": 2,
+      "max_ms": 471.509,
+      "mean_ms": 471.356,
+      "min_ms": 471.203,
+      "p50_ms": 471.203,
+      "p95_ms": 471.509,
+      "total_ms": 942.713
+    },
+    "logits_ms": {
+      "count": 2,
+      "max_ms": 44.813,
+      "mean_ms": 44.789,
+      "min_ms": 44.765,
+      "p50_ms": 44.765,
+      "p95_ms": 44.813,
+      "total_ms": 89.578
+    },
+    "model_load_ms": 0.0,
+    "prefill_ms": 7970.634,
+    "sample_ms": {
+      "count": 2,
+      "max_ms": 0.447,
+      "mean_ms": 0.223,
+      "min_ms": 0.0,
+      "p50_ms": 0.0,
+      "p95_ms": 0.447,
+      "total_ms": 0.447
+    },
+    "sampling_ms_per_token": 0.223,
+    "session_model_load_ms": 4499.005,
+    "session_model_sha256_ms": 0.0,
+    "session_tokenizer_load_ms": 158.153,
+    "time_to_first_token_ms": 8486,
+    "token_decode_ms": {
+      "count": 2,
+      "max_ms": 0.003,
+      "mean_ms": 0.002,
+      "min_ms": 0.001,
+      "p50_ms": 0.001,
+      "p95_ms": 0.003,
+      "total_ms": 0.004
+    },
+    "tokenize_ms": 0.0,
+    "tokenizer_load_ms": 0.0,
+    "total_ms": 9003.402
+  },
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "model_family": "llama3",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "tokens": {
+    "generated": 2,
+    "generated_ids": [
+      19,
+      128009
+    ],
+    "ids": [
+      19,
+      128009
+    ],
+    "prompt": 17,
+    "prompt_ids": [
+      1502,
+      25,
+      22559,
+      449,
+      264,
+      3254,
+      16099,
+      25,
+      220,
+      17,
+      10,
+      17,
+      28,
+      128009,
+      72803,
+      25,
+      220
+    ],
+    "total": 19
+  }
+}

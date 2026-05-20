@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T23:28:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-014"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5795
+head_sha = "6daf6cf08afb4ce9b5757f48159bb2847378afd1"
+merge_sha = "e2658842e453e23462dd5c17838fefdc844534b9"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-014-bitnet-250-repaired-run"
+
+notes = [
+  "Closed M4-BITNET-EX-014 after PR #5795 merged the repaired BitNet 250-case M4 CPU/NEON receipt set.",
+  "The merged evidence records 250 completed cases, zero timeouts, fallback_used=false, 205/250 quality passes, 210/250 mechanical scoring passes, aggregate plus child receipt validation, prompt-generation identity, task-family summaries, and a context-mismatch/new-baseline statement against the unrepaired 2.0.0 baseline.",
+  "No BitNet chat, serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad Apple Silicon, broad BitNet quality, broad performance, or dense-SLM-as-BitNet claim was added.",
+]

@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T17:36:46Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-013"
+event = "merged"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "merged"
+pr = 5727
+head_sha = "75326d3f833eae90ce584a16c85e8bc033387a54"
+merge_sha = "50821320612b09156635eb31cf0eb309bd8d7862"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-013-bitnet-250-repair"
+
+notes = [
+  "Closed M4-BITNET-EX-013 after PR #5727 merged the BitNet 250-case corpus/scorer repair contract.",
+  "The repair bumped the 250-case corpus to 2.1.0, recorded closed-form expected-answer authority, added fixed-table contains_expected scoring, tightened numeric final-answer extraction, broadened rewrite punctuation/space normalization, and recorded the missing 250-case reference-vs-Rust sidecar.",
+  "No fresh BitNet runtime proof, 500-case expansion approval, chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad quality/performance claim was added.",
+]

@@ -12,13 +12,7 @@ on:
       - '.github/workflows/compatibility.yml'
   pull_request:
     branches: [main]
-    paths:
-      - 'crates/**'
-      - 'crossval/**'
-      - 'xtask/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - '.github/workflows/compatibility.yml'
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,8 +24,73 @@ env:
   CARGO_TARGET_DIR: ${{ github.workspace }}/target
 
 jobs:
+  route-msrv:
+    name: Route MSRV Compatibility
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      selected: ${{ steps.route.outputs.selected }}
+      reason: ${{ steps.route.outputs.reason }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether MSRV is selected
+        id: route
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref || github.ref_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+
+          selected=false
+          reason="ordinary PR without MSRV label or compatibility-risk paths"
+
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            selected=true
+            reason="$EVENT_NAME"
+          elif python - "$LABELS_JSON" <<'PY'
+          import json
+          import sys
+
+          labels = set(json.loads(sys.argv[1] or "[]"))
+          selected = bool(labels & {"msrv", "compatibility", "full-ci"})
+          sys.exit(0 if selected else 1)
+          PY
+          then
+            selected=true
+            reason="explicit msrv/compatibility/full-ci label"
+          else
+            if [ -n "${BASE_SHA:-}" ] && changed="$(git diff --name-only "$BASE_SHA"...HEAD 2>/dev/null)"; then
+              :
+            elif changed="$(git diff --name-only "origin/$BASE_REF"...HEAD 2>/dev/null)"; then
+              :
+            else
+              git fetch --no-tags --depth=50 origin "$BASE_REF" >/dev/null 2>&1 || true
+              changed="$(git diff --name-only "origin/$BASE_REF"...HEAD 2>/dev/null || git diff --name-only HEAD~1..HEAD 2>/dev/null || true)"
+            fi
+            if printf '%s\n' "$changed" | grep -E '^(Cargo\.toml|Cargo\.lock|rust-toolchain\.toml|\.cargo/|crates/[^/]+/Cargo\.toml|crates/[^/]+/src/lib\.rs|crates/[^/]+/src/api/|crates/bitnet-ffi/|crates/bitnet-py/|COMPATIBILITY\.md|MIGRATION\.md|docs/release/|\.github/workflows/compatibility\.yml|policy/ci-risk-packs\.toml)' >/dev/null; then
+              selected=true
+              reason="manifest/toolchain/public API/release compatibility paths changed"
+            fi
+          fi
+
+          echo "selected=$selected" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          {
+            echo "### MSRV route"
+            echo "- selected: $selected"
+            echo "- reason: $reason"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   msrv:
     name: Minimum Supported Rust Version
+    needs: route-msrv
+    if: needs.route-msrv.outputs.selected == 'true'
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     env:
@@ -128,6 +187,8 @@ jobs:
 
   msrv-workspace-informational:
     name: MSRV Workspace Coverage (informational)
+    needs: route-msrv
+    if: needs.route-msrv.outputs.selected == 'true'
     runs-on: ubuntu-22.04
     continue-on-error: true
     timeout-minutes: 20

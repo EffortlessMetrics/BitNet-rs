@@ -372,6 +372,9 @@ memory_drift_mb
 The operator command is:
 
 ```bash
+bitnet mac benchmark --calibrate \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/benchmark/calibration.json
+
 target/release/bitnet --device apple-m4-cpu-neon mac benchmark \
   --model-id <model-id> \
   --profile short_prompt_16_out \
@@ -386,7 +389,24 @@ target/release/bitnet --device apple-m4-cpu-neon mac benchmark \
   --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-benchmark-v2/<model-id>/summary.json
 ```
 
-The receipt kind is `apple_m4_slm_benchmark_v2`. Each profile is one
+The current published `M4-BENCH-002` full-profile summaries are:
+
+| Model | Receipt | Prompt runs | Generated tokens | Receipt check |
+|---|---|---:|---:|---|
+| `qwen2.5-0.5b-instruct-q8_0` | `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json` | 201 | 2382 | pass |
+| `qwen2.5-0.5b-instruct-q4_k_m` | `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json` | 201 | 2543 | pass |
+| `qwen2.5-1.5b-instruct-q4_k_m` | `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json` | 201 | 2262 | pass |
+
+Each summary covers `short_prompt_16_out`, `short_prompt_64_out`,
+`long_prompt_16_out`, `long_prompt_128_out`, `context_1k`, `context_4k`,
+`resident_25`, `resident_50`, and `resident_100`. The reports are comparable
+only inside their recorded model, tokenizer, backend, runtime API, fallback
+state, profile set, and M4 Mac mini identity.
+
+The calibration receipt kind is `apple_m4_benchmark_calibration`; it records
+synthetic harness timing only and does not load a model or claim model speed.
+
+The live benchmark receipt kind is `apple_m4_slm_benchmark_v2`. Each profile is one
 resident warm-session run with model/tokenizer reuse visible inside that
 profile. The memory drift field is based on `getrusage.ru_maxrss`, so it is a
 process peak delta and not a live RSS measurement.

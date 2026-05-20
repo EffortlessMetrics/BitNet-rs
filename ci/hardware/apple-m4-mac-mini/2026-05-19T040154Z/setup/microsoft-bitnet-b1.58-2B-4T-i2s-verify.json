@@ -1,0 +1,170 @@
+{
+  "id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+  "path": "/Users/steven/Library/Caches/bitnet-rs/models/microsoft-bitnet-b1.58-2B-4T-i2s/ggml-model-i2_s.gguf",
+  "expected_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+  "actual_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+  "expected_bytes": 1187801280,
+  "actual_bytes": 1187801280,
+  "passed": true,
+  "model": {
+    "id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+    "aliases": [
+      "microsoft-bitnet-b1.58-2b-4t-i2s",
+      "microsoft_bitnet_b158_2b_4t_gguf_i2s_current",
+      "microsoft/bitnet-b1.58-2B-4T-gguf",
+      "ggml-model-i2_s.gguf"
+    ],
+    "display_name": "Microsoft BitNet-b1.58 2B 4T I2_S",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+    "filename": "ggml-model-i2_s.gguf",
+    "url": "https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/a1f2f1c765812aa8af3f6eda4a313707064bba15/ggml-model-i2_s.gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "bytes": 1187801280,
+    "architecture": "bitnet_b1_58",
+    "quantization": "I2_S/QK256",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "llama-bpe-external",
+    "tokenizer_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "tokenizer_sha256_status": "external_tokenizer_json_sha256_recorded",
+    "tokenizer_path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+    "chat_template": true,
+    "license_spdx": null,
+    "redistribution_boundary": "Redistribution boundary recorded instead of a repo-local license assertion: BitNet-rs pins the upstream Microsoft/Hugging Face GGUF URL, revision, size, and SHA256, but does not vendor or redistribute the artifact.",
+    "prompt_template": "bitnetcpp-answer",
+    "prompt_template_source": "MODEL-ARTIFACT-007 Microsoft BitNet.cpp answer prompt envelope",
+    "provenance_manifests": [
+      "ci/model-artifacts/artifact-manifest.toml",
+      "ci/model-artifacts/tokenizer-authority.toml",
+      "ci/quality/apple-m4-local-answer-model-artifacts.toml",
+      "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md"
+    ],
+    "model_contract": "microsoft_bitnet_b158_2b_4t_i2s",
+    "apple_m4_cpu_neon_supported": false,
+    "support_note": "Answer-ready BitNet artifact for backend gates when paired with external llama-bpe tokenizer authority and bitnetcpp-answer prompt authority. RTX 5070 Ti CUDA and x86 CPU routes require their own strict receipts; speedup_claim remains false unless profile-qualified."
+  },
+  "model_contract": {
+    "id": "microsoft_bitnet_b158_2b_4t_i2s",
+    "model_family": "bitnet_b1_58",
+    "artifact_format": "gguf",
+    "artifact_id": "microsoft_bitnet_b158_2b_4t_gguf_i2s_current",
+    "kernel_family": "i2_s_qk256",
+    "status": "reference_ready",
+    "architecture_support": [
+      {
+        "arch": "x86",
+        "kernel": "i2_s",
+        "status": "supported_reference"
+      },
+      {
+        "arch": "arm",
+        "kernel": "i2_s",
+        "status": "supported"
+      }
+    ],
+    "tokenizer_authority": "external_llama_bpe",
+    "prompt_authority": "bitnetcpp-answer",
+    "cpu_oracle": "x86_cpu_scalar_then_avx512_parity",
+    "accelerator_routes": [
+      {
+        "backend": "cpu-scalar",
+        "route": "bitnet_i2s_qk256_cpu_scalar",
+        "status": "oracle"
+      },
+      {
+        "backend": "cpu-avx2",
+        "route": "bitnet_i2s_qk256_cpu_avx2",
+        "status": "parity_lane"
+      },
+      {
+        "backend": "cpu-avx512",
+        "route": "bitnet_i2s_qk256_cpu_avx512",
+        "status": "parity_lane"
+      },
+      {
+        "backend": "nvidia-rtx-5070-ti-cuda",
+        "route": "bitnet_qk256_cuda",
+        "status": "strict_receipt_lane"
+      }
+    ],
+    "permitted_claims": [
+      "diagnostic_run",
+      "artifact_inspection",
+      "answer_ready",
+      "reference_authority",
+      "backend_parity",
+      "benchmark_baseline"
+    ],
+    "required_receipts": [
+      "answer_artifact_gate",
+      "prompt_authority_audit",
+      "strict_answer_corpus",
+      "cpu_cuda_answer_parity",
+      "execution_plan",
+      "fallback_free_backend_receipt",
+      "benchmark_profile_receipt"
+    ],
+    "claim_boundary": "Reference lane for x86 CPU and RTX 5070 Ti CUDA, but speedup and full-residency claims still require profile-specific receipts."
+  },
+  "artifact_provenance": {
+    "schema_version": "1.0.0",
+    "artifact_kind": "m4_supported_model_provenance",
+    "id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+    "display_name": "Microsoft BitNet-b1.58 2B 4T I2_S",
+    "source": {
+      "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+      "revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+      "url": "https://huggingface.co/microsoft/bitnet-b1.58-2B-4T-gguf/resolve/a1f2f1c765812aa8af3f6eda4a313707064bba15/ggml-model-i2_s.gguf",
+      "manifests": [
+        "ci/model-artifacts/artifact-manifest.toml",
+        "ci/model-artifacts/tokenizer-authority.toml",
+        "ci/quality/apple-m4-local-answer-model-artifacts.toml",
+        "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md"
+      ]
+    },
+    "license": {
+      "spdx": null,
+      "redistribution_boundary": "Redistribution boundary recorded instead of a repo-local license assertion: BitNet-rs pins the upstream Microsoft/Hugging Face GGUF URL, revision, size, and SHA256, but does not vendor or redistribute the artifact."
+    },
+    "artifact": {
+      "format": "gguf",
+      "filename": "ggml-model-i2_s.gguf",
+      "size_bytes": 1187801280,
+      "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+      "architecture": "bitnet_b1_58",
+      "quantization": "I2_S/QK256"
+    },
+    "tokenizer": {
+      "authority": "llama-bpe-external",
+      "model": "gpt2",
+      "pre_tokenizer": "llama-bpe-external",
+      "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "sha256_status": "external_tokenizer_json_sha256_recorded",
+      "external_path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+      "source": "external_tokenizer_file"
+    },
+    "prompt_template": {
+      "identity": "bitnetcpp-answer",
+      "identity_sha256": "214849536fa705541abf49607bfb3d2100257a79617286f3eafb26501ad17e47",
+      "source": "MODEL-ARTIFACT-007 Microsoft BitNet.cpp answer prompt envelope",
+      "chat_template_present": true
+    },
+    "local_cache": {
+      "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+      "cache_path": "/Users/steven/Library/Caches/bitnet-rs/models/microsoft-bitnet-b1.58-2B-4T-i2s/ggml-model-i2_s.gguf",
+      "metadata_path": "/Users/steven/Library/Caches/bitnet-rs/models/microsoft-bitnet-b1.58-2B-4T-i2s/bitnet-model-cache.json",
+      "verify_path": "/Users/steven/Library/Caches/bitnet-rs/models/microsoft-bitnet-b1.58-2B-4T-i2s/ggml-model-i2_s.gguf",
+      "path_role": "cache_path",
+      "symlink_target": null,
+      "symlink_status": "not_symlink"
+    },
+    "repair": {
+      "command": "bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "fetch_command": "bitnet model fetch microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "verify_command": "bitnet model verify microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "prune_command": "bitnet model prune microsoft-bitnet-b1.58-2B-4T-i2s --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+      "cache_state": "ready"
+    },
+    "claim_boundary": "Artifact provenance only for the accepted BitNet GGUF/tokenizer identity; does not prove BitNet chat, BitNet serve, Metal, QK256 acceleration, speedup, broad quality, or broad performance."
+  }
+}

@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T16:33:45Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-013"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-013-bitnet-250-repair"
+
+notes = [
+  "Started the BitNet 250-case repair item after M4-BITNET-EX-012 recorded a repair-first decision before any 500-case expansion.",
+  "Scope is limited to corpus, scorer, template-normalization, and reference-comparison plumbing for the accepted artifact/tokenizer identity; this is not a fresh runtime proof and does not enable BitNet chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad quality/performance claims.",
+]

@@ -1,0 +1,16 @@
+timestamp = "2026-05-19T07:22:01Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-002"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5887
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-002-p50-p90-p99"
+head_sha = "bab27e553c9e8299ebbe48ca4330c60df6483e3f"
+
+notes = [
+  "Opened PR #5887 to publish the existing dense SLM benchmark-v2 envelope for M4-BENCH-002.",
+  "The PR documents the three committed 2026-05-15T1845Z full-profile summaries and records release receipts-check validation for all supported dense Qwen model IDs.",
+  "The evidence is dense M4 benchmark evidence only and does not claim BitNet performance, broad Apple Silicon performance, MacBook behavior, Metal inference, QK256, Neural Engine, MPSGraph, or a speedup.",
+]

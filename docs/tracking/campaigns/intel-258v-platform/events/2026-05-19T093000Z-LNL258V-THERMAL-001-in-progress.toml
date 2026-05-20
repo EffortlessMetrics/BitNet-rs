@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T09:30:00Z"
+event = "in_progress"
+item = "LNL258V-THERMAL-001"
+branch = "codex/lunar-lake/LNL258V-THERMAL-001-thermal-zone-probe"
+actor = "codex"
+summary = "Started LNL258V-THERMAL-001 to improve Lunar Lake thermal telemetry visibility."
+
+notes = [
+  "The work keeps MSAcpi temperature readings as the preferred Windows thermal source, then falls back to visible Windows thermal-zone counter evidence when temperatures are unavailable.",
+  "The refreshed telemetry should record thermal-zone visibility without claiming measured thermal temperatures.",
+  "Low-power remains unpromoted; battery-mode, energy-proxy, and benchmark-qualified power-advantage evidence are still required.",
+  "The claim boundary remains no new inference, no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]

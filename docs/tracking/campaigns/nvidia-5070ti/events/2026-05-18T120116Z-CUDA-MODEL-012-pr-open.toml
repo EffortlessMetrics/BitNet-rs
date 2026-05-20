@@ -1,0 +1,21 @@
+timestamp = "2026-05-18T12:01:16Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-012"
+event = "pr_open"
+actor = "codex"
+from = "pr_open"
+to = "pr_open"
+branch = "cuda-model-012-qwen3-product-cli-review"
+pr = 5660
+head_sha = "e3aa09a7cf76186caae47387380d5ffdb0c91e94"
+summary = "Synced PR #5660 with current origin/main and resolved the generated active PR dashboard conflict."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5660",
+  "docs/tracking/generated/active-prs.md",
+]
+
+notes = [
+  "The conflict was limited to generated tracker dashboard output after concurrent campaign PRs landed.",
+  "The resolved dashboard includes the Apple M4 active PR from main and the CUDA-MODEL-012 active PR.",
+]

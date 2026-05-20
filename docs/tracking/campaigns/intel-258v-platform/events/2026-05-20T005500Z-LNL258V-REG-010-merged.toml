@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T00:55:00Z"
+event = "merged"
+item = "LNL258V-REG-010"
+pr = 6012
+branch = "codex/lunar-lake/LNL258V-REG-010-thermal-availability"
+head_sha = "d31b6080c9d9c9eeec44896f8043c227f5ac2356"
+merge_sha = "d5918c25e8aa2291b0125a2f73831e03ebe45e13"
+actor = "codex"
+summary = "Merged strict regression indexing for Lunar Lake thermal temperature availability evidence."
+
+notes = [
+  "Regression v2 now indexes lunar-lake-thermal-temperature-availability.json and records the no-usable-temperature-readings state.",
+  "Strict regression fails closed on false measured-temperature or claim-boundary changes for the thermal availability receipt.",
+  "The merge preserves no new-inference, route-promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]

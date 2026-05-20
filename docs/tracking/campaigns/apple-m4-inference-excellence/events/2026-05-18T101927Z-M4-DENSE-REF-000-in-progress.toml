@@ -1,0 +1,14 @@
+timestamp = "2026-05-18T10:19:27Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-DENSE-REF-000"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-REF-000-reference-receipt-contract"
+
+notes = [
+  "Started the dense SLM reference-vs-Rust comparison receipt-contract item before live dense comparison receipts.",
+  "Scope is validator, fixture, docs, and tracker only; no live model run or reference-runner output is committed by this item.",
+  "No BitNet proof, BitNet chat or serve enablement, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, speedup, broad quality, or broad performance claim.",
+]

@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T04:15:00Z"
+event = "merged"
+item = "LNL258V-OP-007"
+branch = "codex/lunar-lake/LNL258V-OP-007-openvino-ask-dispatch"
+pr = 5767
+head_sha = "64375725b1a62cfcbde0d1738183fe47211b665a"
+merge_sha = "8582dd40d9a1921542d8dffc335d1c62e20d6fd3"
+actor = "codex"
+summary = "Merged LNL258V-OP-007 after adding explicit OpenVINO GPU/NPU candidate ask dispatch through the Lunar Lake operator command."
+
+notes = [
+  "Explicit GPU/NPU candidate asks now run through the existing OpenVINO GenAI helper and are wrapped in standard Lunar Lake operator ask receipts.",
+  "Auto routing remains ledger-gated on promoted routes only, while OpenVINO GPU/NPU candidate receipts preserve route/profile blockers.",
+  "The merge does not claim route promotion, speedup, power advantage, Arc/NPU acceleration, native OpenCL/NPU execution, or BitNet QK256/I2_S behavior change.",
+]

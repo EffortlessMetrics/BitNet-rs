@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T06:26:01Z"
+event = "merged"
+item = "LNL258V-REG-013"
+pr = 6106
+head_sha = "1670aac2979a81cb530f5702e9993fe7da5ffde5"
+merge_sha = "5fb87bbb38a8e27a7b2847c59e0f6be496f3d3c2"
+branch = "codex/lunar-lake/LNL258V-REG-013-bitnet-cpu-reference-surface"
+actor = "codex"
+summary = "Merged strict regression BitNet CPU reference surface hardening."
+
+notes = [
+  "Strict Lunar Lake regression now exposes BitNet CPU reference indexed/ready fields and fails closed if the required operator-readiness evidence disappears.",
+  "POWER-006 remains blocked because real battery-mode low_power telemetry and energy-proxy evidence are still unavailable.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, A770 semantic merged-to-main claim, stale BitNet claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]

@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T13:35:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5583
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-002-dense-slm-contract"
+head_sha = "60a50ff16926f27a3f490e82eab51639967631d1"
+summary = "Opened PR #5583 for the OpenVINO dense SLM model/export contract spec."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5583",
+  "docs/specs/BITNET-SPEC-OPENVINO-DENSE-SLM.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The PR defines the dense SLM manifest, smoke, operator ask, corpus-v2, phase profile, route profile, promotion review, model status, and exact-profile server ladder.",
+  "No route promotion, speedup, power-advantage, broad dense SLM quality, BitNet QK256/I2_S, native OpenCL, cold one-off NPU, model-binary, or server-readiness claim is made.",
+]

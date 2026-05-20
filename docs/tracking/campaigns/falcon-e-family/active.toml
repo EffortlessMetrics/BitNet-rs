@@ -1,0 +1,91 @@
+id = "falcon-e-family"
+title = "Falcon-E Family compact 1.58-bit lane"
+status = "active"
+
+objective = "Register Falcon-E Family as BitNet-rs's compact direct-GGUF 1.58-bit validation lane while preserving artifact, tokenizer, prompt, route, backend, and performance claim boundaries."
+
+end_state = [
+  "Falcon-E 1B and 3B direct I2_S GGUF candidates have exact artifact contracts before any answer claim.",
+  "Tokenizer/prompt authority, reference-good behavior, I2_S layout compatibility, and Rust CPU answer quality are proven before backend promotion.",
+  "AVX, CUDA, Apple CPU/NEON, A770/OpenCL, benchmark, CLI, and server claims are graduated only through exact receipts with fallback=false.",
+]
+
+hard_constraints = [
+  "Do not commit model binaries.",
+  "Do not claim Falcon-E 1B proof proves Falcon-E 3B.",
+  "Do not claim Falcon-E proof inherits Microsoft BitNet 2B, Falcon3, 1bitLLM, or dense SLM proof.",
+  "Do not claim I2_S/QK256 compatibility before Falcon-E layout proof.",
+  "Do not route TL1/TL2 through QK256/I2_S kernels.",
+  "Do not claim CPU, CUDA, Apple, A770, speed, server, or full-residency readiness without exact receipts.",
+]
+
+[[work_item]]
+id = "FE-000"
+status = "ready"
+branch = "codex/falcon-e-family/FE-000-source-map-and-specs"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add Falcon-E source-of-truth docs, implementation plan, active campaign, specs, and registered-only candidate matrix rows without runtime/kernel changes or support promotion."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check falcon-e-family",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/proposals/BITNET-PROP-0013-falcon-e-family-supported-models.md",
+  "docs/bitnet/falcon-e-family/**",
+  "plans/falcon-e-family/**",
+  "docs/tracking/campaigns/falcon-e-family/**",
+  "docs/specs/BITNET-SPEC-FALCON-E-FAMILY-*.md",
+  "docs/specs/INDEX.md",
+  "ci/model-artifacts/model-kernel-compatibility.toml",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/apple-silicon/bitnet-candidate-matrix.md",
+  "ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+]
+may_claim = [
+  "Falcon-E is registered as a compact 1.58-bit planning lane with direct I2_S GGUF candidates.",
+]
+must_not_claim = [
+  "Falcon-E is answer-ready.",
+  "Falcon-E is CPU/CUDA/Apple/A770-ready.",
+  "Falcon-E I2_S is QK256-compatible before layout proof.",
+  "Falcon-E has speedup, server, or full-residency support.",
+]
+
+[[work_item]]
+id = "FE-001"
+status = "proposed"
+branch = "codex/falcon-e-family/FE-001-artifact-inventory"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["FE-000"]
+acceptance = "Record exact source revision, file list, size, SHA256, license, GGUF metadata, tokenizer metadata if embedded, and cleanup status for Falcon-E 1B and 3B I2_S GGUF artifacts without answer/backend/speed claims."
+commands = [
+  "bitnet model artifact-probe --hf-repo tiiuae/Falcon-E-1B-Instruct-GGUF --file ggml-model-i2_s.gguf --json-out ci/model-artifacts/falcon-e/1b-i2s-inventory.json",
+  "bitnet model artifact-probe --hf-repo tiiuae/Falcon-E-3B-Instruct-GGUF --file ggml-model-i2_s.gguf --json-out ci/model-artifacts/falcon-e/3b-i2s-inventory.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check falcon-e-family",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/falcon-e/**",
+  "docs/model-artifacts/**",
+  "docs/tracking/campaigns/falcon-e-family/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+]
+may_claim = ["Falcon-E artifact identity is known for the exact recorded files if receipts pass."]
+must_not_claim = ["Falcon-E answer readiness.", "Falcon-E backend readiness.", "Falcon-E speedup."]

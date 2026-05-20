@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T05:34:00Z"
+event = "pr_open"
+item = "LNL258V-POWER-009"
+pr = 6097
+head_sha = "71b480467c512d731dd07f3c2fddad92b0578879"
+branch = "codex/lunar-lake/LNL258V-POWER-009-power-profile-guidance"
+actor = "codex"
+summary = "Opened PR #6097 for low_power power-profile runbook and next-evidence guidance hardening."
+
+notes = [
+  "PR #6097 makes Lunar Lake power-profile evidence carry the POWER-006 battery runbook and exact telemetry-context --require-battery next-evidence guidance when battery-mode low_power evidence is missing.",
+  "Strict regression and operator readiness inspection now fail closed if the low_power power-profile guidance disappears while the real battery-mode sample is missing.",
+  "The PR preserves POWER-006 as blocked with no inference, model load, fallback change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, or BitNet QK256/I2_S behavior-change claim.",
+]

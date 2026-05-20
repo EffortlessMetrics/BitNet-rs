@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T05:54:35Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-010"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "cuda-model-010-qwen3-ask-user-path-clean"
+pr = 5529
+head_sha = "0d710cdb5eb600db089158d3738cd8ea957dbabe"
+merge_sha = "bbd48fec17afed8d1a1962f9ed3a36bb0413311f"
+summary = "Merged PR #5529 with the Qwen3 normal ask user-path receipt."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5529",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-ask-user-path-cuda.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-ask-user-path-cuda.source-short-decode.json",
+  "docs/reports/CUDA_MODEL_010_QWEN3_ASK_USER_PATH_RECEIPT.md",
+]
+
+notes = [
+  "The receipt records selected_backend=nvidia-rtx-5070-ti-cuda, selected_route=dense_regular_llm_cuda, fallback_used=false, and a passing Qwen ask quality gate.",
+  "Qwen3 product CLI readiness, chat readiness, server readiness, speedup, full CUDA residency, broad dense GGUF readiness, proof inheritance, and BitNet packed I2_S/QK256 proof remained false/non-claims.",
+]

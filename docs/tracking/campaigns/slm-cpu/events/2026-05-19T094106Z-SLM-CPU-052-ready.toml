@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T09:41:06Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-052"
+event = "in_progress"
+from = "proposed"
+to = "ready"
+actor = "codex"
+
+notes = [
+  "Queued the first packed Q8_0 sidecar selector-update gate after SLM-CPU-051.",
+  "The slice may update selection only under generated-ID/text and strict-provenance equivalence against the eager F32 Candle oracle.",
+  "No sustained throughput, Q4/Q5 runtime, accelerator, Qwen3.5, server, or BitNet QK256 claim is made.",
+]

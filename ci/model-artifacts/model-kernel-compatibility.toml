@@ -1,10 +1,13 @@
 schema = 1
 artifact_kind = "bitnet_model_kernel_compatibility"
-updated = "2026-05-08"
+updated = "2026-05-19"
 work_item = "BITNET-COMPAT-001"
 source = "microsoft/BitNet README supported model table"
 source_url = "https://github.com/microsoft/BitNet/blob/main/README.md"
-claim_boundary = "Upstream model/kernel support is a precondition for answer_ready, reference_authority, backend_parity, and speedup claims. Unsupported combinations may only be used for diagnostic runs, artifact inspection, or unsupported-path receipts."
+source_map = "docs/bitnet/official-2b/README.md"
+i2s_source_map = "docs/bitnet/i2s/README.md"
+claim_boundary = "Upstream model/kernel support is a precondition for answer_ready, reference_authority, backend_parity, and speedup claims. Unsupported combinations may only be used for diagnostic runs, artifact inspection, or unsupported-path receipts. TL1 is a distinct route family and must not inherit I2_S/QK256 or TL2 proof."
+tl2_boundary_note = "TL2 x86 route evidence is tracked separately from I2_S/QK256 and TL1; listed support is not automatic answer proof."
 
 proof_claims_rejected_when_unsupported = [
   "answer_ready",
@@ -66,6 +69,53 @@ notes = [
   status = "unsupported_upstream"
 
 [[model_kernel_support]]
+model = "Falcon3 Family"
+model_aliases = [
+  "tiiuae/Falcon3-1B-Instruct-1.58bit-GGUF",
+  "tiiuae/Falcon3-3B-Instruct-1.58bit",
+  "tiiuae/Falcon3-7B-Instruct-1.58bit-GGUF",
+  "tiiuae/Falcon3-10B-Instruct-1.58bit",
+]
+family = "falcon3_158bit"
+role = "multi_size_bitnet_family_candidate"
+answer_authority = false
+notes = [
+  "Falcon3 Family is registered as a candidate multi-size BitNet-family lane only; listed upstream support does not prove BitNet-rs runner, tokenizer, layout, answer, backend, speed, or server readiness.",
+  "Direct I2_S GGUF artifact inventory starts with 1B and 7B; 3B and 10B remain conversion/runner-authority candidates.",
+  "Falcon3 proof must not inherit Microsoft BitNet 2B, Falcon-E, Llama3-8B-1.58, dense Falcon3, or dense SLM proof.",
+]
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl1"
+  status = "unsupported_upstream"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl2"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl2"
+  status = "unsupported_upstream"
+
+[[model_kernel_support]]
 model = "1bitLLM/bitnet_b1_58-3B"
 model_aliases = [
   "bitnet_b1_58-3B",
@@ -99,6 +149,101 @@ notes = [
   arch = "arm"
   kernel = "i2_s"
   status = "unsupported_upstream"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl2"
+  status = "unsupported_upstream"
+
+[[model_kernel_support]]
+model = "HF1BitLLM/Llama3-8B-1.58-100B-tokens"
+model_aliases = [
+  "Llama3-8B-1.58-100B-tokens",
+  "hf1bitllm_llama3_8b_158_100b_tokens",
+  "llama3_8b_158_100b_tokens_candidate",
+]
+family = "llama3_bitnet_b1_58"
+role = "large_supported_model_candidate"
+answer_authority = false
+notes = [
+  "Upstream bitnet.cpp lists this model under supported models, not official Microsoft answer authority.",
+  "The current BitNet-rs state is safetensors-visible with no approved GGUF, conversion, reference-good receipt, CPU claim, CUDA claim, Apple claim, server claim, or speed claim.",
+  "Do not inherit official Microsoft 2B I2_S/QK256 proof, dense Llama3 proof, or dense Qwen proof.",
+  "I2_S/QK256 compatibility requires model-specific converted-layout and scalar-oracle proof before kernel reuse.",
+]
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl1"
+  status = "unsupported_upstream"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl2"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl1"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "tl2"
+  status = "unsupported_upstream"
+
+[[model_kernel_support]]
+model = "tiiuae/Falcon-E-Family"
+model_aliases = [
+  "tiiuae/Falcon-E-1B-Instruct-GGUF",
+  "tiiuae/Falcon-E-3B-Instruct-GGUF",
+  "falcon_e_1b_instruct_i2s_gguf",
+  "falcon_e_3b_instruct_i2s_gguf",
+]
+family = "falcon_e_158bit"
+role = "supported_secondary_family"
+answer_authority = false
+reference_artifact_id = "pending_falcon_e_artifact_inventory"
+notes = [
+  "Falcon-E Family is a compact direct-GGUF 1.58-bit validation lane, not Microsoft BitNet 2B, 1bitLLM, Falcon3, dense Falcon, or generic Falcon support.",
+  "Direct I2_S GGUF artifacts exist externally for 1B and 3B, but BitNet-rs claims remain registered-only until artifact identity, tokenizer/prompt authority, reference quality, I2_S layout, and backend receipts pass.",
+  "TL1/TL2 routes are separate future lanes and must not use I2_S/QK256 proof.",
+]
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl1"
+  status = "unsupported_upstream"
+
+  [[model_kernel_support.route]]
+  arch = "x86"
+  kernel = "tl2"
+  status = "listed_supported_verify_runner"
+
+  [[model_kernel_support.route]]
+  arch = "arm"
+  kernel = "i2_s"
+  status = "listed_supported_verify_runner"
 
   [[model_kernel_support.route]]
   arch = "arm"

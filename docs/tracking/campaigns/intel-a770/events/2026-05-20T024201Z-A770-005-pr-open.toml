@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T02:42:01Z"
+campaign = "intel-a770"
+item = "A770-005"
+event = "pr_open"
+pr = 6072
+branch = "codex/intel-a770/A770-005-opencl-smoke"
+head_sha = "20b35436ff7b94a675cbd3dd2086349875695940"
+actor = "codex"
+
+notes = [
+  "Opened PR #6072 for A770-005 selected-device OpenCL tiny vector-add smoke.",
+  "The receipt records selected_backend=intel-arc-a770-opencl and fallback_used=false for the tiny kernel smoke only.",
+  "No BitNet inference, packed QK256 dispatch, trusted-partial acceleration, residency, or performance claim is promoted.",
+]

@@ -2,7 +2,7 @@ schema_version = "1.0"
 policy = "ci-risk-packs"
 owner = "release/ci"
 status = "active"
-updated = "2026-05-07"
+updated = "2026-05-18"
 
 # Risk packs map an area of risk to (a) the paths/packages that
 # touching activates the pack, (b) the default-PR lanes it should
@@ -103,10 +103,31 @@ labels = ["bdd", "grid", "full-ci"]
 
 [risk_pack.manifest_release]
 description = "Cargo manifests, lockfile, MSRV, dependency, release surfaces."
-paths = ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/**"]
-lanes = ["ci-core-build-test", "compatibility-msrv", "feature-matrix-pr"]
+paths = [
+  "Cargo.toml",
+  "Cargo.lock",
+  "rust-toolchain.toml",
+  ".cargo/**",
+  "crates/**/Cargo.toml",
+]
+lanes = ["ci-core-build-test", "compatibility-msrv", "feature-matrix-pr", "feature-matrix-full-cli"]
 deep_lanes = ["feature-matrix-full", "security-audit", "coverage"]
-labels = ["feature-matrix", "security-audit", "full-ci"]
+labels = ["full-cli", "feature-matrix", "security-audit", "full-ci"]
+
+[risk_pack.public_api]
+description = "Public Rust API, FFI, compatibility, and release-package surfaces."
+paths = [
+  "crates/**/src/lib.rs",
+  "crates/**/src/api/**",
+  "crates/bitnet-ffi/**",
+  "crates/bitnet-py/**",
+  "COMPATIBILITY.md",
+  "MIGRATION.md",
+  "docs/release/**",
+]
+lanes = ["compatibility-msrv", "compatibility-ffi-abi", "ripr-advisory"]
+deep_lanes = ["crossval", "coverage"]
+labels = ["msrv", "compatibility", "ffi", "abi", "crossval", "full-ci"]
 
 [risk_pack.docs_tracking]
 description = "Docs, tracking, campaigns, generated status."

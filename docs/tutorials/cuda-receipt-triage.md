@@ -8,14 +8,23 @@ proves.
 Start from:
 
 ```powershell
-bitnet model status --device nvidia-rtx-5070-ti-cuda
-bitnet receipts explain --latest
+bitnet model status --device nvidia-rtx-5070-ti-cuda --format json
+bitnet receipts explain --latest --format json
+```
+
+For issue reports, prefer the single support bundle. It includes model status,
+the latest receipt explanation, route/backend/fallback summary, quality gate,
+server-readiness scope, proof-family booleans, binary identity, and runtime
+identity when the receipt exposes it:
+
+```powershell
+bitnet support bundle --latest --device nvidia-rtx-5070-ti-cuda --format json
 ```
 
 Or explain a specific receipt:
 
 ```powershell
-bitnet receipts explain <path-to-receipt.json>
+bitnet receipts explain <path-to-receipt.json> --format json
 ```
 
 The model status command tells you what the repo currently allows each model
@@ -23,24 +32,63 @@ row to claim. The receipt tells you what the last command actually did.
 
 ## What To Paste In An Issue
 
-Paste the `receipts explain` summary plus:
+Paste the `support bundle` JSON when available. If bundle creation fails, paste
+the `receipts explain` summary plus:
 
 ```text
-model coverage row
+model_coverage_row
+current_tier
 model id or artifact SHA
 requested backend
-selected backend
+selected_backend
 runtime API
-route
+selected_route
 fallback_used
 quality gate result
 speedup_claim
 server_ready
+server_scope
+server_endpoint
+server_streaming
+server_smoke
+server_reason
+full_residency_claim
+bitnet_packed_i2s_qk256_proof
+dense_regular_llm_cuda_proof
 receipt path
 claim boundary / not allowed claims
 ```
 
 Do not paste private paths, tokens, credentials, or model files.
+
+## Server Response Metadata
+
+For `/v1/chat/completions`, the response metadata links the response to the
+same receipt that is embedded in the response body:
+
+```json
+{
+  "metadata": {
+    "receipt_id": "uuid",
+    "receipt_path": "/receipts/uuid",
+    "latest_receipt_path": "/receipts/latest",
+    "readiness_path": "/readiness",
+    "model_coverage_row": "dense_qwen25_05b_q8_cuda",
+    "model_coverage_tier": "product_cli_ready",
+    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+    "selected_route": "dense_regular_llm_cuda",
+    "fallback_used": false
+  }
+}
+```
+
+Use these server endpoints for support triage:
+
+- `GET /receipts/latest`: latest retained server shared-engine receipt.
+- `GET /receipts/{receipt_id}`: retained receipt by response metadata id.
+- `GET /readiness`: readiness and claim-boundary state.
+- `GET /v1/readiness`: versioned readiness alias.
+- `GET /v1/models`: loaded model inventory.
 
 ## If `fallback_used=true`
 
@@ -155,6 +203,8 @@ Check:
 - selected backend;
 - fallback status;
 - model coverage row;
+- `server_smoke`, `server_scope`, `server_endpoint`, and `server_streaming`
+  from `bitnet model status --format json`;
 - response quality;
 - receipt emission path;
 - whether the row was explicitly promoted by an exact-profile readiness gate.
@@ -162,6 +212,12 @@ Check:
 Allowed claim: bounded server-smoke evidence when a receipt exists.
 Not allowed: production server readiness, global dense server readiness, or
 BitNet server readiness unless the exact route has its own receipt and row.
+
+For the RTX 5070 Ti lane, Qwen2.5 exact-profile server readiness should show
+`server_ready=true`, `server_scope=exact_profile`, endpoint
+`/v1/chat/completions`, and `server_streaming=false`. Official BitNet QK256
+server smoke should show `server_smoke=true`, `server_ready=false`, and
+`server_reason=broad production readiness not qualified`.
 
 ## If Dense Proof Is Mistaken For BitNet Proof
 
@@ -180,12 +236,32 @@ If the issue mixes these claims, paste the route and model coverage row first.
 The route usually determines whether the issue belongs to BitNet QK256 CUDA,
 dense regular-LLM CUDA, CPU reference, server, or benchmark triage.
 
+## If Qwen2.5 Proof Is Mistaken For Qwen3 Proof
+
+Qwen2.5 and Qwen3 are separate model coverage rows. A Qwen2.5 receipt can prove
+only the Qwen2.5 artifact/profile it names. It does not prove Qwen3 artifact
+identity, tokenizer/prompt authority, user-path ask/chat behavior, server
+readiness, speedup, or residency.
+
+Check:
+
+- `model_coverage_row`;
+- model id and artifact checksum;
+- selected route;
+- prompt and tokenizer authority;
+- whether the receipt path names Qwen2.5 or Qwen3;
+- whether the model coverage row already earned the claim being discussed.
+
+Allowed claim: the exact model/profile named by the receipt.
+Not allowed: inheriting Qwen2.5 server readiness, speed, or quality proof for
+Qwen3.
+
 ## If The Receipt Is Missing
 
 Re-run with an explicit receipt output path when the command supports it:
 
 ```powershell
-bitnet receipts explain --latest
+bitnet receipts explain --latest --format json
 ```
 
 If `--latest` cannot find the expected file, include:

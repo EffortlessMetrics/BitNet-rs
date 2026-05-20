@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T09:02:19Z"
+event = "in_progress"
+item = "SLM-CPU-034"
+branch = "codex/slm-cpu-034-prefill-forward-attribution"
+actor = "codex"
+summary = "Started the Qwen3 Q8_0 Kaby prompt prefill/model.forward allocation attribution slice."
+
+notes = [
+  "SLM-CPU-033 identified prompt_prefill as the dominant aggregate allocation hotspot after prompt-token caching.",
+  "This slice keeps the existing prompt_prefill total for receipt continuity while adding prompt_prefill.embed and prompt_prefill.forward attribution.",
+  "No generated-ID, strict-provenance, runtime speedup, sustained-throughput, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

@@ -1221,8 +1221,8 @@ mod tests {
             let input_a = make_input(2 * channels * spatial, 95.0);
             let mut input_b = input_a.clone();
             // Modify second sample.
-            for i in channels * spatial..2 * channels * spatial {
-                input_b[i] = 100.0;
+            for value in input_b.iter_mut().skip(channels * spatial).take(channels * spatial) {
+                *value = 100.0;
             }
             let out_a = instance_norm_cpu(&input_a, &gamma, &beta, channels, spatial, BN_EPSILON);
             let out_b = instance_norm_cpu(&input_b, &gamma, &beta, channels, spatial, BN_EPSILON);
@@ -1285,8 +1285,8 @@ mod tests {
             let (gamma, beta) = identity_affine(channels);
             let (output, _, var) =
                 batch_norm_forward_cpu(&input, &gamma, &beta, channels, spatial, BN_EPSILON);
-            for c in 0..channels {
-                assert!(var[c].abs() < 1e-6, "constant input var should be ~0");
+            for channel_var in var.iter().take(channels) {
+                assert!(channel_var.abs() < 1e-6, "constant input var should be ~0");
             }
             assert!(output.iter().all(|x| x.is_finite()), "constant: non-finite output");
         }

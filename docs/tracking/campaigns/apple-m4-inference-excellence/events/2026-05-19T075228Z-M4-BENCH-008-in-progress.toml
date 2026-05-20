@@ -1,0 +1,15 @@
+timestamp = "2026-05-19T07:52:28Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-008"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-008-repeat-harness"
+
+notes = [
+  "Started M4-BENCH-008 after M4-BENCH-002 closeout advanced the M4 excellence campaign to the repeat-run benchmark harness prerequisite.",
+  "`bitnet mac benchmark --repeat <n>` is scoped to writing an `apple_m4_benchmark_variance_v1` aggregate over repeated dense SLM benchmark v2 child summaries, with strict model/profile/backend/fallback identity and claim-boundary validation.",
+  "A narrow short_prompt_16_out repeat=2 smoke receipt was recorded at `ci/hardware/apple-m4-mac-mini/2026-05-19T0746Z/benchmark-variance/harness-smoke.json` as harness evidence only.",
+  "No final dense or BitNet variance envelope, BitNet performance claim, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

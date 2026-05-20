@@ -52,9 +52,10 @@ For automation:
 bitnet model status --device nvidia-rtx-5070-ti-cuda --format json
 ```
 
-The BitNet row should stay scoped to `bitnet_qk256_cuda`, show server readiness
-as false until a server smoke lands, and keep speed unqualified unless a
-profile-specific benchmark review accepts it.
+The BitNet row should stay scoped to `bitnet_qk256_cuda`, show server smoke as
+bounded evidence while keeping `server_ready=false` for broad production
+readiness, and keep speed unqualified unless a profile-specific benchmark
+review accepts it.
 
 ## Verify The Model Artifact
 
@@ -152,6 +153,19 @@ bitnet receipts explain target\bitnet\receipts\cuda-answer-readiness\strict-cuda
 
 The explanation should make the route, selected backend, fallback state, quality
 gate, and claim boundary obvious enough to paste into an issue.
+
+For support issues, collect the status row and latest receipt explanation in one
+artifact:
+
+```powershell
+bitnet support bundle --latest --device nvidia-rtx-5070-ti-cuda --format json
+```
+
+For this BitNet lane, the bundle should preserve `selected_route =
+bitnet_qk256_cuda`, `bitnet_packed_i2s_qk256_proof = true`,
+`dense_regular_llm_cuda_proof = false`, `server_ready = false`, and
+`speedup_claim = false` unless a later exact-profile review explicitly changes
+those claims.
 
 ## Read The Governed Benchmark Receipt
 

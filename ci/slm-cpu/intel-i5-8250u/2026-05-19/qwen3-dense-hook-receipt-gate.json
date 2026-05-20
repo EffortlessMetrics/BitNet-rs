@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "artifact_kind": "dense_gguf_q8_hook_selection_receipt_gate",
+  "work_item": "SLM-CPU-057",
+  "source_artifacts": [
+    "ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-production-dense-linear-hook-boundary.json"
+  ],
+  "receipt_surface_added": true,
+  "warm_session_receipts_record_dense_q8_hook_selection": true,
+  "prompt_receipts_record_dense_q8_hook_selection": true,
+  "aggregate_receipt_records_dense_q8_hook_selection": true,
+  "selected_path": "eager_f32_candle",
+  "selected_kernel": "dense-f32-candle-linear",
+  "runtime_compute_enabled": false,
+  "dense_runtime_replaced": false,
+  "fallback_used": false,
+  "speedup_claim": false,
+  "dense_hook_selection_identity_fields": [
+    "selected_path",
+    "selected_kernel",
+    "sidecar_descriptor_count",
+    "hook_boundary_count",
+    "sidecar_descriptors_reached_transformer",
+    "example_boundary.tensor_name",
+    "example_boundary.sidecar_role",
+    "example_boundary.sidecar_payload_sha256",
+    "example_boundary.runtime_compute_enabled",
+    "example_boundary.eager_f32_runtime_preserved",
+    "remaining_blockers"
+  ],
+  "generated_id_preservation_required_before_runtime_use": true,
+  "remaining_blockers": [
+    "packed_q8_sidecar_compute_kernel_not_enabled",
+    "before_after_qwen3_q8_warm_session_receipts_with_hook_selection_identity_missing"
+  ],
+  "next_safe_step": "run before/after Qwen3 Q8_0 warm-session receipts that record identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook selection identity, and fallback_used=false before enabling packed sidecar compute",
+  "claim_boundary": {
+    "no_runtime_speedup_claim": true,
+    "no_sustained_throughput_claim": true,
+    "no_broad_answer_quality_claim": true,
+    "no_q4_q5_runtime_support": true,
+    "no_server_gpu_npu_openvino_uhd620_claim": true,
+    "no_qwen35_or_hybrid_claim": true,
+    "no_bitnet_qk256_claim": true
+  }
+}

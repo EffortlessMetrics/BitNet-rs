@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T08:30:00Z"
+event = "merged"
+item = "LNL258V-BITNET-INTAKE-003"
+pr = 6046
+branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-003-pending-5064"
+head_sha = "a8b5ebd7553dda704c8cd0091a8256eb6cf32b24"
+merge_sha = "d5f77955b61d26692c2a155dce4992d2c3001aa1"
+actor = "codex"
+summary = "Merged LNL258V-BITNET-INTAKE-003, indexing pending A770 #5064 as a shared BitNet semantic rerun trigger."
+
+notes = [
+  "PR #6046 refreshed the semantic source-change ledger, semantic-intake receipt, strict regression bundle, and operator comparison.",
+  "Strict regression remains ready because pending_shared_change_count=1 and stale_after_merged_count=0; Lunar Lake reruns become required only if A770 #5064 reaches main.",
+  "The merge preserves no new inference, route promotion, speedup, power-advantage, acceleration, dense-SLM-as-BitNet proof, native accelerator, or BitNet QK256/I2_S behavior-change claims.",
+]

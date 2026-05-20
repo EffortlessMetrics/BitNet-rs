@@ -256,9 +256,31 @@ and mirrored in `policy/ci-routed-rollout.toml`.
 | `performance` / `perf` | Performance baseline tracking. | Runs performance lane outside ordinary PR defaults. |
 | `test-telemetry` / `slow-tests` | JUnit and slow-test telemetry. | Runs advisory telemetry outside ordinary PR defaults. |
 | `msrv` / `compatibility` | MSRV compatibility proof. | Runs MSRV for explicit compatibility concern or global-risk paths. |
-| `full-cli` / `feature-matrix` | Expanded feature-matrix proof including full CLI. | Runs `cpu+full-cli` or full feature lanes when relevant. |
+| `full-cli` | Targeted full CLI feature smoke. | Runs `cpu+full-cli` without selecting the exhaustive feature matrix. |
+| `feature-matrix` | Expanded feature-matrix proof. | Runs the full feature matrix on a PR. |
 | `gpu-ci` | GPU native compile proof. | Runs GPU compile lanes for GPU risk only. |
 | `coverage` | Codecov/coverage evidence with `rust-cpu` flag. | Runs coverage outside ordinary PR defaults. |
+
+The shared Apple Silicon workflow still emits a cheap Linux route/summary check
+on pull requests so existing branch protection does not see a missing check.
+Those control jobs do not start `macos-14`. Applying `macos`,
+`apple-silicon`, `metal`, or `full-ci` selects the expensive Apple jobs; main,
+manual, merge-queue, and Mac/Metal-path changes still preserve Apple proof.
+
+Performance Baseline Tracking uses the same selected-lane shape. Ordinary PRs
+only run its cheap route job. Applying `performance`, `perf`, or `full-ci`
+selects the historical workspace smoke; the full benchmark matrix remains
+scheduled/manual evidence unless a later rollout explicitly promotes PR
+benchmark selection.
+
+Test Telemetry also stays selected-only. Ordinary PRs only run its route job;
+`test-telemetry`, `slow-tests`, or `full-ci` runs the nextest/JUnit lane for
+PR observability, while `main` and manual dispatch keep the same summaries.
+
+MSRV compatibility follows risk routing. Ordinary leaf implementation PRs only
+run the compatibility route job; `msrv`, `compatibility`, or `full-ci` selects
+MSRV checks, and manifest/toolchain/public API/release-package paths select the
+same proof automatically.
 
 ## Label Matrix
 

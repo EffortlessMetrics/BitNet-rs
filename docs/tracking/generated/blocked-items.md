@@ -27,6 +27,10 @@
 | apple-m3-macbook-air | M3MBA-009 | M3MBA-004B | merged |
 | apple-m3-macbook-air | M3MBA-010 | M3MBA-005A | merged |
 | apple-m3-macbook-air | M3MBA-019 | M3MBA-008 | merged |
+| apple-m3-macbook-air | M3MBA-022 | M3MBA-021 | merged |
+| apple-m3-macbook-air | M3MBA-023 | M3MBA-022 | proposed |
+| apple-m3-macbook-air | M3MBA-024 | M3MBA-021 | proposed |
+| apple-m3-macbook-air | M3MBA-025 | M3MBA-021, M3MBA-024 | proposed |
 | apple-m4 | M4-002 | M4-001 | merged |
 | apple-m4 | M4-003 | M4-002 | merged |
 | apple-m4 | M4-004 | M4-003 | merged |
@@ -72,14 +76,19 @@
 | apple-m4-inference-excellence | M4-ACCURACY-005 | M4-ACCURACY-004 | merged |
 | apple-m4-inference-excellence | M4-ACCURACY-006 | M4-ACCURACY-005 | merged |
 | apple-m4-inference-excellence | M4-ACCURACY-007 | M4-ACCURACY-006 | merged |
-| apple-m4-inference-excellence | M4-CANARY-001 | M4-ACCURACY-000, M4-REPRO-003 | proposed |
-| apple-m4-inference-excellence | M4-DENSE-REF-001 | M4-ACCURACY-001, M4-CANARY-001 | proposed |
-| apple-m4-inference-excellence | M4-DENSE-CHAT-001 | M4-CANARY-001, M4-REPRO-003 | proposed |
-| apple-m4-inference-excellence | M4-BENCH-004 | M4-REPRO-001 | proposed |
-| apple-m4-inference-excellence | M4-BENCH-002 | M4-BENCH-001, M4-BENCH-004, M4-BENCH-007 | proposed |
-| apple-m4-inference-excellence | M4-BENCH-005 | M4-BENCH-002 | proposed |
-| apple-m4-inference-excellence | M4-BENCH-006 | M4-BENCH-005, M4-BITNET-EX-003, M4-BITNET-EX-004 | proposed |
-| apple-m4-inference-excellence | M4-BENCH-003 | M4-BENCH-005, M4-BENCH-006, M4-EXCELLENCE-003 | proposed |
+| apple-m4-inference-excellence | M4-CANARY-001 | M4-ACCURACY-000, M4-REPRO-003 | merged |
+| apple-m4-inference-excellence | M4-DENSE-REF-000 | M4-CANARY-001, M4-REPRO-003, M4-REPRO-004 | merged |
+| apple-m4-inference-excellence | M4-DENSE-REF-001 | M4-ACCURACY-001, M4-CANARY-001, M4-DENSE-REF-000, M4-REPRO-004 | merged |
+| apple-m4-inference-excellence | M4-DENSE-CHAT-001 | M4-CANARY-001, M4-REPRO-003 | merged |
+| apple-m4-inference-excellence | M4-ROBUSTNESS-001 | M4-ACCURACY-007, M4-BITNET-EX-012, M4-CANARY-001, M4-REPRO-003 | merged |
+| apple-m4-inference-excellence | M4-BENCH-004 | M4-REPRO-001 | merged |
+| apple-m4-inference-excellence | M4-BENCH-002 | M4-BENCH-001, M4-BENCH-004, M4-BENCH-007 | merged |
+| apple-m4-inference-excellence | M4-BENCH-009 | M4-BENCH-007, M4-BENCH-008 | merged |
+| apple-m4-inference-excellence | M4-BENCH-005 | M4-BENCH-002, M4-BENCH-008, M4-BENCH-009, M4-BENCH-010 | merged |
+| apple-m4-inference-excellence | M4-BENCH-010 | M4-BENCH-008, M4-BENCH-009 | merged |
+| apple-m4-inference-excellence | M4-BENCH-008 | M4-BENCH-002 | merged |
+| apple-m4-inference-excellence | M4-BENCH-006 | M4-BENCH-005, M4-BITNET-EX-003, M4-BITNET-EX-004 | merged |
+| apple-m4-inference-excellence | M4-BENCH-003 | M4-BENCH-005, M4-BENCH-006, M4-EXCELLENCE-003 | in_progress |
 | apple-m4-inference-excellence | M4-BITNET-REG-001 | M4-EXCELLENCE-002, M4-EXCELLENCE-004 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-002 | M4-BITNET-EX-001 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-003 | M4-BITNET-EX-001 | merged |
@@ -89,33 +98,43 @@
 | apple-m4-inference-excellence | M4-BITNET-EX-007 | M4-BITNET-EX-006 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-008 | M4-BITNET-EX-001, M4-BITNET-EX-002, M4-BITNET-EX-005 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-009 | M4-BITNET-EX-008, M4-BITNET-REG-001 | merged |
-| apple-m4-inference-excellence | M4-BITNET-EX-010 | M4-BITNET-EX-009 | proposed |
-| apple-m4-inference-excellence | M4-BITNET-EX-011 | M4-BITNET-EX-010 | proposed |
-| apple-m4-inference-excellence | M4-BITNET-EX-012 | M4-BITNET-EX-011 | proposed |
-| apple-m4-inference-excellence | M4-OPS-UX-001 | M4-EXCELLENCE-003 | proposed |
-| apple-m4-inference-excellence | M4-OPS-UX-002 | M4-OPS-UX-001 | proposed |
-| apple-m4-inference-excellence | M4-OPS-UX-003 | M4-OPS-UX-001 | proposed |
+| apple-m4-inference-excellence | M4-BITNET-EX-010 | M4-BITNET-EX-009 | merged |
+| apple-m4-inference-excellence | M4-BITNET-EX-011 | M4-BITNET-EX-010 | merged |
+| apple-m4-inference-excellence | M4-BITNET-EX-012 | M4-BITNET-EX-011 | merged |
+| apple-m4-inference-excellence | M4-BITNET-EX-013 | M4-BITNET-EX-012, M4-REPRO-003 | merged |
+| apple-m4-inference-excellence | M4-BITNET-EX-014 | M4-BITNET-EX-013 | merged |
+| apple-m4-inference-excellence | M4-BITNET-EX-015 | M4-BITNET-EX-014, M4-BENCH-006 | merged |
+| apple-m4-inference-excellence | M4-OPS-UX-001 | M4-EXCELLENCE-003 | merged |
+| apple-m4-inference-excellence | M4-OPS-UX-002 | M4-OPS-UX-001 | merged |
+| apple-m4-inference-excellence | M4-OPS-UX-003 | M4-OPS-UX-001 | merged |
 | apple-m4-inference-excellence | M4-OPS-SLO-001 | M4-ACCURACY-007, M4-BENCH-005, M4-BENCH-006, M4-BITNET-EX-003, M4-OPS-UX-003 | proposed |
 | apple-m4-inference-excellence | M4-CONTEXT-001 | M4-BENCH-002, M4-OPS-SLO-001 | proposed |
-| apple-m4-inference-excellence | M4-REPRO-002 | M4-REPRO-001 | proposed |
-| apple-m4-inference-excellence | M4-REPRO-003 | M4-REPRO-001 | proposed |
-| apple-m4-inference-excellence | M4-RECEIPT-001 | M4-REPRO-001 | proposed |
+| apple-m4-inference-excellence | M4-CONTEXT-002 | M4-CONTEXT-001, M4-BENCH-007, M4-REPRO-003 | proposed |
+| apple-m4-inference-excellence | M4-REPRO-002 | M4-REPRO-001 | merged |
+| apple-m4-inference-excellence | M4-REPRO-003 | M4-REPRO-001 | merged |
+| apple-m4-inference-excellence | M4-REPRO-004 | M4-REPRO-003 | merged |
+| apple-m4-inference-excellence | M4-RECEIPT-001 | M4-REPRO-001 | merged |
+| apple-m4-inference-excellence | M4-GATE-HYGIENE-001 | M4-RECEIPT-001 | merged |
 | apple-m4-inference-excellence | M4-STABILITY-001 | M4-BENCH-002, M4-EXCELLENCE-003 | proposed |
-| apple-m4-inference-excellence | M4-STABILITY-002 | M4-REPRO-002, M4-OPS-UX-003 | proposed |
+| apple-m4-inference-excellence | M4-STABILITY-002 | M4-REPRO-002, M4-OPS-UX-003 | merged |
 | apple-m4-inference-excellence | M4-STABILITY-003 | M4-STABILITY-001, M4-STABILITY-002, M4-EXCELLENCE-004 | proposed |
 | apple-m4-inference-excellence | M4-RELIABILITY-001 | M4-STABILITY-001, M4-STABILITY-002, M4-BITNET-EX-005 | proposed |
+| apple-m4-inference-excellence | M4-OBS-001 | M4-RECEIPT-001, M4-RELIABILITY-001, M4-SERVE-EX-002 | proposed |
 | apple-m4-inference-excellence | M4-SERVE-EX-001 | M4-REPRO-001, M4-BENCH-003 | proposed |
 | apple-m4-inference-excellence | M4-SERVE-EX-002 | M4-SERVE-EX-001, M4-BITNET-EX-007 | proposed |
 | apple-m4-inference-excellence | M4-SERVE-EX-003 | M4-SERVE-EX-001 | proposed |
 | apple-m4-inference-excellence | M4-SERVE-EX-004 | M4-SERVE-EX-001, M4-SERVE-EX-003, M4-CONTEXT-001 | proposed |
-| apple-m4-inference-excellence | M4-CI-001 | M4-RECEIPT-001, M4-STABILITY-003 | proposed |
-| apple-m4-inference-excellence | M4-SETUP-001 | M4-REPRO-002, M4-STABILITY-002, M4-OPS-UX-003 | proposed |
-| apple-m4-inference-excellence | M4-BENCH-007 | M4-BENCH-004, M4-REPRO-001 | proposed |
+| apple-m4-inference-excellence | M4-CI-001 | M4-GATE-HYGIENE-001, M4-RECEIPT-001, M4-STABILITY-003 | proposed |
+| apple-m4-inference-excellence | M4-SETUP-001 | M4-REPRO-002, M4-STABILITY-002, M4-OPS-UX-003 | merged |
+| apple-m4-inference-excellence | M4-BENCH-007 | M4-BENCH-004, M4-REPRO-001 | merged |
 | apple-m4-inference-excellence | M4-ROUTE-MATRIX-001 | M4-DENSE-CHAT-001, M4-BITNET-EX-006, M4-BITNET-EX-007, M4-SERVE-EX-002, M4-OPS-SLO-001 | proposed |
+| apple-m4-inference-excellence | M4-WORKLOAD-001 | M4-DENSE-CHAT-001, M4-BITNET-EX-006, M4-SERVE-EX-002, M4-ROUTE-MATRIX-001, M4-REPRO-003 | proposed |
 | apple-m4-inference-excellence | M4-EVIDENCE-REPLAY-001 | M4-RECEIPT-001, M4-CI-001, M4-REPRO-001 | proposed |
 | apple-m4-inference-excellence | M4-TREND-001 | M4-CI-001, M4-BENCH-003, M4-BITNET-REG-001, M4-ACCURACY-007, M4-BITNET-EX-012 | proposed |
 | apple-m4-inference-excellence | M4-MODEL-LIFECYCLE-001 | M4-REPRO-002, M4-OPS-SLO-001, M4-CI-001 | proposed |
-| apple-m4-inference-excellence | M4-RELEASE-001 | M4-ACCURACY-007, M4-BENCH-003, M4-BENCH-007, M4-BITNET-EX-005, M4-BITNET-EX-012, M4-BITNET-REG-001, M4-CANARY-001, M4-CONTEXT-001, M4-DENSE-CHAT-001, M4-DENSE-REF-001, M4-EVIDENCE-REPLAY-001, M4-MODEL-LIFECYCLE-001, M4-OPS-SLO-001, M4-OPS-UX-003, M4-RELIABILITY-001, M4-ROUTE-MATRIX-001, M4-SERVE-EX-004, M4-SETUP-001, M4-TREND-001, M4-CI-001 | proposed |
+| apple-m4-inference-excellence | M4-COMPAT-001 | M4-SETUP-001, M4-MODEL-LIFECYCLE-001, M4-CI-001, M4-REPRO-001 | proposed |
+| apple-m4-inference-excellence | M4-CLAIM-LINT-001 | M4-COMPAT-001, M4-REPRO-001 | proposed |
+| apple-m4-inference-excellence | M4-RELEASE-001 | M4-ACCURACY-007, M4-BENCH-003, M4-BENCH-007, M4-BITNET-EX-005, M4-BITNET-EX-015, M4-BITNET-REG-001, M4-CANARY-001, M4-CLAIM-LINT-001, M4-COMPAT-001, M4-CONTEXT-001, M4-CONTEXT-002, M4-DENSE-CHAT-001, M4-DENSE-REF-001, M4-EVIDENCE-REPLAY-001, M4-GATE-HYGIENE-001, M4-MODEL-LIFECYCLE-001, M4-OBS-001, M4-OPS-SLO-001, M4-OPS-UX-003, M4-RELIABILITY-001, M4-ROBUSTNESS-001, M4-ROUTE-MATRIX-001, M4-SERVE-EX-004, M4-SETUP-001, M4-TREND-001, M4-WORKLOAD-001, M4-CI-001 | proposed |
 | apple-m4-inference-excellence | M4-METAL-EX-001 | M4-EXCELLENCE-004 | proposed |
 | apple-m4-inference-excellence | M4-METAL-EX-002 | M4-METAL-EX-001 | proposed |
 | apple-m4-inference-ops | M4-INF-OPS-002 | M4-INF-OPS-001 | merged |
@@ -215,8 +234,13 @@
 | cpu-proof | CPU-ANSWER-005 | CPU-ANSWER-004 | merged |
 | cpu-proof | CPU-ANSWER-006 | CPU-ANSWER-005 | merged |
 | cpu-proof | CPU-ANSWER-007 | CPU-ANSWER-006 | merged |
+| cpu-proof | CPU-AVX512-000 | CPU-ANSWER-007 | merged |
+| cpu-proof | CPU-SCALAR-000 | CPU-ANSWER-007 | merged |
+| cpu-proof | CPU-AVX2-HOTPATH-000 | CPU-ANSWER-007 | merged |
+| cpu-proof | CPU-AVX2-HOTPATH-001 | CPU-AVX2-HOTPATH-000 | merged |
 | cpu-qk256-performance | KBL8250U-004 | KBL8250U-003 | merged |
 | crate-collapse | LEAF-001 | INV-001 | proposed |
+| falcon-e-family | FE-001 | FE-000 | proposed |
 | intel-258v-platform | ARC140V-002 | LNL258V-RUN-001 | merged |
 | intel-258v-platform | ARC140V-003 | ARC140V-002, CPU258V-003 | merged |
 | intel-258v-platform | ARC140V-004 | ARC140V-003, CPU258V-003 | merged |
@@ -279,6 +303,7 @@
 | intel-258v-platform | LNL258V-COMPARE-006 | LNL258V-COMPARE-005, LNL258V-REG-005 | merged |
 | intel-258v-platform | LNL258V-ASK-001 | LNL258V-COMPARE-005 | merged |
 | intel-258v-platform | LNL258V-ASK-002 | LNL258V-ASK-001 | merged |
+| intel-258v-platform | LNL258V-OV-QUAL-002 | LNL258V-OV-QUAL-001, LNL258V-ROUTE-006, LNL258V-QUAL-006 | merged |
 | intel-258v-platform | LNL258V-CPU-SLM-PERF-001 | LNL258V-BENCH-004, LNL258V-REG-005, LNL258V-DURABLE-003 | merged |
 | intel-258v-platform | LNL258V-CPU-SLM-PERF-002 | LNL258V-CPU-SLM-PERF-001, LNL258V-DURABLE-003 | merged |
 | intel-258v-platform | LNL258V-CPU-SLM-PERF-003 | LNL258V-CPU-SLM-PERF-002, SLM-OV258V-006, LNL258V-QUAL-003 | merged |
@@ -317,6 +342,120 @@
 | intel-258v-platform | LNL258V-DURABLE-003 | LNL258V-DURABLE-001, LNL258V-DURABLE-002, LNL258V-REG-004 | merged |
 | intel-258v-platform | LNL258V-REG-005 | LNL258V-REG-004, LNL258V-DURABLE-003 | merged |
 | intel-258v-platform | LNL258V-ASK-003 | LNL258V-ASK-002 | merged |
+| intel-258v-platform | LNL258V-OV-QUAL-003 | LNL258V-OV-QUAL-002 | merged |
+| intel-258v-platform | LNL258V-OV-QUAL-004 | LNL258V-OV-QUAL-003 | merged |
+| intel-258v-platform | LNL258V-NPU-CACHE-001 | LNL258V-NPU-COLD-001, LNL258V-NPU-RESIDENT-001 | merged |
+| intel-258v-platform | LNL258V-NPU-CACHE-002 | LNL258V-NPU-CACHE-001 | merged |
+| intel-258v-platform | LNL258V-QUAL-009 | LNL258V-OPENVINO-QUAL-RERUN-002 | merged |
+| intel-258v-platform | LNL258V-NPU-RESIDENT-001 | LNL258V-NPU-COLD-001, LNL258V-ROUTE-014, LNL258V-REG-006 | merged |
+| intel-258v-platform | LNL258V-NPU-RESIDENT-002 | LNL258V-ROUTE-019, LNL258V-NPU-RESIDENT-001, LNL258V-NPU-CACHE-001 | merged |
+| intel-258v-platform | LNL258V-ROUTE-011 | LNL258V-ROUTE-010, LNL258V-QUAL-010 | merged |
+| intel-258v-platform | LNL258V-ROUTE-012 | LNL258V-ROUTE-011 | merged |
+| intel-258v-platform | LNL258V-ROUTE-013 | LNL258V-ROUTE-012 | merged |
+| intel-258v-platform | LNL258V-ROUTE-014 | LNL258V-ROUTE-013 | merged |
+| intel-258v-platform | LNL258V-REG-006 | LNL258V-ROUTE-014 | merged |
+| intel-258v-platform | LNL258V-REG-007 | LNL258V-BITNET-INTAKE-001 | merged |
+| intel-258v-platform | LNL258V-QUAL-010 | LNL258V-QUAL-009 | merged |
+| intel-258v-platform | LNL258V-BENCH-005 | LNL258V-ROUTE-009 | merged |
+| intel-258v-platform | LNL258V-ROUTE-007 | LNL258V-OV-QUAL-005, LNL258V-ROUTE-006 | merged |
+| intel-258v-platform | LNL258V-ROUTE-008 | LNL258V-ROUTE-007 | merged |
+| intel-258v-platform | LNL258V-ROUTE-009 | LNL258V-ROUTE-008 | merged |
+| intel-258v-platform | LNL258V-ROUTE-010 | LNL258V-BENCH-005 | merged |
+| intel-258v-platform | LNL258V-OV-QUAL-005 | LNL258V-OV-QUAL-004 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-DOCS-002 | LNL258V-OPENVINO-DOCS-001 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-DOCS-003 | LNL258V-OPENVINO-DOCS-002 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-DOCS-004 | LNL258V-OPENVINO-DOCS-003 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-DOCS-005 | LNL258V-OPENVINO-DOCS-004 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-DOCS-006 | LNL258V-OPENVINO-DOCS-005 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-VALIDATE-001 | LNL258V-OPENVINO-DOCS-006 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-QUAL-RERUN-001 | LNL258V-OPENVINO-QUAL-FIX-001 | merged |
+| intel-258v-platform | LNL258V-QUAL-007 | LNL258V-OPENVINO-QUAL-RERUN-001 | merged |
+| intel-258v-platform | LNL258V-OP-005 | LNL258V-QUAL-007 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-QUAL-REPORT-001 | LNL258V-OPENVINO-UX-001, LNL258V-OV-QUAL-005 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-QUAL-POLICY-001 | LNL258V-OPENVINO-QUAL-REPORT-001, LNL258V-OV-QUAL-005 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-QUAL-FIX-001 | LNL258V-OPENVINO-QUAL-POLICY-001 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-STATUS-001 | LNL258V-OPENVINO-VALIDATE-001 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-UX-001 | LNL258V-OPENVINO-STATUS-001 | merged |
+| intel-258v-platform | LNL258V-QUAL-008 | LNL258V-QUAL-007, LNL258V-OP-005 | merged |
+| intel-258v-platform | LNL258V-OPENVINO-QUAL-RERUN-002 | LNL258V-QUAL-008 | merged |
+| intel-258v-platform | LNL258V-OV-TOKEN-001 | LNL258V-NPU-CACHE-002 | merged |
+| intel-258v-platform | LNL258V-ROUTE-015 | LNL258V-OV-TOKEN-001 | merged |
+| intel-258v-platform | LNL258V-BITNET-INTAKE-002 | LNL258V-BITNET-INTAKE-001 | merged |
+| intel-258v-platform | LNL258V-OP-010 | LNL258V-OP-009, LNL258V-COMPARE-007 | merged |
+| intel-258v-platform | LNL258V-OP-011 | LNL258V-OP-010, LNL258V-POWER-005 | merged |
+| intel-258v-platform | LNL258V-OP-012 | LNL258V-OP-011, LNL258V-ROUTE-024, LNL258V-POWER-005 | merged |
+| intel-258v-platform | LNL258V-EXCELLENCE-AUDIT-002 | LNL258V-OP-012, LNL258V-POWER-005 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-001 | LNL258V-EXCELLENCE-AUDIT-002, LNL258V-OP-012, LNL258V-POWER-005 | merged |
+| intel-258v-platform | LNL258V-THERMAL-002 | LNL258V-THERMAL-001, LNL258V-GOAL-AUDIT-001 | merged |
+| intel-258v-platform | LNL258V-REG-010 | LNL258V-THERMAL-002, LNL258V-REG-008 | merged |
+| intel-258v-platform | LNL258V-VALIDATE-002 | LNL258V-VALIDATE-001, LNL258V-POWER-005, LNL258V-THERMAL-002, LNL258V-REG-010 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-002 | LNL258V-GOAL-AUDIT-001, LNL258V-REG-010, LNL258V-VALIDATE-002 | merged |
+| intel-258v-platform | LNL258V-ROUTE-025 | LNL258V-ROUTE-024, LNL258V-VALIDATE-002, LNL258V-GOAL-AUDIT-002 | merged |
+| intel-258v-platform | LNL258V-REG-011 | LNL258V-ROUTE-025 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-003 | LNL258V-GOAL-AUDIT-002, LNL258V-REG-011 | merged |
+| intel-258v-platform | LNL258V-OP-013 | LNL258V-REG-011 | merged |
+| intel-258v-platform | LNL258V-ASK-006 | LNL258V-OP-013 | merged |
+| intel-258v-platform | LNL258V-ASK-007 | LNL258V-ASK-006 | merged |
+| intel-258v-platform | LNL258V-BITNET-INTAKE-003 | LNL258V-BITNET-INTAKE-002 | merged |
+| intel-258v-platform | LNL258V-BITNET-INTAKE-004 | LNL258V-BITNET-INTAKE-003 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-004 | LNL258V-GOAL-AUDIT-003, LNL258V-OP-013, LNL258V-ASK-006, LNL258V-ASK-007, LNL258V-BITNET-INTAKE-003 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-007 | LNL258V-GOAL-AUDIT-006 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-006 | LNL258V-GOAL-AUDIT-005, LNL258V-BITNET-INTAKE-004 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-005 | LNL258V-GOAL-AUDIT-004, LNL258V-POWER-007, LNL258V-POWER-008 | merged |
+| intel-258v-platform | LNL258V-CI-001 | LNL258V-GOAL-AUDIT-004 | merged |
+| intel-258v-platform | LNL258V-POWER-008 | LNL258V-POWER-007 | merged |
+| intel-258v-platform | LNL258V-POWER-007 | LNL258V-POWER-005 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-008 | LNL258V-OP-014 | merged |
+| intel-258v-platform | LNL258V-VALIDATE-003 | LNL258V-OP-014 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-009 | LNL258V-VALIDATE-003 | merged |
+| intel-258v-platform | LNL258V-POWER-009 | LNL258V-VALIDATE-003, LNL258V-POWER-008 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-010 | LNL258V-POWER-009 | merged |
+| intel-258v-platform | LNL258V-REG-012 | LNL258V-GOAL-AUDIT-010 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-011 | LNL258V-REG-012 | merged |
+| intel-258v-platform | LNL258V-REG-013 | LNL258V-GOAL-AUDIT-011 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-012 | LNL258V-REG-013 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-013 | LNL258V-GOAL-AUDIT-012 | merged |
+| intel-258v-platform | LNL258V-POWER-006 | LNL258V-POWER-005 | blocked |
+| intel-258v-platform | LNL258V-POWER-005 | LNL258V-POWER-004, LNL258V-ASK-005 | merged |
+| intel-258v-platform | LNL258V-ASK-005 | LNL258V-ROUTE-024 | merged |
+| intel-258v-platform | LNL258V-ROUTE-024 | LNL258V-ROUTE-023, LNL258V-NPU-RESIDENT-002, LNL258V-POWER-004 | merged |
+| intel-258v-platform | LNL258V-POWER-004 | LNL258V-POWER-003, LNL258V-ROUTE-023 | merged |
+| intel-258v-platform | LNL258V-ROUTE-023 | LNL258V-PROFILE-RUN-004, LNL258V-ROUTE-022 | merged |
+| intel-258v-platform | LNL258V-EXCELLENCE-AUDIT-001 | LNL258V-QUAL-013 | merged |
+| intel-258v-platform | LNL258V-ROUTE-021 | LNL258V-EXCELLENCE-AUDIT-001 | merged |
+| intel-258v-platform | LNL258V-ROUTE-022 | LNL258V-ROUTE-021 | merged |
+| intel-258v-platform | LNL258V-QUAL-013 | LNL258V-QUAL-012 | merged |
+| intel-258v-platform | LNL258V-QUAL-012 | LNL258V-ROUTE-019 | merged |
+| intel-258v-platform | LNL258V-VALIDATE-001 | LNL258V-COMPARE-007 | merged |
+| intel-258v-platform | LNL258V-COMPARE-008 | LNL258V-VALIDATE-001 | merged |
+| intel-258v-platform | LNL258V-OP-008 | LNL258V-ROUTE-020, LNL258V-OP-007 | merged |
+| intel-258v-platform | LNL258V-COMPARE-007 | LNL258V-REG-009 | merged |
+| intel-258v-platform | LNL258V-REG-009 | LNL258V-OP-009, LNL258V-REG-008 | merged |
+| intel-258v-platform | LNL258V-OP-009 | LNL258V-OP-008 | merged |
+| intel-258v-platform | LNL258V-ROUTE-020 | LNL258V-ROUTE-019, LNL258V-LOWPOWER-QUAL-001, LNL258V-OP-004 | merged |
+| intel-258v-platform | LNL258V-LOWPOWER-QUAL-001 | LNL258V-QUAL-011, LNL258V-POWER-003 | merged |
+| intel-258v-platform | LNL258V-QUAL-011 | LNL258V-POWER-003, LNL258V-REG-008 | merged |
+| intel-258v-platform | LNL258V-POWER-002 | LNL258V-POWER-001, LNL258V-REG-008, LNL258V-THERMAL-001 | merged |
+| intel-258v-platform | LNL258V-POWER-003 | LNL258V-POWER-002 | merged |
+| intel-258v-platform | LNL258V-THERMAL-001 | LNL258V-POWER-001, LNL258V-REG-008 | merged |
+| intel-258v-platform | LNL258V-PROFILE-RUN-004 | LNL258V-PROFILE-RUN-003, LNL258V-ROUTE-022 | merged |
+| intel-258v-platform | LNL258V-PROFILE-RUN-003 | LNL258V-PROFILE-RUN-002, LNL258V-ROUTE-022 | merged |
+| intel-258v-platform | LNL258V-PROFILE-RUN-002 | LNL258V-PROFILE-RUN-001 | merged |
+| intel-258v-platform | LNL258V-PROFILE-RUN-001 | LNL258V-ROUTE-019 | merged |
+| intel-258v-platform | LNL258V-ROUTE-019 | LNL258V-REG-007 | merged |
+| intel-258v-platform | LNL258V-BITNET-INTAKE-001 | LNL258V-ROUTE-018 | merged |
+| intel-258v-platform | LNL258V-ROUTE-018 | LNL258V-ROUTE-017 | merged |
+| intel-258v-platform | LNL258V-ROUTE-017 | LNL258V-ROUTE-016 | merged |
+| intel-258v-platform | LNL258V-ROUTE-016 | LNL258V-OP-007 | merged |
+| intel-258v-platform | LNL258V-OP-007 | LNL258V-OP-006 | merged |
+| intel-258v-platform | LNL258V-REG-008 | LNL258V-POWER-001, LNL258V-REG-007 | merged |
+| intel-258v-platform | LNL258V-POWER-001 | LNL258V-ROUTE-019, LNL258V-NPU-RESIDENT-002, LNL258V-BENCH-004 | merged |
+| intel-258v-platform | LNL258V-OP-006 | LNL258V-ROUTE-015 | merged |
+| intel-a770 | A770-003 | A770-000 | merged |
+| intel-a770 | A770-004 | A770-003 | merged |
+| intel-a770 | A770-005 | A770-004 | merged |
+| intel-a770 | A770-006 | A770-005 | merged |
+| intel-a770 | A770-007 | A770-006 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
@@ -326,6 +465,10 @@
 | intel-npu | NPU-009 | NPU-008 | merged |
 | intel-npu | NPU-010 | NPU-009 | merged |
 | intel-npu | NPU-011 | NPU-010 | merged |
+| intel-npu | NPU-012 | NPU-011 | merged |
+| intel-npu | NPU-013 | NPU-012 | merged |
+| llama3-8b-158 | LLAMA3-158-001 | LLAMA3-158-000 | proposed |
+| llama3-8b-158 | LLAMA3-158-002 | LLAMA3-158-001 | proposed |
 | model-artifacts | MODEL-ARTIFACT-002 | MODEL-ARTIFACT-001 | blocked |
 | model-artifacts | MODEL-ARTIFACT-003 | MODEL-ARTIFACT-002 | merged |
 | model-artifacts | MODEL-ARTIFACT-004 | MODEL-ARTIFACT-003 | merged |
@@ -394,15 +537,22 @@
 | nvidia-5070ti | CUDA-MODEL-006 | CUDA-MODEL-005 | merged |
 | nvidia-5070ti | CUDA-MODEL-007 | CUDA-MODEL-006 | merged |
 | nvidia-5070ti | CUDA-MODEL-008 | CUDA-MODEL-007 | merged |
+| nvidia-5070ti | CUDA-MODEL-009 | CUDA-MODEL-008 | merged |
+| nvidia-5070ti | CUDA-MODEL-010 | CUDA-MODEL-009 | merged |
+| nvidia-5070ti | CUDA-MODEL-011 | CUDA-MODEL-010 | merged |
+| nvidia-5070ti | CUDA-MODEL-013 | CUDA-MODEL-012 | merged |
+| nvidia-5070ti | CUDA-MODEL-014B | CUDA-MODEL-013 | merged |
+| nvidia-5070ti | CUDA-MODEL-015 | CUDA-MODEL-014B | merged |
+| nvidia-5070ti | CUDA-MODEL-016 | CUDA-MODEL-015 | merged |
 | nvidia-5070ti | CUDA-MODEL-SMOLLM2-001 | CUDA-MODEL-008 | merged |
 | nvidia-5070ti | CUDA-UX-009 | CUDA-PROD-010 | merged |
 | nvidia-5070ti | CUDA-UX-010 | CUDA-UX-008, CUDA-UX-009 | merged |
 | nvidia-5070ti | CUDA-SERVER-001 | CUDA-UX-008, CUDA-DENSE-054 | merged |
 | nvidia-5070ti | CUDA-SERVER-002 | CUDA-SERVER-001 | merged |
 | nvidia-5070ti | CUDA-SERVER-003 | CUDA-SERVER-002 | merged |
-| nvidia-5070ti | CUDA-SERVER-004 | CUDA-SERVER-003 | proposed |
-| nvidia-5070ti | CUDA-SERVER-005 | CUDA-SERVER-004 | proposed |
-| nvidia-5070ti | CUDA-SERVER-006 | CUDA-SERVER-004 | proposed |
+| nvidia-5070ti | CUDA-SERVER-004 | CUDA-SERVER-003 | merged |
+| nvidia-5070ti | CUDA-SERVER-005 | CUDA-SERVER-004 | merged |
+| nvidia-5070ti | CUDA-SERVER-006 | CUDA-SERVER-004 | merged |
 | nvidia-5070ti | CUDA-DENSE-050 | CUDA-PROD-008 | merged |
 | nvidia-5070ti | CUDA-PROD-009 | CUDA-PROD-008 | merged |
 | nvidia-5070ti | CUDA-PROD-010 | CUDA-BITNET-PERF-004, CUDA-UX-006, CUDA-UX-007 | merged |
@@ -452,6 +602,8 @@
 | nvidia-5070ti | CUDA-DENSE-020 | CUDA-DENSE-019 | merged |
 | nvidia-5070ti | CUDA-UX-002 | CUDA-UX-001, CUDA-PROD-001 | merged |
 | nvidia-5070ti | CUDA-DENSE-014 | CUDA-DENSE-013 | merged |
+| official-bitnet-2b | OFFICIAL-2B-001 | OFFICIAL-2B-000 | blocked |
+| official-bitnet-2b | OFFICIAL-2B-002 | OFFICIAL-2B-001 | blocked |
 | server-real-inference | SERVER-002 | SERVER-001 | merged |
 | server-real-inference | SERVER-003 | SERVER-002 | merged |
 | server-real-inference | SERVER-004 | SERVER-003 | merged |
@@ -497,14 +649,46 @@
 | slm-cpu | SLM-CPU-018 | SLM-CPU-017 | merged |
 | slm-cpu | SLM-CPU-019 | SLM-CPU-018 | merged |
 | slm-cpu | SLM-CPU-020 | SLM-CPU-019 | merged |
+| slm-cpu | SLM-CPU-059 | SLM-CPU-058 | merged |
+| slm-cpu | SLM-CPU-060 | SLM-CPU-059 | merged |
+| slm-cpu | SLM-CPU-061 | SLM-CPU-060 | merged |
+| slm-cpu | SLM-CPU-033 | SLM-CPU-032 | merged |
+| slm-cpu | SLM-CPU-034 | SLM-CPU-033 | merged |
+| slm-cpu | SLM-CPU-035 | SLM-CPU-034 | merged |
+| slm-cpu | SLM-CPU-036 | SLM-CPU-035 | merged |
+| slm-cpu | SLM-CPU-037 | SLM-CPU-036 | merged |
+| slm-cpu | SLM-CPU-038 | SLM-CPU-037 | merged |
+| slm-cpu | SLM-CPU-039 | SLM-CPU-038 | merged |
+| slm-cpu | SLM-CPU-040 | SLM-CPU-039 | merged |
+| slm-cpu | SLM-CPU-041 | SLM-CPU-040 | merged |
+| slm-cpu | SLM-CPU-042 | SLM-CPU-041 | merged |
+| slm-cpu | SLM-CPU-043 | SLM-CPU-042 | merged |
+| slm-cpu | SLM-CPU-044 | SLM-CPU-043 | merged |
+| slm-cpu | SLM-CPU-045 | SLM-CPU-044 | merged |
+| slm-cpu | SLM-CPU-046 | SLM-CPU-045 | merged |
+| slm-cpu | SLM-CPU-047 | SLM-CPU-046 | merged |
+| slm-cpu | SLM-CPU-048 | SLM-CPU-047 | merged |
+| slm-cpu | SLM-CPU-049 | SLM-CPU-048 | merged |
+| slm-cpu | SLM-CPU-050 | SLM-CPU-049 | merged |
+| slm-cpu | SLM-CPU-051 | SLM-CPU-050 | merged |
+| slm-cpu | SLM-CPU-052 | SLM-CPU-051 | merged |
+| slm-cpu | SLM-CPU-053 | SLM-CPU-052 | merged |
+| slm-cpu | SLM-CPU-054 | SLM-CPU-053 | merged |
+| slm-cpu | SLM-CPU-055 | SLM-CPU-054 | merged |
+| slm-cpu | SLM-CPU-056 | SLM-CPU-055 | merged |
+| slm-cpu | SLM-CPU-057 | SLM-CPU-056 | merged |
+| slm-cpu | SLM-CPU-058 | SLM-CPU-057 | merged |
 | slm-cpu | SLM-CPU-024 | SLM-CPU-023 | merged |
 | slm-cpu | SLM-CPU-025 | SLM-CPU-024 | merged |
 | slm-cpu | SLM-CPU-026 | SLM-CPU-025 | merged |
-| slm-cpu | SLM-CPU-027 | SLM-CPU-026 | blocked |
+| slm-cpu | SLM-CPU-027 | SLM-CPU-026 | superseded |
 | slm-cpu | SLM-CPU-028 | SLM-CPU-026 | merged |
-| slm-cpu | SLM-CPU-029 | SLM-CPU-028 | ready |
+| slm-cpu | SLM-CPU-029 | SLM-CPU-028 | merged |
 | slm-cpu | SLM-CPU-023 | SLM-CPU-016, SLM-CPU-017A, SLM-CPU-022 | merged |
 | slm-cpu | SLM-CPU-022 | SLM-CPU-021 | merged |
+| slm-cpu | SLM-CPU-030 | SLM-CPU-029 | merged |
+| slm-cpu | SLM-CPU-031 | SLM-CPU-030 | merged |
+| slm-cpu | SLM-CPU-032 | SLM-CPU-031 | merged |
 | slm-cpu | SLM-CPU-021 | SLM-CPU-020 | merged |
 | tracker-infra | TRACKER-002 | TRACKER-001 | merged |
 | tracker-infra | TRACKER-003 | TRACKER-002 | merged |

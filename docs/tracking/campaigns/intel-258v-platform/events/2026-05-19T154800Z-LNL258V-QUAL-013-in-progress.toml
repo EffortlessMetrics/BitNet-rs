@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T15:48:00Z"
+event = "in_progress"
+item = "LNL258V-QUAL-013"
+branch = "codex/lunar-lake/LNL258V-QUAL-013-warm-resident-cpu-corpus"
+actor = "codex"
+summary = "Started refreshing Lunar Lake warm_resident corpus-v2 evidence across CPU and OpenVINO routes."
+
+notes = [
+  "The work executes the updated warm_resident corpus-v2 lens on the promoted dense Qwen CPU route and OpenVINO CPU/GPU/NPU candidate routes.",
+  "Downstream route-profile, benchmark, power, regression, readiness, and comparison receipts are refreshed so the active fixture and route evidence stay aligned.",
+  "The scope preserves no broad-quality, route-promotion, speedup, power-advantage, acceleration, native accelerator, or BitNet QK256/I2_S behavior-change claims.",
+]

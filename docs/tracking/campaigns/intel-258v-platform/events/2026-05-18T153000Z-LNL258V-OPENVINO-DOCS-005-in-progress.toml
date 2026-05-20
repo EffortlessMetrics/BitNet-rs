@@ -1,0 +1,20 @@
+timestamp = "2026-05-18T15:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-005"
+event = "in_progress"
+from = "proposed"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-005-promotion-bitnet-boundary"
+summary = "Started LNL258V-OPENVINO-DOCS-005 to define OpenVINO route-promotion and BitNet-boundary contracts."
+
+artifacts = [
+  "docs/specs/BITNET-SPEC-OPENVINO-ROUTE-PROMOTION.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-BITNET-BOUNDARY.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The specs define exact-profile route promotion states/packages and separate OpenVINO dense SLM, OpenVINO BitNet subgraph, native OpenCL, NPU, server, and CPU BitNet reference proof families.",
+  "No route promotion, speedup, power-advantage, broad dense SLM quality, BitNet QK256/I2_S behavior, native OpenCL execution, native NPU kernel execution, full BitNet accelerator inference, QK256 accelerator decode, or server-readiness claim is in scope.",
+]

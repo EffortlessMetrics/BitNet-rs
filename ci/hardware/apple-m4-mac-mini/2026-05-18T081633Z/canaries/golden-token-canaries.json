@@ -1,0 +1,214 @@
+{
+  "artifact_kind": "apple_m4_golden_token_canaries",
+  "schema_version": "1.0.0",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "machine": {
+    "id": "apple-m4-mac-mini"
+  },
+  "canary_contract": {
+    "work_item": "M4-CANARY-001",
+    "live_runtime_claim": false,
+    "drift_localization_only": true,
+    "source_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/answer-corpus-runs/arithmetic_seed777331_add_011.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session-prompts/01-answer-with-a-single-digit-22.json"
+    ]
+  },
+  "claim_boundary": {
+    "dense_slm_and_bitnet_evidence_separated": true,
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "full_metal_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "broad_quality_claim": false,
+    "broad_performance_claim": false,
+    "speedup_claim": false,
+    "bitnet_quality_claimed": false
+  },
+  "summary": {
+    "cases": 2,
+    "generated_token_count": 7
+  },
+  "cases": [
+    {
+      "case_id": "dense-qwen25-q8-arithmetic-001",
+      "model_family": "dense_slm",
+      "prompt": {
+        "text": "Compute 85 + 67. Answer with only the number.",
+        "template_family": "qwen2.5",
+        "template_identity": "qwen2.5-chat-template:gguf_metadata",
+        "rendered_sha256": "7500e70a9b28111044bfcab7d487aa650465d410462f185ed9526ef82aba3415"
+      },
+      "tokens": {
+        "input_count": 43,
+        "input_ids": [
+          151644,
+          8948,
+          198,
+          2610,
+          525,
+          1207,
+          16948,
+          11,
+          3465,
+          553,
+          54364,
+          14817,
+          13,
+          1446,
+          525,
+          264,
+          10950,
+          17847,
+          13,
+          151645,
+          198,
+          151644,
+          872,
+          198,
+          46254,
+          220,
+          23,
+          20,
+          488,
+          220,
+          21,
+          22,
+          13,
+          21806,
+          448,
+          1172,
+          279,
+          1372,
+          13,
+          151645,
+          198,
+          151644,
+          77091
+        ],
+        "generated_count": 5,
+        "generated_ids": [
+          198,
+          16,
+          20,
+          17,
+          151645
+        ]
+      },
+      "generated": {
+        "text": "\n152<|im_end|>",
+        "stop_reason": "eos_token",
+        "valid_utf8": true
+      },
+      "sampler": {
+        "mode": "greedy",
+        "temperature": 0.0,
+        "top_k": 1,
+        "seed": 0
+      },
+      "backend": {
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false
+      },
+      "model": {
+        "id": "qwen2.5-0.5b-instruct-q8_0",
+        "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+      },
+      "tokenizer": {
+        "source": "gguf_metadata",
+        "pretokenizer_authority": "present",
+        "identity": "embedded-gguf-tokenizer:qwen2.5:qwen2"
+      },
+      "claim_boundary": {
+        "runtime_canary": true,
+        "drift_localization_only": true,
+        "live_runtime_claim": false,
+        "broad_quality_claim": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+        "full_metal_inference_claimed": false
+      }
+    },
+    {
+      "case_id": "bitnet-i2s-arithmetic-001",
+      "model_family": "bitnet",
+      "prompt": {
+        "text": "Answer with a single digit: 2+2=",
+        "template_family": "bitnetcpp-answer",
+        "template_identity": "bitnetcpp-answer:external-tokenizer-llama-bpe",
+        "rendered_sha256": "a4a27c8dfd02f3285e44a0bbedd55a37451d1b3513861fc30a035e2f7ed4725d"
+      },
+      "tokens": {
+        "input_count": 18,
+        "input_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          449,
+          264,
+          3254,
+          16099,
+          25,
+          220,
+          17,
+          10,
+          17,
+          28,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "generated_count": 2,
+        "generated_ids": [
+          19,
+          128009
+        ]
+      },
+      "generated": {
+        "text": "4",
+        "stop_reason": "eos_token",
+        "valid_utf8": true
+      },
+      "sampler": {
+        "mode": "greedy",
+        "temperature": 0.0,
+        "top_k": 1,
+        "seed": 0
+      },
+      "backend": {
+        "requested_backend": "apple-m4-cpu-neon",
+        "selected_backend": "apple-m4-cpu-neon",
+        "runtime_api": "cpu",
+        "fallback_used": false
+      },
+      "model": {
+        "id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+      },
+      "tokenizer": {
+        "source": "external_tokenizer_json",
+        "pretokenizer_authority": "llama-bpe",
+        "identity": "external-tokenizer-json:llama-bpe",
+        "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+      },
+      "claim_boundary": {
+        "runtime_canary": true,
+        "drift_localization_only": true,
+        "live_runtime_claim": false,
+        "broad_quality_claim": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+        "full_metal_inference_claimed": false
+      }
+    }
+  ]
+}

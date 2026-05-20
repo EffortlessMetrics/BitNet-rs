@@ -1,0 +1,24 @@
+timestamp = "2026-05-17T22:24:03Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-SERVER-006"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "server/bitnet-qk256-strict-server-smoke"
+pr = 5439
+head_sha = "890848365e0392d1d844d7f1bfc56cc51f450326"
+summary = "Opened PR #5439 for the official BitNet I2_S/QK256 strict RTX 5070 Ti server-smoke evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5439",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-bitnet-qk256-smoke.json",
+  "docs/reports/CUDA_SERVER_006_BITNET_QK256_STRICT_SERVER_SMOKE.md",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+]
+
+notes = [
+  "The PR adds a validated server_shared_engine_chat_completion receipt for the official Microsoft BitNet I2_S/QK256 artifact on RTX 5070 Ti CUDA.",
+  "The receipt records selected_route=bitnet_qk256_cuda, 630 QK256 CUDA invocations, zero BitNet linear CPU fallback, and dense_regular_llm_cuda_inference_claimed=false.",
+  "Speedup, full CUDA residency, broad production server readiness, deployment readiness, concurrency, and broad chat-quality claims remain false/non-claims.",
+]

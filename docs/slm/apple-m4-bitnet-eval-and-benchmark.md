@@ -158,12 +158,112 @@ The follow-on inference-excellence tracker work splits that stage into
 `M4-BITNET-EX-011` for bounded 250-case M4 receipts, and `M4-BITNET-EX-012`
 for the 500-case expansion-or-repair decision.
 
-The receipt records generated text, generated token IDs, tokenizer authority,
-model SHA, per-case timing, task-family scoring, and failure taxonomy for the
-bounded corpus. It also keeps the explicit claim boundary: this is not a broad
-BitNet quality benchmark, not a performance envelope, not dense SLM evidence,
-and not chat, serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad
-Apple Silicon proof.
+`M4-BITNET-EX-010` defines that first stage as
+`ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml`: a dry-run-checked
+250-case corpus with the same accepted artifact/tokenizer identity and
+mechanical scoring authority, but no new runtime pass-rate or performance
+claim.
+
+`M4-BITNET-EX-011` runs that 250-case corpus through the accepted Microsoft
+I2_S BitNet GGUF, accepted external tokenizer, and `apple-m4-cpu-neon` backend.
+
+Recorded report:
+
+- Aggregate receipt:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json`
+- Child receipts:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus-runs/*.json`
+- Derived compact summary:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/summary.json`
+- Receipt validation:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/receipts-check.json`
+- Strict regression context mismatch:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/regression-vs-2026-05-17T1417Z.json`
+- 500-case expansion decision:
+  `ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/larger-corpus-decision.json`
+
+The live run records 250 mechanically scored cases, 196 passes, 54
+quality-failed cases, zero timeouts, generated token IDs for every case, 2,086
+generated tokens, and `fallback_used=false`. The compact summary records p50,
+p90, and p99 timing for model load, tokenizer load, prompt tokenization,
+prefill, first token, decode, input tok/s, output tok/s, and sampling overhead.
+
+| Task family | Passed | Quality failed |
+|---|---:|---:|
+| arithmetic_exact | 14 | 1 |
+| numeric_tolerance | 24 | 11 |
+| fixed_table_qa | 23 | 12 |
+| format_constrained_json | 20 | 0 |
+| closed_label_classification | 18 | 2 |
+| synthetic_extraction | 19 | 6 |
+| ordering_sorting | 17 | 3 |
+| rewrite_normalized | 15 | 5 |
+| constrained_summary | 24 | 6 |
+| required_forbidden_tokens | 22 | 8 |
+
+The regression command intentionally does not compare this receipt against the
+100-case baseline because the corpus identity, selected case IDs, and case
+count differ. The context-mismatch artifact records that boundary explicitly.
+This is bounded BitNet runtime evidence for one accepted
+artifact/tokenizer/backend identity only. It is not a broad BitNet quality
+benchmark, not a performance envelope, not dense SLM evidence, and not chat,
+serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon
+proof.
+
+`M4-BITNET-EX-012` records the follow-on decision: do not expand BitNet to 500
+cases yet. The 250-case run completed without timeouts or fallback, but the
+evidence still exposes repair targets before the next runtime-cost increase:
+numeric tolerance has two format-only failures, fixed-table QA has twelve
+factual-table misses, rewrite-normalized dropped from 90% in the latest
+100-case run to 75%, and required/forbidden-token, extraction, and constrained
+summary families remain visibly weak. The decision requires a repair-focused
+250-case refresh before approving a 500-case BitNet campaign.
+
+`M4-BITNET-EX-013` stages that repair without making a new runtime claim. The
+250-case corpus contract is bumped to `2.1.0`, records explicit
+closed-form YAML expected-answer authority, switches fixed-table prose answers
+to a mechanical `contains_expected` scorer, tightens numeric final-answer
+extraction so prompt-echo numbers are not treated as answers, broadens
+rewrite normalization to punctuation/space-only cleanup, and records that the
+250-case reference-vs-Rust sidecar is still not supplied.
+
+`M4-BITNET-EX-014` reruns that repaired corpus on the accepted Microsoft I2_S
+GGUF, accepted external tokenizer, and `apple-m4-cpu-neon` backend:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/summary.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/receipts-check.json
+ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/regression-vs-2026-05-17T1903Z.json
+```
+
+The repaired run completed 250/250 cases with zero timeouts, zero `not_run`
+cases, `fallback_used=false`, 250 child receipts, and a validated aggregate.
+It records 205/250 quality passes and 210/250 mechanical scoring passes. The
+family result is intentionally narrow:
+
+| Family | Passed / Total |
+| --- | ---: |
+| arithmetic_exact | 14 / 15 |
+| numeric_tolerance | 24 / 35 |
+| fixed_table_qa | 30 / 35 |
+| format_constrained_json | 20 / 20 |
+| closed_label_classification | 18 / 20 |
+| synthetic_extraction | 19 / 25 |
+| ordering_sorting | 17 / 20 |
+| rewrite_normalized | 15 / 20 |
+| constrained_summary | 26 / 30 |
+| required_forbidden_tokens | 22 / 30 |
+
+The prior `2026-05-17T1903Z` 250-case receipt is not a compatible regression
+baseline because its corpus contract is `2.0.0` and its scoring kinds do not
+include `contains_expected`. The repaired run is therefore the first repaired
+250-case baseline. Context-only deltas versus the old run are +9 quality
+passes, -9 quality failures, +7 fixed-table passes, +2 constrained-summary
+passes, unchanged numeric-tolerance quality passes, and +4 rewrite scoring
+passes; these are not a strict regression result. The reference-vs-Rust sidecar
+is still not supplied, so 250/250 reference comparisons remain
+`reference_not_supplied`.
 
 ## M4 Benchmark Report Slice
 

@@ -80,10 +80,14 @@ const ANSWER_RECEIPT_CHECKED_RULES: &[&str] = &[
     "timing_first_token_ms_recorded",
     "timing_decode_total_ms_recorded",
     "latency_total_ms_recorded",
+    "qk256_hot_path_recorded",
+    "qk256_hot_path_invocations_positive",
+    "qk256_hot_path_materialization_audited",
 ];
 const ANSWER_CORPUS_SCORING_KINDS: &[&str] = &[
     "exact_match",
     "normalized_match",
+    "contains_expected",
     "json_schema",
     "numeric_tolerance",
     "required_keywords",
@@ -320,6 +324,8 @@ impl AnswerCorpusCommand {
             aggregate_case_str(&rows, &["kernel", "selected_kernel"])
                 .unwrap_or(&top_level_runtime_api)
                 .to_string();
+        let prompt_generation_identity =
+            aggregate_case_value(&rows, &["prompt_generation_identity"]).unwrap_or(Value::Null);
         let top_level_backend_lane =
             answer_corpus_backend_lane(&device, slm_answer_path, &top_level_model_family);
         let answer_ready_artifact_available = corpus_answer_ready_artifact_available(&corpus.model);
@@ -343,6 +349,7 @@ impl AnswerCorpusCommand {
             "quantization": top_level_quantization.clone(),
             "tokenizer_source": top_level_tokenizer_source,
             "prompt_template": corpus.defaults.prompt_template.as_str(),
+            "prompt_generation_identity": &prompt_generation_identity,
             "selected_kernel_or_runtime": top_level_selected_kernel_or_runtime,
             "corpus": {
                 "id": corpus.corpus_id(),
@@ -389,6 +396,7 @@ impl AnswerCorpusCommand {
             "execution_plan": aggregate_execution_plan,
             "prompt_template_policy": {
                 "family": corpus.defaults.prompt_template.as_str(),
+                "identity_sha256": prompt_generation_identity["identity_sha256"].as_str(),
             },
             "generation": {
                 "mode": if corpus.defaults.greedy { "greedy" } else { "sampling" },
@@ -425,6 +433,7 @@ impl AnswerCorpusCommand {
                 top_level_fallback_used,
                 corpus.defaults.prompt_template.as_str(),
                 &corpus.model.tokenizer_authority,
+                &corpus.metadata.reference_comparison_plan,
             ),
             "receipt_quality": {
                 "case_receipt_checker": "answer_receipt_failed_rules",
@@ -645,8 +654,9 @@ impl AnswerCorpusCommand {
                             run_receipt["tokenizer"]["bos"].is_number()
                                 || run_receipt["tokenizer"]["eos"].is_number(),
                         )
-                    }),
+                }),
             },
+            "prompt_generation_identity": run_receipt["prompt_generation_identity"].clone(),
             "prompt_template": corpus.defaults.prompt_template,
             "prompt_prefill": prompt_prefill,
             "position": {
@@ -679,10 +689,13 @@ impl AnswerCorpusCommand {
             "timing": run_receipt.get("timing").cloned().unwrap_or(Value::Null),
             "latency": run_receipt.get("latency").cloned().unwrap_or(Value::Null),
             "throughput": run_receipt.get("throughput").cloned().unwrap_or(Value::Null),
+            "execution_coverage": run_receipt.get("execution_coverage").cloned().unwrap_or(Value::Null),
+            "qk256_hot_path": run_receipt.get("qk256_hot_path").cloned().unwrap_or(Value::Null),
             "execution_plan": run_receipt.get("execution_plan").cloned().unwrap_or(Value::Null),
             "kernel": {
                 "selected_kernel": run_receipt["kernel"]["kernel_id"].clone(),
                 "family": run_receipt["kernel"]["family"].clone(),
+                "hot_path_kernel": run_receipt["kernel"]["hot_path_kernel_id"].clone(),
             },
             "loader": {
                 "mode": run_receipt["loader"]["mode"].clone(),
@@ -832,6 +845,10 @@ struct AnswerCorpusMetadata {
     claim_boundary: Option<Value>,
     #[serde(default)]
     corpus_contract: Option<CorpusContract>,
+    #[serde(default)]
+    expected_answer_authority: Option<Value>,
+    #[serde(default)]
+    reference_comparison_plan: Option<Value>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1037,6 +1054,8 @@ struct AnswerScoring {
     required_keywords: Option<Vec<String>>,
     #[serde(default)]
     forbidden_tokens: Option<Vec<String>>,
+    #[serde(default)]
+    expected_answer_authority: Option<Value>,
 }
 
 impl AnswerScoring {
@@ -1124,6 +1143,16 @@ fn aggregate_case_str<'a>(rows: &'a [Value], path: &[&str]) -> Option<&'a str> {
             cursor = cursor.get(*key)?;
         }
         cursor.as_str()
+    })
+}
+
+fn aggregate_case_value(rows: &[Value], path: &[&str]) -> Option<Value> {
+    rows.iter().find_map(|row| {
+        let mut cursor = row;
+        for key in path {
+            cursor = cursor.get(*key)?;
+        }
+        Some(cursor.clone())
     })
 }
 
@@ -1284,6 +1313,8 @@ fn answer_corpus_metadata_receipt(corpus: &AnswerCorpus) -> Value {
         "case_count_target": corpus.metadata.case_count_target,
         "prompt_template": corpus.metadata.prompt_template,
         "scoring_status": corpus.metadata.scoring_status,
+        "expected_answer_authority": corpus.metadata.expected_answer_authority,
+        "reference_comparison_plan": corpus.metadata.reference_comparison_plan,
         "claim_boundary": corpus.metadata.claim_boundary,
     })
 }
@@ -1317,6 +1348,8 @@ fn answer_corpus_scoring_contract_receipt(corpus: &AnswerCorpus) -> Value {
         "normalization_rules": contract.map(|contract| contract.normalization_rules.as_str()),
         "expected_output_provenance": contract
             .map(|contract| contract.expected_output_provenance.as_str()),
+        "expected_answer_authority": corpus.metadata.expected_answer_authority,
+        "reference_comparison_plan": corpus.metadata.reference_comparison_plan,
         "receipt_contract": contract.map(|contract| contract.receipt_contract.as_str()),
         "scorer_self_tests": contract.map(|contract| contract.scorer_self_tests.as_slice()),
         "supported_scoring_kinds": ANSWER_CORPUS_SCORING_KINDS,
@@ -1333,7 +1366,7 @@ fn validate_answer_scoring(case: &AnswerCase) -> Result<()> {
         return Ok(());
     };
     match scoring.kind() {
-        "exact_match" | "normalized_match" => {
+        "exact_match" | "normalized_match" | "contains_expected" => {
             if scoring.expected_answer().is_none() {
                 anyhow::bail!(
                     "answer corpus case `{}` scoring `{}` requires expected or expected_normalized",
@@ -1482,6 +1515,12 @@ fn evaluate_quality(
         failed_rules
             .extend(scoring_result.failed_rules.iter().map(|rule| format!("scoring_{rule}")));
     }
+    let exact_scoring_passed = scoring
+        .map(|scoring| {
+            matches!(scoring.kind(), "exact_match" | "normalized_match" | "numeric_tolerance")
+        })
+        .unwrap_or(false)
+        && scoring_result.as_ref().is_some_and(|result| result.passed);
     if let Some(minimum) = min_generated_tokens
         && generated_token_count < minimum
     {
@@ -1489,6 +1528,7 @@ fn evaluate_quality(
     }
     if let Some(minimum) = min_distinct_generated_tokens
         && distinct_generated_tokens < minimum
+        && !exact_scoring_passed
     {
         failed_rules.push("generated_token_variation".to_string());
     }
@@ -1515,6 +1555,7 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
     let mut failed_rules = Vec::new();
     let mut details = Map::new();
     details.insert("kind".to_string(), Value::String(kind.clone()));
+    insert_expected_answer_authority(&mut details, scoring);
 
     match kind.as_str() {
         "exact_match" => {
@@ -1530,13 +1571,30 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
             let expected = scoring.expected_answer().unwrap_or_default();
             let observed = normalize_match_text(&normalized_answer);
             let expected_normalized = normalize_match_text(expected);
+            let observed_compact = compact_match_text(&observed);
+            let expected_compact = compact_match_text(&expected_normalized);
             details.insert(
                 "expected_normalized".to_string(),
                 Value::String(expected_normalized.clone()),
             );
             details.insert("observed_normalized".to_string(), Value::String(observed.clone()));
-            if observed != expected_normalized {
+            details.insert("expected_compact".to_string(), Value::String(expected_compact.clone()));
+            details.insert("observed_compact".to_string(), Value::String(observed_compact.clone()));
+            if observed != expected_normalized && observed_compact != expected_compact {
                 failed_rules.push("normalized_match".to_string());
+            }
+        }
+        "contains_expected" => {
+            let expected = scoring.expected_answer().unwrap_or_default();
+            let observed = normalize_match_text(&normalized_answer);
+            let expected_normalized = normalize_match_text(expected);
+            let expected_present = !expected_normalized.is_empty()
+                && contains_keyword_form(&observed, &expected_normalized);
+            details.insert("expected_normalized".to_string(), Value::String(expected_normalized));
+            details.insert("observed_normalized".to_string(), Value::String(observed));
+            details.insert("expected_present".to_string(), Value::Bool(expected_present));
+            if !expected_present {
+                failed_rules.push("contains_expected".to_string());
             }
         }
         "json_schema" => {
@@ -1560,13 +1618,21 @@ fn evaluate_scoring(answer: &str, scoring: &AnswerScoring) -> ScoringResult {
             let expected = scoring
                 .expected_number
                 .or_else(|| scoring.expected_answer().and_then(first_number));
-            let observed = first_number(&normalized_answer);
             let tolerance = scoring.numeric_tolerance.unwrap_or(0.0);
+            let observed_candidates = numeric_answer_candidates(&normalized_answer);
+            let matching = expected.and_then(|expected| {
+                observed_candidates
+                    .iter()
+                    .copied()
+                    .find(|observed| (*observed - expected).abs() <= tolerance)
+            });
+            let observed = matching.or_else(|| observed_candidates.first().copied());
             details.insert("expected_number".to_string(), json!(expected));
             details.insert("observed_number".to_string(), json!(observed));
+            details.insert("observed_number_candidates".to_string(), json!(observed_candidates));
             details.insert("numeric_tolerance".to_string(), json!(tolerance));
             match (expected, observed) {
-                (Some(expected), Some(observed)) if (observed - expected).abs() <= tolerance => {}
+                (Some(_), Some(_)) if matching.is_some() => {}
                 (Some(_), Some(_)) => failed_rules.push("numeric_tolerance".to_string()),
                 (Some(_), None) => failed_rules.push("numeric_observed_missing".to_string()),
                 (None, _) => failed_rules.push("numeric_expected_missing".to_string()),
@@ -1639,6 +1705,12 @@ fn scoring_result_json(result: Option<&ScoringResult>) -> Value {
     })
 }
 
+fn insert_expected_answer_authority(details: &mut Map<String, Value>, scoring: &AnswerScoring) {
+    if let Some(authority) = &scoring.expected_answer_authority {
+        details.insert("expected_answer_authority".to_string(), authority.clone());
+    }
+}
+
 fn scoring_not_run_json(scoring: Option<&AnswerScoring>) -> Value {
     scoring.map_or(Value::Null, |scoring| {
         json!({
@@ -1652,6 +1724,7 @@ fn scoring_not_run_json(scoring: Option<&AnswerScoring>) -> Value {
             "numeric_tolerance": scoring.numeric_tolerance,
             "required_keywords": &scoring.required_keywords,
             "forbidden_tokens": &scoring.forbidden_tokens,
+            "expected_answer_authority": &scoring.expected_answer_authority,
             "failure_taxonomy": [],
             "failure_category_labels": [],
             "failure_categories": failure_category_fields(&[]),
@@ -2025,6 +2098,7 @@ fn reference_comparison_summary(
     fallback_used: bool,
     prompt_template: &str,
     tokenizer_authority: &Option<CorpusTokenizerAuthority>,
+    reference_comparison_plan: &Option<Value>,
 ) -> Value {
     let mut status_counts = BTreeMap::<String, usize>::new();
     let mut reference_supplied = 0usize;
@@ -2066,6 +2140,7 @@ fn reference_comparison_summary(
         "schema": "bitnet_reference_vs_rust_v1",
         "enabled": bitnet_answer_path,
         "reference_runner_required": bitnet_answer_path,
+        "reference_comparison_plan": reference_comparison_plan,
         "rust_runner": {
             "selected_backend": selected_backend,
             "runtime_api": runtime_api,
@@ -2163,6 +2238,7 @@ fn scoring_failure_taxonomy(
             }
         }
         "normalized_match"
+        | "contains_expected"
         | "required_keywords"
         | "forbidden_tokens"
         | "required_forbidden_tokens" => {
@@ -2301,8 +2377,24 @@ fn normalize_scoring_text(value: &str) -> String {
 
 fn normalize_match_text(value: &str) -> String {
     normalize_scoring_text(value)
-        .trim_matches(|ch: char| matches!(ch, '.' | '!' | '?'))
-        .to_ascii_lowercase()
+        .chars()
+        .map(
+            |ch| {
+                if ch.is_alphanumeric() || ch.is_whitespace() {
+                    ch.to_ascii_lowercase()
+                } else {
+                    ' '
+                }
+            },
+        )
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn compact_match_text(value: &str) -> String {
+    value.chars().filter(|ch| ch.is_alphanumeric()).collect()
 }
 
 fn gate_evaluation_text<'a>(answer: &'a str, scoring: Option<&AnswerScoring>) -> Cow<'a, str> {
@@ -2314,10 +2406,47 @@ fn gate_evaluation_text<'a>(answer: &'a str, scoring: Option<&AnswerScoring>) ->
 }
 
 fn first_number(value: &str) -> Option<f64> {
+    all_numbers(value).into_iter().next()
+}
+
+fn numeric_answer_candidates(value: &str) -> Vec<f64> {
+    let normalized = normalize_scoring_text(value);
+    for marker in ["answer is", "answer:", "result is", "equals", "=", "therefore", " is "] {
+        if let Some(index) = normalized.to_ascii_lowercase().rfind(marker) {
+            let start = index + marker.len();
+            let candidates = all_numbers(&normalized[start..]);
+            if !candidates.is_empty() {
+                return candidates;
+            }
+        }
+    }
+
+    let candidates = all_numbers(&normalized);
+    if normalized
+        .trim_start()
+        .chars()
+        .next()
+        .is_some_and(|ch| ch.is_ascii_digit() || matches!(ch, '-' | '+' | '.'))
+        || candidates.len() <= 1
+    {
+        return candidates;
+    }
+    Vec::new()
+}
+
+fn all_numbers(value: &str) -> Vec<f64> {
     value
         .split(|ch: char| !(ch.is_ascii_digit() || matches!(ch, '.' | '-' | '+')))
         .filter(|token| !token.is_empty() && !matches!(*token, "." | "-" | "+" | "-." | "+."))
-        .find_map(|token| token.parse::<f64>().ok())
+        .filter_map(parse_number_token)
+        .collect()
+}
+
+fn parse_number_token(token: &str) -> Option<f64> {
+    let trimmed = token.trim_matches(|ch| matches!(ch, '.' | '+' | '-'));
+    let start = token.find(trimmed)?;
+    let end = start + trimmed.len();
+    token[..end].parse::<f64>().ok()
 }
 
 fn missing_keywords(answer: &str, keywords: Option<&[String]>) -> Vec<String> {
@@ -2344,10 +2473,51 @@ fn contains_keyword_boundary(answer: &str, keyword: &str) -> bool {
     if needle.is_empty() {
         return false;
     }
+    keyword_boundary_forms(&needle).iter().any(|needle| contains_keyword_form(&haystack, needle))
+}
+
+fn keyword_boundary_forms(needle: &str) -> Vec<String> {
+    let mut forms = vec![needle.to_string()];
+    if let Some(plural) = regular_plural_form(needle)
+        && plural != needle
+    {
+        forms.push(plural);
+    }
+    forms
+}
+
+fn regular_plural_form(needle: &str) -> Option<String> {
+    let last = needle.chars().next_back()?;
+    if !last.is_ascii_alphabetic() || needle.ends_with('s') {
+        return None;
+    }
+    let plural = if needle.ends_with('x')
+        || needle.ends_with('z')
+        || needle.ends_with("ch")
+        || needle.ends_with("sh")
+    {
+        format!("{needle}es")
+    } else if let Some(stem) = needle.strip_suffix('y') {
+        let preceding = stem.chars().next_back();
+        if preceding.is_some_and(|ch| {
+            ch.is_ascii_alphabetic()
+                && !matches!(ch.to_ascii_lowercase(), 'a' | 'e' | 'i' | 'o' | 'u')
+        }) {
+            format!("{stem}ies")
+        } else {
+            format!("{needle}s")
+        }
+    } else {
+        format!("{needle}s")
+    };
+    Some(plural)
+}
+
+fn contains_keyword_form(haystack: &str, needle: &str) -> bool {
     let needle_starts_alnum = needle.chars().next().is_some_and(char::is_alphanumeric);
     let needle_ends_alnum = needle.chars().next_back().is_some_and(char::is_alphanumeric);
     let mut search_from = 0usize;
-    while let Some(relative_index) = haystack[search_from..].find(&needle) {
+    while let Some(relative_index) = haystack[search_from..].find(needle) {
         let start = search_from + relative_index;
         let end = start + needle.len();
         let before = haystack[..start].chars().next_back();
@@ -2638,6 +2808,8 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
         {
             failed.push("dense_slm_execution_coverage_not_bitnet_qk256".to_string());
         }
+    } else if model_family == "bitnet" && expected_backend == "cpu" {
+        failed.extend(qk256_hot_path_failed_rules(run_receipt));
     }
     if is_cuda_answer_corpus_device(expected_backend) {
         let cuda_kernel_recorded = selected_kernel.contains("cuda")
@@ -2732,6 +2904,56 @@ fn json_contains_bitnet_dense_forbidden(value: &Value) -> bool {
         }),
         _ => false,
     }
+}
+
+fn qk256_hot_path_failed_rules(run_receipt: &Value) -> Vec<String> {
+    let mut failed = Vec::new();
+    let hot_path = &run_receipt["qk256_hot_path"];
+    if !hot_path.is_object() {
+        failed.push("qk256_hot_path_recorded".to_string());
+        return failed;
+    }
+
+    for field in [
+        "qk256_f32_scalar_gemv_invocations",
+        "qk256_f32_avx2_gemv_invocations",
+        "qk256_i8s_scaled_scalar_invocations",
+        "qk256_i8s_scaled_avx2_invocations",
+        "qk256_flat_bytes_extracted_count",
+        "input_rows_materialized_count",
+        "output_rows_allocated_count",
+        "no_scale_f32_gemv_invocations",
+        "scaled_i2s_i8s_gemv_invocations",
+        "audited_tensor_materialization_count",
+    ] {
+        if hot_path[field].as_u64().is_none() {
+            failed.push(format!("qk256_hot_path_{field}_recorded"));
+        }
+    }
+
+    let total_invocations = hot_path["no_scale_f32_gemv_invocations"]
+        .as_u64()
+        .unwrap_or(0)
+        .saturating_add(hot_path["scaled_i2s_i8s_gemv_invocations"].as_u64().unwrap_or(0));
+    if total_invocations == 0 {
+        failed.push("qk256_hot_path_invocations_positive".to_string());
+    }
+
+    if hot_path["audited_tensor_materialization_count"].as_u64().unwrap_or(0) == 0 {
+        failed.push("qk256_hot_path_materialization_audited".to_string());
+    }
+
+    if hot_path["qk256_execution_path"].as_str().unwrap_or_default().is_empty() {
+        failed.push("qk256_hot_path_execution_path_recorded".to_string());
+    }
+    if hot_path["selected_kernel"].as_str().unwrap_or_default().is_empty() {
+        failed.push("qk256_hot_path_selected_kernel_recorded".to_string());
+    }
+    if truthy_bool_at_any(hot_path, &[&["speedup_claim"][..], &["math_changed"][..]]) {
+        failed.push("qk256_hot_path_no_speedup_or_math_change_claim".to_string());
+    }
+
+    failed
 }
 
 fn answer_receipt_required_case_fields() -> &'static [&'static str] {
@@ -3216,6 +3438,7 @@ mod tests {
             numeric_tolerance: None,
             required_keywords: None,
             forbidden_tokens: None,
+            expected_answer_authority: None,
         }
     }
 
@@ -3344,6 +3567,23 @@ mod tests {
     }
 
     #[test]
+    fn exact_scored_single_token_answer_does_not_need_variation() {
+        let gate = AnswerGate {
+            starts_with_any: Some(vec!["yes".to_string()]),
+            ..gate("starts_with_any")
+        };
+        let scoring = AnswerScoring {
+            expected_normalized: Some("yes".to_string()),
+            ..scoring("normalized_match")
+        };
+        let quality =
+            evaluate_quality("Yes", &gate, Some(&scoring), Some(&[9454]), Some(1), Some(2));
+
+        assert!(quality.passed, "{:?}", quality.failed_rules);
+        assert_eq!(quality.distinct_generated_tokens, 1);
+    }
+
+    #[test]
     fn slm_eval_scoring_exact_and_normalized_match_are_deterministic() {
         let exact =
             AnswerScoring { expected_normalized: Some("15".to_string()), ..scoring("exact_match") };
@@ -3465,10 +3705,42 @@ mod tests {
         };
 
         assert!(evaluate_scoring("approximately 3.141", &scoring).passed);
+        assert!(evaluate_scoring("The answer is approximately 3.141.", &scoring).passed);
+        assert!(!evaluate_scoring("To find 3.141 percent of 20", &scoring).passed);
         let result = evaluate_scoring("3.20", &scoring);
         assert!(!result.passed);
         assert!(result.failed_rules.contains(&"numeric_tolerance".to_string()));
         assert!(result.failure_taxonomy.contains(&"answer_content".to_string()));
+    }
+
+    #[test]
+    fn bitnet_250_repair_scoring_normalizes_table_and_rewrite_answers() {
+        let table = AnswerScoring {
+            expected_normalized: Some("cyd".to_string()),
+            expected_answer_authority: Some(json!({
+                "source": "closed_form_yaml_fixture",
+                "case_family": "fixed_table_qa"
+            })),
+            ..scoring("contains_expected")
+        };
+        let table_result = evaluate_scoring("Cyd has green.", &table);
+        assert!(table_result.passed);
+        assert_eq!(
+            table_result.details["expected_answer_authority"]["source"],
+            "closed_form_yaml_fixture"
+        );
+
+        let rewrite = AnswerScoring {
+            expected_normalized: Some("local fast verified".to_string()),
+            ..scoring("normalized_match")
+        };
+        assert!(evaluate_scoring("local, fast, verified", &rewrite).passed);
+
+        let compact_rewrite = AnswerScoring {
+            expected_normalized: Some("receipt has tokens".to_string()),
+            ..scoring("normalized_match")
+        };
+        assert!(evaluate_scoring("receipthastokens", &compact_rewrite).passed);
     }
 
     #[test]
@@ -3517,6 +3789,20 @@ mod tests {
             ..scoring("required_keywords")
         };
         assert!(evaluate_scoring("The model cache is ready.", &phrase).passed);
+
+        let plural_required = AnswerScoring {
+            required_keywords: Some(vec!["fallback".to_string()]),
+            ..scoring("required_keywords")
+        };
+        assert!(evaluate_scoring("Check local route fallbacks.", &plural_required).passed);
+
+        let plural_forbidden = AnswerScoring {
+            forbidden_tokens: Some(vec!["warning".to_string()]),
+            ..scoring("forbidden_tokens")
+        };
+        let observed_plural = evaluate_scoring("Warnings were emitted.", &plural_forbidden);
+        assert!(!observed_plural.passed);
+        assert!(observed_plural.failed_rules.contains(&"forbidden_tokens".to_string()));
     }
 
     #[test]
@@ -3836,6 +4122,22 @@ cases:
                 "pretokenizer_authority": "llama-bpe"
             },
             "kernel": { "kernel_id": kernel_id },
+            "qk256_hot_path": {
+                "qk256_f32_scalar_gemv_invocations": 0,
+                "qk256_f32_avx2_gemv_invocations": 0,
+                "qk256_i8s_scaled_scalar_invocations": 1,
+                "qk256_i8s_scaled_avx2_invocations": 0,
+                "qk256_flat_bytes_extracted_count": 1,
+                "input_rows_materialized_count": 1,
+                "output_rows_allocated_count": 1,
+                "no_scale_f32_gemv_invocations": 0,
+                "scaled_i2s_i8s_gemv_invocations": 1,
+                "audited_tensor_materialization_count": 3,
+                "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+                "qk256_execution_path": "scaled_i2s_i8s",
+                "math_changed": false,
+                "speedup_claim": false
+            },
             "tokens": {
                 "prompt": 3,
                 "generated": 1,
@@ -3870,6 +4172,33 @@ cases:
             strict_answer_receipt_fixture("cpu", "cpu-rust", "cpu", "i2_s-avx2-reference");
 
         assert!(answer_receipt_failed_rules(&receipt, "cpu").is_empty());
+    }
+
+    #[test]
+    fn cpu_answer_receipt_rejects_missing_qk256_hot_path_counters() {
+        let mut receipt =
+            strict_answer_receipt_fixture("cpu", "cpu-rust", "cpu", "i2_s-avx2-reference");
+        if let Some(receipt) = receipt.as_object_mut() {
+            receipt.remove("qk256_hot_path");
+        }
+
+        let failed = answer_receipt_failed_rules(&receipt, "cpu");
+
+        assert!(failed.contains(&"qk256_hot_path_recorded".to_string()));
+    }
+
+    #[test]
+    fn cpu_answer_receipt_rejects_zero_qk256_hot_path_invocations() {
+        let mut receipt =
+            strict_answer_receipt_fixture("cpu", "cpu-rust", "cpu", "i2_s-avx2-reference");
+        receipt["qk256_hot_path"]["qk256_i8s_scaled_scalar_invocations"] = json!(0);
+        receipt["qk256_hot_path"]["scaled_i2s_i8s_gemv_invocations"] = json!(0);
+        receipt["qk256_hot_path"]["audited_tensor_materialization_count"] = json!(0);
+
+        let failed = answer_receipt_failed_rules(&receipt, "cpu");
+
+        assert!(failed.contains(&"qk256_hot_path_invocations_positive".to_string()));
+        assert!(failed.contains(&"qk256_hot_path_materialization_audited".to_string()));
     }
 
     #[test]

@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T10:30:00Z"
+event = "merged"
+item = "LNL258V-POWER-007"
+pr = 6055
+head_sha = "da2fd6e59c81b916421b0afc2fcfe16a1faa67a9"
+merge_sha = "91979d3e27fc95e1e2bd8dde4384b4ef017e9bf4"
+branch = "codex/lunar-lake/LNL258V-POWER-007-battery-runbook"
+actor = "codex"
+summary = "Merged PR #6055, adding the POWER-006 low_power battery-mode runbook."
+
+notes = [
+  "PR #6055 added a no-evidence operator runbook for the physical battery-mode low_power evidence run.",
+  "The runbook records strict AC stop rules, before/after battery telemetry requirements, route/profile sampling requirements, energy-proxy refresh, artifact refresh, and promotion gates.",
+  "POWER-006 remains blocked until real battery telemetry and route/profile evidence exist, with no inference, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]

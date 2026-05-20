@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T01:28:25Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OPS-UX-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-OPS-UX-002-explain-open"
+
+notes = [
+  "Started M4-OPS-UX-002 to add model-free explanation and open-target affordances for report-refresh and regression-dashboard outputs.",
+  "Scope is operator navigation and receipt explanation only: no live inference, model download, new runtime proof, BitNet chat or serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim.",
+]

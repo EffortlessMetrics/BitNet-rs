@@ -13,7 +13,7 @@ receipt/artifact
 claim allowed
 ```
 
-Do not merge CPU, Metal, MPSGraph, CUDA, WGPU, Intel Arc GPU, OpenVINO GPU, or OpenVINO NPU claims just because the hardware, vendor name, or accelerator class overlaps.
+Do not merge CPU, Metal, MPSGraph, CUDA, WGPU, Intel Arc GPU, OpenVINO GPU, OpenVINO NPU, or AMD ROCm claims just because the hardware, vendor name, or accelerator class overlaps.
 
 ## Lane Matrix
 
@@ -34,6 +34,7 @@ Do not merge CPU, Metal, MPSGraph, CUDA, WGPU, Intel Arc GPU, OpenVINO GPU, or O
 | M4 Mac mini CPU | `apple-m4-cpu-neon` | ARM64 CPU/NEON fallback and parity | AVX2/AVX-512 behavior |
 | RTX 5070 Ti | `nvidia-rtx-5070-ti-cuda` | Modern NVIDIA CUDA kernel/perf lane | Generic GPU or wgpu proof |
 | RTX 5070 Ti WGPU/Vulkan | `nvidia-rtx-5070-ti-wgpu` | Cross-platform GPU reference lane | CUDA kernel proof |
+| Selected AMD Radeon / Radeon PRO / Instinct | `amd-rocm` (registered only; selected backend must become concrete, for example `amd-radeon-rx-7900-xtx-rocm`) | AMD GPU HIP/ROCm lane scaffold for selected devices | Generic AMD GPU support, CUDA/OpenCL/WGPU/OpenVINO/CPU proof, source-text-as-compile proof, speed, full residency, or server readiness |
 
 ## Machine Summary
 
@@ -46,10 +47,14 @@ Do not merge CPU, Metal, MPSGraph, CUDA, WGPU, Intel Arc GPU, OpenVINO GPU, or O
 | 258V | `intel-258v-cpu-avx2`, `intel-arc-140v-opencl`, `intel-npu-openvino` | `intel-arc-140v-openvino-gpu` | Lunar Lake tri-device box; BitNet CPU lead and same-machine CPU/NPU/Arc comparison plate |
 | M4 Mac mini | `apple-m4-metal` | `apple-m4-mpsgraph`, `apple-m4-cpu-neon` | Apple Silicon Metal lane |
 | RTX 5070 Ti | `nvidia-rtx-5070-ti-cuda` | `nvidia-rtx-5070-ti-wgpu` | Modern NVIDIA CUDA lane |
+| AMD ROCm candidate host | `amd-rocm` | selected concrete AMD ROCm route TBD | Registered scaffold only; first real product target depends on available supported AMD GPU and recorded GFX/HIP/ROCm identity |
 
 ## Required Identity Fields
 
-Every receipt or hardware artifact should preserve separate identity fields:
+Every receipt or hardware artifact should preserve separate identity fields.
+The example path below is a required shape, not a claim that the artifact already
+exists; A770 OpenCL claims require a committed receipt linked from the route and
+capability matrices.
 
 ```json
 {
@@ -61,7 +66,7 @@ Every receipt or hardware artifact should preserve separate identity fields:
     "pci_device_id": "0x56A0"
   },
   "fallback_used": false,
-  "artifact_path": "ci/hardware/intel-arc-a770/2026-05-05/opencl-smoke.json"
+  "artifact_path": "ci/hardware/amd-5700x-intel-a770/<date>/opencl-smoke.json"
 }
 ```
 
@@ -137,6 +142,31 @@ For AMD desktop CPU:
 }
 ```
 
+For AMD ROCm:
+
+```json
+{
+  "requested_backend": "amd-rocm",
+  "selected_backend": "amd-radeon-rx-7900-xtx-rocm",
+  "runtime_api": "hip",
+  "runtime_stack": "rocm",
+  "rocm_version": "7.2.3",
+  "hip_version": "7.2.53211",
+  "gfx_target": "gfx1100",
+  "resolved_device": {
+    "name": "AMD Radeon RX 7900 XTX",
+    "arch": "RDNA3",
+    "pci_bus_id": "..."
+  },
+  "fallback_used": false
+}
+```
+
+The example above is a required receipt shape, not a current support claim.
+`amd-rocm` may be requested by users, but proof must resolve to a concrete
+selected backend and must preserve ROCm/HIP version, GFX target, device
+identity, proof stage, fallback state, and applicable not-claims.
+
 Never use these as proof labels:
 
 ```text
@@ -149,6 +179,11 @@ metal
 mpsgraph
 cuda
 wgpu
+amd
+gpu
+rocm
+hip
+radeon
 ```
 
 ## First PR Queue
@@ -164,6 +199,7 @@ wgpu
 | 258V platform | `LNL258V-001` | Tri-device platform profile only |
 | M4 Mac mini | `M4-001` | Apple Silicon docs and status only |
 | RTX 5070 Ti | `RTX5070TI-001` | NVIDIA CUDA docs and status only |
+| AMD ROCm | `ROCM-DOCS-000` | Docs and backend status only; no runtime, compile, execution, model, speed, residency, or server claim |
 
 Implementation sequence for any lane:
 

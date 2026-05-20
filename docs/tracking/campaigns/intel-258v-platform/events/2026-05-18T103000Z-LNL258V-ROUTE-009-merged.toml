@@ -1,0 +1,27 @@
+timestamp = "2026-05-18T10:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-009"
+event = "merged"
+from = "in_review"
+to = "merged"
+actor = "codex"
+pr = 5537
+merge_sha = "84b5b31a050c72db685b10d5eb41da238042c01f"
+head_sha = "5a88907ad6a82a5be4f2bb31d774f3907bd61f55"
+branch = "codex/lunar-lake/LNL258V-ROUTE-009-profile-timing-applicability"
+summary = "Merged LNL258V-ROUTE-009 profile timing applicability evidence."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "Route-profile comparison now records measured prompt/output token applicability for timing evidence.",
+  "Proxy-only timing adds a profile-specific blocker when it does not satisfy workload profile token bounds.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted with no speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]

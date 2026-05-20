@@ -10,7 +10,7 @@ use bitnet_gpu_hal::context_window::*;
 
 #[test]
 fn chunking_strategy_all_variants() {
-    let variants = vec![
+    let variants = [
         ChunkingStrategy::NoChunking,
         ChunkingStrategy::FixedSize(512),
         ChunkingStrategy::SentenceBased,
@@ -37,7 +37,7 @@ fn chunking_strategy_debug() {
 
 #[test]
 fn eviction_strategy_all_variants() {
-    let variants = vec![
+    let variants = [
         EvictionStrategy::OldestFirst,
         EvictionStrategy::LeastImportant,
         EvictionStrategy::LRU,
@@ -57,8 +57,7 @@ fn eviction_strategy_clone_copy_eq() {
 
 #[test]
 fn chunk_role_all_variants() {
-    let variants =
-        vec![ChunkRole::System, ChunkRole::User, ChunkRole::Assistant, ChunkRole::Context];
+    let variants = [ChunkRole::System, ChunkRole::User, ChunkRole::Assistant, ChunkRole::Context];
     assert_eq!(variants.len(), 4);
 }
 

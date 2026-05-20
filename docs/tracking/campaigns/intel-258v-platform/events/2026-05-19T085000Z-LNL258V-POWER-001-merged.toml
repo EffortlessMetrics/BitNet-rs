@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T08:50:00Z"
+event = "merged"
+item = "LNL258V-POWER-001"
+pr = 5806
+head_sha = "987f75b4d75cc87666e04ecbe910be31af84bfea"
+merge_sha = "e43dfb485d406117891d15689016d615fe436ccb"
+branch = "codex/lunar-lake/LNL258V-POWER-001-power-profile-evidence"
+actor = "codex"
+summary = "Merged PR #5806 for Lunar Lake low-power route power-profile evidence indexing."
+
+notes = [
+  "The merged PR adds a no-inference power-profile receipt that indexes telemetry, low_power route evidence, cold/warm benchmark timing, and explicit AC-only, battery, energy, and thermal blockers.",
+  "The closeout preserves low_power as unpromoted and records no speedup, power-advantage, route-promotion, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]

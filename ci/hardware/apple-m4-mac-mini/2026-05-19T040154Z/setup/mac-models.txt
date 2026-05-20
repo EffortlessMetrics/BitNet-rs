@@ -1,0 +1,20 @@
+Cache: /Users/steven/Library/Caches/bitnet-rs/models
+Default model: qwen2.5-0.5b-instruct-q8_0
+Disk: available=10.14 GB, default_fetch_headroom=2.43 GB, low_disk=false
+Recommendation: Start with the default `qwen2.5-0.5b-instruct-q8_0`. Current headroom can also fetch explicit-only supported models such as `qwen2.5-1.5b-instruct-q4_k_m`.
+Next fetch: bitnet model fetch qwen2.5-0.5b-instruct-q8_0 --cache-dir /Users/steven/Library/Caches/bitnet-rs/models
+Next verify: bitnet model verify qwen2.5-0.5b-instruct-q8_0 --cache-dir /Users/steven/Library/Caches/bitnet-rs/models
+ID                                         State           Cache         Quant      Size       Disk             Selection
+-----------------------------------------------------------------------------------------------------------------------------------
+qwen2.5-0.5b-instruct-q8_0                 default         ready         Q8_0       675.71 MB  enough-headroom  implicit default or explicit --model-id
+qwen2.5-0.5b-instruct-q4_k_m               supported       ready         Q4_K_M     491.40 MB  enough-headroom  explicit --model-id only
+qwen2.5-1.5b-instruct-q4_k_m               supported       ready         Q4_K_M     1.12 GB    enough-headroom  explicit --model-id only
+microsoft-bitnet-b1.58-2B-4T-i2s           supported-ask   missing       I2_S/QK256 1.19 GB    enough-headroom  explicit --model-id with --model-path/--tokenizer for one-shot ask or fixed warm route only
+qwen3-0.6b-q8_0                            diagnostic-only -             Q8_0       -          -                not selectable
+qwen-small-instruct-1b-ish                 candidate       -             -          -          -                not selectable
+small-gemma-phi-smollm-instruct-gguf       candidate       -             -          -          -                not selectable
+qwen3.5-hybrid-vision-moe-state-space      rejected        -             -          -          -                not selectable
+random-or-unpinned-community-gguf          rejected        -             -          -          -                not selectable
+Claim boundary: default/supported rows are dense Qwen Apple M4 CPU/NEON answer paths; supported-ask BitNet rows are limited to one-shot ask plus fixed-prompt warm-session proof with explicit GGUF/tokenizer authority; diagnostic-only, candidate, and rejected rows are not selectable M4 answer claims
+Proof bridge: microsoft-bitnet-b1.58-2B-4T-i2s -> bitnet --device apple-m4-cpu-neon mac bitnet-proof --model models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --proof-receipt ci/hardware/apple-m4-mac-mini/YYYY-MM-DD/bitnet-local-answer/bitnet-answer-corpus-full-release.json --strict
+Warm bridge: microsoft-bitnet-b1.58-2B-4T-i2s -> bitnet --device apple-m4-cpu-neon mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json --max-new-tokens 8 --json-out ci/hardware/apple-m4-mac-mini/2026-05-14/bitnet-warm/bitnet-mac-bitnet-warm-runtime-receipt.json

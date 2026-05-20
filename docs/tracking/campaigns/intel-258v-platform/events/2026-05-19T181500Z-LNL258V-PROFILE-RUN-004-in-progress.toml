@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T18:15:00Z"
+event = "in_progress"
+item = "LNL258V-PROFILE-RUN-004"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-004-cpu-heavy-profile-run"
+actor = "codex"
+summary = "Started collecting explicit Rust GGUF CPU heavy-profile timing for Lunar Lake route comparison."
+
+notes = [
+  "The work adds a CPU profile-run receipt builder for dense Qwen prefill_heavy and decode_heavy cases that match the OpenVINO profile thresholds.",
+  "The receipt feeds profile-specific CPU baseline timing into route-profile comparison so OpenVINO heavy-profile latency advantage can be qualified without proxy timing.",
+  "The scope preserves no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]

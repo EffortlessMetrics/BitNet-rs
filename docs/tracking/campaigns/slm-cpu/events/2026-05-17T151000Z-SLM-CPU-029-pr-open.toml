@@ -1,0 +1,35 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+item = "SLM-CPU-029"
+event = "pr_open"
+timestamp = "2026-05-17T15:10:00Z"
+actor = "codex"
+pr = 5405
+head_sha = "6021d96ed78ee8ffeb6a390e884d3f053771314d"
+branch = "codex/slm-cpu-029-kv-temp-reuse"
+
+summary = "Opened #5405 with temperature-zero Qwen3 warm-session sampler reuse and i5-8250U validation evidence."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5405",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json",
+  "docs/slm/SLM_CPU_KABY_PERFORMANCE_DASHBOARD.md",
+]
+
+notes = [
+  "The warm-session path reuses one SamplingStrategy only for the deterministic temperature-zero profile.",
+  "Nonzero-temperature sampling modes keep per-prompt sampler recreation to avoid RNG-state coupling.",
+  "The validation preserves generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend, model SHA, and fallback=false against the recorded 4-thread appliance oracle.",
+  "No sustained throughput, broad answer quality, Q4/Q5 runtime, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim was added.",
+]
+
+validation = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --allocation-audit --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-17\\qwen3-kv-temp-reuse.json",
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]

@@ -1,0 +1,12 @@
+timestamp = "2026-05-20T04:15:08Z"
+campaign = "intel-a770"
+item = "A770-006"
+event = "in_progress"
+branch = "codex/intel-a770/A770-006-opencl-parity"
+actor = "codex"
+
+notes = [
+  "Started A770-006 after A770-005 landed selected-device OpenCL tiny smoke evidence.",
+  "This slice adds an opt-in selected-device A770 OpenCL matmul_i2s parity test against a CPU reference.",
+  "The parity receipt remains diagnostic-only and does not promote official BitNet QK256 semantics, BitNet inference, trusted-partial acceleration, residency, performance, or completion.",
+]

@@ -1,0 +1,16 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T14:50:51Z"
+event = "pr_open"
+item = "SLM-CPU-039"
+pr = 5693
+head_sha = "db12089189783365d76ac495c855ac44d1c3c0da"
+branch = "codex/slm-cpu-039-workspace-owned-tensor-output"
+actor = "codex"
+summary = "Opened the workspace-owned transformer output boundary PR."
+
+notes = [
+  "PR #5693 routes the FeedForward owned output through TransformerForwardWorkspace before returning it.",
+  "The allocation audit now names feed_forward.output as the first workspace-owned output boundary while reusable Candle tensor storage remains deferred.",
+  "No runtime speedup, sustained throughput, Q4/Q5 runtime, server, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

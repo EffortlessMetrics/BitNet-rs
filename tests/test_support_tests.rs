@@ -329,13 +329,10 @@ fn test_ac1_auto_repair_shows_rebuild_instructions() {
 fn test_ac2_build_time_constant_detection() {
     use bitnet_crossval::{HAS_BITNET, HAS_LLAMA};
     // The constants must be booleans and accessible.
-    let _bitnet: bool = HAS_BITNET;
-    let _llama: bool = HAS_LLAMA;
-    // In a test environment without C++ backends, both should be false.
-    // (Unless CROSSVAL_HAS_BITNET/LLAMA was set at build time.)
-    // Just verify the constants compile and are boolean.
-    assert!(HAS_BITNET == true || HAS_BITNET == false);
-    assert!(HAS_LLAMA == true || HAS_LLAMA == false);
+    let _constants_are_boolean: (bool, bool) = (HAS_BITNET, HAS_LLAMA);
+    // In a test environment without C++ backends, both should be false,
+    // unless CROSSVAL_HAS_BITNET/LLAMA was set at build time. This test only
+    // verifies that the constants compile and have boolean types.
 }
 
 /// Tests spec: docs/specs/test-infrastructure-conditional-execution.md#ac2

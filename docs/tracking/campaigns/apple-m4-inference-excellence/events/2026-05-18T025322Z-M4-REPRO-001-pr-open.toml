@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T02:53:22Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-REPRO-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5502
+head_sha = "6df9009314834f70013c529cbd0ccffda570607a"
+branch = "codex/apple-m4-inference-excellence/M4-REPRO-001-run-identity"
+
+notes = [
+  "Opened PR #5502 for the shared Apple M4 run-identity contract and schema 1.2.0 model-free operator receipts.",
+  "The PR adds validator coverage for run_identity/run_identity_sha256 and keeps legacy committed receipts accepted until later refresh items rewrite their identity shape.",
+  "Scope remains schema and receipt-validation infrastructure only: no new live inference proof, model download, BitNet chat or serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim.",
+]

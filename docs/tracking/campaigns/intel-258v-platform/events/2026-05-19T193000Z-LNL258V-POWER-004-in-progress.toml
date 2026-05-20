@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T19:30:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-004"
+branch = "codex/lunar-lake/LNL258V-POWER-004-energy-proxy-blocker"
+actor = "codex"
+summary = "Started LNL258V-POWER-004 to commit and index an explicit low_power energy-proxy blocker receipt."
+
+notes = [
+  "The current low_power gap is no longer GPU timing; it is battery-mode and benchmark-qualified power-advantage evidence.",
+  "The new receipt is built from current AC-only telemetry and therefore records a blocker, not power advantage.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, acceleration, or BitNet QK256/I2_S behavior claim is added.",
+]

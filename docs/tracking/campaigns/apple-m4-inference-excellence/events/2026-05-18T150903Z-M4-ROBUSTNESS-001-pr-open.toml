@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T15:09:03Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ROBUSTNESS-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-ROBUSTNESS-001-negative-corpus"
+pr = 5699
+head_sha = "71aa445a19a84048ac277553fb642333fdaf13e8"
+
+notes = [
+  "Opened PR #5699 for the M4 robustness/negative eval dry-run lane.",
+  "The PR adds `bitnet mac eval --suite m4-robustness --dry-run`, a deterministic robustness corpus, a family-separated summary receipt, and receipts-check validation for `apple_m4_robustness_eval_summary`.",
+  "No broad safety, alignment, factuality, dense-to-BitNet transfer, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, broad performance, or speedup claim.",
+]

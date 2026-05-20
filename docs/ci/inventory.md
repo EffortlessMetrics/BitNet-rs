@@ -13,7 +13,7 @@ view is the whitelist itself, validated by `xtask ci-lane-whitelist check`.
 | --------------------------------- | -------------------------------------------------- | ---------------------------------- |
 | `pr-plan.yml`                     | `pr-plan`                                          | Visibility-only                    |
 | `ci-core.yml`                     | `ci-core-build-test`, `ci-core-clippy`, `ci-core-docs`, `bdd-grid-check` | BDD grid runs only when relevant   |
-| `feature-matrix.yml`              | `feature-matrix-pr`, `feature-matrix-full`         | Full matrix is label/scheduled     |
+| `feature-matrix.yml`              | `feature-matrix-pr`, `feature-matrix-full-cli`, `feature-matrix-full` | Full CLI and full matrix are risk-routed |
 | `compatibility.yml`               | `compatibility-msrv`, `compatibility-ffi-abi`      | MSRV path-gated; FFI label-gated   |
 
 ## Risk-gated and expensive workflows
@@ -25,7 +25,7 @@ view is the whitelist itself, validated by `xtask ci-lane-whitelist check`.
 | `coverage.yml`                    | (deep, not yet whitelisted)                         | Main / nightly                      |
 | `crossval.yml`                    | (deep, not yet whitelisted)                         | Labels                              |
 | `property-tests.yml`              | (deep, not yet whitelisted)                         | Labels + scheduled                  |
-| `fuzz-ci.yml`, `fuzz-nightly.yml`, `nightly-fuzz.yml` | (deep, not yet whitelisted)     | Scheduled                           |
+| `fuzz-ci.yml`                     | (deep, not yet whitelisted)                         | PR build + scheduled matrix         |
 | `model-gates.yml`, `validation.yml`, `gguf_build_and_validate.yml` | (deep) | Labels                              |
 | `intel-gpu-*.yml`, `rocm-smoke.yml`, `gpu-smoke.yml`, `gpu.yml`, `a770-nightly.yml` | (gpu deep) | Labels / scheduled |
 | `tl-lut-nightly.yml`, `tl-lut-stress.yml`, `quant-matrix.yml` | (deep)         | Scheduled                           |

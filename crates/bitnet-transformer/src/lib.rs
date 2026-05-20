@@ -25,6 +25,169 @@ use layer_builders::{
     linear_with_optional_bias, norm_with_optional_bias, optional_layer_norm_with_optional_bias,
 };
 use qk256::{TIED_EMBED_QK256_KEY, qk256_inline_scale};
+use std::collections::HashMap;
+
+pub type DenseLinearRuntimeHookRegistry = HashMap<String, DenseLinearRuntimeHookDescriptor>;
+
+/// Evidence-scoped packed Q8_0 payload for a dense-linear runtime hook.
+///
+/// This carries bytes only when a caller intentionally wires one tensor path
+/// for before/after proof. Runtime compute stays disabled until receipts prove
+/// generated-ID/text preservation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DenseLinearPackedQ8Payload {
+    pub tensor_name: String,
+    pub packed_q8_bytes: std::sync::Arc<[u8]>,
+    pub q8_block_size: usize,
+    pub q8_block_count: usize,
+    pub matrix_rows: usize,
+    pub matrix_cols: usize,
+}
+
+impl DenseLinearPackedQ8Payload {
+    pub fn payload_len(&self) -> usize {
+        self.packed_q8_bytes.len()
+    }
+
+    pub fn expected_q8_payload_len(&self) -> Option<usize> {
+        self.q8_block_count.checked_mul(2 + self.q8_block_size)
+    }
+
+    pub fn shape_matches_matvec_contract(&self) -> bool {
+        self.matrix_rows > 0
+            && self.matrix_cols > 0
+            && self.q8_block_size == 32
+            && self
+                .matrix_rows
+                .checked_mul(self.matrix_cols)
+                .is_some_and(|values| self.q8_block_count == values.div_ceil(self.q8_block_size))
+    }
+
+    pub fn payload_len_matches_contract(&self) -> bool {
+        self.expected_q8_payload_len().is_some_and(|expected| expected == self.payload_len())
+    }
+}
+
+/// Descriptor passed from model loading into transformer dense-linear calls.
+///
+/// Production loading may still pass metadata-only descriptors. A later
+/// evidence-scoped slice can attach `packed_q8_payload` for exactly one tensor
+/// path, but this descriptor still does not enable packed compute by itself.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DenseLinearRuntimeHookDescriptor {
+    pub tensor_name: String,
+    pub role: String,
+    pub sidecar_payload_sha256: Option<String>,
+    pub packed_q8_payload: Option<DenseLinearPackedQ8Payload>,
+    pub runtime_compute_enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DenseLinearRuntimeHookBoundary {
+    pub tensor_name: String,
+    pub selected_path: &'static str,
+    pub selected_kernel: &'static str,
+    pub sidecar_descriptor_present: bool,
+    pub sidecar_role: Option<String>,
+    pub sidecar_payload_sha256: Option<String>,
+    pub sidecar_payload_bytes_available: bool,
+    pub sidecar_payload_bytes: Option<usize>,
+    pub sidecar_q8_block_count: Option<usize>,
+    pub sidecar_matrix_rows: Option<usize>,
+    pub sidecar_matrix_cols: Option<usize>,
+    pub sidecar_payload_contract_valid: bool,
+    pub runtime_compute_enabled: bool,
+    pub eager_f32_runtime_preserved: bool,
+    pub dense_runtime_replaced: bool,
+    pub speedup_claim: bool,
+    pub generated_id_preservation_required_before_runtime_use: bool,
+    pub next_receipt_gate: &'static str,
+}
+
+impl DenseLinearRuntimeHookBoundary {
+    pub fn eager_f32(tensor_name: impl Into<String>) -> Self {
+        Self {
+            tensor_name: tensor_name.into(),
+            selected_path: "eager_f32_candle",
+            selected_kernel: "dense-f32-candle-linear",
+            sidecar_descriptor_present: false,
+            sidecar_role: None,
+            sidecar_payload_sha256: None,
+            sidecar_payload_bytes_available: false,
+            sidecar_payload_bytes: None,
+            sidecar_q8_block_count: None,
+            sidecar_matrix_rows: None,
+            sidecar_matrix_cols: None,
+            sidecar_payload_contract_valid: false,
+            runtime_compute_enabled: false,
+            eager_f32_runtime_preserved: true,
+            dense_runtime_replaced: false,
+            speedup_claim: false,
+            generated_id_preservation_required_before_runtime_use: true,
+            next_receipt_gate: "before_after_qwen3_q8_generated_id_text_receipts",
+        }
+    }
+
+    pub fn from_sidecar_descriptor(
+        tensor_name: impl Into<String>,
+        descriptor: &DenseLinearRuntimeHookDescriptor,
+    ) -> Self {
+        let payload = descriptor.packed_q8_payload.as_ref();
+        Self {
+            tensor_name: tensor_name.into(),
+            selected_path: "eager_f32_candle",
+            selected_kernel: "dense-f32-candle-linear",
+            sidecar_descriptor_present: true,
+            sidecar_role: Some(descriptor.role.clone()),
+            sidecar_payload_sha256: descriptor.sidecar_payload_sha256.clone(),
+            sidecar_payload_bytes_available: payload.is_some(),
+            sidecar_payload_bytes: payload.map(DenseLinearPackedQ8Payload::payload_len),
+            sidecar_q8_block_count: payload.map(|payload| payload.q8_block_count),
+            sidecar_matrix_rows: payload.map(|payload| payload.matrix_rows),
+            sidecar_matrix_cols: payload.map(|payload| payload.matrix_cols),
+            sidecar_payload_contract_valid: payload.is_some_and(|payload| {
+                payload.tensor_name == descriptor.tensor_name
+                    && payload.shape_matches_matvec_contract()
+                    && payload.payload_len_matches_contract()
+            }),
+            runtime_compute_enabled: false,
+            eager_f32_runtime_preserved: true,
+            dense_runtime_replaced: false,
+            speedup_claim: false,
+            generated_id_preservation_required_before_runtime_use: true,
+            next_receipt_gate: "before_after_qwen3_q8_generated_id_text_receipts",
+        }
+    }
+
+    pub fn preserves_eager_f32(&self) -> bool {
+        self.selected_path == "eager_f32_candle"
+            && self.selected_kernel == "dense-f32-candle-linear"
+            && !self.runtime_compute_enabled
+            && self.eager_f32_runtime_preserved
+            && !self.dense_runtime_replaced
+            && !self.speedup_claim
+    }
+}
+
+fn dense_linear_runtime_hook_boundary(
+    tensor_name: &str,
+    hooks: &DenseLinearRuntimeHookRegistry,
+) -> DenseLinearRuntimeHookBoundary {
+    hooks
+        .get(tensor_name)
+        .map(|descriptor| {
+            DenseLinearRuntimeHookBoundary::from_sidecar_descriptor(tensor_name, descriptor)
+        })
+        .unwrap_or_else(|| DenseLinearRuntimeHookBoundary::eager_f32(tensor_name))
+}
+
+fn attention_f16_dot_input(tensor: &Tensor) -> Result<Tensor> {
+    Ok(tensor.to_dtype(DType::F16)?.to_dtype(DType::F32)?)
+}
+
+fn attention_score_key_input(tensor: &Tensor) -> Result<Tensor> {
+    Ok(tensor.to_dtype(DType::F32)?)
+}
 
 /// Rotary Position Embedding
 pub struct RotaryEmbedding {
@@ -230,12 +393,15 @@ impl MultiHeadAttention {
     // stay isolated from QK256 linear dispatch helpers below.
 
     /// Apply linear transformation with QK256 dispatch
+    /// Apply linear transformation with QK256 dispatch
+    /// Apply linear transformation with QK256 dispatch
     fn apply_linear(
         &self,
         input: &Tensor,
         linear: &Linear,
         proj_name: &str,
-        raw_tensors: &std::collections::HashMap<String, Tensor>,
+        raw_tensors: &HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
     ) -> Result<Tensor> {
         // Generate weight name based on layer index and projection name
         // Format: "layers.{idx}.attention.{proj_name}.weight.qk256_qs"
@@ -277,6 +443,17 @@ impl MultiHeadAttention {
             "Using standard linear for layers.{}.attention.{}",
             self.layer_idx,
             proj_name
+        );
+        let dense_tensor_name = format!("layers.{}.attention.{}.weight", self.layer_idx, proj_name);
+        let hook_boundary =
+            dense_linear_runtime_hook_boundary(&dense_tensor_name, dense_linear_hooks);
+        tracing::trace!(
+            tensor_name = %hook_boundary.tensor_name,
+            selected_path = hook_boundary.selected_path,
+            selected_kernel = hook_boundary.selected_kernel,
+            sidecar_descriptor_present = hook_boundary.sidecar_descriptor_present,
+            runtime_compute_enabled = hook_boundary.runtime_compute_enabled,
+            "dense linear production hook boundary"
         );
         record_bitnet_linear_cpu_fallback();
         linear.forward(input).map_err(BitNetError::from)
@@ -341,9 +518,21 @@ impl FeedForward {
     pub fn forward(
         &self,
         x: &Tensor,
-        raw_tensors: &std::collections::HashMap<String, Tensor>,
+        raw_tensors: &HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
     ) -> Result<Tensor> {
-        let gate = self.apply_linear(x, &self.gate_proj, "gate_proj", raw_tensors)?;
+        self.forward_impl(x, raw_tensors, dense_linear_hooks, None)
+    }
+
+    fn forward_impl(
+        &self,
+        x: &Tensor,
+        raw_tensors: &HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
+        workspace: Option<&mut TransformerForwardWorkspace>,
+    ) -> Result<Tensor> {
+        let gate =
+            self.apply_linear(x, &self.gate_proj, "gate_proj", raw_tensors, dense_linear_hooks)?;
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("mlp.gate_proj", Some(self.layer_idx), &gate)?;
         }
@@ -366,7 +555,7 @@ impl FeedForward {
             tracing::debug!("MLP ||activation(u)||: {:.6e}", activation_norm);
         }
 
-        let up = self.apply_linear(x, &self.up_proj, "up_proj", raw_tensors)?;
+        let up = self.apply_linear(x, &self.up_proj, "up_proj", raw_tensors, dense_linear_hooks)?;
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("mlp.up_proj", Some(self.layer_idx), &up)?;
         }
@@ -397,7 +586,17 @@ impl FeedForward {
             tracing::debug!("MLP ||silu(u) * v||: {:.6e}", prod_norm);
         }
 
-        let output = self.apply_linear(&hidden, &self.down_proj, "down_proj", raw_tensors)?;
+        let output = self.apply_linear(
+            &hidden,
+            &self.down_proj,
+            "down_proj",
+            raw_tensors,
+            dense_linear_hooks,
+        )?;
+        if let Some(workspace) = workspace {
+            let boundary = self.down_proj_output_storage_boundary(&output);
+            workspace.record_down_proj_output_storage_boundary(&output, boundary);
+        }
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("mlp.down_proj", Some(self.layer_idx), &output)?;
         }
@@ -411,6 +610,20 @@ impl FeedForward {
         Ok(output)
     }
 
+    pub fn forward_with_workspace(
+        &self,
+        x: &Tensor,
+        raw_tensors: &HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
+        workspace: &mut TransformerForwardWorkspace,
+    ) -> Result<Tensor> {
+        workspace.record_feed_forward_input(x);
+        let output = self.forward_impl(x, raw_tensors, dense_linear_hooks, Some(workspace))?;
+        workspace.record_feed_forward_output(&output);
+        workspace.store_feed_forward_output(output);
+        workspace.take_feed_forward_output()
+    }
+
     fn apply_activation(&self, input: &Tensor) -> Result<Tensor> {
         apply_ffn_activation(input, self.activation_type)
     }
@@ -421,7 +634,8 @@ impl FeedForward {
         input: &Tensor,
         linear: &Linear,
         proj_name: &str,
-        raw_tensors: &std::collections::HashMap<String, Tensor>,
+        raw_tensors: &HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
     ) -> Result<Tensor> {
         // Generate weight name based on layer index and projection name
         // Format: "layers.{idx}.feed_forward.{proj_name}.weight.qk256_qs"
@@ -449,8 +663,43 @@ impl FeedForward {
             self.layer_idx,
             proj_name
         );
+        let dense_tensor_name =
+            format!("layers.{}.feed_forward.{}.weight", self.layer_idx, proj_name);
+        let hook_boundary =
+            dense_linear_runtime_hook_boundary(&dense_tensor_name, dense_linear_hooks);
+        tracing::trace!(
+            tensor_name = %hook_boundary.tensor_name,
+            selected_path = hook_boundary.selected_path,
+            selected_kernel = hook_boundary.selected_kernel,
+            sidecar_descriptor_present = hook_boundary.sidecar_descriptor_present,
+            runtime_compute_enabled = hook_boundary.runtime_compute_enabled,
+            "dense linear production hook boundary"
+        );
         record_bitnet_linear_cpu_fallback();
         linear.forward(input).map_err(BitNetError::from)
+    }
+
+    fn down_proj_output_storage_boundary(
+        &self,
+        output: &Tensor,
+    ) -> TransformerWorkspaceOutputSurface {
+        let boundary = DenseLinearOutputStorageApiBoundary::from_candle_linear(
+            "feed_forward.down_proj.output",
+            &self.down_proj,
+        );
+        TransformerWorkspaceOutputSurface {
+            name: "feed_forward.down_proj.output",
+            storage_owner: "TransformerForwardWorkspace",
+            status: boundary.status,
+            reason: boundary.reason,
+            next_api_hook: boundary.next_api_hook,
+            last_shape: output.dims().to_vec(),
+            linear_weight_shape: boundary.weight_shape,
+            linear_bias_shape: boundary.bias_shape,
+            weight_accessible: boundary.weight_accessible,
+            bias_accessible: boundary.bias_accessible,
+            can_fill_caller_output_storage: boundary.can_fill_caller_output_storage,
+        }
     }
 }
 
@@ -468,6 +717,192 @@ pub struct TransformerBlock {
     feed_forward: FeedForward,
     attention_norm: LayerNorm,
     ffn_norm: LayerNorm,
+}
+
+/// Typed transformer forward workspace boundary.
+///
+/// This is intentionally conservative: it records the API surface that future
+/// slices can use for reusable transformer-owned buffers, but it does not reuse
+/// Candle tensor outputs yet. Keeping tensor math delegated to the existing
+/// `forward` path preserves the current Qwen3 Q8_0 behavior oracle while making
+/// the owned-output boundary explicit in code.
+#[derive(Debug, Clone, Default)]
+pub struct TransformerForwardWorkspace {
+    model_forward_calls: usize,
+    block_forward_calls: usize,
+    feed_forward_calls: usize,
+    last_input_shape: Vec<usize>,
+    last_output_shape: Vec<usize>,
+    feed_forward_output_slot: Option<Tensor>,
+    feed_forward_output_surface: Option<TransformerWorkspaceOutputSurface>,
+    workspace_owned_output_count: usize,
+    down_proj_output_storage_attempts: usize,
+    tensor_reuse_enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransformerWorkspaceOutputSurface {
+    pub name: &'static str,
+    pub storage_owner: &'static str,
+    pub status: &'static str,
+    pub reason: &'static str,
+    pub next_api_hook: &'static str,
+    pub last_shape: Vec<usize>,
+    pub linear_weight_shape: Vec<usize>,
+    pub linear_bias_shape: Option<Vec<usize>>,
+    pub weight_accessible: bool,
+    pub bias_accessible: bool,
+    pub can_fill_caller_output_storage: bool,
+}
+
+/// Behavior-preserving dense linear output-storage API boundary.
+///
+/// Candle exposes the read-side pieces (`Linear::weight` and `Linear::bias`),
+/// but the compute-side `Tensor::matmul` and optional bias add still allocate
+/// and return owned tensors. This boundary records that narrower fact so Kaby
+/// SLM allocation work does not mistake read access for a reusable output slot.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DenseLinearOutputStorageApiBoundary {
+    pub role: &'static str,
+    pub status: &'static str,
+    pub reason: &'static str,
+    pub next_api_hook: &'static str,
+    pub weight_shape: Vec<usize>,
+    pub bias_shape: Option<Vec<usize>>,
+    pub weight_accessible: bool,
+    pub bias_accessible: bool,
+    pub can_fill_caller_output_storage: bool,
+}
+
+impl DenseLinearOutputStorageApiBoundary {
+    pub fn from_candle_linear(role: &'static str, linear: &Linear) -> Self {
+        let weight_shape = linear.weight().dims().to_vec();
+        let bias_shape = linear.bias().map(|bias| bias.dims().to_vec());
+
+        Self {
+            role,
+            status: "dense_linear_output_storage_blocked_by_candle_tensor_ops",
+            reason: "candle_nn::Linear exposes weight and optional bias tensors, but its behavior-preserving compute path is Tensor::matmul plus optional broadcast_add, and those operations return owned Tensors without a caller-provided output-storage parameter",
+            next_api_hook: "add or adopt a Candle Tensor matmul/bias-add output-storage API before replacing FeedForward::down_proj output construction with reusable workspace-backed storage",
+            weight_shape,
+            bias_shape,
+            weight_accessible: true,
+            bias_accessible: true,
+            can_fill_caller_output_storage: false,
+        }
+    }
+}
+
+impl TransformerForwardWorkspace {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn clear(&mut self) {
+        *self = Self::default();
+    }
+
+    pub fn model_forward_calls(&self) -> usize {
+        self.model_forward_calls
+    }
+
+    pub fn block_forward_calls(&self) -> usize {
+        self.block_forward_calls
+    }
+
+    pub fn feed_forward_calls(&self) -> usize {
+        self.feed_forward_calls
+    }
+
+    pub fn last_input_shape(&self) -> &[usize] {
+        &self.last_input_shape
+    }
+
+    pub fn last_output_shape(&self) -> &[usize] {
+        &self.last_output_shape
+    }
+
+    pub fn tensor_reuse_enabled(&self) -> bool {
+        self.tensor_reuse_enabled
+    }
+
+    pub fn workspace_owned_output_count(&self) -> usize {
+        self.workspace_owned_output_count
+    }
+
+    pub fn down_proj_output_storage_attempts(&self) -> usize {
+        self.down_proj_output_storage_attempts
+    }
+
+    pub fn first_output_surface(&self) -> Option<&TransformerWorkspaceOutputSurface> {
+        self.feed_forward_output_surface.as_ref()
+    }
+
+    pub fn reuse_status(&self) -> &'static str {
+        if self.tensor_reuse_enabled {
+            "typed_transformer_forward_workspace_reuse_enabled"
+        } else if self.feed_forward_output_surface.is_some() {
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
+        } else {
+            "api_boundary_present_owned_tensor_reuse_not_enabled"
+        }
+    }
+
+    fn record_model_input(&mut self, tensor: &Tensor) {
+        self.model_forward_calls += 1;
+        self.last_input_shape = tensor.dims().to_vec();
+    }
+
+    fn record_model_output(&mut self, tensor: &Tensor) {
+        self.last_output_shape = tensor.dims().to_vec();
+    }
+
+    fn record_block_input(&mut self, tensor: &Tensor) {
+        self.block_forward_calls += 1;
+        self.last_input_shape = tensor.dims().to_vec();
+    }
+
+    fn record_block_output(&mut self, tensor: &Tensor) {
+        self.last_output_shape = tensor.dims().to_vec();
+    }
+
+    fn record_feed_forward_input(&mut self, tensor: &Tensor) {
+        self.feed_forward_calls += 1;
+        self.last_input_shape = tensor.dims().to_vec();
+    }
+
+    fn record_feed_forward_output(&mut self, tensor: &Tensor) {
+        self.last_output_shape = tensor.dims().to_vec();
+    }
+
+    fn record_down_proj_output_storage_boundary(
+        &mut self,
+        tensor: &Tensor,
+        boundary: TransformerWorkspaceOutputSurface,
+    ) {
+        self.down_proj_output_storage_attempts += 1;
+        self.last_output_shape = tensor.dims().to_vec();
+        self.feed_forward_output_surface = Some(boundary);
+    }
+
+    fn store_feed_forward_output(&mut self, tensor: Tensor) {
+        let last_shape = tensor.dims().to_vec();
+        self.last_output_shape = last_shape.clone();
+        if let Some(surface) = self.feed_forward_output_surface.as_mut() {
+            surface.last_shape = last_shape;
+        }
+        self.workspace_owned_output_count += 1;
+        self.feed_forward_output_slot = Some(tensor);
+    }
+
+    fn take_feed_forward_output(&mut self) -> Result<Tensor> {
+        self.feed_forward_output_slot.take().ok_or_else(|| {
+            BitNetError::Validation(
+                "TransformerForwardWorkspace feed-forward output slot must be populated before take"
+                    .to_string(),
+            )
+        })
+    }
 }
 
 impl TransformerBlock {
@@ -500,7 +935,34 @@ impl TransformerBlock {
         &self,
         x: &Tensor,
         kv_cache: Option<&mut LayerKVCache>,
-        raw_tensors: &std::collections::HashMap<String, Tensor>,
+        raw_tensors: &HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
+    ) -> Result<Tensor> {
+        self.forward_impl(x, kv_cache, raw_tensors, dense_linear_hooks, None)
+    }
+
+    pub fn forward_with_workspace(
+        &self,
+        x: &Tensor,
+        kv_cache: Option<&mut LayerKVCache>,
+        raw_tensors: &HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
+        workspace: &mut TransformerForwardWorkspace,
+    ) -> Result<Tensor> {
+        workspace.record_block_input(x);
+        let output =
+            self.forward_impl(x, kv_cache, raw_tensors, dense_linear_hooks, Some(workspace))?;
+        workspace.record_block_output(&output);
+        Ok(output)
+    }
+
+    fn forward_impl(
+        &self,
+        x: &Tensor,
+        kv_cache: Option<&mut LayerKVCache>,
+        raw_tensors: &HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
+        mut workspace: Option<&mut TransformerForwardWorkspace>,
     ) -> Result<Tensor> {
         // Debug input activation norms
         if debug_attn_enabled() {
@@ -593,7 +1055,7 @@ impl TransformerBlock {
             });
         }
 
-        let x = self.attention.forward(&x, kv_cache, raw_tensors)?;
+        let x = self.attention.forward(&x, kv_cache, raw_tensors, dense_linear_hooks)?;
         let x = (x + residual)?;
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.post_attention_residual", Some(self.attention.layer_idx), &x)?;
@@ -651,7 +1113,16 @@ impl TransformerBlock {
             });
         }
 
-        let x = self.feed_forward.forward(&x, raw_tensors)?;
+        let x = if let Some(workspace) = workspace.as_mut() {
+            self.feed_forward.forward_with_workspace(
+                &x,
+                raw_tensors,
+                dense_linear_hooks,
+                workspace,
+            )?
+        } else {
+            self.feed_forward.forward(&x, raw_tensors, dense_linear_hooks)?
+        };
         let x = (x + residual)?;
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.output", Some(self.attention.layer_idx), &x)?;
@@ -804,18 +1275,33 @@ pub struct TransformerModel {
     pub lm_head_weight: Option<Tensor>, // Direct access to lm_head weight for transposed handling
     pub lm_head_transposed: bool,       // True if lm_head is stored as [hidden, vocab]
     device: Device,
-    raw_tensors: std::collections::HashMap<String, Tensor>, // Store raw tensors for QK256 dispatch
+    raw_tensors: HashMap<String, Tensor>, // Store raw tensors for QK256 dispatch
+    dense_linear_hooks: DenseLinearRuntimeHookRegistry,
 }
 
 impl TransformerModel {
     pub fn new(config: BitNetConfig, vb: VarBuilder) -> Result<Self> {
-        Self::new_with_tensors(config, vb, std::collections::HashMap::new())
+        Self::new_with_tensors(config, vb, HashMap::new())
     }
 
     pub fn new_with_tensors(
         config: BitNetConfig,
         vb: VarBuilder,
-        raw_tensors: std::collections::HashMap<String, Tensor>,
+        raw_tensors: HashMap<String, Tensor>,
+    ) -> Result<Self> {
+        Self::new_with_tensors_and_dense_linear_hooks(
+            config,
+            vb,
+            raw_tensors,
+            DenseLinearRuntimeHookRegistry::default(),
+        )
+    }
+
+    pub fn new_with_tensors_and_dense_linear_hooks(
+        config: BitNetConfig,
+        vb: VarBuilder,
+        raw_tensors: HashMap<String, Tensor>,
+        dense_linear_hooks: DenseLinearRuntimeHookRegistry,
     ) -> Result<Self> {
         let device = vb.device().clone();
         let vocab_size = config.model.vocab_size;
@@ -987,7 +1473,26 @@ impl TransformerModel {
             lm_head_transposed,
             device,
             raw_tensors,
+            dense_linear_hooks,
         })
+    }
+
+    pub fn dense_linear_runtime_hook_boundary(
+        &self,
+        tensor_name: &str,
+    ) -> DenseLinearRuntimeHookBoundary {
+        dense_linear_runtime_hook_boundary(tensor_name, &self.dense_linear_hooks)
+    }
+
+    pub fn dense_linear_runtime_hook_boundaries(&self) -> Vec<DenseLinearRuntimeHookBoundary> {
+        let mut tensor_names: Vec<_> = self.dense_linear_hooks.keys().cloned().collect();
+        tensor_names.sort();
+        tensor_names
+            .into_iter()
+            .map(|tensor_name| {
+                dense_linear_runtime_hook_boundary(&tensor_name, &self.dense_linear_hooks)
+            })
+            .collect()
     }
 
     pub fn embed(&self, tokens: &[u32]) -> Result<Tensor> {
@@ -1157,7 +1662,28 @@ impl TransformerModel {
     ///
     /// **Performance note**: Accepts ownership of `hidden` to avoid cloning on hot path.
     /// Caller should pass owned tensor or use `.clone()` explicitly if needed.
-    pub fn forward(&self, hidden: Tensor, mut kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
+    pub fn forward(&self, hidden: Tensor, kv_cache: Option<&mut KVCache>) -> Result<Tensor> {
+        self.forward_impl(hidden, kv_cache, None)
+    }
+
+    pub fn forward_with_workspace(
+        &self,
+        hidden: Tensor,
+        kv_cache: Option<&mut KVCache>,
+        workspace: &mut TransformerForwardWorkspace,
+    ) -> Result<Tensor> {
+        workspace.record_model_input(&hidden);
+        let output = self.forward_impl(hidden, kv_cache, Some(workspace))?;
+        workspace.record_model_output(&output);
+        Ok(output)
+    }
+
+    fn forward_impl(
+        &self,
+        hidden: Tensor,
+        mut kv_cache: Option<&mut KVCache>,
+        mut workspace: Option<&mut TransformerForwardWorkspace>,
+    ) -> Result<Tensor> {
         let mut x = hidden; // Take ownership - no clone needed!
 
         // Tracepoint 1: Embeddings (incremental path - single token)
@@ -1179,7 +1705,17 @@ impl TransformerModel {
 
         for (i, layer) in self.layers.iter().enumerate() {
             let layer_cache = kv_cache.as_mut().and_then(|c| c.layer_mut(i));
-            x = layer.forward(&x, layer_cache, &self.raw_tensors)?;
+            x = if let Some(workspace) = workspace.as_mut() {
+                layer.forward_with_workspace(
+                    &x,
+                    layer_cache,
+                    &self.raw_tensors,
+                    &self.dense_linear_hooks,
+                    workspace,
+                )?
+            } else {
+                layer.forward(&x, layer_cache, &self.raw_tensors, &self.dense_linear_hooks)?
+            };
 
             // Debug layer activation norms (show all layers when debugging)
             if debug_attn_enabled()
@@ -1478,6 +2014,65 @@ mod tests {
     }
 
     #[test]
+    fn attention_f16_dot_input_uses_f16_roundtrip_values() -> Result<()> {
+        let device = Device::Cpu;
+        let input =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+
+        let output = attention_f16_dot_input(&input)?;
+        let values = output.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(values, vec![1.0, -2.0, 3.125, -4.25]);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_score_key_input_preserves_f32_values() -> Result<()> {
+        let device = Device::Cpu;
+        let input =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+
+        let output = attention_score_key_input(&input)?;
+        let values = output.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(values, vec![1.0003, -2.0007, 3.1259, -4.2509]);
+        Ok(())
+    }
+
+    #[test]
+    fn attention_score_qk_inputs_match_reference_precision_contract() -> Result<()> {
+        let device = Device::Cpu;
+        let query =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 1, 4), &device)?;
+        let key = Tensor::from_slice(&[5.0003f32, 6.0007, -7.1259, 8.2509], (1, 1, 1, 4), &device)?;
+
+        let q_values = attention_f16_dot_input(&query)?.flatten_all()?.to_vec1::<f32>()?;
+        let k_values = attention_score_key_input(&key)?.flatten_all()?.to_vec1::<f32>()?;
+        let score = q_values.iter().zip(k_values.iter()).fold(0.0f32, |sum, (q, k)| sum + q * k);
+
+        assert_eq!(q_values, vec![1.0, -2.0, 3.125, -4.25]);
+        assert_eq!(k_values, vec![5.0003, 6.0007, -7.1259, 8.2509]);
+        assert_eq!(score, -64.33586);
+
+        Ok(())
+    }
+
+    #[test]
+    fn attention_value_mix_uses_f16_roundtrip_values() -> Result<()> {
+        let device = Device::Cpu;
+        let weights = Tensor::from_slice(&[0.25f32, 0.25, 0.25, 0.25], (1, 1, 1, 4), &device)?;
+        let values =
+            Tensor::from_slice(&[1.0003f32, -2.0007, 3.1259, -4.2509], (1, 1, 4, 1), &device)?;
+
+        let rounded_values = attention_f16_dot_input(&values)?;
+        let mixed = weights.matmul(&rounded_values)?;
+        let mixed = mixed.flatten_all()?.to_vec1::<f32>()?;
+
+        assert_eq!(mixed, vec![-0.53125]);
+        Ok(())
+    }
+
+    #[test]
     fn test_layer_norm_with_small_gamma() -> candle_core::Result<()> {
         // Test RMSNorm with gamma RMS ≈ 0.018 (our model's case)
         let device = Device::Cpu;
@@ -1594,7 +2189,166 @@ mod tests {
     }
 
     #[test]
-    #[serial]
+    fn test_rms_norm_type_does_not_remove_mean() -> candle_core::Result<()> {
+        let device = Device::Cpu;
+        let hidden_size = 3;
+        let eps = 1e-5;
+
+        use std::collections::HashMap;
+
+        let mut tensors = HashMap::new();
+        tensors.insert("weight".to_string(), Tensor::ones(hidden_size, DType::F32, &device)?);
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let norm = norm_with_optional_bias(NormType::RmsNorm, hidden_size, eps, vb)?;
+
+        let input = Tensor::from_slice(&[1.0f32, 2.0, 3.0], (1, hidden_size), &device)?;
+        let output = norm.forward(&input)?;
+        let values = output.to_vec2::<f32>()?;
+
+        assert!(
+            values[0].iter().all(|value| *value > 0.0),
+            "RMSNorm should preserve positive sign instead of mean-centering: {values:?}"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn transposed_lm_head_uses_dedicated_output_weight() -> Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let vocab_size = 4;
+        let hidden_size = 2;
+        let mut config = BitNetConfig::default();
+        config.model.vocab_size = vocab_size;
+        config.model.hidden_size = hidden_size;
+        config.model.num_layers = 0;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::zeros((vocab_size, hidden_size), DType::F32, &device)?,
+        );
+        tensors.insert(
+            "final_norm.weight".to_string(),
+            Tensor::ones(hidden_size, DType::F32, &device)?,
+        );
+        tensors.insert(
+            "final_norm.bias".to_string(),
+            Tensor::zeros(hidden_size, DType::F32, &device)?,
+        );
+        tensors.insert(
+            "lm_head.weight".to_string(),
+            Tensor::from_slice(
+                &[
+                    1.0f32, 0.0, 0.0, 0.0, // hidden dim 0 -> token 0
+                    0.0, 1.0, 0.0, 0.0, // hidden dim 1 -> token 1
+                ],
+                (hidden_size, vocab_size),
+                &device,
+            )?,
+        );
+        tensors.insert(
+            "lm_head.transposed".to_string(),
+            Tensor::from_slice(&[1.0f32], (1,), &device)?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors(config, vb, HashMap::new())?;
+
+        assert!(
+            model.lm_head_transposed,
+            "transposed lm_head flag must survive model construction"
+        );
+        assert!(
+            model.lm_head_weight.is_some(),
+            "transposed lm_head must keep its dedicated output weight"
+        );
+        assert!(
+            model.embed_tied_weight.is_none(),
+            "dedicated transposed lm_head must not fall back to tied embeddings"
+        );
+
+        let hidden = Tensor::from_slice(&[2.0f32, 3.0], (1, hidden_size), &device)?;
+        let logits = model.logits(&hidden)?;
+        let values = logits.to_vec2::<f32>()?;
+        assert_eq!(values, vec![vec![2.0, 3.0, 0.0, 0.0]]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn tied_embedding_logits_use_cached_embedding_transpose() -> Result<()> {
+        use std::collections::HashMap;
+
+        let device = Device::Cpu;
+        let vocab_size = 4;
+        let hidden_size = 3;
+        let mut config = BitNetConfig::default();
+        config.model.vocab_size = vocab_size;
+        config.model.hidden_size = hidden_size;
+        config.model.num_layers = 0;
+
+        let mut tensors = HashMap::new();
+        tensors.insert(
+            "embed_tokens.weight".to_string(),
+            Tensor::from_slice(
+                &[
+                    1.0f32, 0.0, 0.0, // token 0
+                    0.0, 1.0, 0.0, // token 1
+                    0.0, 0.0, 1.0, // token 2
+                    1.0, 1.0, 1.0, // token 3
+                ],
+                (vocab_size, hidden_size),
+                &device,
+            )?,
+        );
+        tensors.insert(
+            "final_norm.weight".to_string(),
+            Tensor::ones(hidden_size, DType::F32, &device)?,
+        );
+        tensors.insert(
+            "final_norm.bias".to_string(),
+            Tensor::zeros(hidden_size, DType::F32, &device)?,
+        );
+
+        let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
+        let model = TransformerModel::new_with_tensors(config, vb, HashMap::new())?;
+
+        assert!(
+            model.lm_head.is_none() && model.lm_head_weight.is_none(),
+            "missing lm_head must use tied embeddings"
+        );
+        assert!(
+            model.embed_tied_weight.is_some(),
+            "tied embedding logits should cache [hidden, vocab] weight"
+        );
+
+        let hidden_2d = Tensor::from_slice(&[2.0f32, 3.0, 5.0], (1, hidden_size), &device)?;
+        let logits_2d = model.logits(&hidden_2d)?;
+        assert_eq!(logits_2d.to_vec2::<f32>()?, vec![vec![2.0, 3.0, 5.0, 10.0]]);
+
+        let hidden_3d = Tensor::from_slice(
+            &[
+                2.0f32, 3.0, 5.0, // step 0
+                7.0, 11.0, 13.0, // step 1
+            ],
+            (1, 2, hidden_size),
+            &device,
+        )?;
+        let logits_3d = model.logits(&hidden_3d)?;
+        assert_eq!(
+            logits_3d.to_vec3::<f32>()?,
+            vec![vec![vec![2.0, 3.0, 5.0, 10.0], vec![7.0, 11.0, 13.0, 31.0]]]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    #[serial(bitnet_env)]
     fn test_layer_norm_requires_bias_when_guard_enabled() -> candle_core::Result<()> {
         let device = Device::Cpu;
         let hidden_size = 64;
@@ -1658,7 +2412,8 @@ mod tests {
         let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
         let attention = MultiHeadAttention::new(&config, vb, 0)?;
         let x = Tensor::from_vec(vec![1.0f32, 3.0], &[1, 1, 2], &device)?;
-        let output = attention.forward(&x, None, &HashMap::new())?;
+        let output =
+            attention.forward(&x, None, &HashMap::new(), &DenseLinearRuntimeHookRegistry::new())?;
         let values: Vec<f32> = output.flatten_all()?.to_vec1()?;
 
         assert!(
@@ -1690,7 +2445,8 @@ mod tests {
         let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
         let feed_forward = FeedForward::new(&config, vb, 0)?;
         let x = Tensor::from_vec(vec![1.0f32, 2.0], &[1, 1, 2], &device)?;
-        let output = feed_forward.forward(&x, &HashMap::new())?;
+        let output =
+            feed_forward.forward(&x, &HashMap::new(), &DenseLinearRuntimeHookRegistry::new())?;
         let values: Vec<f32> = output.flatten_all()?.to_vec1()?;
 
         assert!(
@@ -1720,7 +2476,8 @@ mod tests {
         let vb = VarBuilder::from_tensors(tensors, DType::F32, &device);
         let feed_forward = FeedForward::new(&config, vb, 0)?;
         let x = Tensor::from_vec(vec![1.0f32, 2.0], &[1, 1, 2], &device)?;
-        let output = feed_forward.forward(&x, &HashMap::new())?;
+        let output =
+            feed_forward.forward(&x, &HashMap::new(), &DenseLinearRuntimeHookRegistry::new())?;
         let values: Vec<f32> = output.flatten_all()?.to_vec1()?;
 
         assert!(

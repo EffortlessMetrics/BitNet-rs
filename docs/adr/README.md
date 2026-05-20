@@ -12,6 +12,7 @@ from campaign manifests and events.
 - ADR-0001: [Configuration layering and clamp location](./0001-configuration-layering.md)
 - ADR-0002: [GPU Backend Strategy](./0002-gpu-backend-strategy.md)
 - BITNET-ADR-0004: [9950X3D + RTX 5070 Ti CUDA Product Bench](./BITNET-ADR-0004-9950x3d-5070ti-cuda-product-bench.md)
+- BITNET-ADR-0005: [Proof Families Are Not Interchangeable](./BITNET-ADR-0005-proof-families-are-not-interchangeable.md)
 
 ## Source-Of-Truth Role
 
@@ -22,6 +23,7 @@ from campaign manifests and events.
 | ADR | What decision was made and why it is durable |
 | Plan | PR order and proof commands |
 | Campaign `active.toml` | Current executable work |
+| Handoff | Operator transfer context and closeout notes |
 | Policy TOML | Enforceable ledger |
 | Receipt or artifact | Evidence |
 

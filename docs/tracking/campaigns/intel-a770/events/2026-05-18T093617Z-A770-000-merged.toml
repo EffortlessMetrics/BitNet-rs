@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T09:36:17Z"
+campaign = "intel-a770"
+item = "A770-000"
+event = "merged"
+actor = "codex"
+previous_status = "ready"
+new_status = "merged"
+branch = "codex/a770-truth-reconciliation-consolidated"
+pr = 5623
+head_sha = "bfb3641f72d85af126184711ed93ced8ba632e6b"
+merge_sha = "27f61f798913a795edc310b31905a2825e50b427"
+
+notes = [
+  "PR #5623 merged the consolidated A770 committed-truth reconciliation.",
+  "The merge keeps A770 OpenCL BitNet proof diagnostic until claim-grade selected-device receipts are committed.",
+  "No OpenCL kernel execution, QK256 dispatch, full inference, trusted partial acceleration, performance, OpenVINO GPU, Arc 140V, or generic OpenCL promotion is claimed.",
+]

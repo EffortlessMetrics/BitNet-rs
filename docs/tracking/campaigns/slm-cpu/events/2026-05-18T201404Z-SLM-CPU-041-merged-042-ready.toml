@@ -1,0 +1,20 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T20:14:04Z"
+event = "merged"
+item = "SLM-CPU-041"
+pr = 5754
+head_sha = "f9ee7725af17b63a66e9c3bfab104ff80fcdece0"
+merge_sha = "40a80c69125aad71b487891a781b979d59a95d48"
+branch = "codex/slm-cpu-041-linear-output-storage-api"
+actor = "codex"
+summary = "Recorded SLM-CPU-041 as merged and queued SLM-CPU-042 as the next Qwen3 Q8_0 dense linear locality boundary slice."
+
+notes = [
+  "PR #5754 merged the dense linear output-storage API boundary classification.",
+  "The slice narrowed the blocker from Linear opacity to the exact Candle Tensor matmul/bias-add API gap: weight and bias are readable, but compute still returns owned tensors without caller-provided output storage.",
+  "SLM-CPU-042 is ready to move the Kaby performance lane into behavior-preserving Q8_0 dense linear locality or matmul/dequant boundary evidence.",
+  "No sustained i5-8250U throughput claim is made.",
+  "No runtime speedup is claimed without before/after behavior-preserving receipts.",
+  "No broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

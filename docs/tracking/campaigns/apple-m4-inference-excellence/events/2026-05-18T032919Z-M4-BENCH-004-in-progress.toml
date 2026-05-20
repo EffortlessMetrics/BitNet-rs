@@ -1,0 +1,14 @@
+timestamp = "2026-05-18T03:29:19Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-004-environment-preflight"
+
+notes = [
+  "Started M4-BENCH-004 to add benchmark environment preflight evidence before interpreting M4 timing drift.",
+  "Scope is a preflight receipt and validator for git/binary identity, macOS build, SoC probe, memory pressure, thermal pressure, power state, disk/cache state, model cache root, background-load notes, and invalid-comparison reasons.",
+  "No live model benchmark, speed result, model download, BitNet chat or serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, broad performance, broad quality, or speedup claim.",
+]

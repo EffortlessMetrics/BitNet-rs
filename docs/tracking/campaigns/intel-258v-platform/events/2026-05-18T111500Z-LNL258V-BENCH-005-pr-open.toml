@@ -1,0 +1,25 @@
+timestamp = "2026-05-18T11:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-005"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+pr = 5550
+branch = "codex/lunar-lake/LNL258V-BENCH-005-profile-timing-coverage"
+head_sha = "184519dd642cd06527fb77266110318564750360"
+summary = "Opened PR #5550 for aggregate Lunar Lake profile timing-applicability coverage."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5550",
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "The PR adds timing_coverage summaries to route-profile comparison, cold/warm benchmark, regression-v2, and comparison artifacts.",
+  "Validation covered focused Lunar Lake tests, JSON parsing, campaign check, generated-dashboard check, and diff check.",
+  "No new inference, route promotion, speedup, power-advantage, Arc/NPU acceleration, or BitNet QK256/I2_S behavior-change claim is made.",
+]

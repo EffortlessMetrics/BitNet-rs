@@ -1,0 +1,13 @@
+timestamp = "2026-05-20T05:12:06Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-061"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "ready"
+summary = "Queued the real Qwen3 Q8_0 sidecar payload candidate slice."
+notes = [
+  "SLM-CPU-061 follows the SLM-CPU-060 hook contract and may wire one exact Qwen3 Q8_0 dense-linear tensor from real GGUF sidecar bytes into DenseLinearPackedQ8Payload behind an explicit opt-in gate.",
+  "Runtime compute remains gated by before/after warm-session receipts proving identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false.",
+  "The item must not claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 changes.",
+]

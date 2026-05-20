@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T16:09:41Z"
+campaign = "intel-a770"
+item = "A770-004"
+event = "in_progress"
+branch = "codex/intel-a770/A770-004-runtime-probe"
+actor = "codex"
+
+notes = [
+  "Started A770-004 to add Intel Arc A770 runtime visibility probe evidence without adding kernels or inference claims.",
+  "The implementation composes existing OpenCL, Level Zero, and OpenVINO visibility probes and selects intel-a770-opencl only when native OpenCL reports an exact A770 identity.",
+  "OpenVINO GPU matches are recorded as reference-only and do not count as native OpenCL proof.",
+  "No A770 OpenCL kernel execution, BitNet inference, packed QK256, speedup, route promotion, or trusted-partial acceleration claim is made.",
+]

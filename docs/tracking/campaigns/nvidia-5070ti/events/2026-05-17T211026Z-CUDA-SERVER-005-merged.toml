@@ -1,0 +1,29 @@
+timestamp = "2026-05-17T21:10:26Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-SERVER-005"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "docs/dense-qwen-exact-server-readiness"
+pr = 5410
+head_sha = "746f148ec34fbd90d7e3ca9f7efa51cd93bdd97c"
+merge_sha = "7923c9fce06ab14bf5d0da6796f003b38c085755"
+summary = "Merged PR #5410 with exact-profile dense Qwen RTX 5070 Ti server readiness."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5410",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/reports/CUDA_SERVER_005_DENSE_QWEN_EXACT_PROFILE_SERVER_READY.md",
+  "docs/status/CUDA_CAPABILITY_MATRIX.md",
+  "docs/model-artifacts/MODEL_COVERAGE_MATRIX.md",
+  "docs/tutorials/rtx5070ti-dense-qwen-cuda.md",
+]
+
+notes = [
+  "The merged slice promotes dense_qwen25_05b_q8_cuda server_ready only for the exact non-streaming shared-engine /v1/chat/completions RTX 5070 Ti receipt.",
+  "The receipt records artifact checksum identity, endpoint/request-profile scope, generation policy, selected backend, dense route, fallback=false, and bounded claim booleans.",
+  "The merged slice keeps official BitNet QK256 server readiness, global dense GGUF server readiness, speedup, full residency, production deployment, concurrency, and broad chat-quality claims out of scope.",
+  "CUDA-SERVER-006 remains the separate official BitNet I2_S/QK256 strict server-smoke item.",
+]

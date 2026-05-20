@@ -8,7 +8,7 @@
 //! ## Coverage
 //!
 //! - Random matrix dimensions (rows, cols with various QK256 block alignments)
-//! - Random code patterns (0..=3 mapping to -2.0, -1.0, 1.0, 2.0)
+//! - Random code patterns (0..=3 mapping to -1.0, 0.0, 1.0, 0.0)
 //! - Random input vectors with various distributions
 //! - Tail handling (cols not multiple of 256)
 //! - Numerical accuracy validation against FP32 reference
@@ -45,6 +45,30 @@ fn qk256_codes(len: usize) -> impl Strategy<Value = Vec<u8>> {
     prop::collection::vec(0u8..=3, len)
 }
 
+fn pack_qk256_row_codes(codes: &[u8], cols: usize) -> Vec<u8> {
+    let blocks_per_row = cols.div_ceil(QK256_BLOCK);
+    let mut packed = vec![0u8; blocks_per_row * QK256_PACKED_BYTES];
+
+    for block_idx in 0..blocks_per_row {
+        let block_code_base = block_idx * QK256_BLOCK;
+        let block_byte_base = block_idx * QK256_PACKED_BYTES;
+        for chunk in 0..2 {
+            let chunk_code_base = block_code_base + chunk * 128;
+            let chunk_byte_base = block_byte_base + chunk * 32;
+            for gp in 0..32 {
+                let code = |lane_offset: usize| -> u8 {
+                    let idx = chunk_code_base + lane_offset + gp;
+                    if idx < cols { codes[idx] & 0x03 } else { 0 }
+                };
+                packed[chunk_byte_base + gp] =
+                    (code(0) << 6) | (code(32) << 4) | (code(64) << 2) | code(96);
+            }
+        }
+    }
+
+    packed
+}
+
 /// Strategy for generating random input vectors
 fn random_input_vector(len: usize) -> impl Strategy<Value = Vec<f32>> {
     prop::collection::vec(-10.0f32..10.0, len)
@@ -54,14 +78,13 @@ fn random_input_vector(len: usize) -> impl Strategy<Value = Vec<f32>> {
 
 /// Test spec: i2s-dual-flavor.md#code-to-f32-lut-verification
 ///
-/// Verify code_to_f32 LUT values match GGML reference: {-2, -1, 1, 2}
+/// Verify code_to_f32 LUT values match canonical GGML I2_S: {-1, 0, 1, 0}
 #[test]
 fn test_code_to_f32_lut_values() {
-    // Verified against GGML ggml-quants.c:62
-    assert_eq!(code_to_f32(0), -2.0);
-    assert_eq!(code_to_f32(1), -1.0);
+    assert_eq!(code_to_f32(0), -1.0);
+    assert_eq!(code_to_f32(1), 0.0);
     assert_eq!(code_to_f32(2), 1.0);
-    assert_eq!(code_to_f32(3), 2.0);
+    assert_eq!(code_to_f32(3), 0.0);
 }
 
 proptest! {
@@ -103,7 +126,8 @@ proptest! {
     /// Property: Unpacking is deterministic (same input yields same output)
     #[test]
     fn prop_unpack_qk256_block_deterministic(packed_bytes in prop::collection::vec(any::<u8>(), QK256_PACKED_BYTES)) {
-        let packed_arr: [u8; QK256_PACKED_BYTES] = packed_bytes.try_into().unwrap();
+        let mut packed_arr = [0u8; QK256_PACKED_BYTES];
+        packed_arr.copy_from_slice(&packed_bytes);
 
         let mut codes1 = [0u8; QK256_BLOCK];
         let mut codes2 = [0u8; QK256_BLOCK];
@@ -126,15 +150,11 @@ proptest! {
         codes in qk256_codes(QK256_BLOCK),
         input in random_input_vector(QK256_BLOCK),
     ) {
-        // Pack codes into bytes (4 codes per byte)
-        let mut packed = [0u8; QK256_PACKED_BYTES];
-        for (i, chunk) in codes.chunks(4).enumerate() {
-            let mut byte = 0u8;
-            for (j, &code) in chunk.iter().enumerate() {
-                byte |= code << (j * 2);
-            }
-            packed[i] = byte;
-        }
+        let packed_vec = pack_qk256_row_codes(&codes, QK256_BLOCK);
+        let packed: [u8; QK256_PACKED_BYTES] = packed_vec
+            .as_slice()
+            .try_into()
+            .map_err(|_| TestCaseError::fail("packed QK256 row length mismatch"))?;
 
         // Compute QK256 result
         let qk256_result = gemv_qk256_row(&packed, &input, QK256_BLOCK);
@@ -162,15 +182,11 @@ proptest! {
         input in random_input_vector(QK256_BLOCK),
         cols in 1usize..=255, // Tail only (< QK256_BLOCK)
     ) {
-        // Pack codes
-        let mut packed = [0u8; QK256_PACKED_BYTES];
-        for (i, chunk) in codes.chunks(4).enumerate() {
-            let mut byte = 0u8;
-            for (j, &code) in chunk.iter().enumerate() {
-                byte |= code << (j * 2);
-            }
-            packed[i] = byte;
-        }
+        let packed_vec = pack_qk256_row_codes(&codes, QK256_BLOCK);
+        let packed: [u8; QK256_PACKED_BYTES] = packed_vec
+            .as_slice()
+            .try_into()
+            .map_err(|_| TestCaseError::fail("packed QK256 row length mismatch"))?;
 
         // Compute QK256 result with limited cols
         let qk256_result = gemv_qk256_row(&packed, &input, cols);
@@ -212,30 +228,12 @@ proptest! {
 
         let codes: Vec<u8> = (0..total_codes).map(|_| rng.random_range(0..=3)).collect();
 
-        // Pack codes into bytes
         let mut packed_data = vec![0u8; rows * row_stride_bytes];
         for row_idx in 0..rows {
             let row_start_code = row_idx * cols;
             let row_start_byte = row_idx * row_stride_bytes;
-
-            for block_idx in 0..blocks_per_row {
-                let block_start_code = row_start_code + block_idx * QK256_BLOCK;
-                let block_start_byte = row_start_byte + block_idx * QK256_PACKED_BYTES;
-
-                let codes_in_block = QK256_BLOCK.min(cols - block_idx * QK256_BLOCK);
-
-                for byte_idx in 0..QK256_PACKED_BYTES {
-                    let mut byte = 0u8;
-                    for j in 0..4 {
-                        let code_idx = block_start_code + byte_idx * 4 + j;
-                        if byte_idx * 4 + j < codes_in_block {
-                            let code = codes[code_idx];
-                            byte |= code << (j * 2);
-                        }
-                    }
-                    packed_data[block_start_byte + byte_idx] = byte;
-                }
-            }
+            let row_packed = pack_qk256_row_codes(&codes[row_start_code..row_start_code + cols], cols);
+            packed_data[row_start_byte..row_start_byte + row_stride_bytes].copy_from_slice(&row_packed);
         }
 
         // Generate random input vector
@@ -417,26 +415,12 @@ proptest! {
         // Create random codes
         let codes: Vec<u8> = (0..rows * cols).map(|_| rng.random_range(0..=3)).collect();
 
-        // Pack codes
         let mut packed_data = vec![0u8; rows * row_stride_bytes];
         for row_idx in 0..rows {
-            for block_idx in 0..blocks_per_row {
-                let block_start_code = row_idx * cols + block_idx * QK256_BLOCK;
-                let block_start_byte = row_idx * row_stride_bytes + block_idx * QK256_PACKED_BYTES;
-
-                let codes_in_block = QK256_BLOCK.min(cols - block_idx * QK256_BLOCK);
-
-                for byte_idx in 0..QK256_PACKED_BYTES {
-                    let mut byte = 0u8;
-                    for j in 0..4 {
-                        if byte_idx * 4 + j < codes_in_block {
-                            let code_idx = block_start_code + byte_idx * 4 + j;
-                            byte |= codes[code_idx] << (j * 2);
-                        }
-                    }
-                    packed_data[block_start_byte + byte_idx] = byte;
-                }
-            }
+            let row_start_code = row_idx * cols;
+            let row_start_byte = row_idx * row_stride_bytes;
+            let row_packed = pack_qk256_row_codes(&codes[row_start_code..row_start_code + cols], cols);
+            packed_data[row_start_byte..row_start_byte + row_stride_bytes].copy_from_slice(&row_packed);
         }
 
         // Generate random input

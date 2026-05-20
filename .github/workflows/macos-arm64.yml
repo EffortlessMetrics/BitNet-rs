@@ -7,14 +7,7 @@ name: "macOS (Apple Silicon)"
 on:
   pull_request:
     branches: [ main ]
-    paths:
-      - 'crates/**'
-      - 'crossval/**'
-      - 'tests/**'
-      - 'xtask/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - '.github/workflows/macos-arm64.yml'
+    types: [ opened, synchronize, reopened, ready_for_review, labeled, unlabeled ]
   push:
     branches: [ main ]
     paths:
@@ -45,9 +38,74 @@ env:
   BITNET_SKIP_SLOW_TESTS: "1"
 
 jobs:
+  route-macos:
+    name: "Route macOS PR lane"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      selected: ${{ steps.route.outputs.selected }}
+      reason: ${{ steps.route.outputs.reason }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether macOS is selected
+        id: route
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref || github.ref_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+
+          selected=false
+          reason="ordinary PR without macOS label or Mac/Metal paths"
+
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            selected=true
+            reason="$EVENT_NAME"
+          elif python - "$LABELS_JSON" <<'PY'
+          import json
+          import sys
+
+          labels = set(json.loads(sys.argv[1] or "[]"))
+          selected = bool(labels & {"macos", "apple-silicon", "metal", "full-ci"})
+          sys.exit(0 if selected else 1)
+          PY
+          then
+            selected=true
+            reason="explicit macOS/Apple/Metal/full-ci label"
+          else
+            if [ -n "${BASE_SHA:-}" ] && changed="$(git diff --name-only "$BASE_SHA"...HEAD 2>/dev/null)"; then
+              :
+            elif changed="$(git diff --name-only "origin/$BASE_REF"...HEAD 2>/dev/null)"; then
+              :
+            else
+              git fetch --no-tags --depth=50 origin "$BASE_REF" >/dev/null 2>&1 || true
+              changed="$(git diff --name-only "origin/$BASE_REF"...HEAD 2>/dev/null || git diff --name-only HEAD~1..HEAD 2>/dev/null || true)"
+            fi
+            if printf '%s\n' "$changed" | grep -E '^(\.github/workflows/macos-arm64\.yml|crates/bitnet-metal/|crates/bitnet-kernels/src/metal/|crates/bitnet-kernels/src/metal_compute\.rs|crates/bitnet-kernels/tests/metal|crates/bitnet-device-probe/src/apple_metal\.rs|crates/bitnet-gpu-hal/src/metal_backend\.rs|crates/bitnet-common/tests/metal_memory_patterns\.rs)' >/dev/null; then
+              selected=true
+              reason="Mac/Metal-specific paths changed"
+            fi
+          fi
+
+          echo "selected=$selected" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          {
+            echo "### macOS route"
+            echo "- selected: $selected"
+            echo "- reason: $reason"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # Job 1: Build and test CPU inference on Apple Silicon
   build-cpu:
     name: "macOS: Build & Test (CPU)"
+    needs: route-macos
+    if: needs.route-macos.outputs.selected == 'true'
     runs-on: macos-14  # Apple Silicon M1
     timeout-minutes: 25
     env:
@@ -100,6 +158,8 @@ jobs:
   # Job 2: Metal feature compilation check
   build-metal:
     name: "macOS: Build (Metal)"
+    needs: route-macos
+    if: needs.route-macos.outputs.selected == 'true'
     runs-on: macos-14  # Apple Silicon M1
     timeout-minutes: 25
     env:
@@ -134,6 +194,8 @@ jobs:
   # Job 3: Clippy linting on macOS/arm64
   clippy:
     name: "macOS: Clippy"
+    needs: route-macos
+    if: needs.route-macos.outputs.selected == 'true'
     runs-on: macos-14  # Apple Silicon M1
     timeout-minutes: 15
     env:
@@ -171,6 +233,8 @@ jobs:
   # Job 4: Formatting check
   fmt:
     name: "macOS: Format"
+    needs: route-macos
+    if: needs.route-macos.outputs.selected == 'true'
     # rustfmt is platform-independent and does not need scarce Apple Silicon
     # capacity. Keeping the check name stable preserves branch protection while
     # preventing the final macOS gate from failing on an unstarted format job.
@@ -199,12 +263,15 @@ jobs:
     # an Apple Silicon runner after the platform-specific jobs have completed.
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [build-cpu, build-metal, clippy, fmt]
+    needs: [route-macos, build-cpu, build-metal, clippy, fmt]
     if: always()
     steps:
       - name: Summarize results
         if: always()
         run: |
+          echo "macOS route:"
+          echo "  Selected:    ${{ needs.route-macos.outputs.selected }}"
+          echo "  Reason:      ${{ needs.route-macos.outputs.reason }}"
           echo "macOS arm64 results:"
           echo "  Build CPU:   ${{ needs.build-cpu.result }}"
           echo "  Build Metal: ${{ needs.build-metal.result }}"
@@ -214,6 +281,13 @@ jobs:
       - name: Check all jobs succeeded
         if: always()
         run: |
+          if [ "${{ needs.route-macos.result }}" != "success" ]; then
+            echo "macOS route job failed"; exit 1
+          fi
+          if [ "${{ needs.route-macos.outputs.selected }}" != "true" ]; then
+            echo "macOS arm64 CI skipped by policy"; exit 0
+          fi
+
           bad=0
           for r in "${{ needs.build-cpu.result }}" \
                    "${{ needs.build-metal.result }}" \

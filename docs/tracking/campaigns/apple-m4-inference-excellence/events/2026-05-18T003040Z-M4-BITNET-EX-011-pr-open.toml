@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T00:30:40Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-011"
+event = "pr_open"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+pr = 5452
+head_sha = "17462920105f0b1e8aa738356bab0205da47089e"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-011-bitnet-250-run"
+summary = "Opened PR #5452 for bounded 250-case BitNet M4 receipts."
+
+notes = [
+  "The PR publishes aggregate and child receipts, compact summary, receipt validation, and an explicit 100-case baseline context-mismatch artifact for the accepted Microsoft I2_S GGUF and external tokenizer on apple-m4-cpu-neon.",
+  "The receipts record 250 cases, 196 mechanical passes, 54 quality-failed cases, zero timeouts, generated token IDs for every case, 2086 generated tokens, and fallback_used=false.",
+  "No broad BitNet quality or performance, dense SLM evidence, BitNet chat, BitNet serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claim is made.",
+]

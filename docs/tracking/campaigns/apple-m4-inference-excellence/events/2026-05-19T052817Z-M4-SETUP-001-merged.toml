@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T05:28:17Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SETUP-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5854
+merge_sha = "8e06f84e526f18999610d1ebf022f34eb6dabe22"
+branch = "codex/apple-m4-inference-excellence/M4-SETUP-001-first-run"
+
+notes = [
+  "Merged PR #5854 with M4 first-run setup evidence for supported dense SLM identities and the accepted BitNet artifact.",
+  "The receipt-backed setup summary covers model discovery, cache fetch/repair state, model/tokenizer verification, disk pressure, doctor readiness, and dense Qwen default smoke receipts.",
+  "BitNet evidence in this item is artifact/tokenizer readiness only; it does not claim BitNet live smoke, chat, serve, or broad runtime quality.",
+  "This closeout records tracker state only and adds no runtime, model, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim.",
+]

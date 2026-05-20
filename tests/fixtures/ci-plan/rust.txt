@@ -1,0 +1,2 @@
+crates/bitnet-cli/src/commands/support.rs
+crates/bitnet-cli/tests/support_bundle_tests.rs

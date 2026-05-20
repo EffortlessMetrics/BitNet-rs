@@ -1,0 +1,14 @@
+timestamp = "2026-05-18T06:54:37Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-REPRO-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-REPRO-003-template-registry"
+
+notes = [
+  "Started M4-REPRO-003 to add prompt-generation registry evidence to M4 dense SLM and BitNet receipts.",
+  "Scope is identity and comparison hygiene: template family/source/hash, tokenizer authority, stop criteria, generation parameters, and digest validation for eval, ask, chat/warm, and serve receipt paths.",
+  "No runtime quality, benchmark speedup, BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, or broad performance claim.",
+]

@@ -1,0 +1,20 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T04:55:36Z"
+event = "merged"
+item = "SLM-CPU-032"
+pr = 5514
+branch = "codex/slm-cpu-032-prompt-token-cache"
+head_sha = "6c4325a0f12eb4e901cd407b362016f26f6abc6f"
+merge_sha = "f3cce75aef2948d42174086f164061da7b4ff65a"
+actor = "codex"
+summary = "Merged the Qwen3 Q8_0 Kaby warm-session prompt token cache slice."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5514",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache.json",
+  "ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache-validation.json",
+]
+notes = [
+  "The merged slice records prompt token cache policy, hit/miss counts, and entry count while preserving strict GGUF tokenizer authority, generated outputs, selected CPU backend, and fallback=false.",
+  "No sustained-throughput, broad answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

@@ -24,7 +24,8 @@ Make coverage upload and reporting reliable without turning forked PRs or missin
 
 | Work item | Status | Notes |
 |---|---|---|
-| CI-COVERAGE-001 | pr_open | Canonical Codecov upload guard is open in #3620. |
+| CI-COVERAGE-001 | merged | Canonical Codecov upload guard merged in #3620. |
+| CI-COVERAGE-002 | pr_open | Move coverage onto the rust-ci job container and remove hosted-runner disk cleanup. |
 
 ## Review Policy
 

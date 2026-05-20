@@ -14,8 +14,9 @@ and committed receipts.
 | Surface | Current claim | Must not claim |
 | --- | --- | --- |
 | Official BitNet 2B I2_S/QK256 | Product CLI ready on `nvidia-rtx-5070-ti-cuda`; route is `bitnet_qk256_cuda`; fallback is rejected in strict CUDA receipts. | Dense SLM proof, server readiness, global CUDA speedup, or generic GPU proof. |
-| Qwen2.5 0.5B Q8_0 dense SLM | Product CLI ready for the bounded dense CUDA lane; route is `dense_regular_llm_cuda`; one-token, short-decode, warm-session, and benchmark review receipts exist. | BitNet packed I2_S/QK256 proof, accepted speedup, server readiness, full CUDA residency, or global dense GGUF support. |
-| Qwen3, SmolLM2, Llama, Gemma, Phi candidates | Registered candidate rows only. | CUDA answer readiness, inherited Qwen2.5 proof, BitNet proof, speedup, or server readiness. |
+| Qwen2.5 0.5B Q8_0 dense SLM | Product CLI ready for the bounded dense CUDA lane; route is `dense_regular_llm_cuda`; one-token, short-decode, warm-session, benchmark review, and exact-profile server-readiness receipts exist. | BitNet packed I2_S/QK256 proof, accepted speedup, full CUDA residency, broad dense GGUF support, or broad/concurrent/deployment server readiness. |
+| Qwen3 0.6B Q8_0 dense SLM | Product CLI ready for bounded ask/chat CLI paths after its own artifact, CPU sanity, all-layer plan, strict CUDA one-token, short-decode, warm-session, benchmark-review, and user-path ask/chat receipts. | Inherited Qwen2.5 proof, BitNet proof, accepted speedup, server readiness, broad dense GGUF support, or full CUDA residency. |
+| SmolLM2, Llama, Gemma, Phi candidates | SmolLM2 360M is structurally valid but CPU quality-blocked; later Llama, Gemma, and Phi rows are registered only. | CUDA answer readiness without their own ladder, inherited Qwen/Qwen3 proof, BitNet proof, speedup, or server readiness. |
 
 ## Use A CUDA-Capable Build
 
@@ -138,9 +139,12 @@ For a bounded chat-style session:
 These commands are the dense SLM user path. Their receipts must resolve to
 `dense_regular_llm_cuda` and the selected RTX 5070 Ti backend before they can
 support the scoped dense CUDA claim. They do not prove BitNet packed
-I2_S/QK256, QK256 kernels, accepted speedup, server readiness, or full CUDA
-residency. The committed dense Qwen hardware receipts remain the durable proof
-set until direct user-path ask/chat receipts are committed under
+I2_S/QK256, QK256 kernels, accepted speedup, broad server readiness, or full
+CUDA residency. Exact-profile dense Qwen server readiness is a separate
+server-smoke claim; it is limited to the named shared-engine
+`/v1/chat/completions` receipt and does not follow from every ask/chat receipt.
+The committed dense Qwen hardware receipts remain the durable proof set until
+direct user-path ask/chat receipts are committed under
 `ci/hardware/windows-9950x3d-rtx5070ti`.
 
 ## 6. Read Governed Benchmark Receipts
@@ -202,15 +206,28 @@ The useful issue-report fields are:
 If the receipt says generic `cuda`, CPU fallback, WGPU, Vulkan, or a different
 model family, it does not prove the strict RTX 5070 Ti CUDA claim.
 
+For a pasteable support artifact, use:
+
+```powershell
+bitnet support bundle --latest --device nvidia-rtx-5070-ti-cuda --format json
+```
+
+The bundle combines model status, the latest receipt explanation, selected
+backend/route, fallback state, quality gate, server-readiness scope,
+speed/residency claims, proof-family booleans, binary identity, and runtime
+identity when the receipt records it.
+
 ## Current Stop Lines
 
 Do not use this quickstart to claim:
 
 - crates.io or docs.rs publication
 - generic CUDA speedup
-- server readiness
+- broad or inherited server readiness; exact-profile server readiness must name
+  the accepted receipt and profile
 - full CUDA residency
-- Qwen3 or other candidate CUDA readiness
+- Qwen3 server readiness, accepted speedup, full residency, broad dense GGUF
+  support, or Qwen2.5 proof inheritance
 - dense Qwen proof as BitNet proof
 - official BitNet QK256 proof as dense SLM proof
 - WGPU, Vulkan, CPU fallback, or generic `cuda` as selected RTX 5070 Ti proof

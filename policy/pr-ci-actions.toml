@@ -1,0 +1,65 @@
+schema_version = "1.0"
+policy = "pr-ci-actions"
+owner = "release/ci"
+status = "active"
+updated = "2026-05-19"
+
+# PR queue writes can trigger CI, status churn, or review churn. Read first;
+# write only when the current disposition, merge, or proof decision requires it.
+
+[write_actions]
+close_pr = { requires_disposition = true, may_trigger_ci = true }
+reopen_pr = { requires_reason = true, may_trigger_ci = true }
+push_branch = { requires_merge_candidate = true, may_trigger_ci = true }
+merge_main_or_rebase = { requires_current_proof_need = true, may_trigger_ci = true }
+retarget_pr = { requires_base_correction = true, may_trigger_ci = true }
+label_pr = { requires_risk_or_proof_match = true, may_trigger_ci = true }
+rerun_workflow = { requires_failed_required_check_or_changed_input = true, may_trigger_ci = true }
+recreate_pr = { requires_successor_policy = true, may_trigger_ci = true }
+
+[bulk_actions]
+bulk_label = { requires_approval = true }
+bulk_close = { allowed = false }
+bulk_reopen = { allowed = false }
+bulk_recreate = { allowed = false }
+bulk_restack = { allowed_without_approval = false }
+one_for_one_replacement_wave = { allowed = false }
+
+[classification]
+read_only_tools = [
+  "gh pr view",
+  "gh pr diff",
+  "gh api",
+  "existing reports",
+  "existing ci logs",
+  "git show",
+  "git log",
+  "git diff",
+]
+allowed_ci_spend = [
+  "approved_merge_candidate",
+  "approved_clean_port",
+  "branch_refresh_for_current_merge_candidate",
+  "focused_required_proof",
+  "failed_required_check_rerun_with_flake_or_infra_evidence",
+  "fresh_check_required_by_branch_protection",
+]
+disallowed_ci_spend = [
+  "archaeology_without_merge_decision",
+  "bulk_queue_write",
+  "visible_queue_size_reduction",
+  "optional_workflow_rerun_without_proof_need",
+  "expensive_label_without_matching_risk",
+]
+
+[rerun_reasons]
+required_check_failed_with_flake_or_infra_evidence = true
+input_changed_after_fix_or_restack = true
+fresh_check_required_by_branch_protection = true
+selected_plan_requires_current_proof = true
+historical_red_check_only = false
+
+[merge_candidate_rules]
+hosted_required_checks_must_pass = true
+branch_must_be_mergeable = true
+optional_pending_rows_do_not_block_unless_required = true

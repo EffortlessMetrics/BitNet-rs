@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T13:13:33Z"
+event = "in_progress"
+item = "SLM-CPU-038"
+branch = "codex/slm-cpu-038-typed-transformer-forward-workspace"
+actor = "codex"
+summary = "Started the typed transformer forward workspace API boundary slice."
+
+notes = [
+  "SLM-CPU-038 is scoped to introducing the first typed transformer forward workspace API boundary after the SLM-CPU-037 owned tensor-output no-reuse classification.",
+  "The initial implementation must preserve existing transformer math and behavior while making future workspace-owned tensor replacement possible.",
+  "No sustained-throughput, runtime-speedup, broad-answer-quality, Q4/Q5 runtime, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

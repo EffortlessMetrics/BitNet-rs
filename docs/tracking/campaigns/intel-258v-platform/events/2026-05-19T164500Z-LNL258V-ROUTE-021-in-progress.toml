@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T16:45:00Z"
+event = "in_progress"
+item = "LNL258V-ROUTE-021"
+branch = "codex/lunar-lake/LNL258V-ROUTE-021-structured-cpu-route"
+actor = "codex"
+summary = "Started promoting the dense Qwen CPU control route for the structured Lunar Lake workload profile."
+
+notes = [
+  "The structured profile already has corpus-v2 quality evidence, fallback=false identity, and profile-applicable CPU timing, so this work makes the CPU control-route promotion explicit.",
+  "OpenVINO GPU remains scoped to ask_short/ask_normal and OpenVINO NPU remains candidate-only.",
+  "The scope makes no new-inference, accelerator-promotion, speedup, power-advantage, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]

@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:15:00Z"
+event = "in_progress"
+item = "LNL258V-OP-010"
+branch = "codex/lunar-lake/LNL258V-OP-010-structured-blocked-ask"
+actor = "codex"
+summary = "Started LNL258V-OP-010 to add structured route-selection evidence to fail-closed blocked auto-route ask receipts."
+
+notes = [
+  "The slice keeps low_power fail-closed and candidate-only while exposing candidate_routes and why_not_cpu/why_not_gpu/why_not_npu as machine-readable receipt fields.",
+  "Strict regression should require the structured blocked ask fields in addition to the legacy route_selection_error string.",
+  "The slice preserves no inference, no route promotion, no speedup, no power-advantage, no acceleration, no native accelerator, and no BitNet QK256/I2_S behavior-change claims.",
+]

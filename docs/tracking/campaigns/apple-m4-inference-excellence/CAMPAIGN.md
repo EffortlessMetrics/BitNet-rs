@@ -98,11 +98,15 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-CANARY-001 | proposed | Add dense SLM and BitNet golden-token trace canaries. |
 | M4-DENSE-REF-001 | proposed | Add a dense reference-vs-Rust control for supported Qwen identities. |
 | M4-DENSE-CHAT-001 | proposed | Prove dense CLI ask/chat conformance with per-turn receipts. |
+| M4-ROBUSTNESS-001 | proposed | Add dense SLM and BitNet negative/robustness eval cases. |
 | M4-BENCH-001 | merged | Ensure benchmark receipts include the full timing and memory metric contract. |
-| M4-BENCH-004 | proposed | Add benchmark environment preflight fields and invalid-comparison reasons. |
-| M4-BENCH-002 | proposed | Publish p50/p90/p99 and min/max summaries for the supported dense benchmark matrix. |
-| M4-BENCH-005 | proposed | Publish repeatability and variance envelopes for dense and BitNet timing families. |
-| M4-BENCH-006 | proposed | Publish explicit BitNet one-shot and warm variance receipts. |
+| M4-BENCH-004 | merged | Add benchmark environment preflight fields and invalid-comparison reasons. |
+| M4-BENCH-002 | merged | Publish p50/p90/p99 and min/max summaries for the supported dense benchmark matrix. |
+| M4-BENCH-008 | merged | Add the repeat-run benchmark variance harness before live variance envelopes. |
+| M4-BENCH-009 | merged | Enforce calibrated dense benchmark profile timeouts before live variance envelopes. |
+| M4-BENCH-010 | merged | Make benchmark variance aggregation timeout-aware before live dense envelopes. |
+| M4-BENCH-005 | merged | Publish repeatability and variance envelopes for supported dense Qwen timing families. |
+| M4-BENCH-006 | merged | Publish explicit BitNet one-shot and warm variance receipts. |
 | M4-BENCH-003 | proposed | Wire benchmark summaries into matching-identity regression comparisons. |
 | M4-BITNET-REG-001 | merged | Add direct BitNet warm-session regression support. |
 | M4-BITNET-EX-001 | merged | Add a BitNet-specific 100-case deterministic corpus. |
@@ -114,27 +118,37 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-BITNET-EX-007 | merged | Enable BitNet serve only after chat and service receipts pass. |
 | M4-BITNET-EX-008 | merged | Publish BitNet task-family and failure-taxonomy reports. |
 | M4-BITNET-EX-009 | merged | Add matching BitNet eval history and a larger-corpus decision. |
-| M4-BITNET-EX-010 | proposed | Define the staged 250-case BitNet corpus and scorer contract. |
-| M4-BITNET-EX-011 | proposed | Run and publish bounded 250-case BitNet M4 receipts. |
-| M4-BITNET-EX-012 | proposed | Decide whether BitNet expands to 500 cases or repairs corpus/scoring first. |
-| M4-OPS-UX-001 | proposed | Add an operator-facing M4 evidence summary. |
-| M4-OPS-UX-002 | proposed | Add explain/open affordances for report-refresh and regression-dashboard outputs. |
-| M4-OPS-UX-003 | proposed | Extend doctor/status UX to report dense SLM and BitNet readiness separately. |
+| M4-BITNET-EX-010 | merged | Define the staged 250-case BitNet corpus and scorer contract. |
+| M4-BITNET-EX-011 | merged | Run and publish bounded 250-case BitNet M4 receipts. |
+| M4-BITNET-EX-012 | merged | Decide whether BitNet expands to 500 cases or repairs corpus/scoring first. |
+| M4-OPS-UX-001 | merged | Add an operator-facing M4 evidence summary. |
+| M4-OPS-UX-002 | merged | Add explain/open affordances for report-refresh and regression-dashboard outputs. |
+| M4-OPS-UX-003 | merged | Extend doctor/status UX to report dense SLM and BitNet readiness separately. |
 | M4-OPS-SLO-001 | proposed | Translate receipts into local operator envelope classes. |
 | M4-CONTEXT-001 | proposed | Add long-context guardrails against recorded dense SLM and BitNet evidence envelopes. |
-| M4-REPRO-001 | proposed | Define the reusable M4 run-identity contract for all evidence families. |
-| M4-REPRO-002 | proposed | Publish supported-model artifact provenance and cache verification manifests. |
+| M4-CONTEXT-002 | proposed | Publish long-context quality and timing receipts where supported. |
+| M4-REPRO-001 | merged | Define the reusable M4 run-identity contract for all evidence families. |
+| M4-REPRO-002 | merged | Publish supported-model artifact provenance and cache verification manifests. |
 | M4-REPRO-003 | proposed | Record prompt-template, stop-sequence, and generation-parameter identity. |
-| M4-RECEIPT-001 | proposed | Add receipt-schema compatibility and negative fixtures for M4 evidence families. |
+| M4-RECEIPT-001 | merged | Add receipt-schema compatibility and negative fixtures for M4 evidence families. |
 | M4-STABILITY-001 | proposed | Run a mixed dense-model switch soak with cache reuse and memory-drift evidence. |
 | M4-STABILITY-002 | proposed | Add cache and disk-pressure repair receipts for operator flows. |
 | M4-STABILITY-003 | proposed | Define scheduled M4 trend-retention and stale-identity policy. |
 | M4-RELIABILITY-001 | proposed | Add recovery drills for cancellation, interruption, low disk, cache corruption, and restart. |
+| M4-OBS-001 | proposed | Correlate progress events, logs, receipts, and failure diagnostics. |
 | M4-SERVE-EX-001 | proposed | Refresh dense SLM local-server conformance receipts. |
 | M4-SERVE-EX-002 | proposed | Prove dense and BitNet streaming/failure semantics after BitNet serve is gated. |
 | M4-SERVE-EX-003 | proposed | Document and test local-server safety defaults for appliance operation. |
 | M4-SERVE-EX-004 | proposed | Add bounded server queue, backpressure, and resident-state evidence. |
 | M4-CI-001 | proposed | Codify PR, advisory, scheduled, release, and retention evidence lanes. |
+| M4-SETUP-001 | proposed | Prove first-run setup, fetch or repair, cache verification, and smoke receipts. |
+| M4-BENCH-007 | proposed | Calibrate the benchmark harness before timing envelopes are interpreted. |
+| M4-ROUTE-MATRIX-001 | proposed | Publish the route-state matrix for dense SLM and BitNet command surfaces. |
+| M4-WORKLOAD-001 | proposed | Add end-to-end operator workload receipts across enabled M4 routes. |
+| M4-EVIDENCE-REPLAY-001 | proposed | Add replayable evidence bundles for dense SLM and BitNet refreshes. |
+| M4-TREND-001 | proposed | Publish seven-day matching-identity trend history and skipped-day reasons. |
+| M4-MODEL-LIFECYCLE-001 | proposed | Define supported-model lifecycle states and claim-boundary requirements. |
+| M4-COMPAT-001 | proposed | Define compatibility refresh receipts after OS, toolchain, binary, or manifest changes. |
 | M4-RELEASE-001 | proposed | Publish the M4 inference release go/no-go matrix. |
 | M4-METAL-EX-001 | proposed | Choose one named future Metal phase and document parity/receipt requirements. |
 | M4-METAL-EX-002 | proposed | Implement that named phase only with CPU parity and fallback-free phase receipts. |

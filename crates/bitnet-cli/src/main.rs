@@ -49,8 +49,8 @@ use allocation_audit::{
 };
 #[cfg(feature = "full-cli")]
 use allocation_audit::{
-    WarmSessionPromptAllocationAudit, warm_session_aggregate_allocation_audit_json,
-    warm_session_prompt_allocation_audit_json,
+    WarmSessionPromptAllocationAudit, WarmSessionPromptSetupAllocationAudit,
+    warm_session_aggregate_allocation_audit_json, warm_session_prompt_allocation_audit_json,
 };
 use exit::*;
 use prompt_audit::*;
@@ -109,8 +109,76 @@ fn critical_not_claims() -> Vec<&'static str> {
     ]
 }
 
+fn qk256_trailer_scale_from_simple_loader_bytes(
+    name: &str,
+    packed: &[u8],
+    expected_bytes: usize,
+) -> Result<Option<f32>> {
+    let Some(trailing_bytes) = packed.len().checked_sub(expected_bytes) else {
+        return Ok(None);
+    };
+    if trailing_bytes == 0 {
+        return Ok(None);
+    }
+    if trailing_bytes < std::mem::size_of::<f32>() {
+        debug!(
+            "QK256 '{}' simple-loader trailer too short for inline scale: {} bytes",
+            name, trailing_bytes
+        );
+        return Ok(None);
+    }
+
+    let mut scale_bytes = [0u8; std::mem::size_of::<f32>()];
+    let scale_len = scale_bytes.len();
+    scale_bytes.copy_from_slice(&packed[expected_bytes..expected_bytes + scale_len]);
+    let scale = f32::from_le_bytes(scale_bytes);
+    if !scale.is_finite() {
+        anyhow::bail!("QK256 '{name}' simple-loader inline scale is not finite: {scale}");
+    }
+    Ok(Some(scale))
+}
+
+fn qk256_raw_tensors_from_simple_loader(
+    i2s_qk256: impl IntoIterator<Item = (String, bitnet_models::quant::i2s_qk256::I2SQk256NoScale)>,
+) -> Result<std::collections::HashMap<String, candle_core::Tensor>> {
+    let mut raw_tensors = std::collections::HashMap::new();
+    for (name, qk256) in i2s_qk256 {
+        let expected_bytes = qk256.rows * qk256.row_stride_bytes;
+        let scale = qk256_trailer_scale_from_simple_loader_bytes(&name, &qk256.qs, expected_bytes)?;
+        let mut packed = qk256.qs;
+        if packed.len() != expected_bytes {
+            tracing::warn!(
+                "QK256 '{}' byte length {} differs from expected {}; normalizing for runtime tensor",
+                name,
+                packed.len(),
+                expected_bytes
+            );
+            packed.resize(expected_bytes, 0);
+        }
+
+        let raw_tensor = candle_core::Tensor::from_raw_buffer(
+            &packed,
+            DType::U8,
+            &[qk256.rows, qk256.row_stride_bytes],
+            &candle_core::Device::Cpu,
+        )
+        .with_context(|| format!("Failed to build QK256 raw tensor for {name}"))?;
+
+        raw_tensors.insert(format!("{name}.qk256_qs"), raw_tensor);
+        if let Some(scale) = scale {
+            let scale_tensor =
+                candle_core::Tensor::from_slice(&[scale], &[1], &candle_core::Device::Cpu)
+                    .with_context(|| format!("Failed to build QK256 scale tensor for {name}"))?;
+            raw_tensors.insert(format!("{name}.qk256_scale"), scale_tensor);
+        }
+    }
+    Ok(raw_tensors)
+}
+
 #[cfg(feature = "cli-bench")]
 use commands::BenchmarkCommand;
+#[cfg(feature = "full-cli")]
+use commands::dense_gguf_linear_parity::is_supported_dense_qwen_cuda_model_path;
 #[cfg(feature = "full-cli")]
 use commands::{
     AnswerCorpusCommand, AnswerParityCommand, ConvertCommand, DenseGgufAllLayerPlanCommand,
@@ -127,8 +195,8 @@ use commands::{
     DenseGgufSamplingPolicyCommand, DenseQwenCudaAskOptions,
     ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
     InspectCommand, LunarLakeAction, LunarLakeCommand, OutputHeadLogitsAuditCommand,
-    ReceiptsCommand, ReferenceCompareCommand, ServeCommand, TransformerLayerParityCommand,
-    run_dense_qwen_cuda_ask,
+    ReceiptsCommand, ReferenceCompareCommand, ServeCommand, SupportCommand,
+    TransformerLayerParityCommand, run_dense_qwen_cuda_ask,
 };
 use config::{CliConfig, ConfigBuilder, DEVICE_HELP};
 #[cfg(feature = "full-cli")]
@@ -475,6 +543,10 @@ enum Commands {
 
     /// Fetch, verify, list, and prune supported local model artifacts
     Model(ModelCommand),
+
+    #[cfg(feature = "full-cli")]
+    /// Collect model status and receipt evidence for support
+    Support(SupportCommand),
 
     /// RTX 5070 Ti CUDA proof-lane utilities
     Cuda {
@@ -1235,6 +1307,17 @@ enum ValidateAction {
         #[arg(long)]
         json_out: Option<std::path::PathBuf>,
     },
+
+    /// Validate a Lunar Lake OpenVINO receipt against strict route-boundary gates
+    OpenVinoLunarLake {
+        /// Receipt JSON to validate
+        #[arg(long)]
+        receipt: std::path::PathBuf,
+
+        /// Output JSON validation summary to file
+        #[arg(long)]
+        json_out: Option<std::path::PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1507,6 +1590,8 @@ async fn async_main() -> Result<()> {
             .await
         }
         Some(Commands::Model(cmd)) => cmd.execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::Support(cmd)) => cmd.execute().await,
         Some(Commands::Cuda { action }) => {
             handle_cuda_command(action, explicit_device_label.as_deref())
         }
@@ -2868,6 +2953,25 @@ async fn handle_validate_command(action: ValidateAction) -> Result<()> {
             write_json_output(json_out.as_ref(), &receipt)?;
             Ok(())
         }
+        ValidateAction::OpenVinoLunarLake { receipt, json_out } => {
+            bitnet_receipts_core::validate_lunar_lake_openvino_receipt_file(&receipt)?;
+            let summary = serde_json::json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_openvino_receipt_validation",
+                "source_receipt": receipt,
+                "valid": true,
+                "validated_contract": "lunar_lake_openvino_route_boundary",
+                "claim_boundary": {
+                    "route_promotion_changed": false,
+                    "speedup_claimed": false,
+                    "power_advantage_claimed": false,
+                    "bitnet_qk256_or_i2s_claimed": false,
+                    "native_opencl_claimed": false
+                }
+            });
+            write_json_output(json_out.as_ref(), &summary)?;
+            Ok(())
+        }
     }
 }
 
@@ -3669,6 +3773,34 @@ fn greedy_top1_token_id(logits: &[f32]) -> Option<u32> {
         .map(|(token_id, _)| token_id as u32)
 }
 
+fn greedy_effective_top1_token_id(
+    logits: &[f32],
+    context_tokens: &[u32],
+    repetition_penalty: f32,
+) -> Option<u32> {
+    if repetition_penalty <= 0.0
+        || !repetition_penalty.is_finite()
+        || repetition_penalty == 1.0
+        || context_tokens.is_empty()
+    {
+        return greedy_top1_token_id(logits);
+    }
+
+    let mut effective_logits = logits.to_vec();
+    let inv_penalty = 1.0 / repetition_penalty;
+    for &token in context_tokens {
+        if let Some(logit) = effective_logits.get_mut(token as usize) {
+            if *logit > 0.0 {
+                *logit *= inv_penalty;
+            } else {
+                *logit *= repetition_penalty;
+            }
+        }
+    }
+
+    greedy_top1_token_id(&effective_logits)
+}
+
 fn qwen_trace_path() -> Option<std::path::PathBuf> {
     std::env::var("BITNET_QWEN_TRACE_JSONL")
         .ok()
@@ -4149,30 +4281,7 @@ async fn run_simple_generation(
             .context("Mock loader also failed")?;
             loader_mode = load_result.loader_mode.as_str();
             warn!("GGUF loader mode: {}", loader_mode);
-            let mut raw_tensors = std::collections::HashMap::new();
-            for (name, qk256) in load_result.i2s_qk256 {
-                let expected_bytes = qk256.rows * qk256.row_stride_bytes;
-                let mut packed = qk256.qs;
-                if packed.len() != expected_bytes {
-                    tracing::warn!(
-                        "QK256 '{}' byte length {} differs from expected {}; normalizing for runtime tensor",
-                        name,
-                        packed.len(),
-                        expected_bytes
-                    );
-                    packed.resize(expected_bytes, 0);
-                }
-
-                let raw_tensor = candle_core::Tensor::from_raw_buffer(
-                    &packed,
-                    DType::U8,
-                    &[qk256.rows, qk256.row_stride_bytes],
-                    &candle_core::Device::Cpu,
-                )
-                .with_context(|| format!("Failed to build QK256 raw tensor for {name}"))?;
-
-                raw_tensors.insert(format!("{}.qk256_qs", name), raw_tensor);
-            }
+            let raw_tensors = qk256_raw_tensors_from_simple_loader(load_result.i2s_qk256)?;
             let m = bitnet_models::BitNetModel::from_gguf(
                 load_result.config.clone(),
                 load_result.tensors,
@@ -4527,19 +4636,22 @@ async fn run_simple_generation(
     // BITNET_TRACE_TIMING=1: Enable timing instrumentation
     let timing_enabled = std::env::var("BITNET_TRACE_TIMING").as_deref() == Ok("1");
 
-    // Generation loop: incremental decoding
+    // Generation loop: prompt prefill followed by incremental decoding.
     //
-    // Each step:
-    //   1. Embed ONLY the new token (last in sequence)
+    // Before this loop, prompt prefill embeds and forwards every prompt token
+    // except the last one. Step 0 embeds the last prompt token, so the first
+    // generated token sees the complete rendered prompt context.
+    //
+    // Each subsequent step:
+    //   1. Embed only the newly generated token
     //   2. Forward pass uses KV cache for historical context
-    //   3. No need to re-embed previous tokens (O(N) not O(N²))
     //
     // Historical context is maintained via:
     //   - KV cache: stores key/value tensors from previous steps
     //   - `tokens` vector: tracks full sequence for stop detection/logging
     //
-    // Performance impact: This changes embedding from O(N²) to O(N), providing
-    // ~50× speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
+    // Performance impact: this avoids O(N^2) full-context re-embedding while
+    // preserving complete prompt context for the first generated token.
     let mut decode_step_ms = Vec::with_capacity(max_new_tokens);
     let mut embed_step_ms = Vec::with_capacity(max_new_tokens);
     let mut forward_step_ms = Vec::with_capacity(max_new_tokens);
@@ -4790,12 +4902,17 @@ async fn run_simple_generation(
         // Assert greedy invariant if requested
         if assert_greedy && greedy && dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps)
         {
-            let Some(best_i) = greedy_top1_token else {
+            let Some(best_i) =
+                greedy_effective_top1_token_id(&logits_vec, &generated_tokens, repetition_penalty)
+            else {
                 anyhow::bail!("No finite logits found for --assert-greedy at step {step_idx}");
             };
             if next_token != best_i {
-                eprintln!("ERROR: Non-argmax token chosen in --greedy at step {}", step_idx);
-                eprintln!("  argmax={} but chosen={}", best_i, next_token);
+                eprintln!(
+                    "ERROR: Non-effective-argmax token chosen in --greedy at step {}",
+                    step_idx
+                );
+                eprintln!("  effective_argmax={} but chosen={}", best_i, next_token);
                 std::process::exit(EXIT_ARGMAX_MISMATCH);
             }
         }
@@ -4950,12 +5067,46 @@ async fn run_simple_generation(
             "bos": bos_policy,
             "explicit_bos_requested": bos,
             "parse_special": parse_special,
+            "max_new_tokens": max_new_tokens,
             "temperature": temperature,
+            "top_k": top_k,
+            "top_p": top_p,
+            "repetition_penalty": repetition_penalty,
             "seed": seed.unwrap_or(0),
             "greedy": greedy,
             "deterministic": deterministic,
             "qwen_no_think": no_think,
         });
+        let prompt_generation_identity = simple_generation::prompt::prompt_generation_identity(
+            simple_generation::prompt::PromptGenerationIdentityInput {
+                template_family: &template_type.to_string(),
+                template_source: "bitnet-prompt-templates-core",
+                tokenizer_source: Some(tokenizer_source_str),
+                tokenizer_authority: Some(pretokenizer_authority),
+                tokenizer_sha256: None,
+                tokenizer_strict: Some(tokenizer_strict),
+                manual_stop_sequences: &stop,
+                stop_sequences: &all_stop_sequences,
+                manual_stop_token_ids: &stop_id,
+                stop_token_ids: &all_stop_ids,
+                stop_string_window: Some(10),
+                stop_policy: "manual_plus_template_defaults",
+                generation_params: simple_generation::prompt::PromptGenerationParams {
+                    max_new_tokens: Some(max_new_tokens),
+                    temperature: Some(temperature),
+                    top_k: Some(top_k),
+                    top_p: Some(top_p),
+                    repetition_penalty: Some(repetition_penalty),
+                    seed,
+                    greedy: Some(greedy),
+                    deterministic: Some(deterministic),
+                    threads: Some(effective_thread_count(threads)),
+                    qwen_no_think: Some(no_think),
+                    fixed_token_count: Some(false),
+                    stream: None,
+                },
+            },
+        );
         let prompt_render_receipt = serde_json::json!({
             "template_family": template_type.to_string(),
             "qwen_no_think": no_think,
@@ -4963,8 +5114,8 @@ async fn run_simple_generation(
             "rendered_sha256": rendered_prompt_sha256,
             "add_bos": bos_policy,
             "parse_special": parse_special,
-            "stop_sequences": all_stop_sequences,
-            "stop_token_ids": all_stop_ids,
+            "stop_sequences": &all_stop_sequences,
+            "stop_token_ids": &all_stop_ids,
         });
         let loader_info = serde_json::json!({
             "mode": loader_mode,
@@ -5008,6 +5159,7 @@ async fn run_simple_generation(
         let runtime_api = backend_identity.runtime_api.as_str();
         let apple_machine = apple_machine_receipt_json(requested_backend, selected_backend);
         let bitnet_linear_coverage = bitnet_qk256_dispatch::qk256_dispatch_coverage();
+        let qk256_cpu_hot_path = bitnet_qk256_dispatch::qk256_cpu_hot_path_counters();
         let strict_cuda_selected_artifact = strict_backend
             && canonical_bitnet_model
             && selected_backend == "nvidia-rtx-5070-ti-cuda"
@@ -5249,6 +5401,7 @@ async fn run_simple_generation(
             "fallback_reason": fallback_reason,
             "prompt": prompt,
             "prompt_render": prompt_render_receipt,
+            "prompt_generation_identity": prompt_generation_identity,
             "text": generated_text,
             "prompt_identity": {
                 "template": template_type.to_string(),
@@ -5341,15 +5494,27 @@ async fn run_simple_generation(
                 "bitnet_linear_layers_total": bitnet_linear_coverage.bitnet_linear_layers_total,
                 "bitnet_linear_layers_on_cuda": bitnet_linear_coverage.bitnet_linear_layers_on_cuda,
                 "bitnet_linear_layers_cpu_fallback": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
+                "qk256_f32_scalar_gemv_invocations": qk256_cpu_hot_path.qk256_f32_scalar_gemv_invocations,
+                "qk256_f32_avx2_gemv_invocations": qk256_cpu_hot_path.qk256_f32_avx2_gemv_invocations,
+                "qk256_i8s_scaled_scalar_invocations": qk256_cpu_hot_path.qk256_i8s_scaled_scalar_invocations,
+                "qk256_i8s_scaled_avx2_invocations": qk256_cpu_hot_path.qk256_i8s_scaled_avx2_invocations,
+                "qk256_flat_bytes_extracted_count": qk256_cpu_hot_path.qk256_flat_bytes_extracted_count,
+                "input_rows_materialized_count": qk256_cpu_hot_path.input_rows_materialized_count,
+                "output_rows_allocated_count": qk256_cpu_hot_path.output_rows_allocated_count,
+                "requested_kernel": qk256_cpu_hot_path.requested_kernel.clone(),
+                "selected_kernel": qk256_cpu_hot_path.selected_kernel.clone(),
+                "qk256_execution_path": qk256_cpu_hot_path.qk256_execution_path,
                 "unsupported_ops": bitnet_linear_coverage.unsupported_ops.clone(),
                 "execution_claim": bitnet_linear_coverage.execution_claim,
             },
+            "qk256_hot_path": qk256_cpu_hot_path_receipt(&qk256_cpu_hot_path),
             "kernel": {
                 "family": kernel_family,
                 "implementation": kernel_implementation,
                 "layout": kernel_layout,
                 "dequantizes_before_compute": dequantizes_before_compute,
                 "kernel_id": selected_kernel.as_str(),
+                "hot_path_kernel_id": qk256_cpu_hot_path.selected_kernel.as_deref(),
             },
             "cpu": {
                 "model": cpu_model.as_str(),
@@ -5360,8 +5525,14 @@ async fn run_simple_generation(
             "strict_provenance": {
                 "requested_backend": requested_backend,
                 "selected_backend": selected_backend,
-                "requested_kernel": selected_kernel.as_str(),
-                "selected_kernel": selected_kernel.as_str(),
+                "requested_kernel": qk256_cpu_hot_path
+                    .requested_kernel
+                    .as_deref()
+                    .unwrap_or(selected_kernel.as_str()),
+                "selected_kernel": qk256_cpu_hot_path
+                    .selected_kernel
+                    .as_deref()
+                    .unwrap_or(selected_kernel.as_str()),
                 "loader_mode": loader_mode,
                 "tokenizer_source": tokenizer_source_str,
                 "tokenizer_strict": tokenizer_strict,
@@ -5399,6 +5570,8 @@ async fn run_simple_generation(
                 "execution_backend": execution_backend,
                 "execution_backend_matched": execution_backend_matched,
                 "fallback_used": proof_fallback_used,
+                "backend_fallback_used": backend_identity.fallback_used,
+                "backend_fallback_reason": backend_identity.fallback_reason.as_deref(),
                 "loader_fallback_used": loader_fallback_used,
                 "tokenizer_fallback_used": tokenizer_fallback_used,
                 "strict_backend": strict_backend,
@@ -5467,6 +5640,7 @@ async fn run_simple_generation(
                     "execution_claim": "dense_slm_cpu_reference_answer_smoke",
                 }),
             );
+            object.remove("qk256_hot_path");
             object.insert(
                 "kernel".to_string(),
                 serde_json::json!({
@@ -7242,6 +7416,17 @@ async fn run_cuda_warm_session(
         total_session_ms,
         "strict RTX 5070 Ti CUDA warm answer session",
         "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
+        WarmSessionReuseReceiptContext {
+            sampler_reuse_enabled: false,
+            sampler_reuse_policy: "recreated_per_prompt_for_rng_state_independence",
+            sampler_reused_prompt_count: 0,
+            sampler_recreated_prompt_count: prompts.len(),
+            kv_cache_recreated_per_prompt: true,
+            kv_cache_reused_across_prompts: false,
+            kv_cache_reuse_policy: "recreated_per_turn_for_prompt_isolation",
+            kv_cache_reused_prompt_count: 0,
+            kv_cache_recreated_prompt_count: prompts.len(),
+        },
     );
     let cuda_execution_residency =
         cuda_execution_residency_receipt(CudaExecutionResidencyReceiptInput {
@@ -7489,6 +7674,39 @@ fn qk256_dispatch_coverage_receipt(
         "bitnet_linear_layers_cpu_fallback": coverage.bitnet_linear_layers_cpu_fallback,
         "unsupported_ops": coverage.unsupported_ops,
         "execution_claim": coverage.execution_claim,
+    })
+}
+
+fn qk256_cpu_hot_path_receipt(
+    counters: &bitnet_qk256_dispatch::Qk256CpuHotPathCounters,
+) -> serde_json::Value {
+    let no_scale_f32_gemv_invocations = counters
+        .qk256_f32_scalar_gemv_invocations
+        .saturating_add(counters.qk256_f32_avx2_gemv_invocations);
+    let scaled_i2s_i8s_gemv_invocations = counters
+        .qk256_i8s_scaled_scalar_invocations
+        .saturating_add(counters.qk256_i8s_scaled_avx2_invocations);
+
+    serde_json::json!({
+        "counter_source": "bitnet_qk256_dispatch::qk256_cpu_hot_path_counters",
+        "qk256_f32_scalar_gemv_invocations": counters.qk256_f32_scalar_gemv_invocations,
+        "qk256_f32_avx2_gemv_invocations": counters.qk256_f32_avx2_gemv_invocations,
+        "qk256_i8s_scaled_scalar_invocations": counters.qk256_i8s_scaled_scalar_invocations,
+        "qk256_i8s_scaled_avx2_invocations": counters.qk256_i8s_scaled_avx2_invocations,
+        "qk256_flat_bytes_extracted_count": counters.qk256_flat_bytes_extracted_count,
+        "input_rows_materialized_count": counters.input_rows_materialized_count,
+        "output_rows_allocated_count": counters.output_rows_allocated_count,
+        "no_scale_f32_gemv_invocations": no_scale_f32_gemv_invocations,
+        "scaled_i2s_i8s_gemv_invocations": scaled_i2s_i8s_gemv_invocations,
+        "audited_tensor_materialization_count": counters
+            .qk256_flat_bytes_extracted_count
+            .saturating_add(counters.input_rows_materialized_count)
+            .saturating_add(counters.output_rows_allocated_count),
+        "requested_kernel": counters.requested_kernel.as_deref(),
+        "selected_kernel": counters.selected_kernel.as_deref(),
+        "qk256_execution_path": counters.qk256_execution_path,
+        "math_changed": false,
+        "speedup_claim": false,
     })
 }
 
@@ -7957,6 +8175,7 @@ async fn run_slm_warm_session(
         format!("Failed to load real model for warm session: {}", model_path.display())
     })?;
     let config = loaded_model.config().clone();
+    let dense_q8_hook_selection = loaded_model.dense_q8_hook_selection_receipt();
     let model: Arc<dyn Model> = Arc::from(loaded_model);
     let model_load_ms = elapsed_ms(model_load_start);
     let loader_mode = detect_loader_mode_for_path(&model_path, is_hf_directory);
@@ -7987,6 +8206,37 @@ async fn run_slm_warm_session(
         template_type,
         tokenizer.as_ref(),
     );
+    let thread_count = effective_thread_count(threads);
+    let prompt_generation_identity = simple_generation::prompt::prompt_generation_identity(
+        simple_generation::prompt::PromptGenerationIdentityInput {
+            template_family: &template_type.to_string(),
+            template_source: "bitnet-prompt-templates-core",
+            tokenizer_source: Some(tokenizer_source_str),
+            tokenizer_authority: Some(pretokenizer_authority),
+            tokenizer_sha256: None,
+            tokenizer_strict: Some(tokenizer_strict),
+            manual_stop_sequences: &stop,
+            stop_sequences: &all_stop_sequences,
+            manual_stop_token_ids: &stop_id,
+            stop_token_ids: &all_stop_ids,
+            stop_string_window: None,
+            stop_policy: "manual_plus_template_defaults",
+            generation_params: simple_generation::prompt::PromptGenerationParams {
+                max_new_tokens: Some(max_new_tokens),
+                temperature: Some(temperature),
+                top_k: Some(top_k),
+                top_p: Some(top_p),
+                repetition_penalty: Some(repetition_penalty),
+                seed,
+                greedy: Some(greedy),
+                deterministic: Some(deterministic),
+                threads: Some(thread_count),
+                qwen_no_think: Some(no_think),
+                fixed_token_count: Some(false),
+                stream: Some(output.stream_tokens),
+            },
+        },
+    );
     let max_stop_len = all_stop_sequences.iter().map(|value| value.len()).max().unwrap_or(0);
     let gguf_metadata = gguf_header_counts_for_receipt(&model_path, is_hf_directory);
     let (n_kv, n_tensors) = gguf_metadata.unwrap_or((0, 0));
@@ -8011,7 +8261,6 @@ async fn run_slm_warm_session(
     let kernel_family = kernel_family_for_quantization(config.quantization.quantization_type);
     let kernel_implementation = cpu_kernel_implementation(config.quantization.quantization_type);
     let selected_kernel = format!("{kernel_family}-{kernel_implementation}-reference");
-    let thread_count = effective_thread_count(threads);
     let cpu_features = detected_cpu_feature_labels();
     let cpu_model = detected_cpu_model_label();
     let apple_machine = apple_machine_receipt_json(
@@ -8050,6 +8299,25 @@ async fn run_slm_warm_session(
     let mut aggregate_direct_greedy_logits_steps = 0usize;
     let mut aggregate_logits_vec_extraction_steps = 0usize;
     let mut aggregate_logits_scratch_reuse_steps = 0usize;
+    let mut prompt_token_cache = WarmSessionPromptTokenCache::default();
+    let logits_capacity = config.model.vocab_size.max(tokenizer.vocab_size());
+    let sampling_config =
+        SamplingConfig { temperature, top_k: top_k as u32, top_p, repetition_penalty, seed };
+    let sampler_reuse_enabled = warm_session_sampler_reuse_enabled(&sampling_config);
+    let sampler_reuse_policy = warm_session_sampler_reuse_policy(sampler_reuse_enabled);
+    let kv_cache_reuse_policy = "single_kv_cache_cleared_per_prompt_for_prompt_isolation";
+    let kv_cache_session_alloc_start = AllocationAuditSnapshot::current();
+    let mut session_kv_cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
+    let kv_cache_session_alloc = AllocationAuditSnapshot::delta_since(kv_cache_session_alloc_start);
+    let kv_cache_reused_across_prompts = true;
+    let mut kv_cache_reused_prompt_count = 0usize;
+    let mut session_sampler = sampler_reuse_enabled.then(|| {
+        let mut sampler = SamplingStrategy::new(sampling_config.clone());
+        sampler.reserve_logits_capacity(logits_capacity);
+        sampler
+    });
+    let mut sampler_reused_prompt_count = 0usize;
+    let mut sampler_recreated_prompt_count = 0usize;
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
         output.status(format!(
             "warm-session: prompt {}/{} started",
@@ -8064,27 +8332,35 @@ async fn run_slm_warm_session(
             template_type.apply(prompt, system_prompt.as_deref()),
             no_think,
         )?;
+        let rendered_prompt_sha256 = compute_sha256_bytes(formatted_prompt.as_bytes());
 
         let bos_policy = template_type.should_add_bos();
         let parse_special = template_type.parse_special();
         let prompt_tokenize_start = std::time::Instant::now();
         let prompt_tokenize_alloc_start = AllocationAuditSnapshot::current();
-        let encoded_prompt_tokens =
-            tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?;
+        let (encoded_prompt_tokens, prompt_token_cache_hit) = prompt_token_cache
+            .get_or_insert_with(&formatted_prompt, bos_policy, parse_special, || {
+                Ok(tokenizer.encode(&formatted_prompt, bos_policy, parse_special)?)
+            })?;
         let prompt_tokenize_ms = elapsed_ms(prompt_tokenize_start);
         let prompt_tokenize_alloc =
             AllocationAuditSnapshot::delta_since(prompt_tokenize_alloc_start);
 
         let prompt_setup_alloc_start = AllocationAuditSnapshot::current();
-        let logits_capacity = config.model.vocab_size.max(tokenizer.vocab_size());
+        let prompt_setup_buffer_reset_alloc_start = AllocationAuditSnapshot::current();
         let buffer_reuse_evidence = session_buffers.reset(
             encoded_prompt_tokens.len(),
             max_new_tokens,
             max_stop_len,
             logits_capacity,
         );
+        let prompt_setup_buffer_reset_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_buffer_reset_alloc_start);
+        let prompt_setup_token_seed_alloc_start = AllocationAuditSnapshot::current();
         session_buffers.tokens.extend_from_slice(&encoded_prompt_tokens);
         ensure_non_empty_generation_context(&mut session_buffers.tokens, tokenizer.as_ref())?;
+        let prompt_setup_token_seed_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_token_seed_alloc_start);
         let tokens = &mut session_buffers.tokens;
         let generated_tokens = &mut session_buffers.generated_tokens;
         let decode_step_ms = &mut session_buffers.decode_step_ms;
@@ -8094,6 +8370,8 @@ async fn run_slm_warm_session(
         let sample_step_ms = &mut session_buffers.sample_step_ms;
         let token_decode_step_ms = &mut session_buffers.token_decode_step_ms;
         let prefill_step_allocs = &mut session_buffers.prefill_step_allocs;
+        let prefill_embed_step_allocs = &mut session_buffers.prefill_embed_step_allocs;
+        let prefill_forward_step_allocs = &mut session_buffers.prefill_forward_step_allocs;
         let decode_step_allocs = &mut session_buffers.decode_step_allocs;
         let embed_step_allocs = &mut session_buffers.embed_step_allocs;
         let forward_step_allocs = &mut session_buffers.forward_step_allocs;
@@ -8105,15 +8383,26 @@ async fn run_slm_warm_session(
         let stop_tail = &mut session_buffers.stop_tail;
         let logits_scratch = &mut session_buffers.logits_scratch;
         let prompt_token_count = tokens.len();
-        let cache = KVCache::new(&config, 1, &candle_core::Device::Cpu)?;
-        let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
-        let mut sampler = SamplingStrategy::new(SamplingConfig {
-            temperature,
-            top_k: top_k as u32,
-            top_p,
-            repetition_penalty,
-            seed,
-        });
+        let prompt_setup_kv_cache_alloc_start = AllocationAuditSnapshot::current();
+        session_kv_cache.clear();
+        kv_cache_reused_prompt_count += 1;
+        let prompt_setup_kv_cache_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_kv_cache_alloc_start);
+        let prompt_setup_sampler_alloc_start = AllocationAuditSnapshot::current();
+        let mut prompt_sampler = if sampler_reuse_enabled {
+            sampler_reused_prompt_count += 1;
+            None
+        } else {
+            sampler_recreated_prompt_count += 1;
+            let mut sampler = SamplingStrategy::new(sampling_config.clone());
+            sampler.reserve_logits_capacity(logits_capacity);
+            Some(sampler)
+        };
+        if let Some(sampler) = session_sampler.as_mut() {
+            sampler.reset();
+        }
+        let prompt_setup_sampler_alloc =
+            AllocationAuditSnapshot::delta_since(prompt_setup_sampler_alloc_start);
         let mut first_token_ms = None;
         let mut first_token_decode_ms = None;
         let prompt_setup_alloc = AllocationAuditSnapshot::delta_since(prompt_setup_alloc_start);
@@ -8126,9 +8415,17 @@ async fn run_slm_warm_session(
         if tokens.len() > 1 {
             for token in &tokens[..tokens.len() - 1] {
                 let prefill_alloc_start = AllocationAuditSnapshot::current();
+                let prefill_embed_alloc_start = AllocationAuditSnapshot::current();
                 let x = model.embed(&[*token])?;
-                let _ = model.forward(&x, any_cache.as_mut())?;
                 if allocation_audit_enabled {
+                    prefill_embed_step_allocs
+                        .push(AllocationAuditSnapshot::delta_since(prefill_embed_alloc_start));
+                }
+                let prefill_forward_alloc_start = AllocationAuditSnapshot::current();
+                let _ = model.forward(&x, &mut session_kv_cache as &mut dyn std::any::Any)?;
+                if allocation_audit_enabled {
+                    prefill_forward_step_allocs
+                        .push(AllocationAuditSnapshot::delta_since(prefill_forward_alloc_start));
                     prefill_step_allocs
                         .push(AllocationAuditSnapshot::delta_since(prefill_alloc_start));
                 }
@@ -8152,7 +8449,7 @@ async fn run_slm_warm_session(
 
             let forward_start = std::time::Instant::now();
             let forward_alloc_start = AllocationAuditSnapshot::current();
-            let h = model.forward(&x, any_cache.as_mut())?;
+            let h = model.forward(&x, &mut session_kv_cache as &mut dyn std::any::Any)?;
             if allocation_audit_enabled {
                 forward_step_allocs.push(AllocationAuditSnapshot::delta_since(forward_alloc_start));
             }
@@ -8187,7 +8484,14 @@ async fn run_slm_warm_session(
             let sample_alloc_start = AllocationAuditSnapshot::current();
             let next_token = match direct_next_token {
                 Some(token) => token,
-                None => sampler.sample_in_place(logits_scratch, generated_tokens)?,
+                None => {
+                    let Some(sampler) = session_sampler.as_mut().or(prompt_sampler.as_mut()) else {
+                        anyhow::bail!(
+                            "warm-session sampler was unavailable for non-direct sampling"
+                        );
+                    };
+                    sampler.sample_in_place(logits_scratch, generated_tokens)?
+                }
             };
             if allocation_audit_enabled {
                 sample_step_allocs.push(AllocationAuditSnapshot::delta_since(sample_alloc_start));
@@ -8346,6 +8650,17 @@ async fn run_slm_warm_session(
             "fallback_used": backend_identity.fallback_used,
             "fallback_reason": backend_identity.fallback_reason.as_deref(),
             "prompt": prompt,
+            "prompt_render": {
+                "template_family": template_type.to_string(),
+                "qwen_no_think": no_think,
+                "rendered_text": &formatted_prompt,
+                "rendered_sha256": rendered_prompt_sha256,
+                "add_bos": bos_policy,
+                "parse_special": parse_special,
+                "stop_sequences": &all_stop_sequences,
+                "stop_token_ids": &all_stop_ids,
+            },
+            "prompt_generation_identity": prompt_generation_identity.clone(),
             "text": generated_text,
             "tokens": {
                 "prompt": prompt_token_count,
@@ -8405,6 +8720,7 @@ async fn run_slm_warm_session(
                 "implementation": kernel_implementation,
                 "kernel_id": selected_kernel.as_str(),
             },
+            "dense_q8_hook_selection": dense_q8_hook_selection.clone(),
             "execution": {
                 "phase": "warm_session_decode",
                 "prompt_tokens": prompt_token_count,
@@ -8435,8 +8751,13 @@ async fn run_slm_warm_session(
                 "timing_buffers_reused": true,
                 "allocation_audit_buffers_reused": true,
                 "stop_tail_buffer_reused": max_stop_len > 0,
-                "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
-                "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+                "kv_cache_reuse_policy": kv_cache_reuse_policy,
+                "kv_cache_reused_across_prompts": kv_cache_reused_across_prompts,
+                "kv_cache_cleared_per_prompt": true,
+                "kv_cache_recreated_per_prompt": false,
+                "sampler_reuse_policy": sampler_reuse_policy,
+                "sampler_reused_across_prompts": sampler_reuse_enabled,
+                "sampler_recreated_per_prompt": !sampler_reuse_enabled,
                 "logits_buffer_reuse_policy": if logits_vec_extraction_steps == 0 {
                     "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer"
                 } else {
@@ -8446,6 +8767,10 @@ async fn run_slm_warm_session(
                 "direct_greedy_logits_steps": direct_greedy_logits_steps,
                 "logits_scratch_reuse_steps": logits_scratch_reuse_steps,
                 "logits_vec_extraction_steps": logits_vec_extraction_steps,
+                "prompt_token_cache_policy": WarmSessionPromptTokenCache::POLICY,
+                "prompt_token_cache_enabled": true,
+                "prompt_token_cache_hit": prompt_token_cache_hit,
+                "prompt_token_cache_entry_count": prompt_token_cache.entry_count(),
                 "stop_policy_precomputed_once": true,
                 "stop_sequence_count": all_stop_sequences.len(),
                 "stop_token_id_count": all_stop_ids.len(),
@@ -8480,7 +8805,15 @@ async fn run_slm_warm_session(
                 requested_backend: backend_identity.requested_backend.as_str(),
                 prompt_tokenize: prompt_tokenize_alloc,
                 prompt_setup: prompt_setup_alloc,
+                prompt_setup_breakdown: WarmSessionPromptSetupAllocationAudit {
+                    buffer_reset: prompt_setup_buffer_reset_alloc,
+                    token_seed: prompt_setup_token_seed_alloc,
+                    kv_cache: prompt_setup_kv_cache_alloc,
+                    sampler_setup: prompt_setup_sampler_alloc,
+                },
                 prompt_prefill: prefill_step_allocs,
+                prompt_prefill_embed: prefill_embed_step_allocs,
+                prompt_prefill_forward: prefill_forward_step_allocs,
                 decode_total: decode_step_allocs,
                 embed: embed_step_allocs,
                 forward: forward_step_allocs,
@@ -8569,6 +8902,17 @@ async fn run_slm_warm_session(
         total_session_ms,
         &format!("validated SLM warm session on {}", backend_identity.selected_backend.as_str()),
         "warm-answer timing is measured for this model, corpus, backend, and machine context only",
+        WarmSessionReuseReceiptContext {
+            sampler_reuse_enabled,
+            sampler_reuse_policy,
+            sampler_reused_prompt_count,
+            sampler_recreated_prompt_count,
+            kv_cache_recreated_per_prompt: false,
+            kv_cache_reused_across_prompts,
+            kv_cache_reuse_policy,
+            kv_cache_reused_prompt_count,
+            kv_cache_recreated_prompt_count: 0,
+        },
     );
     let determinism = slm_warm_session_determinism_receipt(&determinism_records);
     let quality_passed = quality_failed_prompts.is_empty();
@@ -8612,8 +8956,17 @@ async fn run_slm_warm_session(
             "timing_buffers_reused": true,
             "allocation_audit_buffers_reused": true,
             "stop_tail_buffer_reused": max_stop_len > 0,
-            "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
-            "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+            "kv_cache_reuse_policy": kv_cache_reuse_policy,
+            "kv_cache_reused_across_prompts": kv_cache_reused_across_prompts,
+            "kv_cache_cleared_per_prompt": true,
+            "kv_cache_recreated_per_prompt": false,
+            "kv_cache_reused_prompt_count": kv_cache_reused_prompt_count,
+            "kv_cache_recreated_prompt_count": 0,
+            "sampler_reuse_policy": sampler_reuse_policy,
+            "sampler_reused_across_prompts": sampler_reuse_enabled,
+            "sampler_recreated_per_prompt": !sampler_reuse_enabled,
+            "sampler_reused_prompt_count": sampler_reused_prompt_count,
+            "sampler_recreated_prompt_count": sampler_recreated_prompt_count,
             "logits_buffer_reuse_policy": if aggregate_logits_vec_extraction_steps == 0 {
                 "full logits Vec extraction bypassed; deterministic greedy no-penalty steps use direct tensor argmax and repetition-penalty steps reuse a preallocated host logits scratch buffer"
             } else {
@@ -8623,6 +8976,12 @@ async fn run_slm_warm_session(
             "direct_greedy_logits_steps": aggregate_direct_greedy_logits_steps,
             "logits_scratch_reuse_steps": aggregate_logits_scratch_reuse_steps,
             "logits_vec_extraction_steps": aggregate_logits_vec_extraction_steps,
+            "prompt_token_cache_policy": WarmSessionPromptTokenCache::POLICY,
+            "prompt_token_cache_enabled": true,
+            "prompt_token_cache_hits": prompt_token_cache.hits,
+            "prompt_token_cache_misses": prompt_token_cache.misses,
+            "prompt_token_cache_entry_count": prompt_token_cache.entry_count(),
+            "prompt_token_cache_reused_rendered_prompts": prompt_token_cache.hits > 0,
             "stop_policy_precomputed_once": true,
             "stop_sequence_count": all_stop_sequences.len(),
             "stop_token_id_count": all_stop_ids.len(),
@@ -8636,9 +8995,10 @@ async fn run_slm_warm_session(
             "repetition_penalty": repetition_penalty,
             "deterministic": deterministic,
             "max_new_tokens": max_new_tokens,
-            "prompt_template": prompt_template,
+            "prompt_template": prompt_template.as_str(),
             "qwen_no_think": no_think,
         },
+        "prompt_generation_identity": prompt_generation_identity,
         "model": {
             "repo": model_repo.as_str(),
             "file": model_file.as_str(),
@@ -8692,6 +9052,7 @@ async fn run_slm_warm_session(
             "fallback_used": backend_identity.fallback_used,
             "fallback_reason": backend_identity.fallback_reason.as_deref(),
         },
+        "dense_q8_hook_selection": dense_q8_hook_selection,
         "cpu": {
             "model": cpu_model.as_str(),
             "arch": std::env::consts::ARCH,
@@ -8744,6 +9105,12 @@ async fn run_slm_warm_session(
             backend_identity.requested_backend.as_str(),
             &prompt_summaries,
         ),
+        "session_setup_allocation_audit": {
+            "enabled": allocation_audit_enabled,
+            "scope": "resident warm-session setup before prompt loop",
+            "kv_cache": allocation_samples_json(std::slice::from_ref(&kv_cache_session_alloc)),
+            "kv_cache_reuse_policy": kv_cache_reuse_policy,
+        },
         "claim_boundary": {
             "warm_session_flow": true,
             "model_loaded_once": true,
@@ -9011,6 +9378,60 @@ struct WarmSessionPromptInput {
 
 #[derive(Debug, Default)]
 #[cfg(feature = "full-cli")]
+struct WarmSessionPromptTokenCache {
+    entries: std::collections::BTreeMap<WarmSessionPromptTokenCacheKey, Vec<u32>>,
+    hits: usize,
+    misses: usize,
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionPromptTokenCacheKey {
+    rendered_prompt: String,
+    bos_policy: bool,
+    parse_special: bool,
+}
+
+#[cfg(feature = "full-cli")]
+impl WarmSessionPromptTokenCache {
+    const POLICY: &'static str =
+        "rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts";
+
+    fn get_or_insert_with<F>(
+        &mut self,
+        rendered_prompt: &str,
+        bos_policy: bool,
+        parse_special: bool,
+        encode: F,
+    ) -> Result<(&[u32], bool)>
+    where
+        F: FnOnce() -> Result<Vec<u32>>,
+    {
+        let lookup_key = WarmSessionPromptTokenCacheKey {
+            rendered_prompt: rendered_prompt.to_string(),
+            bos_policy,
+            parse_special,
+        };
+        match self.entries.entry(lookup_key) {
+            std::collections::btree_map::Entry::Occupied(entry) => {
+                self.hits += 1;
+                Ok((entry.into_mut().as_slice(), true))
+            }
+            std::collections::btree_map::Entry::Vacant(entry) => {
+                let encoded = encode()?;
+                self.misses += 1;
+                Ok((entry.insert(encoded).as_slice(), false))
+            }
+        }
+    }
+
+    fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+}
+
+#[derive(Debug, Default)]
+#[cfg(feature = "full-cli")]
 struct WarmSessionPromptBuffers {
     tokens: Vec<u32>,
     generated_tokens: Vec<u32>,
@@ -9021,6 +9442,8 @@ struct WarmSessionPromptBuffers {
     sample_step_ms: Vec<f64>,
     token_decode_step_ms: Vec<f64>,
     prefill_step_allocs: Vec<AllocationAuditSnapshot>,
+    prefill_embed_step_allocs: Vec<AllocationAuditSnapshot>,
+    prefill_forward_step_allocs: Vec<AllocationAuditSnapshot>,
     decode_step_allocs: Vec<AllocationAuditSnapshot>,
     embed_step_allocs: Vec<AllocationAuditSnapshot>,
     forward_step_allocs: Vec<AllocationAuditSnapshot>,
@@ -9062,6 +9485,14 @@ impl WarmSessionPromptBuffers {
             &mut self.prefill_step_allocs,
             prompt_token_capacity.saturating_sub(1),
         );
+        reserve_total_capacity(
+            &mut self.prefill_embed_step_allocs,
+            prompt_token_capacity.saturating_sub(1),
+        );
+        reserve_total_capacity(
+            &mut self.prefill_forward_step_allocs,
+            prompt_token_capacity.saturating_sub(1),
+        );
         reserve_total_capacity(&mut self.decode_step_allocs, max_new_tokens);
         reserve_total_capacity(&mut self.embed_step_allocs, max_new_tokens);
         reserve_total_capacity(&mut self.forward_step_allocs, max_new_tokens);
@@ -9082,6 +9513,8 @@ impl WarmSessionPromptBuffers {
         self.sample_step_ms.clear();
         self.token_decode_step_ms.clear();
         self.prefill_step_allocs.clear();
+        self.prefill_embed_step_allocs.clear();
+        self.prefill_forward_step_allocs.clear();
         self.decode_step_allocs.clear();
         self.embed_step_allocs.clear();
         self.forward_step_allocs.clear();
@@ -9240,6 +9673,20 @@ struct WarmSessionSpeedAccumulator {
     steady_decode_tok_s: Vec<f64>,
 }
 
+#[derive(Clone, Debug)]
+#[cfg(feature = "full-cli")]
+struct WarmSessionReuseReceiptContext<'a> {
+    sampler_reuse_enabled: bool,
+    sampler_reuse_policy: &'a str,
+    sampler_reused_prompt_count: usize,
+    sampler_recreated_prompt_count: usize,
+    kv_cache_recreated_per_prompt: bool,
+    kv_cache_reused_across_prompts: bool,
+    kv_cache_reuse_policy: &'a str,
+    kv_cache_reused_prompt_count: usize,
+    kv_cache_recreated_prompt_count: usize,
+}
+
 #[cfg(feature = "full-cli")]
 impl WarmSessionSpeedAccumulator {
     fn record(&mut self, prompt: WarmSessionPromptSpeed) {
@@ -9266,6 +9713,7 @@ impl WarmSessionSpeedAccumulator {
         total_session_ms: f64,
         measurement_scope: &str,
         claim: &str,
+        reuse: WarmSessionReuseReceiptContext<'_>,
     ) -> serde_json::Value {
         serde_json::json!({
             "measurement_scope": measurement_scope,
@@ -9284,10 +9732,17 @@ impl WarmSessionSpeedAccumulator {
                 "timing_buffers_reused": true,
                 "allocation_audit_buffers_reused": true,
                 "stop_tail_buffer_reused": true,
-                "kv_cache_recreated_per_prompt": true,
-                "kv_cache_reuse_policy": "recreated_per_prompt_for_prompt_isolation",
-                "sampler_recreated_per_prompt": true,
-                "sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+                "kv_cache_recreated_per_prompt": reuse.kv_cache_recreated_per_prompt,
+                "kv_cache_reused_across_prompts": reuse.kv_cache_reused_across_prompts,
+                "kv_cache_cleared_per_prompt": reuse.kv_cache_reused_across_prompts,
+                "kv_cache_reuse_policy": reuse.kv_cache_reuse_policy,
+                "kv_cache_reused_prompt_count": reuse.kv_cache_reused_prompt_count,
+                "kv_cache_recreated_prompt_count": reuse.kv_cache_recreated_prompt_count,
+                "sampler_recreated_per_prompt": !reuse.sampler_reuse_enabled,
+                "sampler_reused_across_prompts": reuse.sampler_reuse_enabled,
+                "sampler_reuse_policy": reuse.sampler_reuse_policy,
+                "sampler_reused_prompt_count": reuse.sampler_reused_prompt_count,
+                "sampler_recreated_prompt_count": reuse.sampler_recreated_prompt_count,
                 "logits_buffer_reuse_claimed": false,
                 "logits_buffer_reuse_policy": "full logits Vec extraction is reported by the session receipt; model.logits tensor allocation remains measured",
             },
@@ -9315,6 +9770,20 @@ impl WarmSessionSpeedAccumulator {
                 "decode_generated_tok_s": tokens_per_second_json(self.generated_tokens, self.decode_total_ms),
             },
         })
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_sampler_reuse_enabled(config: &bitnet_sampling::SamplingConfig) -> bool {
+    config.temperature.abs() <= f32::EPSILON
+}
+
+#[cfg(feature = "full-cli")]
+fn warm_session_sampler_reuse_policy(reuse_enabled: bool) -> &'static str {
+    if reuse_enabled {
+        "single_sampler_reused_for_temperature_zero_prompt_independence"
+    } else {
+        "recreated_per_prompt_for_rng_state_independence"
     }
 }
 
@@ -9799,7 +10268,7 @@ fn slm_cpu_warm_session_normalize_windows_verbatim_path(
 
 fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) -> Result<String> {
     question.or(question_arg).ok_or_else(|| {
-        anyhow::anyhow!("ask requires a question via --question or positional QUESTION")
+        anyhow::anyhow!("ask requires a question via --question, --prompt, or positional QUESTION")
     })
 }
 
@@ -10712,13 +11181,17 @@ fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static 
         #[cfg(feature = "full-cli")]
         Some(Commands::Receipts(_)) => Some("warn"),
         #[cfg(feature = "full-cli")]
+        Some(Commands::Support(_)) => Some("warn"),
+        #[cfg(feature = "full-cli")]
         Some(Commands::Mac(cmd)) => cmd.default_log_level(),
         _ => None,
     }
 }
 
 fn skips_startup_backend_selection(command: Option<&Commands>) -> bool {
-    uses_report_only_cuda_benchmark_receipt(command) || uses_read_only_model_status(command)
+    uses_report_only_cuda_benchmark_receipt(command)
+        || uses_read_only_model_status(command)
+        || uses_read_only_support_bundle(command)
 }
 
 fn uses_report_only_cuda_benchmark_receipt(command: Option<&Commands>) -> bool {
@@ -10736,6 +11209,18 @@ fn uses_read_only_model_status(command: Option<&Commands>) -> bool {
         command,
         Some(Commands::Model(ModelCommand { action: model_cache::ModelAction::Status { .. } }))
     )
+}
+
+fn uses_read_only_support_bundle(command: Option<&Commands>) -> bool {
+    #[cfg(feature = "full-cli")]
+    {
+        matches!(command, Some(Commands::Support(_)))
+    }
+    #[cfg(not(feature = "full-cli"))]
+    {
+        let _ = command;
+        false
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -11009,15 +11494,11 @@ fn is_dense_qwen_cuda_ask_backend(requested_backend_label: &str) -> bool {
 fn resolve_dense_qwen_cuda_ask_model(
     model: &std::path::Path,
 ) -> Result<Option<std::path::PathBuf>> {
-    const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
-
     if let Some(cached) = model_cache::verified_dense_qwen_cuda_model_arg(model, None)? {
         return Ok(Some(cached.path));
     }
 
-    if model.file_name().and_then(|value| value.to_str())
-        == Some(QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)
-    {
+    if is_supported_dense_qwen_cuda_model_path(model) {
         return Ok(Some(model.to_path_buf()));
     }
 
@@ -11615,6 +12096,34 @@ fn extract_last_token_hidden(
     }
 }
 
+#[cfg(test)]
+mod extract_last_token_hidden_tests {
+    use super::{extract_last_token_hidden, tensor_to_vec};
+    use bitnet_common::Tensor as _;
+
+    #[test]
+    fn extract_last_token_hidden_uses_final_sequence_position() -> anyhow::Result<()> {
+        let device = candle_core::Device::Cpu;
+        let hidden = candle_core::Tensor::from_vec(
+            vec![
+                1.0f32, 2.0, 3.0, 4.0, // position 0
+                10.0, 20.0, 30.0, 40.0, // position 1
+                100.0, 200.0, 300.0, 400.0, // position 2
+            ],
+            (1usize, 3usize, 4usize),
+            &device,
+        )?;
+        let tensor =
+            bitnet_common::ConcreteTensor::BitNet(bitnet_common::BitNetTensor::new(hidden));
+
+        let last = extract_last_token_hidden(&tensor)?;
+        assert_eq!(last.shape(), vec![1, 4]);
+        assert_eq!(tensor_to_vec(&last)?, vec![100.0f32, 200.0, 300.0, 400.0]);
+        Ok(())
+    }
+}
+
+#[cfg(any(test, feature = "full-cli"))]
 fn can_use_direct_greedy_logits(
     temperature: f32,
     repetition_penalty: f32,
@@ -11626,6 +12135,7 @@ fn can_use_direct_greedy_logits(
 /// Select the greedy token from 2D logits \[B,V\] without materializing a full
 /// host logits vector. This is only used under the same deterministic
 /// no-penalty guard as `bitnet_sampling::SamplingStrategy`.
+#[cfg(any(test, feature = "full-cli"))]
 fn greedy_argmax_token_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<u32> {
     use bitnet_common::{BitNetError, ConcreteTensor, Tensor};
 
@@ -11681,7 +12191,7 @@ fn extract_logits_2d(tensor: &bitnet_common::ConcreteTensor) -> Result<Vec<f32>>
 /// Returns true when the data was copied directly from contiguous/non-contiguous
 /// CPU F32 storage without allocating a fresh `Vec<f32>`. Non-CPU or non-F32
 /// tensors fall back to the compatibility extractor.
-#[cfg(feature = "full-cli")]
+#[cfg(any(test, feature = "full-cli"))]
 fn extract_logits_2d_into(
     tensor: &bitnet_common::ConcreteTensor,
     scratch: &mut Vec<f32>,
@@ -12169,6 +12679,50 @@ fn apple_machine_receipt_json_from_probe(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn simple_loader_qk256_raw_tensors_preserve_trailer_scale() -> Result<()> {
+        let mut packed = vec![0x55; 64];
+        packed.extend_from_slice(&1.25f32.to_le_bytes());
+        let qk256 = bitnet_models::quant::i2s_qk256::I2SQk256NoScale::new(1, 256, packed)?;
+
+        let raw_tensors =
+            qk256_raw_tensors_from_simple_loader([("blk.0.ffn_gate.weight".to_string(), qk256)])?;
+        let qs = raw_tensors
+            .get("blk.0.ffn_gate.weight.qk256_qs")
+            .ok_or_else(|| anyhow::anyhow!("missing qk256 raw tensor"))?;
+        let scale = raw_tensors
+            .get("blk.0.ffn_gate.weight.qk256_scale")
+            .ok_or_else(|| anyhow::anyhow!("missing qk256 scale tensor"))?;
+
+        assert_eq!(qs.dims(), &[1, 64]);
+        assert_eq!(qs.to_vec2::<u8>()?, vec![vec![0x55; 64]]);
+        assert_eq!(scale.to_vec1::<f32>()?, vec![1.25]);
+        Ok(())
+    }
+
+    #[test]
+    fn greedy_effective_top1_applies_repetition_penalty() {
+        let logits = [10.0, 9.0];
+
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[], 2.0), Some(0));
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[0], 2.0), Some(1));
+    }
+
+    #[test]
+    fn greedy_effective_top1_uses_count_aware_penalty() {
+        let logits = [10.0, 3.0];
+
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[0], 2.0), Some(0));
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[0, 0], 2.0), Some(1));
+    }
+
+    #[test]
+    fn greedy_effective_top1_keeps_lowest_token_id_tie_break() {
+        let logits = [1.0, 1.0, 0.0];
+
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[], 1.0), Some(0));
+    }
 
     #[test]
     #[cfg(feature = "full-cli")]
@@ -12689,6 +13243,17 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
+    fn dense_qwen_ask_resolves_qwen3_explicit_model_file() -> Result<()> {
+        let model = std::path::PathBuf::from("C:/models/Qwen3-0.6B-Q8_0.gguf");
+        let resolved = resolve_dense_qwen_cuda_ask_model(&model)?
+            .context("Qwen3 explicit GGUF should resolve to dense Qwen CUDA ask path")?;
+
+        assert_eq!(resolved, model);
+        Ok(())
+    }
+
+    #[test]
     fn ask_defaults_to_warn_logging_for_user_facing_output() {
         let command = Commands::Ask {
             model: std::path::PathBuf::from("qwen2.5-0.5b-instruct-q8_0"),
@@ -12724,6 +13289,19 @@ mod tests {
                     path: None,
                     latest: true,
                     json: false,
+                    format: None,
+                },
+            }))),
+            Some("warn")
+        );
+        assert_eq!(
+            default_log_level_for_command(Some(&Commands::Support(SupportCommand {
+                action: commands::support::SupportAction::Bundle {
+                    path: None,
+                    latest: true,
+                    device: "nvidia-rtx-5070-ti-cuda".to_string(),
+                    matrix: None,
+                    format: commands::support::SupportBundleFormat::Json,
                 },
             }))),
             Some("warn")
@@ -12745,6 +13323,24 @@ mod tests {
         });
 
         assert!(uses_read_only_model_status(Some(&command)));
+        assert!(skips_startup_backend_selection(Some(&command)));
+        assert_eq!(default_log_level_for_command(Some(&command)), Some("warn"));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn support_bundle_skips_startup_backend_selection() {
+        let command = Commands::Support(SupportCommand {
+            action: commands::support::SupportAction::Bundle {
+                path: None,
+                latest: true,
+                device: "nvidia-rtx-5070-ti-cuda".to_string(),
+                matrix: None,
+                format: commands::support::SupportBundleFormat::Json,
+            },
+        });
+
+        assert!(uses_read_only_support_bundle(Some(&command)));
         assert!(skips_startup_backend_selection(Some(&command)));
         assert_eq!(default_log_level_for_command(Some(&command)), Some("warn"));
     }
@@ -12903,6 +13499,31 @@ mod tests {
         assert_eq!(receipt[0]["device_to_host_bytes"], 2048);
         assert_eq!(receipt[0]["kernel_time_ms"], 1.235);
         assert_eq!(receipt[0]["kernel_time_samples"], 4);
+    }
+
+    #[test]
+    fn qk256_cpu_hot_path_receipt_distinguishes_scaled_and_materialized_paths() {
+        let counters = bitnet_qk256_dispatch::Qk256CpuHotPathCounters {
+            qk256_f32_scalar_gemv_invocations: 1,
+            qk256_f32_avx2_gemv_invocations: 0,
+            qk256_i8s_scaled_scalar_invocations: 2,
+            qk256_i8s_scaled_avx2_invocations: 0,
+            qk256_flat_bytes_extracted_count: 3,
+            input_rows_materialized_count: 4,
+            output_rows_allocated_count: 5,
+            requested_kernel: Some("scalar".to_string()),
+            selected_kernel: Some("mixed-qk256-cpu-hot-paths".to_string()),
+            qk256_execution_path: "mixed_scaled_and_no_scale",
+        };
+
+        let receipt = qk256_cpu_hot_path_receipt(&counters);
+
+        assert_eq!(receipt["no_scale_f32_gemv_invocations"], 1);
+        assert_eq!(receipt["scaled_i2s_i8s_gemv_invocations"], 2);
+        assert_eq!(receipt["audited_tensor_materialization_count"], 12);
+        assert_eq!(receipt["selected_kernel"], "mixed-qk256-cpu-hot-paths");
+        assert_eq!(receipt["math_changed"], false);
+        assert_eq!(receipt["speedup_claim"], false);
     }
 
     #[test]
@@ -13201,6 +13822,217 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
+    fn lunar_lake_operator_ask_blocked_receipt_records_no_inference_boundary() {
+        let receipt = build_lunar_lake_operator_ask_blocked_receipt(
+            LunarLakeAskBlockedReceiptContext {
+                artifact_root: std::path::Path::new("ci/hardware/intel-258v/2026-05-08"),
+                operator_receipt: std::path::Path::new("lunar-lake-operator-readiness.json"),
+                promotion_ledger: std::path::Path::new("lunar-lake-route-promotion.json"),
+                route_profile_comparison: std::path::Path::new(
+                    "lunar-lake-route-profile-comparison.json",
+                ),
+                requested_device: "auto",
+                requested_route: "auto",
+                profile_id: "low_power",
+                question: "What is 2+2?",
+                max_new_tokens: 4,
+                error: "no promoted Lunar Lake auto route for profile `low_power`; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage",
+                route_selection: Some(&commands::lunar_lake::BlockedOperatorAskRouteSelection {
+                    requested_device: "auto".to_string(),
+                    requested_route: "auto".to_string(),
+                    profile_id: "low_power".to_string(),
+                    route_selection_status: "blocked".to_string(),
+                    promotion_status: "no_promoted_route".to_string(),
+                    selection_source: "promotion_ledger_auto_blocked".to_string(),
+                    route_reason: "no promoted Lunar Lake auto route for profile `low_power`"
+                        .to_string(),
+                    candidate_routes: vec![
+                        commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
+                        "dense_slm_openvino_gpu_candidate".to_string(),
+                        "dense_slm_openvino_npu_candidate".to_string(),
+                    ],
+                    why_not_cpu: vec!["route is not promoted for profile `low_power`".to_string()],
+                    why_not_gpu: vec![
+                        "route blocker for profile `low_power`: low_power_power_advantage_unproven"
+                            .to_string(),
+                    ],
+                    why_not_npu: vec![
+                        "missing evidence: benchmark_qualified_speedup_or_power_advantage"
+                            .to_string(),
+                    ],
+                    operator_runbook: Some(
+                        commands::lunar_lake::LOW_POWER_BATTERY_RUNBOOK.to_string(),
+                    ),
+                    next_required_evidence:
+                        commands::lunar_lake::blocked_operator_ask_next_required_evidence(
+                            "low_power",
+                        ),
+                    promotion_ledger: Some("lunar-lake-route-promotion.json".to_string()),
+                    route_profile_comparison: Some(
+                        "lunar-lake-route-profile-comparison.json".to_string(),
+                    ),
+                }),
+            },
+        );
+
+        assert_eq!(receipt["artifact_kind"], "lunar_lake_operator_ask_blocked");
+        assert_eq!(receipt["proof_stage"], "operator_route_selection_blocked_no_inference");
+        assert_eq!(receipt["requested_device"], "auto");
+        assert_eq!(receipt["requested_route"], "auto");
+        assert_eq!(receipt["profile_id"], "low_power");
+        assert_eq!(receipt["selected_route"], serde_json::Value::Null);
+        assert_eq!(receipt["fallback_used"], false);
+        assert_eq!(receipt["new_inference_executed"], false);
+        assert_eq!(receipt["model_path_required"], false);
+        assert_eq!(
+            receipt["model_resolution"],
+            "not_required_for_blocked_auto_route_before_execution"
+        );
+        assert_eq!(receipt["route_selection_blocked"], true);
+        assert_eq!(receipt["promotion_status"], "no_promoted_route");
+        assert_eq!(receipt["route_selection"]["selection_source"], "promotion_ledger_auto_blocked");
+        assert_eq!(receipt["route_selection"]["model_path_required"], false);
+        assert!(receipt["candidate_routes"].as_array().is_some_and(|items| items.len() == 3));
+        assert!(receipt["why_not_cpu"].as_array().is_some_and(|items| !items.is_empty()));
+        assert!(receipt["why_not_gpu"].as_array().is_some_and(|items| !items.is_empty()));
+        assert!(receipt["why_not_npu"].as_array().is_some_and(|items| !items.is_empty()));
+        assert_eq!(receipt["operator_runbook"], commands::lunar_lake::LOW_POWER_BATTERY_RUNBOOK);
+        assert!(receipt["next_required_evidence"].as_array().is_some_and(|items| {
+            items.iter().any(|item| {
+                item.as_str()
+                    .is_some_and(|value| value.contains("telemetry-context --require-battery"))
+            })
+        }));
+        assert_eq!(
+            receipt["route_selection"]["operator_runbook"],
+            commands::lunar_lake::LOW_POWER_BATTERY_RUNBOOK
+        );
+        assert!(receipt["route_selection"]["next_required_evidence"].as_array().is_some_and(
+            |items| {
+                items.iter().any(|item| {
+                    item.as_str()
+                        .is_some_and(|value| value.contains("telemetry-context --require-battery"))
+                })
+            }
+        ));
+        assert!(receipt["route_selection"]["why_not_npu"].as_array().is_some_and(|items| {
+            items.iter().any(|item| item.as_str().is_some_and(|value| value.contains("benchmark")))
+        }));
+        assert_eq!(receipt["claim_boundary"]["route_selection_blocked"], true);
+        assert_eq!(receipt["claim_boundary"]["new_inference_executed"], false);
+        assert_eq!(receipt["claim_boundary"]["model_loaded"], false);
+        assert_eq!(receipt["claim_boundary"]["route_promotion_changed"], false);
+        assert!(
+            receipt["route_selection_error"].as_str().is_some_and(
+                |error| error.contains("benchmark_qualified_speedup_or_power_advantage")
+            )
+        );
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_ask_default_model_path_uses_cpu_phase_receipt_when_present() -> Result<()> {
+        let temp_dir = tempfile::tempdir().context("temp dir")?;
+        let artifact_root = temp_dir.path().join("artifacts");
+        std::fs::create_dir_all(&artifact_root).context("artifact root")?;
+        let model_path = temp_dir.path().join("qwen2.5-0.5b-instruct-q8_0.gguf");
+        std::fs::write(&model_path, b"fake gguf fixture").context("model file")?;
+        std::fs::write(
+            artifact_root.join("slm-phase-warm-session-qwen25-cpu.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "artifact_kind": "slm_phase_warm_session",
+                "model": {"path": model_path}
+            }))
+            .context("phase json")?,
+        )
+        .context("phase receipt")?;
+
+        let route = commands::lunar_lake::OperatorRoute {
+            route_id: commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
+            workload: "ask".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct Q8_0 GGUF".to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            runtime_api: "cpu".to_string(),
+            selected_kernel_or_runtime: "dense-qwen-cpu-reference".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            route_reason: "test route".to_string(),
+            answer_gate_evidence: None,
+            phase_evidence: None,
+            acceleration_claim: false,
+        };
+
+        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, None)
+            .context("resolved default CPU model path")?;
+        assert_eq!(resolved, model_path);
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_ask_default_model_path_uses_openvino_manifest_when_present() -> Result<()> {
+        let temp_dir = tempfile::tempdir().context("temp dir")?;
+        let artifact_root = temp_dir.path().join("artifacts");
+        std::fs::create_dir_all(&artifact_root).context("artifact root")?;
+        let model_dir = temp_dir.path().join("openvino-model");
+        std::fs::create_dir_all(&model_dir).context("model dir")?;
+        std::fs::write(
+            artifact_root.join("slm-openvino-ir-qwen25-int4-sym-manifest.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_ir_manifest",
+                "export_contract": {"expected_output_dir": model_dir}
+            }))
+            .context("manifest json")?,
+        )
+        .context("manifest receipt")?;
+
+        let route = commands::lunar_lake::OperatorRoute {
+            route_id: "dense_slm_openvino_gpu_candidate".to_string(),
+            workload: "ask".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM".to_string(),
+            selected_backend: "openvino-gpu".to_string(),
+            runtime_api: "openvino_genai".to_string(),
+            selected_kernel_or_runtime: "openvino-genai-llmpipeline-gpu0".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            route_reason: "test route".to_string(),
+            answer_gate_evidence: None,
+            phase_evidence: None,
+            acceleration_claim: false,
+        };
+
+        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, None)
+            .context("resolved default OpenVINO model path")?;
+        assert_eq!(resolved, model_dir);
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_ask_default_model_path_prefers_explicit_model() -> Result<()> {
+        let temp_dir = tempfile::tempdir().context("temp dir")?;
+        let artifact_root = temp_dir.path().join("artifacts");
+        let explicit = temp_dir.path().join("explicit.gguf");
+        let route = commands::lunar_lake::OperatorRoute {
+            route_id: commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
+            workload: "ask".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct Q8_0 GGUF".to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            runtime_api: "cpu".to_string(),
+            selected_kernel_or_runtime: "dense-qwen-cpu-reference".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            route_reason: "test route".to_string(),
+            answer_gate_evidence: None,
+            phase_evidence: None,
+            acceleration_claim: false,
+        };
+
+        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, Some(&explicit))
+            .context("explicit model is accepted")?;
+        assert_eq!(resolved, explicit);
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
     fn lunar_lake_operator_ask_receipt_has_top_level_identity() {
         let route = commands::lunar_lake::OperatorRoute {
             route_id: commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
@@ -13238,6 +14070,9 @@ mod tests {
                 "dense_slm_openvino_npu_candidate".to_string(),
             ],
             promotion_ledger: Some("lunar-lake-route-promotion.json".to_string()),
+            route_profile_comparison: Some("lunar-lake-route-profile-comparison.json".to_string()),
+            route_profile_status: Some("promoted_route_ready".to_string()),
+            route_profile_blockers: vec![],
             route: route.clone(),
         };
         let source = serde_json::json!({
@@ -13298,7 +14133,10 @@ mod tests {
         assert_eq!(receipt["profile_id"], "ask_normal");
         assert_eq!(receipt["selected_route"], commands::lunar_lake::DEFAULT_ASK_ROUTE);
         assert_eq!(receipt["promotion_status"], "promoted");
+        assert_eq!(receipt["route_profile_status"], "promoted_route_ready");
+        assert_eq!(receipt["route_profile_comparison"], "lunar-lake-route-profile-comparison.json");
         assert_eq!(receipt["route_selection"]["selection_source"], "promotion_ledger_auto");
+        assert_eq!(receipt["route_selection"]["route_profile_status"], "promoted_route_ready");
         assert!(receipt["why_not_gpu"].as_array().is_some_and(|items| !items.is_empty()));
         assert_eq!(receipt["model_family"], "qwen");
         assert_eq!(receipt["model_architecture"], "qwen2");
@@ -13309,6 +14147,123 @@ mod tests {
         assert_eq!(receipt["acceleration_claim"], false);
         assert_eq!(receipt["backend"]["fallback_used"], false);
         assert!(receipt["source_receipt"].is_object());
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_operator_ask_receipt_accepts_openvino_source_shape() -> anyhow::Result<()> {
+        let route = commands::lunar_lake::OperatorRoute {
+            route_id: "dense_slm_openvino_gpu_candidate".to_string(),
+            workload: "ask".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct INT4_SYM OpenVINO IR".to_string(),
+            selected_backend: "openvino-gpu".to_string(),
+            runtime_api: "openvino_genai".to_string(),
+            selected_kernel_or_runtime: "openvino-genai-llmpipeline-gpu0".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            route_reason: "explicit OpenVINO GPU candidate route".to_string(),
+            answer_gate_evidence: Some(
+                "lunar-lake-openvino-operator-ask-gpu-math-brief.json".to_string(),
+            ),
+            phase_evidence: Some("slm-openvino-cpu-gpu-npu-phase-runner.json".to_string()),
+            acceleration_claim: false,
+        };
+        let route_selection = commands::lunar_lake::OperatorAskRouteSelection {
+            requested_device: "GPU.0".to_string(),
+            requested_route: "dense_slm_openvino_gpu_candidate".to_string(),
+            profile_id: "ask_normal".to_string(),
+            selected_route: "dense_slm_openvino_gpu_candidate".to_string(),
+            selected_backend: "openvino-gpu".to_string(),
+            runtime_api: "openvino_genai".to_string(),
+            promotion_status: "direct_route_validated".to_string(),
+            selection_source: "operator_receipt_direct".to_string(),
+            route_reason: "explicit OpenVINO GPU candidate route".to_string(),
+            why_not_cpu: vec!["CPU route was not requested".to_string()],
+            why_not_gpu: vec!["auto routing was not requested".to_string()],
+            why_not_npu: vec!["auto routing was not requested".to_string()],
+            candidate_routes: vec![],
+            promotion_ledger: None,
+            route_profile_comparison: Some("lunar-lake-route-profile-comparison.json".to_string()),
+            route_profile_status: Some("promoted_route_ready".to_string()),
+            route_profile_blockers: vec!["route not promoted for profile ask_normal".to_string()],
+            route: route.clone(),
+        };
+        let source = serde_json::json!({
+            "artifact_kind": "lunar_lake_openvino_operator_ask",
+            "requested_backend": "openvino-gpu",
+            "selected_backend": "openvino-gpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "GPU.0",
+            "fallback_used": false,
+            "fallback_reason": null,
+            "backend_lane": "dense_slm_openvino_gpu_arc140v",
+            "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+            "model_family": "qwen",
+            "model_architecture": "qwen2",
+            "quantization": "INT4_SYM",
+            "prompt_template": "qwen2.5",
+            "tokenizer_source": "hf_tokenizer_export",
+            "model": {
+                "local_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym"
+            },
+            "prompt_policy": {
+                "rendered_prompt": "<|im_start|>user\n2+2?<|im_end|>\n<|im_start|>assistant\n",
+                "prompt_token_ids": [1, 2, 3],
+                "prompt_token_count": 3
+            },
+            "output": {
+                "generated_text": "2 + 2 equals 4.",
+                "normalized_answer": "2 + 2 equals 4.",
+                "generated_token_ids": [17, 488, 220, 17, 16819, 220, 19, 13, 151645],
+                "generated_token_count": 9
+            },
+            "answer_gate": {
+                "kind": "contains",
+                "expected": "4",
+                "passed": true,
+                "failed_rules": []
+            },
+            "timing": {"generation_wall_ms": 301.0}
+        });
+        validate_lunar_lake_ask_source_receipt(&source, &route)?;
+        let answer = lunar_lake_source_answer_text(&source);
+        let normalized = lunar_lake_source_normalized_answer(&source, &answer);
+        let gate = evaluate_lunar_lake_answer_gate(&normalized, Some("4"));
+        let receipt = build_lunar_lake_operator_ask_receipt(LunarLakeAskReceiptContext {
+            artifact_root: std::path::Path::new("ci/hardware/intel-258v/2026-05-08"),
+            operator_receipt_path: std::path::Path::new("lunar-lake-operator-readiness.json"),
+            source_run_path: std::path::Path::new("lunar-lake-openvino-ask-source-run.json"),
+            route: &route,
+            route_selection: &route_selection,
+            question: "2+2?",
+            answer: &answer,
+            normalized_answer: &normalized,
+            answer_gate: &gate,
+            expect_contains: Some("4"),
+            source_run_receipt: &source,
+        });
+
+        assert_eq!(
+            receipt["proof_stage"],
+            "operator_candidate_route_executed_through_lunar_lake_ask"
+        );
+        assert_eq!(receipt["requested_backend"], "openvino-gpu");
+        assert_eq!(receipt["selected_backend"], "openvino-gpu");
+        assert_eq!(receipt["runtime_api"], "openvino_genai");
+        assert_eq!(receipt["backend_lane"], "dense_slm_openvino_gpu_arc140v");
+        assert_eq!(receipt["selected_kernel_or_runtime"], "openvino-genai-llmpipeline-gpu0");
+        assert_eq!(receipt["route_id"], "dense_slm_openvino_gpu_candidate");
+        assert_eq!(receipt["openvino_candidate_route_executed"], true);
+        assert_eq!(receipt["claim_boundary"]["openvino_candidate_route_executed"], true);
+        assert_eq!(receipt["claim_boundary"]["default_route_changed"], false);
+        assert_eq!(receipt["claim_boundary"]["acceleration_claim"], false);
+        assert_eq!(receipt["model_family"], "qwen");
+        assert_eq!(receipt["model_architecture"], "qwen2");
+        assert_eq!(receipt["quantization"], "INT4_SYM");
+        assert_eq!(receipt["tokenizer_source"], "hf_tokenizer_export");
+        assert_eq!(receipt["prompt"]["token_ids"], serde_json::json!([1, 2, 3]));
+        assert_eq!(receipt["tokens"]["generated_count"], 9);
+        assert_eq!(receipt["answer"]["normalized_text"], "2 + 2 equals 4.");
+        Ok(())
     }
 
     #[test]
@@ -13620,6 +14575,17 @@ mod tests {
             1600.0,
             "strict RTX 5070 Ti CUDA warm answer session",
             "strict CUDA answer-path timing is measured for this model, corpus, backend, and machine context only",
+            WarmSessionReuseReceiptContext {
+                sampler_reuse_enabled: true,
+                sampler_reuse_policy: "single_sampler_reused_for_temperature_zero_prompt_independence",
+                sampler_reused_prompt_count: 2,
+                sampler_recreated_prompt_count: 0,
+                kv_cache_recreated_per_prompt: false,
+                kv_cache_reused_across_prompts: true,
+                kv_cache_reuse_policy: "single_kv_cache_cleared_per_prompt_for_prompt_isolation",
+                kv_cache_reused_prompt_count: 2,
+                kv_cache_recreated_prompt_count: 0,
+            },
         );
 
         assert_eq!(receipt["counts"]["prompt_count"], 2);
@@ -13631,6 +14597,43 @@ mod tests {
         assert_eq!(receipt["broad_performance_claim"], false);
         assert_eq!(receipt["reuse"]["model_loaded_once"], true);
         assert_eq!(receipt["reuse"]["logits_buffer_reuse_claimed"], false);
+        assert_eq!(receipt["reuse"]["kv_cache_recreated_per_prompt"], false);
+        assert_eq!(receipt["reuse"]["kv_cache_reused_across_prompts"], true);
+        assert_eq!(receipt["reuse"]["kv_cache_cleared_per_prompt"], true);
+        assert_eq!(
+            receipt["reuse"]["kv_cache_reuse_policy"],
+            "single_kv_cache_cleared_per_prompt_for_prompt_isolation"
+        );
+        assert_eq!(receipt["reuse"]["kv_cache_reused_prompt_count"], 2);
+        assert_eq!(receipt["reuse"]["sampler_recreated_per_prompt"], false);
+        assert_eq!(receipt["reuse"]["sampler_reused_across_prompts"], true);
+        assert_eq!(receipt["reuse"]["sampler_reused_prompt_count"], 2);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_sampler_reuse_is_only_for_temperature_zero() {
+        let greedy = bitnet_sampling::SamplingConfig {
+            temperature: 0.0,
+            repetition_penalty: 1.1,
+            ..Default::default()
+        };
+        let sampled = bitnet_sampling::SamplingConfig {
+            temperature: 0.7,
+            seed: Some(42),
+            ..Default::default()
+        };
+
+        assert!(warm_session_sampler_reuse_enabled(&greedy));
+        assert!(!warm_session_sampler_reuse_enabled(&sampled));
+        assert_eq!(
+            warm_session_sampler_reuse_policy(true),
+            "single_sampler_reused_for_temperature_zero_prompt_independence"
+        );
+        assert_eq!(
+            warm_session_sampler_reuse_policy(false),
+            "recreated_per_prompt_for_rng_state_independence"
+        );
     }
 
     #[test]
@@ -13705,6 +14708,268 @@ mod tests {
         assert_eq!(summary["mean_alloc_bytes_per_token"], 96.0);
         assert_eq!(summary["max_alloc_count_per_token"], 3);
         assert_eq!(summary["max_alloc_bytes_per_token"], 128);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_allocation_audit_reports_prompt_setup_breakdown() {
+        let prompt_tokenize = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 64,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let prompt_setup = AllocationAuditSnapshot {
+            alloc_count: 4,
+            alloc_bytes: 400,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let buffer_reset = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 40,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let token_seed = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 60,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let kv_cache = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 250,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+        let sampler_setup = AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 50,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        };
+
+        let audit = warm_session_prompt_allocation_audit_json(WarmSessionPromptAllocationAudit {
+            enabled: true,
+            requested_backend: "cpu",
+            prompt_tokenize,
+            prompt_setup,
+            prompt_setup_breakdown: WarmSessionPromptSetupAllocationAudit {
+                buffer_reset,
+                token_seed,
+                kv_cache,
+                sampler_setup,
+            },
+            prompt_prefill: &[],
+            prompt_prefill_embed: &[],
+            prompt_prefill_forward: &[],
+            decode_total: &[],
+            embed: &[],
+            forward: &[],
+            logits: &[],
+            sample: &[],
+            token_vector_update: &[],
+            token_decode: &[],
+            stop_tail_update: &[],
+            receipt_construction: AllocationAuditSnapshot::default(),
+        });
+
+        assert_eq!(audit["prompt_setup"]["alloc_bytes_total"], 400);
+        assert_eq!(audit["prompt_setup_breakdown"]["buffer_reset"]["alloc_bytes_total"], 40);
+        assert_eq!(audit["prompt_setup_breakdown"]["token_seed"]["alloc_bytes_total"], 60);
+        assert_eq!(audit["prompt_setup_breakdown"]["kv_cache"]["alloc_bytes_total"], 250);
+        assert_eq!(audit["prompt_setup_breakdown"]["sampler_setup"]["alloc_bytes_total"], 50);
+        assert!(audit["ranked_hotspots"].as_array().is_some_and(|hotspots| {
+            hotspots.iter().any(|hotspot| hotspot["component"] == "prompt_setup.kv_cache")
+        }));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_allocation_audit_reports_prefill_breakdown() {
+        let prefill_total = [AllocationAuditSnapshot {
+            alloc_count: 4,
+            alloc_bytes: 400,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        }];
+        let prefill_embed = [AllocationAuditSnapshot {
+            alloc_count: 1,
+            alloc_bytes: 80,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        }];
+        let prefill_forward = [AllocationAuditSnapshot {
+            alloc_count: 3,
+            alloc_bytes: 320,
+            dealloc_count: 0,
+            dealloc_bytes: 0,
+        }];
+
+        let audit = warm_session_prompt_allocation_audit_json(WarmSessionPromptAllocationAudit {
+            enabled: true,
+            requested_backend: "cpu",
+            prompt_tokenize: AllocationAuditSnapshot::default(),
+            prompt_setup: AllocationAuditSnapshot::default(),
+            prompt_setup_breakdown: WarmSessionPromptSetupAllocationAudit {
+                buffer_reset: AllocationAuditSnapshot::default(),
+                token_seed: AllocationAuditSnapshot::default(),
+                kv_cache: AllocationAuditSnapshot::default(),
+                sampler_setup: AllocationAuditSnapshot::default(),
+            },
+            prompt_prefill: &prefill_total,
+            prompt_prefill_embed: &prefill_embed,
+            prompt_prefill_forward: &prefill_forward,
+            decode_total: &[],
+            embed: &[],
+            forward: &[],
+            logits: &[],
+            sample: &[],
+            token_vector_update: &[],
+            token_decode: &[],
+            stop_tail_update: &[],
+            receipt_construction: AllocationAuditSnapshot::default(),
+        });
+
+        assert_eq!(audit["prompt_prefill"]["alloc_bytes_total"], 400);
+        assert_eq!(audit["prompt_prefill_breakdown"]["embed"]["alloc_bytes_total"], 80);
+        assert_eq!(audit["prompt_prefill_breakdown"]["forward"]["alloc_bytes_total"], 320);
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["first_reusable_allocation_surface"],
+            "feed_forward.down_proj.output"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["claim_scope"],
+            "allocation-boundary classification only; no dense math, kernel, or sustained-throughput claim is made"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["reuse_status"],
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["workspace_storage_owner"],
+            "TransformerForwardWorkspace"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["workspace_owned_output_surface"],
+            "feed_forward.down_proj.output"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["required_api_boundary"],
+            "dense_linear_output_storage_api_boundary"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["next_dense_math_boundary"]["target"],
+            "q8_dense_linear_locality_boundary"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["next_dense_math_boundary"]["current_path"],
+            "eager_dense_standard_quant_dequant_to_f32_before_candle_tensor"
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["weight_accessible"],
+            true
+        );
+        assert_eq!(audit["prompt_prefill_breakdown"]["forward_boundary"]["bias_accessible"], true);
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["can_fill_caller_output_storage"],
+            false
+        );
+        assert_eq!(
+            audit["prompt_prefill_breakdown"]["forward_boundary"]["behavior_gate"],
+            "generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false must match the Qwen3 Q8_0 baseline"
+        );
+        assert!(audit["ranked_hotspots"].as_array().is_some_and(|hotspots| {
+            hotspots.iter().any(|hotspot| hotspot["component"] == "prompt_prefill.forward")
+        }));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_aggregate_allocation_audit_names_next_target() {
+        let prompt_summaries = [
+            serde_json::json!({
+                "allocation_audit": {
+                    "ranked_hotspots": [
+                        {
+                            "component": "prompt_prefill",
+                            "alloc_count": 10,
+                            "alloc_bytes": 1_000,
+                        },
+                        {
+                            "component": "model.forward",
+                            "alloc_count": 5,
+                            "alloc_bytes": 400,
+                        }
+                    ]
+                }
+            }),
+            serde_json::json!({
+                "allocation_audit": {
+                    "ranked_hotspots": [
+                        {
+                            "component": "prompt_prefill",
+                            "alloc_count": 3,
+                            "alloc_bytes": 500,
+                        }
+                    ]
+                }
+            }),
+        ];
+
+        let audit = warm_session_aggregate_allocation_audit_json(true, "cpu", &prompt_summaries);
+
+        assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill");
+        assert_eq!(audit["dominant_hotspot"]["alloc_bytes"], 1_500);
+        assert_eq!(
+            audit["next_optimization_target"]["target"],
+            "q8_dense_linear_locality_boundary"
+        );
+        assert_eq!(
+            audit["next_optimization_target"]["status"],
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
+        );
+        assert_eq!(audit["optimization_deferred"], true);
+        assert_eq!(
+            audit["next_optimization_target"]["claim_scope"],
+            "diagnostic prioritization only; no runtime optimization or sustained-throughput claim is made"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_aggregate_allocation_audit_targets_prefill_forward_boundary() {
+        let prompt_summaries = [serde_json::json!({
+            "allocation_audit": {
+                "ranked_hotspots": [
+                    {
+                        "component": "prompt_prefill.forward",
+                        "alloc_count": 20,
+                        "alloc_bytes": 2_000,
+                    },
+                    {
+                        "component": "prompt_prefill.embed",
+                        "alloc_count": 2,
+                        "alloc_bytes": 100,
+                    }
+                ]
+            }
+        })];
+
+        let audit = warm_session_aggregate_allocation_audit_json(true, "cpu", &prompt_summaries);
+
+        assert_eq!(audit["dominant_hotspot"]["component"], "prompt_prefill.forward");
+        assert_eq!(
+            audit["next_optimization_target"]["target"],
+            "q8_dense_linear_locality_boundary"
+        );
+        assert_eq!(audit["next_optimization_target"]["component"], "prompt_prefill.forward");
+        assert_eq!(
+            audit["next_optimization_target"]["status"],
+            "dense_linear_output_storage_blocked_by_candle_tensor_ops"
+        );
+        assert_eq!(audit["optimization_deferred"], true);
     }
 
     #[test]
@@ -13821,6 +15086,39 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
+    fn warm_session_prompt_token_cache_reuses_rendered_prompt_ids() -> Result<()> {
+        let mut cache = WarmSessionPromptTokenCache::default();
+        let mut encode_calls = 0usize;
+
+        let (first, first_hit) = cache.get_or_insert_with("prompt", false, true, || {
+            encode_calls += 1;
+            Ok(vec![1, 2, 3])
+        })?;
+        assert_eq!(first, &[1, 2, 3]);
+        assert!(!first_hit);
+
+        let (second, second_hit) = cache.get_or_insert_with("prompt", false, true, || {
+            encode_calls += 1;
+            Ok(vec![9])
+        })?;
+        assert_eq!(second, &[1, 2, 3]);
+        assert!(second_hit);
+
+        let (_third, third_hit) = cache.get_or_insert_with("prompt", true, true, || {
+            encode_calls += 1;
+            Ok(vec![0, 1, 2, 3])
+        })?;
+        assert!(!third_hit);
+
+        assert_eq!(encode_calls, 2);
+        assert_eq!(cache.hits, 1);
+        assert_eq!(cache.misses, 2);
+        assert_eq!(cache.entry_count(), 2);
+        Ok(())
+    }
+
+    #[test]
     fn direct_greedy_logits_guard_matches_sampler_fast_path_policy() {
         assert!(can_use_direct_greedy_logits(0.0, 1.0, false));
         assert!(can_use_direct_greedy_logits(0.0, 1.2, true));
@@ -13840,6 +15138,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
     fn extract_logits_2d_into_reuses_host_scratch() -> Result<()> {
         let logits =
             candle_core::Tensor::new(&[[0.25f32, 1.0, 0.5, 1.5]], &candle_core::Device::Cpu)?;

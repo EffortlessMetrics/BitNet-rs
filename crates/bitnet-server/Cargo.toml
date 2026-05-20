@@ -29,6 +29,7 @@ bitnet-http-auth-core = { path = "../bitnet-http-auth-core", version = "0.2.1-de
 bitnet-inference = { path = "../bitnet-inference", version = "0.2.1-dev" }
 bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
 bitnet-models = { path = "../bitnet-models", version = "0.2.1-dev" }
+bitnet-qk256-dispatch = { path = "../bitnet-qk256-dispatch", version = "0.2.1-dev", default-features = false }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
 bitnet-runtime-bootstrap = { path = "../bitnet-runtime-bootstrap", version = "0.2.1-dev" }
 bitnet-request-context-core = { path = "../bitnet-request-context-core", version = "0.2.1-dev" }
@@ -76,7 +77,7 @@ vergen-gix = { version = "9", features = ["build", "cargo", "rustc"] }
 base64 = "0.22.1"
 futures = "0.3.31"
 http-body-util = "0.1.3"
-hyper = "1.7.0"
+hyper = "1.9.0"
 proptest.workspace = true
 serial_test = "3.2.0"
 tempfile.workspace = true
@@ -99,6 +100,7 @@ runtime-profile-core = [
 cpu = [
   "bitnet-inference/cpu",
   "bitnet-kernels/cpu",
+  "bitnet-qk256-dispatch/cpu",
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cpu",
   "bitnet-tokenizers/cpu",
@@ -109,6 +111,7 @@ cuda = [
   "bitnet-inference/cuda",
   "bitnet-kernels/cuda",
   "bitnet-models/cuda",
+  "bitnet-qk256-dispatch/cuda",
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cuda",
 ]

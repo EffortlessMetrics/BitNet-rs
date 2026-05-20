@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T06:33:19Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-012"
+pr = 6108
+head_sha = "75afe58bd07224933db194073d54357a37ea9302"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-012-post-reg013-closeout"
+actor = "codex"
+summary = "Opened PR #6108 for the no-inference Lunar Lake completion-audit refresh after REG-013 closeout."
+
+notes = [
+  "The PR refreshes the excellence audit and goal artifact checklist so source_revision points at closeout #6107.",
+  "The audit records REG-013/#6106 and closeout #6107 as merged strict-regression BitNet CPU reference surface hardening.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, stale BitNet claim, A770 semantic PR merged-to-main claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]

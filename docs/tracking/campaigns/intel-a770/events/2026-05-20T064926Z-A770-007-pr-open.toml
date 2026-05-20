@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T06:49:26Z"
+campaign = "intel-a770"
+item = "A770-007"
+event = "pr_open"
+pr = 6113
+head_sha = "bb695ecd9819c4269fb19eeed84d064fef5171c5"
+branch = "codex/intel-a770/A770-007-receipt-identity"
+actor = "codex"
+
+notes = [
+  "Opened PR #6113 for A770-007 selected-device receipt identity.",
+  "The PR records receipt identity across the committed A770-005 smoke and A770-006 matmul_i2s parity receipts.",
+  "No trusted-partial acceleration, BitNet inference, official QK256 production semantics, selected attention residency, resident KV decode, full residency, performance speedup, or completion claim is promoted.",
+]

@@ -17,14 +17,22 @@ and proof receipts.
 | ADR | Durable architecture or proof decision |
 | Plan | PR order, proof commands, rollback path |
 | Campaign `active.toml` | Current executable work item state |
+| Handoff | Operator transfer context, closeout summary, remaining work |
 | Status document | User-facing claim tier, proof command, artifact link |
 | Policy TOML | Enforceable CI, exception, allowlist, or routing ledger |
 | Receipt or artifact | Evidence for what actually happened |
 
 ## BitNet Rule
 
-Do not create `.adze/goals`, `.bitnet/goals`, or another hidden global goals
-file. BitNet-rs already uses campaign-local tracking:
+Use proposals to frame a lane, then connect implementation to active manifests
+instead of reconstructing state from chat logs or README prose. BitNet-rs uses a
+repo-level active-goal entrypoint when present:
+
+```text
+.bitnet-rs/goals/active.toml
+```
+
+BitNet-rs also keeps campaign-local tracking for campaign execution:
 
 ```text
 docs/tracking/campaigns/<campaign>/CAMPAIGN.md
@@ -33,8 +41,7 @@ docs/tracking/campaigns/<campaign>/events/
 docs/tracking/campaigns/<campaign>/generated/
 ```
 
-Use proposals to frame a lane, then connect implementation to the campaign
-tracker instead of reconstructing active state from chat logs or README prose.
+A proposal may link either authority, but it must not become the live work queue.
 
 ## Proposal Shape
 
@@ -52,3 +59,9 @@ New proposals should include:
 Every proposal that affects user-visible capability claims should link to the
 status, model-artifact, hardware, CI, and campaign surfaces that will carry the
 actual proof.
+
+## Current proposals
+
+- [BITNET-PROP-0009 bitnet_b1_58-large control model](BITNET-PROP-0009-bitnet-b158-large-control-model.md)
+  defines why `1bitLLM/bitnet_b1_58-large` starts as an artifact authority and
+  conversion-lane project before any CPU, CUDA, Apple, server, or speed claim.

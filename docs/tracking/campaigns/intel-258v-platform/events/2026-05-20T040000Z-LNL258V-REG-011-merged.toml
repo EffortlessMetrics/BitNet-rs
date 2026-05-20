@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T04:00:00Z"
+event = "merged"
+item = "LNL258V-REG-011"
+pr = 6027
+branch = "codex/lunar-lake/LNL258V-REG-011-route-model-identity-gate"
+head_sha = "82c1cdd0b3de069339b2af7d12e5fe3bbbf8345f"
+merge_sha = "6985f5846f8bf1236bda89b399d7d2d4313c0579"
+actor = "codex"
+summary = "Merged strict Lunar Lake route/model identity regression gating."
+
+notes = [
+  "Strict regression and operator readiness now fail closed if route-profile or cold/warm benchmark rows lack model identity, tokenizer/template identity, or model-hash-or-explicit-gap coverage.",
+  "OpenVINO IR rows keep the no-local-model-binary-SHA256 gap explicit from the committed manifest instead of using a fake hash.",
+  "The merge preserves no new-inference, route-promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]

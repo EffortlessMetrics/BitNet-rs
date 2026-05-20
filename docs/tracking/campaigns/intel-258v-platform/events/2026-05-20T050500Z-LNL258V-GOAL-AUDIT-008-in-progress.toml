@@ -1,0 +1,13 @@
+timestamp = "2026-05-20T05:05:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-GOAL-AUDIT-008"
+event = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-008-post-op014"
+actor = "codex"
+summary = "Started no-inference Lunar Lake goal audit refresh after OP-014."
+
+notes = [
+  "The refresh records OP-014 low_power blocked-auto-route runbook and next-required-evidence guidance.",
+  "The audit still marks excellent support not complete because POWER-006 lacks real battery-mode low_power telemetry, energy-proxy evidence, and benchmark-qualified power advantage.",
+  "No inference, model load, fallback, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, stale BitNet, A770 semantic merge, or BitNet QK256/I2_S behavior-change claim is allowed.",
+]

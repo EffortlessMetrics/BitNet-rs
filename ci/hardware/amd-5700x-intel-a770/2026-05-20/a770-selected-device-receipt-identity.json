@@ -1,0 +1,60 @@
+{
+  "campaign": "intel-a770",
+  "work_item": "A770-007",
+  "proof_family": "a770_selected_device_receipt_identity",
+  "proof_stage": "selected_device_receipt_identity_recorded",
+  "identity_consistent": true,
+  "requested_backend": "intel-arc-a770",
+  "selected_backend": "intel-arc-a770-opencl",
+  "runtime_api": "opencl",
+  "runtime_device": "Intel(R) Arc(TM) A770 Graphics",
+  "platform_index": 0,
+  "device_index": 0,
+  "platform_name": "Intel(R) OpenCL Graphics",
+  "vendor": "Intel(R) Corporation",
+  "driver_version": "32.0.101.8801",
+  "receipt_paths": [
+    "ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-tiny-smoke.json",
+    "ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-parity.json"
+  ],
+  "proofs": [
+    {
+      "work_item": "A770-005",
+      "proof_family": "a770_opencl_tiny_vector_add_smoke",
+      "proof_stage": "kernel_smoke_tested",
+      "kernel_name": "tiny_vector_add",
+      "fallback_used": false,
+      "claim_allowed": false,
+      "diagnostic_only": true
+    },
+    {
+      "work_item": "A770-006",
+      "proof_family": "a770_opencl_matmul_i2s_cpu_parity",
+      "proof_stage": "cpu_opencl_parity_tested",
+      "kernel_name": "matmul_i2s",
+      "fallback_used": false,
+      "claim_allowed": false,
+      "diagnostic_only": true
+    }
+  ],
+  "fallback_used": false,
+  "cpu_fallback_allowed": false,
+  "bitnet_inference": false,
+  "qk256_decode": false,
+  "claim_allowed": false,
+  "diagnostic_only": true,
+  "performance_claim": false,
+  "full_residency_claim": false,
+  "trusted_partial_acceleration_claim": false,
+  "selected_attention_residency_claim": false,
+  "resident_kv_decode_claim": false,
+  "model_family": null,
+  "must_not_claim": [
+    "A770 trusted partial acceleration is claim-grade",
+    "BitNet inference works on A770",
+    "Official BitNet QK256 production semantics are proven",
+    "Full A770 residency is proven",
+    "Performance speedup is proven"
+  ],
+  "next_gate": "A770-008 benchmark baseline remains blocked until receipt identity is accepted and no performance claim is made from diagnostic smoke/parity alone."
+}

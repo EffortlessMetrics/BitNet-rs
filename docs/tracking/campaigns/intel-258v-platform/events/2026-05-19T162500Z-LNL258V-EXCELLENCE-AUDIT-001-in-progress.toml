@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T16:25:00Z"
+event = "in_progress"
+item = "LNL258V-EXCELLENCE-AUDIT-001"
+branch = "codex/lunar-lake/LNL258V-EXCELLENCE-AUDIT-001"
+actor = "codex"
+summary = "Started a no-inference Lunar Lake excellence audit to map the current operator-platform goal to committed evidence and explicit remaining blockers."
+
+notes = [
+  "The audit records command-surface readiness, route-policy state, Qwen CPU control-route evidence, OpenVINO GPU profile-scoped promotion, OpenVINO NPU candidate-only status, BitNet semantic-intake protection, and Arc/NPU BitNet claim boundaries.",
+  "The artifact intentionally preserves unpromoted prefill_heavy, decode_heavy, structured, low_power, and warm_resident profile gaps.",
+  "The scope makes no new-inference, route-promotion, speedup, power-advantage, acceleration, native accelerator, or BitNet QK256/I2_S behavior-change claim.",
+]

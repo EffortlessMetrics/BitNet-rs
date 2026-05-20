@@ -1,0 +1,16 @@
+timestamp = "2026-05-18T11:45:29Z"
+campaign = "intel-npu"
+item = "NPU-012"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/add-npu-productization-proposal"
+pr = 5634
+head_sha = "663feef4cf1521fd37dcfafb6a6bade2f2260665"
+
+notes = [
+  "Opened PR #5634 for the docs-only NPU source-of-truth map and implementation plan.",
+  "The PR keeps NPU-002 through NPU-011 bounded to runtime visibility, tiny static graph execution, and selected static BitNet-shaped subgraph parity.",
+  "No full BitNet inference, native NPU inference, NPU acceleration, QK256 decode, CPU fallback proof, OpenVINO GPU proof, cross-family NPU proof, warm/resident route promotion, speedup, or residency claim is promoted.",
+]

@@ -101,7 +101,7 @@ pub enum ModelAction {
 
     /// Show user-facing model support for a device from the coverage matrix.
     Status {
-        /// Device label to summarize, for example nvidia-rtx-5070-ti-cuda.
+        /// Device label to summarize, for example cuda or nvidia-rtx-5070-ti-cuda.
         #[arg(long, value_name = "DEVICE")]
         device: String,
 
@@ -169,7 +169,15 @@ struct SupportedModel {
     quantization: &'static str,
     tokenizer_model: &'static str,
     tokenizer_pre: &'static str,
+    tokenizer_sha256: Option<&'static str>,
+    tokenizer_sha256_status: &'static str,
+    tokenizer_path: Option<&'static str>,
     chat_template: bool,
+    license_spdx: Option<&'static str>,
+    redistribution_boundary: &'static str,
+    prompt_template: &'static str,
+    prompt_template_source: &'static str,
+    provenance_manifests: &'static [&'static str],
     model_contract: Option<&'static str>,
     apple_m4_cpu_neon_supported: bool,
     support_note: &'static str,
@@ -180,6 +188,8 @@ struct CacheStatus {
     model: SupportedModel,
     cache_path: PathBuf,
     metadata_path: PathBuf,
+    symlink_target: Option<PathBuf>,
+    symlink_status: String,
     present: bool,
     cached: bool,
     size_matches: bool,
@@ -247,6 +257,8 @@ struct AppleM4ModelRow {
     disk_state: Option<String>,
     fetch_command: Option<String>,
     verify_command: Option<String>,
+    repair_command: Option<String>,
+    provenance_manifest: Option<ModelProvenanceManifest>,
 }
 
 #[cfg(feature = "full-cli")]
@@ -331,6 +343,7 @@ struct VerifyResult {
     model_contract: Option<VerifyContractSummary>,
     #[serde(skip_serializing_if = "Option::is_none")]
     model_capability: Option<VerifyModelCapabilitySummary>,
+    artifact_provenance: ModelProvenanceManifest,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -392,6 +405,85 @@ struct VerifyModelCapabilitySummary {
     claim_boundary: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct ModelProvenanceManifest {
+    schema_version: &'static str,
+    artifact_kind: &'static str,
+    id: String,
+    display_name: String,
+    source: ProvenanceSource,
+    license: ProvenanceLicense,
+    artifact: ProvenanceArtifact,
+    tokenizer: ProvenanceTokenizer,
+    prompt_template: ProvenancePromptTemplate,
+    local_cache: ProvenanceLocalCache,
+    repair: ProvenanceRepair,
+    claim_boundary: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ProvenanceSource {
+    repo: String,
+    revision: String,
+    url: String,
+    manifests: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ProvenanceLicense {
+    spdx: Option<String>,
+    redistribution_boundary: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ProvenanceArtifact {
+    format: &'static str,
+    filename: String,
+    size_bytes: u64,
+    sha256: String,
+    architecture: String,
+    quantization: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ProvenanceTokenizer {
+    authority: String,
+    model: String,
+    pre_tokenizer: String,
+    sha256: Option<String>,
+    sha256_status: String,
+    external_path: Option<String>,
+    source: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ProvenancePromptTemplate {
+    identity: String,
+    identity_sha256: String,
+    source: String,
+    chat_template_present: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ProvenanceLocalCache {
+    cache_root: PathBuf,
+    cache_path: PathBuf,
+    metadata_path: PathBuf,
+    verify_path: PathBuf,
+    path_role: String,
+    symlink_target: Option<PathBuf>,
+    symlink_status: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ProvenanceRepair {
+    command: String,
+    fetch_command: String,
+    verify_command: String,
+    prune_command: String,
+    cache_state: String,
+}
+
 #[cfg(feature = "full-cli")]
 #[derive(Debug, Clone)]
 pub(crate) struct VerifiedCachedModel {
@@ -428,6 +520,9 @@ pub(crate) struct AppleM4SlmModelReceiptMetadata {
     pub architecture: &'static str,
     pub quantization: &'static str,
     pub tokenizer_authority: &'static str,
+    pub prompt_template: &'static str,
+    pub prompt_template_source: &'static str,
+    pub prompt_template_sha256: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -437,6 +532,10 @@ struct PruneResult {
     existed: bool,
     removed: bool,
     dry_run: bool,
+    action: String,
+    expected_bytes: u64,
+    estimated_reclaim_bytes: u64,
+    repair_guidance: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -517,26 +616,45 @@ struct ModelCoverageEntryOutput<'a> {
 }
 
 #[derive(Debug, Serialize)]
-struct ModelStatusDashboard {
+pub(crate) struct ModelStatusDashboard {
     schema_version: u32,
     device: String,
+    requested_backend: String,
+    selected_backend: Option<String>,
     source: PathBuf,
     note: &'static str,
     models: Vec<ModelStatusRow>,
 }
 
+impl ModelStatusDashboard {
+    #[cfg(feature = "full-cli")]
+    pub(crate) fn next_proof_for_row(&self, row: &str) -> Option<&str> {
+        self.models
+            .iter()
+            .find(|model| model.model_coverage_row == row)
+            .map(|model| model.next_proof.as_str())
+    }
+}
+
 #[derive(Debug, Serialize)]
-struct ModelStatusRow {
+pub(crate) struct ModelStatusRow {
     id: String,
+    model_coverage_row: String,
     display_name: String,
     model_class: String,
     route: Option<String>,
+    selected_route: Option<String>,
+    requested_backend: String,
+    selected_backend: String,
     tier: String,
+    current_tier: String,
     status: String,
     category: String,
+    fallback_used: Option<bool>,
     cpu_answer_ready: bool,
     accelerator_answer_ready: bool,
     benchmark_qualified: bool,
+    product_cli_ready: bool,
     speedup_claim: bool,
     server_ready: bool,
     full_residency_claim: bool,
@@ -548,6 +666,12 @@ struct ModelStatusRow {
     warm_session: String,
     benchmark: String,
     server: String,
+    server_ready_scope: Option<String>,
+    server_scope: Option<String>,
+    server_endpoint: Option<String>,
+    server_streaming: Option<bool>,
+    server_smoke: bool,
+    server_reason: Option<String>,
     claim_boundary: String,
     next_proof: String,
 }
@@ -594,7 +718,7 @@ pub(crate) fn verified_apple_m4_slm_model(
             apple_m4_cache_repair_guidance(&cache_root, &status)
         );
     }
-    let result = verify_model(model, &path)?;
+    let result = verify_model(model, &path, Some(&cache_root))?;
     write_cache_metadata(&cache_root, model, &path, &result)?;
     Ok(VerifiedCachedModel {
         id: model.id.to_string(),
@@ -633,7 +757,7 @@ pub(crate) fn verified_apple_m4_bitnet_model(
     let cache_root = resolve_cache_root(cache_dir)?;
     let cache_path = model_path(&cache_root, model);
     let path = explicit_model_path.unwrap_or_else(|| cache_path.clone());
-    let result = verify_model(model, &path)?;
+    let result = verify_model(model, &path, Some(&cache_root))?;
     if !result.passed {
         let source = if path == cache_path {
             format!(
@@ -704,7 +828,7 @@ pub(crate) fn verified_dense_qwen_cuda_model_arg(
             cache_repair_guidance(&cache_root, &status)
         );
     }
-    let result = verify_model(model, &path)?;
+    let result = verify_model(model, &path, Some(&cache_root))?;
     write_cache_metadata(&cache_root, model, &path, &result)?;
     Ok(Some(VerifiedCachedModel {
         id: model.id.to_string(),
@@ -732,6 +856,16 @@ pub(crate) fn apple_m4_slm_cache_status_json(
     let cache_root = resolve_cache_root(cache_dir)?;
     let status = cache_status(&cache_root, *model, verify)?;
     let ready = cache_ready(&status);
+    let cache_state = cache_state_label(&status);
+    let artifact_provenance = model_provenance_manifest(
+        model,
+        &cache_root,
+        &status.cache_path,
+        cache_state,
+        None,
+        None,
+        status.verified,
+    );
     Ok(serde_json::json!({
         "artifact_kind": "apple_m4_slm_model_cache_check",
         "id": model.id,
@@ -739,7 +873,10 @@ pub(crate) fn apple_m4_slm_cache_status_json(
         "cache_root": cache_root,
         "cache_path": status.cache_path,
         "metadata_path": status.metadata_path,
-        "state": cache_state_label(&status),
+        "symlink_target": status.symlink_target.clone(),
+        "symlink_status": status.symlink_status.clone(),
+        "stale_symlink": status.symlink_status == "stale_symlink",
+        "state": cache_state,
         "ready": ready,
         "present": status.present,
         "size_matches": status.size_matches,
@@ -761,6 +898,7 @@ pub(crate) fn apple_m4_slm_cache_status_json(
             "apple_m4_cpu_neon": model.apple_m4_cpu_neon_supported,
             "note": model.support_note,
         },
+        "artifact_provenance": artifact_provenance,
         "next_step": if ready {
             serde_json::Value::Null
         } else {
@@ -789,7 +927,20 @@ const SUPPORTED_MODELS: &[SupportedModel] = &[
         quantization: "I2_S/QK256",
         tokenizer_model: "gpt2",
         tokenizer_pre: "llama-bpe-external",
+        tokenizer_sha256: Some("e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"),
+        tokenizer_sha256_status: "external_tokenizer_json_sha256_recorded",
+        tokenizer_path: Some("models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json"),
         chat_template: true,
+        license_spdx: None,
+        redistribution_boundary: "Redistribution boundary recorded instead of a repo-local license assertion: BitNet-rs pins the upstream Microsoft/Hugging Face GGUF URL, revision, size, and SHA256, but does not vendor or redistribute the artifact.",
+        prompt_template: "bitnetcpp-answer",
+        prompt_template_source: "MODEL-ARTIFACT-007 Microsoft BitNet.cpp answer prompt envelope",
+        provenance_manifests: &[
+            "ci/model-artifacts/artifact-manifest.toml",
+            "ci/model-artifacts/tokenizer-authority.toml",
+            "ci/quality/apple-m4-local-answer-model-artifacts.toml",
+            "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md",
+        ],
         model_contract: Some("microsoft_bitnet_b158_2b_4t_i2s"),
         apple_m4_cpu_neon_supported: false,
         support_note: "Answer-ready BitNet artifact for backend gates when paired with external llama-bpe tokenizer authority and bitnetcpp-answer prompt authority. RTX 5070 Ti CUDA and x86 CPU routes require their own strict receipts; speedup_claim remains false unless profile-qualified.",
@@ -808,7 +959,18 @@ const SUPPORTED_MODELS: &[SupportedModel] = &[
         quantization: "Q8_0",
         tokenizer_model: "gpt2",
         tokenizer_pre: "qwen2",
+        tokenizer_sha256: None,
+        tokenizer_sha256_status: "embedded_gguf_metadata_bound_to_model_sha256",
+        tokenizer_path: None,
         chat_template: true,
+        license_spdx: Some("apache-2.0"),
+        redistribution_boundary: "Upstream Hugging Face GGUF artifact is fetched by URL and pinned by revision, size, and SHA256; BitNet-rs does not vendor or redistribute the model file.",
+        prompt_template: "qwen2.5",
+        prompt_template_source: "GGUF tokenizer.chat_template / Qwen2.5 ChatML identity",
+        provenance_manifests: &[
+            "ci/quality/apple-m4-slm-answer-first-token-parity.toml",
+            "docs/slm/apple-m4-dense-slm-model-support-matrix.md",
+        ],
         model_contract: None,
         apple_m4_cpu_neon_supported: true,
         support_note: "Rust-native Apple M4 CPU/NEON SLM baseline artifact; RTX 5070 Ti dense CUDA ask is bounded to the CUDA-UX-003 receipt gate.",
@@ -827,7 +989,19 @@ const SUPPORTED_MODELS: &[SupportedModel] = &[
         quantization: "Q4_K_M",
         tokenizer_model: "gpt2",
         tokenizer_pre: "qwen2",
+        tokenizer_sha256: None,
+        tokenizer_sha256_status: "embedded_gguf_metadata_bound_to_model_sha256",
+        tokenizer_path: None,
         chat_template: true,
+        license_spdx: Some("apache-2.0"),
+        redistribution_boundary: "Upstream Hugging Face GGUF artifact is fetched by URL and pinned by revision, size, and SHA256; BitNet-rs does not vendor or redistribute the model file.",
+        prompt_template: "qwen2.5",
+        prompt_template_source: "GGUF tokenizer.chat_template / Qwen2.5 ChatML identity",
+        provenance_manifests: &[
+            "ci/quality/apple-m4-slm-answer-model-artifacts.toml",
+            "docs/reports/M4_SLM_EX_006_Q4KM_SECOND_MODEL.md",
+            "docs/slm/apple-m4-dense-slm-model-support-matrix.md",
+        ],
         model_contract: None,
         apple_m4_cpu_neon_supported: true,
         support_note: "Rust-native Apple M4 CPU/NEON storage-conscious SLM artifact.",
@@ -846,7 +1020,19 @@ const SUPPORTED_MODELS: &[SupportedModel] = &[
         quantization: "Q4_K_M",
         tokenizer_model: "gpt2",
         tokenizer_pre: "qwen2",
+        tokenizer_sha256: None,
+        tokenizer_sha256_status: "embedded_gguf_metadata_bound_to_model_sha256",
+        tokenizer_path: None,
         chat_template: true,
+        license_spdx: Some("apache-2.0"),
+        redistribution_boundary: "Upstream Hugging Face GGUF artifact is fetched by URL and pinned by revision, size, and SHA256; BitNet-rs does not vendor or redistribute the model file.",
+        prompt_template: "qwen2.5",
+        prompt_template_source: "GGUF tokenizer.chat_template / Qwen2.5 ChatML identity",
+        provenance_manifests: &[
+            "ci/quality/apple-m4-slm-model-breadth-qwen15-reference-sanity.toml",
+            "ci/quality/apple-m4-slm-model-breadth-qwen15-rust-m4-quality.toml",
+            "docs/slm/apple-m4-dense-slm-model-support-matrix.md",
+        ],
         model_contract: None,
         apple_m4_cpu_neon_supported: true,
         support_note: "Rust-native Apple M4 CPU/NEON larger Qwen-class SLM artifact; non-default.",
@@ -865,7 +1051,7 @@ async fn fetch_model(
     let path = model_path(&cache_root, model);
 
     if path.exists() && !force {
-        let result = verify_model(model, &path)?;
+        let result = verify_model(model, &path, Some(&cache_root))?;
         if result.passed {
             write_cache_metadata(&cache_root, model, &path, &result)?;
             return print_fetch_result("cached", &result, json);
@@ -924,7 +1110,7 @@ async fn fetch_model(
         });
     }
 
-    let result = verify_model(model, &tmp_path)?;
+    let result = verify_model(model, &tmp_path, Some(&cache_root))?;
     if !result.passed {
         let _ = fs::remove_file(&tmp_path);
         anyhow::bail!(
@@ -936,7 +1122,7 @@ async fn fetch_model(
     }
     replace_cached_file(&tmp_path, &path)
         .with_context(|| format!("failed to move {} to {}", tmp_path.display(), path.display()))?;
-    let result = verify_model(model, &path)?;
+    let result = verify_model(model, &path, Some(&cache_root))?;
     write_cache_metadata(&cache_root, model, &path, &result)?;
     print_fetch_result("downloaded", &result, json)
 }
@@ -953,7 +1139,7 @@ fn verify_model_command(
     let cache_root = resolve_cache_root(cache_dir)?;
     let cache_path = model_path(&cache_root, model);
     let path = path.unwrap_or_else(|| cache_path.clone());
-    let result = verify_model(model, &path)?;
+    let result = verify_model(model, &path, Some(&cache_root))?;
     if result.passed && path == cache_path {
         write_cache_metadata(&cache_root, model, &path, &result)?;
     }
@@ -1281,31 +1467,57 @@ fn print_model_status(
     Ok(())
 }
 
+#[cfg(feature = "full-cli")]
+pub(crate) fn model_status_dashboard_for_device(
+    device: &str,
+    matrix: Option<PathBuf>,
+) -> Result<ModelStatusDashboard> {
+    let matrix_path = resolve_model_coverage_matrix_path(matrix)?;
+    let matrix = read_model_coverage_matrix(&matrix_path)?;
+    Ok(model_status_dashboard(device, &matrix_path, &matrix))
+}
+
 fn model_status_dashboard(
     device: &str,
     matrix_path: &Path,
     matrix: &ModelCoverageMatrix,
 ) -> ModelStatusDashboard {
-    let models = matrix
-        .entry
-        .iter()
-        .filter(|entry| model_status_includes_entry(device, entry))
-        .map(model_status_row)
-        .collect();
+    let selected_backend = model_status_selected_backend(device);
+    let models = selected_backend
+        .as_deref()
+        .map(|backend| {
+            matrix
+                .entry
+                .iter()
+                .filter(|entry| model_status_includes_entry(backend, entry))
+                .map(|entry| model_status_row(device, backend, entry))
+                .collect()
+        })
+        .unwrap_or_default();
 
     ModelStatusDashboard {
         schema_version: 1,
         device: device.to_string(),
+        requested_backend: device.to_string(),
+        selected_backend,
         source: matrix_path.to_path_buf(),
         note: "Read-only model coverage view; it does not probe hardware or create new proof.",
         models,
     }
 }
 
-fn model_status_includes_entry(device: &str, entry: &ModelCoverageEntry) -> bool {
-    if device != "nvidia-rtx-5070-ti-cuda" {
+fn model_status_selected_backend(device: &str) -> Option<String> {
+    match device {
+        "cuda" | "nvidia-rtx-5070-ti-cuda" => Some("nvidia-rtx-5070-ti-cuda".to_string()),
+        _ => None,
+    }
+}
+
+fn model_status_includes_entry(selected_backend: &str, entry: &ModelCoverageEntry) -> bool {
+    if selected_backend != "nvidia-rtx-5070-ti-cuda" {
         return false;
     }
+
     if entry.claims.product_cli_ready
         && (entry.accelerator_routes.iter().any(|route| route == "bitnet_qk256_cuda")
             || entry.accelerator_routes.iter().any(|route| route == "dense_regular_llm_cuda"))
@@ -1313,12 +1525,19 @@ fn model_status_includes_entry(device: &str, entry: &ModelCoverageEntry) -> bool
         return true;
     }
 
+    let actionable_candidate = entry.status.contains("candidate")
+        || entry.status.contains("blocked")
+        || entry.id.ends_with("_candidate");
     !entry.claims.product_cli_ready
-        && entry.status.contains("candidate")
+        && actionable_candidate
         && matches!(entry.model_class.as_str(), "dense_slm" | "small_llm")
 }
 
-fn model_status_row(entry: &ModelCoverageEntry) -> ModelStatusRow {
+fn model_status_row(
+    requested_backend: &str,
+    selected_backend: &str,
+    entry: &ModelCoverageEntry,
+) -> ModelStatusRow {
     let route = entry.accelerator_routes.first().cloned();
     let category =
         if entry.claims.product_cli_ready { "supported" } else { "candidate" }.to_string();
@@ -1327,18 +1546,26 @@ fn model_status_row(entry: &ModelCoverageEntry) -> ModelStatusRow {
     let ask = ask_status(entry);
     let one_token = dense_receipt_status(entry, "one_token");
     let short_decode = dense_receipt_status(entry, "short_decode");
+    let server = server_status(entry);
 
     ModelStatusRow {
         id: entry.id.clone(),
+        model_coverage_row: entry.id.clone(),
         display_name: model_status_display_name(entry),
         model_class: entry.model_class.clone(),
-        route,
+        route: route.clone(),
+        selected_route: route.clone(),
+        requested_backend: requested_backend.to_string(),
+        selected_backend: selected_backend.to_string(),
         tier: entry.current_tier.clone(),
+        current_tier: entry.current_tier.clone(),
         status: entry.status.clone(),
         category,
+        fallback_used: route.is_some().then_some(false),
         cpu_answer_ready: entry.claims.cpu_answer_ready,
         accelerator_answer_ready: entry.claims.accelerator_answer_ready,
         benchmark_qualified: entry.claims.benchmark_qualified,
+        product_cli_ready: entry.claims.product_cli_ready,
         speedup_claim: entry.claims.speedup_claim,
         server_ready: entry.claims.server_ready,
         full_residency_claim: entry.claims.full_residency_claim,
@@ -1349,14 +1576,79 @@ fn model_status_row(entry: &ModelCoverageEntry) -> ModelStatusRow {
         short_decode,
         warm_session,
         benchmark,
-        server: if entry.claims.server_ready { "ready" } else { "not ready" }.to_string(),
+        server: server.label,
+        server_ready_scope: server.scope.clone(),
+        server_scope: server.scope,
+        server_endpoint: server.endpoint,
+        server_streaming: server.streaming,
+        server_smoke: server.smoke,
+        server_reason: server.reason,
         claim_boundary: entry.claim_boundary.clone(),
         next_proof: entry.next_proof.clone(),
     }
 }
 
+struct ServerStatus {
+    label: String,
+    scope: Option<String>,
+    endpoint: Option<String>,
+    streaming: Option<bool>,
+    smoke: bool,
+    reason: Option<String>,
+}
+
+fn server_status(entry: &ModelCoverageEntry) -> ServerStatus {
+    let has_shared_engine_receipt = entry
+        .required_receipts
+        .iter()
+        .any(|receipt| receipt == "server_shared_engine_chat_completion");
+    let exact_profile_ready = entry.claims.server_ready
+        && has_shared_engine_receipt
+        && entry.claim_boundary.contains("exact-profile");
+    let server_smoke_only = !entry.claims.server_ready
+        && has_shared_engine_receipt
+        && entry.claim_boundary.contains("server-smoke evidence");
+
+    if exact_profile_ready {
+        return ServerStatus {
+            label: "exact-profile ready (/v1/chat/completions, streaming=false)".to_string(),
+            scope: Some("exact_profile".to_string()),
+            endpoint: Some("/v1/chat/completions".to_string()),
+            streaming: Some(false),
+            smoke: true,
+            reason: None,
+        };
+    }
+
+    if server_smoke_only {
+        return ServerStatus {
+            label: "smoke only, not broad-ready".to_string(),
+            scope: None,
+            endpoint: Some("/v1/chat/completions".to_string()),
+            streaming: Some(false),
+            smoke: true,
+            reason: Some("broad production readiness not qualified".to_string()),
+        };
+    }
+
+    ServerStatus {
+        label: if entry.claims.server_ready { "ready" } else { "not ready" }.to_string(),
+        scope: entry.claims.server_ready.then(|| "unspecified".to_string()),
+        endpoint: None,
+        streaming: None,
+        smoke: false,
+        reason: None,
+    }
+}
+
 fn print_model_status_text(dashboard: &ModelStatusDashboard) {
     println!("CUDA model status for {}", dashboard.device);
+    println!("requested backend: {}", dashboard.requested_backend);
+    if let Some(selected_backend) = &dashboard.selected_backend {
+        println!("selected backend: {selected_backend}");
+    } else {
+        println!("selected backend: none");
+    }
     println!("source: {}", dashboard.source.display());
     println!("{}", dashboard.note);
     println!();
@@ -1378,12 +1670,10 @@ fn print_model_status_group(dashboard: &ModelStatusDashboard, title: &str, categ
         println!("    tier: {}", row.tier);
         println!("    cpu answer: {}", ready_label(row.cpu_answer_ready));
         println!("    cuda answer: {}", ready_label(row.accelerator_answer_ready));
-        if row.model_class == "dense_slm" && row.route.as_deref() == Some("dense_regular_llm_cuda")
-        {
+        println!("    ask: {}", row.ask);
+        if matches!(row.route.as_deref(), Some("dense_regular_llm_cuda" | "bitnet_qk256_cuda")) {
             println!("    one-token: {}", row.one_token);
             println!("    short-decode: {}", row.short_decode);
-        } else {
-            println!("    ask: {}", row.ask);
         }
         println!("    warm-session: {}", row.warm_session);
         println!("    benchmark: {}", row.benchmark);
@@ -1647,12 +1937,26 @@ fn apple_m4_registered_model_row(
         None if selectable_m4_answer || bitnet_ask_only => Some("unknown".to_string()),
         None => None,
     };
+    let cache_state = cache_state_label(status);
+    let provenance_manifest = (selectable_m4_answer || bitnet_ask_only).then(|| {
+        model_provenance_manifest(
+            model,
+            cache_root,
+            &status.cache_path,
+            cache_state,
+            None,
+            None,
+            status.verified,
+        )
+    });
+    let repair_command =
+        provenance_manifest.as_ref().map(|manifest| manifest.repair.command.clone());
 
     AppleM4ModelRow {
         id: model.id.to_string(),
         display_name: model.display_name.to_string(),
         state: state.to_string(),
-        cache_state: Some(cache_state_label(status).to_string()),
+        cache_state: Some(cache_state.to_string()),
         cache_path: Some(status.cache_path.clone()),
         size_bytes: Some(model.bytes),
         size: format_size(model.bytes, DECIMAL),
@@ -1694,6 +1998,8 @@ fn apple_m4_registered_model_row(
             .then(|| model_command("fetch", model, Some(cache_root))),
         verify_command: (selectable_m4_answer || bitnet_ask_only)
             .then(|| model_command("verify", model, Some(cache_root))),
+        repair_command,
+        provenance_manifest,
     }
 }
 
@@ -1753,6 +2059,8 @@ fn apple_m4_policy_rows() -> Vec<AppleM4ModelRow> {
             disk_state: None,
             fetch_command: None,
             verify_command: None,
+            repair_command: None,
+            provenance_manifest: None,
         })
         .collect()
 }
@@ -1938,21 +2246,25 @@ fn prune_models(
     if all && id.is_some() {
         anyhow::bail!("pass either a model id or --all, not both");
     }
-    if !all && id.is_none() {
+    if !all && id.is_none() && !dry_run {
         anyhow::bail!("pass a model id or --all");
     }
 
     let cache_root = resolve_cache_root(cache_dir)?;
-    let models: Vec<_> = if all {
+    let scope =
+        if all || (dry_run && id.is_none()) { "all_supported_models" } else { "single_model" };
+    let models: Vec<_> = if all || (dry_run && id.is_none()) {
         SUPPORTED_MODELS.iter().collect()
     } else {
-        vec![supported_model(id.as_deref().unwrap())?]
+        vec![supported_model(id.as_deref().ok_or_else(|| anyhow!("pass a model id or --all"))?)?]
     };
     let mut results = Vec::new();
 
     for model in models {
         let path = model_dir(&cache_root, model);
         let existed = path.exists();
+        let estimated_reclaim_bytes =
+            if existed { directory_size_bytes(&path).unwrap_or(model.bytes) } else { 0 };
         let removed = if existed && !dry_run {
             fs::remove_dir_all(&path)
                 .with_context(|| format!("failed to remove {}", path.display()))?;
@@ -1960,11 +2272,69 @@ fn prune_models(
         } else {
             false
         };
-        results.push(PruneResult { id: model.id.to_string(), path, existed, removed, dry_run });
+        let action = if dry_run {
+            if existed { "would_remove" } else { "not_cached" }
+        } else if removed {
+            "removed"
+        } else if existed {
+            "kept"
+        } else {
+            "not_cached"
+        };
+        let repair_guidance = if existed && dry_run {
+            format!(
+                "dry run only; rerun `{}` without --dry-run to remove this cached artifact",
+                model_command("prune", model, Some(&cache_root))
+            )
+        } else if existed {
+            "cache entry was removed; fetch again before running inference".to_string()
+        } else {
+            format!(
+                "cache entry is absent; fetch with `{}`",
+                model_command("fetch", model, Some(&cache_root))
+            )
+        };
+        results.push(PruneResult {
+            id: model.id.to_string(),
+            path,
+            existed,
+            removed,
+            dry_run,
+            action: action.to_string(),
+            expected_bytes: model.bytes,
+            estimated_reclaim_bytes,
+            repair_guidance,
+        });
     }
 
     if json {
-        println!("{}", serde_json::to_string_pretty(&results)?);
+        let estimated_reclaim_bytes =
+            results.iter().map(|result| result.estimated_reclaim_bytes).sum::<u64>();
+        let would_remove_count =
+            results.iter().filter(|result| result.action == "would_remove").count();
+        let removed_count = results.iter().filter(|result| result.removed).count();
+        let artifact_kind =
+            if dry_run { "bitnet_model_prune_dry_run" } else { "bitnet_model_prune" };
+        let payload = serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": artifact_kind,
+            "cache_root": cache_root,
+            "scope": scope,
+            "dry_run": dry_run,
+            "deletes_user_data": false,
+            "removed_count": removed_count,
+            "would_remove_count": would_remove_count,
+            "estimated_reclaim_bytes": estimated_reclaim_bytes,
+            "estimated_reclaim": format_size(estimated_reclaim_bytes, DECIMAL),
+            "guidance": if dry_run {
+                "dry run only; no files were deleted. Review results before rerunning prune without --dry-run."
+            } else {
+                "Only supported BitNet-rs model cache entries under cache_root were considered."
+            },
+            "claim_boundary": "Model cache prune receipt only; does not run inference, delete user data outside the BitNet-rs model cache, or prove model quality/performance.",
+            "results": results,
+        });
+        println!("{}", serde_json::to_string_pretty(&payload)?);
     } else {
         for result in &results {
             let action = if result.dry_run {
@@ -2032,6 +2402,9 @@ pub(crate) fn apple_m4_slm_model_receipt_metadata(
         architecture: model.architecture,
         quantization: model.quantization,
         tokenizer_authority: model.tokenizer_pre,
+        prompt_template: model.prompt_template,
+        prompt_template_source: model.prompt_template_source,
+        prompt_template_sha256: sha256_hex(model.prompt_template.as_bytes()),
     })
 }
 
@@ -2085,16 +2458,24 @@ fn metadata_path(cache_root: &Path, model: &SupportedModel) -> PathBuf {
 fn cache_status(cache_root: &Path, model: SupportedModel, verify: bool) -> Result<CacheStatus> {
     let path = model_path(cache_root, &model);
     let metadata = metadata_path(cache_root, &model);
+    let symlink_target = symlink_target(&path);
+    let symlink_status = symlink_status(&path, symlink_target.as_ref());
     let present = path.exists();
     let size_matches = present
         && fs::metadata(&path).map(|metadata| metadata.len() == model.bytes).unwrap_or(false);
     let metadata_present = metadata.exists();
     let cached = present && size_matches && metadata_present;
-    let verified = if present && verify { Some(verify_model(&model, &path)?.passed) } else { None };
+    let verified = if present && verify {
+        Some(verify_model(&model, &path, Some(cache_root))?.passed)
+    } else {
+        None
+    };
     Ok(CacheStatus {
         model,
         cache_path: path,
         metadata_path: metadata.clone(),
+        symlink_target,
+        symlink_status,
         present,
         cached,
         size_matches,
@@ -2112,7 +2493,9 @@ fn cache_ready(status: &CacheStatus) -> bool {
 }
 
 fn cache_state_label(status: &CacheStatus) -> &'static str {
-    if !status.present {
+    if status.symlink_status == "stale_symlink" {
+        "stale-symlink"
+    } else if !status.present {
         "missing"
     } else if !status.size_matches {
         "invalid-size"
@@ -2146,6 +2529,10 @@ fn cache_repair_guidance(cache_root: &Path, status: &CacheStatus) -> String {
         ),
         "unverified" => format!(
             "Cache repair: {} is present but missing BitNet-rs model-cache metadata. Run `{verify}`; if verification fails, run `{prune}` then `{fetch}`.",
+            status.cache_path.display()
+        ),
+        "stale-symlink" => format!(
+            "Cache repair: {} is a stale symlink. Run `{prune}`, then `{fetch}`, or replace the symlink target with the verified artifact.",
             status.cache_path.display()
         ),
         _ => format!("Cache is ready. Optional check: `{verify}`."),
@@ -2206,12 +2593,40 @@ fn verify_failure_guidance(
     )
 }
 
-fn verify_model(model: &SupportedModel, path: &Path) -> Result<VerifyResult> {
+fn verify_model(
+    model: &SupportedModel,
+    path: &Path,
+    cache_root: Option<&Path>,
+) -> Result<VerifyResult> {
+    let default_cache_root;
+    let cache_root = if let Some(cache_root) = cache_root {
+        cache_root
+    } else {
+        default_cache_root = resolve_cache_root(None)?;
+        &default_cache_root
+    };
     let metadata = fs::metadata(path).ok();
     let actual_bytes = metadata.as_ref().map(fs::Metadata::len);
     let actual_sha256 = if metadata.is_some() { Some(compute_sha256(path)?) } else { None };
     let passed =
         actual_bytes == Some(model.bytes) && actual_sha256.as_deref() == Some(model.sha256);
+    let cache_state = verification_cache_state(
+        model,
+        path,
+        cache_root,
+        actual_bytes,
+        actual_sha256.as_deref(),
+        passed,
+    );
+    let artifact_provenance = model_provenance_manifest(
+        model,
+        cache_root,
+        path,
+        cache_state,
+        actual_bytes,
+        actual_sha256.as_deref(),
+        Some(passed),
+    );
     Ok(VerifyResult {
         id: model.id.to_string(),
         path: path.to_path_buf(),
@@ -2223,7 +2638,214 @@ fn verify_model(model: &SupportedModel, path: &Path) -> Result<VerifyResult> {
         model: *model,
         model_contract: model_contract_summary(model)?,
         model_capability: model_capability_summary(model),
+        artifact_provenance,
     })
+}
+
+fn verification_cache_state(
+    model: &SupportedModel,
+    path: &Path,
+    cache_root: &Path,
+    actual_bytes: Option<u64>,
+    actual_sha256: Option<&str>,
+    passed: bool,
+) -> &'static str {
+    if passed {
+        return "ready";
+    }
+    if actual_bytes.is_none() {
+        return "missing";
+    }
+    if actual_bytes != Some(model.bytes) {
+        return "invalid-size";
+    }
+    if actual_sha256 != Some(model.sha256) {
+        return "invalid-sha";
+    }
+    if path != model_path(cache_root, model).as_path() {
+        return "explicit-path-invalid";
+    }
+    "invalid-artifact"
+}
+
+fn model_provenance_manifest(
+    model: &SupportedModel,
+    cache_root: &Path,
+    verify_path: &Path,
+    cache_state: &str,
+    _actual_bytes: Option<u64>,
+    _actual_sha256: Option<&str>,
+    passed: Option<bool>,
+) -> ModelProvenanceManifest {
+    let cache_path = model_path(cache_root, model);
+    let metadata_path = metadata_path(cache_root, model);
+    let symlink_target = symlink_target(verify_path);
+    let path_role =
+        if verify_path == cache_path.as_path() { "cache_path" } else { "explicit_path" };
+    let fetch_command = model_command("fetch", model, Some(cache_root));
+    let verify_command = if verify_path == cache_path.as_path() {
+        model_command("verify", model, Some(cache_root))
+    } else {
+        format!(
+            "{} --path {}",
+            model_command("verify", model, Some(cache_root)),
+            shellish_path(verify_path)
+        )
+    };
+    let prune_command = model_command("prune", model, Some(cache_root));
+    let command = provenance_repair_command(
+        model,
+        cache_root,
+        verify_path,
+        cache_state,
+        passed,
+        &fetch_command,
+        &verify_command,
+        &prune_command,
+    );
+    let prompt_identity = model.prompt_template.to_string();
+
+    ModelProvenanceManifest {
+        schema_version: "1.0.0",
+        artifact_kind: "m4_supported_model_provenance",
+        id: model.id.to_string(),
+        display_name: model.display_name.to_string(),
+        source: ProvenanceSource {
+            repo: model.repo.to_string(),
+            revision: model.revision.to_string(),
+            url: model.url.to_string(),
+            manifests: model.provenance_manifests.iter().map(|path| (*path).to_string()).collect(),
+        },
+        license: ProvenanceLicense {
+            spdx: model.license_spdx.map(str::to_string),
+            redistribution_boundary: model.redistribution_boundary.to_string(),
+        },
+        artifact: ProvenanceArtifact {
+            format: "gguf",
+            filename: model.filename.to_string(),
+            size_bytes: model.bytes,
+            sha256: model.sha256.to_string(),
+            architecture: model.architecture.to_string(),
+            quantization: model.quantization.to_string(),
+        },
+        tokenizer: ProvenanceTokenizer {
+            authority: model.tokenizer_pre.to_string(),
+            model: model.tokenizer_model.to_string(),
+            pre_tokenizer: model.tokenizer_pre.to_string(),
+            sha256: model.tokenizer_sha256.map(str::to_string),
+            sha256_status: model.tokenizer_sha256_status.to_string(),
+            external_path: model.tokenizer_path.map(str::to_string),
+            source: if model.tokenizer_path.is_some() {
+                "external_tokenizer_file"
+            } else {
+                "gguf_metadata"
+            }
+            .to_string(),
+        },
+        prompt_template: ProvenancePromptTemplate {
+            identity_sha256: stable_sha256_hex(prompt_identity.as_bytes()),
+            identity: prompt_identity,
+            source: model.prompt_template_source.to_string(),
+            chat_template_present: model.chat_template,
+        },
+        local_cache: ProvenanceLocalCache {
+            cache_root: cache_root.to_path_buf(),
+            cache_path,
+            metadata_path,
+            verify_path: verify_path.to_path_buf(),
+            path_role: path_role.to_string(),
+            symlink_target: symlink_target.clone(),
+            symlink_status: if symlink_target.is_some() { "symlink" } else { "not_symlink" }
+                .to_string(),
+        },
+        repair: ProvenanceRepair {
+            command,
+            fetch_command,
+            verify_command,
+            prune_command,
+            cache_state: cache_state.to_string(),
+        },
+        claim_boundary: artifact_provenance_claim_boundary(model).to_string(),
+    }
+}
+
+fn provenance_repair_command(
+    model: &SupportedModel,
+    cache_root: &Path,
+    verify_path: &Path,
+    cache_state: &str,
+    passed: Option<bool>,
+    fetch_command: &str,
+    verify_command: &str,
+    prune_command: &str,
+) -> String {
+    if passed == Some(true) {
+        return verify_command.to_string();
+    }
+    if verify_path != model_path(cache_root, model).as_path() && passed == Some(false) {
+        return format!(
+            "replace explicit --path with the supported artifact, then run `{verify_command}`"
+        );
+    }
+    match cache_state {
+        "missing" => fetch_command.to_string(),
+        "invalid-size" | "invalid-sha" | "invalid-artifact" | "stale-symlink" => {
+            format!("{prune_command} && {fetch_command}")
+        }
+        "unverified" => verify_command.to_string(),
+        _ => verify_command.to_string(),
+    }
+}
+
+fn artifact_provenance_claim_boundary(model: &SupportedModel) -> &'static str {
+    if model.id == "microsoft-bitnet-b1.58-2B-4T-i2s" {
+        "Artifact provenance only for the accepted BitNet GGUF/tokenizer identity; does not prove BitNet chat, BitNet serve, Metal, QK256 acceleration, speedup, broad quality, or broad performance."
+    } else if model.apple_m4_cpu_neon_supported {
+        "Artifact provenance only for supported dense Qwen Apple M4 CPU/NEON model identity; runtime quality and performance require separate eval, benchmark, and regression receipts."
+    } else {
+        "Artifact provenance only; not a supported M4 runtime claim."
+    }
+}
+
+fn symlink_target(path: &Path) -> Option<PathBuf> {
+    fs::symlink_metadata(path)
+        .ok()
+        .filter(|metadata| metadata.file_type().is_symlink())
+        .and_then(|_| fs::read_link(path).ok())
+}
+
+fn symlink_status(path: &Path, target: Option<&PathBuf>) -> String {
+    let Some(target) = target else {
+        return "not_symlink".to_string();
+    };
+    let resolved = if target.is_absolute() {
+        target.clone()
+    } else {
+        path.parent().unwrap_or_else(|| Path::new(".")).join(target)
+    };
+    if resolved.exists() { "symlink".to_string() } else { "stale_symlink".to_string() }
+}
+
+fn directory_size_bytes(path: &Path) -> Result<u64> {
+    let metadata = fs::symlink_metadata(path)?;
+    if metadata.is_file() {
+        return Ok(metadata.len());
+    }
+    if metadata.file_type().is_symlink() {
+        return Ok(0);
+    }
+    let mut total = 0;
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        total += directory_size_bytes(&entry.path()).unwrap_or(0);
+    }
+    Ok(total)
+}
+
+fn stable_sha256_hex(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
 }
 
 fn model_contract_summary(model: &SupportedModel) -> Result<Option<VerifyContractSummary>> {
@@ -2390,6 +3012,12 @@ fn compute_sha256(path: &Path) -> Result<String> {
     Ok(format!("{:x}", hasher.finalize()))
 }
 
+fn sha256_hex(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
 fn write_cache_metadata(
     cache_root: &Path,
     model: &SupportedModel,
@@ -2417,6 +3045,7 @@ fn write_cache_metadata(
         },
         "model_contract": &verify.model_contract,
         "model_capability": &verify.model_capability,
+        "artifact_provenance": &verify.artifact_provenance,
         "runtime_support": {
             "apple_m4_cpu_neon": model.apple_m4_cpu_neon_supported,
             "note": model.support_note,
@@ -2454,6 +3083,7 @@ fn print_fetch_result(status: &str, verify: &VerifyResult, json: bool) -> Result
         "support_note": verify.model.support_note,
         "model_contract": &verify.model_contract,
         "model_capability": &verify.model_capability,
+        "artifact_provenance": &verify.artifact_provenance,
     });
     if json {
         println!("{}", serde_json::to_string_pretty(&payload)?);
@@ -2545,6 +3175,16 @@ mod tests {
             .with_context(|| format!("missing model status row {id}"))
     }
 
+    fn model_status_json_row_for<'a>(
+        value: &'a serde_json::Value,
+        id: &str,
+    ) -> Result<&'a serde_json::Value> {
+        value["models"]
+            .as_array()
+            .and_then(|models| models.iter().find(|model| model["id"] == id))
+            .with_context(|| format!("missing model status JSON row {id}"))
+    }
+
     #[test]
     fn supported_manifest_contains_m4_runtime_artifact() {
         let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
@@ -2606,9 +3246,9 @@ mod tests {
     }
 
     #[test]
-    fn verify_model_includes_bitnet_contract_summary() {
-        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s").unwrap();
-        let result = verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf")).unwrap();
+    fn verify_model_includes_bitnet_contract_summary() -> Result<(), Box<dyn std::error::Error>> {
+        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s")?;
+        let result = verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf"), None)?;
         let contract = result.model_contract.expect("model contract summary");
 
         assert!(!result.passed);
@@ -2625,6 +3265,7 @@ mod tests {
         assert!(contract.accelerator_routes.iter().any(|route| route.route == "bitnet_qk256_cuda"));
         assert!(contract.permitted_claims.contains(&"answer_ready".to_string()));
         assert!(contract.required_receipts.contains(&"execution_plan".to_string()));
+        Ok(())
     }
 
     #[test]
@@ -2703,6 +3344,45 @@ mod tests {
         assert!(model.support_note.contains("non-default"));
     }
 
+    #[test]
+    fn m4_supported_models_emit_complete_artifact_provenance_manifests()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let cache_root = Path::new("/tmp/bitnet-m4-provenance-cache");
+        for id in [
+            "qwen2.5-0.5b-instruct-q8_0",
+            "qwen2.5-0.5b-instruct-q4_k_m",
+            "qwen2.5-1.5b-instruct-q4_k_m",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+        ] {
+            let model = supported_model(id)?;
+            let cache_path = model_path(cache_root, model);
+            let manifest = model_provenance_manifest(
+                model,
+                cache_root,
+                &cache_path,
+                "missing",
+                None,
+                None,
+                None,
+            );
+
+            assert_eq!(manifest.artifact_kind, "m4_supported_model_provenance");
+            assert_eq!(manifest.source.repo, model.repo);
+            assert_eq!(manifest.artifact.size_bytes, model.bytes);
+            assert_eq!(manifest.artifact.sha256, model.sha256);
+            assert!(!manifest.license.redistribution_boundary.trim().is_empty());
+            assert_eq!(manifest.tokenizer.authority, model.tokenizer_pre);
+            assert!(!manifest.tokenizer.sha256_status.trim().is_empty());
+            assert_eq!(manifest.prompt_template.identity, model.prompt_template);
+            assert_eq!(manifest.local_cache.cache_path, cache_path);
+            assert_eq!(manifest.local_cache.symlink_status, "not_symlink");
+            assert!(manifest.repair.command.contains("bitnet model fetch"));
+            assert!(manifest.repair.verify_command.contains(model.id));
+            assert!(manifest.claim_boundary.contains("Artifact provenance"));
+        }
+        Ok(())
+    }
+
     #[cfg(feature = "full-cli")]
     #[test]
     fn apple_m4_disk_recommendation_prefers_default_when_headroom_is_good()
@@ -2779,6 +3459,8 @@ mod tests {
             model: *default,
             cache_path: model_path(&cache_root, default),
             metadata_path: metadata_path(&cache_root, default),
+            symlink_target: None,
+            symlink_status: "not_symlink".to_string(),
             present: false,
             cached: false,
             size_matches: false,
@@ -2841,9 +3523,10 @@ mod tests {
     }
 
     #[test]
-    fn verify_model_includes_qwen_dense_capability_summary() {
-        let model = supported_model("qwen2.5-0.5b-instruct-q8_0").unwrap();
-        let result = verify_model(model, Path::new("/tmp/missing-qwen-q8.gguf")).unwrap();
+    fn verify_model_includes_qwen_dense_capability_summary()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let model = supported_model("qwen2.5-0.5b-instruct-q8_0")?;
+        let result = verify_model(model, Path::new("/tmp/missing-qwen-q8.gguf"), None)?;
         let capability = result.model_capability.expect("model capability summary");
 
         assert!(!result.passed);
@@ -2885,12 +3568,14 @@ mod tests {
         );
         assert!(capability.claim_boundary.contains("bounded RTX 5070 Ti dense CUDA ask/chat"));
         assert!(capability.claim_boundary.contains("does not prove broad dense GGUF inference"));
+        Ok(())
     }
 
     #[test]
-    fn qwen_q4_capability_is_storage_conscious_answer_lane() {
-        let model = supported_model("qwen2.5-0.5b-instruct-q4_k_m").unwrap();
-        let result = verify_model(model, Path::new("/tmp/missing-qwen-q4.gguf")).unwrap();
+    fn qwen_q4_capability_is_storage_conscious_answer_lane()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let model = supported_model("qwen2.5-0.5b-instruct-q4_k_m")?;
+        let result = verify_model(model, Path::new("/tmp/missing-qwen-q4.gguf"), None)?;
         let capability = result.model_capability.expect("model capability summary");
 
         assert!(!result.passed);
@@ -2905,12 +3590,14 @@ mod tests {
         assert!(capability.permitted_claims.contains(&"apple_m4_cpu_neon_slm_answer".to_string()));
         assert!(capability.required_receipts.contains(&"slm_answer_receipt".to_string()));
         assert!(capability.claim_boundary.contains("does not prove dense CUDA"));
+        Ok(())
     }
 
     #[test]
-    fn larger_qwen_capability_is_non_default_answer_lane() {
-        let model = supported_model("qwen2.5-1.5b-instruct-q4_k_m").unwrap();
-        let result = verify_model(model, Path::new("/tmp/missing-qwen-15-q4.gguf")).unwrap();
+    fn larger_qwen_capability_is_non_default_answer_lane() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let model = supported_model("qwen2.5-1.5b-instruct-q4_k_m")?;
+        let result = verify_model(model, Path::new("/tmp/missing-qwen-15-q4.gguf"), None)?;
         let capability = result.model_capability.expect("model capability summary");
 
         assert!(!result.passed);
@@ -2928,15 +3615,18 @@ mod tests {
             capability.required_receipts.contains(&"fallback_free_backend_receipt".to_string())
         );
         assert!(capability.claim_boundary.contains("does not prove dense CUDA"));
+        Ok(())
     }
 
     #[test]
-    fn bitnet_contract_artifact_does_not_emit_dense_capability_summary() {
-        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s").unwrap();
-        let result = verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf")).unwrap();
+    fn bitnet_contract_artifact_does_not_emit_dense_capability_summary()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let model = supported_model("microsoft-bitnet-b1.58-2B-4T-i2s")?;
+        let result = verify_model(model, Path::new("/tmp/missing-bitnet-model.gguf"), None)?;
 
         assert!(result.model_contract.is_some());
         assert!(result.model_capability.is_none());
+        Ok(())
     }
 
     #[test]
@@ -3032,38 +3722,73 @@ mod tests {
 
         assert_eq!(dashboard.schema_version, 1);
         assert_eq!(dashboard.device, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(dashboard.requested_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(dashboard.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
         assert!(dashboard.note.contains("does not probe hardware"));
 
         let bitnet = model_status_row_for(&dashboard, "bitnet_official_2b_i2s_qk256")?;
         assert_eq!(bitnet.display_name, "microsoft-bitnet-b1.58-2B-4T-i2s");
+        assert_eq!(bitnet.model_coverage_row, "bitnet_official_2b_i2s_qk256");
+        assert_eq!(bitnet.current_tier, "product_cli_ready");
+        assert_eq!(bitnet.requested_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(bitnet.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(bitnet.selected_route.as_deref(), Some("bitnet_qk256_cuda"));
+        assert_eq!(bitnet.fallback_used, Some(false));
         assert_eq!(bitnet.category, "supported");
         assert_eq!(bitnet.model_class, "bitnet");
         assert_eq!(bitnet.route.as_deref(), Some("bitnet_qk256_cuda"));
         assert!(bitnet.cpu_answer_ready);
         assert!(bitnet.accelerator_answer_ready);
+        assert!(bitnet.product_cli_ready);
         assert!(bitnet.bitnet_packed_i2s_qk256_proof);
         assert!(!bitnet.dense_regular_llm_cuda_proof);
         assert!(!bitnet.benchmark_qualified);
         assert!(!bitnet.speedup_claim);
         assert!(!bitnet.server_ready);
+        assert_eq!(bitnet.server, "smoke only, not broad-ready");
+        assert_eq!(bitnet.server_ready_scope, None);
+        assert_eq!(bitnet.server_scope, None);
+        assert_eq!(bitnet.server_endpoint.as_deref(), Some("/v1/chat/completions"));
+        assert_eq!(bitnet.server_streaming, Some(false));
+        assert!(bitnet.server_smoke);
+        assert_eq!(
+            bitnet.server_reason.as_deref(),
+            Some("broad production readiness not qualified")
+        );
         assert!(!bitnet.full_residency_claim);
         assert_eq!(bitnet.ask, "ready");
+        assert_eq!(bitnet.one_token, "ready");
+        assert_eq!(bitnet.short_decode, "ready");
         assert_eq!(bitnet.warm_session, "ready");
         assert_eq!(bitnet.benchmark, "reviewed, speedup not accepted");
         assert!(bitnet.claim_boundary.contains("does not prove dense regular-LLM CUDA"));
 
         let dense = model_status_row_for(&dashboard, "dense_qwen25_05b_q8_cuda")?;
         assert_eq!(dense.display_name, "qwen2.5-0.5b-instruct-q8_0");
+        assert_eq!(dense.model_coverage_row, "dense_qwen25_05b_q8_cuda");
+        assert_eq!(dense.current_tier, "product_cli_ready");
+        assert_eq!(dense.requested_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(dense.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(dense.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(dense.fallback_used, Some(false));
         assert_eq!(dense.category, "supported");
         assert_eq!(dense.model_class, "dense_slm");
         assert_eq!(dense.route.as_deref(), Some("dense_regular_llm_cuda"));
         assert!(dense.cpu_answer_ready);
         assert!(dense.accelerator_answer_ready);
+        assert!(dense.product_cli_ready);
         assert!(dense.dense_regular_llm_cuda_proof);
         assert!(!dense.bitnet_packed_i2s_qk256_proof);
         assert!(!dense.benchmark_qualified);
         assert!(!dense.speedup_claim);
-        assert!(!dense.server_ready);
+        assert!(dense.server_ready);
+        assert_eq!(dense.server, "exact-profile ready (/v1/chat/completions, streaming=false)");
+        assert_eq!(dense.server_ready_scope.as_deref(), Some("exact_profile"));
+        assert_eq!(dense.server_scope.as_deref(), Some("exact_profile"));
+        assert_eq!(dense.server_endpoint.as_deref(), Some("/v1/chat/completions"));
+        assert_eq!(dense.server_streaming, Some(false));
+        assert!(dense.server_smoke);
+        assert_eq!(dense.server_reason, None);
         assert!(!dense.full_residency_claim);
         assert_eq!(dense.one_token, "ready");
         assert_eq!(dense.short_decode, "ready");
@@ -3074,41 +3799,98 @@ mod tests {
     }
 
     #[test]
-    fn model_status_dashboard_lists_qwen3_as_accelerator_ready_candidate() -> Result<()> {
+    fn model_status_dashboard_lists_qwen3_as_product_cli_ready() -> Result<()> {
         let matrix_path = workspace_model_coverage_matrix_path();
         let matrix = read_model_coverage_matrix(&matrix_path)?;
         let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
 
         let qwen3 = model_status_row_for(&dashboard, "dense_qwen3_06b_q8_candidate")?;
         assert_eq!(qwen3.display_name, "qwen3-0.6b-instruct-q8_0");
-        assert_eq!(qwen3.category, "candidate");
+        assert_eq!(qwen3.category, "supported");
         assert_eq!(qwen3.route.as_deref(), Some("dense_regular_llm_cuda"));
         assert!(qwen3.cpu_answer_ready);
         assert!(qwen3.accelerator_answer_ready);
+        assert!(qwen3.product_cli_ready);
         assert!(qwen3.dense_regular_llm_cuda_proof);
         assert!(!qwen3.bitnet_packed_i2s_qk256_proof);
         assert!(!qwen3.speedup_claim);
-        assert!(!qwen3.server_ready);
+        assert!(qwen3.server_ready);
+        assert_eq!(qwen3.server_ready_scope.as_deref(), Some("exact_profile"));
+        assert_eq!(qwen3.server_endpoint.as_deref(), Some("/v1/chat/completions"));
+        assert_eq!(qwen3.server_streaming, Some(false));
+        assert!(qwen3.server_smoke);
+        assert_eq!(qwen3.server_reason, None);
         assert!(!qwen3.full_residency_claim);
-        assert_eq!(qwen3.ask, "not ready");
+        assert_eq!(qwen3.ask, "ready");
         assert_eq!(qwen3.one_token, "ready");
         assert_eq!(qwen3.short_decode, "ready");
         assert_eq!(qwen3.warm_session, "ready");
         assert_eq!(qwen3.benchmark, "reviewed, speedup not accepted");
-        assert_eq!(qwen3.tier, "accelerator_answer_ready");
-        assert!(qwen3.next_proof.contains("user-facing ask/chat product UX"));
+        assert_eq!(qwen3.tier, "product_cli_ready");
+        assert!(qwen3.next_proof.contains("Qwen3 exact-profile server readiness"));
         assert!(qwen3.claim_boundary.contains("dense_regular_llm_cuda RTX 5070 Ti route"));
         assert!(qwen3.claim_boundary.contains("does not inherit Qwen2.5 CUDA receipts"));
         Ok(())
     }
 
     #[test]
-    fn model_status_dashboard_is_strictly_device_scoped() -> Result<()> {
+    fn model_status_dashboard_lists_smollm2_structural_blocker() -> Result<()> {
+        let matrix_path = workspace_model_coverage_matrix_path();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
+        let dashboard = model_status_dashboard("nvidia-rtx-5070-ti-cuda", &matrix_path, &matrix);
+
+        let smollm2 = model_status_row_for(&dashboard, "dense_smollm2_360m_candidate")?;
+        assert_eq!(smollm2.display_name, "smollm2-360m-instruct");
+        assert_eq!(smollm2.current_tier, "structurally_valid");
+        assert_eq!(smollm2.category, "candidate");
+        assert_eq!(smollm2.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(smollm2.selected_route, None);
+        assert_eq!(smollm2.fallback_used, None);
+        assert!(!smollm2.product_cli_ready);
+        assert!(!smollm2.cpu_answer_ready);
+        assert!(!smollm2.accelerator_answer_ready);
+        assert!(!smollm2.dense_regular_llm_cuda_proof);
+        assert!(!smollm2.bitnet_packed_i2s_qk256_proof);
+        assert!(!smollm2.speedup_claim);
+        assert!(!smollm2.server_ready);
+        assert_eq!(smollm2.server_ready_scope, None);
+        assert!(!smollm2.full_residency_claim);
+        assert!(smollm2.next_proof.contains("same-prompt SmolLM2"));
+        assert!(smollm2.claim_boundary.contains("no CPU answer readiness"));
+        Ok(())
+    }
+
+    #[test]
+    fn model_status_dashboard_resolves_generic_cuda_to_strict_backend() -> Result<()> {
         let matrix_path = workspace_model_coverage_matrix_path();
         let matrix = read_model_coverage_matrix(&matrix_path)?;
         let dashboard = model_status_dashboard("cuda", &matrix_path, &matrix);
 
         assert_eq!(dashboard.device, "cuda");
+        assert_eq!(dashboard.requested_backend, "cuda");
+        assert_eq!(dashboard.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
+
+        let bitnet = model_status_row_for(&dashboard, "bitnet_official_2b_i2s_qk256")?;
+        assert_eq!(bitnet.requested_backend, "cuda");
+        assert_eq!(bitnet.selected_backend, "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(bitnet.selected_route.as_deref(), Some("bitnet_qk256_cuda"));
+        assert_eq!(bitnet.fallback_used, Some(false));
+        assert!(!bitnet.speedup_claim);
+        assert!(!bitnet.full_residency_claim);
+        assert!(bitnet.bitnet_packed_i2s_qk256_proof);
+        assert!(!bitnet.dense_regular_llm_cuda_proof);
+        Ok(())
+    }
+
+    #[test]
+    fn model_status_dashboard_stays_empty_for_unknown_device() -> Result<()> {
+        let matrix_path = workspace_model_coverage_matrix_path();
+        let matrix = read_model_coverage_matrix(&matrix_path)?;
+        let dashboard = model_status_dashboard("cuda-experimental", &matrix_path, &matrix);
+
+        assert_eq!(dashboard.device, "cuda-experimental");
+        assert_eq!(dashboard.requested_backend, "cuda-experimental");
+        assert_eq!(dashboard.selected_backend, None);
         assert!(dashboard.models.is_empty());
         Ok(())
     }
@@ -3122,29 +3904,101 @@ mod tests {
 
         assert_eq!(value["schema_version"], 1);
         assert_eq!(value["device"], "nvidia-rtx-5070-ti-cuda");
-        assert!(value["models"].as_array().is_some_and(|models| {
-            models.iter().any(|model| {
-                model["id"] == "dense_qwen25_05b_q8_cuda"
-                    && model["route"] == "dense_regular_llm_cuda"
-                    && model["speedup_claim"] == false
-                    && model["server_ready"] == false
-                    && model["bitnet_packed_i2s_qk256_proof"] == false
-                    && model["dense_regular_llm_cuda_proof"] == true
-            })
-        }));
-        assert!(value["models"].as_array().is_some_and(|models| {
-            models.iter().any(|model| {
-                model["id"] == "dense_qwen3_06b_q8_candidate"
-                    && model["category"] == "candidate"
-                    && model["tier"] == "accelerator_answer_ready"
-                    && model["route"] == "dense_regular_llm_cuda"
-                    && model["accelerator_answer_ready"] == true
-                    && model["speedup_claim"] == false
-                    && model["server_ready"] == false
-                    && model["bitnet_packed_i2s_qk256_proof"] == false
-                    && model["dense_regular_llm_cuda_proof"] == true
-            })
-        }));
+        assert_eq!(value["requested_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+
+        let bitnet = model_status_json_row_for(&value, "bitnet_official_2b_i2s_qk256")?;
+        assert_eq!(bitnet["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
+        assert_eq!(bitnet["current_tier"], "product_cli_ready");
+        assert_eq!(bitnet["requested_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(bitnet["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(bitnet["selected_route"], "bitnet_qk256_cuda");
+        assert_eq!(bitnet["fallback_used"], false);
+        assert_eq!(bitnet["product_cli_ready"], true);
+        assert_eq!(bitnet["route"], "bitnet_qk256_cuda");
+        assert_eq!(bitnet["speedup_claim"], false);
+        assert_eq!(bitnet["server_ready"], false);
+        assert!(bitnet["server_ready_scope"].is_null());
+        assert!(bitnet["server_scope"].is_null());
+        assert_eq!(bitnet["full_residency_claim"], false);
+        assert_eq!(bitnet["server_endpoint"], "/v1/chat/completions");
+        assert_eq!(bitnet["server_streaming"], false);
+        assert_eq!(bitnet["server_smoke"], true);
+        assert_eq!(bitnet["server_reason"], "broad production readiness not qualified");
+        assert_eq!(bitnet["bitnet_packed_i2s_qk256_proof"], true);
+        assert_eq!(bitnet["dense_regular_llm_cuda_proof"], false);
+
+        let qwen25 = model_status_json_row_for(&value, "dense_qwen25_05b_q8_cuda")?;
+        assert_eq!(qwen25["model_coverage_row"], "dense_qwen25_05b_q8_cuda");
+        assert_eq!(qwen25["current_tier"], "product_cli_ready");
+        assert_eq!(qwen25["requested_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(qwen25["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(qwen25["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(qwen25["fallback_used"], false);
+        assert_eq!(qwen25["product_cli_ready"], true);
+        assert_eq!(qwen25["route"], "dense_regular_llm_cuda");
+        assert_eq!(qwen25["speedup_claim"], false);
+        assert_eq!(qwen25["server_ready"], true);
+        assert_eq!(qwen25["server_ready_scope"], "exact_profile");
+        assert_eq!(qwen25["server_scope"], "exact_profile");
+        assert_eq!(qwen25["full_residency_claim"], false);
+        assert_eq!(qwen25["server_endpoint"], "/v1/chat/completions");
+        assert_eq!(qwen25["server_streaming"], false);
+        assert_eq!(qwen25["server_smoke"], true);
+        assert!(qwen25["server_reason"].is_null());
+        assert_eq!(qwen25["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(qwen25["dense_regular_llm_cuda_proof"], true);
+
+        let qwen3 = model_status_json_row_for(&value, "dense_qwen3_06b_q8_candidate")?;
+        assert_eq!(qwen3["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+        assert_eq!(
+            qwen3["next_proof"],
+            "Qwen3 exact-profile server readiness is promoted only for the current-source non-streaming /v1/chat/completions RTX 5070 Ti shared-engine receipt at ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json. Separate exact-profile performance comparator evidence is still required before any speed, benchmark-qualified, or full-residency promotion."
+        );
+        assert_eq!(qwen3["category"], "supported");
+        assert_eq!(qwen3["current_tier"], "product_cli_ready");
+        assert_eq!(qwen3["requested_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(qwen3["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(qwen3["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(qwen3["fallback_used"], false);
+        assert_eq!(qwen3["tier"], "product_cli_ready");
+        assert_eq!(qwen3["product_cli_ready"], true);
+        assert_eq!(qwen3["route"], "dense_regular_llm_cuda");
+        assert_eq!(qwen3["accelerator_answer_ready"], true);
+        assert_eq!(qwen3["speedup_claim"], false);
+        assert_eq!(qwen3["server_ready"], true);
+        assert_eq!(qwen3["server_ready_scope"], "exact_profile");
+        assert_eq!(qwen3["server_scope"], "exact_profile");
+        assert_eq!(qwen3["full_residency_claim"], false);
+        assert_eq!(qwen3["server_endpoint"], "/v1/chat/completions");
+        assert_eq!(qwen3["server_streaming"], false);
+        assert_eq!(qwen3["server_smoke"], true);
+        assert!(qwen3["server_reason"].is_null());
+        assert_eq!(qwen3["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(qwen3["dense_regular_llm_cuda_proof"], true);
+
+        let smollm2 = model_status_json_row_for(&value, "dense_smollm2_360m_candidate")?;
+        assert_eq!(smollm2["model_coverage_row"], "dense_smollm2_360m_candidate");
+        assert_eq!(smollm2["category"], "candidate");
+        assert_eq!(smollm2["current_tier"], "structurally_valid");
+        assert_eq!(smollm2["requested_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(smollm2["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert!(smollm2["selected_route"].is_null());
+        assert!(smollm2["fallback_used"].is_null());
+        assert_eq!(smollm2["product_cli_ready"], false);
+        assert_eq!(smollm2["cpu_answer_ready"], false);
+        assert_eq!(smollm2["accelerator_answer_ready"], false);
+        assert_eq!(smollm2["speedup_claim"], false);
+        assert_eq!(smollm2["server_ready"], false);
+        assert!(smollm2["server_ready_scope"].is_null());
+        assert_eq!(smollm2["full_residency_claim"], false);
+        assert_eq!(smollm2["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(smollm2["dense_regular_llm_cuda_proof"], false);
+        assert!(
+            smollm2["next_proof"]
+                .as_str()
+                .is_some_and(|next| { next.contains("same-prompt SmolLM2") })
+        );
         Ok(())
     }
 
@@ -3164,6 +4018,8 @@ mod tests {
             model,
             cache_path: model_path(&root, &model),
             metadata_path: metadata_path(&root, &model),
+            symlink_target: None,
+            symlink_status: "not_symlink".to_string(),
             present: true,
             cached: true,
             size_matches: true,
@@ -3187,6 +4043,8 @@ mod tests {
             model,
             cache_path: model_path(&root, &model),
             metadata_path: metadata_path(&root, &model),
+            symlink_target: None,
+            symlink_status: "not_symlink".to_string(),
             present: true,
             cached: false,
             size_matches: true,
@@ -3211,6 +4069,8 @@ mod tests {
             model,
             cache_path: model_path(&root, &model),
             metadata_path: metadata_path(&root, &model),
+            symlink_target: None,
+            symlink_status: "not_symlink".to_string(),
             present: false,
             cached: false,
             size_matches: false,

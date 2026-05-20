@@ -1,0 +1,514 @@
+{
+  "artifact_kind": "apple_m4_bitnet_eval_250_repaired_summary",
+  "schema_version": "1.0.0",
+  "campaign": "apple-m4-inference-excellence",
+  "work_item": "M4-BITNET-EX-014",
+  "source_report": "ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus.json",
+  "corpus": {
+    "name": "apple-m4-bitnet-eval-seeded-corpus-250",
+    "path": "ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml",
+    "case_count": 250,
+    "selected_case_count": 250,
+    "corpus_version": "2.1.0",
+    "seed": 912587,
+    "prompt_template": "bitnetcpp-answer",
+    "scoring_kinds": [
+      "contains_expected",
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "numeric_tolerance",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ]
+  },
+  "model": {
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+    "file": "ggml-model-i2_s.gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "bytes": 1187801280,
+    "family": "bitnet",
+    "architecture": "bitnet_b1_58",
+    "quantization": "I2_S"
+  },
+  "tokenizer": {
+    "authority": {
+      "ggml_pre": "llama-bpe",
+      "repo": "microsoft/bitnet-b1.58-2B-4T",
+      "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+      "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "source": "external_tokenizer_json"
+    },
+    "path": "models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json",
+    "source": "externally_supplied_llama_bpe",
+    "strict": true
+  },
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon"
+  },
+  "quality_summary": {
+    "total": 250,
+    "passed": 205,
+    "quality_failed": 45,
+    "timeout": 0,
+    "not_run": 0,
+    "failure_categories": {
+      "extraction": 6,
+      "factual_table": 5,
+      "formatting": 4
+    }
+  },
+  "scoring_summary": {
+    "enabled": true,
+    "failed": 40,
+    "failure_categories": {
+      "formatting": 4
+    },
+    "failure_taxonomy": {
+      "answer_content": 36,
+      "format_only": 4
+    },
+    "kinds": [
+      "contains_expected",
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "numeric_tolerance",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ],
+    "not_run": 0,
+    "passed": 210,
+    "total": 250
+  },
+  "tokens": {
+    "prompt_total": 6645,
+    "generated_total": 2086,
+    "cases_with_generated_token_ids": 250
+  },
+  "timing": {
+    "model_load_ms": {
+      "min": 4214.179,
+      "max": 23366.42,
+      "p50": 4445.372,
+      "p90": 21041.673,
+      "p99": 21116.43
+    },
+    "tokenizer_load_ms": {
+      "min": 170.037,
+      "max": 760.75,
+      "p50": 184.693,
+      "p90": 732.72,
+      "p99": 754.848
+    },
+    "prompt_tokenize_ms": {
+      "min": 0.239,
+      "max": 1.067,
+      "p50": 0.292,
+      "p90": 0.905,
+      "p99": 0.994
+    },
+    "prefill_ms": {
+      "min": 5632.701,
+      "max": 65910.284,
+      "p50": 13989.122,
+      "p90": 43243.916,
+      "p99": 59937.87
+    },
+    "first_token_ms": {
+      "min": 6135,
+      "max": 68264,
+      "p50": 14535,
+      "p90": 45590,
+      "p99": 60645
+    },
+    "decode_total_ms": {
+      "min": 975.412,
+      "max": 34028.878,
+      "p50": 4116.5,
+      "p90": 11628.472,
+      "p99": 22772.119
+    },
+    "decode_steady_state_tok_s": {
+      "min": 0.429,
+      "max": 2.116,
+      "p50": 1.642,
+      "p90": 2.088,
+      "p99": 2.097
+    },
+    "sampling_ms_per_token": {
+      "min": 0.381,
+      "max": 2.051,
+      "p50": 0.528,
+      "p90": 2.001,
+      "p99": 2.027
+    },
+    "input_tok_s": {
+      "min": 0.500447860476428,
+      "max": 2.4854860927288702,
+      "p50": 1.781739147358325,
+      "p90": 2.4068245992877726,
+      "p99": 2.446408794210539
+    },
+    "output_tok_s": {
+      "min": 0.028353913548917583,
+      "max": 1.210409521888239,
+      "p50": 0.3033175355450237,
+      "p90": 0.8271298593879239,
+      "p99": 1.2102874432677762
+    }
+  },
+  "task_families": [
+    {
+      "family": "arithmetic_exact",
+      "total": 15,
+      "passed": 14,
+      "failed": 1,
+      "timeout": 0,
+      "not_run": 0,
+      "pass_rate": 0.9333333333333333,
+      "failure_taxonomy": {
+        "answer_content": 1
+      },
+      "failure_categories": {},
+      "scoring": {
+        "enabled": true,
+        "failed": 1,
+        "kinds": [
+          "exact_match"
+        ],
+        "not_run": 0,
+        "passed": 14,
+        "total": 15
+      }
+    },
+    {
+      "family": "closed_label_classification",
+      "total": 20,
+      "passed": 18,
+      "failed": 2,
+      "timeout": 0,
+      "not_run": 0,
+      "pass_rate": 0.9,
+      "failure_taxonomy": {
+        "answer_content": 2
+      },
+      "failure_categories": {},
+      "scoring": {
+        "enabled": true,
+        "failed": 2,
+        "kinds": [
+          "normalized_match"
+        ],
+        "not_run": 0,
+        "passed": 18,
+        "total": 20
+      }
+    },
+    {
+      "family": "constrained_summary",
+      "total": 30,
+      "passed": 26,
+      "failed": 4,
+      "timeout": 0,
+      "not_run": 0,
+      "pass_rate": 0.8666666666666667,
+      "failure_taxonomy": {
+        "answer_content": 4
+      },
+      "failure_categories": {},
+      "scoring": {
+        "enabled": true,
+        "failed": 4,
+        "kinds": [
+          "required_keywords"
+        ],
+        "not_run": 0,
+        "passed": 26,
+        "total": 30
+      }
+    },
+    {
+      "family": "fixed_table_qa",
+      "total": 35,
+      "passed": 30,
+      "failed": 5,
+      "timeout": 0,
+      "not_run": 0,
+      "pass_rate": 0.8571428571428571,
+      "failure_taxonomy": {
+        "answer_content": 5
+      },
+      "failure_categories": {
+        "factual_table": 5
+      },
+      "scoring": {
+        "enabled": true,
+        "failed": 5,
+        "kinds": [
+          "contains_expected",
+          "exact_match"
+        ],
+        "not_run": 0,
+        "passed": 30,
+        "total": 35
+      }
+    },
+    {
+      "family": "format_constrained_json",
+      "total": 20,
+      "passed": 20,
+      "failed": 0,
+      "timeout": 0,
+      "not_run": 0,
+      "pass_rate": 1,
+      "failure_taxonomy": {},
+      "failure_categories": {},
+      "scoring": {
+        "enabled": true,
+        "failed": 0,
+        "kinds": [
+          "json_schema"
+        ],
+        "not_run": 0,
+        "passed": 20,
+        "total": 20
+      }
+    },
+    {
+      "family": "numeric_tolerance",
+      "total": 35,
+      "passed": 24,
+      "failed": 11,
+      "timeout": 0,
+      "not_run": 0,
+      "pass_rate": 0.6857142857142857,
+      "failure_taxonomy": {
+        "answer_content": 10,
+        "format_only": 4
+      },
+      "failure_categories": {
+        "formatting": 4
+      },
+      "scoring": {
+        "enabled": true,
+        "failed": 11,
+        "kinds": [
+          "numeric_tolerance"
+        ],
+        "not_run": 0,
+        "passed": 24,
+        "total": 35
+      }
+    },
+    {
+      "family": "ordering_sorting",
+      "total": 20,
+      "passed": 17,
+      "failed": 3,
+      "timeout": 0,
+      "not_run": 0,
+      "pass_rate": 0.85,
+      "failure_taxonomy": {
+        "answer_content": 3
+      },
+      "failure_categories": {},
+      "scoring": {
+        "enabled": true,
+        "failed": 2,
+        "kinds": [
+          "normalized_match"
+        ],
+        "not_run": 0,
+        "passed": 18,
+        "total": 20
+      }
+    },
+    {
+      "family": "required_forbidden_tokens",
+      "total": 30,
+      "passed": 22,
+      "failed": 8,
+      "timeout": 0,
+      "not_run": 0,
+      "pass_rate": 0.7333333333333333,
+      "failure_taxonomy": {
+        "answer_content": 8
+      },
+      "failure_categories": {},
+      "scoring": {
+        "enabled": true,
+        "failed": 8,
+        "kinds": [
+          "required_forbidden_tokens"
+        ],
+        "not_run": 0,
+        "passed": 22,
+        "total": 30
+      }
+    },
+    {
+      "family": "rewrite_normalized",
+      "total": 20,
+      "passed": 15,
+      "failed": 5,
+      "timeout": 0,
+      "not_run": 0,
+      "pass_rate": 0.75,
+      "failure_taxonomy": {
+        "answer_content": 5
+      },
+      "failure_categories": {},
+      "scoring": {
+        "enabled": true,
+        "failed": 1,
+        "kinds": [
+          "normalized_match"
+        ],
+        "not_run": 0,
+        "passed": 19,
+        "total": 20
+      }
+    },
+    {
+      "family": "synthetic_extraction",
+      "total": 25,
+      "passed": 19,
+      "failed": 6,
+      "timeout": 0,
+      "not_run": 0,
+      "pass_rate": 0.76,
+      "failure_taxonomy": {
+        "answer_content": 6
+      },
+      "failure_categories": {
+        "extraction": 6
+      },
+      "scoring": {
+        "enabled": true,
+        "failed": 6,
+        "kinds": [
+          "exact_match",
+          "normalized_match"
+        ],
+        "not_run": 0,
+        "passed": 19,
+        "total": 25
+      }
+    }
+  ],
+  "reference_comparison": {
+    "comparable_cases": 0,
+    "generated_token_id_matches": 0,
+    "matched": 0,
+    "mismatched": 0,
+    "mismatched_fields": {},
+    "not_run": 0,
+    "partially_compared": 0,
+    "reference_not_supplied": 250,
+    "reference_supplied": 0,
+    "status_counts": {
+      "reference_not_supplied": 250
+    },
+    "text_matches": 0,
+    "total": 250
+  },
+  "regression": {
+    "compatible_regression_performed": false,
+    "attempted_baseline": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json",
+    "context_mismatch": "scoring_summary.kinds mismatch",
+    "current_corpus_version": "2.1.0",
+    "baseline_corpus_version": "2.0.0",
+    "current_scoring_kinds": [
+      "contains_expected",
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "numeric_tolerance",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ],
+    "baseline_scoring_kinds": [
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "numeric_tolerance",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ],
+    "operator_delta_context_only": {
+      "pass_delta": 9,
+      "quality_failure_delta": -9,
+      "timeout_delta": 0,
+      "fixed_table_qa_pass_delta": 7,
+      "constrained_summary_pass_delta": 2,
+      "numeric_tolerance_pass_delta": 0,
+      "rewrite_scoring_pass_delta": 4
+    }
+  },
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 4,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "00b261527dacd7ea460d8dcba87057f37a91c328d7b64eedd4c73641e805c8d5",
+    "identity_sha256": "8ccb3ad8cf3e3af19b5da2cf69b50a21b78cf01cd3b287de76a1497d2fbfeb3c",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        128009,
+        128001
+      ]
+    },
+    "stop_criteria_sha256": "e1342df3623e7e44cd79854888c249063c066138b7fa463d8b371e8bb3b4ef7e",
+    "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+    "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+    "template": {
+      "family": "bitnetcpp-answer",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "bitnetcpp-answer",
+    "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+    "tokenizer_authority": {
+      "authority": "llama-bpe",
+      "sha256": null,
+      "source": "explicit",
+      "strict": true
+    }
+  },
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "bitnet_performance_claimed": false,
+    "dense_slm_evidence_used": false,
+    "chat_enabled": false,
+    "serve_enabled": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_claimed": false,
+    "mpsgraph_claimed": false,
+    "macbook_evidence": false,
+    "broad_apple_silicon_claimed": false
+  }
+}

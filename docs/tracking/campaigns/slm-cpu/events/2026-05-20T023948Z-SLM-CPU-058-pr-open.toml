@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T02:39:48Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-058"
+event = "pr_open"
+actor = "codex"
+previous_status = "ready"
+new_status = "pr_open"
+pr = 6070
+head_sha = "704449cad52ac5e9ebd0c4f54e993b7f9b14378c"
+summary = "Opened PR #6070 for the dense hook before/after receipt pack."
+notes = [
+  "PR #6070 queues the SLM-CPU-058 receipt-equivalence gate after SLM-CPU-057.",
+  "The PR is tracker/dashboard documentation only and does not enable packed Q8_0 sidecar runtime compute.",
+  "Packed compute remains gated on before/after Qwen3 Q8_0 warm-session receipts proving identical generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, dense hook-selection identity, model SHA, and fallback=false.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

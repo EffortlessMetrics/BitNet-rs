@@ -33,7 +33,10 @@ cpu:
   quality_gate: required
 
 a770:
-  support: trusted_partial
+  support: diagnostic
+  target_support: trusted_partial
+  claim_status: diagnostic
+  promotion_blocker: clean claim-grade A770 OpenCL receipts are not committed for the required operations
   selected_backend: intel-arc-a770-opencl
   required_claimed_ops:
     - qk256_linears

@@ -1,145 +1,16 @@
 //! Core device configuration parsing and runtime resolution.
 
-use anyhow::Result;
-use bitnet_common::{BackendRequest, Device};
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+mod backend;
+mod config;
+mod parse;
+mod profile;
+mod resolve;
 
-/// Device configuration mode for runtime initialization.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
-pub enum DeviceConfig {
-    /// Automatically select the best available device (prefer GPU if available).
-    #[default]
-    Auto,
-    /// Force CPU execution.
-    Cpu,
-    /// Force GPU execution on specific device ID.
-    Gpu(usize),
-    /// Preserve Intel NPU backend identity without mapping through GPU/Metal/CPU.
-    IntelNpu(usize),
-    /// Preserve Intel NPU through OpenVINO backend identity.
-    OpenVinoNpu,
-    /// Preserve the RTX 5070 Ti CUDA proof-lane backend identity.
-    NvidiaRtx5070TiCuda,
-    /// Preserve the RTX 5070 Ti WGPU reference-lane backend identity.
-    NvidiaRtx5070TiWgpu,
-    /// Preserve a native Metal backend identity.
-    Metal,
-    /// Preserve an MPSGraph graph/reference backend identity.
-    MpsGraph,
-    /// Preserve the Apple M4 native Metal backend identity.
-    AppleM4Metal,
-    /// Preserve the Apple M4 MPSGraph graph/reference backend identity.
-    AppleM4MpsGraph,
-    /// Preserve the Apple M4 CPU/NEON fallback/parity backend identity.
-    AppleM4CpuNeon,
-    /// Preserve the Apple M3 MacBook Air native Metal backend identity.
-    AppleM3AirMetal,
-    /// Preserve the Apple M3 MacBook Air MPSGraph backend identity.
-    AppleM3AirMpsGraph,
-    /// Preserve the Apple M3 MacBook Air CPU/NEON backend identity.
-    AppleM3AirCpuNeon,
-}
-
-impl FromStr for DeviceConfig {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "auto" => Ok(DeviceConfig::Auto),
-            "cpu" => Ok(DeviceConfig::Cpu),
-            "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" => Ok(DeviceConfig::Gpu(0)),
-            "npu" | "intel-npu" => Ok(DeviceConfig::IntelNpu(0)),
-            "openvino-npu" | "intel-npu-openvino" => Ok(DeviceConfig::OpenVinoNpu),
-            "nvidia-rtx-5070-ti-cuda" => Ok(DeviceConfig::NvidiaRtx5070TiCuda),
-            "nvidia-rtx-5070-ti-wgpu" => Ok(DeviceConfig::NvidiaRtx5070TiWgpu),
-            "metal" => Ok(DeviceConfig::Metal),
-            "mpsgraph" => Ok(DeviceConfig::MpsGraph),
-            "apple-m4-metal" => Ok(DeviceConfig::AppleM4Metal),
-            "apple-m4-mpsgraph" => Ok(DeviceConfig::AppleM4MpsGraph),
-            "apple-m4-cpu-neon" => Ok(DeviceConfig::AppleM4CpuNeon),
-            "apple-m3-air-metal" => Ok(DeviceConfig::AppleM3AirMetal),
-            "apple-m3-air-mpsgraph" => Ok(DeviceConfig::AppleM3AirMpsGraph),
-            "apple-m3-air-cpu-neon" => Ok(DeviceConfig::AppleM3AirCpuNeon),
-            s if s.starts_with("gpu:") => Ok(DeviceConfig::Gpu(s[4..].parse::<usize>()?)),
-            s if s.starts_with("cuda:") => Ok(DeviceConfig::Gpu(s[5..].parse::<usize>()?)),
-            s if s.starts_with("vulkan:") => Ok(DeviceConfig::Gpu(s[7..].parse::<usize>()?)),
-            s if s.starts_with("opencl:") => Ok(DeviceConfig::Gpu(s[7..].parse::<usize>()?)),
-            s if s.starts_with("ocl:") => Ok(DeviceConfig::Gpu(s[4..].parse::<usize>()?)),
-            s if s.starts_with("npu:") => Ok(DeviceConfig::IntelNpu(s[4..].parse::<usize>()?)),
-            s if s.starts_with("intel-npu:") => {
-                Ok(DeviceConfig::IntelNpu(s[10..].parse::<usize>()?))
-            }
-            _ => anyhow::bail!("Unknown device config: {}", s),
-        }
-    }
-}
-
-impl DeviceConfig {
-    /// Resolve configuration to an executable device choice.
-    #[must_use]
-    pub fn resolve(&self) -> Device {
-        match self {
-            DeviceConfig::Auto => {
-                #[cfg(any(feature = "gpu", feature = "cuda"))]
-                {
-                    use bitnet_kernels::device_features::gpu_available_runtime;
-                    if gpu_available_runtime() { Device::Cuda(0) } else { Device::Cpu }
-                }
-                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
-                {
-                    Device::Cpu
-                }
-            }
-            DeviceConfig::Cpu => Device::Cpu,
-            DeviceConfig::Gpu(id) => Device::Cuda(*id),
-            DeviceConfig::IntelNpu(_) | DeviceConfig::OpenVinoNpu => Device::Npu,
-            DeviceConfig::NvidiaRtx5070TiCuda => Device::Cuda(0),
-            // WGPU is a reference-lane identity; execution lands in a later item.
-            DeviceConfig::NvidiaRtx5070TiWgpu => Device::Cpu,
-            DeviceConfig::Metal | DeviceConfig::AppleM4Metal => Device::Metal,
-            // M3 Air Metal is an identity-only request until a receipt-backed runtime item lands.
-            DeviceConfig::AppleM3AirMetal => Device::Cpu,
-            // MPSGraph is a separate proof label; runtime execution is introduced in a later item.
-            DeviceConfig::MpsGraph
-            | DeviceConfig::AppleM4MpsGraph
-            | DeviceConfig::AppleM3AirMpsGraph => Device::Cpu,
-            DeviceConfig::AppleM4CpuNeon | DeviceConfig::AppleM3AirCpuNeon => Device::Cpu,
-        }
-    }
-
-    /// Return the backend request identity represented by this config.
-    #[must_use]
-    pub fn backend_request(&self) -> BackendRequest {
-        match self {
-            DeviceConfig::Auto => BackendRequest::Auto,
-            DeviceConfig::Cpu => BackendRequest::Cpu,
-            DeviceConfig::Gpu(_) => BackendRequest::Gpu,
-            DeviceConfig::IntelNpu(_) => BackendRequest::IntelNpu,
-            DeviceConfig::OpenVinoNpu => BackendRequest::OpenVinoNpu,
-            DeviceConfig::NvidiaRtx5070TiCuda => BackendRequest::NvidiaRtx5070TiCuda,
-            DeviceConfig::NvidiaRtx5070TiWgpu => BackendRequest::NvidiaRtx5070TiWgpu,
-            DeviceConfig::Metal => BackendRequest::Metal,
-            DeviceConfig::MpsGraph => BackendRequest::MpsGraph,
-            DeviceConfig::AppleM4Metal => BackendRequest::AppleM4Metal,
-            DeviceConfig::AppleM4MpsGraph => BackendRequest::AppleM4MpsGraph,
-            DeviceConfig::AppleM4CpuNeon => BackendRequest::AppleM4CpuNeon,
-            DeviceConfig::AppleM3AirMetal => BackendRequest::AppleM3AirMetal,
-            DeviceConfig::AppleM3AirMpsGraph => BackendRequest::AppleM3AirMpsGraph,
-            DeviceConfig::AppleM3AirCpuNeon => BackendRequest::AppleM3AirCpuNeon,
-        }
-    }
-
-    /// Stable label for logs and planned receipt fields.
-    #[must_use]
-    pub fn backend_label(&self) -> String {
-        match self {
-            DeviceConfig::IntelNpu(0) => "intel-npu".to_string(),
-            DeviceConfig::IntelNpu(index) => format!("intel-npu:{index}"),
-            _ => self.backend_request().to_string(),
-        }
-    }
-}
+pub use config::DeviceConfig;
+pub use profile::{
+    DeviceProfileContract, DeviceProfileLabel, DeviceProfileStoragePolicy,
+    DeviceProfileUnsupportedClaim, ThermalPolicy,
+};
 
 #[cfg(test)]
 mod tests {
@@ -167,6 +38,7 @@ mod tests {
             parse_device("nvidia-rtx-5070-ti-wgpu"),
             Some(DeviceConfig::NvidiaRtx5070TiWgpu)
         );
+        assert_eq!(parse_device("intel-a770-opencl"), Some(DeviceConfig::IntelA770OpenCl));
         assert_eq!(parse_device("metal"), Some(DeviceConfig::Metal));
         assert_eq!(parse_device("mpsgraph"), Some(DeviceConfig::MpsGraph));
         assert_eq!(parse_device("apple-m4-metal"), Some(DeviceConfig::AppleM4Metal));
@@ -216,6 +88,43 @@ mod tests {
     }
 
     #[test]
+    fn apple_m3_air_profile_contract_is_shared_across_lane_labels() {
+        let metal = DeviceConfig::AppleM3AirMetal.device_profile_contract();
+        let mpsgraph = DeviceConfig::AppleM3AirMpsGraph.device_profile_contract();
+        let cpu = DeviceConfig::AppleM3AirCpuNeon.device_profile_contract();
+        assert!(metal.is_some());
+        assert_eq!(metal, mpsgraph);
+        assert_eq!(metal, cpu);
+
+        let Some(contract) = metal else {
+            return;
+        };
+        assert_eq!(contract.profile_id, "apple-m3-macbook-air");
+        assert_eq!(contract.soc_family, "Apple M3");
+        assert_eq!(contract.thermal_policy, super::ThermalPolicy::FanlessMobile);
+        assert_eq!(contract.storage.cache_root_required, true);
+        assert_eq!(contract.storage.large_artifact_sweep_allowed, true);
+        assert_eq!(contract.storage.model_binaries_committed, false);
+        assert_eq!(
+            contract.label("apple-m3-air-metal").map(|label| label.execution_available),
+            Some(false)
+        );
+        assert_eq!(
+            contract.label("apple-m3-air-mpsgraph").map(|label| label.execution_available),
+            Some(false)
+        );
+        assert_eq!(
+            contract.label("apple-m3-air-cpu-neon").map(|label| label.execution_available),
+            Some(true)
+        );
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::MetalModelInference));
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::MpsGraphModelInference));
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::NeuralEngineExecution));
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::Qk256AppleSilicon));
+        assert!(DeviceConfig::AppleM4CpuNeon.device_profile_contract().is_none());
+    }
+
+    #[test]
     fn rtx_5070_ti_backend_labels_do_not_alias_legacy_gpu_labels() {
         let generic_gpu = DeviceConfig::Gpu(0);
         let generic_cuda = DeviceConfig::Gpu(0);
@@ -228,6 +137,20 @@ mod tests {
         assert_ne!(rtx_cuda.backend_label(), generic_cuda.backend_label());
         assert_ne!(rtx_wgpu.backend_label(), generic_gpu.backend_label());
         assert_ne!(rtx_wgpu.backend_label(), generic_cuda.backend_label());
+    }
+
+    #[test]
+    fn intel_a770_opencl_backend_label_does_not_alias_generic_gpu_or_oneapi() {
+        let generic_gpu = DeviceConfig::Gpu(0);
+        let generic_opencl_alias = DeviceConfig::Gpu(0);
+        let a770 = DeviceConfig::IntelA770OpenCl;
+
+        assert_eq!(a770.backend_label(), "intel-a770-opencl");
+        assert_eq!(a770.backend_request().to_string(), "intel-a770-opencl");
+        assert_eq!(a770.resolve(), bitnet_common::Device::OpenCL(0));
+        assert_ne!(a770.backend_label(), generic_gpu.backend_label());
+        assert_ne!(a770.backend_label(), generic_opencl_alias.backend_label());
+        assert_ne!(a770.backend_request(), bitnet_common::BackendRequest::OneApi);
     }
 
     #[test]
@@ -348,6 +271,7 @@ mod tests {
             DeviceConfig::OpenVinoNpu,
             DeviceConfig::NvidiaRtx5070TiCuda,
             DeviceConfig::NvidiaRtx5070TiWgpu,
+            DeviceConfig::IntelA770OpenCl,
             DeviceConfig::Metal,
             DeviceConfig::MpsGraph,
             DeviceConfig::AppleM4Metal,

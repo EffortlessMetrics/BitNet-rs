@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "artifact_kind": "dense_gguf_q8_payload_bearing_hook_contract",
+  "work_item": "SLM-CPU-060",
+  "source_artifacts": [
+    "ci/slm-cpu/intel-i5-8250u/2026-05-20/qwen3-packed-q8-compute-kernel-proof-gate.json"
+  ],
+  "model": {
+    "repo": "Qwen/Qwen3-0.6B-GGUF",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0"
+  },
+  "hook_contract": {
+    "crate": "bitnet-transformer",
+    "descriptor": "DenseLinearRuntimeHookDescriptor",
+    "payload_type": "DenseLinearPackedQ8Payload",
+    "payload_fields": [
+      "tensor_name",
+      "packed_q8_bytes",
+      "q8_block_size",
+      "q8_block_count",
+      "matrix_rows",
+      "matrix_cols"
+    ],
+    "boundary_fields": [
+      "sidecar_payload_bytes_available",
+      "sidecar_payload_bytes",
+      "sidecar_q8_block_count",
+      "sidecar_matrix_rows",
+      "sidecar_matrix_cols",
+      "sidecar_payload_contract_valid"
+    ],
+    "payload_contract_valid_requires": [
+      "payload tensor_name matches descriptor tensor_name",
+      "q8_block_size = 32",
+      "q8_block_count = ceil(matrix_rows * matrix_cols / q8_block_size)",
+      "packed_q8_bytes.len = q8_block_count * (2 + q8_block_size)",
+      "matrix_rows > 0",
+      "matrix_cols > 0"
+    ]
+  },
+  "runtime_behavior": {
+    "selected_path": "eager_f32_candle",
+    "selected_kernel": "dense-f32-candle-linear",
+    "runtime_compute_enabled": false,
+    "dense_runtime_replaced": false,
+    "eager_f32_runtime_preserved": true,
+    "speedup_claim": false,
+    "generated_id_preservation_required_before_runtime_use": true,
+    "production_default_payload_attached": false
+  },
+  "evidence": {
+    "contract_test": "dense_linear_runtime_hook_boundary_can_carry_payload_without_enabling_compute",
+    "targeted_transformer_command": "cargo test --locked -p bitnet-transformer --no-default-features --features cpu dense_linear_runtime_hook",
+    "targeted_model_command": "cargo test --locked -p bitnet-models --no-default-features --features cpu dense_gguf_q8"
+  },
+  "remaining_gate_before_compute": {
+    "status": "blocked",
+    "blockers": [
+      "production_loader_still_attaches_metadata_only_hook_descriptors",
+      "payload_bearing_contract_not_yet_wired_from_real_qwen3_gguf_sidecar_registry",
+      "packed_q8_dequant_fused_matvec_not_invoked_by_production_transformer",
+      "before_after_qwen3_q8_warm_session_receipts_missing_for_payload_candidate"
+    ],
+    "next_safe_step": "wire one exact Qwen3 Q8_0 dense-linear tensor from GGUF sidecar bytes into DenseLinearPackedQ8Payload behind an opt-in gate, then emit before/after warm-session receipts proving generated IDs, decoded text, tokenizer authority, selected backend/kernel identity, model SHA, dense hook-selection identity, and fallback=false are unchanged"
+  },
+  "claim_boundary": {
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "q4_q5_runtime_support": false,
+    "server_claim": false,
+    "accelerator_claim": false,
+    "openvino_or_uhd620_claim": false,
+    "qwen35_or_hybrid_claim": false,
+    "bitnet_qk256_claim": false
+  }
+}

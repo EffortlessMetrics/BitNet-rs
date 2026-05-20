@@ -1,0 +1,20 @@
+timestamp = "2026-05-19T10:55:53Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-015"
+event = "in_progress"
+actor = "codex"
+from = "blocked"
+to = "in_progress"
+branch = "codex/cuda-model-015-qwen3-repeated-comparator-plan"
+summary = "Started the Qwen3 repeated same-artifact CPU/CUDA comparator baseline after exact-profile server readiness was accepted."
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/qwen3-0_6b-benchmark-qualification.json",
+  "docs/reports/CUDA_MODEL_015_QWEN3_REPEATED_COMPARATOR_BASELINE.md",
+]
+
+notes = [
+  "The existing Qwen3 benchmark review remains insufficient for speed or benchmark-qualified promotion because runs_per_backend=1 and repeated_evidence=false.",
+  "The baseline must compare the same Qwen3 artifact on CPU AVX-512 and RTX 5070 Ti CUDA for one_token, short_decode_8, short_decode_32, warm_session_3_turns, and decode_128_from_warm_context.",
+  "Speedup, benchmark-qualified speed, full CUDA residency, broad dense GGUF readiness, Qwen2.5 inheritance, and BitNet packed I2_S/QK256 proof remain forbidden claims.",
+]

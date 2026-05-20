@@ -33,10 +33,17 @@ That receipt is evidence for the bounded smoke path. It is not, by itself, a
 BITNET-SPEC-0010 and found the receipt is missing artifact checksum identity,
 endpoint or request-profile scope, and generation-policy fields. CUDA-SERVER-004
 hardens future server receipts to emit those fields and adds a receipt validator,
-but still does not promote `server_ready=true`. A later promotion PR must refresh
-or supplement the receipt from the hardened server path and pass the validator
-before applying the exact-profile requirements in BITNET-SPEC-0010. The model
-coverage row remains false until that later promotion PR lands.
+but still does not promote `server_ready=true`. CUDA-SERVER-005 refreshes the
+dense Qwen receipt from the hardened server path:
+
+```text
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json
+```
+
+That receipt carries the artifact SHA-256, endpoint/request profile, generation
+policy, strict backend, dense route, quality gate, and false speed/full
+residency/BitNet proof booleans required by BITNET-SPEC-0010. The model
+coverage row promotes `server_ready=true` only for that exact bounded profile.
 
 Official BitNet I2_S/QK256 does not have a server-readiness claim from the dense
 Qwen server smoke. It needs its own exact-profile server receipt before any
@@ -91,7 +98,7 @@ smoke receipts stay immutable evidence for what happened.
 
 ## Work Item: CUDA-SERVER-004
 
-Status: proposed
+Status: merged
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, BITNET-SPEC-0010
 Linked ADRs: BITNET-ADR-0004
@@ -151,7 +158,7 @@ readiness.
 
 ## Work Item: CUDA-SERVER-005
 
-Status: proposed
+Status: in_progress
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, BITNET-SPEC-0010
 Linked ADRs: BITNET-ADR-0004
@@ -165,6 +172,41 @@ Promote dense Qwen2.5 server readiness only for the exact bounded profile after
 a refreshed or supplemental receipt carries the artifact checksum, endpoint or
 request-profile scope, and generation policy required by BITNET-SPEC-0010 and
 passes the server shared-engine receipt validator.
+
+### Production Delta
+
+The dense Qwen2.5 0.5B Q8_0 model coverage row becomes server-ready only for
+the refreshed non-streaming RTX 5070 Ti shared-engine `/v1/chat/completions`
+profile. The promotion does not change runtime behavior.
+
+### Acceptance
+
+- The refreshed receipt path is
+  `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json`.
+- The receipt includes model SHA-256, endpoint profile, request profile,
+  generation policy, strict selected backend, runtime API, dense route, quality
+  gate, and false speed/full-residency/BitNet proof booleans.
+- The receipt passes the `server_shared_engine_chat_completion` validator.
+- `ci/model-artifacts/model-coverage-matrix.toml`,
+  `docs/model-artifacts/MODEL_COVERAGE_MATRIX.md`, and
+  `docs/status/CUDA_CAPABILITY_MATRIX.md` agree on the exact-profile
+  `server_ready=true` promotion.
+- Speedup, full CUDA residency, global dense GGUF server readiness, BitNet
+  QK256 server readiness, concurrency, deployment readiness, and broad chat
+  quality remain false/non-claims.
+
+### Proof Commands
+
+```bash
+python -m json.tool ci\hardware\windows-9950x3d-rtx5070ti\2026-05-17\server-strict-dense-qwen25-q8-smoke.json
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation --no-default-features server_shared_engine_chat_completion
+cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- receipts explain ci\hardware\windows-9950x3d-rtx5070ti\2026-05-17\server-strict-dense-qwen25-q8-smoke.json
+cargo run --locked -p xtask --no-default-features -- check-model-coverage
+cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti
+cargo run --locked -p xtask --no-default-features -- campaign generate --check
+cargo run --locked -p xtask --no-default-features -- check-file-policy --report-dir target/bitnet/reports --fail-on-error
+git diff --check
+```
 
 ### Claim Boundary
 

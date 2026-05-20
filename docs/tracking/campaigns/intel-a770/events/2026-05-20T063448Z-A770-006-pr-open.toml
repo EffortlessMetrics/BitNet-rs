@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T06:34:48Z"
+campaign = "intel-a770"
+item = "A770-006"
+event = "pr_open"
+pr = 6110
+head_sha = "65aeb1a7dda1a18d7fad3e09b644c31321749c78"
+branch = "codex/intel-a770/A770-006-opencl-parity"
+actor = "codex"
+
+notes = [
+  "Opened PR #6110 for A770-006 selected-device OpenCL matmul_i2s CPU parity.",
+  "The receipt records selected_backend=intel-arc-a770-opencl, runtime_api=opencl, kernel_name=matmul_i2s, fallback_used=false, and exact CPU parity for the diagnostic kernel proof.",
+  "No official BitNet QK256 production semantics, BitNet inference, trusted-partial acceleration, full residency, or performance speedup claim is promoted.",
+]

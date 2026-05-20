@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T07:05:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-050"
+event = "in_progress"
+from = "proposed"
+to = "ready"
+actor = "codex"
+
+notes = [
+  "Queued the next packed Q8_0 sidecar runtime boundary after SLM-CPU-049.",
+  "The item adds a production-compute-hook availability surface while preserving eager F32 Candle runtime selection.",
+  "No packed sidecar production compute, speedup, generated-ID/text change, Q4/Q5, accelerator, Qwen3.5, or BitNet QK256 claim is in scope.",
+]

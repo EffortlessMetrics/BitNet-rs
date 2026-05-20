@@ -1,0 +1,74 @@
+id = "qwen36"
+title = "Qwen3.6 governed model family"
+status = "active"
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+plan = "plans/qwen36/implementation-plan.md"
+source_map = "docs/qwen/qwen36/README.md"
+
+objective = "Govern Qwen3.6 as a separate modern dense, multimodal, and agentic model-family lane with source-of-truth docs, spec placeholders, and registered-only candidate coverage rows before any native BitNet-rs runtime or quality claim."
+
+end_state = [
+  "Qwen3.6 source map, implementation plan, and proposal/spec placeholders exist.",
+  "Model coverage rows register Qwen3.6 candidates as reference-only or candidate-only with claim booleans false.",
+  "Future Qwen3.6 work cannot inherit BitNet, Qwen2.5, or Qwen3-0.6B proof claims.",
+]
+
+hard_constraints = [
+  "Qwen3.6 registration is not native BitNet-rs inference support.",
+  "External engine behavior is reference-only until native receipts exist.",
+  "Do not claim answer quality, server support, performance, GPU/NPU execution, Qwen3.5 support, or BitNet QK256 changes.",
+]
+
+[[work_item]]
+id = "QWEN36-DOCS-000"
+status = "merged"
+pr = 5892
+head_sha = "f9fd728e3ac76ba853c7c0165641bcd238eff20f"
+merge_sha = "a2b374225d01908e96a5858d0268b8116b928da2"
+branch = "codex/add-qwen3.6-as-a-governed-model-family"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Register the Qwen3.6 family governance lane as documentation and model-coverage scaffolding only. The slice must add the source map, implementation plan, proposal/spec placeholders, candidate coverage rows, and campaign tracker entry without claiming native runtime support, server inference, answer quality, performance, GPU/NPU execution, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check qwen36",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/proposals/**",
+  "docs/qwen/qwen36/**",
+  "docs/specs/**",
+  "docs/status/**",
+  "docs/tracking/campaigns/qwen36/**",
+  "docs/tracking/generated/**",
+  "plans/qwen36/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "Qwen3.6 candidates are registered as governed reference-only or candidate-only rows.",
+  "The Qwen3.6 lane has a source map, plan, and spec placeholders for future proof work.",
+]
+must_not_claim = [
+  "Native BitNet-rs Qwen3.6 inference works.",
+  "Qwen3.6 answer quality is proven.",
+  "Qwen3.6 server support is available.",
+  "Qwen3.6 performance is measured.",
+  "GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.6 inherits BitNet, Qwen2.5, or Qwen3-0.6B proof claims.",
+  "Qwen3.5 support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]

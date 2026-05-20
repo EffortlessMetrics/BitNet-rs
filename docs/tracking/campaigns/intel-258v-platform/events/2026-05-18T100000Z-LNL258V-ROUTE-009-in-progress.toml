@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T10:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-009"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-009-profile-timing-applicability"
+summary = "Started profile timing applicability evidence for Lunar Lake route-profile comparison."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "Route-profile comparison should distinguish profile-matching timing from proxy timing reused from bounded operator asks.",
+  "Measured prompt/output token counts and applicability notes should be recorded per route/profile.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted with no speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]

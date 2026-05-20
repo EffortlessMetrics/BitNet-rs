@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-18T16:40:00Z"
+event = "in_progress"
+item = "LNL258V-REG-006"
+branch = "codex/lunar-lake/LNL258V-REG-006-blocker-summary"
+actor = "codex"
+summary = "Started LNL258V-REG-006 to carry grouped route promotion blocker summaries into strict Lunar Lake regression v2."
+
+notes = [
+  "This item surfaces route/profile coverage and next-action hints from route-profile comparison in the regression bundle.",
+  "No new inference, route promotion, speedup, power-advantage, accelerator, native OpenCL/NPU, or BitNet QK256/I2_S claim is made.",
+]

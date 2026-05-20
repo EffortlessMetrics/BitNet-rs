@@ -2,10 +2,11 @@ id = "intel-a770"
 title = "Intel Arc A770 validation"
 status = "active"
 
-objective = "Validate Intel Arc A770 as an OpenCL-first BitNet acceleration lane with selected-device receipts and no CPU, NPU, CUDA, or OpenVINO GPU conflation."
+objective = "Validate Intel Arc A770 as an OpenCL-first BitNet acceleration lane with selected-device receipts and no CPU, NPU, CUDA, OpenVINO GPU, or uncommitted proof conflation."
 
 end_state = [
-  "A770 backend identity is distinct from generic OpenCL and Intel NPU.",
+  "A770 backend identity is distinct from generic OpenCL, Intel NPU, Arc 140V, CUDA, and CPU fallback.",
+  "Tracker, route matrix, kernel matrix, model contract, and claim ledger agree on the committed proof level.",
   "Runtime probe records OpenCL, Level Zero, OpenVINO GPU, PCI, VRAM, ReBAR, and render-node facts.",
   "Tiny OpenCL smoke executes with fallback_used=false.",
   "CPU/OpenCL parity exists for one kernel or subgraph.",
@@ -14,25 +15,75 @@ end_state = [
 
 hard_constraints = [
   "OpenCL-first for native A770 proof.",
+  "Uncommitted transcript evidence cannot promote A770 claims.",
   "OpenVINO GPU is reference only.",
+  "Generic OpenCL and Arc 140V proof cannot count as A770 proof.",
   "CPU fallback cannot count as A770 execution.",
 ]
 
 [[work_item]]
-id = "A770-003"
-status = "ready"
-branch = "codex/intel-a770/A770-003-backend-identity"
+id = "A770-000"
+status = "merged"
+pr = 5623
+head_sha = "bfb3641f72d85af126184711ed93ced8ba632e6b"
+merge_sha = "27f61f798913a795edc310b31905a2825e50b427"
+branch = "codex/intel-a770/A770-000-truth-reconciliation"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = []
+acceptance = "Reconcile active.toml, CAMPAIGN.md, route matrix, kernel matrix, claim ledger, and model contract so no full inference or trusted-partial A770 claim is present without committed claim-grade receipts."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/claims/claim-ledger.json",
+  "ci/hardware/device-kernel-routing.toml",
+  "ci/hardware/amd-5700x-intel-a770/a770-kernel-capability-matrix.json",
+  "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml",
+  "docs/reports/OPENCL_A770_000_TRUTH_RECONCILIATION.md",
+  "docs/tracking/campaigns/intel-a770/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/src/**",
+]
+may_claim = [
+  "Committed A770 OpenCL proof remains diagnostic until claim-grade receipts land.",
+]
+must_not_claim = [
+  "A770 OpenCL execution works.",
+  "OpenVINO GPU proves native OpenCL kernels.",
+  "Generic OpenCL or Arc 140V proof proves A770.",
+  "BitNet inference works on A770.",
+  "A770 trusted partial acceleration is claim-grade.",
+  "Full A770 residency is proven.",
+]
+
+[[work_item]]
+id = "A770-003"
+status = "merged"
+branch = "codex/intel-a770/A770-003-backend-identity"
+pr = 5969
+head_sha = "f86bc087913a3c2251a8a97c730ac060b2ff7d18"
+merge_sha = "9deb49448c1884813a3d06d5ca6b2b73d1e7eda9"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-000"]
 acceptance = "Preserve Intel Arc A770 requested and selected backend identity without adding kernels or inference claims."
 commands = [
   "cargo fmt --all -- --check",
   "cargo test --locked -p bitnet-device-config-core --no-default-features --features cpu",
 ]
 allowed_paths = [
+  "crates/bitnet-common/src/backend_selection.rs",
   "crates/bitnet-common/src/types.rs",
   "crates/bitnet-device-config-core/src/lib.rs",
   "crates/bitnet-inference/src/backends.rs",
@@ -52,4 +103,146 @@ must_not_claim = [
   "A770 OpenCL execution works.",
   "OpenVINO GPU proves native OpenCL kernels.",
   "BitNet inference works on A770.",
+]
+
+[[work_item]]
+id = "A770-004"
+status = "merged"
+branch = "codex/intel-a770/A770-004-runtime-probe"
+pr = 5971
+head_sha = "7b0895e4b8a1900287f831b64ea6222e1ac52eb4"
+merge_sha = "0922f5ffd7f7e08e6f3c750cea453d8afc4dc920"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-003"]
+acceptance = "Add A770 runtime probe evidence without promoting OpenCL execution or BitNet inference claims."
+commands = [
+  "cargo test --locked -p bitnet-device-probe --no-default-features --features opencl",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A770 runtime probe records selected-device facts.",
+]
+must_not_claim = [
+  "A770 OpenCL kernels execute.",
+  "BitNet inference works on A770.",
+]
+
+[[work_item]]
+id = "A770-005"
+status = "merged"
+pr = 6072
+branch = "codex/intel-a770/A770-005-opencl-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-004"]
+acceptance = "Run a tiny selected-device OpenCL smoke with fallback_used=false and CPU parity, without BitNet inference claims."
+commands = [
+  "confirm host exposes Intel Arc A770 PCI DEV_56A0 before running the opt-in smoke",
+  "BITNET_RUN_A770_OPENCL_SMOKE=1 cargo test --locked -p bitnet-device-probe --no-default-features --features opencl a770",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-device-probe/**",
+  "ci/hardware/amd-5700x-intel-a770/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Tiny selected-device A770 OpenCL smoke executes with fallback_used=false when the opt-in hardware test is run.",
+]
+must_not_claim = [
+  "BitNet QK256 runs on A770.",
+  "BitNet inference works on A770.",
+  "A770 trusted partial acceleration is claim-grade.",
+  "Arc 140V DEV_64A0 can satisfy A770 DEV_56A0 selected-device smoke.",
+]
+
+[[work_item]]
+id = "A770-006"
+status = "merged"
+pr = 6110
+head_sha = "65aeb1a7dda1a18d7fad3e09b644c31321749c78"
+merge_sha = "e98d4fb6574087a83ed47e6dae7316d9dc12f40d"
+branch = "codex/intel-a770/A770-006-opencl-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-005"]
+acceptance = "Add CPU/OpenCL parity for a minimal kernel or subgraph without promoting official BitNet QK256 inference."
+commands = [
+  "cargo run --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity -- --receipt ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-parity.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/**",
+  "ci/hardware/amd-5700x-intel-a770/**",
+  "docs/tracking/campaigns/intel-a770/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A minimal OpenCL kernel or subgraph has CPU parity on the selected A770 route.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are proven.",
+  "BitNet inference works on A770.",
+  "Full A770 residency is proven.",
+]
+
+[[work_item]]
+id = "A770-007"
+status = "merged"
+pr = 6113
+head_sha = "bb695ecd9819c4269fb19eeed84d064fef5171c5"
+merge_sha = "d248ffd3077da72eb1be665f281aa1cd2a4a4f14"
+branch = "codex/intel-a770/A770-007-receipt-identity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-006"]
+acceptance = "Record selected-device receipt identity for the validated smoke/parity path before any performance or trusted-partial claim."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/amd-5700x-intel-a770/**",
+  "docs/reports/**",
+  "docs/tracking/campaigns/intel-a770/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Selected-device receipt identity exists for the validated A770 smoke/parity path.",
+]
+must_not_claim = [
+  "A770 trusted partial acceleration is claim-grade.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
 ]

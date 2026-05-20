@@ -2,7 +2,7 @@ schema_version = "1.0"
 policy = "ci-lane-whitelist"
 owner = "release/ci"
 status = "advisory"
-updated = "2026-05-07"
+updated = "2026-05-18"
 
 # Linear LEM (Linux-Equivalent Minutes) budget bands for ordinary PRs.
 # These are the planning targets, not enforcement. Enforcement is
@@ -118,11 +118,11 @@ tier = "frontdoor"
 default_pr = true
 blocking = true
 runner = "ubuntu_22_04"
-base_lem = 12
+base_lem = 8
 owner = "core/features"
 intent = "Prevent drift in canonical PR feature combinations."
-failure_mode = "No-default/cpu/full-cli feature combinations stop compiling."
-proof_obligation = "Run reduced PR feature matrix: no-features, cpu, cpu+full-cli."
+failure_mode = "No-default/cpu feature combinations stop compiling."
+proof_obligation = "Run reduced PR feature matrix: no-features and cpu."
 evidence = ["job logs"]
 allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
 duplicate_of = ["ci-core-build-test where CPU overlap exists"]
@@ -130,12 +130,54 @@ review_after = "2026-06-07"
 expires = "2026-11-07"
 
 [[lane]]
+id = "feature-matrix-full-cli"
+workflow = ".github/workflows/feature-matrix.yml"
+job = "Feature Matrix full-cli PR smoke"
+kind = "feature"
+tier = "frontdoor"
+default_pr = false
+blocking = true
+runner = "ubuntu_22_04"
+base_lem = 5
+owner = "core/features"
+intent = "Keep full CLI feature wiring covered only for CLI/server/validation/model-cache risk."
+failure_mode = "The cpu+full-cli feature combination stops compiling for user-facing CLI/server paths."
+proof_obligation = "Run cargo check --workspace --locked --no-default-features --features cpu,full-cli when selected by path or label."
+evidence = ["job logs", "ci-plan.json selected_lanes"]
+allowed_triggers = ["pull_request", "workflow_dispatch"]
+labels = ["full-cli", "feature-matrix", "full-ci"]
+duplicate_of = ["feature-matrix-full"]
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "test-telemetry-route"
+workflow = ".github/workflows/test-telemetry.yml"
+job = "Route Test Telemetry"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "testing/telemetry"
+intent = "Select test telemetry only for non-PR events or explicit telemetry labels."
+failure_mode = "Ordinary PRs spend advisory nextest/JUnit minutes even when no telemetry signal was requested."
+proof_obligation = "Evaluate event and labels and emit selected=true/false with a route reason."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
+labels = ["test-telemetry", "slow-tests", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
 id = "test-telemetry"
 workflow = ".github/workflows/test-telemetry.yml"
 job = "Test Telemetry (JUnit + slow tests)"
 kind = "observability"
 tier = "frontdoor-advisory"
-default_pr = true
+default_pr = false
 blocking = false
 runner = "ubuntu_22_04"
 base_lem = 18
@@ -144,10 +186,11 @@ intent = "Emit nextest JUnit and slow-test summaries for PR test-observability w
 failure_mode = "Per-test timing, slow-test, and future flake/actuals signals remain invisible."
 proof_obligation = "Run cargo-nextest on the CI Core Rust test surface and upload target/nextest/ci/junit.xml."
 evidence = ["target/nextest/ci/junit.xml", "GitHub step summary"]
-allowed_triggers = ["pull_request:path-gated", "push", "workflow_dispatch"]
+allowed_triggers = ["push", "workflow_dispatch", "pull_request:labeled"]
+labels = ["test-telemetry", "slow-tests", "full-ci"]
 duplicate_of = ["ci-core-build-test for pass/fail semantics"]
-review_after = "2026-06-07"
-expires = "2026-11-07"
+review_after = "2026-06-18"
+expires = "2026-11-18"
 
 [[lane]]
 id = "ci-actuals"
@@ -218,6 +261,220 @@ review_after = "2026-06-07"
 expires = "2026-11-07"
 
 [[lane]]
+id = "macos-arm64-route"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "Route macOS PR lane"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "release/ci"
+intent = "Select macOS proof only for labels, main/manual/merge-group, or Mac/Metal-specific paths."
+failure_mode = "Ordinary PRs silently launch expensive Apple Silicon runners or selected Apple proof is invisible."
+proof_obligation = "Evaluate event, labels, and Mac/Metal paths and emit selected=true/false with a route reason."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch", "merge_group"]
+labels = ["macos", "apple-silicon", "metal", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "macos-arm64-build-test"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "macOS: Build & Test (CPU)"
+kind = "platform"
+tier = "expensive"
+default_pr = false
+blocking = false
+runner = "macos_14"
+base_minutes = 25
+owner = "platform/apple"
+intent = "Validate CPU build, unit tests, and CPU golden path on Apple Silicon when Apple proof is selected."
+failure_mode = "Apple Silicon CPU build or runtime failures are missed for selected Mac proof."
+proof_obligation = "Run selected core CPU build, unit tests, and bitnet-inference CPU golden path on macOS arm64."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "merge_group", "pull_request:labeled", "pull_request:path-gated"]
+labels = ["macos", "apple-silicon", "full-ci"]
+expensive = true
+expensive_reason = "macOS is treated as 10x Linux in LEM planning."
+duplicate_of = ["ci-core-build-test"]
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "macos-arm64-metal-build"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "macOS: Build (Metal)"
+kind = "platform"
+tier = "expensive"
+default_pr = false
+blocking = false
+runner = "macos_14"
+base_minutes = 25
+owner = "platform/apple"
+intent = "Compile Metal feature surfaces on Apple Silicon when Metal or Apple proof is selected."
+failure_mode = "Metal feature compilation breaks outside Linux-only ordinary PR proof."
+proof_obligation = "Run cargo check for the selected CPU and Metal package set on macOS arm64."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "merge_group", "pull_request:labeled", "pull_request:path-gated"]
+labels = ["macos", "apple-silicon", "metal", "full-ci"]
+expensive = true
+expensive_reason = "macOS is treated as 10x Linux in LEM planning."
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "macos-arm64-workflow-clippy"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "macOS: Clippy"
+kind = "platform"
+tier = "expensive"
+default_pr = false
+blocking = false
+runner = "macos_14"
+base_minutes = 15
+owner = "platform/apple"
+intent = "Run core Clippy on Apple Silicon when Apple proof is selected."
+failure_mode = "Apple Silicon-specific lint or compile-shape failures are missed for selected Mac proof."
+proof_obligation = "Run Clippy for selected core crates on macOS arm64 with CPU features."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "merge_group", "pull_request:labeled", "pull_request:path-gated"]
+labels = ["macos", "apple-silicon", "full-ci"]
+expensive = true
+expensive_reason = "macOS is treated as 10x Linux in LEM planning."
+duplicate_of = ["ci-core-clippy", "macos-arm64-clippy"]
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "macos-arm64-format"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "macOS: Format"
+kind = "lint"
+tier = "selected-support"
+default_pr = false
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 5
+owner = "core/rust"
+intent = "Preserve the selected macOS workflow format check without consuming Apple Silicon capacity."
+failure_mode = "The selected macOS workflow can pass platform jobs while formatting is unchecked in that workflow."
+proof_obligation = "Run cargo fmt --all -- --check when the macOS workflow is selected."
+evidence = ["job logs"]
+allowed_triggers = ["push", "workflow_dispatch", "merge_group", "pull_request:labeled", "pull_request:path-gated"]
+labels = ["macos", "apple-silicon", "metal", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "macos-arm64-success"
+workflow = ".github/workflows/macos-arm64.yml"
+job = "macOS arm64 Success"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "release/ci"
+intent = "Keep the branch-protection-compatible macOS summary check green when macOS is unselected."
+failure_mode = "Unselected macOS lanes leave a missing or failed branch-protection summary check."
+proof_obligation = "Pass on unselected PRs; on selected runs, fail unless all selected macOS workflow jobs succeed."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch", "merge_group"]
+labels = ["macos", "apple-silicon", "metal", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "performance-tracking-route"
+workflow = ".github/workflows/performance-tracking.yml"
+job = "Route Performance Tracking"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "release/ci"
+intent = "Select performance tracking only for non-PR events or explicit performance labels."
+failure_mode = "Ordinary PRs spend duplicated workspace-check minutes in Performance Baseline Tracking."
+proof_obligation = "Evaluate event and labels and emit selected=true/false with a route reason."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "schedule", "workflow_dispatch"]
+labels = ["performance", "perf", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "performance-tracking-smoke"
+workflow = ".github/workflows/performance-tracking.yml"
+job = "Cargo Tests (smoke)"
+kind = "performance"
+tier = "selected-support"
+default_pr = false
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 20
+owner = "performance"
+intent = "Run the historical workspace performance-smoke check only when performance tracking is selected."
+failure_mode = "Selected performance tracking loses the quick workspace compile smoke."
+proof_obligation = "Run cargo check --locked --workspace --no-default-features --features cpu."
+evidence = ["job logs"]
+allowed_triggers = ["push", "schedule", "workflow_dispatch", "pull_request:labeled"]
+labels = ["performance", "perf", "full-ci"]
+duplicate_of = ["ci-core-build-test", "feature-matrix-pr"]
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "performance-tracking-benchmark"
+workflow = ".github/workflows/performance-tracking.yml"
+job = "Performance Benchmark (${{ matrix.platform }})"
+kind = "performance"
+tier = "deep"
+default_pr = false
+blocking = false
+runner = "macos_latest"
+base_lem = 1320
+owner = "performance"
+intent = "Run the full scheduled/manual performance benchmark matrix outside ordinary PR defaults."
+failure_mode = "Release and scheduled performance regressions are not tracked across the benchmark matrix."
+proof_obligation = "Build optimized CPU artifacts, generate fixtures, run benchmark scripts, detect regressions, and upload benchmark artifacts."
+evidence = ["benchmark-results-* artifacts", "job logs", "GitHub step summary"]
+allowed_triggers = ["schedule", "workflow_dispatch"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "performance-tracking-summary"
+workflow = ".github/workflows/performance-tracking.yml"
+job = "Performance Summary"
+kind = "performance"
+tier = "deep-summary"
+default_pr = false
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 15
+owner = "performance"
+intent = "Aggregate scheduled/manual performance benchmark artifacts into a durable summary."
+failure_mode = "Benchmark artifacts exist without a cross-platform summary or scheduled tracking issue."
+proof_obligation = "Download benchmark artifacts, generate performance-summary.md, optionally create the scheduled tracking issue, and upload the summary artifact."
+evidence = ["performance-summary artifact", "job logs"]
+allowed_triggers = ["schedule", "workflow_dispatch"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
 id = "feature-matrix-full"
 workflow = ".github/workflows/feature-matrix.yml"
 job = "Feature Matrix Full"
@@ -235,7 +492,7 @@ evidence = ["job logs"]
 allowed_triggers = ["push", "workflow_dispatch", "pull_request:labeled"]
 labels = ["feature-matrix", "full-ci"]
 expensive = true
-duplicate_of = ["feature-matrix-pr"]
+duplicate_of = ["feature-matrix-pr", "feature-matrix-full-cli"]
 review_after = "2026-06-07"
 expires = "2026-11-07"
 
@@ -287,12 +544,33 @@ review_after = "2026-06-07"
 expires = "2026-11-07"
 
 [[lane]]
+id = "compatibility-msrv-route"
+workflow = ".github/workflows/compatibility.yml"
+job = "Route MSRV Compatibility"
+kind = "control"
+tier = "frontdoor"
+default_pr = true
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 1
+owner = "release/compat"
+intent = "Select MSRV compatibility only for global compatibility risk, main/manual, or explicit labels."
+failure_mode = "Leaf implementation PRs spend MSRV minutes despite not changing compatibility surfaces."
+proof_obligation = "Evaluate event, labels, and compatibility-risk paths and emit selected=true/false with a route reason."
+evidence = ["GitHub step summary", "job logs"]
+allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
+labels = ["msrv", "compatibility", "full-ci"]
+duplicate_of = []
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
 id = "compatibility-msrv"
 workflow = ".github/workflows/compatibility.yml"
 job = "MSRV"
 kind = "compatibility"
 tier = "risk-gated"
-default_pr = true
+default_pr = false
 blocking = true
 runner = "ubuntu_22_04"
 base_lem = 12
@@ -301,10 +579,32 @@ intent = "Validate declared Rust compatibility for manifest/public crate changes
 failure_mode = "MSRV drifts silently after dependency or public crate changes."
 proof_obligation = "Run MSRV check when manifest/toolchain/public API changes."
 evidence = ["job logs"]
-allowed_triggers = ["pull_request:path-gated", "push", "workflow_dispatch"]
+allowed_triggers = ["pull_request:path-gated", "pull_request:labeled", "push", "workflow_dispatch"]
+labels = ["msrv", "compatibility", "full-ci"]
 duplicate_of = []
-review_after = "2026-06-07"
-expires = "2026-11-07"
+review_after = "2026-06-18"
+expires = "2026-11-18"
+
+[[lane]]
+id = "compatibility-msrv-workspace-informational"
+workflow = ".github/workflows/compatibility.yml"
+job = "MSRV Workspace Coverage (informational)"
+kind = "compatibility"
+tier = "risk-gated-advisory"
+default_pr = false
+blocking = false
+runner = "ubuntu_22_04"
+base_lem = 20
+owner = "release/compat"
+intent = "Show broader workspace MSRV coverage when MSRV compatibility is selected."
+failure_mode = "Selected MSRV proof lacks visibility into workspace-wide compatibility drift."
+proof_obligation = "Run cargo check --workspace --all-targets --locked --no-default-features --features cpu as advisory evidence."
+evidence = ["job logs"]
+allowed_triggers = ["pull_request:path-gated", "pull_request:labeled", "push", "workflow_dispatch"]
+labels = ["msrv", "compatibility", "full-ci"]
+duplicate_of = ["compatibility-msrv"]
+review_after = "2026-06-18"
+expires = "2026-11-18"
 
 [[lane]]
 id = "compatibility-ffi-abi"

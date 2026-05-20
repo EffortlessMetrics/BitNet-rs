@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T07:20:00Z"
+event = "pr_open"
+item = "LNL258V-ASK-007"
+pr = 6041
+branch = "codex/lunar-lake/LNL258V-ASK-007-auto-gpu-ask-short"
+head_sha = "aab012d418858a46fc7d09c5544f3731b380b147"
+actor = "codex"
+summary = "Opened PR #6041 to index the ask_short auto GPU ask receipt in strict regression."
+
+notes = [
+  "The PR adds `--ask-short-ask-receipt` to `bitnet lunar-lake regress` and carries the ask_short summary into operator comparison.",
+  "The refreshed regression bundle records ask_short_ask_receipt_indexed=true and ask_short_auto_ask_ready=true.",
+  "The scope preserves no new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]

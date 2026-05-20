@@ -7,9 +7,10 @@
 #[cfg(feature = "trace")]
 use super::BitNetError;
 use super::{
-    LayerKVCache, MultiHeadAttention, dbg_finite, dbg_stats, debug_attn_enabled,
-    debug_attn_scale_enabled, debug_gqa_enabled, debug_rope_enabled, qwen_trace_event,
-    qwen_trace_layer_enabled, qwen_trace_tensor, trace_rms_enabled,
+    DenseLinearRuntimeHookRegistry, LayerKVCache, MultiHeadAttention, attention_f16_dot_input,
+    attention_score_key_input, dbg_finite, dbg_stats, debug_attn_enabled, debug_attn_scale_enabled,
+    debug_gqa_enabled, debug_rope_enabled, qwen_trace_event, qwen_trace_layer_enabled,
+    qwen_trace_tensor, trace_rms_enabled,
 };
 use bitnet_common::Result;
 use candle_core::{DType, Module, Tensor};
@@ -37,10 +38,11 @@ impl MultiHeadAttention {
         x: &Tensor,
         kv_cache: Option<&mut LayerKVCache>,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
     ) -> Result<Tensor> {
         let (batch_size, seq_len, _) = x.dims3()?;
 
-        let projections = self.project_qkv(x, raw_tensors)?;
+        let projections = self.project_qkv(x, raw_tensors, dense_linear_hooks)?;
         self.trace_projection_rms_once(&projections)?;
         self.trace_q_projection(&projections.q)?;
 
@@ -56,22 +58,29 @@ impl MultiHeadAttention {
         let attn_weights = self.softmax_attention_scores(&scores)?;
         let output_heads = self.apply_attention_weights(&attn_weights, &expanded.v)?;
 
-        self.project_attention_output(output_heads, batch_size, seq_len, raw_tensors)
+        self.project_attention_output(
+            output_heads,
+            batch_size,
+            seq_len,
+            raw_tensors,
+            dense_linear_hooks,
+        )
     }
 
     fn project_qkv(
         &self,
         x: &Tensor,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
     ) -> Result<QkvProjections> {
         // PATCH 3: Project to Q, K, V separately (NOT fused QKV)
         // This is the correct implementation - separate projections ensure proper shape handling
         // Q: [B, T, hidden] -> [B, T, n_heads * head_dim] -> [B, n_heads, T, head_dim]
         // K: [B, T, hidden] -> [B, T, n_kv_heads * head_dim] -> [B, n_kv_heads, T, head_dim]
         // V: [B, T, hidden] -> [B, T, n_kv_heads * head_dim] -> [B, n_kv_heads, T, head_dim]
-        let q = self.apply_linear(x, &self.q_proj, "q_proj", raw_tensors)?;
-        let k = self.apply_linear(x, &self.k_proj, "k_proj", raw_tensors)?;
-        let v = self.apply_linear(x, &self.v_proj, "v_proj", raw_tensors)?;
+        let q = self.apply_linear(x, &self.q_proj, "q_proj", raw_tensors, dense_linear_hooks)?;
+        let k = self.apply_linear(x, &self.k_proj, "k_proj", raw_tensors, dense_linear_hooks)?;
+        let v = self.apply_linear(x, &self.v_proj, "v_proj", raw_tensors, dense_linear_hooks)?;
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("attention.q_proj", Some(self.layer_idx), &q)?;
             qwen_trace_tensor("attention.k_proj", Some(self.layer_idx), &k)?;
@@ -315,7 +324,9 @@ impl MultiHeadAttention {
             });
         }
 
-        let scores = q.matmul(&k_expanded.transpose(2, 3)?)?;
+        let q_for_scores = attention_f16_dot_input(q)?;
+        let k_for_scores = attention_score_key_input(k_expanded)?;
+        let scores = q_for_scores.matmul(&k_for_scores.transpose(2, 3)?)?;
 
         // Convert to fp32 for numerically stable computation
         let scores_f32 = scores.to_dtype(DType::F32)?;
@@ -424,7 +435,8 @@ impl MultiHeadAttention {
         attn_weights: &Tensor,
         v_expanded: &Tensor,
     ) -> Result<Tensor> {
-        let attn_output = attn_weights.matmul(v_expanded)?;
+        let v_for_value_mix = attention_f16_dot_input(v_expanded)?;
+        let attn_output = attn_weights.matmul(&v_for_value_mix)?;
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("attention.output_heads", Some(self.layer_idx), &attn_output)?;
         }
@@ -437,6 +449,7 @@ impl MultiHeadAttention {
         batch_size: usize,
         seq_len: usize,
         raw_tensors: &std::collections::HashMap<String, Tensor>,
+        dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
     ) -> Result<Tensor> {
         // Reshape and project output
         let attn_output = attn_output.transpose(1, 2)?.reshape(&[
@@ -454,7 +467,13 @@ impl MultiHeadAttention {
             attn_output
         };
 
-        let projected = self.apply_linear(&attn_output, &self.o_proj, "o_proj", raw_tensors)?;
+        let projected = self.apply_linear(
+            &attn_output,
+            &self.o_proj,
+            "o_proj",
+            raw_tensors,
+            dense_linear_hooks,
+        )?;
         if qwen_trace_layer_enabled(self.layer_idx) {
             qwen_trace_tensor("attention.o_proj", Some(self.layer_idx), &projected)?;
         }

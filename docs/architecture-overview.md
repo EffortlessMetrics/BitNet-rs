@@ -167,7 +167,7 @@ BitNet-rs has comprehensive test infrastructure spanning multiple strategies:
 |----------|-------|---------|
 | **Property-based (proptest)** | 63 crates | Randomized invariant testing across quantization, tokenization, KV-cache, tensor shapes |
 | **Snapshot (insta)** | 49 crates, ~1 233 `.snap` files | Struct/output stability for serialization, CLI output, receipt schemas |
-| **Fuzz (cargo-fuzz)** | 98 targets | Nightly `nightly-fuzz.yml`: RoPE table gen, tokenizer encode, softmax stability, embedding lookup, memory layout, and more |
+| **Fuzz (cargo-fuzz)** | 100+ registered targets | Nightly `fuzz-ci.yml` selected matrix: RoPE table gen, tokenizer encode, GGUF parsing, runtime validation, cache structures, and more |
 | **BDD grid** | `bitnet-bdd-grid` | Compile-coverage matrix (`xtask grid-check`) |
 | **Feature-lattice** | `bitnet-feature-matrix` | Orthogonal feature-gate contracts |
 | **Fixture-based** | `bitnet-models`, `bitnet-test-fixtures-core` | GGUF dual-flavor detection, alignment (12/12 passing) |

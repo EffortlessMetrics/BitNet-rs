@@ -1,0 +1,78 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_cpu_packed_q8_sidecar_runtime_proof",
+  "work_item": "SLM-CPU-053",
+  "claim": "packed_q8_sidecar_runtime_execution_remains_blocked_until_production_dispatch_and_after_receipts_exist",
+  "model": {
+    "repo": "Qwen/Qwen3-0.6B-GGUF",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0"
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "strict": true,
+    "prompt_template": "qwen"
+  },
+  "backend": {
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "fallback_used": false
+  },
+  "selector_update_receipt": {
+    "artifact_kind": "dense_gguf_q8_selector_update",
+    "selector_update_applied": true,
+    "sidecar_runtime_compute_allowed": true,
+    "speedup_claim": false,
+    "scope": "selector-reporting boundary only; production forward dispatch still requires a runtime proof gate"
+  },
+  "runtime_execution_proof": {
+    "schema": 1,
+    "artifact_kind": "dense_gguf_q8_runtime_execution_proof",
+    "tensor_name": "blk.0.attn_q.weight",
+    "role": "attention_q",
+    "sidecar_payload_sha256": "evidence-scoped-q8-sidecar-payload",
+    "selected_path": "eager_f32_candle",
+    "selected_kernel": "dense-f32-candle-linear",
+    "execution_status": "blocked",
+    "selector_update_status": "applied_to_packed_sidecar_candidate",
+    "selector_update_applied": true,
+    "selector_update_ready": true,
+    "production_runtime_hook_invoked": false,
+    "runtime_compute_enabled": false,
+    "sidecar_runtime_compute_allowed": false,
+    "before_receipt": null,
+    "after_receipt": null,
+    "before_after_behavior_preserved": false,
+    "runtime_blockers": [
+      "production_dispatch_still_eager_f32",
+      "packed_runtime_compute_disabled",
+      "production_runtime_hook_missing",
+      "before_after_receipts_missing"
+    ],
+    "eager_f32_runtime_preserved": true,
+    "dense_runtime_replaced": false,
+    "fallback_used": false,
+    "speedup_claim": false
+  },
+  "runtime_decision": {
+    "packed_q8_sidecar_runtime_execution_enabled": false,
+    "packed_q8_sidecar_compute_disabled": true,
+    "default_runtime_path_preserved": "eager_f32_candle",
+    "blocker": "production_runtime_hook_missing",
+    "next_safe_step": "add a production forward hook plus before/after Qwen3 Q8_0 receipts before enabling packed Q8_0 sidecar execution"
+  },
+  "claim_boundary": {
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "q4_q5_runtime_support": false,
+    "server_claim": false,
+    "accelerator_claim": false,
+    "openvino_or_uhd620_claim": false,
+    "qwen35_or_hybrid_claim": false,
+    "bitnet_qk256_claim": false
+  }
+}

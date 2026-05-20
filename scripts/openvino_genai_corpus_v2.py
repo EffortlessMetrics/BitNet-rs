@@ -16,6 +16,10 @@ from typing import Any
 
 import yaml
 
+from openvino_genai_token_utils import generate_with_direct_token_ids
+from openvino_genai_token_utils import prompt_evidence as ov_prompt_evidence
+from openvino_genai_token_utils import public_prompt_evidence
+
 
 DEVICE_BACKENDS = {
     "CPU": ("openvino-cpu", "dense_slm_openvino_cpu", "openvino-genai-llmpipeline-cpu"),
@@ -24,6 +28,7 @@ DEVICE_BACKENDS = {
 }
 
 SPECIAL_TOKEN_RE = re.compile(r"<\|[^|]+?\|>")
+KNOWN_STOP_MARKERS = ("<|im_end|>", "<|end_of_text|>", "<|endoftext|>", "<|eot_id|>", "<|im_start|>")
 
 
 def parse_args() -> argparse.Namespace:
@@ -92,12 +97,74 @@ def load_corpus(path: Path) -> dict[str, Any]:
     return data
 
 
+def strip_leading_chatml_assistant(text: str) -> str:
+    rest = text
+    while rest.startswith("<|im_start|>assistant"):
+        rest = rest[len("<|im_start|>assistant") :]
+        if rest.startswith("\r\n"):
+            rest = rest[2:]
+        elif rest.startswith("\n") or rest.startswith(" "):
+            rest = rest[1:]
+        rest = rest.lstrip()
+    return rest
+
+
+def strip_special_markers(text: str) -> str:
+    cleaned = strip_leading_chatml_assistant(text.lstrip()).replace("<|begin_of_text|>", "")
+    marker_indexes = [cleaned.find(marker) for marker in KNOWN_STOP_MARKERS if cleaned.find(marker) >= 0]
+    if marker_indexes:
+        cleaned = cleaned[: min(marker_indexes)]
+    return cleaned
+
+
+def strip_leading_assistant_separator(text: str) -> str:
+    if text.startswith(":") and len(text) > 1 and text[1].isspace():
+        return text[1:].lstrip()
+    return text
+
+
+def normalize_scoring_text(text: str) -> str:
+    stripped = strip_special_markers(text)
+    collapsed = " ".join(stripped.split())
+    return strip_leading_assistant_separator(collapsed)
+
+
+def normalize_match_text(text: str) -> str:
+    return normalize_scoring_text(text).strip(" \t\r\n.!?").lower()
+
+
 def normalize_text(text: str) -> str:
-    text = SPECIAL_TOKEN_RE.sub("", text)
-    text = text.strip()
-    text = re.sub(r"\s+", " ", text)
-    text = text.strip(" \t\r\n.,;:!?\"'`")
-    return text.lower()
+    return normalize_match_text(text).strip(" \t\r\n.,;:!?\"'`")
+
+
+def contains_keyword_boundary(answer: str, keyword: str) -> bool:
+    haystack = answer.lower()
+    needle = keyword.strip().lower()
+    if not needle:
+        return False
+    needle_starts_alnum = needle[0].isalnum()
+    needle_ends_alnum = needle[-1].isalnum()
+    search_from = 0
+    while True:
+        start = haystack.find(needle, search_from)
+        if start < 0:
+            return False
+        end = start + len(needle)
+        before = haystack[start - 1] if start > 0 else None
+        after = haystack[end] if end < len(haystack) else None
+        left_ok = not needle_starts_alnum or before is None or not before.isalnum()
+        right_ok = not needle_ends_alnum or after is None or not after.isalnum()
+        if left_ok and right_ok:
+            return True
+        search_from = start + 1
+
+
+def missing_keywords(answer: str, keywords: list[str]) -> list[str]:
+    return [keyword for keyword in keywords if not contains_keyword_boundary(answer, keyword)]
+
+
+def observed_forbidden_tokens(answer: str, tokens: list[str]) -> list[str]:
+    return [token for token in tokens if contains_keyword_boundary(answer, token)]
 
 
 def readable_words(text: str) -> list[str]:
@@ -106,15 +173,7 @@ def readable_words(text: str) -> list[str]:
 
 
 def prompt_evidence(tokenizer: Any, question: str) -> dict[str, Any]:
-    messages = [{"role": "user", "content": question}]
-    rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    token_ids = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True)
-    return {
-        "rendered_prompt": rendered,
-        "rendered_sha256": hashlib.sha256(rendered.encode("utf-8")).hexdigest(),
-        "prompt_token_ids": token_ids,
-        "prompt_token_count": len(token_ids),
-    }
+    return public_prompt_evidence(ov_prompt_evidence(tokenizer, question))
 
 
 def mean_std(pair: Any) -> dict[str, float | None]:
@@ -176,13 +235,14 @@ def evaluate_scoring(scoring: dict[str, Any] | None, generated_text: str) -> dic
     kind = scoring.get("kind")
     failed_rules: list[str] = []
     failure_taxonomy: list[str] = []
-    details: dict[str, Any] = {"kind": kind}
+    normalized_answer = normalize_scoring_text(generated_text)
+    details: dict[str, Any] = {"kind": kind, "normalized_answer": normalized_answer}
 
     if kind == "required_forbidden_tokens":
         required = list(scoring.get("required_keywords") or [])
         forbidden = list(scoring.get("forbidden_tokens") or [])
-        missing = [needle for needle in required if needle not in generated_text]
-        observed_forbidden = [needle for needle in forbidden if needle in generated_text]
+        missing = missing_keywords(normalized_answer, required)
+        observed_forbidden = observed_forbidden_tokens(normalized_answer, forbidden)
         if missing:
             failed_rules.append("required_keywords_missing")
             failure_taxonomy.append("required_keyword_missing")
@@ -198,8 +258,8 @@ def evaluate_scoring(scoring: dict[str, Any] | None, generated_text: str) -> dic
     elif kind == "required_keywords":
         required = list(scoring.get("required_keywords") or [])
         forbidden = list(scoring.get("forbidden_tokens") or [])
-        missing = [needle for needle in required if needle not in generated_text]
-        observed_forbidden = [needle for needle in forbidden if needle in generated_text]
+        missing = missing_keywords(normalized_answer, required)
+        observed_forbidden = observed_forbidden_tokens(normalized_answer, forbidden)
         if missing:
             failed_rules.append("required_keywords_missing")
             failure_taxonomy.append("required_keyword_missing")
@@ -213,8 +273,8 @@ def evaluate_scoring(scoring: dict[str, Any] | None, generated_text: str) -> dic
             }
         )
     elif kind == "normalized_match":
-        expected = normalize_text(str(scoring.get("expected_normalized") or ""))
-        observed = normalize_text(generated_text)
+        expected = normalize_match_text(str(scoring.get("expected_normalized") or ""))
+        observed = normalize_match_text(generated_text)
         if observed != expected:
             failed_rules.append("normalized_match_failed")
             failure_taxonomy.append("normalized_match_failed")
@@ -285,7 +345,6 @@ def summarize_cases(cases: list[dict[str, Any]]) -> dict[str, Any]:
 def run_device(
     device: str,
     model_dir: Path,
-    tokenizer: Any,
     ov_genai: Any,
     ov_core: Any,
     cases: list[dict[str, Any]],
@@ -303,12 +362,12 @@ def run_device(
     construct_start = time.perf_counter()
     pipe = ov_genai.LLMPipeline(str(model_dir), device)
     construct_wall_ms = (time.perf_counter() - construct_start) * 1000.0
+    tokenizer = pipe.get_tokenizer()
 
     results: list[dict[str, Any]] = []
     for case in cases:
         question = str(case["question"])
         max_new_tokens = int(case.get("max_new_tokens") or defaults.get("max_new_tokens") or 48)
-        prompt = prompt_evidence(tokenizer, question)
         chunks: list[dict[str, Any]] = []
         first_chunk_at: list[float | None] = [None]
         generation_start = time.perf_counter()
@@ -320,20 +379,21 @@ def run_device(
             chunks.append({"elapsed_ms": (now - generation_start) * 1000.0, "text": text})
             return ov_genai.StreamingStatus.RUNNING
 
-        result = pipe.generate(
-            [question],
-            max_new_tokens=max_new_tokens,
-            do_sample=False,
-            num_beams=1,
-            apply_chat_template=True,
+        generation = generate_with_direct_token_ids(
+            pipe,
+            tokenizer,
+            ov_genai,
+            question,
+            max_new_tokens,
             streamer=streamer,
         )
         generation_wall_ms = (time.perf_counter() - generation_start) * 1000.0
-        generated_text = result.texts[0] if getattr(result, "texts", None) else ""
+        result = generation["result"]
+        prompt = generation["prompt"]
+        generated_text = generation["generated_text"]
         gate = evaluate_gate(case.get("gate"), generated_text)
         scoring = evaluate_scoring(case.get("scoring"), generated_text)
         quality = quality_status(gate, scoring, generated_text)
-        generated_ids = tokenizer.encode(generated_text, add_special_tokens=False)
         first_chunk_ms = None
         if first_chunk_at[0] is not None:
             first_chunk_ms = (first_chunk_at[0] - generation_start) * 1000.0
@@ -364,10 +424,12 @@ def run_device(
                 "generated_text": generated_text,
                 "decoded_preview": generated_text[:240],
                 "normalized_output": normalize_text(generated_text),
-                "generated_token_ids": generated_ids,
-                "generated_token_ids_available_from_pipeline": False,
-                "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids",
-                "generated_token_count": len(generated_ids),
+                "generated_token_ids": generation["generated_token_ids"],
+                "generated_token_ids_available_from_pipeline": generation[
+                    "generated_token_ids_available_from_pipeline"
+                ],
+                "generated_token_ids_source": generation["generated_token_ids_source"],
+                "generated_token_count": generation["generated_token_count"],
                 "stop_eos": {
                     "raw_special_token_seen": "<|" in generated_text,
                     "eos_marker_seen": "<|im_end|>" in generated_text or "<|endoftext|>" in generated_text,
@@ -448,16 +510,14 @@ def main() -> int:
     args = parse_args()
     import openvino as ov
     import openvino_genai as ov_genai
-    from transformers import AutoTokenizer
 
     corpus = load_corpus(args.corpus)
     defaults = corpus.get("defaults") or {}
     cases = corpus["cases"]
-    tokenizer = AutoTokenizer.from_pretrained(args.model_dir, trust_remote_code=True)
     core = ov.Core()
 
     devices = [
-        run_device(device, args.model_dir, tokenizer, ov_genai, core, cases, defaults)
+        run_device(device, args.model_dir, ov_genai, core, cases, defaults)
         for device in args.devices
     ]
     all_cases = [case for device in devices for case in device["cases"]]
@@ -470,7 +530,7 @@ def main() -> int:
         "schema_version": "1.0.0",
         "artifact_kind": "intel_258v_dense_slm_openvino_corpus_v2",
         "campaign": "intel-258v-platform",
-        "item": "LNL258V-QUAL-003",
+        "item": "LNL258V-OV-QUAL-004",
         "created_utc": created,
         "machine_id": args.machine_id,
         "proof_stage": "candidate_route_corpus_v2_executed_no_promotion_change",
@@ -485,6 +545,14 @@ def main() -> int:
         "quantization": "INT4_SYM",
         "prompt_template": "qwen2.5",
         "tokenizer_source": "hf_tokenizer_export",
+        "scoring_policy": {
+            "name": "openvino_corpus_v2_scoring_aligned_with_rust_answer_corpus_v2",
+            "normalized_match": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, trim terminal punctuation, lowercase",
+            "required_keywords": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, then match case-insensitive token boundaries",
+            "forbidden_tokens": "strip known chat/stop markers, collapse whitespace, strip leading assistant separator, then match case-insensitive token boundaries",
+            "generated_token_ids": "openvino_genai_encoded_results_tokens",
+            "direct_generated_token_ids": "captured from OpenVINO GenAI EncodedResults.tokens by generating from OpenVINO TokenizedInputs",
+        },
         "promotion_status": "candidate_only_not_promoted",
         "route_promotion_changed": False,
         "paths": {
@@ -522,8 +590,9 @@ def main() -> int:
             "openvino": {"version": ov.get_version(), "available_devices": core.available_devices},
             "openvino_genai": {"version": getattr(ov_genai, "__version__", None)},
             "transformers": {
-                "tokenizer_loaded_from_export_dir": True,
-                "generated_token_ids_available_from_pipeline": False,
+                "tokenizer_loaded_from_export_dir": False,
+                "openvino_tokenizer_loaded_from_export_dir": True,
+                "generated_token_ids_available_from_pipeline": True,
             },
         },
         "corpus": corpus_metadata(corpus),
@@ -540,8 +609,8 @@ def main() -> int:
             "fallback_used": fallback_used_any,
             "openvino_perf_metrics_recorded": True,
             "streamer_first_text_chunk_recorded": True,
-            "generated_token_ids_available_from_pipeline": False,
-            "generated_token_ids_retaken_from_text": True,
+            "generated_token_ids_available_from_pipeline": True,
+            "generated_token_ids_retokenized_from_text": False,
             "route_promotion_changed": False,
             "candidate_routes_remain_unpromoted": True,
             "quality_failures_are_evidence_not_route_policy": True,
@@ -558,7 +627,6 @@ def main() -> int:
                 "Broad dense SLM answer quality is proven beyond bounded corpus v2 evidence.",
                 "OpenVINO GPU evidence proves native OpenCL execution.",
                 "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
-                "OpenVINO GenAI generated token IDs are captured directly from pipeline internals.",
                 "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
                 "BitNet QK256/I2_S behavior changed.",
             ],

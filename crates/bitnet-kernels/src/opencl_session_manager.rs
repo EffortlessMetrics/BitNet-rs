@@ -1339,7 +1339,7 @@ mod tests {
         let m = s.complete().unwrap();
         assert_eq!(m.prompt_tokens, 5);
         assert_eq!(m.generated_tokens, 2);
-        assert!(m.total_time > Duration::ZERO || true);
+        assert!(m.total_time > Duration::ZERO);
     }
 
     // ── Cancellation tests ──────────────────────────────────────────

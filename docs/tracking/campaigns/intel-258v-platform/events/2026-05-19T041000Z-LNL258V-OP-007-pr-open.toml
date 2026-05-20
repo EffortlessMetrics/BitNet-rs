@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T04:10:00Z"
+event = "pr_open"
+item = "LNL258V-OP-007"
+branch = "codex/lunar-lake/LNL258V-OP-007-openvino-ask-dispatch"
+pr = 5767
+head_sha = "39275bb4628f9f52f1b86519b866b1bd12ac08fc"
+actor = "codex"
+summary = "Opened PR #5767 for LNL258V-OP-007 to route explicit Lunar Lake OpenVINO candidate asks through the OpenVINO GenAI helper."
+
+notes = [
+  "The PR preserves auto routing on ledger-promoted routes only.",
+  "GPU/NPU OpenVINO candidate ask receipts record fallback_used=false and bounded answer gates without route promotion or speedup/acceleration claims.",
+  "The PR preserves no route promotion, no speedup claim, no power-advantage claim, no Arc/NPU acceleration claim, no native OpenCL/NPU claim, and no BitNet QK256/I2_S behavior change.",
+]

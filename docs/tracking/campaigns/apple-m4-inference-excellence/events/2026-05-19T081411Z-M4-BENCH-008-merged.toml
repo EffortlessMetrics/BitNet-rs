@@ -1,0 +1,18 @@
+timestamp = "2026-05-19T08:14:11Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-008"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 5902
+merge_sha = "1cf5aedda58ef50919bdb943778aca4fe10a51f3"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-008-repeat-harness"
+
+notes = [
+  "Merged PR #5902 with the M4 benchmark repeat-run harness.",
+  "`bitnet mac benchmark --repeat <n>` now writes `apple_m4_benchmark_variance_v1` aggregate receipts over dense SLM benchmark v2 child summaries.",
+  "Receipt validation opens child summaries and checks model/cache identity, tokenizer pre, backend/fallback state, profile set, prompt totals, and generated-token totals.",
+  "This closeout records tracker state only; M4-BENCH-005 remains responsible for final dense and BitNet variance envelopes.",
+  "No BitNet performance, BitNet chat/serve enablement, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

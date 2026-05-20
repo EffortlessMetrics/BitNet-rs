@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T01:20:00Z"
+event = "merged"
+item = "LNL258V-NPU-RESIDENT-001"
+branch = "codex/lunar-lake/LNL258V-NPU-RESIDENT-001"
+pr = 5726
+head_sha = "21214742420d6ca51a08b379a42b2d57178543a9"
+merge_sha = "658e421a900be4edf0e434b318da071913244705"
+actor = "codex"
+summary = "Merged LNL258V-NPU-RESIDENT-001 to add OpenVINO NPU resident-session evidence and route-profile wiring."
+
+notes = [
+  "The NPU resident receipt records one cold LLMPipeline construction plus ten same-process warm dense Qwen asks with fallback_used=false and bounded answer gates.",
+  "Route-profile comparison now indexes the resident receipt and clears only the missing resident proof blocker; cold one-off, token-visibility, benchmark-qualified advantage, power, and promotion blockers remain.",
+  "No route promotion, speedup claim, power-advantage claim, NPU acceleration claim, native NPU inference claim, or BitNet QK256/I2_S behavior change was made.",
+]

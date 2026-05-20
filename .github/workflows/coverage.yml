@@ -28,9 +28,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  RUST_CI_IMAGE: ghcr.io/effortlessmetrics/bitnet-rs-ci:rust-1.95
-
 jobs:
   coverage:
     name: Code Coverage
@@ -39,6 +36,11 @@ jobs:
     permissions:
       contents: read
       packages: read
+    container:
+      image: ghcr.io/effortlessmetrics/bitnet-rs-ci:rust-1.95
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     # PRs: only run when explicitly labeled "coverage" or "full-ci"
     if: >-
@@ -50,73 +52,28 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-            /usr/local/share/boost /usr/share/swift /usr/share/miniconda \
-            /usr/local/.ghcup /opt/hostedtoolcache /usr/local/share/chromium \
-            /usr/local/share/powershell /usr/share/az_* /opt/microsoft
-          sudo docker image prune --all --force
-          df -h /
-
-      - name: Log in to GHCR
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef  # v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull rust-ci image
-        run: docker pull "${{ env.RUST_CI_IMAGE }}"
-
       - name: Disk usage before coverage
         run: df -h /
 
-      - name: Generate coverage in rust-ci image
+      - name: Generate coverage
         env:
           RUST_BACKTRACE: 1
           CARGO_INCREMENTAL: "0"
           CARGO_PROFILE_TEST_DEBUG: "0"
         run: |
           set -euo pipefail
-          docker run --rm \
-            -v "$PWD:/workspace" \
-            -w /workspace \
-            -e RUST_BACKTRACE \
-            -e CARGO_INCREMENTAL \
-            -e CARGO_PROFILE_TEST_DEBUG \
-            "${{ env.RUST_CI_IMAGE }}" \
-            bash -c '
-              set -euo pipefail
-              export PATH="/usr/local/cargo/bin:${PATH}"
-              cargo llvm-cov clean --workspace
-              cargo llvm-cov nextest --workspace --locked --no-default-features --features cpu --no-report --profile ci \
-                --ignore-run-fail
-              cargo llvm-cov report --json --output-path coverage.json
-              cargo llvm-cov report --lcov --output-path lcov.info
-              cargo llvm-cov report --text | tee coverage.txt
-            '
-
-      - name: Restore coverage receipt ownership
-        if: always()
-        run: |
-          sudo mkdir -p target/bitnet/reports
-          sudo chown -R "$USER:$USER" target/bitnet
-          for file in coverage.json coverage.txt lcov.info; do
-            if [ -e "$file" ]; then
-              sudo chown "$USER:$USER" "$file"
-            fi
-          done
+          cargo llvm-cov clean --workspace
+          cargo llvm-cov nextest --workspace --locked --no-default-features --features cpu --no-report --profile ci \
+            --ignore-run-fail
+          cargo llvm-cov report --json --output-path coverage.json
+          cargo llvm-cov report --lcov --output-path lcov.info
+          cargo llvm-cov report --text | tee coverage.txt
 
       - name: Disk usage after coverage
         if: always()
         run: |
           df -h /
           du -sh target/ || true
-
-      - name: Install jq
-        if: github.event_name == 'push'
-        run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Enforce threshold on main (70%)
         if: github.event_name == 'push'

@@ -191,6 +191,192 @@
       }
     },
 
+    "ChatCompletionResponseMetadata": {
+      "type": "object",
+      "required": [
+        "receipt_id",
+        "receipt_path",
+        "latest_receipt_path",
+        "readiness_path",
+        "selected_backend",
+        "selected_route",
+        "fallback_used"
+      ],
+      "properties": {
+        "receipt_id": {
+          "type": "string"
+        },
+        "receipt_path": {
+          "type": "string",
+          "pattern": "^/receipts/[A-Za-z0-9_-]+$"
+        },
+        "latest_receipt_path": {
+          "type": "string",
+          "const": "/receipts/latest"
+        },
+        "readiness_path": {
+          "type": "string",
+          "const": "/readiness"
+        },
+        "model_coverage_row": {
+          "type": ["string", "null"]
+        },
+        "model_coverage_tier": {
+          "type": ["string", "null"]
+        },
+        "selected_backend": {
+          "type": "string"
+        },
+        "selected_route": {
+          "type": "string"
+        },
+        "fallback_used": {
+          "type": "boolean"
+        }
+      }
+    },
+
+    "ServerSharedEngineReceipt": {
+      "type": "object",
+      "required": [
+        "receipt_kind",
+        "request_id",
+        "runtime_path",
+        "runtime_api",
+        "requested_model",
+        "active_model_id",
+        "selected_backend",
+        "requested_backend",
+        "selected_route",
+        "fallback_used",
+        "server_ready_claimed",
+        "speedup_claim",
+        "full_cuda_residency_claimed"
+      ],
+      "properties": {
+        "receipt_kind": {
+          "type": "string",
+          "const": "server_shared_engine_chat_completion"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "runtime_path": {
+          "type": "string",
+          "const": "shared_local_inference_engine"
+        },
+        "runtime_api": {
+          "type": "string"
+        },
+        "model_coverage_row": {
+          "type": ["string", "null"]
+        },
+        "model_coverage_tier": {
+          "type": ["string", "null"]
+        },
+        "selected_backend": {
+          "type": "string"
+        },
+        "requested_backend": {
+          "type": "string"
+        },
+        "selected_route": {
+          "type": "string"
+        },
+        "fallback_used": {
+          "type": "boolean"
+        },
+        "server_smoke_response_claimed": {
+          "type": "boolean"
+        },
+        "server_ready_claimed": {
+          "type": "boolean",
+          "const": false
+        },
+        "speedup_claim": {
+          "type": "boolean",
+          "const": false
+        },
+        "full_cuda_residency_claimed": {
+          "type": "boolean",
+          "const": false
+        }
+      }
+    },
+
+    "ServerReceiptLookupError": {
+      "type": "object",
+      "required": ["error_code", "error", "receipt_id"],
+      "properties": {
+        "error_code": {
+          "type": "string",
+          "enum": ["NO_RECEIPTS", "INVALID_RECEIPT_ID", "RECEIPT_NOT_FOUND"]
+        },
+        "error": {
+          "type": "string"
+        },
+        "receipt_id": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+
+    "ServerReadinessResponse": {
+      "type": "object",
+      "required": ["ready", "status", "model", "backend", "inference", "claim_boundary"],
+      "properties": {
+        "ready": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ready", "not_ready"]
+        },
+        "model": {
+          "type": "object",
+          "properties": {
+            "active_model": {
+              "type": ["object", "null"],
+              "properties": {
+                "model_coverage_row": {
+                  "type": ["string", "null"]
+                },
+                "model_coverage_tier": {
+                  "type": ["string", "null"]
+                },
+                "selected_route": {
+                  "type": ["string", "null"]
+                }
+              }
+            }
+          }
+        },
+        "backend": {
+          "type": "object"
+        },
+        "inference": {
+          "type": "object"
+        },
+        "claim_boundary": {
+          "type": "object",
+          "properties": {
+            "server_ready_claimed": {
+              "type": "boolean",
+              "const": false
+            },
+            "speedup_claim": {
+              "type": "boolean",
+              "const": false
+            },
+            "full_cuda_residency_claimed": {
+              "type": "boolean",
+              "const": false
+            }
+          }
+        }
+      }
+    },
+
     "Error": {
       "type": "object",
       "required": ["code", "message"],
@@ -225,6 +411,70 @@
           "items": {
             "$ref": "#/definitions/ModelConfig"
           }
+        }
+      }
+    },
+    "/readiness": {
+      "GET": {
+        "description": "Server readiness and claim-boundary state with active model coverage linkage when available",
+        "response": {
+          "$ref": "#/definitions/ServerReadinessResponse"
+        }
+      }
+    },
+    "/v1/readiness": {
+      "GET": {
+        "description": "Versioned alias for server readiness and claim-boundary state",
+        "response": {
+          "$ref": "#/definitions/ServerReadinessResponse"
+        }
+      }
+    },
+    "/receipts/latest": {
+      "GET": {
+        "description": "Return the latest in-memory server shared-engine receipt",
+        "response": {
+          "$ref": "#/definitions/ServerSharedEngineReceipt"
+        },
+        "errors": {
+          "$ref": "#/definitions/ServerReceiptLookupError"
+        }
+      }
+    },
+    "/receipts/{receipt_id}": {
+      "GET": {
+        "description": "Return a captured server shared-engine receipt by request/receipt id",
+        "parameters": {
+          "receipt_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,128}$"
+          }
+        },
+        "response": {
+          "$ref": "#/definitions/ServerSharedEngineReceipt"
+        },
+        "errors": {
+          "$ref": "#/definitions/ServerReceiptLookupError"
+        }
+      }
+    },
+    "/v1/chat/completions": {
+      "POST": {
+        "description": "OpenAI-compatible non-streaming chat completion with receipt metadata and embedded server receipt",
+        "response": {
+          "type": "object",
+          "required": ["id", "object", "created", "model", "choices", "usage", "metadata", "receipt"],
+          "properties": {
+            "metadata": {
+              "$ref": "#/definitions/ChatCompletionResponseMetadata"
+            },
+            "receipt": {
+              "$ref": "#/definitions/ServerSharedEngineReceipt"
+            }
+          }
+        },
+        "errors": {
+          "$ref": "#/definitions/Error"
         }
       }
     },

@@ -26,11 +26,15 @@ fn optimization_level_eq() {
     assert_ne!(OptimizationLevel::None, OptimizationLevel::Full);
 }
 
+fn clone_value<T: Clone>(value: &T) -> T {
+    value.clone()
+}
+
 #[test]
 fn optimization_level_copy_clone() {
     let level = OptimizationLevel::Basic;
     let level2 = level;
-    let level3 = level.clone();
+    let level3 = clone_value(&level);
     assert_eq!(level2, level3);
 }
 
@@ -142,7 +146,7 @@ fn validator_bad_magic() {
 fn validator_bad_version() {
     let mut bytes = build_test_spirv(1, 0);
     // Set version to 2.0 (unsupported)
-    let bad_version: u32 = (2 << 16) | (0 << 8);
+    let bad_version: u32 = 2 << 16;
     bytes[4..8].copy_from_slice(&bad_version.to_le_bytes());
     assert!(SpirVValidator::check_version(&bytes).is_err());
 }
@@ -183,7 +187,7 @@ fn validator_has_capability_too_short() {
 fn validator_has_capability_with_data() {
     let mut bytes = build_test_spirv(1, 0);
     // Append OpCapability (opcode 17, wordcount 2): (2 << 16) | 17 = 0x00020011
-    let op_cap: u32 = (2 << 16) | 17;
+    let op_cap: u32 = (2 << 16) | 0x0011;
     bytes.extend_from_slice(&op_cap.to_le_bytes());
     // Capability operand: e.g., Shader = 1
     bytes.extend_from_slice(&1u32.to_le_bytes());

@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T06:48:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-049"
+event = "merged"
+pr = 5879
+head_sha = "363f24398a71b6e363fbf38a85a1cbd4507ff438"
+merge_sha = "f76c93862c5feb94d7688061f571f6704d9b01e1"
+actor = "codex"
+
+notes = [
+  "Merged the generated-ID/text receipt equivalence gate for the packed Q8_0 sidecar runtime lane.",
+  "The gate preserves eager F32 runtime selection and keeps sidecar runtime compute disabled.",
+  "No speedup, Q4/Q5, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

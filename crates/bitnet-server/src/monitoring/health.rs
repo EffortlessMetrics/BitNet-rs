@@ -102,6 +102,15 @@ pub struct HealthChecker {
 }
 
 impl HealthChecker {
+    const BUILD_METADATA: BuildMetadata = BuildMetadata::from_env(
+        option_env!("VERGEN_GIT_SHA"),
+        option_env!("VERGEN_GIT_BRANCH"),
+        option_env!("VERGEN_BUILD_TIMESTAMP"),
+        option_env!("VERGEN_RUSTC_SEMVER"),
+        option_env!("VERGEN_CARGO_TARGET_TRIPLE"),
+        option_env!("VERGEN_CARGO_OPT_LEVEL"),
+    );
+
     pub fn new(metrics: Arc<MetricsCollector>) -> Self {
         #[cfg(any(feature = "gpu", feature = "cuda"))]
         let gpu_leak_detector = Arc::new(crate::health::GpuMemoryLeakDetector::default());
@@ -126,16 +135,7 @@ impl HealthChecker {
     /// Perform comprehensive health check
     pub async fn check_health(&self) -> HealthResponse {
         let mut components = HashMap::new();
-
-        // Check model availability
-        components.insert("model".to_string(), self.check_model_health().await);
-
-        // Check memory usage
-        components.insert("memory".to_string(), self.check_memory_health().await);
-
-        // Check inference engine
-        components
-            .insert("inference_engine".to_string(), self.check_inference_engine_health().await);
+        self.add_core_component_health(&mut components).await;
 
         // Check GPU availability (if enabled)
         #[cfg(any(feature = "gpu", feature = "cuda"))]
@@ -147,33 +147,12 @@ impl HealthChecker {
         // Collect metrics
         let metrics = self.collect_health_metrics().await;
 
-        const BUILD_METADATA: BuildMetadata = BuildMetadata::from_env(
-            option_env!("VERGEN_GIT_SHA"),
-            option_env!("VERGEN_GIT_BRANCH"),
-            option_env!("VERGEN_BUILD_TIMESTAMP"),
-            option_env!("VERGEN_RUSTC_SEMVER"),
-            option_env!("VERGEN_CARGO_TARGET_TRIPLE"),
-            option_env!("VERGEN_CARGO_OPT_LEVEL"),
-        );
-
         HealthResponse {
             status: overall_status,
             timestamp: chrono::Utc::now().to_rfc3339(),
             uptime_seconds: self.start_time.elapsed().as_secs(),
             version: env!("CARGO_PKG_VERSION").to_string(),
-            build: BuildInfo {
-                version: env!("CARGO_PKG_VERSION").to_string(),
-                git_sha: BUILD_METADATA.git_sha.to_string(),
-                git_branch: BUILD_METADATA.git_branch.to_string(),
-                build_timestamp: BUILD_METADATA.build_timestamp.to_string(),
-                rustc_version: BUILD_METADATA.rustc_semver.to_string(),
-                cargo_target: BUILD_METADATA.cargo_target_triple.to_string(),
-                cargo_profile: BUILD_METADATA.cargo_opt_level.to_string(),
-                #[cfg(any(feature = "gpu", feature = "cuda"))]
-                cuda_version: Some(self.get_cuda_version()),
-                #[cfg(not(any(feature = "gpu", feature = "cuda")))]
-                cuda_version: None,
-            },
+            build: self.build_info(),
             components,
             metrics,
         }
@@ -208,6 +187,29 @@ impl HealthChecker {
             HealthStatus::Degraded
         } else {
             HealthStatus::Healthy
+        }
+    }
+
+    async fn add_core_component_health(&self, components: &mut HashMap<String, ComponentHealth>) {
+        components.insert("model".to_string(), self.check_model_health().await);
+        components.insert("memory".to_string(), self.check_memory_health().await);
+        components
+            .insert("inference_engine".to_string(), self.check_inference_engine_health().await);
+    }
+
+    fn build_info(&self) -> BuildInfo {
+        BuildInfo {
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            git_sha: Self::BUILD_METADATA.git_sha.to_string(),
+            git_branch: Self::BUILD_METADATA.git_branch.to_string(),
+            build_timestamp: Self::BUILD_METADATA.build_timestamp.to_string(),
+            rustc_version: Self::BUILD_METADATA.rustc_semver.to_string(),
+            cargo_target: Self::BUILD_METADATA.cargo_target_triple.to_string(),
+            cargo_profile: Self::BUILD_METADATA.cargo_opt_level.to_string(),
+            #[cfg(any(feature = "gpu", feature = "cuda"))]
+            cuda_version: Some(self.get_cuda_version()),
+            #[cfg(not(any(feature = "gpu", feature = "cuda")))]
+            cuda_version: None,
         }
     }
 

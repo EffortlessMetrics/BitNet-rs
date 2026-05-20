@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T09:50:00Z"
+event = "merged"
+item = "LNL258V-THERMAL-001"
+pr = 5813
+head_sha = "65a2e600471d106aad5520617b62c6ab376c0ef3"
+merge_sha = "57aaa38634f279bed2e960f0dfa62a4250fd9d00"
+branch = "codex/lunar-lake/LNL258V-THERMAL-001-thermal-zone-probe"
+actor = "codex"
+summary = "Merged PR #5813 for Lunar Lake thermal-zone visibility telemetry."
+
+notes = [
+  "The merged PR records Windows thermal-zone counter visibility when measured thermal temperatures are unavailable and refreshes Lunar Lake telemetry, route-profile, benchmark, power-profile, regression, and comparison artifacts.",
+  "The closeout preserves no measured thermal-temperature claim, no new inference, no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]

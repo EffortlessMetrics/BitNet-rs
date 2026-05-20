@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T05:50:35Z"
+event = "merged"
+item = "LNL258V-ROUTE-022"
+branch = "codex/lunar-lake/LNL258V-ROUTE-022-warm-resident-gpu-route"
+pr = 5865
+head_sha = "148288d23ae365526783151b184e63423575b48b"
+merge_sha = "603625f37e97a74f2dd62db4788b4127bc018ee9"
+actor = "codex"
+summary = "Merged LNL258V-ROUTE-022 to promote the OpenVINO GPU dense Qwen route for the warm_resident workload profile."
+
+notes = [
+  "The warm_resident profile now resolves to dense_slm_openvino_gpu_candidate using existing fallback-free corpus-v2 quality, direct-token/profile evidence, profile-matched timing, and benchmark-qualified latency advantage.",
+  "OpenVINO GPU is now profile-promoted for ask_short, ask_normal, and warm_resident only; OpenVINO NPU remains candidate-only.",
+  "prefill_heavy, decode_heavy, and low_power remain unpromoted; no new inference, NPU promotion, broad GPU promotion, power-advantage claim, Arc/NPU acceleration claim, native accelerator claim, full BitNet accelerator inference claim, packed QK256 accelerator decode claim, or BitNet QK256/I2_S behavior change was made.",
+]

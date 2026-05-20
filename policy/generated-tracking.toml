@@ -1,0 +1,51 @@
+schema_version = "1.0"
+policy = "generated-tracking"
+owner = "release/ci"
+status = "active"
+updated = "2026-05-19"
+
+# Generated tracking files are derived views. Source manifests, events,
+# generators, and checkers own campaign truth.
+
+[generated_paths]
+global = "docs/tracking/generated/"
+campaign = "docs/tracking/campaigns/*/generated/"
+
+[source_paths]
+campaign_active = "docs/tracking/campaigns/*/active.toml"
+campaign_events = "docs/tracking/campaigns/*/events/*.toml"
+tracker_model = "docs/tracking/TRACKER_MODEL.md"
+
+[rules]
+hand_edit_generated_tracking = false
+resolve_conflict_by_hand_edit = false
+delete_other_lane_row_to_resolve_conflict = false
+generated_output_owns_campaign_state = false
+generated_output_may_close_pr = false
+generated_output_may_promote_claim = false
+preserve_true_active_rows = true
+update_source_before_regenerate = true
+fix_generator_when_output_is_wrong = true
+record_generator_command_in_pr = true
+
+[required_commands]
+check = [
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+regenerate = "cargo run --locked -p xtask --no-default-features -- campaign generate"
+
+[conflict_resolution]
+inspect_active_toml = true
+inspect_events = true
+preserve_rows_that_remain_true = true
+resolve_item_ownership_before_generating = true
+review_generated_diff_after_regenerate = true
+
+[allowed_generated_diffs]
+produced_by_generator = true
+matches_committed_sources = true
+preserves_true_active_rows = true
+no_claim_promotion = true
+no_pr_disposition_without_source = true

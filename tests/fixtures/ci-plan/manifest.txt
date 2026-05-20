@@ -1,0 +1,3 @@
+Cargo.lock
+crates/bitnet-cli/Cargo.toml
+crates/bitnet-cli/src/lib.rs

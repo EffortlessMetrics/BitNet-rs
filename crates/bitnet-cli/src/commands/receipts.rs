@@ -6,7 +6,7 @@
 //! actually ran without needing to know every receipt variant.
 
 use anyhow::{Context, Result, anyhow, bail};
-use clap::{Args, Subcommand};
+use clap::{Args, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeSet;
@@ -40,12 +40,35 @@ pub enum ReceiptsAction {
         /// Emit normalized JSON instead of text.
         #[arg(long, default_value_t = false)]
         json: bool,
+
+        /// Emit text or normalized JSON. Equivalent to --json when set to json.
+        #[arg(long, value_enum)]
+        format: Option<ReceiptExplainFormat>,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum ReceiptExplainFormat {
+    Text,
+    Json,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct ReceiptExplanation {
+    pub schema_version: u32,
     pub path: String,
+    pub model_coverage_row: Option<String>,
+    pub current_tier: Option<String>,
+    pub selected_backend: Option<String>,
+    pub selected_route: Option<String>,
+    pub fallback_used: Option<bool>,
+    pub product_cli_ready: Option<bool>,
+    pub server_ready: Option<bool>,
+    pub server_ready_scope: Option<String>,
+    pub speedup_claim: Option<bool>,
+    pub full_residency_claim: Option<bool>,
+    pub bitnet_packed_i2s_qk256_proof: Option<bool>,
+    pub dense_regular_llm_cuda_proof: Option<bool>,
     pub artifact_kind: Option<String>,
     pub claim: Option<String>,
     pub model: Option<String>,
@@ -57,6 +80,7 @@ pub struct ReceiptExplanation {
     pub timing: TimingExplanation,
     pub residency: ResidencyExplanation,
     pub benchmark_qualification: BenchmarkQualificationExplanation,
+    pub openvino: OpenVinoExplanation,
     pub claim_limits: ClaimLimitsExplanation,
 }
 
@@ -67,9 +91,12 @@ pub struct ModelCoverageExplanation {
     pub current_tier: Option<String>,
     pub status: Option<String>,
     pub route: Option<String>,
+    pub product_cli_ready: Option<bool>,
     pub speedup_claim: Option<bool>,
     pub benchmark_qualified: Option<bool>,
     pub server_ready: Option<bool>,
+    pub server_ready_scope: Option<String>,
+    pub full_residency_claim: Option<bool>,
     pub bitnet_packed_i2s_qk256_proof: Option<bool>,
     pub dense_regular_llm_cuda_proof: Option<bool>,
     pub claim_boundary: Option<String>,
@@ -116,8 +143,12 @@ pub struct TimingExplanation {
 #[derive(Debug, Clone, Default, Serialize, PartialEq)]
 pub struct ResidencyExplanation {
     pub qk256_cuda_residency_claimed: Option<bool>,
+    pub model_loaded_once: Option<bool>,
+    pub cuda_context_once: Option<bool>,
     pub weights_uploaded_once: Option<bool>,
+    pub per_request_model_load: Option<bool>,
     pub per_token_weight_upload: Option<bool>,
+    pub workspace_reused: Option<bool>,
     pub kv_cache_residency: Option<String>,
     pub full_cuda_residency_claimed: Option<bool>,
 }
@@ -169,6 +200,26 @@ pub struct BenchmarkProfileExplanation {
     pub blockers: Vec<String>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, PartialEq)]
+pub struct OpenVinoExplanation {
+    pub route_id: Option<String>,
+    pub route_reason: Option<String>,
+    pub requested_backend: Option<String>,
+    pub selected_backend: Option<String>,
+    pub runtime_api: Option<String>,
+    pub runtime_device: Option<String>,
+    pub resolved_device: Option<String>,
+    pub proof_family: Option<String>,
+    pub proof_stage: Option<String>,
+    pub backend_lane: Option<String>,
+    pub selected_kernel_or_runtime: Option<String>,
+    pub quality_status: Option<String>,
+    pub timing_scope: Option<String>,
+    pub promotion_status: Option<String>,
+    pub blockers: Vec<String>,
+    pub does_not_prove: Vec<String>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 struct ModelCoverageMatrix {
     schema: u32,
@@ -191,8 +242,10 @@ struct ModelCoverageEntry {
 #[derive(Debug, Clone, Deserialize)]
 struct ModelCoverageClaims {
     benchmark_qualified: bool,
+    product_cli_ready: bool,
     server_ready: bool,
     speedup_claim: bool,
+    full_residency_claim: bool,
     bitnet_packed_i2s_qk256_proof: bool,
     dense_regular_llm_cuda_proof: bool,
 }
@@ -200,11 +253,12 @@ struct ModelCoverageClaims {
 impl ReceiptsCommand {
     pub async fn execute(&self) -> Result<()> {
         match &self.action {
-            ReceiptsAction::Explain { path, latest, json } => {
+            ReceiptsAction::Explain { path, latest, json, format } => {
                 let receipt_path = resolve_receipt_path(path.as_deref(), *latest)?;
                 let receipt = read_receipt_json(&receipt_path)?;
                 let explanation = explain_receipt(&receipt_path, &receipt);
-                if *json {
+                let output_json = *json || matches!(format, Some(ReceiptExplainFormat::Json));
+                if output_json {
                     println!("{}", serde_json::to_string_pretty(&explanation)?);
                 } else {
                     print_receipt_explanation(&explanation);
@@ -215,7 +269,7 @@ impl ReceiptsCommand {
     }
 }
 
-fn resolve_receipt_path(path: Option<&Path>, latest: bool) -> Result<PathBuf> {
+pub(crate) fn resolve_receipt_path(path: Option<&Path>, latest: bool) -> Result<PathBuf> {
     if latest {
         let search_root = path.unwrap_or_else(|| Path::new(DEFAULT_RECEIPTS_DIR));
         return latest_receipt_under(search_root);
@@ -228,7 +282,7 @@ fn resolve_receipt_path(path: Option<&Path>, latest: bool) -> Result<PathBuf> {
     Ok(path.to_path_buf())
 }
 
-fn read_receipt_json(path: &Path) -> Result<Value> {
+pub(crate) fn read_receipt_json(path: &Path) -> Result<Value> {
     let bytes = fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     serde_json::from_slice(&bytes)
         .with_context(|| format!("failed to parse receipt JSON {}", path.display()))
@@ -280,7 +334,20 @@ fn consider_latest_file(path: &Path, latest: &mut Option<(SystemTime, PathBuf)>)
 
 pub fn explain_receipt(path: &Path, receipt: &Value) -> ReceiptExplanation {
     let mut explanation = ReceiptExplanation {
+        schema_version: 1,
         path: path.display().to_string(),
+        model_coverage_row: None,
+        current_tier: None,
+        selected_backend: None,
+        selected_route: None,
+        fallback_used: None,
+        product_cli_ready: None,
+        server_ready: None,
+        server_ready_scope: None,
+        speedup_claim: None,
+        full_residency_claim: None,
+        bitnet_packed_i2s_qk256_proof: None,
+        dense_regular_llm_cuda_proof: None,
         artifact_kind: string_at(receipt, &["artifact_kind"]),
         claim: string_at(receipt, &["claim"]),
         model: model_summary(receipt),
@@ -292,10 +359,42 @@ pub fn explain_receipt(path: &Path, receipt: &Value) -> ReceiptExplanation {
         timing: timing_explanation(receipt),
         residency: residency_explanation(receipt),
         benchmark_qualification: benchmark_qualification_explanation(receipt),
+        openvino: openvino_explanation(receipt),
         claim_limits: claim_limits_explanation(receipt),
     };
     explanation.model_coverage = model_coverage_explanation(&explanation, receipt);
+    apply_receipt_json_contract_aliases(&mut explanation);
     explanation
+}
+
+fn apply_receipt_json_contract_aliases(explanation: &mut ReceiptExplanation) {
+    explanation.model_coverage_row = explanation.model_coverage.row.clone();
+    explanation.current_tier = explanation.model_coverage.current_tier.clone();
+    explanation.selected_backend = explanation.backend.selected_backend.clone();
+    explanation.selected_route = explanation
+        .execution_plan
+        .selected_route
+        .clone()
+        .or_else(|| explanation.model_coverage.route.clone());
+    explanation.fallback_used = explanation.backend.fallback_used;
+    explanation.product_cli_ready = explanation.model_coverage.product_cli_ready;
+    explanation.server_ready = explanation.model_coverage.server_ready;
+    explanation.server_ready_scope = explanation.model_coverage.server_ready_scope.clone();
+    explanation.speedup_claim =
+        explanation.model_coverage.speedup_claim.or(explanation.claim_limits.speedup_claim);
+    explanation.full_residency_claim = explanation
+        .model_coverage
+        .full_residency_claim
+        .or(explanation.residency.full_cuda_residency_claimed)
+        .or(explanation.claim_limits.full_cuda_residency_claimed);
+    explanation.bitnet_packed_i2s_qk256_proof = explanation
+        .model_coverage
+        .bitnet_packed_i2s_qk256_proof
+        .or(explanation.claim_limits.bitnet_packed_i2s_qk256_proof);
+    explanation.dense_regular_llm_cuda_proof = explanation
+        .model_coverage
+        .dense_regular_llm_cuda_proof
+        .or(explanation.claim_limits.dense_gguf_inference_claimed);
 }
 
 fn backend_explanation(receipt: &Value) -> BackendExplanation {
@@ -318,6 +417,8 @@ fn backend_explanation(receipt: &Value) -> BackendExplanation {
 fn execution_plan_explanation(receipt: &Value) -> ExecutionPlanExplanation {
     ExecutionPlanExplanation {
         selected_route: string_at(receipt, &["execution_plan", "selected_route"])
+            .or_else(|| string_at(receipt, &["route_id"]))
+            .or_else(|| string_at(receipt, &["route", "route_id"]))
             .or_else(|| string_at(receipt, &["selected_route"])),
         model_family: string_at(receipt, &["execution_plan", "model_family"]),
         quantization: string_at(receipt, &["execution_plan", "quantization"]),
@@ -335,6 +436,8 @@ fn quality_explanation(receipt: &Value) -> QualityExplanation {
         answer_quality_passed: bool_at(receipt, &["answer_quality", "passed"])
             .or_else(|| bool_at(receipt, &["quality", "passed"]))
             .or_else(|| bool_at(receipt, &["quality_gate", "passed"]))
+            .or_else(|| bool_at(receipt, &["answer_gate", "passed"]))
+            .or_else(|| bool_at(receipt, &["generation", "all_answer_gates_passed"]))
             .or_else(|| bool_at(receipt, &["quality", "garbage_filter_passed"]))
             .or_else(|| bool_at(receipt, &["benchmark", "quality_passed"])),
         benchmark_quality_passed: bool_at(receipt, &["benchmark", "quality_passed"]),
@@ -405,6 +508,14 @@ fn residency_explanation(receipt: &Value) -> ResidencyExplanation {
             receipt,
             &["cuda_execution_residency", "claim_boundary", "qk256_cuda_residency_claimed"],
         ),
+        model_loaded_once: bool_at(receipt, &["session_lifecycle", "model_loaded_once"])
+            .or_else(|| bool_at(receipt, &["tensor_residency", "model_loaded_once"]))
+            .or_else(|| bool_at(receipt, &["residency", "model_loaded_once"])),
+        cuda_context_once: bool_at(receipt, &["session_lifecycle", "cuda_context_once"])
+            .or_else(|| bool_at(receipt, &["session_lifecycle", "cuda_context_initialized_once"]))
+            .or_else(|| bool_at(receipt, &["tensor_residency", "cuda_context_once"]))
+            .or_else(|| bool_at(receipt, &["tensor_residency", "cuda_context_initialized_once"]))
+            .or_else(|| bool_at(receipt, &["residency", "cuda_context_once"])),
         weights_uploaded_once: bool_at(
             receipt,
             &["cuda_execution_residency", "weights", "uploaded_once"],
@@ -416,8 +527,13 @@ fn residency_explanation(receipt: &Value) -> ResidencyExplanation {
             )
         })
         .or_else(|| bool_at(receipt, &["bitnet", "weights_uploaded_once"]))
+        .or_else(|| bool_at(receipt, &["session_lifecycle", "weights_uploaded_once"]))
+        .or_else(|| bool_at(receipt, &["tensor_residency", "weights_uploaded_once"]))
         .or_else(|| bool_at(receipt, &["residency", "weights_uploaded_once"]))
         .or_else(|| bool_at(receipt, &["proof", "weights_uploaded_once"])),
+        per_request_model_load: bool_at(receipt, &["session_lifecycle", "per_request_model_load"])
+            .or_else(|| bool_at(receipt, &["tensor_residency", "per_request_model_load"]))
+            .or_else(|| bool_at(receipt, &["residency", "per_request_model_load"])),
         per_token_weight_upload: bool_at(
             receipt,
             &["cuda_execution_residency", "weights", "per_token_weight_upload"],
@@ -429,8 +545,15 @@ fn residency_explanation(receipt: &Value) -> ResidencyExplanation {
             )
         })
         .or_else(|| bool_at(receipt, &["bitnet", "per_token_weight_upload"]))
+        .or_else(|| bool_at(receipt, &["tensor_residency", "per_token_weight_upload"]))
         .or_else(|| bool_at(receipt, &["residency", "per_token_weight_upload"]))
         .or_else(|| bool_at(receipt, &["proof", "per_token_weight_upload"])),
+        workspace_reused: bool_at(receipt, &["session_lifecycle", "workspace_reused"])
+            .or_else(|| bool_at(receipt, &["session_lifecycle", "runtime_buffers_reused"]))
+            .or_else(|| bool_at(receipt, &["tensor_residency", "workspace_reused"]))
+            .or_else(|| bool_at(receipt, &["tensor_residency", "runtime_buffers_reused"]))
+            .or_else(|| bool_at(receipt, &["residency", "workspace_reused"]))
+            .or_else(|| bool_at(receipt, &["residency", "runtime_buffers_reused"])),
         kv_cache_residency: string_at(
             receipt,
             &["cuda_execution_residency", "kv_cache", "residency"],
@@ -559,6 +682,220 @@ fn benchmark_profile_reviews(receipt: &Value) -> Vec<BenchmarkProfileExplanation
         .collect()
 }
 
+fn openvino_explanation(receipt: &Value) -> OpenVinoExplanation {
+    let requested_backend = string_at(receipt, &["requested_backend"])
+        .or_else(|| string_at(receipt, &["backend", "requested_backend"]))
+        .or_else(|| string_at(receipt, &["execution_plan", "requested_backend"]));
+    let selected_backend = string_at(receipt, &["selected_backend"])
+        .or_else(|| string_at(receipt, &["backend", "selected_backend"]))
+        .or_else(|| string_at(receipt, &["execution_plan", "selected_backend"]));
+    let runtime_api = string_at(receipt, &["runtime_api"])
+        .or_else(|| string_at(receipt, &["backend", "runtime_api"]))
+        .or_else(|| string_at(receipt, &["execution_plan", "runtime_api"]));
+    let route_id = string_at(receipt, &["route_id"])
+        .or_else(|| string_at(receipt, &["route", "route_id"]))
+        .or_else(|| string_at(receipt, &["execution_plan", "route_id"]))
+        .or_else(|| string_at(receipt, &["execution_plan", "selected_route"]))
+        .or_else(|| string_at(receipt, &["selected_route"]));
+    let artifact_kind = string_at(receipt, &["artifact_kind"]);
+    let backend_lane = string_at(receipt, &["backend_lane"]);
+
+    if !is_openvino_receipt(
+        artifact_kind.as_deref(),
+        route_id.as_deref(),
+        requested_backend.as_deref(),
+        selected_backend.as_deref(),
+        runtime_api.as_deref(),
+        backend_lane.as_deref(),
+    ) {
+        return OpenVinoExplanation::default();
+    }
+
+    let runtime_device = string_at(receipt, &["runtime_device"])
+        .or_else(|| string_at(receipt, &["device"]))
+        .or_else(|| string_at(receipt, &["backend", "runtime_device"]));
+    let resolved_device = string_at(receipt, &["resolved_device"])
+        .or_else(|| string_at(receipt, &["device_name"]))
+        .or_else(|| string_at(receipt, &["backend", "resolved_device"]));
+    let proof_family = string_at(receipt, &["proof_family"])
+        .or_else(|| backend_lane.clone())
+        .or_else(|| route_id.clone());
+    let proof_stage = string_at(receipt, &["proof_stage"]);
+    let selected_kernel_or_runtime = string_at(receipt, &["selected_kernel_or_runtime"])
+        .or_else(|| string_at(receipt, &["selected_kernel"]))
+        .or_else(|| string_at(receipt, &["runtime", "selected_kernel_or_runtime"]));
+    let route_reason = string_at(receipt, &["route", "route_reason"])
+        .or_else(|| string_at(receipt, &["route_reason"]));
+    let timing_scope = string_at(receipt, &["timing", "timing_scope"])
+        .or_else(|| string_at(receipt, &["timing_scope"]))
+        .or_else(|| string_at(receipt, &["comparison_scope"]))
+        .or_else(|| infer_openvino_timing_scope(receipt));
+    let promotion_status = string_at(receipt, &["promotion_status"])
+        .or_else(|| string_at(receipt, &["route", "promotion_status"]))
+        .or_else(|| string_at(receipt, &["route_status"]))
+        .or_else(|| infer_openvino_promotion_status(route_id.as_deref()));
+    let quality_status = openvino_quality_status(receipt);
+    let blockers = openvino_blockers(receipt, route_id.as_deref(), selected_backend.as_deref());
+    let does_not_prove = openvino_does_not_prove(
+        route_id.as_deref(),
+        selected_backend.as_deref(),
+        promotion_status.as_deref(),
+        receipt,
+    );
+
+    OpenVinoExplanation {
+        route_id,
+        route_reason,
+        requested_backend,
+        selected_backend,
+        runtime_api,
+        runtime_device,
+        resolved_device,
+        proof_family,
+        proof_stage,
+        backend_lane,
+        selected_kernel_or_runtime,
+        quality_status,
+        timing_scope,
+        promotion_status,
+        blockers,
+        does_not_prove,
+    }
+}
+
+fn is_openvino_receipt(
+    artifact_kind: Option<&str>,
+    route_id: Option<&str>,
+    requested_backend: Option<&str>,
+    selected_backend: Option<&str>,
+    runtime_api: Option<&str>,
+    backend_lane: Option<&str>,
+) -> bool {
+    [artifact_kind, route_id, requested_backend, selected_backend, runtime_api, backend_lane]
+        .into_iter()
+        .flatten()
+        .any(|value| value.to_ascii_lowercase().contains("openvino"))
+}
+
+fn infer_openvino_timing_scope(receipt: &Value) -> Option<String> {
+    if value_at(receipt, &["timing", "openvino_perf_metrics"]).is_some()
+        || f64_at(receipt, &["timing", "pipeline_construct_wall_ms"]).is_some()
+        || f64_at(receipt, &["timing", "generation_wall_ms"]).is_some()
+    {
+        return Some("openvino_pipeline_construct_and_generation_wall_time".to_string());
+    }
+    if value_at(receipt, &["generation", "devices"]).is_some() {
+        return Some("openvino_multi_device_generation_summary".to_string());
+    }
+    None
+}
+
+fn infer_openvino_promotion_status(route_id: Option<&str>) -> Option<String> {
+    let route_id = route_id?;
+    if route_id.contains("candidate") {
+        Some("candidate".to_string())
+    } else if route_id.contains("promoted") || route_id == "dense_slm_default_cpu" {
+        Some("promoted".to_string())
+    } else {
+        None
+    }
+}
+
+fn openvino_quality_status(receipt: &Value) -> Option<String> {
+    if let Some(passed) = bool_at(receipt, &["answer_gate", "passed"]) {
+        return Some(if passed { "answer_gate_passed" } else { "answer_gate_failed" }.to_string());
+    }
+    if let Some(passed) = bool_at(receipt, &["quality_gate", "passed"]) {
+        return Some(
+            if passed { "quality_gate_passed" } else { "quality_gate_failed" }.to_string(),
+        );
+    }
+    if let Some(status) = string_at(receipt, &["profile_quality", "status"]) {
+        return Some(status);
+    }
+    if let Some(passed) = bool_at(receipt, &["generation", "all_answer_gates_passed"]) {
+        return Some(
+            if passed { "all_answer_gates_passed" } else { "answer_gate_failures_present" }
+                .to_string(),
+        );
+    }
+    None
+}
+
+fn openvino_blockers(
+    receipt: &Value,
+    route_id: Option<&str>,
+    selected_backend: Option<&str>,
+) -> Vec<String> {
+    let mut blockers = BTreeSet::new();
+    extend_string_set(&mut blockers, string_array_at(receipt, &["blockers"]));
+    extend_string_set(&mut blockers, string_array_at(receipt, &["route", "blockers"]));
+    extend_string_set(&mut blockers, string_array_at(receipt, &["known_gaps"]));
+    extend_string_set(&mut blockers, string_array_at(receipt, &["timing", "known_gaps"]));
+    extend_string_set(&mut blockers, string_array_at(receipt, &["profile_quality", "notes"]));
+
+    if route_id.is_some_and(|route| route.contains("candidate")) {
+        blockers.insert(
+            "route remains candidate until exact-profile promotion evidence exists".to_string(),
+        );
+    }
+    if bool_at(receipt, &["output", "generated_token_ids_available_from_pipeline"]) == Some(false)
+        || bool_at(
+            receipt,
+            &["environment", "transformers", "generated_token_ids_available_from_pipeline"],
+        ) == Some(false)
+    {
+        blockers
+            .insert("direct generated token IDs are unavailable from OpenVINO GenAI".to_string());
+    }
+    if selected_backend == Some("openvino-npu") {
+        blockers.insert("NPU promotion requires cache plus warm/resident evidence".to_string());
+    }
+    blockers.into_iter().collect()
+}
+
+fn openvino_does_not_prove(
+    route_id: Option<&str>,
+    selected_backend: Option<&str>,
+    promotion_status: Option<&str>,
+    receipt: &Value,
+) -> Vec<String> {
+    let mut limits = BTreeSet::new();
+    limits.insert("BitNet packed I2_S/QK256 proof".to_string());
+    limits.insert("full BitNet accelerator inference".to_string());
+    limits.insert("QK256 accelerator decode".to_string());
+
+    if selected_backend == Some("openvino-gpu") {
+        limits.insert("native OpenCL execution proof".to_string());
+    }
+    if selected_backend == Some("openvino-npu") {
+        limits.insert("native NPU kernel execution".to_string());
+        limits.insert("NPU cold one-off usability".to_string());
+        limits.insert("dynamic decode, beam search, or parallel sampling on NPU".to_string());
+    }
+    if promotion_status != Some("promoted")
+        || route_id.is_some_and(|route| route.contains("candidate"))
+    {
+        limits.insert("route promotion".to_string());
+    }
+    if bool_at(receipt, &["route", "acceleration_claim"]) == Some(false)
+        || bool_at(receipt, &["acceleration_claim"]) == Some(false)
+    {
+        limits.insert("acceleration claim".to_string());
+    }
+    if bool_at(receipt, &["speedup_claim"]) == Some(false)
+        || bool_at(receipt, &["route", "speedup_claim"]) == Some(false)
+        || bool_at(receipt, &["claim_boundary", "speedup_claim"]) == Some(false)
+    {
+        limits.insert("speedup claim".to_string());
+    }
+    limits.into_iter().collect()
+}
+
+fn extend_string_set(values: &mut BTreeSet<String>, entries: Vec<String>) {
+    values.extend(entries.into_iter().filter(|entry| !entry.trim().is_empty()));
+}
+
 fn model_coverage_explanation(
     explanation: &ReceiptExplanation,
     receipt: &Value,
@@ -590,9 +927,12 @@ fn model_coverage_explanation(
             .selected_route
             .clone()
             .or_else(|| entry.accelerator_routes.first().cloned());
+        coverage.product_cli_ready = Some(entry.claims.product_cli_ready);
         coverage.speedup_claim = Some(entry.claims.speedup_claim);
         coverage.benchmark_qualified = Some(entry.claims.benchmark_qualified);
         coverage.server_ready = Some(entry.claims.server_ready);
+        coverage.server_ready_scope = model_coverage_server_ready_scope(entry);
+        coverage.full_residency_claim = Some(entry.claims.full_residency_claim);
         coverage.bitnet_packed_i2s_qk256_proof = Some(entry.claims.bitnet_packed_i2s_qk256_proof);
         coverage.dense_regular_llm_cuda_proof = Some(entry.claims.dense_regular_llm_cuda_proof);
         coverage.claim_boundary = Some(entry.claim_boundary.clone());
@@ -602,6 +942,10 @@ fn model_coverage_explanation(
     }
 
     coverage
+}
+
+fn model_coverage_server_ready_scope(entry: &ModelCoverageEntry) -> Option<String> {
+    entry.claims.server_ready.then(|| "exact_profile".to_string())
 }
 
 fn find_model_coverage_matrix() -> Option<PathBuf> {
@@ -665,6 +1009,14 @@ fn match_model_coverage_entry<'a>(
 
     let search_text = receipt_search_text(receipt, explanation);
     let route = explanation.execution_plan.selected_route.as_deref();
+    if route == Some("dense_regular_llm_cuda")
+        && (search_text.contains("qwen3")
+            || search_text.contains("qwen3-0.6b-instruct-q8_0")
+            || search_text.contains("qwen3-0.6b-q8_0.gguf"))
+    {
+        return matrix.entry.iter().find(|entry| entry.id == "dense_qwen3_06b_q8_candidate");
+    }
+
     if route == Some("dense_regular_llm_cuda")
         && (search_text.contains("qwen")
             || search_text.contains("qwen25")
@@ -893,8 +1245,13 @@ pub fn compact_proof_lines(explanation: &ReceiptExplanation) -> Vec<String> {
     if let Some(runtime) = &explanation.backend.runtime_api {
         lines.push(format!("  runtime: {runtime}"));
     }
+    if let Some(device) = &explanation.openvino.runtime_device {
+        lines.push(format!("  device: {device}"));
+    }
     if !explanation.kernels.is_empty() {
         lines.push(format!("  kernel: {}", explanation.kernels.join(", ")));
+    } else if let Some(runtime) = &explanation.openvino.selected_kernel_or_runtime {
+        lines.push(format!("  runtime id: {runtime}"));
     }
     if let Some(fallback) = explanation.backend.fallback_used {
         lines.push(format!("  fallback: {fallback}"));
@@ -938,6 +1295,12 @@ pub fn compact_proof_lines(explanation: &ReceiptExplanation) -> Vec<String> {
     if let Some(speedup_claim) = speedup_claim {
         lines.push(format!("  speed claim: {speedup_claim}"));
     }
+    if let Some(status) = &explanation.openvino.promotion_status {
+        lines.push(format!("  OpenVINO promotion: {status}"));
+    }
+    if !explanation.openvino.does_not_prove.is_empty() {
+        lines.push(format!("  does not prove: {}", explanation.openvino.does_not_prove.join("; ")));
+    }
     lines.push(format!("  receipt: {}", explanation.path));
 
     lines
@@ -963,9 +1326,14 @@ fn print_receipt_explanation(explanation: &ReceiptExplanation) {
         print_option_indented("current_tier", explanation.model_coverage.current_tier.as_deref());
         print_option_indented("status", explanation.model_coverage.status.as_deref());
         print_option_indented("route", explanation.model_coverage.route.as_deref());
+        print_bool_indented("product_cli_ready", explanation.model_coverage.product_cli_ready);
         print_bool_indented("speedup_claim", explanation.model_coverage.speedup_claim);
         print_bool_indented("benchmark_qualified", explanation.model_coverage.benchmark_qualified);
         print_bool_indented("server_ready", explanation.model_coverage.server_ready);
+        print_option_indented(
+            "server_ready_scope",
+            explanation.model_coverage.server_ready_scope.as_deref(),
+        );
         print_bool_indented(
             "bitnet_packed_i2s_qk256_proof",
             explanation.model_coverage.bitnet_packed_i2s_qk256_proof,
@@ -1042,10 +1410,14 @@ fn print_receipt_explanation(explanation: &ReceiptExplanation) {
             explanation.residency.qk256_cuda_residency_claimed,
         );
         print_bool_indented("weights_uploaded_once", explanation.residency.weights_uploaded_once);
+        print_bool_indented("model_loaded_once", explanation.residency.model_loaded_once);
+        print_bool_indented("cuda_context_once", explanation.residency.cuda_context_once);
+        print_bool_indented("per_request_model_load", explanation.residency.per_request_model_load);
         print_bool_indented(
             "per_token_weight_upload",
             explanation.residency.per_token_weight_upload,
         );
+        print_bool_indented("workspace_reused", explanation.residency.workspace_reused);
         print_option_indented("kv_cache", explanation.residency.kv_cache_residency.as_deref());
         print_bool_indented(
             "full_cuda_residency_claimed",
@@ -1103,6 +1475,33 @@ fn print_receipt_explanation(explanation: &ReceiptExplanation) {
                 print_benchmark_profile(profile);
             }
         }
+    }
+
+    if has_openvino(&explanation.openvino) {
+        println!();
+        println!("OpenVINO:");
+        print_option_indented("route_id", explanation.openvino.route_id.as_deref());
+        print_option_indented("route_reason", explanation.openvino.route_reason.as_deref());
+        print_option_indented(
+            "requested_backend",
+            explanation.openvino.requested_backend.as_deref(),
+        );
+        print_option_indented("selected_backend", explanation.openvino.selected_backend.as_deref());
+        print_option_indented("runtime_api", explanation.openvino.runtime_api.as_deref());
+        print_option_indented("runtime_device", explanation.openvino.runtime_device.as_deref());
+        print_option_indented("resolved_device", explanation.openvino.resolved_device.as_deref());
+        print_option_indented("proof_family", explanation.openvino.proof_family.as_deref());
+        print_option_indented("proof_stage", explanation.openvino.proof_stage.as_deref());
+        print_option_indented("backend_lane", explanation.openvino.backend_lane.as_deref());
+        print_option_indented(
+            "selected_kernel_or_runtime",
+            explanation.openvino.selected_kernel_or_runtime.as_deref(),
+        );
+        print_option_indented("quality_status", explanation.openvino.quality_status.as_deref());
+        print_option_indented("timing_scope", explanation.openvino.timing_scope.as_deref());
+        print_option_indented("promotion_status", explanation.openvino.promotion_status.as_deref());
+        print_string_list_indented("blockers", &explanation.openvino.blockers);
+        print_string_list_indented("does_not_prove", &explanation.openvino.does_not_prove);
     }
 
     println!();
@@ -1240,8 +1639,12 @@ fn has_timing(timing: &TimingExplanation) -> bool {
 
 fn has_residency(residency: &ResidencyExplanation) -> bool {
     residency.qk256_cuda_residency_claimed.is_some()
+        || residency.model_loaded_once.is_some()
+        || residency.cuda_context_once.is_some()
         || residency.weights_uploaded_once.is_some()
+        || residency.per_request_model_load.is_some()
         || residency.per_token_weight_upload.is_some()
+        || residency.workspace_reused.is_some()
         || residency.kv_cache_residency.is_some()
         || residency.full_cuda_residency_claimed.is_some()
 }
@@ -1261,15 +1664,36 @@ fn has_benchmark_qualification(qualification: &BenchmarkQualificationExplanation
         || !qualification.profile_reviews.is_empty()
 }
 
+fn has_openvino(openvino: &OpenVinoExplanation) -> bool {
+    openvino.route_id.is_some()
+        || openvino.route_reason.is_some()
+        || openvino.requested_backend.is_some()
+        || openvino.selected_backend.is_some()
+        || openvino.runtime_api.is_some()
+        || openvino.runtime_device.is_some()
+        || openvino.resolved_device.is_some()
+        || openvino.proof_family.is_some()
+        || openvino.proof_stage.is_some()
+        || openvino.backend_lane.is_some()
+        || openvino.selected_kernel_or_runtime.is_some()
+        || openvino.quality_status.is_some()
+        || openvino.timing_scope.is_some()
+        || openvino.promotion_status.is_some()
+        || !openvino.blockers.is_empty()
+        || !openvino.does_not_prove.is_empty()
+}
+
 fn has_model_coverage(coverage: &ModelCoverageExplanation) -> bool {
     coverage.source.is_some()
         || coverage.row.is_some()
         || coverage.current_tier.is_some()
         || coverage.status.is_some()
         || coverage.route.is_some()
+        || coverage.product_cli_ready.is_some()
         || coverage.speedup_claim.is_some()
         || coverage.benchmark_qualified.is_some()
         || coverage.server_ready.is_some()
+        || coverage.server_ready_scope.is_some()
         || coverage.bitnet_packed_i2s_qk256_proof.is_some()
         || coverage.dense_regular_llm_cuda_proof.is_some()
         || coverage.claim_boundary.is_some()
@@ -1340,7 +1764,227 @@ fn sum_kernel_f64(receipt: &Value, field: &str) -> Option<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use clap::Parser;
+    use serde_json::{Value, json};
+
+    #[derive(Parser, Debug)]
+    struct TestReceiptsCli {
+        #[command(subcommand)]
+        action: ReceiptsAction,
+    }
+
+    struct ExpectedReceiptJson<'a> {
+        model_coverage_row: &'a str,
+        current_tier: &'a str,
+        selected_backend: &'a str,
+        selected_route: Option<&'a str>,
+        fallback_used: bool,
+        product_cli_ready: bool,
+        server_ready: bool,
+        server_ready_scope: Option<&'a str>,
+        speedup_claim: bool,
+        full_residency_claim: bool,
+        bitnet_packed_i2s_qk256_proof: bool,
+        dense_regular_llm_cuda_proof: bool,
+    }
+
+    fn assert_receipt_json_contract(
+        receipt: &Value,
+        expected: ExpectedReceiptJson<'_>,
+    ) -> Result<()> {
+        let explanation = explain_receipt(Path::new("receipt.json"), receipt);
+        let value = serde_json::to_value(&explanation)?;
+
+        assert_eq!(value["schema_version"], 1);
+        assert_eq!(value["model_coverage_row"], expected.model_coverage_row);
+        assert_eq!(value["current_tier"], expected.current_tier);
+        assert_eq!(value["selected_backend"], expected.selected_backend);
+        if let Some(route) = expected.selected_route {
+            assert_eq!(value["selected_route"], route);
+        } else {
+            assert!(value["selected_route"].is_null());
+        }
+        assert_eq!(value["fallback_used"], expected.fallback_used);
+        assert_eq!(value["product_cli_ready"], expected.product_cli_ready);
+        assert_eq!(value["server_ready"], expected.server_ready);
+        if let Some(scope) = expected.server_ready_scope {
+            assert_eq!(value["server_ready_scope"], scope);
+        } else {
+            assert!(value["server_ready_scope"].is_null());
+        }
+        assert_eq!(value["speedup_claim"], expected.speedup_claim);
+        assert_eq!(value["full_residency_claim"], expected.full_residency_claim);
+        assert_eq!(value["bitnet_packed_i2s_qk256_proof"], expected.bitnet_packed_i2s_qk256_proof);
+        assert_eq!(value["dense_regular_llm_cuda_proof"], expected.dense_regular_llm_cuda_proof);
+        Ok(())
+    }
+
+    #[test]
+    fn receipts_explain_accepts_format_json_alias() {
+        let cli =
+            TestReceiptsCli::parse_from(["receipts", "explain", "--latest", "--format", "json"]);
+
+        let ReceiptsAction::Explain { latest, json, format, .. } = cli.action;
+        assert!(latest);
+        assert!(!json);
+        assert_eq!(format, Some(ReceiptExplainFormat::Json));
+    }
+
+    #[test]
+    fn receipts_explain_json_contract_locks_cuda_model_rows() -> Result<()> {
+        assert_receipt_json_contract(
+            &json!({
+                "artifact_kind": "bitnet_cuda_answer",
+                "model": {
+                    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                    "file": "ggml-model-i2_s.gguf"
+                },
+                "backend": {
+                    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                    "runtime_api": "cuda",
+                    "fallback_used": false
+                },
+                "execution_plan": {
+                    "selected_route": "bitnet_qk256_cuda",
+                    "model_family": "bitnet_b1_58",
+                    "speedup_claim": false
+                },
+                "claim_boundary": {
+                    "bitnet_packed_i2s_qk256_proof": true,
+                    "dense_gguf_inference_claimed": false
+                }
+            }),
+            ExpectedReceiptJson {
+                model_coverage_row: "bitnet_official_2b_i2s_qk256",
+                current_tier: "product_cli_ready",
+                selected_backend: "nvidia-rtx-5070-ti-cuda",
+                selected_route: Some("bitnet_qk256_cuda"),
+                fallback_used: false,
+                product_cli_ready: true,
+                server_ready: false,
+                server_ready_scope: None,
+                speedup_claim: false,
+                full_residency_claim: false,
+                bitnet_packed_i2s_qk256_proof: true,
+                dense_regular_llm_cuda_proof: false,
+            },
+        )?;
+
+        assert_receipt_json_contract(
+            &json!({
+                "artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof",
+                "model": {
+                    "id": "qwen2.5-0.5b-instruct-q8_0"
+                },
+                "execution_plan": {
+                    "selected_route": "dense_regular_llm_cuda",
+                    "model_family": "qwen",
+                    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                    "fallback_used": false,
+                    "speedup_claim": false
+                },
+                "claim_boundary": {
+                    "bitnet_packed_i2s_qk256_proof": false,
+                    "dense_regular_llm_cuda_claimed": true,
+                    "server_ready_claimed": false,
+                    "speedup_claim": false
+                }
+            }),
+            ExpectedReceiptJson {
+                model_coverage_row: "dense_qwen25_05b_q8_cuda",
+                current_tier: "product_cli_ready",
+                selected_backend: "nvidia-rtx-5070-ti-cuda",
+                selected_route: Some("dense_regular_llm_cuda"),
+                fallback_used: false,
+                product_cli_ready: true,
+                server_ready: true,
+                server_ready_scope: Some("exact_profile"),
+                speedup_claim: false,
+                full_residency_claim: false,
+                bitnet_packed_i2s_qk256_proof: false,
+                dense_regular_llm_cuda_proof: true,
+            },
+        )?;
+
+        assert_receipt_json_contract(
+            &json!({
+                "artifact_kind": "dense_gguf_qwen_ask_strict_cuda_proof",
+                "model": {
+                    "id": "qwen3-0.6b-instruct-q8_0",
+                    "file": "Qwen3-0.6B-Q8_0.gguf",
+                    "architecture": "qwen3"
+                },
+                "execution_plan": {
+                    "selected_route": "dense_regular_llm_cuda",
+                    "model_family": "qwen",
+                    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                    "fallback_used": false,
+                    "speedup_claim": false
+                },
+                "claim_boundary": {
+                    "bitnet_packed_i2s_qk256_proof": false,
+                    "dense_regular_llm_cuda_claimed": true,
+                    "server_ready_claimed": false,
+                    "speedup_claim": false,
+                    "full_cuda_residency_claimed": false
+                }
+            }),
+            ExpectedReceiptJson {
+                model_coverage_row: "dense_qwen3_06b_q8_candidate",
+                current_tier: "product_cli_ready",
+                selected_backend: "nvidia-rtx-5070-ti-cuda",
+                selected_route: Some("dense_regular_llm_cuda"),
+                fallback_used: false,
+                product_cli_ready: true,
+                server_ready: true,
+                server_ready_scope: Some("exact_profile"),
+                speedup_claim: false,
+                full_residency_claim: false,
+                bitnet_packed_i2s_qk256_proof: false,
+                dense_regular_llm_cuda_proof: true,
+            },
+        )?;
+
+        assert_receipt_json_contract(
+            &json!({
+                "artifact_kind": "smollm2_same_prompt_comparator_blocker",
+                "model_coverage_row": "dense_smollm2_360m_candidate",
+                "model": {
+                    "id": "smollm2-360m-instruct",
+                    "architecture": "smollm2"
+                },
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "fallback_used": false,
+                "quality_gate": {
+                    "passed": false,
+                    "blocker": "same-prompt comparator required"
+                },
+                "claim_boundary": {
+                    "bitnet_packed_i2s_qk256_proof": false,
+                    "dense_regular_llm_cuda_claimed": false,
+                    "server_ready_claimed": false,
+                    "speedup_claim": false,
+                    "full_cuda_residency_claimed": false
+                }
+            }),
+            ExpectedReceiptJson {
+                model_coverage_row: "dense_smollm2_360m_candidate",
+                current_tier: "structurally_valid",
+                selected_backend: "nvidia-rtx-5070-ti-cuda",
+                selected_route: None,
+                fallback_used: false,
+                product_cli_ready: false,
+                server_ready: false,
+                server_ready_scope: None,
+                speedup_claim: false,
+                full_residency_claim: false,
+                bitnet_packed_i2s_qk256_proof: false,
+                dense_regular_llm_cuda_proof: false,
+            },
+        )?;
+
+        Ok(())
+    }
 
     #[test]
     fn explain_receipt_extracts_cuda_plan_and_claim_limits() {
@@ -1402,6 +2046,10 @@ mod tests {
         assert_eq!(explanation.claim_limits.speedup_claim, Some(false));
         assert_eq!(explanation.claim_limits.dense_gguf_inference_claimed, Some(false));
         assert_eq!(explanation.claim_limits.bitnet_packed_i2s_qk256_proof, Some(false));
+        assert_eq!(explanation.schema_version, 1);
+        assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
+        assert_eq!(explanation.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.fallback_used, Some(false));
     }
 
     #[test]
@@ -1469,7 +2117,104 @@ mod tests {
     }
 
     #[test]
-    fn receipts_explain_links_bitnet_receipt_to_model_coverage() {
+    fn receipts_explain_extracts_lunar_lake_openvino_route_summary() -> Result<()> {
+        let receipt = json!({
+            "artifact_kind": "lunar_lake_openvino_operator_ask",
+            "proof_stage": "operator_candidate_route_executed",
+            "requested_backend": "openvino-gpu",
+            "selected_backend": "openvino-gpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "GPU.0",
+            "resolved_device": "Intel(R) Arc(TM) 140V GPU (16GB) (iGPU)",
+            "fallback_used": false,
+            "backend_lane": "dense_slm_openvino_gpu_arc140v",
+            "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+            "model_family": "qwen",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "route": {
+                "route_id": "dense_slm_openvino_gpu_candidate",
+                "route_reason": "Candidate route because answer gates and phase metrics exist, but no benchmark-qualified speedup claim is recorded.",
+                "acceleration_claim": false
+            },
+            "model": {
+                "repo": "Qwen/Qwen2.5-0.5B-Instruct"
+            },
+            "output": {
+                "generated_token_ids_available_from_pipeline": false
+            },
+            "answer_gate": {
+                "passed": true
+            },
+            "timing": {
+                "pipeline_construct_wall_ms": 6089.31,
+                "generation_wall_ms": 2458.34,
+                "openvino_perf_metrics": {
+                    "time_to_first_token": {
+                        "mean_ms": 1455.4
+                    }
+                }
+            },
+            "claim_boundary": {
+                "speedup_claim": false,
+                "bitnet_packed_i2s_qk256_proof": false
+            }
+        });
+
+        let explanation = explain_receipt(Path::new("openvino-gpu.json"), &receipt);
+
+        assert_eq!(explanation.selected_route.as_deref(), Some("dense_slm_openvino_gpu_candidate"));
+        assert_eq!(explanation.quality.answer_quality_passed, Some(true));
+        assert_eq!(
+            explanation.openvino.route_id.as_deref(),
+            Some("dense_slm_openvino_gpu_candidate")
+        );
+        assert_eq!(explanation.openvino.selected_backend.as_deref(), Some("openvino-gpu"));
+        assert_eq!(explanation.openvino.runtime_api.as_deref(), Some("openvino_genai"));
+        assert_eq!(explanation.openvino.runtime_device.as_deref(), Some("GPU.0"));
+        assert_eq!(
+            explanation.openvino.proof_family.as_deref(),
+            Some("dense_slm_openvino_gpu_arc140v")
+        );
+        assert_eq!(
+            explanation.openvino.selected_kernel_or_runtime.as_deref(),
+            Some("openvino-genai-llmpipeline-gpu0")
+        );
+        assert_eq!(explanation.openvino.quality_status.as_deref(), Some("answer_gate_passed"));
+        assert_eq!(
+            explanation.openvino.timing_scope.as_deref(),
+            Some("openvino_pipeline_construct_and_generation_wall_time")
+        );
+        assert_eq!(explanation.openvino.promotion_status.as_deref(), Some("candidate"));
+        assert!(
+            explanation
+                .openvino
+                .blockers
+                .iter()
+                .any(|blocker| blocker.contains("direct generated token IDs"))
+        );
+        assert!(
+            explanation
+                .openvino
+                .does_not_prove
+                .iter()
+                .any(|limit| limit == "native OpenCL execution proof")
+        );
+        assert!(explanation.openvino.does_not_prove.iter().any(|limit| limit == "route promotion"));
+
+        let value = serde_json::to_value(&explanation)?;
+        assert_eq!(value["openvino"]["runtime_device"], "GPU.0");
+        assert_eq!(value["openvino"]["quality_status"], "answer_gate_passed");
+
+        let lines = compact_proof_lines(&explanation);
+        assert!(lines.contains(&"  route: dense_slm_openvino_gpu_candidate".to_string()));
+        assert!(lines.contains(&"  device: GPU.0".to_string()));
+        assert!(lines.contains(&"  OpenVINO promotion: candidate".to_string()));
+        assert!(lines.iter().any(|line| line.contains("does not prove")));
+        Ok(())
+    }
+
+    #[test]
+    fn receipts_explain_links_bitnet_receipt_to_model_coverage() -> Result<()> {
         let receipt = json!({
             "artifact_kind": "bitnet_cuda_answer",
             "model": {
@@ -1497,10 +2242,24 @@ mod tests {
         assert_eq!(explanation.model_coverage.row.as_deref(), Some("bitnet_official_2b_i2s_qk256"));
         assert_eq!(explanation.model_coverage.current_tier.as_deref(), Some("product_cli_ready"));
         assert_eq!(explanation.model_coverage.route.as_deref(), Some("bitnet_qk256_cuda"));
+        assert_eq!(explanation.model_coverage.product_cli_ready, Some(true));
         assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
         assert_eq!(explanation.model_coverage.server_ready, Some(false));
+        assert_eq!(explanation.model_coverage.server_ready_scope, None);
+        assert_eq!(explanation.server_ready, Some(false));
         assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(true));
         assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(false));
+        assert_eq!(explanation.model_coverage_row.as_deref(), Some("bitnet_official_2b_i2s_qk256"));
+        assert_eq!(explanation.current_tier.as_deref(), Some("product_cli_ready"));
+        assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
+        assert_eq!(explanation.selected_route.as_deref(), Some("bitnet_qk256_cuda"));
+        assert_eq!(explanation.fallback_used, Some(false));
+        assert_eq!(explanation.product_cli_ready, Some(true));
+        assert_eq!(explanation.server_ready_scope, None);
+        assert_eq!(explanation.speedup_claim, Some(false));
+        assert_eq!(explanation.full_residency_claim, Some(false));
+        assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(true));
+        assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(false));
         assert!(
             explanation
                 .model_coverage
@@ -1508,10 +2267,25 @@ mod tests {
                 .iter()
                 .any(|warning| warning.contains("not dense SLM CUDA proof"))
         );
+
+        let value = serde_json::to_value(&explanation)?;
+        assert_eq!(value["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
+        assert_eq!(value["current_tier"], "product_cli_ready");
+        assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["selected_route"], "bitnet_qk256_cuda");
+        assert_eq!(value["fallback_used"], false);
+        assert_eq!(value["product_cli_ready"], true);
+        assert_eq!(value["server_ready"], false);
+        assert!(value["server_ready_scope"].is_null());
+        assert_eq!(value["speedup_claim"], false);
+        assert_eq!(value["full_residency_claim"], false);
+        assert_eq!(value["bitnet_packed_i2s_qk256_proof"], true);
+        assert_eq!(value["dense_regular_llm_cuda_proof"], false);
+        Ok(())
     }
 
     #[test]
-    fn receipts_explain_links_dense_qwen_receipt_to_model_coverage() {
+    fn receipts_explain_links_dense_qwen_receipt_to_model_coverage() -> Result<()> {
         let receipt = json!({
             "artifact_kind": "dense_gguf_qwen_warm_session_strict_cuda_proof",
             "claim": "dense_gguf_qwen_warm_session_strict_cuda_proof_recorded",
@@ -1532,6 +2306,23 @@ mod tests {
                 "dense_regular_llm_cuda_claimed": true,
                 "server_ready_claimed": false,
                 "speedup_claim": false
+            },
+            "session_lifecycle": {
+                "model_loaded_once": true,
+                "cuda_context_once": true,
+                "weights_uploaded_once": true,
+                "per_request_model_load": false,
+                "workspace_reused": true,
+                "fallback_used": false
+            },
+            "tensor_residency": {
+                "model_loaded_once": true,
+                "cuda_context_once": true,
+                "weights_uploaded_once": true,
+                "per_request_model_load": false,
+                "per_token_weight_upload": false,
+                "workspace_reused": true,
+                "full_cuda_residency_claimed": false
             }
         });
 
@@ -1540,10 +2331,30 @@ mod tests {
         assert_eq!(explanation.model_coverage.row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
         assert_eq!(explanation.model_coverage.current_tier.as_deref(), Some("product_cli_ready"));
         assert_eq!(explanation.model_coverage.route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.model_coverage.product_cli_ready, Some(true));
         assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
-        assert_eq!(explanation.model_coverage.server_ready, Some(false));
+        assert_eq!(explanation.model_coverage.server_ready, Some(true));
+        assert_eq!(explanation.model_coverage.server_ready_scope.as_deref(), Some("exact_profile"));
         assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
         assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(true));
+        assert_eq!(explanation.model_coverage_row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
+        assert_eq!(explanation.current_tier.as_deref(), Some("product_cli_ready"));
+        assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
+        assert_eq!(explanation.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.fallback_used, Some(false));
+        assert_eq!(explanation.product_cli_ready, Some(true));
+        assert_eq!(explanation.server_ready, Some(true));
+        assert_eq!(explanation.server_ready_scope.as_deref(), Some("exact_profile"));
+        assert_eq!(explanation.speedup_claim, Some(false));
+        assert_eq!(explanation.full_residency_claim, Some(false));
+        assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(false));
+        assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(true));
+        assert_eq!(explanation.residency.model_loaded_once, Some(true));
+        assert_eq!(explanation.residency.cuda_context_once, Some(true));
+        assert_eq!(explanation.residency.weights_uploaded_once, Some(true));
+        assert_eq!(explanation.residency.per_request_model_load, Some(false));
+        assert_eq!(explanation.residency.per_token_weight_upload, Some(false));
+        assert_eq!(explanation.residency.workspace_reused, Some(true));
         assert!(
             explanation
                 .model_coverage
@@ -1551,6 +2362,96 @@ mod tests {
                 .iter()
                 .any(|warning| warning.contains("not BitNet packed I2_S/QK256 proof"))
         );
+
+        let value = serde_json::to_value(&explanation)?;
+        assert_eq!(value["model_coverage_row"], "dense_qwen25_05b_q8_cuda");
+        assert_eq!(value["current_tier"], "product_cli_ready");
+        assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(value["fallback_used"], false);
+        assert_eq!(value["product_cli_ready"], true);
+        assert_eq!(value["server_ready"], true);
+        assert_eq!(value["server_ready_scope"], "exact_profile");
+        assert_eq!(value["speedup_claim"], false);
+        assert_eq!(value["full_residency_claim"], false);
+        assert_eq!(value["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(value["dense_regular_llm_cuda_proof"], true);
+        assert_eq!(value["residency"]["model_loaded_once"], true);
+        assert_eq!(value["residency"]["cuda_context_once"], true);
+        assert_eq!(value["residency"]["weights_uploaded_once"], true);
+        assert_eq!(value["residency"]["per_request_model_load"], false);
+        assert_eq!(value["residency"]["per_token_weight_upload"], false);
+        assert_eq!(value["residency"]["workspace_reused"], true);
+        Ok(())
+    }
+
+    #[test]
+    fn receipts_explain_links_qwen3_dense_receipt_to_product_cli_coverage() -> Result<()> {
+        let receipt = json!({
+            "artifact_kind": "dense_gguf_qwen_ask_strict_cuda_proof",
+            "claim": "dense_gguf_qwen_ask_strict_cuda_proof_recorded",
+            "model": {
+                "id": "qwen3-0.6b-instruct-q8_0",
+                "file": "Qwen3-0.6B-Q8_0.gguf",
+                "architecture": "qwen3"
+            },
+            "execution_plan": {
+                "selected_route": "dense_regular_llm_cuda",
+                "model_family": "qwen",
+                "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "runtime_api": "cuda",
+                "fallback_used": false,
+                "speedup_claim": false
+            },
+            "claim_boundary": {
+                "bitnet_packed_i2s_qk256_proof": false,
+                "dense_regular_llm_cuda_claimed": true,
+                "server_ready_claimed": false,
+                "speedup_claim": false,
+                "full_cuda_residency_claimed": false
+            }
+        });
+
+        let explanation = explain_receipt(Path::new("dense-qwen3.json"), &receipt);
+
+        assert_eq!(explanation.model_coverage.row.as_deref(), Some("dense_qwen3_06b_q8_candidate"));
+        assert_eq!(explanation.model_coverage.current_tier.as_deref(), Some("product_cli_ready"));
+        assert_eq!(explanation.model_coverage.route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.model_coverage.product_cli_ready, Some(true));
+        assert_eq!(explanation.model_coverage.server_ready, Some(true));
+        assert_eq!(explanation.model_coverage.server_ready_scope.as_deref(), Some("exact_profile"));
+        assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
+        assert_eq!(explanation.model_coverage.full_residency_claim, Some(false));
+        assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
+        assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(true));
+        assert_eq!(explanation.model_coverage_row.as_deref(), Some("dense_qwen3_06b_q8_candidate"));
+        assert_eq!(explanation.current_tier.as_deref(), Some("product_cli_ready"));
+        assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
+        assert_eq!(explanation.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.fallback_used, Some(false));
+        assert_eq!(explanation.product_cli_ready, Some(true));
+        assert_eq!(explanation.server_ready, Some(true));
+        assert_eq!(explanation.server_ready_scope.as_deref(), Some("exact_profile"));
+        assert_eq!(explanation.speedup_claim, Some(false));
+        assert_eq!(explanation.full_residency_claim, Some(false));
+        assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(false));
+        assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(true));
+
+        let value = serde_json::to_value(&explanation)?;
+        assert_eq!(value["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+        assert_eq!(value["current_tier"], "product_cli_ready");
+        assert_eq!(value["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(value["fallback_used"], false);
+        assert_eq!(value["product_cli_ready"], true);
+        assert_eq!(value["server_ready"], true);
+        assert_eq!(value["server_ready_scope"], "exact_profile");
+        assert_eq!(value["speedup_claim"], false);
+        assert_eq!(value["full_residency_claim"], false);
+        assert_eq!(value["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(value["dense_regular_llm_cuda_proof"], true);
+        Ok(())
     }
 
     #[test]
@@ -1622,10 +2523,20 @@ mod tests {
         assert_eq!(explanation.backend.runtime_api.as_deref(), Some("cuda"));
         assert_eq!(explanation.backend.fallback_used, Some(false));
         assert_eq!(explanation.quality.answer_quality_passed, Some(true));
-        assert_eq!(explanation.model_coverage.server_ready, Some(false));
+        assert_eq!(explanation.model_coverage.server_ready, Some(true));
         assert_eq!(explanation.model_coverage.speedup_claim, Some(false));
         assert_eq!(explanation.model_coverage.dense_regular_llm_cuda_proof, Some(true));
         assert_eq!(explanation.model_coverage.bitnet_packed_i2s_qk256_proof, Some(false));
+        assert_eq!(explanation.model_coverage_row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
+        assert_eq!(explanation.current_tier.as_deref(), Some("product_cli_ready"));
+        assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
+        assert_eq!(explanation.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
+        assert_eq!(explanation.fallback_used, Some(false));
+        assert_eq!(explanation.server_ready, Some(true));
+        assert_eq!(explanation.speedup_claim, Some(false));
+        assert_eq!(explanation.full_residency_claim, Some(false));
+        assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(false));
+        assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(true));
         assert!(
             !explanation
                 .model_coverage
@@ -1711,14 +2622,14 @@ mod tests {
             "receipt_kind": "server_shared_engine_chat_completion",
             "runtime_path": "shared_local_inference_engine",
             "runtime_api": "cuda",
-            "requested_model": "qwen2.5-0.5b-instruct-q8_0",
-            "active_model_id": "model-1",
-            "active_model_path": "models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
-            "model_coverage_row": "dense_qwen25_05b_q8_cuda",
+            "requested_model": "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "active_model_id": "bitnet-model-1",
+            "active_model_path": "models/microsoft-bitnet-b1.58-2B-4T-i2s/ggml-model-i2_s.gguf",
+            "model_coverage_row": "bitnet_official_2b_i2s_qk256",
             "model_coverage_tier": "product_cli_ready",
             "requested_backend": "nvidia-rtx-5070-ti-cuda",
             "selected_backend": "nvidia-rtx-5070-ti-cuda",
-            "selected_route": "dense_regular_llm_cuda",
+            "selected_route": "bitnet_qk256_cuda",
             "fallback_used": false,
             "quality_gate": {
                 "passed": true
@@ -1726,14 +2637,16 @@ mod tests {
             "server_smoke_response_claimed": true,
             "server_ready_claimed": true,
             "speedup_claim": false,
-            "dense_regular_llm_cuda_inference_claimed": true,
-            "bitnet_packed_i2s_qk256_proof": false
+            "dense_regular_llm_cuda_inference_claimed": false,
+            "bitnet_packed_i2s_qk256_proof": true
         });
 
         let explanation = explain_receipt(Path::new("server-smoke-stale.json"), &receipt);
         let warnings = &explanation.model_coverage.warnings;
 
-        assert_eq!(explanation.model_coverage.row.as_deref(), Some("dense_qwen25_05b_q8_cuda"));
+        assert_eq!(explanation.model_coverage.row.as_deref(), Some("bitnet_official_2b_i2s_qk256"));
+        assert_eq!(explanation.server_ready, Some(false));
+        assert_eq!(explanation.selected_route.as_deref(), Some("bitnet_qk256_cuda"));
         assert!(warnings.iter().any(|warning| warning.contains("missing exact artifact checksum")));
         assert!(
             warnings.iter().any(|warning| warning.contains("missing endpoint/request profile"))

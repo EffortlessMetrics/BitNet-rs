@@ -18,14 +18,14 @@ use bitnet_inference::prompt_template::{ChatRole, ChatTurn};
 use bitnet_inference::{InferenceEngine, TemplateType};
 use tracing::info;
 
-use super::dense_gguf_linear_parity::{DenseQwenCudaChatOptions, run_dense_qwen_cuda_chat};
+use super::dense_gguf_linear_parity::{
+    DenseQwenCudaChatOptions, is_supported_dense_qwen_cuda_model_path, run_dense_qwen_cuda_chat,
+};
 use super::inference::InferenceCommand;
 use super::receipts::{explain_receipt, print_compact_proof_summary};
 use super::template_util::looks_like_llama3_chat;
 use crate::config::CliConfig;
 use crate::model_cache;
-
-const DENSE_QWEN_CHAT_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
 
 impl InferenceCommand {
     /// Run interactive chat mode with REPL
@@ -388,7 +388,7 @@ fn resolve_dense_qwen_cuda_chat_model(model: Option<&Path>) -> Result<Option<Pat
         return Ok(Some(cached.path));
     }
 
-    if model.file_name().and_then(|value| value.to_str()) == Some(DENSE_QWEN_CHAT_MODEL_FILE) {
+    if is_supported_dense_qwen_cuda_model_path(model) {
         return Ok(Some(model.to_path_buf()));
     }
 

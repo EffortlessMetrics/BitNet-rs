@@ -1,0 +1,58 @@
+{
+    "receipt_kind":  "server_shared_engine_chat_completion",
+    "request_id":  "fec5e9e8-1e8b-4472-b721-65704e0bfd90",
+    "runtime_path":  "shared_local_inference_engine",
+    "runtime_api":  "cuda",
+    "model_identity":  {
+                           "model_id":  "qwen3-0.6b-instruct-q8_0",
+                           "requested_model":  "qwen3-0.6b-instruct-q8_0",
+                           "active_model_id":  "model-1",
+                           "active_model_path":  "C:\\bntmp\\cuda-model-010\\Qwen3-0.6B-Q8_0.gguf",
+                           "model_sha256":  "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+                       },
+    "endpoint_profile":  {
+                             "endpoint":  "/v1/chat/completions",
+                             "method":  "POST",
+                             "request_profile":  "non_streaming_chat_completion",
+                             "streaming":  false,
+                             "message_count":  1
+                         },
+    "generation_policy":  {
+                              "max_tokens":  2,
+                              "temperature":  0.0,
+                              "top_p":  1.0,
+                              "decoding":  "greedy"
+                          },
+    "requested_model":  "qwen3-0.6b-instruct-q8_0",
+    "active_model_id":  "model-1",
+    "active_model_path":  "C:\\bntmp\\cuda-model-010\\Qwen3-0.6B-Q8_0.gguf",
+    "model_sha256":  "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "model_coverage_row":  "dense_qwen3_06b_q8_candidate",
+    "model_coverage_tier":  "product_cli_ready",
+    "selected_backend":  "nvidia-rtx-5070-ti-cuda",
+    "requested_backend":  "nvidia-rtx-5070-ti-cuda",
+    "selected_route":  "dense_regular_llm_cuda",
+    "prompt_template":  "chatml",
+    "tokenizer_authority":  "active_model_tokenizer",
+    "prompt_authority":  "server_chat_template",
+    "fallback_used":  false,
+    "simulated_inference":  false,
+    "streaming":  false,
+    "generated_text_non_empty":  true,
+    "prompt_tokens":  11,
+    "completion_tokens":  1,
+    "total_ms":  12317,
+    "quality_gate":  {
+                         "gate":  "server_non_empty_utf8_response",
+                         "passed":  true,
+                         "generated_text_non_empty":  true,
+                         "utf8_valid":  true,
+                         "broad_chat_quality_claimed":  false
+                     },
+    "server_smoke_response_claimed":  true,
+    "server_ready_claimed":  false,
+    "speedup_claim":  false,
+    "full_cuda_residency_claimed":  false,
+    "dense_regular_llm_cuda_inference_claimed":  true,
+    "bitnet_packed_i2s_qk256_proof":  false
+}

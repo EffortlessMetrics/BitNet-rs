@@ -1,0 +1,12 @@
+timestamp = "2026-05-19T13:51:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BITNET-INTAKE-002"
+event = "in_progress"
+branch = "codex/lunar-lake/bitnet-intake-closed-source-status"
+actor = "codex"
+summary = "Started a narrow Lunar Lake BitNet semantic-intake refresh for closed shared source changes."
+notes = [
+  "GitHub reports A770 PR #5020 closed unmerged, so it should not remain an active pending stack in the committed Lunar Lake semantic intake.",
+  "The slice distinguishes closed or superseded shared changes from pending stacks without running inference or changing route promotion.",
+  "low_power remains blocked on battery-mode evidence and is not affected by this work.",
+]

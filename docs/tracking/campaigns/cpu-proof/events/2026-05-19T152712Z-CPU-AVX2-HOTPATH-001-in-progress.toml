@@ -1,0 +1,11 @@
+timestamp = "2026-05-19T15:27:12Z"
+campaign = "cpu-proof"
+item = "CPU-AVX2-HOTPATH-001"
+event = "in_progress"
+actor = "codex"
+
+notes = [
+  "Started CPU-AVX2-HOTPATH-001 after CPU-AVX2-HOTPATH-000 was closed out as merged.",
+  "Scope is QK256 hot-path counter receipt plumbing for strict CPU BitNet answer-corpus receipts.",
+  "No math change, speedup claim, GPU/NPU/OpenVINO/CUDA/dense SLM claim, or broad chat-quality claim is made.",
+]

@@ -582,31 +582,26 @@ mod data_type_conversion {
         assert!(back.is_nan());
     }
 
+    fn i8_to_offset_u8(value: i8) -> u8 {
+        (i16::from(value) + 128) as u8
+    }
+
+    fn offset_u8_to_i8(value: u8) -> i8 {
+        (i16::from(value) - 128) as i8
+    }
+
     #[test]
     fn i8_to_u8_quantized_format_offset() {
         // Quantized i8 [-128..127] → u8 [0..255] via offset 128
-        let i8_val: i8 = -128;
-        let u8_val = (i8_val as i16 + 128) as u8;
-        assert_eq!(u8_val, 0);
-
-        let i8_val: i8 = 0;
-        let u8_val = (i8_val as i16 + 128) as u8;
-        assert_eq!(u8_val, 128);
-
-        let i8_val: i8 = 127;
-        let u8_val = (i8_val as i16 + 128) as u8;
-        assert_eq!(u8_val, 255);
+        assert_eq!(i8_to_offset_u8(-128), 0);
+        assert_eq!(i8_to_offset_u8(0), 128);
+        assert_eq!(i8_to_offset_u8(127), 255);
     }
 
     #[test]
     fn u8_to_i8_quantized_format_offset() {
-        let u8_val: u8 = 0;
-        let i8_val = (u8_val as i16 - 128) as i8;
-        assert_eq!(i8_val, -128);
-
-        let u8_val: u8 = 128;
-        let i8_val = (u8_val as i16 - 128) as i8;
-        assert_eq!(i8_val, 0);
+        assert_eq!(offset_u8_to_i8(0), -128);
+        assert_eq!(offset_u8_to_i8(128), 0);
     }
 
     #[test]

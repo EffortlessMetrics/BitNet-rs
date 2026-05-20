@@ -1,0 +1,549 @@
+{
+  "artifact_kind": "apple_m4_bitnet_eval_250_repaired_regression_context_mismatch",
+  "schema_version": "1.0.0",
+  "campaign": "apple-m4-inference-excellence",
+  "work_item": "M4-BITNET-EX-014",
+  "current": {
+    "path": "ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus.json",
+    "corpus_version": "2.1.0",
+    "scoring_kinds": [
+      "contains_expected",
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "numeric_tolerance",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ],
+    "quality_summary": {
+      "failed": 45,
+      "failure_categories": {
+        "extraction": 6,
+        "factual_table": 5,
+        "formatting": 4
+      },
+      "not_run": 0,
+      "passed": 205,
+      "timeout": 0,
+      "total": 250
+    },
+    "task_family_summary": {
+      "arithmetic_exact": {
+        "failed": 1,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 1
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 14,
+        "scoring": {
+          "enabled": true,
+          "failed": 1,
+          "kinds": [
+            "exact_match"
+          ],
+          "not_run": 0,
+          "passed": 14,
+          "total": 15
+        },
+        "timeout": 0,
+        "total": 15
+      },
+      "closed_label_classification": {
+        "failed": 2,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 2
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 18,
+        "scoring": {
+          "enabled": true,
+          "failed": 2,
+          "kinds": [
+            "normalized_match"
+          ],
+          "not_run": 0,
+          "passed": 18,
+          "total": 20
+        },
+        "timeout": 0,
+        "total": 20
+      },
+      "constrained_summary": {
+        "failed": 4,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 4
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 26,
+        "scoring": {
+          "enabled": true,
+          "failed": 4,
+          "kinds": [
+            "required_keywords"
+          ],
+          "not_run": 0,
+          "passed": 26,
+          "total": 30
+        },
+        "timeout": 0,
+        "total": 30
+      },
+      "fixed_table_qa": {
+        "failed": 5,
+        "failure_categories": {
+          "factual_table": 5
+        },
+        "failure_taxonomy": {
+          "answer_content": 5
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 30,
+        "scoring": {
+          "enabled": true,
+          "failed": 5,
+          "kinds": [
+            "contains_expected",
+            "exact_match"
+          ],
+          "not_run": 0,
+          "passed": 30,
+          "total": 35
+        },
+        "timeout": 0,
+        "total": 35
+      },
+      "format_constrained_json": {
+        "failed": 0,
+        "failure_categories": {},
+        "failure_taxonomy": {},
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 20,
+        "scoring": {
+          "enabled": true,
+          "failed": 0,
+          "kinds": [
+            "json_schema"
+          ],
+          "not_run": 0,
+          "passed": 20,
+          "total": 20
+        },
+        "timeout": 0,
+        "total": 20
+      },
+      "numeric_tolerance": {
+        "failed": 11,
+        "failure_categories": {
+          "formatting": 4
+        },
+        "failure_taxonomy": {
+          "answer_content": 10,
+          "format_only": 4
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 24,
+        "scoring": {
+          "enabled": true,
+          "failed": 11,
+          "kinds": [
+            "numeric_tolerance"
+          ],
+          "not_run": 0,
+          "passed": 24,
+          "total": 35
+        },
+        "timeout": 0,
+        "total": 35
+      },
+      "ordering_sorting": {
+        "failed": 3,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 3
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 17,
+        "scoring": {
+          "enabled": true,
+          "failed": 2,
+          "kinds": [
+            "normalized_match"
+          ],
+          "not_run": 0,
+          "passed": 18,
+          "total": 20
+        },
+        "timeout": 0,
+        "total": 20
+      },
+      "required_forbidden_tokens": {
+        "failed": 8,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 8
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 22,
+        "scoring": {
+          "enabled": true,
+          "failed": 8,
+          "kinds": [
+            "required_forbidden_tokens"
+          ],
+          "not_run": 0,
+          "passed": 22,
+          "total": 30
+        },
+        "timeout": 0,
+        "total": 30
+      },
+      "rewrite_normalized": {
+        "failed": 5,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 5
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 15,
+        "scoring": {
+          "enabled": true,
+          "failed": 1,
+          "kinds": [
+            "normalized_match"
+          ],
+          "not_run": 0,
+          "passed": 19,
+          "total": 20
+        },
+        "timeout": 0,
+        "total": 20
+      },
+      "synthetic_extraction": {
+        "failed": 6,
+        "failure_categories": {
+          "extraction": 6
+        },
+        "failure_taxonomy": {
+          "answer_content": 6
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 19,
+        "scoring": {
+          "enabled": true,
+          "failed": 6,
+          "kinds": [
+            "exact_match",
+            "normalized_match"
+          ],
+          "not_run": 0,
+          "passed": 19,
+          "total": 25
+        },
+        "timeout": 0,
+        "total": 25
+      }
+    },
+    "prompt_generation_identity": "8ccb3ad8cf3e3af19b5da2cf69b50a21b78cf01cd3b287de76a1497d2fbfeb3c",
+    "fallback_used": false,
+    "selected_backend": "apple-m4-cpu-neon"
+  },
+  "baseline": {
+    "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json",
+    "corpus_version": "2.0.0",
+    "scoring_kinds": [
+      "exact_match",
+      "json_schema",
+      "normalized_match",
+      "numeric_tolerance",
+      "required_forbidden_tokens",
+      "required_keywords"
+    ],
+    "quality_summary": {
+      "failed": 54,
+      "failure_categories": {
+        "extraction": 6,
+        "factual_table": 12,
+        "formatting": 2
+      },
+      "not_run": 0,
+      "passed": 196,
+      "timeout": 0,
+      "total": 250
+    },
+    "task_family_summary": {
+      "arithmetic_exact": {
+        "failed": 1,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 1
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 14,
+        "scoring": {
+          "enabled": true,
+          "failed": 1,
+          "kinds": [
+            "exact_match"
+          ],
+          "not_run": 0,
+          "passed": 14,
+          "total": 15
+        },
+        "timeout": 0,
+        "total": 15
+      },
+      "closed_label_classification": {
+        "failed": 2,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 2
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 18,
+        "scoring": {
+          "enabled": true,
+          "failed": 2,
+          "kinds": [
+            "normalized_match"
+          ],
+          "not_run": 0,
+          "passed": 18,
+          "total": 20
+        },
+        "timeout": 0,
+        "total": 20
+      },
+      "constrained_summary": {
+        "failed": 6,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 6
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 24,
+        "scoring": {
+          "enabled": true,
+          "failed": 6,
+          "kinds": [
+            "required_keywords"
+          ],
+          "not_run": 0,
+          "passed": 24,
+          "total": 30
+        },
+        "timeout": 0,
+        "total": 30
+      },
+      "fixed_table_qa": {
+        "failed": 12,
+        "failure_categories": {
+          "factual_table": 12
+        },
+        "failure_taxonomy": {
+          "answer_content": 12
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 23,
+        "scoring": {
+          "enabled": true,
+          "failed": 12,
+          "kinds": [
+            "exact_match",
+            "normalized_match"
+          ],
+          "not_run": 0,
+          "passed": 23,
+          "total": 35
+        },
+        "timeout": 0,
+        "total": 35
+      },
+      "format_constrained_json": {
+        "failed": 0,
+        "failure_categories": {},
+        "failure_taxonomy": {},
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 20,
+        "scoring": {
+          "enabled": true,
+          "failed": 0,
+          "kinds": [
+            "json_schema"
+          ],
+          "not_run": 0,
+          "passed": 20,
+          "total": 20
+        },
+        "timeout": 0,
+        "total": 20
+      },
+      "numeric_tolerance": {
+        "failed": 11,
+        "failure_categories": {
+          "formatting": 2
+        },
+        "failure_taxonomy": {
+          "answer_content": 11,
+          "format_only": 2
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 24,
+        "scoring": {
+          "enabled": true,
+          "failed": 11,
+          "kinds": [
+            "numeric_tolerance"
+          ],
+          "not_run": 0,
+          "passed": 24,
+          "total": 35
+        },
+        "timeout": 0,
+        "total": 35
+      },
+      "ordering_sorting": {
+        "failed": 3,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 3
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 17,
+        "scoring": {
+          "enabled": true,
+          "failed": 3,
+          "kinds": [
+            "normalized_match"
+          ],
+          "not_run": 0,
+          "passed": 17,
+          "total": 20
+        },
+        "timeout": 0,
+        "total": 20
+      },
+      "required_forbidden_tokens": {
+        "failed": 8,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 8
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 22,
+        "scoring": {
+          "enabled": true,
+          "failed": 8,
+          "kinds": [
+            "required_forbidden_tokens"
+          ],
+          "not_run": 0,
+          "passed": 22,
+          "total": 30
+        },
+        "timeout": 0,
+        "total": 30
+      },
+      "rewrite_normalized": {
+        "failed": 5,
+        "failure_categories": {},
+        "failure_taxonomy": {
+          "answer_content": 5
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 15,
+        "scoring": {
+          "enabled": true,
+          "failed": 5,
+          "kinds": [
+            "normalized_match"
+          ],
+          "not_run": 0,
+          "passed": 15,
+          "total": 20
+        },
+        "timeout": 0,
+        "total": 20
+      },
+      "synthetic_extraction": {
+        "failed": 6,
+        "failure_categories": {
+          "extraction": 6
+        },
+        "failure_taxonomy": {
+          "answer_content": 6
+        },
+        "not_run": 0,
+        "other_statuses": {},
+        "passed": 19,
+        "scoring": {
+          "enabled": true,
+          "failed": 6,
+          "kinds": [
+            "exact_match",
+            "normalized_match"
+          ],
+          "not_run": 0,
+          "passed": 19,
+          "total": 25
+        },
+        "timeout": 0,
+        "total": 25
+      }
+    },
+    "prompt_generation_identity": null,
+    "fallback_used": false,
+    "selected_backend": "apple-m4-cpu-neon"
+  },
+  "regression": {
+    "attempted": true,
+    "compatible_regression_performed": false,
+    "tool_exit_code": 1,
+    "mismatch_reason": "scoring_summary.kinds mismatch",
+    "command": "target/release/bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-17T1903Z/bitnet-eval-250/answer-corpus.json --json",
+    "interpretation": "The repaired 2.1.0 corpus adds contains_expected scoring and revised normalization, so the 2026-05-17T1903Z 2.0.0 receipt is not a matching regression baseline. Treat this run as the first repaired 250-case baseline until a second repaired receipt exists. Operator deltas are context only, not a compatible regression result.",
+    "context_delta_only": {
+      "pass_delta": 9,
+      "quality_failure_delta": -9,
+      "timeout_delta": 0,
+      "fixed_table_qa_pass_delta": 7,
+      "constrained_summary_pass_delta": 2,
+      "numeric_tolerance_pass_delta": 0,
+      "rewrite_scoring_pass_delta": 4
+    }
+  },
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "bitnet_performance_claimed": false,
+    "dense_slm_evidence_used": false,
+    "chat_enabled": false,
+    "serve_enabled": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_claimed": false,
+    "mpsgraph_claimed": false,
+    "macbook_evidence": false,
+    "broad_apple_silicon_claimed": false
+  }
+}

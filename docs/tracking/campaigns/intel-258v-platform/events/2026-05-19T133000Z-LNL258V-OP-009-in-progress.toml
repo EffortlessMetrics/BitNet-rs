@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T13:30:00Z"
+event = "in_progress"
+item = "LNL258V-OP-009"
+branch = "codex/lunar-lake/LNL258V-OP-009-blocked-ask-receipt"
+actor = "codex"
+summary = "Started adding a no-inference blocked-route receipt for Lunar Lake ask auto-route failures."
+
+notes = [
+  "When auto route selection fails before model execution, bitnet lunar-lake ask should preserve the fail-closed error and write a machine-readable blocked receipt when --json-out is supplied.",
+  "The receipt should record requested device/route/profile, promotion/profile evidence paths, route-selection error, fallback=false, and no inference execution.",
+  "The scope makes no route promotion, speedup, power-advantage, new-inference, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]

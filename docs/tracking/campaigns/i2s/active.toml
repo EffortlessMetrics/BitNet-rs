@@ -1,0 +1,64 @@
+id = "i2s"
+title = "I2_S productization"
+status = "active"
+linked_plan = "plans/i2s/implementation-plan.md"
+linked_source_map = "docs/bitnet/i2s/README.md"
+
+objective = "Govern I2_S/QK256 as a first-class packed BitNet route with explicit layout, scaled-math, kernel-identity, artifact, receipt, backend-parity, and performance claim boundaries before runtime work proceeds."
+
+end_state = [
+  "I2_S layout authority, scaled math semantics, kernel identities, and artifact gates are documented before implementation.",
+  "Runtime work is sequenced through campaign-local tracker items with explicit no-claim boundaries.",
+  "Backend parity and performance claims require strict receipts rather than inheriting from diagnostic or no-scale paths.",
+]
+
+hard_constraints = [
+  "Do not change runtime code in docs-only I2_S tracker slices.",
+  "Do not treat no-scale QK256 paths as scaled I2_S productization proof.",
+  "Do not claim backend parity, strict artifacts, receipts, or performance without dedicated evidence.",
+]
+
+[[work_item]]
+id = "I2S-DOCS-000"
+title = "docs(i2s): add I2_S source map and implementation plan"
+status = "merged"
+pr = 5880
+merge_sha = "603b87839ae0d59b101c01bf9262be7ae9ca3601"
+branch = "codex/document-i2_s-productization-plan"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add the I2_S source map, campaign manifest, implementation plan, proposal, and initial contract specs without changing runtime code or making kernel, backend, artifact, receipt, or performance claims."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check i2s",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/**",
+  "docs/bitnet/**",
+  "docs/proposals/**",
+  "docs/specs/**",
+  "docs/tracking/campaigns/i2s/**",
+  "docs/tracking/generated/**",
+  "plans/i2s/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "tests/**",
+  "benches/**",
+  "runtime code",
+]
+may_claim = [
+  "The I2_S productization lane has a docs-only source map, campaign manifest, proposal, plan, and draft contract specs.",
+]
+must_not_claim = [
+  "I2_S runtime behavior changed.",
+  "Scaled I2_S math is implemented.",
+  "Backend parity is proven.",
+  "Strict artifacts or receipts validate I2_S productization.",
+  "Performance is proven.",
+]

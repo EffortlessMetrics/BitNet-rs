@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "intel-258v-platform"
+timestamp = "2026-05-18T15:06:58Z"
+event = "in_progress"
+item = "LNL258V-ROUTE-012"
+branch = "codex/lunar-lake/LNL258V-ROUTE-012-advantage-context"
+actor = "codex"
+summary = "Started route advantage context wiring for Lunar Lake profile comparison."
+
+notes = [
+  "This item adds diagnostic observed total-response comparison context against the promoted CPU baseline.",
+  "Candidate OpenVINO GPU/NPU routes remain benchmark-unqualified and promotion-blocked unless separate promotion evidence clears blockers.",
+  "No new inference, route promotion, speedup, power-advantage, accelerator, native OpenCL/NPU, or BitNet QK256/I2_S claim is made.",
+]

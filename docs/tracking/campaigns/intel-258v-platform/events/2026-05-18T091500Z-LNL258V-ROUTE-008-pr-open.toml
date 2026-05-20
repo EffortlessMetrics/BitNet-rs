@@ -1,0 +1,27 @@
+timestamp = "2026-05-18T09:15:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-008"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-008-profile-diagnostics"
+pr = 5533
+head_sha = "75e1f45d0622f67a725e3512abe281154ec9da95"
+summary = "Opened LNL258V-ROUTE-008 to scope OpenVINO route diagnostics by workload profile."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "PR #5533 scopes OpenVINO diagnosis and generation-budget blockers to their matching route profiles.",
+  "yes_no_clear_sky now blocks ask_short, while stop_token_one_word_done remains visible on regression_tiny candidate rows.",
+  "OpenVINO GPU/NPU routes remain candidate-only and unpromoted with no speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim.",
+]

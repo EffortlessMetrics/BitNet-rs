@@ -53,16 +53,21 @@ pub use artifact_kinds::{
     DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND,
-    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND, DENSE_REGULAR_LLM_MODEL_CLASS, RECEIPT_SCHEMA,
-    RECEIPT_SCHEMA_VERSION, SERVER_SHARED_ENGINE_CHAT_COMPLETION_RECEIPT_KIND,
+    DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND, DENSE_REGULAR_LLM_MODEL_CLASS,
+    M4_RUN_IDENTITY_CONTRACT_VERSION, RECEIPT_SCHEMA, RECEIPT_SCHEMA_VERSION,
+    SERVER_SHARED_ENGINE_CHAT_COMPLETION_RECEIPT_KIND,
 };
 pub use schema::{
     AccuracyMetric, AccuracyTestResults, CacheEfficiency, CrossValidation, DeterminismTestResults,
-    KVCacheTestResults, ModelInfo, ParityMetadata, PerformanceBaseline, StrictInferenceProvenance,
-    TestResults,
+    KVCacheTestResults, M4RunIdentity, M4RunIdentityBackend, M4RunIdentityBinary,
+    M4RunIdentityCommand, M4RunIdentityEvidence, M4RunIdentityGit, M4RunIdentityModel,
+    M4RunIdentityOs, M4RunIdentityPromptTemplate, M4RunIdentityTiming, M4RunIdentityTokenizer,
+    ModelInfo, ParityMetadata, PerformanceBaseline, StrictInferenceProvenance, TestResults,
 };
 
 use artifact_kinds::{
+    BITNET_B158_2B_4T_I2S_MODEL_FILE, BITNET_B158_2B_4T_I2S_MODEL_ID,
+    BITNET_B158_2B_4T_I2S_MODEL_SHA256,
     DENSE_ONE_LAYER_ATTENTION_V_MIX_FIXTURE_GAP_CANDIDATE_ORDER,
     DENSE_ONE_LAYER_GAP_CANDIDATE_ORDER, DENSE_ONE_LAYER_NO_REMAINING_GAP_CANDIDATE_ORDER,
     DENSE_ONE_LAYER_REMAINING_GAP_CANDIDATE_ORDER, QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE,
@@ -225,14 +230,11 @@ pub fn validate_server_shared_engine_chat_completion_receipt_json(receipt: &Valu
 
     let model_identity = object_field(receipt, "model_identity")?;
     require_string_non_empty(model_identity, "model_id")?;
-    require_string_eq(model_identity, "model_id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
     require_string_non_empty(model_identity, "requested_model")?;
     require_string_non_empty(model_identity, "active_model_id")?;
     require_string_non_empty(model_identity, "active_model_path")?;
     require_sha256(model_identity, "model_sha256")?;
     require_sha256(receipt, "model_sha256")?;
-    require_string_eq(model_identity, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
-    require_string_eq(receipt, "model_sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
     require_same_string(receipt, "model_sha256", model_identity, "model_sha256", "model_sha256")?;
     require_same_string(
         receipt,
@@ -286,11 +288,19 @@ pub fn validate_server_shared_engine_chat_completion_receipt_json(receipt: &Valu
     require_positive_number(generation_policy, "top_p")?;
     require_string_non_empty(generation_policy, "decoding")?;
 
-    require_string_eq(receipt, "model_coverage_row", "dense_qwen25_05b_q8_cuda")?;
-    require_string_eq(receipt, "model_coverage_tier", "product_cli_ready")?;
-    require_string_eq(receipt, "selected_route", "dense_regular_llm_cuda")?;
-    require_bool_eq(receipt, "dense_regular_llm_cuda_inference_claimed", true)?;
-    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", false)?;
+    match required_string(receipt, "selected_route")? {
+        "dense_regular_llm_cuda" => {
+            validate_dense_qwen_server_shared_engine_receipt(receipt, model_identity)?
+        }
+        "bitnet_qk256_cuda" => {
+            validate_bitnet_qk256_server_shared_engine_receipt(receipt, model_identity)?
+        }
+        route => {
+            return Err(anyhow!(
+                "server shared-engine receipt selected_route `{route}` is not an accepted exact-profile server-smoke route"
+            ));
+        }
+    }
 
     let quality = object_field(receipt, "quality_gate")?;
     require_string_non_empty(quality, "gate")?;
@@ -299,6 +309,143 @@ pub fn validate_server_shared_engine_chat_completion_receipt_json(receipt: &Valu
     require_bool_eq(quality, "utf8_valid", true)?;
     require_bool_eq(quality, "broad_chat_quality_claimed", false)?;
 
+    Ok(())
+}
+
+fn validate_dense_qwen_server_shared_engine_receipt(
+    receipt: &Value,
+    model_identity: &Value,
+) -> Result<()> {
+    let (model_id, model_sha256, model_coverage_row) = match required_string(
+        model_identity,
+        "model_id",
+    )? {
+        QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID => (
+            QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID,
+            QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256,
+            "dense_qwen25_05b_q8_cuda",
+        ),
+        QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID => (
+            QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID,
+            QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256,
+            "dense_qwen3_06b_q8_candidate",
+        ),
+        model_id => {
+            return Err(anyhow!(
+                "dense server shared-engine receipt model_id `{model_id}` is not an accepted exact-profile dense Qwen model"
+            ));
+        }
+    };
+
+    require_string_eq(model_identity, "model_id", model_id)?;
+    require_string_eq(model_identity, "model_sha256", model_sha256)?;
+    require_string_eq(receipt, "model_sha256", model_sha256)?;
+    require_string_eq(receipt, "model_coverage_row", model_coverage_row)?;
+    require_string_eq(receipt, "model_coverage_tier", "product_cli_ready")?;
+    require_bool_eq(receipt, "dense_regular_llm_cuda_inference_claimed", true)?;
+    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", false)?;
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_shared_engine_receipt(
+    receipt: &Value,
+    model_identity: &Value,
+) -> Result<()> {
+    require_string_eq(model_identity, "model_id", BITNET_B158_2B_4T_I2S_MODEL_ID)?;
+    require_string_eq(model_identity, "model_sha256", BITNET_B158_2B_4T_I2S_MODEL_SHA256)?;
+    require_string_eq(receipt, "model_sha256", BITNET_B158_2B_4T_I2S_MODEL_SHA256)?;
+    let active_model_path = required_string(model_identity, "active_model_path")?;
+    let normalized_path = active_model_path.replace('\\', "/");
+    if !normalized_path.ends_with(BITNET_B158_2B_4T_I2S_MODEL_FILE) {
+        return Err(anyhow!(
+            "model_identity.active_model_path must end with `{}` for BitNet QK256 server smoke",
+            BITNET_B158_2B_4T_I2S_MODEL_FILE
+        ));
+    }
+    require_string_eq(receipt, "model_coverage_row", "bitnet_official_2b_i2s_qk256")?;
+    require_string_eq(receipt, "model_coverage_tier", "product_cli_ready")?;
+    require_bool_eq(receipt, "dense_regular_llm_cuda_inference_claimed", false)?;
+    require_bool_eq(receipt, "bitnet_packed_i2s_qk256_proof", true)?;
+    validate_bitnet_qk256_server_execution_plan(receipt)?;
+    validate_bitnet_qk256_server_execution_coverage(receipt)?;
+    validate_bitnet_qk256_server_kernel_stats(receipt)?;
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_execution_plan(receipt: &Value) -> Result<()> {
+    let plan = object_field(receipt, "execution_plan")?;
+    require_string_eq(plan, "planner_version", CUDA_PLANNER_RECEIPT_VERSION)?;
+    require_string_eq(plan, "model_family", "bitnet_b1_58")?;
+    require_string_eq(plan, "quantization", "i2_s_qk256")?;
+    require_string_eq(plan, "selected_route", "bitnet_qk256_cuda")?;
+    require_string_eq(plan, "requested_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(plan, "selected_backend", "nvidia-rtx-5070-ti-cuda")?;
+    require_string_eq(plan, "runtime_api", "cuda")?;
+    require_string_eq(plan, "strict_fallback_policy", "reject")?;
+    require_bool_eq(plan, "dense_regular_llm_cuda", false)?;
+    require_bool_eq(plan, "bitnet_packed_qk256_cuda", true)?;
+    require_positive_u64(plan, "cuda_bitnet_qk256_ops")?;
+    let cuda_bitnet_ops = required_u64(plan, "cuda_bitnet_qk256_ops")?;
+    require_u64_eq(plan, "cuda_dense_regular_llm_ops", 0)?;
+    require_u64_eq(plan, "cpu_fallback_ops", 0)?;
+    require_u64_eq(plan, "unsupported_ops", 0)?;
+    require_u64_eq(plan, "total_ops", cuda_bitnet_ops)?;
+    require_u64_eq(plan, "cuda_ops", cuda_bitnet_ops)?;
+    require_bool_eq(plan, "mixed_cuda_routes", false)?;
+    require_bool_eq(plan, "fallback_used", false)?;
+    require_bool_eq(plan, "strict_cuda_ready", true)?;
+    require_bool_eq(plan, "speedup_claim", false)?;
+    require_bool_eq(plan, "full_cuda_residency_claimed", false)?;
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_execution_coverage(receipt: &Value) -> Result<()> {
+    let coverage = object_field(receipt, "execution_coverage")?;
+    require_string_eq(coverage, "execution_claim", "cuda_inference_contribution")?;
+    require_positive_u64(coverage, "bitnet_linear_layers_total")?;
+    require_positive_u64(coverage, "bitnet_linear_layers_on_cuda")?;
+    let total = required_u64(coverage, "bitnet_linear_layers_total")?;
+    let on_cuda = required_u64(coverage, "bitnet_linear_layers_on_cuda")?;
+    if total != on_cuda {
+        return Err(anyhow!(
+            "execution_coverage bitnet_linear_layers_total must match bitnet_linear_layers_on_cuda for zero-fallback BitNet QK256 server smoke"
+        ));
+    }
+    require_u64_eq(coverage, "bitnet_linear_layers_cpu_fallback", 0)?;
+    require_bool_eq(coverage, "fallback_used", false)?;
+    let unsupported_ops = array_field(coverage, "unsupported_ops")?;
+    if !unsupported_ops.is_empty() {
+        return Err(anyhow!("execution_coverage.unsupported_ops must be empty"));
+    }
+    Ok(())
+}
+
+fn validate_bitnet_qk256_server_kernel_stats(receipt: &Value) -> Result<()> {
+    let stats = array_field(receipt, "kernel_stats")?;
+    if stats.is_empty() {
+        return Err(anyhow!("kernel_stats must contain QK256 CUDA server-smoke entries"));
+    }
+    let mut total_invocations = 0_u64;
+    for (index, stat) in stats.iter().enumerate() {
+        require_string_eq(stat, "kernel_id", "qk256_gemv_cuda")?;
+        require_positive_u64(stat, "invocations")?;
+        let invocations = required_u64(stat, "invocations")?;
+        total_invocations += invocations;
+        require_u64_eq(stat, "fallback_invocations", 0)?;
+        require_u64_eq(stat, "cpu_fallback_invocations", 0)?;
+        require_optional_u64_field(stat, "host_to_device_bytes")?;
+        require_optional_u64_field(stat, "device_to_host_bytes")?;
+        require_positive_u64(stat, "kernel_launches")?;
+        require_optional_non_negative_number(stat, "kernel_time_ms")?;
+        require_optional_u64_field(stat, "kernel_time_samples")?;
+        if required_u64(stat, "kernel_launches")? != invocations {
+            return Err(anyhow!(
+                "kernel_stats[{index}].kernel_launches must match invocations for QK256 server smoke"
+            ));
+        }
+    }
+    let coverage = object_field(receipt, "execution_coverage")?;
+    require_u64_eq(coverage, "bitnet_linear_layers_on_cuda", total_invocations)?;
     Ok(())
 }
 
@@ -5225,9 +5372,17 @@ fn validate_dense_qwen_transfer_timing(timing: &Value, transfer: &Value) -> Resu
     }
 
     require_non_negative_number(timing, "device_to_host_ms")?;
-    require_string_eq(timing, "device_to_host_ms_source", "wall_clock_extract_logits_2d_local")?;
+    let d2h_source = required_string(timing, "device_to_host_ms_source")?;
+    if !matches!(
+        d2h_source,
+        "wall_clock_extract_logits_2d_local" | "wall_clock_device_top_k_cuda_sampler"
+    ) {
+        return Err(anyhow!(
+            "field `device_to_host_ms_source` must be a supported dense Qwen D2H timing source, got `{d2h_source}`"
+        ));
+    }
     require_non_negative_number(transfer, "device_to_host_ms")?;
-    require_string_eq(transfer, "device_to_host_ms_source", "wall_clock_extract_logits_2d_local")?;
+    require_string_eq(transfer, "device_to_host_ms_source", d2h_source)?;
 
     let timing_d2h = timing
         .get("device_to_host_ms")
@@ -5241,6 +5396,229 @@ fn validate_dense_qwen_transfer_timing(timing: &Value, transfer: &Value) -> Resu
         return Err(anyhow!(
             "timing.device_to_host_ms must match tensor_residency.transfer_accounting.device_to_host_ms"
         ));
+    }
+
+    Ok(())
+}
+
+fn dense_qwen_reduced_logits_transfer_requested(receipt: &Value) -> bool {
+    receipt
+        .get("logits_transfer_reduction")
+        .and_then(|reduction| reduction.get("device_to_host_bytes_reduced"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+}
+
+fn validate_dense_qwen_step_logits_sha256(step: &Value, reduced_cuda_transfer: bool) -> Result<()> {
+    require_sha256(step, "cpu_logits_sha256")?;
+    if step.get("cpu_logits_sha256_available").is_some() {
+        require_bool_eq(step, "cpu_logits_sha256_available", true)?;
+    }
+    if step.get("cpu_logits_sha256_source").is_some() {
+        require_string_eq(step, "cpu_logits_sha256_source", "full_logits_download")?;
+    }
+
+    if reduced_cuda_transfer {
+        if let Some(value) = step.get("cuda_logits_sha256")
+            && !value.is_null()
+        {
+            return Err(anyhow!(
+                "cuda_logits_sha256 must be null or omitted when reduced device top-k transfer is claimed"
+            ));
+        }
+        require_bool_eq(step, "cuda_logits_sha256_available", false)?;
+        require_string_eq(
+            step,
+            "cuda_logits_sha256_source",
+            "not_recorded_reduced_device_top_k_sampler",
+        )?;
+    } else {
+        require_sha256(step, "cuda_logits_sha256")?;
+        if step.get("cuda_logits_sha256_available").is_some() {
+            require_bool_eq(step, "cuda_logits_sha256_available", true)?;
+        }
+        if step.get("cuda_logits_sha256_source").is_some() {
+            require_string_eq(step, "cuda_logits_sha256_source", "full_logits_download")?;
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_dense_qwen_logits_transfer_reduction(
+    receipt: &Value,
+    stats_d2h: u64,
+    generated_tokens: u64,
+) -> Result<()> {
+    let Some(reduction) = receipt.get("logits_transfer_reduction") else {
+        return Ok(());
+    };
+    if !reduction.is_object() {
+        return Err(anyhow!("logits_transfer_reduction must be an object when present"));
+    }
+
+    require_u64_eq(reduction, "schema", 1)?;
+    require_string_eq(reduction, "scope", "dense_qwen_logits_top_k_transfer")?;
+    let transfer_mode = required_string(reduction, "transfer_mode")?;
+    if transfer_mode.trim().is_empty() {
+        return Err(anyhow!("field `transfer_mode` must not be empty"));
+    }
+    let sampling_location = required_string(reduction, "sampling_location")?;
+    if sampling_location.trim().is_empty() {
+        return Err(anyhow!("field `sampling_location` must not be empty"));
+    }
+    let requested_top_k = required_u64(reduction, "requested_top_k")?;
+    if requested_top_k == 0 {
+        return Err(anyhow!("logits_transfer_reduction.requested_top_k must be positive"));
+    }
+    require_u64_eq(reduction, "generated_tokens_count", generated_tokens)?;
+    let logits_vector_length = required_u64(reduction, "logits_vector_length")?;
+    let logits_element_bytes = required_u64(reduction, "logits_element_bytes")?;
+    if logits_vector_length == 0 || logits_element_bytes == 0 {
+        return Err(anyhow!(
+            "logits_transfer_reduction logits vector length and element bytes must be positive"
+        ));
+    }
+    let full_logits_bytes_per_step = required_u64(reduction, "full_logits_bytes_per_step")?;
+    let full_logits_download_bytes = required_u64(reduction, "full_logits_download_bytes")?;
+    if full_logits_bytes_per_step == 0 || full_logits_download_bytes == 0 {
+        return Err(anyhow!("logits_transfer_reduction full logits byte counts must be positive"));
+    }
+    let expected_full_logits_bytes_per_step = logits_vector_length
+        .checked_mul(logits_element_bytes)
+        .ok_or_else(|| anyhow!("logits_transfer_reduction logits byte count overflows"))?;
+    if full_logits_bytes_per_step != expected_full_logits_bytes_per_step {
+        return Err(anyhow!(
+            "logits_transfer_reduction.full_logits_bytes_per_step must equal logits_vector_length * logits_element_bytes"
+        ));
+    }
+    let expected_full_bytes = full_logits_bytes_per_step
+        .checked_mul(generated_tokens)
+        .ok_or_else(|| anyhow!("logits_transfer_reduction full logits byte count overflows"))?;
+    if full_logits_download_bytes != expected_full_bytes {
+        return Err(anyhow!(
+            "logits_transfer_reduction.full_logits_download_bytes must equal full_logits_bytes_per_step * generated_tokens_count"
+        ));
+    }
+    let actual_device_to_host_bytes = required_u64(reduction, "actual_device_to_host_bytes")?;
+    if actual_device_to_host_bytes != stats_d2h {
+        return Err(anyhow!(
+            "logits_transfer_reduction.actual_device_to_host_bytes must match measured device_to_host_bytes"
+        ));
+    }
+    let top_k_result_bytes_per_step_floor =
+        required_u64(reduction, "top_k_result_bytes_per_step_floor")?;
+    let top_k_result_bytes_total_floor = required_u64(reduction, "top_k_result_bytes_total_floor")?;
+    let selected_token_bytes_total_floor =
+        required_u64(reduction, "selected_token_bytes_total_floor")?;
+    if top_k_result_bytes_per_step_floor == 0
+        || top_k_result_bytes_total_floor == 0
+        || selected_token_bytes_total_floor == 0
+    {
+        return Err(anyhow!(
+            "logits_transfer_reduction preserved-evidence byte floors must be positive"
+        ));
+    }
+    let expected_top_k_bytes_per_step = requested_top_k
+        .checked_mul(12)
+        .ok_or_else(|| anyhow!("logits_transfer_reduction top-k byte floor overflows"))?;
+    if top_k_result_bytes_per_step_floor != expected_top_k_bytes_per_step {
+        return Err(anyhow!(
+            "logits_transfer_reduction.top_k_result_bytes_per_step_floor must equal requested_top_k * 12"
+        ));
+    }
+    let expected_top_k_bytes_total = top_k_result_bytes_per_step_floor
+        .checked_mul(generated_tokens)
+        .ok_or_else(|| anyhow!("logits_transfer_reduction top-k byte total overflows"))?;
+    if top_k_result_bytes_total_floor != expected_top_k_bytes_total {
+        return Err(anyhow!(
+            "logits_transfer_reduction.top_k_result_bytes_total_floor must equal top_k_result_bytes_per_step_floor * generated_tokens_count"
+        ));
+    }
+    let expected_selected_token_bytes_total = 4_u64
+        .checked_mul(generated_tokens)
+        .ok_or_else(|| anyhow!("logits_transfer_reduction selected-token byte floor overflows"))?;
+    if selected_token_bytes_total_floor != expected_selected_token_bytes_total {
+        return Err(anyhow!(
+            "logits_transfer_reduction.selected_token_bytes_total_floor must equal 4 * generated_tokens_count"
+        ));
+    }
+    require_bool_eq(reduction, "selected_token_equality_preserved", true)?;
+    require_bool_eq(reduction, "top_k_evidence_preserved", true)?;
+    require_bool_eq(reduction, "quality_receipts_unchanged", true)?;
+
+    let reduced = object_field(reduction, "device_to_host_bytes_reduced")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `device_to_host_bytes_reduced` must be a bool"))?;
+    let bytes_saved = required_u64(reduction, "bytes_saved_vs_full_logits")?;
+    if reduced {
+        if !matches!(transfer_mode, "device_top_k_cuda_sampler" | "device_greedy_cuda_sampler") {
+            return Err(anyhow!(
+                "logits_transfer_reduction.device_to_host_bytes_reduced requires a device_top_k_cuda_sampler or device_greedy_cuda_sampler transfer_mode"
+            ));
+        }
+        if sampling_location != "cuda_device" {
+            return Err(anyhow!(
+                "logits_transfer_reduction.device_to_host_bytes_reduced requires sampling_location=cuda_device"
+            ));
+        }
+        if let Some(blocker) = reduction.get("reduction_blocker")
+            && !blocker.is_null()
+        {
+            return Err(anyhow!(
+                "logits_transfer_reduction.reduction_blocker must be omitted or null when device_to_host_bytes_reduced is true"
+            ));
+        }
+        if actual_device_to_host_bytes >= full_logits_download_bytes {
+            return Err(anyhow!(
+                "logits_transfer_reduction.device_to_host_bytes_reduced requires actual_device_to_host_bytes < full_logits_download_bytes"
+            ));
+        }
+        if bytes_saved != full_logits_download_bytes - actual_device_to_host_bytes {
+            return Err(anyhow!(
+                "logits_transfer_reduction.bytes_saved_vs_full_logits must equal the measured D2H reduction"
+            ));
+        }
+        let timing = object_field(receipt, "timing")?;
+        let residency = object_field(receipt, "tensor_residency")?;
+        let transfer = object_field(residency, "transfer_accounting")?;
+        require_string_eq(
+            timing,
+            "device_to_host_ms_source",
+            "wall_clock_device_top_k_cuda_sampler",
+        )?;
+        require_string_eq(
+            transfer,
+            "device_to_host_ms_source",
+            "wall_clock_device_top_k_cuda_sampler",
+        )?;
+    } else {
+        require_string_eq(reduction, "transfer_mode", "full_logits_download_cpu_sampler")?;
+        require_string_eq(reduction, "sampling_location", "cpu")?;
+        require_string_non_empty(reduction, "reduction_blocker")?;
+        if actual_device_to_host_bytes != full_logits_download_bytes {
+            return Err(anyhow!(
+                "logits_transfer_reduction non-reduced receipts must account for full logits D2H bytes"
+            ));
+        }
+        if bytes_saved != 0 {
+            return Err(anyhow!(
+                "logits_transfer_reduction.bytes_saved_vs_full_logits must be 0 when device_to_host_bytes_reduced is false"
+            ));
+        }
+        let timing = object_field(receipt, "timing")?;
+        let residency = object_field(receipt, "tensor_residency")?;
+        let transfer = object_field(residency, "transfer_accounting")?;
+        require_string_eq(
+            timing,
+            "device_to_host_ms_source",
+            "wall_clock_extract_logits_2d_local",
+        )?;
+        require_string_eq(
+            transfer,
+            "device_to_host_ms_source",
+            "wall_clock_extract_logits_2d_local",
+        )?;
     }
 
     Ok(())
@@ -5686,6 +6064,7 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     if steps.len() != requested as usize {
         return Err(anyhow!("short_decode_proof.steps length must match generated_tokens_count"));
     }
+    let reduced_cuda_transfer = dense_qwen_reduced_logits_transfer_requested(receipt);
     for (idx, step) in steps.iter().enumerate() {
         require_u64_eq(step, "index", idx as u64)?;
         let cpu_token = required_u64(step, "cpu_selected_token_id")?;
@@ -5696,8 +6075,7 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
         require_bool_eq(step, "selected_token_match", true)?;
         require_sha256(step, "cpu_logits_top_k_sha256")?;
         require_sha256(step, "cuda_logits_top_k_sha256")?;
-        require_sha256(step, "cpu_logits_sha256")?;
-        require_sha256(step, "cuda_logits_sha256")?;
+        validate_dense_qwen_step_logits_sha256(step, reduced_cuda_transfer)?;
         object_field(step, "top_k_match")?
             .as_bool()
             .ok_or_else(|| anyhow!("field `top_k_match` must be a bool"))?;
@@ -5810,6 +6188,7 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     require_u64_eq(transfer, "kernel_invocations", stats_invocations)?;
     require_u64_eq(transfer, "kernel_launches", stats_launches)?;
     validate_dense_qwen_transfer_timing(timing, transfer)?;
+    validate_dense_qwen_logits_transfer_reduction(receipt, stats_d2h, requested)?;
 
     let claim_boundary = object_field(receipt, "claim_boundary")?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
@@ -5959,9 +6338,27 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     require_bool_eq(lifecycle, "model_loaded_once", true)?;
     require_bool_eq(lifecycle, "tokenizer_loaded_once", true)?;
     require_bool_eq(lifecycle, "cuda_context_initialized_once", true)?;
+    require_bool_alias_eq(
+        lifecycle,
+        &["cuda_context_once", "cuda_context_initialized_once"],
+        true,
+        "cuda_context_once",
+    )?;
     require_bool_eq(lifecycle, "weights_uploaded_once", true)?;
+    require_bool_alias_eq(
+        lifecycle,
+        &["per_request_model_load", "per_turn_weight_upload"],
+        false,
+        "per_request_model_load",
+    )?;
     require_bool_eq(lifecycle, "per_turn_weight_upload", false)?;
     require_bool_eq(lifecycle, "runtime_buffers_reused", true)?;
+    require_bool_alias_eq(
+        lifecycle,
+        &["workspace_reused", "runtime_buffers_reused"],
+        true,
+        "workspace_reused",
+    )?;
     require_bool_eq(lifecycle, "kv_cache_policy_recorded", true)?;
     require_bool_eq(lifecycle, "kv_cache_reinitialized_per_turn", true)?;
     require_bool_eq(lifecycle, "sampling_policy_recorded", true)?;
@@ -6013,6 +6410,7 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     if turns.len() != turns_count as usize {
         return Err(anyhow!("warm_session_proof.turns length must match turns_count"));
     }
+    let reduced_cuda_transfer = dense_qwen_reduced_logits_transfer_requested(receipt);
     for (turn_idx, turn) in turns.iter().enumerate() {
         require_u64_eq(turn, "index", turn_idx as u64)?;
         require_positive_u64(turn, "prompt_token_count")?;
@@ -6061,8 +6459,7 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             require_bool_eq(step, "selected_token_match", true)?;
             require_sha256(step, "cpu_logits_top_k_sha256")?;
             require_sha256(step, "cuda_logits_top_k_sha256")?;
-            require_sha256(step, "cpu_logits_sha256")?;
-            require_sha256(step, "cuda_logits_sha256")?;
+            validate_dense_qwen_step_logits_sha256(step, reduced_cuda_transfer)?;
             let step_timing = object_field(step, "cuda_step_timing")?;
             require_non_negative_number(step_timing, "logits_download_ms")?;
             require_non_negative_number(step, "top_k_max_abs_error")?;
@@ -6161,11 +6558,29 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     require_bool_eq(residency, "model_loaded_once", true)?;
     require_bool_eq(residency, "tokenizer_loaded_once", true)?;
     require_bool_eq(residency, "cuda_context_initialized_once", true)?;
+    require_bool_alias_eq(
+        residency,
+        &["cuda_context_once", "cuda_context_initialized_once"],
+        true,
+        "cuda_context_once",
+    )?;
     require_bool_eq(residency, "weights_uploaded_once", true)?;
     require_bool_eq(residency, "weights_resident_on_cuda", true)?;
+    require_bool_alias_eq(
+        residency,
+        &["per_request_model_load", "per_turn_weight_upload"],
+        false,
+        "per_request_model_load",
+    )?;
     require_bool_eq(residency, "per_turn_weight_upload", false)?;
     require_bool_eq(residency, "per_token_weight_upload", false)?;
     require_bool_eq(residency, "runtime_buffers_reused", true)?;
+    require_bool_alias_eq(
+        residency,
+        &["workspace_reused", "runtime_buffers_reused"],
+        true,
+        "workspace_reused",
+    )?;
     require_bool_eq(residency, "kv_cache_policy_recorded", true)?;
     require_bool_eq(residency, "kv_cache_reinitialized_per_turn", true)?;
     require_bool_eq(residency, "sampling_policy_recorded", true)?;
@@ -6182,6 +6597,7 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     require_u64_eq(transfer, "kernel_invocations", stats_invocations)?;
     require_u64_eq(transfer, "kernel_launches", stats_launches)?;
     validate_dense_qwen_transfer_timing(timing, transfer)?;
+    validate_dense_qwen_logits_transfer_reduction(receipt, stats_d2h, turns_count * requested)?;
 
     let claim_boundary = object_field(receipt, "claim_boundary")?;
     require_bool_eq(claim_boundary, "dense_regular_llm_cuda_claimed", true)?;
@@ -6240,12 +6656,8 @@ pub fn validate_dense_gguf_qwen_ask_strict_cuda_proof_receipt_json(receipt: &Val
 
     let model = object_field(receipt, "model")?;
     require_string_eq(model, "model_family", "qwen")?;
-    require_string_eq(model, "id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
-    require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
-    require_string_eq(model, "architecture", "qwen2")?;
+    require_verified_dense_qwen_runtime_model(model)?;
     require_string_eq(model, "artifact_kind", "dense_gguf")?;
-    require_sha256(model, "sha256")?;
-    require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
 
     let execution_path = object_field(receipt, "execution_path")?;
     require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
@@ -6500,12 +6912,8 @@ pub fn validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json(receipt: &Va
 
     let model = object_field(receipt, "model")?;
     require_string_eq(model, "model_family", "qwen")?;
-    require_string_eq(model, "id", QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID)?;
-    require_string_eq(model, "file", QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE)?;
-    require_string_eq(model, "architecture", "qwen2")?;
+    require_verified_dense_qwen_runtime_model(model)?;
     require_string_eq(model, "artifact_kind", "dense_gguf")?;
-    require_sha256(model, "sha256")?;
-    require_string_eq(model, "sha256", QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256)?;
 
     let execution_path = object_field(receipt, "execution_path")?;
     require_string_eq(execution_path, "model_class", DENSE_REGULAR_LLM_MODEL_CLASS)?;
@@ -7865,6 +8273,472 @@ fn load_json_receipt(path: &Path) -> Result<Value> {
     Ok(serde_json::from_str(&content)?)
 }
 
+/// Return the canonical SHA256 identity digest for an Apple M4 `run_identity`.
+pub fn m4_run_identity_sha256(run_identity: &Value) -> Result<String> {
+    let bytes = serde_json::to_vec(run_identity)?;
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+/// Validate the reusable Apple M4 run-identity contract on a receipt.
+///
+/// This checks the top-level `run_identity` object and, when present, the
+/// top-level `run_identity_sha256` digest. It also cross-checks the common
+/// top-level backend and artifact fields so receipt validators can share one
+/// identity gate without duplicating field-level checks.
+pub fn validate_m4_run_identity_contract_json(receipt: &Value) -> Result<()> {
+    let identity = object_field(receipt, "run_identity")?;
+    require_string_eq(identity, "contract_version", M4_RUN_IDENTITY_CONTRACT_VERSION)?;
+    require_string_non_empty_not_tbd(identity, "machine_id")?;
+    require_string_non_empty_not_tbd(identity, "soc")?;
+    require_string_non_empty_not_tbd(identity, "artifact_kind")?;
+    require_string_non_empty_not_tbd(identity, "evidence_family")?;
+
+    if let Some(receipt_artifact_kind) = receipt.get("artifact_kind").and_then(Value::as_str) {
+        let identity_artifact_kind = required_string(identity, "artifact_kind")?;
+        if identity_artifact_kind != receipt_artifact_kind {
+            return Err(anyhow!("run_identity.artifact_kind must match receipt artifact_kind"));
+        }
+    }
+
+    validate_m4_run_identity_os(object_field(identity, "os")?)?;
+    validate_m4_run_identity_git(object_field(identity, "git")?)?;
+    validate_m4_run_identity_binary(object_field(identity, "binary")?)?;
+    validate_m4_run_identity_command(object_field(identity, "command")?)?;
+    validate_m4_run_identity_model(object_field(identity, "model")?)?;
+    validate_m4_run_identity_tokenizer(object_field(identity, "tokenizer")?)?;
+    validate_m4_run_identity_prompt_template(object_field(identity, "prompt_template")?)?;
+    validate_m4_run_identity_backend(receipt, object_field(identity, "backend")?)?;
+    validate_m4_run_identity_evidence(object_field(identity, "evidence_identity")?)?;
+    validate_m4_run_identity_timing(object_field(identity, "timing")?)?;
+
+    let digest = object_field(receipt, "run_identity_sha256")?
+        .as_str()
+        .ok_or_else(|| anyhow!("field `run_identity_sha256` must be a string"))?;
+    if digest.len() != 64 || !digest.chars().all(|ch| ch.is_ascii_hexdigit()) {
+        return Err(anyhow!(
+            "field `run_identity_sha256` must be a 64-character sha256 hex digest"
+        ));
+    }
+    let expected = m4_run_identity_sha256(identity)?;
+    if digest != expected {
+        return Err(anyhow!("field `run_identity_sha256` does not match run_identity"));
+    }
+
+    Ok(())
+}
+
+/// Validate Lunar Lake OpenVINO route receipts against the shared proof boundary.
+///
+/// This is a claim-boundary validator, not a route promoter. It accepts the
+/// existing OpenVINO dense-SLM, route-profile, route-ledger, and diagnosis
+/// receipt families while rejecting hidden fallback, backend/device identity
+/// drift, retokenized-token ambiguity, dense-SLM-to-BitNet claim leakage,
+/// OpenVINO-GPU-to-native-OpenCL claim leakage, and premature NPU promotion
+/// without cache plus warm/resident evidence.
+pub fn validate_lunar_lake_openvino_receipt_json(receipt: &Value) -> Result<()> {
+    let artifact_kind = required_string(receipt, "artifact_kind")?;
+    if !is_lunar_lake_openvino_artifact_kind(artifact_kind) {
+        return Err(anyhow!("unsupported Lunar Lake OpenVINO artifact_kind `{artifact_kind}`"));
+    }
+
+    if let Some(machine_id) = receipt.get("machine_id").and_then(Value::as_str)
+        && machine_id != "intel-258v"
+    {
+        return Err(anyhow!(
+            "Lunar Lake OpenVINO receipts must target machine_id `intel-258v`, got `{machine_id}`"
+        ));
+    }
+
+    if receipt.get("fallback_used").is_some() {
+        require_bool_eq(receipt, "fallback_used", false)?;
+    }
+    if receipt.get("runtime_api").is_some() {
+        require_string_eq(receipt, "runtime_api", "openvino_genai")?;
+    }
+
+    validate_lunar_lake_openvino_value(receipt, "$")?;
+    Ok(())
+}
+
+/// Validate a Lunar Lake OpenVINO route receipt file.
+pub fn validate_lunar_lake_openvino_receipt_file(path: &Path) -> Result<()> {
+    let receipt = load_json_receipt(path)?;
+    validate_lunar_lake_openvino_receipt_json(&receipt)
+}
+
+fn is_lunar_lake_openvino_artifact_kind(artifact_kind: &str) -> bool {
+    matches!(
+        artifact_kind,
+        "intel_258v_dense_slm_openvino_corpus_v2"
+            | "intel_258v_dense_slm_openvino_generation_budget_sensitivity"
+            | "intel_258v_dense_slm_openvino_phase_comparison"
+            | "intel_258v_dense_slm_openvino_phase_runner"
+            | "intel_258v_dense_slm_openvino_profile_run"
+            | "lunar_lake_openvino_corpus_v2_diagnosis"
+            | "lunar_lake_openvino_npu_cold_start_diagnosis"
+            | "lunar_lake_openvino_npu_cache_experiment"
+            | "lunar_lake_openvino_npu_resident_session"
+            | "lunar_lake_openvino_operator_ask"
+            | "lunar_lake_route_profile_comparison"
+            | "lunar_lake_route_promotion_ledger"
+    )
+}
+
+fn validate_lunar_lake_openvino_value(value: &Value, path: &str) -> Result<()> {
+    match value {
+        Value::Object(object) => {
+            validate_lunar_lake_openvino_object(value, path)?;
+            for (key, child) in object {
+                let child_path = format!("{path}.{key}");
+                validate_lunar_lake_openvino_forbidden_claim(key, child, &child_path)?;
+                validate_lunar_lake_openvino_value(child, &child_path)?;
+            }
+        }
+        Value::Array(items) => {
+            for (index, child) in items.iter().enumerate() {
+                validate_lunar_lake_openvino_value(child, &format!("{path}[{index}]"))?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn validate_lunar_lake_openvino_object(object: &Value, path: &str) -> Result<()> {
+    validate_lunar_lake_openvino_backend_object(object, path)?;
+    validate_lunar_lake_openvino_generated_token_marking(object, path)?;
+    validate_lunar_lake_openvino_npu_promotion_evidence(object, path)
+}
+
+fn validate_lunar_lake_openvino_backend_object(object: &Value, path: &str) -> Result<()> {
+    let selected_backend = object.get("selected_backend").and_then(Value::as_str);
+    let route_id = object.get("route_id").and_then(Value::as_str);
+    let openvino_route = route_id.is_some_and(|route| route.contains("openvino"));
+    let Some(selected_backend) = selected_backend else {
+        return Ok(());
+    };
+
+    if !selected_backend.starts_with("openvino") && !openvino_route {
+        return Ok(());
+    }
+
+    if let Some(fallback_used) = object.get("fallback_used").and_then(Value::as_bool) {
+        if fallback_used {
+            return Err(anyhow!("{path} OpenVINO route must record fallback_used=false"));
+        }
+    } else if object.get("fallback_policy").and_then(Value::as_str) == Some("strict_no_fallback") {
+        // Policy/ledger entries do not execute a route themselves, but they must
+        // still fail closed by declaring strict no-fallback routing.
+    } else {
+        return Err(anyhow!(
+            "{path} OpenVINO route must record fallback_used=false or fallback_policy=strict_no_fallback"
+        ));
+    }
+
+    if selected_backend.starts_with("openvino") {
+        require_string_eq(object, "runtime_api", "openvino_genai")
+            .map_err(|err| anyhow!("{path}: {err}"))?;
+    }
+
+    if let Some(route_id) = route_id {
+        match route_id {
+            "dense_slm_openvino_gpu_candidate" if selected_backend != "openvino-gpu" => {
+                return Err(anyhow!(
+                    "{path} GPU OpenVINO route must select openvino-gpu, got `{selected_backend}`"
+                ));
+            }
+            "dense_slm_openvino_npu_candidate" if selected_backend != "openvino-npu" => {
+                return Err(anyhow!(
+                    "{path} NPU OpenVINO route must select openvino-npu, got `{selected_backend}`"
+                ));
+            }
+            route if route.contains("openvino_cpu") && selected_backend != "openvino-cpu" => {
+                return Err(anyhow!(
+                    "{path} CPU OpenVINO route must select openvino-cpu, got `{selected_backend}`"
+                ));
+            }
+            _ => {}
+        }
+    }
+
+    match selected_backend {
+        "openvino-cpu" => require_runtime_device_prefix(object, "CPU", path)?,
+        "openvino-gpu" => {
+            require_runtime_device_prefix(object, "GPU", path)?;
+            reject_openvino_gpu_opencl_claim(object, path)?;
+        }
+        "openvino-npu" => require_runtime_device_prefix(object, "NPU", path)?,
+        "openvino-cpu-gpu-npu" => {}
+        other if other.starts_with("openvino") => {
+            return Err(anyhow!("{path} has unsupported OpenVINO backend `{other}`"));
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn require_runtime_device_prefix(object: &Value, expected_prefix: &str, path: &str) -> Result<()> {
+    let Some(runtime_device) = object.get("runtime_device").and_then(Value::as_str) else {
+        return Ok(());
+    };
+    if !runtime_device.starts_with(expected_prefix) {
+        return Err(anyhow!(
+            "{path} runtime_device `{runtime_device}` must start with `{expected_prefix}`"
+        ));
+    }
+    Ok(())
+}
+
+fn reject_openvino_gpu_opencl_claim(object: &Value, path: &str) -> Result<()> {
+    for field in ["runtime_api", "backend_lane", "selected_kernel_or_runtime"] {
+        let Some(value) = object.get(field).and_then(Value::as_str) else {
+            continue;
+        };
+        let normalized = value.replace(['-', '_', ' '], "").to_ascii_lowercase();
+        if normalized.contains("opencl") {
+            return Err(anyhow!(
+                "{path}.{field} must not claim native OpenCL for an OpenVINO GPU route"
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_lunar_lake_openvino_generated_token_marking(object: &Value, path: &str) -> Result<()> {
+    if object.get("generated_token_ids").is_none_or(|value| value.as_array().is_none()) {
+        return Ok(());
+    }
+
+    let source = required_string(object, "generated_token_ids_source")
+        .map_err(|err| anyhow!("{path}: generated_token_ids require source marking: {err}"))?;
+    let available_from_pipeline = object
+        .get("generated_token_ids_available_from_pipeline")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+
+    if !available_from_pipeline && !source.contains("retokenized") {
+        return Err(anyhow!(
+            "{path}.generated_token_ids_source must mark retokenized IDs when OpenVINO pipeline IDs are unavailable"
+        ));
+    }
+    if available_from_pipeline && source.contains("retokenized") {
+        return Err(anyhow!(
+            "{path}.generated_token_ids_source must not claim retokenized IDs when pipeline IDs are marked available"
+        ));
+    }
+
+    Ok(())
+}
+
+fn validate_lunar_lake_openvino_npu_promotion_evidence(object: &Value, path: &str) -> Result<()> {
+    let route_id = object.get("route_id").and_then(Value::as_str).unwrap_or_default();
+    let selected_backend =
+        object.get("selected_backend").and_then(Value::as_str).unwrap_or_default();
+    if !route_id.contains("openvino_npu") && selected_backend != "openvino-npu" {
+        return Ok(());
+    }
+
+    let promotion_attempted = object
+        .get("route_status")
+        .or_else(|| object.get("status"))
+        .or_else(|| object.get("promotion_status"))
+        .and_then(Value::as_str)
+        .is_some_and(|status| status == "promoted")
+        || object.get("promotion_eligible_for_profile").and_then(Value::as_bool).unwrap_or(false);
+    if !promotion_attempted {
+        return Ok(());
+    }
+
+    if !openvino_object_has_cache_evidence(object) {
+        return Err(anyhow!("{path} promoted OpenVINO NPU route must include cache evidence"));
+    }
+    if !openvino_object_has_warm_or_resident_evidence(object) {
+        return Err(anyhow!(
+            "{path} promoted OpenVINO NPU route must include warm or resident evidence"
+        ));
+    }
+
+    Ok(())
+}
+
+fn openvino_object_has_cache_evidence(object: &Value) -> bool {
+    object.get("npu_cache").is_some()
+        || object.get("cache").is_some()
+        || object.get("cache_identity").is_some()
+        || object.get("cache_hit").is_some()
+        || object
+            .get("phase_coverage")
+            .is_some_and(|value| value_contains_case_insensitive(value, "cache"))
+        || object.get("timing").is_some_and(|value| value_contains_case_insensitive(value, "cache"))
+}
+
+fn openvino_object_has_warm_or_resident_evidence(object: &Value) -> bool {
+    object.get("warm_session").is_some()
+        || object.get("resident_session").is_some()
+        || object
+            .get("phase_coverage")
+            .is_some_and(|value| value_contains_case_insensitive(value, "warm"))
+        || object
+            .get("phase_coverage")
+            .is_some_and(|value| value_contains_case_insensitive(value, "resident"))
+        || object.get("timing").is_some_and(|value| value_contains_case_insensitive(value, "warm"))
+        || object
+            .get("timing")
+            .is_some_and(|value| value_contains_case_insensitive(value, "resident"))
+}
+
+fn validate_lunar_lake_openvino_forbidden_claim(
+    key: &str,
+    value: &Value,
+    path: &str,
+) -> Result<()> {
+    let normalized_key = key.replace(['-', '_', ' '], "").to_ascii_lowercase();
+    if value.as_bool() == Some(true)
+        && (normalized_key.contains("qk256")
+            || normalized_key.contains("i2s")
+            || normalized_key.contains("bitnetpacked")
+            || normalized_key.contains("nativeopencl")
+            || normalized_key.contains("openclclaim"))
+    {
+        return Err(anyhow!("{path} must not be true for Lunar Lake OpenVINO receipts"));
+    }
+
+    if matches!(key, "claim" | "proof_family" | "claim_boundary" | "selected_kernel_or_runtime")
+        && let Some(text) = value.as_str()
+    {
+        reject_bitnet_packed_marker(text, path)?;
+        let normalized_text = text.replace(['-', '_', ' '], "").to_ascii_lowercase();
+        if normalized_text.contains("nativeopencl") {
+            return Err(anyhow!(
+                "{path} must not claim native OpenCL for Lunar Lake OpenVINO receipts"
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn value_contains_case_insensitive(value: &Value, needle: &str) -> bool {
+    match value {
+        Value::String(text) => text.to_ascii_lowercase().contains(needle),
+        Value::Array(items) => {
+            items.iter().any(|item| value_contains_case_insensitive(item, needle))
+        }
+        Value::Object(map) => {
+            map.values().any(|item| value_contains_case_insensitive(item, needle))
+        }
+        _ => false,
+    }
+}
+
+fn validate_m4_run_identity_os(os: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(os, "name")?;
+    require_string_non_empty_not_tbd(os, "version")?;
+    require_string_non_empty_not_tbd(os, "version_source")
+}
+
+fn validate_m4_run_identity_git(git: &Value) -> Result<()> {
+    let commit = required_string(git, "commit")?;
+    if commit.trim().is_empty() || commit == "TBD" || commit == "unknown" {
+        return Err(anyhow!("field `commit` must record a concrete git commit"));
+    }
+    require_string_non_empty_not_tbd(git, "commit_source")
+}
+
+fn validate_m4_run_identity_binary(binary: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(binary, "crate_version")?;
+    let build_profile = binary.get("build_profile").and_then(Value::as_str);
+    let binary_sha256 = binary.get("binary_sha256").and_then(Value::as_str);
+    if build_profile.is_none_or(|value| value.trim().is_empty())
+        && binary_sha256.is_none_or(str::is_empty)
+    {
+        return Err(anyhow!("run_identity.binary must record build_profile or binary_sha256"));
+    }
+    if let Some(sha256) = binary_sha256
+        && (sha256.len() != 64 || !sha256.chars().all(|ch| ch.is_ascii_hexdigit()))
+    {
+        return Err(anyhow!("field `binary_sha256` must be a 64-character sha256 hex digest"));
+    }
+    Ok(())
+}
+
+fn validate_m4_run_identity_command(command: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(command, "class")?;
+    object_field(command, "live_model_run")?
+        .as_bool()
+        .ok_or_else(|| anyhow!("field `live_model_run` must be a boolean"))?;
+    Ok(())
+}
+
+fn validate_m4_run_identity_model(model: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(model, "id")?;
+    require_sha256_or_not_applicable(model, "sha256")
+}
+
+fn validate_m4_run_identity_tokenizer(tokenizer: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(tokenizer, "authority")?;
+    require_sha256_or_not_applicable(tokenizer, "sha256")?;
+    if let Some(strict) = tokenizer.get("strict") {
+        strict.as_bool().ok_or_else(|| anyhow!("field `strict` must be a boolean"))?;
+    }
+    Ok(())
+}
+
+fn validate_m4_run_identity_prompt_template(prompt_template: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(prompt_template, "id")?;
+    require_sha256(prompt_template, "sha256")
+}
+
+fn validate_m4_run_identity_backend(receipt: &Value, backend: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(backend, "requested_backend")?;
+    require_string_non_empty_not_tbd(backend, "selected_backend")?;
+    require_string_non_empty_not_tbd(backend, "runtime_api")?;
+    require_bool_eq(backend, "fallback_used", false)?;
+    require_same_string(
+        backend,
+        "requested_backend",
+        backend,
+        "selected_backend",
+        "run_identity backend selection",
+    )?;
+    for field in ["requested_backend", "selected_backend", "runtime_api"] {
+        if let Some(top_level) = receipt.get(field).and_then(Value::as_str) {
+            let identity_value = required_string(backend, field)?;
+            if top_level != identity_value {
+                return Err(anyhow!("run_identity.backend.{field} must match receipt {field}"));
+            }
+        }
+    }
+    if let Some(top_level_fallback) = receipt.get("fallback_used").and_then(Value::as_bool)
+        && top_level_fallback != object_field(backend, "fallback_used")?.as_bool().unwrap_or(true)
+    {
+        return Err(anyhow!("run_identity.backend.fallback_used must match receipt fallback_used"));
+    }
+    Ok(())
+}
+
+fn validate_m4_run_identity_evidence(evidence: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(evidence, "scope")?;
+    require_string_non_empty_not_tbd(evidence, "seed")?;
+    require_string_non_empty_not_tbd(evidence, "corpus_id")?;
+    require_string_non_empty_not_tbd(evidence, "profile_id")
+}
+
+fn validate_m4_run_identity_timing(timing: &Value) -> Result<()> {
+    require_string_non_empty_not_tbd(timing, "source")
+}
+
+fn require_sha256_or_not_applicable(object: &Value, field: &str) -> Result<()> {
+    let value = required_string(object, field)?;
+    if value == "not_applicable" {
+        return Ok(());
+    }
+    require_sha256(object, field)
+}
+
 fn validate_cuda_receipt_common<'a>(
     receipt: &'a Value,
     artifact_kind: &str,
@@ -8080,6 +8954,26 @@ fn require_bool_eq(object: &Value, field: &str, expected: bool) -> Result<()> {
     Ok(())
 }
 
+fn require_bool_alias_eq(
+    object: &Value,
+    fields: &[&str],
+    expected: bool,
+    label: &str,
+) -> Result<()> {
+    let mut saw_field = false;
+    for field in fields {
+        if let Some(value) = object.get(*field) {
+            saw_field = true;
+            let actual =
+                value.as_bool().ok_or_else(|| anyhow!("field `{field}` must be a bool"))?;
+            if actual != expected {
+                return Err(anyhow!("field `{field}` must be `{expected}`, got `{actual}`"));
+            }
+        }
+    }
+    if saw_field { Ok(()) } else { Err(anyhow!("field `{label}` must be `{expected}`")) }
+}
+
 fn require_null(object: &Value, field: &str) -> Result<()> {
     if !object_field(object, field)?.is_null() {
         return Err(anyhow!("field `{field}` must be null"));
@@ -8118,6 +9012,15 @@ fn require_optional_positive_u64(object: &Value, field: &str) -> Result<()> {
     if actual == 0 {
         return Err(anyhow!("field `{field}` must be greater than zero when measured"));
     }
+    Ok(())
+}
+
+fn require_optional_u64_field(object: &Value, field: &str) -> Result<()> {
+    let value = object_field(object, field)?;
+    if value.is_null() {
+        return Ok(());
+    }
+    value.as_u64().ok_or_else(|| anyhow!("field `{field}` must be null or an unsigned integer"))?;
     Ok(())
 }
 
@@ -8873,6 +9776,298 @@ fn detect_gpu_info() -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    fn minimal_lunar_lake_openvino_gpu_receipt() -> Value {
+        json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "lunar_lake_openvino_operator_ask",
+            "machine_id": "intel-258v",
+            "proof_stage": "operator_candidate_route_executed",
+            "requested_backend": "openvino-gpu",
+            "selected_backend": "openvino-gpu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "GPU.0",
+            "fallback_used": false,
+            "backend_lane": "dense_slm_openvino_gpu_arc140v",
+            "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+            "route_id": "dense_slm_openvino_gpu_candidate",
+            "model_family": "qwen",
+            "model_architecture": "qwen2",
+            "quantization": "INT4_SYM",
+            "prompt_template": "qwen2.5",
+            "tokenizer_source": "hf_tokenizer_export",
+            "generation": {
+                "decoded_text": "2+2 equals 4.",
+                "generated_token_ids": [17, 488, 17],
+                "generated_token_ids_available_from_pipeline": false,
+                "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids"
+            }
+        })
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_accepts_candidate_gpu_receipt() {
+        let result =
+            validate_lunar_lake_openvino_receipt_json(&minimal_lunar_lake_openvino_gpu_receipt());
+        assert!(result.is_ok(), "got: {result:?}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_accepts_npu_resident_session_receipt() {
+        let receipt = json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "lunar_lake_openvino_npu_resident_session",
+            "machine_id": "intel-258v",
+            "requested_backend": "openvino-npu",
+            "selected_backend": "openvino-npu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "NPU",
+            "fallback_used": false,
+            "route_id": "dense_slm_openvino_npu_candidate",
+            "resident_session": {
+                "resident_session_ready": true,
+                "warm_resident_asks": {
+                    "ask_count": 10,
+                    "passed": 10,
+                    "failed": 0,
+                    "fallback_used": false
+                }
+            },
+            "asks": [{
+                "generated_text": "2+2 equals 4.",
+                "generated_token_ids": [17, 488, 17],
+                "generated_token_ids_available_from_pipeline": false,
+                "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids"
+            }],
+            "claim_boundary": {
+                "route_promotion_changed": false,
+                "speedup_claim": false,
+                "power_advantage_claim": false,
+                "acceleration_claim": false,
+                "native_npu_inference_claim": false,
+                "bitnet_qk256_i2s_behavior_changed": false
+            }
+        });
+        let result = validate_lunar_lake_openvino_receipt_json(&receipt);
+        assert!(result.is_ok(), "got: {result:?}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_accepts_npu_cache_experiment_receipt() {
+        let receipt = json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "lunar_lake_openvino_npu_cache_experiment",
+            "machine_id": "intel-258v",
+            "requested_backend": "openvino-npu",
+            "selected_backend": "openvino-npu",
+            "runtime_api": "openvino_genai",
+            "runtime_device": "NPU",
+            "fallback_used": false,
+            "route_id": "dense_slm_openvino_npu_candidate",
+            "cache": {
+                "cache_dir": "target/openvino-cache/lnl258v-npu-cache-001",
+                "cache_enabled": true,
+                "cache_hit_runtime_metric_available": false,
+                "cache_effective_by_timing": false
+            },
+            "process_runs": [{
+                "child_receipt": {
+                    "generated_text": "2+2 equals 4.",
+                    "generated_token_ids": [17, 488, 17],
+                    "generated_token_ids_available_from_pipeline": false,
+                    "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids"
+                }
+            }],
+            "generated_token_visibility": {
+                "direct_generated_token_ids_available": false,
+                "generated_token_ids_source": "retokenized_generated_text_not_pipeline_internal_ids"
+            },
+            "claim_boundary": {
+                "route_promotion_changed": false,
+                "speedup_claim": false,
+                "power_advantage_claim": false,
+                "acceleration_claim": false,
+                "native_npu_inference_claim": false,
+                "bitnet_qk256_i2s_behavior_changed": false
+            }
+        });
+        let result = validate_lunar_lake_openvino_receipt_json(&receipt);
+        assert!(result.is_ok(), "got: {result:?}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_accepts_profile_run_receipt() {
+        let receipt = json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "intel_258v_dense_slm_openvino_profile_run",
+            "machine_id": "intel-258v",
+            "proof_stage": "openvino_heavy_profile_timing_evidence",
+            "generation": {
+                "fallback_used": false,
+                "devices": [
+                    {
+                        "runtime_device": "GPU.0",
+                        "requested_backend": "openvino-gpu",
+                        "selected_backend": "openvino-gpu",
+                        "runtime_api": "openvino_genai",
+                        "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+                        "fallback_used": false,
+                        "cases": [
+                            {
+                                "id": "prefill_heavy_route_policy_long_context",
+                                "profile": "prefill_heavy",
+                                "requested_backend": "openvino-gpu",
+                                "selected_backend": "openvino-gpu",
+                                "runtime_api": "openvino_genai",
+                                "runtime_device": "GPU.0",
+                                "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
+                                "fallback_used": false,
+                                "prompt_token_count": 2731,
+                                "generated_token_ids": [111, 222, 333],
+                                "generated_token_ids_available_from_pipeline": true,
+                                "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+                                "generated_token_count": 3
+                            }
+                        ]
+                    },
+                    {
+                        "runtime_device": "NPU",
+                        "requested_backend": "openvino-npu",
+                        "selected_backend": "openvino-npu",
+                        "runtime_api": "openvino_genai",
+                        "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+                        "fallback_used": false,
+                        "cases": [
+                            {
+                                "id": "decode_heavy_route_policy_long_generation",
+                                "profile": "decode_heavy",
+                                "requested_backend": "openvino-npu",
+                                "selected_backend": "openvino-npu",
+                                "runtime_api": "openvino_genai",
+                                "runtime_device": "NPU",
+                                "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
+                                "fallback_used": false,
+                                "prompt_token_count": 66,
+                                "generated_token_ids": [444, 555, 666],
+                                "generated_token_ids_available_from_pipeline": true,
+                                "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
+                                "generated_token_count": 3
+                            }
+                        ]
+                    }
+                ]
+            },
+            "verification": {
+                "fallback_used": false,
+                "route_promotion_changed": false,
+                "candidate_routes_remain_unpromoted": true
+            },
+            "claim_boundary": {
+                "speedup_claim": false,
+                "power_advantage_claim": false,
+                "acceleration_claim": false,
+                "route_promotion_changed": false,
+                "native_npu_inference_claim": false,
+                "bitnet_qk256_i2s_behavior_changed": false
+            }
+        });
+        let result = validate_lunar_lake_openvino_receipt_json(&receipt);
+        assert!(result.is_ok(), "got: {result:?}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_rejects_hidden_fallback() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["fallback_used"] = json!(true);
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("fallback_used"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_rejects_backend_device_mismatch() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["runtime_device"] = json!("CPU");
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("runtime_device"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_rejects_route_backend_mismatch() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["selected_backend"] = json!("openvino-npu");
+        receipt["runtime_device"] = json!("NPU");
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("GPU OpenVINO route must select openvino-gpu"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_rejects_opencl_claim_leak() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["selected_kernel_or_runtime"] = json!("native-opencl-kernel");
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("native OpenCL"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_requires_retokenized_id_marking() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        let generation = receipt.get_mut("generation").and_then(serde_json::Value::as_object_mut);
+        assert!(generation.is_some(), "test receipt must include generation object");
+        if let Some(generation) = generation {
+            generation.remove("generated_token_ids_source");
+        }
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("generated_token_ids require source marking"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_rejects_dense_slm_to_bitnet_claim_leak() {
+        let mut receipt = minimal_lunar_lake_openvino_gpu_receipt();
+        receipt["bitnet_packed_i2s_qk256_proof"] = json!(true);
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("qk256"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_requires_npu_cache_and_warm_evidence_for_promotion() {
+        let receipt = json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "lunar_lake_route_promotion_ledger",
+            "machine_id": "intel-258v",
+            "routes": [{
+                "route_id": "dense_slm_openvino_npu_candidate",
+                "status": "promoted",
+                "selected_backend": "openvino-npu",
+                "runtime_api": "openvino_genai",
+                "runtime_device": "NPU",
+                "fallback_policy": "strict_no_fallback"
+            }]
+        });
+        let err = validate_lunar_lake_openvino_receipt_json(&receipt).unwrap_err().to_string();
+        assert!(err.contains("cache evidence"), "got: {err}");
+    }
+
+    #[test]
+    fn lunar_lake_openvino_validator_accepts_npu_promotion_with_cache_and_warm_evidence() {
+        let receipt = json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "lunar_lake_route_promotion_ledger",
+            "machine_id": "intel-258v",
+            "routes": [{
+                "route_id": "dense_slm_openvino_npu_candidate",
+                "status": "promoted",
+                "selected_backend": "openvino-npu",
+                "runtime_api": "openvino_genai",
+                "runtime_device": "NPU",
+                "fallback_policy": "strict_no_fallback",
+                "cache": {"mode": "openvino_model_cache", "cache_hit": true},
+                "warm_session": {"mode": "resident", "attempts": 10}
+            }]
+        });
+        let result = validate_lunar_lake_openvino_receipt_json(&receipt);
+        assert!(result.is_ok(), "got: {result:?}");
+    }
 
     #[test]
     fn test_receipt_generation_real_path() {

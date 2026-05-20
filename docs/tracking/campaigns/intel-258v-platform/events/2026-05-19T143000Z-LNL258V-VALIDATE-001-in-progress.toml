@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:30:00Z"
+event = "in_progress"
+item = "LNL258V-VALIDATE-001"
+branch = "codex/lunar-lake/LNL258V-VALIDATE-001-profile-policy"
+actor = "codex"
+summary = "Started profile-aware Lunar Lake operator readiness validation."
+
+notes = [
+  "The previous readiness receipt was still an operator-evidence index and did not directly carry the current profile-scoped route policy.",
+  "This item makes validate index the current route-promotion ledger and route-profile comparison so readiness records ask_normal/ask_short GPU promotion, NPU candidate-only status, blocked profiles, and hidden-fallback policy.",
+  "The scope makes no new-inference, route-promotion, speedup, power-advantage, acceleration, native accelerator, model/kernel, or BitNet QK256/I2_S behavior-change claim.",
+]

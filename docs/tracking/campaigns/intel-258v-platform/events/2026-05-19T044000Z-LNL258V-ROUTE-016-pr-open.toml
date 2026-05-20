@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T04:40:00Z"
+event = "pr_open"
+item = "LNL258V-ROUTE-016"
+branch = "codex/lunar-lake/LNL258V-ROUTE-016-openvino-gpu-profile-promotion"
+pr = 5774
+head_sha = "297e814584032a3907cce141cb58ff0ff7d93298"
+actor = "codex"
+summary = "Opened PR #5774 for LNL258V-ROUTE-016 to promote OpenVINO GPU for benchmark-qualified ask_short and ask_normal profiles."
+
+notes = [
+  "The PR keeps regression_tiny on the dense Qwen CPU baseline and keeps NPU candidate-only.",
+  "The PR includes refreshed promotion/profile/benchmark/regression/comparison artifacts and a live auto ask receipt selecting OpenVINO GPU for ask_short.",
+  "The claim boundary excludes NPU promotion, power advantage, native OpenCL/NPU execution, broad accelerator claims, and BitNet QK256/I2_S behavior changes.",
+]

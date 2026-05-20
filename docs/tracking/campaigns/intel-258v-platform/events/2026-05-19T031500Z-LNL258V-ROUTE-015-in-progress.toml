@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T03:15:00Z"
+event = "in_progress"
+item = "LNL258V-ROUTE-015"
+branch = "codex/lunar-lake/LNL258V-ROUTE-015-benchmark-qualified-advantage"
+actor = "codex"
+summary = "Started LNL258V-ROUTE-015 to let route-profile comparison classify benchmark-qualified latency advantage without promoting OpenVINO candidate routes."
+
+notes = [
+  "The branch qualifies dense Qwen OpenVINO candidate latency evidence only when profile quality, fallback, direct-token, profile-matched timing, and promoted CPU-baseline comparison gates all pass.",
+  "Route-profile, cold/warm benchmark, regression-v2, and operator-comparison artifacts are refreshed from existing committed evidence.",
+  "GPU/NPU routes remain candidate-only and unpromoted; the claim boundary remains no route promotion, no speedup claim, no power-advantage claim, no Arc/NPU acceleration claim, no native OpenCL/NPU claim, and no BitNet QK256/I2_S behavior change.",
+]

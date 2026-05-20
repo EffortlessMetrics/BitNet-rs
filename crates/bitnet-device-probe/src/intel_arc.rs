@@ -6,6 +6,13 @@
 
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
+use crate::runtimes::{
+    LevelZeroProbe, OpenClRuntimeProbe, OpenVinoProbe, level_zero::probe_level_zero,
+    opencl::probe_opencl_runtime, openvino::probe_openvino,
+};
+
 // ── PCI Device IDs (Alchemist / Battlemage) ────────────────────────────────
 
 /// PCI device ID for Intel Arc A770 (DG2-512 full die).
@@ -18,6 +25,87 @@ pub const PCI_ID_ARC_A580: u32 = 0x56A5;
 pub const PCI_ID_ARC_A380: u32 = 0x56A6;
 /// PCI device ID for Intel Arc A310 (DG2-128 cut-down).
 pub const PCI_ID_ARC_A310: u32 = 0x56A7;
+
+// ── A770 runtime receipt identity ───────────────────────────────────────────
+
+/// Requested backend label for the Intel Arc A770 OpenCL proof lane.
+pub const INTEL_ARC_A770_REQUESTED_BACKEND: &str = "intel-a770-opencl";
+/// Selected backend label when native OpenCL sees the A770 device.
+pub const INTEL_ARC_A770_OPENCL_BACKEND: &str = "intel-a770-opencl";
+/// Expected PCI device ID for Intel Arc A770.
+pub const INTEL_ARC_A770_PCI_DEVICE_ID: &str = "0x56A0";
+/// Universal proof stage for the A770 visibility-only runtime probe.
+pub const INTEL_ARC_A770_PROOF_STAGE_RUNTIME_DETECTED: &str = "runtime_detected";
+
+/// Runtime visibility facts for the Intel Arc A770 campaign lane.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct IntelArcA770RuntimeProbe {
+    /// Universal proof stage for this visibility-only probe.
+    pub proof_stage: String,
+    /// Requested backend identity for A770 receipts.
+    pub requested_backend: String,
+    /// Selected backend only when native OpenCL reports the A770 device.
+    pub selected_backend: Option<String>,
+    /// Runtime API associated with the strongest matching runtime evidence.
+    pub runtime_api: Option<String>,
+    /// Runtime device name selected for native OpenCL proof visibility.
+    pub selected_device_name: Option<String>,
+    /// Whether any exact A770 identity was visible through the probed runtimes.
+    pub available: bool,
+    /// Expected PCI device ID when A770 identity is visible.
+    pub pci_device_id: Option<String>,
+    /// Runtime evidence entries that matched A770 by name or PCI ID.
+    pub identity_evidence: Vec<String>,
+    /// Whether the OpenCL runtime itself was available.
+    pub opencl_runtime_available: bool,
+    /// Whether OpenCL reported an exact A770 GPU device.
+    pub opencl_available: bool,
+    /// OpenCL platform name for the selected A770 device when available.
+    pub opencl_platform_name: Option<String>,
+    /// OpenCL device name for the selected A770 device when available.
+    pub opencl_device_name: Option<String>,
+    /// OpenCL vendor for the selected A770 device when available.
+    pub opencl_vendor: Option<String>,
+    /// OpenCL driver version for the selected A770 device when available.
+    pub opencl_driver_version: Option<String>,
+    /// Whether Level Zero tooling/runtime visibility was available.
+    pub level_zero_runtime_available: bool,
+    /// Whether Level Zero reported an A770 name or PCI device ID.
+    pub level_zero_available: bool,
+    /// Matching Level Zero device names or lines.
+    pub level_zero_devices: Vec<String>,
+    /// Matching Level Zero PCI/device IDs.
+    pub level_zero_device_ids: Vec<String>,
+    /// Whether OpenVINO runtime visibility was available.
+    pub openvino_runtime_available: bool,
+    /// Whether OpenVINO exposes a GPU token on this machine.
+    pub openvino_gpu_visible: bool,
+    /// First OpenVINO GPU device token when visible.
+    pub openvino_gpu_device: Option<String>,
+    /// OpenVINO GPU full device name when available.
+    pub openvino_gpu_full_name: Option<String>,
+    /// Whether a matching OpenVINO GPU identity was recorded as reference-only.
+    pub openvino_reference_only: bool,
+    /// Expected VRAM from the A770 hardware preset when identity is visible.
+    pub expected_vram_bytes: Option<u64>,
+    /// Expected VRAM in GiB from the A770 hardware preset when identity is visible.
+    pub expected_vram_gib: Option<u64>,
+    /// ReBAR context status. This probe records the gap but does not infer it.
+    pub rebar_status: String,
+    /// Render-node path when available. Windows/command-only probes often cannot provide one.
+    pub render_node: Option<String>,
+    /// Always false: A770-004 is visibility-only and does not dispatch kernels.
+    pub kernel_execution: bool,
+    /// Always false: A770-004 is not BitNet inference.
+    pub bitnet_inference: bool,
+    /// Always false: A770-004 does not prove packed QK256 decode.
+    pub qk256_decode: bool,
+    /// Always false: CPU or another GPU cannot satisfy A770 runtime proof.
+    pub fallback_used: bool,
+    /// Non-fatal reason explaining why exact A770 identity was not found.
+    pub failure_reason: Option<String>,
+}
 
 // ── IntelArcTier ───────────────────────────────────────────────────────────
 
@@ -247,11 +335,156 @@ pub fn detect_intel_arc_by_pci_id(device_id: u32) -> Option<IntelArcCapabilities
     IntelArcTier::from_pci_id(device_id).map(IntelArcCapabilities::from_tier)
 }
 
+/// Probe A770 runtime visibility without compiling kernels or running inference.
+#[must_use]
+pub fn probe_intel_arc_a770_runtime() -> IntelArcA770RuntimeProbe {
+    let opencl = probe_opencl_runtime();
+    let level_zero = probe_level_zero();
+    let openvino = probe_openvino();
+    probe_intel_arc_a770_runtime_from_probes(&opencl, &level_zero, &openvino)
+}
+
+/// Build an A770 runtime visibility result from lower-level runtime probes.
+#[must_use]
+pub fn probe_intel_arc_a770_runtime_from_probes(
+    opencl: &OpenClRuntimeProbe,
+    level_zero: &LevelZeroProbe,
+    openvino: &OpenVinoProbe,
+) -> IntelArcA770RuntimeProbe {
+    let opencl_device = opencl.devices.iter().find(|device| {
+        device.is_gpu
+            && vendor_matches_intel(&device.vendor)
+            && name_or_id_matches_arc_a770(&device.device_name)
+    });
+
+    let level_zero_devices: Vec<String> = level_zero
+        .devices
+        .iter()
+        .filter(|device| name_or_id_matches_arc_a770(device))
+        .cloned()
+        .collect();
+    let level_zero_device_ids: Vec<String> = level_zero
+        .device_ids
+        .iter()
+        .filter(|device_id| device_id_matches_arc_a770(device_id))
+        .cloned()
+        .collect();
+
+    let openvino_gpu_device = openvino.gpu_device_token();
+    let openvino_gpu_full_name =
+        openvino_gpu_device.as_deref().and_then(|token| openvino.full_name_for(token));
+    let openvino_gpu_visible = openvino_gpu_device.is_some();
+    let openvino_name_matches =
+        openvino_gpu_full_name.as_deref().is_some_and(name_or_id_matches_arc_a770);
+
+    let opencl_available = opencl_device.is_some();
+    let level_zero_available = !level_zero_devices.is_empty() || !level_zero_device_ids.is_empty();
+    let available = opencl_available || level_zero_available || openvino_name_matches;
+
+    let mut identity_evidence = Vec::new();
+    if let Some(device) = opencl_device {
+        identity_evidence.push(format!("opencl:{}", device.device_name));
+    }
+    identity_evidence
+        .extend(level_zero_devices.iter().map(|device| format!("level_zero:{device}")));
+    identity_evidence.extend(
+        level_zero_device_ids
+            .iter()
+            .map(|device_id| format!("level_zero_pci_device_id:{device_id}")),
+    );
+    if let (Some(token), Some(full_name)) = (&openvino_gpu_device, &openvino_gpu_full_name)
+        && openvino_name_matches
+    {
+        identity_evidence.push(format!("openvino_reference:{token}:{full_name}"));
+    }
+
+    let selected_backend = opencl_available.then(|| INTEL_ARC_A770_OPENCL_BACKEND.to_owned());
+    let runtime_api =
+        selected_runtime_api(opencl_available, level_zero_available, openvino_name_matches);
+    let selected_device_name = opencl_device.map(|device| device.device_name.clone());
+    let caps = available.then(|| IntelArcTier::A770.capabilities());
+    let failure_reason = if available {
+        None
+    } else {
+        Some("Intel Arc A770 identity was not visible through OpenCL, Level Zero, or OpenVINO GPU reference visibility".to_owned())
+    };
+
+    IntelArcA770RuntimeProbe {
+        proof_stage: INTEL_ARC_A770_PROOF_STAGE_RUNTIME_DETECTED.to_owned(),
+        requested_backend: INTEL_ARC_A770_REQUESTED_BACKEND.to_owned(),
+        selected_backend,
+        runtime_api,
+        selected_device_name,
+        available,
+        pci_device_id: available.then_some(INTEL_ARC_A770_PCI_DEVICE_ID.to_owned()),
+        identity_evidence,
+        opencl_runtime_available: opencl.runtime_available,
+        opencl_available,
+        opencl_platform_name: opencl_device.and_then(|device| device.platform_name.clone()),
+        opencl_device_name: opencl_device.map(|device| device.device_name.clone()),
+        opencl_vendor: opencl_device.map(|device| device.vendor.clone()),
+        opencl_driver_version: opencl_device.and_then(|device| device.driver_version.clone()),
+        level_zero_runtime_available: level_zero.runtime_available,
+        level_zero_available,
+        level_zero_devices,
+        level_zero_device_ids,
+        openvino_runtime_available: openvino.runtime_available,
+        openvino_gpu_visible,
+        openvino_gpu_device,
+        openvino_gpu_full_name,
+        openvino_reference_only: openvino_name_matches,
+        expected_vram_bytes: caps.as_ref().map(|caps| caps.vram_bytes),
+        expected_vram_gib: caps.as_ref().map(IntelArcCapabilities::vram_gib),
+        rebar_status: "not_probed".to_owned(),
+        render_node: None,
+        kernel_execution: false,
+        bitnet_inference: false,
+        qk256_decode: false,
+        fallback_used: false,
+        failure_reason,
+    }
+}
+
+fn vendor_matches_intel(value: &str) -> bool {
+    value.to_ascii_lowercase().contains("intel")
+}
+
+fn name_or_id_matches_arc_a770(value: &str) -> bool {
+    let lower = value.to_ascii_lowercase();
+    (lower.contains("arc") && lower.contains("a770")) || lower.contains("56a0")
+}
+
+fn device_id_matches_arc_a770(value: &str) -> bool {
+    let normalized = value.trim().to_ascii_uppercase();
+    normalized == INTEL_ARC_A770_PCI_DEVICE_ID
+        || normalized.trim_start_matches("0X") == "56A0"
+        || normalized.contains("56A0")
+}
+
+fn selected_runtime_api(
+    opencl_available: bool,
+    level_zero_available: bool,
+    openvino_name_matches: bool,
+) -> Option<String> {
+    if opencl_available {
+        Some("opencl".to_owned())
+    } else if level_zero_available {
+        Some("level_zero".to_owned())
+    } else if openvino_name_matches {
+        Some("openvino".to_owned())
+    } else {
+        None
+    }
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtimes::{
+        LevelZeroProbe, OpenClRuntimeDevice, OpenClRuntimeProbe, OpenVinoDeviceProbe, OpenVinoProbe,
+    };
 
     // ── Tier presets ───────────────────────────────────────────────────
 
@@ -428,6 +661,151 @@ mod tests {
     #[test]
     fn detect_empty_string_returns_none() {
         assert!(detect_intel_arc("").is_none());
+    }
+
+    // ── A770 runtime probe ─────────────────────────────────────────────
+
+    #[test]
+    fn opencl_a770_identity_selects_native_lane_without_execution_claim()
+    -> Result<(), serde_json::Error> {
+        let opencl = OpenClRuntimeProbe {
+            runtime_available: true,
+            devices: vec![OpenClRuntimeDevice {
+                platform_name: Some("Intel(R) OpenCL Graphics".to_owned()),
+                device_name: "Intel(R) Arc(TM) A770 Graphics".to_owned(),
+                vendor: "Intel(R) Corporation".to_owned(),
+                driver_version: Some("test-driver".to_owned()),
+                is_gpu: true,
+            }],
+            error: None,
+        };
+        let level_zero = LevelZeroProbe::unavailable("not installed");
+        let openvino = OpenVinoProbe::unavailable("not installed");
+
+        let probe = probe_intel_arc_a770_runtime_from_probes(&opencl, &level_zero, &openvino);
+
+        assert!(probe.available);
+        assert!(probe.opencl_available);
+        assert_eq!(probe.requested_backend, INTEL_ARC_A770_REQUESTED_BACKEND);
+        assert_eq!(probe.selected_backend.as_deref(), Some(INTEL_ARC_A770_OPENCL_BACKEND));
+        assert_eq!(probe.runtime_api.as_deref(), Some("opencl"));
+        assert_eq!(probe.selected_device_name.as_deref(), Some("Intel(R) Arc(TM) A770 Graphics"));
+        assert_eq!(probe.pci_device_id.as_deref(), Some(INTEL_ARC_A770_PCI_DEVICE_ID));
+        assert_eq!(probe.expected_vram_gib, Some(16));
+        assert!(!probe.kernel_execution);
+        assert!(!probe.bitnet_inference);
+        assert!(!probe.qk256_decode);
+        assert!(!probe.fallback_used);
+        assert!(probe.identity_evidence.iter().any(|entry| entry.starts_with("opencl:")));
+
+        let value = serde_json::to_value(&probe)?;
+        assert_eq!(value["proof_stage"], "runtime_detected");
+        assert_eq!(value["requested_backend"], INTEL_ARC_A770_REQUESTED_BACKEND);
+        assert_eq!(value["selected_backend"], INTEL_ARC_A770_OPENCL_BACKEND);
+        assert_eq!(value["runtime_api"], "opencl");
+        assert_eq!(value["kernel_execution"], false);
+        assert_eq!(value["bitnet_inference"], false);
+        assert_eq!(value["qk256_decode"], false);
+        assert_eq!(value["fallback_used"], false);
+        assert_eq!(value["rebar_status"], "not_probed");
+        Ok(())
+    }
+
+    #[test]
+    fn level_zero_a770_pci_id_records_visibility_without_selecting_opencl() {
+        let opencl = OpenClRuntimeProbe::unavailable("not installed");
+        let level_zero = LevelZeroProbe {
+            runtime_available: true,
+            devices: Vec::new(),
+            device_ids: vec!["0x56A0".to_owned()],
+            error: None,
+        };
+        let openvino = OpenVinoProbe::unavailable("not installed");
+
+        let probe = probe_intel_arc_a770_runtime_from_probes(&opencl, &level_zero, &openvino);
+
+        assert!(probe.available);
+        assert!(probe.level_zero_available);
+        assert_eq!(probe.selected_backend, None);
+        assert_eq!(probe.runtime_api.as_deref(), Some("level_zero"));
+        assert_eq!(probe.level_zero_device_ids, vec!["0x56A0"]);
+        assert!(probe.identity_evidence.iter().any(|entry| entry.contains("56A0")));
+        assert!(!probe.kernel_execution);
+    }
+
+    #[test]
+    fn openvino_a770_gpu_is_reference_only_not_native_opencl_proof() {
+        let opencl = OpenClRuntimeProbe::unavailable("not installed");
+        let level_zero = LevelZeroProbe::unavailable("not installed");
+        let openvino = OpenVinoProbe {
+            runtime_available: true,
+            version: Some("2026.1".to_owned()),
+            available_devices: vec!["CPU".to_owned(), "GPU.0".to_owned()],
+            devices: vec![OpenVinoDeviceProbe {
+                device: "GPU.0".to_owned(),
+                full_name: Some("Intel(R) Arc(TM) A770 Graphics".to_owned()),
+                supported_properties: Vec::new(),
+                properties: Vec::new(),
+            }],
+            error: None,
+        };
+
+        let probe = probe_intel_arc_a770_runtime_from_probes(&opencl, &level_zero, &openvino);
+
+        assert!(probe.available);
+        assert!(probe.openvino_gpu_visible);
+        assert!(probe.openvino_reference_only);
+        assert_eq!(probe.selected_backend, None);
+        assert_eq!(probe.runtime_api.as_deref(), Some("openvino"));
+        assert!(
+            probe.identity_evidence.iter().any(|entry| entry.starts_with("openvino_reference:"))
+        );
+        assert!(!probe.kernel_execution);
+        assert!(!probe.bitnet_inference);
+    }
+
+    #[test]
+    fn generic_intel_gpu_does_not_count_as_a770_identity() {
+        let opencl = OpenClRuntimeProbe {
+            runtime_available: true,
+            devices: vec![OpenClRuntimeDevice {
+                platform_name: Some("Intel(R) OpenCL Graphics".to_owned()),
+                device_name: "Intel(R) UHD Graphics 770".to_owned(),
+                vendor: "Intel(R) Corporation".to_owned(),
+                driver_version: Some("test-driver".to_owned()),
+                is_gpu: true,
+            }],
+            error: None,
+        };
+        let level_zero = LevelZeroProbe {
+            runtime_available: true,
+            devices: vec!["Intel(R) UHD Graphics 770".to_owned()],
+            device_ids: vec!["0x4680".to_owned()],
+            error: None,
+        };
+        let openvino = OpenVinoProbe {
+            runtime_available: true,
+            version: Some("2026.1".to_owned()),
+            available_devices: vec!["GPU.0".to_owned()],
+            devices: vec![OpenVinoDeviceProbe {
+                device: "GPU.0".to_owned(),
+                full_name: Some("Intel(R) UHD Graphics 770".to_owned()),
+                supported_properties: Vec::new(),
+                properties: Vec::new(),
+            }],
+            error: None,
+        };
+
+        let probe = probe_intel_arc_a770_runtime_from_probes(&opencl, &level_zero, &openvino);
+
+        assert!(!probe.available);
+        assert!(!probe.opencl_available);
+        assert!(!probe.level_zero_available);
+        assert!(probe.openvino_gpu_visible);
+        assert_eq!(probe.selected_backend, None);
+        assert_eq!(probe.runtime_api, None);
+        assert_eq!(probe.expected_vram_bytes, None);
+        assert!(probe.failure_reason.is_some());
     }
 
     // ── is_arc_alchemist ───────────────────────────────────────────────

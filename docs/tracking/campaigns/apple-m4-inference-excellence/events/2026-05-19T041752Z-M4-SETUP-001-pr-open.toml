@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T04:17:52Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SETUP-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5854
+head_sha = "e9d6926e61e580cfea7b0c092526ea591724a42a"
+branch = "codex/apple-m4-inference-excellence/M4-SETUP-001-first-run"
+
+notes = [
+  "Opened PR #5854 for M4-SETUP-001 first-run setup evidence.",
+  "The PR records model discovery before and after fetching the accepted BitNet artifact, dense and BitNet model verification, doctor readiness, dense default smoke receipts, and an apple_m4_first_run_setup_summary receipt check.",
+  "The setup summary records dense smoke completion plus accepted BitNet artifact and external tokenizer readiness; BitNet live smoke remains outside this setup summary.",
+  "No BitNet chat/serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

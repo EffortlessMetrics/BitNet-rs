@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T06:21:16Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-048"
+event = "merged"
+pr = 5873
+head_sha = "4b1f335ec95ff23a5fd457711e21249ea6750546"
+merge_sha = "eb3fb38d17d5b545448492c65535c7c187b50a34"
+actor = "codex"
+
+notes = [
+  "Merged the non-executing packed Q8_0 sidecar runtime preflight slice.",
+  "The preflight names remaining runtime eligibility blockers while preserving the eager F32 Candle production path.",
+  "No packed sidecar runtime compute, speedup, generated-ID/text change, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

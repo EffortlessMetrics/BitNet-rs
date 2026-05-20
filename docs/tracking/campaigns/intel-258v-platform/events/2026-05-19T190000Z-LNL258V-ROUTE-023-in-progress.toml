@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T19:00:00Z"
+event = "in_progress"
+item = "LNL258V-ROUTE-023"
+branch = "codex/lunar-lake/LNL258V-ROUTE-023-heavy-gpu-promotion"
+actor = "codex"
+summary = "Started LNL258V-ROUTE-023 to promote OpenVINO GPU for prefill_heavy and decode_heavy from existing profile-qualified evidence."
+
+notes = [
+  "The latest route-profile comparison has profile-specific CPU baselines plus benchmark-qualified OpenVINO GPU latency advantage for prefill_heavy and decode_heavy.",
+  "The item is policy/artifact refresh only and runs no new model inference.",
+  "OpenVINO NPU and low_power remain unpromoted; no native accelerator, acceleration, power-advantage, or BitNet QK256/I2_S behavior claim is added.",
+]

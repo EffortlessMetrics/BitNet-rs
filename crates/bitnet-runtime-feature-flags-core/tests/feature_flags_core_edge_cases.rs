@@ -1,3 +1,5 @@
+#![allow(clippy::clone_on_copy)]
+
 //! Edge-case tests for `bitnet-runtime-feature-flags-core`.
 //!
 //! Coverage:

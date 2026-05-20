@@ -124,11 +124,15 @@ fn operation_eq() {
     assert_ne!(Operation::MatMul, Operation::Softmax);
 }
 
+fn clone_value<T: Clone>(value: &T) -> T {
+    value.clone()
+}
+
 #[test]
 fn operation_copy_clone() {
     let op = Operation::Attention;
     let op2 = op; // Copy
-    let op3 = op.clone();
+    let op3 = clone_value(&op);
     assert_eq!(op2, op3);
 }
 

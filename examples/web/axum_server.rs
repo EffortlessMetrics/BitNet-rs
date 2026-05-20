@@ -96,7 +96,7 @@ struct ErrorResponse {
 
 /// Main server setup and startup
 #[tokio::main]
-async fn main() -> Result<()> {
+pub async fn main() -> Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)

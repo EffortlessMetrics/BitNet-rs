@@ -10,6 +10,7 @@ end_state = [
   "Packed BitNet layout is canonical.",
   "Scalar truth kernels exist before SIMD performance work.",
   "AVX2 dispatch and decode work are parity checked.",
+  "AVX-512 work is separated into detection, dispatch, execution, parity, profile, and sustained proof before speed claims.",
   "Strict receipts record model, tokenizer, quantization, kernel family, selected backend, phase, and fallback status.",
 ]
 
@@ -20,6 +21,7 @@ hard_constraints = [
   "No coherent local-answer claim from an artifact that is not answer_ready under docs/model-artifacts/ANSWER_ARTIFACT_GATE.md.",
   "No performance claim without receipt artifacts.",
   "No helper-only SIMD work unless it is wired to real inference or explicitly scoped as preparation.",
+  "No AVX-512 speed or auto-selection claim from CPUID detection, receipt labels, or AVX2 proof alone.",
 ]
 
 [[work_item]]
@@ -800,4 +802,196 @@ must_not_claim = [
   "CUDA answer readiness is proven.",
   "GPU, NPU, or server inference is involved.",
   "A speedup or throughput claim is proven.",
+]
+
+[[work_item]]
+id = "CPU-AVX512-000"
+status = "merged"
+pr = 5554
+head_sha = "18ec173922bea3c858aaaa9f8194fe62cd6ac1b9"
+merge_sha = "f3e1986ecb48b55cc0258127d2e378d50400e8ce"
+branch = "codex/cpu-avx512-kernel-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "Add the AVX-512 kernel contract, strict CPU ISA selection rails, implementation plan, 9950X3D proof requirements, and kernel-matrix claim boundary before runtime AVX-512 implementation starts."
+commands = [
+  "git diff --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-CPU-AVX512-KERNEL-CONTRACT.md",
+  "docs/specs/BITNET-SPEC-CPU-ISA-SELECTION.md",
+  "docs/specs/amd-9950x3d-cpu-roadmap.md",
+  "docs/specs/INDEX.md",
+  "docs/bitnet/BITNET_KERNEL_MATRIX.md",
+  "plans/cpu-avx512/implementation-plan.md",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/hardware/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The AVX-512 CPU kernel contract and strict CPU ISA selection rails are documented after merge.",
+  "The 9950X3D AVX-512 lane now has a receipt-gated implementation sequence after merge.",
+]
+must_not_claim = [
+  "An AVX-512 optimized kernel is implemented.",
+  "AVX-512 is auto-selected.",
+  "AVX-512 speedup or sustained performance is proven.",
+  "CUDA, GPU, NPU, OpenCL, OpenVINO, Metal, WGPU, server, or answer-quality readiness is proven.",
+]
+
+[[work_item]]
+id = "CPU-SCALAR-000"
+status = "merged"
+pr = 5559
+head_sha = "3d33c2324e9474753cd0fd2b29344168528fb2ce"
+merge_sha = "2fa488420140fd80f532781c18340adda88cc116"
+branch = "codex/cpu-scalar-000-docs-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "Docs-only scalar CPU contracts define precise scalar kernel IDs, hot-path counters, parity direction, performance profiles, implementation sequencing, and claim boundaries without runtime changes."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-KERNEL-CONTRACT.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-HOTPATH.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-PARITY.md",
+  "docs/specs/BITNET-SPEC-CPU-SCALAR-PERFORMANCE.md",
+  "plans/cpu-scalar/implementation-plan.md",
+  "docs/bitnet/BITNET_CPU_PATH_PLAN.md",
+  "docs/bitnet/BITNET_KERNEL_MATRIX.md",
+  "docs/tracking/campaigns/cpu-proof/active.toml",
+  "docs/tracking/campaigns/cpu-proof/generated/status.md",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The scalar CPU BitNet contract and implementation sequence are documented after merge.",
+  "Precise scalar kernel IDs, hot-path counters, parity direction, and scalar performance receipt fields are specified after merge.",
+]
+must_not_claim = [
+  "Runtime scalar kernel IDs are implemented.",
+  "Scaled scalar kernel selection metadata is implemented.",
+  "Strict scalar answer-corpus proof exists.",
+  "Scalar performance is proven.",
+  "A speedup is proven.",
+  "GPU, NPU, or server inference is involved.",
+]
+
+[[work_item]]
+id = "CPU-AVX2-HOTPATH-000"
+status = "merged"
+pr = 5547
+head_sha = "c54e80f230fcf8acdb9f2631002a71c89dcc1161"
+merge_sha = "4be4bce6e9573a665de0bf2469bc2c7a2fdad053"
+branch = "codex/cpu-avx2-hotpath-000-docs-plan"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-ANSWER-007"]
+acceptance = "Add documentation-only CPU AVX2 BitNet hot-path rails: repo-local plan, implementation sequence, behavior spec, status page, and ready follow-on tracker item for hot-path counters."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "plans/cpu-avx2-bitnet/**",
+  "docs/specs/BITNET-SPEC-CPU-AVX2-HOTPATH.md",
+  "docs/bitnet/BITNET_CPU_AVX2_STATUS.md",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "ci/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "The CPU AVX2 BitNet hot-path implementation plan and claim boundary are documented after merge.",
+  "The next ready runtime work item is hot-path counter evidence after merge.",
+]
+must_not_claim = [
+  "Strict AVX2 scaled I2S-I8S execution is proven.",
+  "A speedup or throughput claim is proven.",
+  "Server inference is complete.",
+  "GPU, NPU, OpenVINO, CUDA, dense SLM, Qwen, or broad chat quality is involved.",
+]
+
+[[work_item]]
+id = "CPU-AVX2-HOTPATH-001"
+status = "merged"
+pr = 5963
+head_sha = "455ff1268289308b0da5b896524467160130d514"
+merge_sha = "0789396eb13476c576a9c4860353e5be13478e11"
+branch = "codex/cpu-avx2-hotpath-001-counters"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-AVX2-HOTPATH-000"]
+acceptance = "Strict scalar and strict AVX2 BitNet answer-corpus receipts include QK256 hot-path counters that distinguish no-scale F32 GEMV, scaled I2S-I8S scalar GEMV, scaled I2S-I8S AVX2 GEMV, and audited tensor materialization without changing math or making speed claims."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 --test qk256_avx2_parity_tests",
+  "cargo test --locked -p bitnet-quantization --no-default-features --features cpu,avx2 i2s_qk256 --lib",
+  "cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli answer_corpus",
+  "cargo run --locked -p xtask --no-default-features -- campaign check cpu-proof",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-common/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "ci/quality/**",
+  "ci/hardware/intel-258v/**",
+  "docs/bitnet/**",
+  "docs/tracking/campaigns/cpu-proof/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+]
+may_claim = [
+  "Strict BitNet CPU receipts expose actual QK256 hot-path counters after merge.",
+  "Receipts distinguish no-scale F32 GEMV from scaled I2S-I8S GEMV after merge.",
+]
+must_not_claim = [
+  "Scaled I2S-I8S AVX2 is optimized or promoted.",
+  "A speedup or throughput claim is proven.",
+  "Generated-token changes are acceptable without a divergence receipt.",
+  "Server inference is complete.",
+  "GPU, NPU, OpenVINO, CUDA, dense SLM, Qwen, or broad chat quality is involved.",
 ]

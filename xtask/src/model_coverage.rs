@@ -326,8 +326,35 @@ fn validate_claim_boundaries(entry: &Entry) -> Result<()> {
         }
     }
     if c.server_ready {
+        validate_server_ready_claim(entry)?;
+    }
+    Ok(())
+}
+
+fn validate_server_ready_claim(entry: &Entry) -> Result<()> {
+    const ACCEPTED_SERVER_READY_ENTRIES: &[&str] =
+        &["dense_qwen25_05b_q8_cuda", "dense_qwen3_06b_q8_candidate"];
+    if !ACCEPTED_SERVER_READY_ENTRIES.contains(&entry.id.as_str()) {
         bail!(
-            "entry `{}` claims server readiness; no server-ready model coverage is accepted yet",
+            "entry `{}` claims server readiness without an accepted exact-profile server receipt",
+            entry.id,
+        );
+    }
+    if !entry
+        .required_receipts
+        .iter()
+        .any(|receipt| receipt == "server_shared_engine_chat_completion")
+    {
+        bail!(
+            "entry `{}` claims server readiness without a server_shared_engine_chat_completion receipt",
+            entry.id
+        );
+    }
+
+    let c = &entry.claims;
+    if c.speedup_claim || c.full_residency_claim || c.bitnet_packed_i2s_qk256_proof {
+        bail!(
+            "entry `{}` claims server readiness with an incompatible speed, residency, or cross-family proof claim",
             entry.id
         );
     }
@@ -450,6 +477,41 @@ mod tests {
             Err(err) => err,
         };
         assert!(err.to_string().contains("must require a memory_envelope receipt"), "{err}");
+        Ok(())
+    }
+
+    #[test]
+    fn non_promoted_entries_cannot_claim_server_readiness() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) =
+            matrix.entry.iter_mut().find(|entry| entry.id == "bitnet_official_2b_i2s_qk256")
+        else {
+            bail!("missing official BitNet entry");
+        };
+        entry.claims.server_ready = true;
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("unaccepted server-ready row must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("accepted exact-profile server receipt"), "{err}");
+        Ok(())
+    }
+
+    #[test]
+    fn accepted_server_ready_row_requires_shared_engine_receipt() -> Result<()> {
+        let mut matrix = load_matrix(&workspace_matrix_path())?;
+        let Some(entry) =
+            matrix.entry.iter_mut().find(|entry| entry.id == "dense_qwen25_05b_q8_cuda")
+        else {
+            bail!("missing dense Qwen entry");
+        };
+        entry.claims.server_ready = true;
+        entry.required_receipts.retain(|receipt| receipt != "server_shared_engine_chat_completion");
+        let err = match validate_matrix(&matrix) {
+            Ok(()) => bail!("server-ready row without shared-engine receipt must fail"),
+            Err(err) => err,
+        };
+        assert!(err.to_string().contains("server_shared_engine_chat_completion"), "{err}");
         Ok(())
     }
 

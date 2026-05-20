@@ -1,0 +1,13 @@
+timestamp = "2026-05-18T18:18:09Z"
+campaign = "ci-coverage"
+item = "CI-COVERAGE-002"
+event = "pr_open"
+pr = 5775
+head_sha = "3646ec9157320ab0ef0295b47541a158012be9f3"
+branch = "codex/coverage-container-cleanup-3394"
+actor = "codex"
+
+notes = [
+  "Issue #3394 requested moving coverage to a slim Rust container image and removing the hosted-runner disk cleanup workaround.",
+  "The rust-ci image and image publishing workflow already exist; this item converts coverage to a first-class job container and documents the boundary.",
+]

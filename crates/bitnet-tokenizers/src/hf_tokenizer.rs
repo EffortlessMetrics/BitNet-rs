@@ -110,15 +110,19 @@ impl HfTokenizer {
 }
 
 impl super::Tokenizer for HfTokenizer {
-    fn encode(&self, text: &str, add_bos: bool, add_special: bool) -> Result<Vec<u32>> {
+    fn encode(&self, text: &str, add_bos: bool, _add_special: bool) -> Result<Vec<u32>> {
         use tokenizers::EncodeInput;
 
-        let enc =
-            self.inner.encode(EncodeInput::Single(text.into()), add_special).map_err(|e| {
-                bitnet_common::BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
-                    reason: format!("Tokenizer encode error: {}", e),
-                })
-            })?;
+        // The Tokenizer trait's third argument is used by prompt templates as
+        // "parse embedded special tokens". Hugging Face tokenizer.json files
+        // still recognize literal AddedToken specials with post-processing
+        // disabled; enabling post-processing here injects template specials
+        // such as BOS/EOS a second time for rendered chat prompts.
+        let enc = self.inner.encode(EncodeInput::Single(text.into()), false).map_err(|e| {
+            bitnet_common::BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                reason: format!("Tokenizer encode error: {}", e),
+            })
+        })?;
 
         let mut ids = enc.get_ids().to_vec();
 
@@ -128,14 +132,6 @@ impl super::Tokenizer for HfTokenizer {
             && (ids.is_empty() || ids[0] != bos)
         {
             ids.insert(0, bos);
-        }
-
-        // Add EOS if requested
-        if add_special
-            && let Some(eos) = self.eos_id
-            && (ids.is_empty() || ids[ids.len() - 1] != eos)
-        {
-            ids.push(eos);
         }
 
         Ok(ids)
@@ -174,5 +170,39 @@ impl super::Tokenizer for HfTokenizer {
 impl HfTokenizer {
     pub fn source_name(&self) -> &'static str {
         "hf_json"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Tokenizer;
+
+    fn fixture_tokenizer() -> AnyhowResult<HfTokenizer> {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/tokenizers/valid_tokenizer_a.json");
+        HfTokenizer::from_file(&path)
+    }
+
+    #[test]
+    fn embedded_special_prompt_does_not_get_post_processor_bos() -> AnyhowResult<()> {
+        let tokenizer = fixture_tokenizer()?;
+
+        let ids = tokenizer.encode("<s>▁t", false, true)?;
+
+        assert_eq!(ids.first().copied(), Some(1), "embedded BOS should be parsed");
+        assert_ne!(ids.get(1).copied(), Some(1), "post-processor BOS must not be injected");
+        Ok(())
+    }
+
+    #[test]
+    fn explicit_bos_policy_still_prepends_single_bos() -> AnyhowResult<()> {
+        let tokenizer = fixture_tokenizer()?;
+
+        let ids = tokenizer.encode("▁t", true, true)?;
+
+        assert_eq!(ids.first().copied(), Some(1), "explicit BOS should be prepended");
+        assert_ne!(ids.get(1).copied(), Some(1), "explicit BOS should not duplicate");
+        Ok(())
     }
 }

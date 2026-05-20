@@ -1,0 +1,16 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-18T02:45:00Z"
+event = "pr_open"
+item = "SLM-CPU-031"
+pr = 5499
+branch = "codex/slm-cpu-031-kv-cache-session-reuse"
+head_sha = "c7249dd853ed949d4476c2a6b56c96082f0b468a"
+actor = "codex"
+summary = "Opened the bounded Qwen3 Q8_0 Kaby warm-session KV cache reuse slice."
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5499",
+]
+notes = [
+  "Opened Qwen3 Q8_0 Kaby warm-session KV cache reuse PR with real i5-8250U allocation evidence.",
+]

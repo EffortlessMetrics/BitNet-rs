@@ -90,7 +90,8 @@ response non-empty and valid UTF-8 for answer claims
 receipt id or durable receipt path
 speedup_claim = false unless separately benchmark-qualified
 full_residency_claim = false unless separately proven
-server_ready_claimed = true only for the exact promoted profile
+server_ready_claimed must not be true outside the exact promoted profile; the
+model coverage row owns the final server_ready promotion decision
 ```
 
 BitNet server receipts must also preserve BitNet route evidence:

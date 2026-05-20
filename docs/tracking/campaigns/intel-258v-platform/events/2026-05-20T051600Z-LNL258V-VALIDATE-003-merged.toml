@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T05:16:00Z"
+item = "LNL258V-VALIDATE-003"
+event = "merged"
+pr = 6092
+branch = "codex/lunar-lake/LNL258V-VALIDATE-003-blocked-ask-guidance"
+head_sha = "a1d76337b52be2f5de18510206cf649326df60d0"
+merge_sha = "0c9e8847f2145de4fe1efe33408e50aa83c8c463"
+actor = "codex"
+summary = "Merged operator-readiness indexing for the blocked low_power auto-ask receipt."
+
+notes = [
+  "PR #6092 adds blocked low_power ask receipt indexing to `bitnet lunar-lake validate` and records the runbook plus next-required-evidence guidance in operator readiness.",
+  "The refreshed readiness, regression-v2, and operator-comparison receipts remain no-inference/no-promotion surfaces.",
+  "The active blocker returns to LNL258V-POWER-006 for real battery-mode low_power telemetry, energy-proxy evidence, and benchmark-qualified power advantage.",
+]

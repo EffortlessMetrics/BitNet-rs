@@ -6,16 +6,7 @@ name: Test Telemetry
 on:
   pull_request:
     branches: [ main ]
-    paths:
-      - 'crates/**'
-      - 'tests/**'
-      - 'tools/bitnet-task/**'
-      - 'xtask/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'rust-toolchain.toml'
-      - '.config/nextest.toml'
-      - '.github/workflows/test-telemetry.yml'
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   push:
     branches: [ main ]
     paths:
@@ -44,8 +35,53 @@ env:
   BITNET_SKIP_SLOW_TESTS: "1"
 
 jobs:
+  route-test-telemetry:
+    name: Route Test Telemetry
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    outputs:
+      selected: ${{ steps.route.outputs.selected }}
+      reason: ${{ steps.route.outputs.reason }}
+    steps:
+      - name: Decide whether test telemetry is selected
+        id: route
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+
+          selected=false
+          reason="ordinary PR without test-telemetry/slow-tests/full-ci label"
+
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            selected=true
+            reason="$EVENT_NAME"
+          elif python - "$LABELS_JSON" <<'PY'
+          import json
+          import sys
+
+          labels = set(json.loads(sys.argv[1] or "[]"))
+          selected = bool(labels & {"test-telemetry", "slow-tests", "full-ci"})
+          sys.exit(0 if selected else 1)
+          PY
+          then
+            selected=true
+            reason="explicit test-telemetry/slow-tests/full-ci label"
+          fi
+
+          echo "selected=$selected" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Test telemetry route"
+            echo "- selected: $selected"
+            echo "- reason: $reason"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   nextest-junit:
     name: Test Telemetry (JUnit + slow tests)
+    needs: route-test-telemetry
+    if: needs.route-test-telemetry.outputs.selected == 'true'
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     continue-on-error: true

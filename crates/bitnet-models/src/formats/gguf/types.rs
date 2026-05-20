@@ -834,6 +834,12 @@ impl I2SFlavor {
         }
     }
 
+    /// Get the logical tensor byte count for this flavor, excluding trailing
+    /// GGUF alignment padding between tensors.
+    pub fn logical_size_bytes(&self, nelems: usize) -> usize {
+        nelems.div_ceil(self.block_size()) * self.total_bytes_per_block()
+    }
+
     /// Convert to legacy I2SLayoutKind for backward compatibility
     pub fn to_layout_kind(&self) -> I2SLayoutKind {
         match self {
@@ -1323,5 +1329,32 @@ mod tests {
         assert_eq!(align_up(31, 32), 32);
         assert_eq!(align_up(32, 32), 32);
         assert_eq!(align_up(33, 32), 64);
+    }
+
+    #[test]
+    fn i2s_flavor_accepts_strict_gguf_alignment_padding() -> Result<()> {
+        let nelems = 256 * 256;
+        let logical = I2SFlavor::GgmlQk256NoScale.logical_size_bytes(nelems);
+        let info = TensorInfo {
+            name: "blk.0.ffn_down.weight".to_string(),
+            shape: vec![256, 256],
+            tensor_type: GgufTensorType::I2_S,
+            offset: 0,
+            size: (logical + 32) as u64,
+        };
+
+        let flavor = temp_env::with_var("BITNET_STRICT_MODE", Some("1"), || {
+            detect_i2s_flavor(&info, false, nelems)
+        })?;
+        assert_eq!(flavor, I2SFlavor::GgmlQk256NoScale);
+        Ok(())
+    }
+
+    #[test]
+    fn i2s_logical_size_excludes_padding() {
+        let nelems = 256 * 256;
+        assert_eq!(I2SFlavor::GgmlQk256NoScale.logical_size_bytes(nelems), 16_384);
+        assert_eq!(I2SFlavor::BitNet32F16.logical_size_bytes(nelems), 20_480);
+        assert_eq!(I2SFlavor::Split32WithSibling.logical_size_bytes(nelems), 16_384);
     }
 }

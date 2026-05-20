@@ -2,7 +2,7 @@ schema_version = "1.0"
 policy = "ci-lanes"
 owner = "release/ci"
 status = "active"
-updated = "2026-05-07"
+updated = "2026-05-18"
 
 # policy/ci-lanes.toml is the planner's compact view of lane costs
 # and posture. The authoritative inventory is
@@ -40,15 +40,27 @@ default_pr = true
 blocking = true
 
 [lane.feature-matrix-pr]
-base_lem = 12
+base_lem = 8
 runner = "ubuntu_22_04"
 default_pr = true
 blocking = true
 
+[lane.feature-matrix-full-cli]
+base_lem = 5
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = true
+
+[lane.test-telemetry-route]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
 [lane.test-telemetry]
 base_lem = 18
 runner = "ubuntu_22_04"
-default_pr = true
+default_pr = false
 blocking = false
 
 [lane.ci-actuals]
@@ -75,6 +87,66 @@ runner = "macos_14"
 default_pr = false
 blocking = false
 
+[lane.macos-arm64-route]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
+[lane.macos-arm64-build-test]
+base_lem = 250
+runner = "macos_14"
+default_pr = false
+blocking = false
+
+[lane.macos-arm64-metal-build]
+base_lem = 250
+runner = "macos_14"
+default_pr = false
+blocking = false
+
+[lane.macos-arm64-workflow-clippy]
+base_lem = 150
+runner = "macos_14"
+default_pr = false
+blocking = false
+
+[lane.macos-arm64-format]
+base_lem = 5
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = false
+
+[lane.macos-arm64-success]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
+[lane.performance-tracking-route]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
+[lane.performance-tracking-smoke]
+base_lem = 20
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = false
+
+[lane.performance-tracking-benchmark]
+base_lem = 1320
+runner = "macos_latest"
+default_pr = false
+blocking = false
+
+[lane.performance-tracking-summary]
+base_lem = 15
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = false
+
 [lane.gpu-native]
 base_lem = 18
 runner = "ubuntu_22_04"
@@ -87,11 +159,23 @@ runner = "gpu_docker"
 default_pr = false
 blocking = false
 
+[lane.compatibility-msrv-route]
+base_lem = 1
+runner = "ubuntu_22_04"
+default_pr = true
+blocking = false
+
 [lane.compatibility-msrv]
 base_lem = 12
 runner = "ubuntu_22_04"
-default_pr = true
+default_pr = false
 blocking = true
+
+[lane.compatibility-msrv-workspace-informational]
+base_lem = 20
+runner = "ubuntu_22_04"
+default_pr = false
+blocking = false
 
 [lane.compatibility-ffi-abi]
 base_lem = 8

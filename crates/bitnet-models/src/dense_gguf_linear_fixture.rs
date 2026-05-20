@@ -14,6 +14,8 @@ use sha2::{Digest, Sha256};
 
 /// Receipt artifact kind for descriptor-driven dense GGUF linear fixture extraction.
 pub const DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND: &str = "dense_gguf_linear_fixture_extraction";
+pub const DENSE_GGUF_Q8_LINEAR_SIDECAR_ARTIFACT_KIND: &str =
+    "dense_gguf_q8_linear_sidecar_prototype";
 
 /// Logical matrix layout used by the extracted fixture.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,6 +65,46 @@ pub struct DenseGgufLinearFixture {
     pub weight_values_f32: Vec<f32>,
     pub cpu_reference_input: Vec<f32>,
     pub cpu_reference_output: Vec<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DenseGgufQ8LinearSidecarSummary {
+    pub schema: u64,
+    pub artifact_kind: String,
+    pub tensor_name: String,
+    pub role: DenseGgufTensorRole,
+    pub tensor_type: String,
+    pub source_shape: Vec<usize>,
+    pub matrix_rows: usize,
+    pub matrix_cols: usize,
+    pub value_count: usize,
+    pub q8_block_size: usize,
+    pub q8_block_count: usize,
+    pub packed_q8_bytes_sha256: String,
+    pub cpu_reference_input_sha256: String,
+    pub fused_output_sha256: String,
+    pub eager_output_sha256: String,
+    pub max_abs_diff_vs_eager_f32: f32,
+    pub dequantizes_inside_matvec: bool,
+    pub materializes_full_f32_weights: bool,
+    pub compares_against_eager_f32_reference: bool,
+    pub generated_id_preservation_required_before_runtime_use: bool,
+    pub speedup_claim: bool,
+    pub dense_runtime_replaced: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseGgufQ8LinearSidecar {
+    pub summary: DenseGgufQ8LinearSidecarSummary,
+    pub cpu_reference_input: Vec<f32>,
+    pub fused_output: Vec<f32>,
+    pub eager_output: Vec<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Q8Block {
+    scale: f32,
+    qs: [i8; 32],
 }
 
 /// Extract the first tensor for `role` as a dense linear CPU-reference fixture.
@@ -160,6 +202,81 @@ pub fn extract_dense_gguf_linear_fixture(
         weight_values_f32,
         cpu_reference_input,
         cpu_reference_output,
+    })
+}
+
+/// Extract a Q8_0 dense linear sidecar and compute a dequant-fused CPU matvec.
+///
+/// This is a locality prototype only. It keeps packed Q8_0 scales/codes and
+/// dequantizes inside the dot product for one extracted dense linear fixture,
+/// then compares against the existing eager F32 fixture. It does not replace the
+/// production dense runtime path and it does not make a speed claim.
+pub fn extract_dense_gguf_q8_linear_sidecar(
+    reader: &GgufReader<'_>,
+    role: DenseGgufTensorRole,
+) -> Result<DenseGgufQ8LinearSidecar> {
+    if !is_extractable_linear_role(role) {
+        return Err(BitNetError::Validation(format!(
+            "Q8_0 dense linear sidecar extraction requires an extractable linear role, got {role:?}"
+        )));
+    }
+
+    let eager = extract_dense_gguf_linear_fixture(reader, role)?;
+    if eager.summary.tensor_type != "q8_0" {
+        return Err(BitNetError::Validation(format!(
+            "Q8_0 dense linear sidecar extraction requires tensor type q8_0, got {} for '{}'",
+            eager.summary.tensor_type, eager.summary.tensor_name
+        )));
+    }
+
+    let info = reader.get_tensor_info_by_name(&eager.summary.tensor_name).ok_or_else(|| {
+        BitNetError::Validation(format!(
+            "Q8_0 dense linear sidecar descriptor '{}' is missing tensor info",
+            eager.summary.tensor_name
+        ))
+    })?;
+    let data = reader.get_tensor_data_by_info(info)?;
+    let elements = eager.summary.value_count;
+    let blocks = q8_0_blocks(data, elements, &info.name)?;
+    let fused_output = q8_0_matvec_dequant_fused_row_major(
+        &blocks,
+        elements,
+        eager.summary.matrix_rows,
+        eager.summary.matrix_cols,
+        &eager.cpu_reference_input,
+    )?;
+    let max_abs_diff_vs_eager_f32 = max_abs_diff(&fused_output, &eager.cpu_reference_output)?;
+
+    let summary = DenseGgufQ8LinearSidecarSummary {
+        schema: 1,
+        artifact_kind: DENSE_GGUF_Q8_LINEAR_SIDECAR_ARTIFACT_KIND.to_string(),
+        tensor_name: eager.summary.tensor_name,
+        role,
+        tensor_type: eager.summary.tensor_type,
+        source_shape: eager.summary.source_shape,
+        matrix_rows: eager.summary.matrix_rows,
+        matrix_cols: eager.summary.matrix_cols,
+        value_count: eager.summary.value_count,
+        q8_block_size: 32,
+        q8_block_count: blocks.len(),
+        packed_q8_bytes_sha256: bytes_sha256(data),
+        cpu_reference_input_sha256: f32_values_sha256(&eager.cpu_reference_input),
+        fused_output_sha256: f32_values_sha256(&fused_output),
+        eager_output_sha256: f32_values_sha256(&eager.cpu_reference_output),
+        max_abs_diff_vs_eager_f32,
+        dequantizes_inside_matvec: true,
+        materializes_full_f32_weights: false,
+        compares_against_eager_f32_reference: true,
+        generated_id_preservation_required_before_runtime_use: true,
+        speedup_claim: false,
+        dense_runtime_replaced: false,
+    };
+
+    Ok(DenseGgufQ8LinearSidecar {
+        summary,
+        cpu_reference_input: eager.cpu_reference_input,
+        fused_output,
+        eager_output: eager.cpu_reference_output,
     })
 }
 
@@ -271,6 +388,75 @@ fn q8_0_tensor_values(bytes: &[u8], shape: &[usize], tensor_name: &str) -> Resul
     Ok(values)
 }
 
+fn q8_0_blocks(bytes: &[u8], elements: usize, tensor_name: &str) -> Result<Vec<Q8Block>> {
+    let blocks = elements.div_ceil(32);
+    let expected_bytes =
+        blocks.checked_mul(GgufTensorType::Q8_0.element_size()).ok_or_else(|| {
+            BitNetError::Validation(format!(
+                "Q8_0 tensor '{tensor_name}' byte count overflows for {blocks} blocks"
+            ))
+        })?;
+    if bytes.len() < expected_bytes {
+        return Err(BitNetError::Validation(format!(
+            "Q8_0 tensor '{tensor_name}' has {} bytes, expected at least {}",
+            bytes.len(),
+            expected_bytes
+        )));
+    }
+
+    let mut parsed = Vec::with_capacity(blocks);
+    for block_idx in 0..blocks {
+        let offset = block_idx * GgufTensorType::Q8_0.element_size();
+        let scale_bits = u16::from_le_bytes([bytes[offset], bytes[offset + 1]]);
+        let mut qs = [0i8; 32];
+        for code_idx in 0..32 {
+            qs[code_idx] = bytes[offset + 2 + code_idx] as i8;
+        }
+        parsed.push(Q8Block { scale: half::f16::from_bits(scale_bits).to_f32(), qs });
+    }
+    Ok(parsed)
+}
+
+fn q8_0_matvec_dequant_fused_row_major(
+    blocks: &[Q8Block],
+    elements: usize,
+    rows: usize,
+    cols: usize,
+    input: &[f32],
+) -> Result<Vec<f32>> {
+    if input.len() != cols {
+        return Err(BitNetError::Validation(format!(
+            "Q8_0 fused dense linear input length {} does not match matrix cols {}",
+            input.len(),
+            cols
+        )));
+    }
+    let expected = rows.checked_mul(cols).ok_or_else(|| {
+        BitNetError::Validation(format!(
+            "Q8_0 fused dense linear matrix shape overflows: {rows}x{cols}"
+        ))
+    })?;
+    if expected != elements {
+        return Err(BitNetError::Validation(format!(
+            "Q8_0 fused dense linear element count {elements} does not match matrix shape {rows}x{cols}"
+        )));
+    }
+
+    let mut output = Vec::with_capacity(rows);
+    for row in 0..rows {
+        let row_start = row * cols;
+        let mut sum = 0.0f32;
+        for (col, value) in input.iter().enumerate().take(cols) {
+            let weight_idx = row_start + col;
+            let block = &blocks[weight_idx / 32];
+            let q = f32::from(block.qs[weight_idx % 32]);
+            sum += block.scale * q * *value;
+        }
+        output.push(sum);
+    }
+    Ok(output)
+}
+
 fn checked_element_count(shape: &[usize], tensor_name: &str, dtype: &str) -> Result<usize> {
     shape.iter().try_fold(1usize, |acc, dim| {
         acc.checked_mul(*dim).ok_or_else(|| {
@@ -336,6 +522,23 @@ fn f32_values_sha256(values: &[f32]) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+fn bytes_sha256(bytes: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
+fn max_abs_diff(left: &[f32], right: &[f32]) -> Result<f32> {
+    if left.len() != right.len() {
+        return Err(BitNetError::Validation(format!(
+            "dense linear output lengths differ: {} vs {}",
+            left.len(),
+            right.len()
+        )));
+    }
+    Ok(left.iter().zip(right).map(|(l, r)| (l - r).abs()).fold(0.0f32, f32::max))
+}
+
 fn tensor_type_label(tensor_type: GgufTensorType) -> &'static str {
     match tensor_type {
         GgufTensorType::F32 => "f32",
@@ -364,17 +567,16 @@ mod tests {
     use crate::formats::gguf::GgufValue;
 
     #[test]
-    fn qwen_q8_attention_q_fixture_dequantizes_and_computes_cpu_reference() {
+    fn qwen_q8_attention_q_fixture_dequantizes_and_computes_cpu_reference() -> Result<()> {
         let data = build_qwen_gguf(vec![(
             "blk.0.attn_q.weight",
             vec![4, 3],
             GgufTensorType::Q8_0,
             q8_0_blob(0.5, &(1..=12).collect::<Vec<_>>()),
         )]);
-        let reader = GgufReader::new(&data).expect("parse qwen q8 fixture");
+        let reader = GgufReader::new(&data)?;
 
-        let fixture = extract_dense_gguf_linear_fixture(&reader, DenseGgufTensorRole::AttentionQ)
-            .expect("extract linear fixture");
+        let fixture = extract_dense_gguf_linear_fixture(&reader, DenseGgufTensorRole::AttentionQ)?;
 
         assert_eq!(fixture.summary.artifact_kind, DENSE_GGUF_LINEAR_FIXTURE_ARTIFACT_KIND);
         assert_eq!(fixture.summary.model_family, "qwen");
@@ -396,18 +598,47 @@ mod tests {
                 fixture.summary.matrix_rows,
                 fixture.summary.matrix_cols,
                 &fixture.cpu_reference_input
-            )
-            .unwrap()
+            )?
         );
         assert!(fixture.summary.values_materialized_as_f32);
         assert!(fixture.summary.cpu_reference_computed);
         assert!(!fixture.summary.cpu_cuda_parity_claimed);
         assert!(!fixture.summary.dense_gguf_inference_claimed);
         assert!(!fixture.summary.bitnet_packed_i2s_qk256_proof);
+        Ok(())
     }
 
     #[test]
-    fn qwen_f16_mlp_up_fixture_materializes_cpu_reference() {
+    fn qwen_q8_sidecar_matvec_matches_eager_f32_fixture() -> Result<()> {
+        let data = build_qwen_gguf(vec![(
+            "blk.0.ffn_down.weight",
+            vec![4, 3],
+            GgufTensorType::Q8_0,
+            q8_0_blob(0.25, &(1..=12).collect::<Vec<_>>()),
+        )]);
+        let reader = GgufReader::new(&data)?;
+
+        let sidecar = extract_dense_gguf_q8_linear_sidecar(&reader, DenseGgufTensorRole::MlpDown)?;
+
+        assert_eq!(sidecar.summary.artifact_kind, DENSE_GGUF_Q8_LINEAR_SIDECAR_ARTIFACT_KIND);
+        assert_eq!(sidecar.summary.tensor_name, "blk.0.ffn_down.weight");
+        assert_eq!(sidecar.summary.tensor_type, "q8_0");
+        assert_eq!(sidecar.summary.matrix_rows, 3);
+        assert_eq!(sidecar.summary.matrix_cols, 4);
+        assert_eq!(sidecar.summary.q8_block_count, 1);
+        assert!(sidecar.summary.dequantizes_inside_matvec);
+        assert!(!sidecar.summary.materializes_full_f32_weights);
+        assert!(sidecar.summary.compares_against_eager_f32_reference);
+        assert!(sidecar.summary.generated_id_preservation_required_before_runtime_use);
+        assert!(!sidecar.summary.speedup_claim);
+        assert!(!sidecar.summary.dense_runtime_replaced);
+        assert_eq!(sidecar.summary.max_abs_diff_vs_eager_f32, 0.0);
+        assert_eq!(sidecar.fused_output, sidecar.eager_output);
+        Ok(())
+    }
+
+    #[test]
+    fn qwen_q8_sidecar_rejects_non_q8_fixture() -> Result<()> {
         let values: Vec<f32> = (0..12).map(|idx| idx as f32 / 8.0).collect();
         let data = build_qwen_gguf(vec![(
             "blk.0.ffn_up.weight",
@@ -415,16 +646,40 @@ mod tests {
             GgufTensorType::F16,
             f16_blob(&values),
         )]);
-        let reader = GgufReader::new(&data).expect("parse qwen f16 fixture");
+        let reader = GgufReader::new(&data)?;
 
-        let fixture = extract_dense_gguf_linear_fixture(&reader, DenseGgufTensorRole::MlpUp)
-            .expect("extract f16 fixture");
+        let err = match extract_dense_gguf_q8_linear_sidecar(&reader, DenseGgufTensorRole::MlpUp) {
+            Ok(_) => {
+                return Err(BitNetError::Validation(
+                    "expected non-Q8 fixture to be rejected".to_string(),
+                ));
+            }
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains("requires tensor type q8_0"), "unexpected error: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn qwen_f16_mlp_up_fixture_materializes_cpu_reference() -> Result<()> {
+        let values: Vec<f32> = (0..12).map(|idx| idx as f32 / 8.0).collect();
+        let data = build_qwen_gguf(vec![(
+            "blk.0.ffn_up.weight",
+            vec![4, 3],
+            GgufTensorType::F16,
+            f16_blob(&values),
+        )]);
+        let reader = GgufReader::new(&data)?;
+
+        let fixture = extract_dense_gguf_linear_fixture(&reader, DenseGgufTensorRole::MlpUp)?;
 
         assert_eq!(fixture.summary.tensor_type, "f16");
         assert_eq!(fixture.summary.matrix_rows, 3);
         assert_eq!(fixture.summary.matrix_cols, 4);
         assert_eq!(fixture.summary.value_count, 12);
         assert_eq!(fixture.cpu_reference_output.len(), 3);
+        Ok(())
     }
 
     #[test]

@@ -1,0 +1,26 @@
+timestamp = "2026-05-18T23:58:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-QUAL-009"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5674
+head_sha = "be9645865a59f1b02bc844d6124d624a96b746e2"
+merge_sha = "306af644ac8f32c36a024d986dce60c4861ed46f"
+branch = "codex/lunar-lake/LNL258V-QUAL-009-cross-runtime-stop-token"
+summary = "Merged PR #5674 for LNL258V-QUAL-009, aligning the corpus-v2 stop-token fixture across dense GGUF CPU and OpenVINO CPU/GPU/NPU candidate routes."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5674",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+]
+
+notes = [
+  "Merged with no route promotion, speedup, power advantage, native accelerator, Arc/NPU acceleration, full BitNet accelerator inference, or BitNet QK256/I2_S behavior change claim.",
+  "Dependent route-profile evidence keeps OpenVINO GPU/NPU candidate-only and no longer treats fixture_budget_passes as a blocker.",
+]

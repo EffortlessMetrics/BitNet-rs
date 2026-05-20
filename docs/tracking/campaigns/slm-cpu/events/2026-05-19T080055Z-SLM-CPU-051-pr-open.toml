@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T08:00:55Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-051"
+event = "pr_open"
+pr = 5897
+head_sha = "da8d4bc91f7350d69d7770db95667e0b82ef5732"
+actor = "codex"
+
+notes = [
+  "Opened the selector-readiness implementation PR after the tracker setup PR merged.",
+  "The PR keeps eager F32 Candle selected and sidecar runtime compute disabled.",
+  "No speedup, Q4/Q5, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

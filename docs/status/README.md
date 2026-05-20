@@ -15,6 +15,7 @@ diagnostic, advisory, or planned.
 | Capability matrix | Product claim tier, proof command, proof artifact, claim boundary |
 | Claim boundaries | What a proof does and does not allow the README or CLI docs to say |
 | README summary | Short user entry point, not the final proof map |
+| Handoff | Operator transfer context and validation gaps, not claim authority |
 | Receipt/artifact | Evidence for one run, model, backend, or lane |
 
 ## Required Claim Boundary
@@ -35,6 +36,7 @@ Current maintained status surfaces:
 
 ```text
 docs/status/CUDA_CAPABILITY_MATRIX.md
+docs/status/OPENVINO_CAPABILITY_MATRIX.md
 ```
 
 Planned status surfaces include:
@@ -53,3 +55,4 @@ These pages summarize proof. They do not replace the operational authorities:
 - `docs/hardware/HARDWARE_MATRIX.md` for hardware lane identity.
 - `docs/ci/cost-and-verification-policy.md` for CI economics.
 - `docs/tracking/TRACKER_MODEL.md` for campaign execution state.
+- `docs/handoffs/` for operator transfer notes and closeout summaries.

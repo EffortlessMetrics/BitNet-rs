@@ -78,7 +78,39 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-025 | merged | #5357 isolated deterministic greedy logits extraction so exact no-penalty steps use direct tensor argmax; default repetition-penalty vector extraction remained explicit. |
 | SLM-CPU-026 | merged | #5369 reused a host logits scratch buffer for default repetition-penalty decode steps, reducing fresh logits Vec extraction while preserving generated IDs, strict tokenizer authority, cpu-rust, and fallback=false. |
 | SLM-CPU-027 | blocked | Duplicate second-model item blocked because SLM-CPU-017 and SLM-CPU-017A already recorded the SmolLM2 blocker and positive Qwen2.5 Q8_0 second-model sanity evidence. |
-| SLM-CPU-028 | pr_open | #5384 defines the bounded Q4_K_M/Q4_K_S expansion plan: candidate artifact identity, metadata, tokenizer, strict CPU, fallback, corpus, multi-token, warm-session, and operator-profile gates before any Q4 runtime support claim. |
+| SLM-CPU-028 | merged | #5384 defined the bounded Q4_K_M/Q4_K_S expansion plan: candidate artifact identity, metadata, tokenizer, strict CPU, fallback, corpus, multi-token, warm-session, and operator-profile gates before any Q4 runtime support claim. |
+| SLM-CPU-029 | merged | #5405 reduced the next Qwen3 Q8_0 warm-session allocation/layout boundary while preserving the 4-thread generated-ID oracle and strict provenance. |
+| SLM-CPU-030 | merged | #5457 added prompt setup allocation attribution for buffer reset, token seed, KV-cache, and sampler setup subcomponents. |
+| SLM-CPU-031 | merged | #5499 reused a single CPU KV cache across warm-session prompts while preserving prompt isolation through explicit clears. |
+| SLM-CPU-032 | merged | #5514 reused rendered prompt token IDs across repeated warm-session prompts and recorded prompt-token cache hit/miss counts. |
+| SLM-CPU-033 | merged | #5603 records the dominant aggregate allocation hotspot and next evidence-scoped optimization target after prompt-token caching; this is diagnostic prioritization only, not a speedup or sustained-throughput claim. |
+| SLM-CPU-034 | merged | #5612 attributes the dominant `prompt_prefill` / `model.forward` allocation boundary before changing dense math. |
+| SLM-CPU-035 | merged | Regenerate the real i5-8250U Qwen3 Q8_0 warm-session artifact so the receipt records `prompt_prefill_breakdown.embed` and `prompt_prefill_breakdown.forward`. |
+| SLM-CPU-036 | merged | #5625 classifies `prompt_prefill.forward` as transformer forward workspace and owned tensor outputs before changing dense math. |
+| SLM-CPU-037 | merged | #5643 explicitly rules out caller-side transformer-forward buffer reuse at the current owned tensor-output boundary and points the next safe hook at a typed transformer forward workspace API. |
+| SLM-CPU-038 | merged | #5679 introduced the first typed transformer forward workspace API boundary while preserving the existing owned tensor-output behavior oracle. |
+| SLM-CPU-039 | merged | #5693 routed the feed-forward output through the typed workspace and recorded `feed_forward.output` as the first workspace-owned transformer output boundary while reusable Candle storage remains deferred. |
+| SLM-CPU-040 | merged | #5715 classified the exact `FeedForward::down_proj` output boundary and recorded that reusable workspace-backed storage remains blocked by Candle's owned linear output path. |
+| SLM-CPU-041 | merged | #5754 narrowed the `FeedForward::down_proj` storage blocker to the exact Candle tensor API gap: linear weight/bias are readable, but matmul/bias-add still lack caller-provided output storage. |
+| SLM-CPU-042 | merged | #5773 identifies and instruments the first behavior-preserving Q8_0 dense linear locality/dequant boundary after the Candle output-storage API blocker. |
+| SLM-CPU-043 | merged | #5794 added a fixture-level packed Q8_0 sidecar linear prototype that matches eager F32 fixture output without replacing production runtime compute. |
+| SLM-CPU-044 | merged | #5810 defined the first production-integration boundary for carrying packed Q8_0 sidecar metadata toward runtime dense-linear use while keeping eager F32 Candle tensors as the behavior oracle. |
+| SLM-CPU-045 | merged | #5845 preserves packed Q8_0 sidecar metadata from strict GGUF tensor loading into an inert model-side descriptor without changing generation behavior or claiming speedup. |
+| SLM-CPU-046 | merged | #5860 added a dense-linear dispatch selector that keeps eager F32 Candle selected while exposing packed Q8_0 sidecars only as unavailable candidates. |
+| SLM-CPU-047 | merged | #5868 added the packed Q8_0 sidecar equivalence gate that records fixture parity and keeps runtime compute disabled until generated-ID/text receipt equivalence exists. |
+| SLM-CPU-048 | merged | #5873 added the non-executing packed Q8_0 sidecar runtime preflight that names generated-ID receipt, production compute hook, and eager-selector blockers. |
+| SLM-CPU-049 | merged | Added the generated-ID/text receipt equivalence gate before any packed Q8_0 sidecar runtime selection or speedup claim. |
+| SLM-CPU-050 | merged | Added the production-compute-hook availability surface while keeping eager F32 Candle selected until later behavior-preserving selector evidence exists. |
+| SLM-CPU-051 | merged | Add the selector-readiness gate that names the evidence required before a later packed Q8_0 runtime selector update. |
+| SLM-CPU-052 | merged | #5921 implemented the first behavior-preserving selector update while preserving eager F32 Candle as the runtime oracle unless generated-ID/text evidence allows a packed Q8_0 candidate. |
+| SLM-CPU-053 | merged | #5943 validated the first packed Q8_0 sidecar runtime execution proof gate and recorded that production runtime execution remains blocked by eager F32 dispatch, disabled packed runtime compute, missing production runtime hook, and missing before/after receipts. |
+| SLM-CPU-054 | merged | #5992 recorded the remaining packed Q8_0 sidecar runtime hook/API gap while keeping eager F32 Candle as the default behavior oracle and sidecar_runtime_compute_allowed=false. |
+| SLM-CPU-055 | merged | #6008 added the first production dense-linear hook contract gate so transformer dense linear calls can receive an explicit eager-F32 selection or selected Q8_0 sidecar descriptor while keeping packed compute disabled until before/after behavior receipts exist. |
+| SLM-CPU-056 | merged | #6018 implemented the first production dense-linear hook boundary from SLM-CPU-055 without enabling packed Q8_0 sidecar compute by default or weakening the Qwen3 Q8_0 Kaby behavior oracle. |
+| SLM-CPU-057 | merged | #6045 added the next Qwen3 Q8_0 dense hook-selection receipt gate before any packed Q8_0 sidecar compute can be enabled. |
+| SLM-CPU-058 | merged | #6070 queued the dense-hook before/after receipt gate and preserved the current safe state: packed Q8_0 sidecar compute remains disabled until behavior-preserving before/after receipts and a narrow compute proof exist. |
+| SLM-CPU-059 | merged | #6078 recorded the packed Q8_0 compute-kernel proof gate and blocker artifact: production transformer dense-linear hooks still receive metadata-only sidecar descriptors, so payload-bearing packed Q8_0 sidecar compute remains disabled pending before/after behavior receipts. |
+| SLM-CPU-060 | ready | Next evidence-scoped hook-contract slice: add a payload-bearing packed Q8_0 sidecar hook contract for one Qwen3 Q8_0 dense-linear tensor path, or record a concrete blocker if the current API cannot safely carry packed payload bytes to the dense-linear callsite. |
 
 ## Review Policy
 

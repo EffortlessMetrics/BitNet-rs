@@ -1,0 +1,25 @@
+timestamp = "2026-05-18T12:30:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-ROUTE-010"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+pr = 5580
+head_sha = "6c498bdfce563468a41d3e718b61765ba0fd7f7b"
+actor = "codex"
+branch = "codex/lunar-lake/LNL258V-ROUTE-010-openvino-token-context"
+summary = "Opened LNL258V-ROUTE-010 to supplement OpenVINO candidate route timing with corpus-v2 prompt-token context while preserving candidate-only GPU/NPU route boundaries."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "PR #5580 keeps OpenVINO GPU/NPU unpromoted and uses existing corpus-v2 prompt-token evidence only for route-profile timing applicability.",
+  "No new inference, route promotion, speedup, power-advantage, acceleration, or BitNet QK256/I2_S behavior-change claim is in scope.",
+]

@@ -1,0 +1,16 @@
+timestamp = "2026-05-19T06:03:03Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-007"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 5869
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-007-harness-calibration"
+head_sha = "116e2a2c828e849ce196529a46485b18547cff85"
+
+notes = [
+  "Opened PR #5869 for M4 benchmark harness calibration.",
+  "The PR adds `bitnet mac benchmark --calibrate`, `apple_m4_benchmark_calibration` receipts-check validation, committed calibration evidence, and docs/tracker updates.",
+  "The calibration receipt is synthetic harness evidence only and does not claim live model benchmark speed, BitNet chat/serve, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance.",
+]

@@ -1,0 +1,22 @@
+timestamp = "2026-05-18T10:24:10Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-011"
+event = "in_progress"
+actor = "codex"
+from = "ready"
+to = "in_progress"
+branch = "codex/cuda-model-011-qwen3-chat-user-path"
+summary = "Started Qwen3 0.6B chat user-path receipt closeout after CUDA-MODEL-010 ask evidence landed."
+
+artifacts = [
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-chat-user-path-prompts.txt",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-chat-user-path-cuda.json",
+  "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-18/qwen3-0_6b-chat-user-path-cuda.source-warm-session.json",
+  "docs/reports/CUDA_MODEL_011_QWEN3_CHAT_USER_PATH_RECEIPT.md",
+]
+
+notes = [
+  "The user-path receipt is generated through normal bitnet chat with selected_backend=nvidia-rtx-5070-ti-cuda, selected_route=dense_regular_llm_cuda, and fallback_used=false.",
+  "The receipt records model_loaded_once, tokenizer_loaded_once, cuda_context_initialized_once, weights_uploaded_once, runtime buffer reuse, and multiple prompts.",
+  "Product CLI readiness, server readiness, speedup, full CUDA residency, broad dense GGUF readiness, Qwen2.5 proof inheritance, and BitNet packed I2_S/QK256 proof remain false/non-claims.",
+]

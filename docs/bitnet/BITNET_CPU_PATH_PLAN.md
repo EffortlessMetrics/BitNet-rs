@@ -160,14 +160,36 @@ Plan by ISA lane before planning by specific machine. AVX2 is the first x86 fast
 
 | Kernel target | Primary workload | First lane | Acceptance |
 |---|---|---|---|
-| Scalar packed GEMV | decode correctness | all CPUs | Deterministic oracle for SIMD parity. |
-| Scalar packed GEMM | prefill correctness | all CPUs | Deterministic oracle and CI fallback. |
+| Scalar packed F32 GEMV | decode diagnostic/reference | all CPUs | Precise `qk256-scalar-f32-gemv` identity; useful diagnostic/oracle path, not a substitute for scaled BitNet I8_S. |
+| Scalar packed F32 GEMM | prefill diagnostic/reference | all CPUs | Precise `qk256-scalar-f32-gemm` identity; deterministic no-scale scalar prefill reference. |
+| Scalar scaled I2_S x I8_S GEMV | decode correctness | all CPUs | Precise `qk256-scalar-i8s-scaled-gemv` identity; production scalar BitNet decode oracle. |
+| Scalar scaled I2_S x I8_S GEMM | prefill correctness | all CPUs | Precise `qk256-scalar-i8s-scaled-gemm` identity; production scalar BitNet prefill oracle. |
 | AVX2/FMA packed GEMV | decode performance | mainstream x86-64 | Meaningful speedup over scalar; selected only with CPUID support. |
 | AVX2/FMA packed GEMM | prefill performance | mainstream x86-64 | Tiled prefill path after decode GEMV is proven. |
 | AVX-512 packed GEMV/GEMM | optional x86 widening | AVX-512 hosts only | Optional and benchmark-proven; never the only fast path. |
 | NEON packed GEMV | ARM decode performance | arm64 | First serious Apple/Arm CPU lane. |
 | NEON packed GEMM | ARM prefill performance | arm64 | Follow NEON decode proof. |
 | Reference dequant + dense matmul | tests and diagnostics | all CPUs | Not valid for steady-state performance claims. |
+
+### Scalar CPU Productization Rails
+
+The scalar lane is governed by the CPU scalar specs:
+
+- [CPU scalar kernel contract](../specs/BITNET-SPEC-CPU-SCALAR-KERNEL-CONTRACT.md)
+- [CPU scalar hot-path contract](../specs/BITNET-SPEC-CPU-SCALAR-HOTPATH.md)
+- [CPU scalar parity contract](../specs/BITNET-SPEC-CPU-SCALAR-PARITY.md)
+- [CPU scalar performance contract](../specs/BITNET-SPEC-CPU-SCALAR-PERFORMANCE.md)
+
+Scalar has two distinct meanings. The F32/no-scale QK256 path is a diagnostic
+and dequant-style reference path. The scaled I2_S x I8_S path is the production
+scalar BitNet path and must be selected for real BitNet I2_S tensors with inline
+scale. Receipts must report precise kernel IDs instead of the compatibility
+aliases `qk256-scalar-gemv` and `qk256-scalar-gemm`.
+
+Strict scalar receipts must show `fallback_used=false` and
+`requested_kernel == selected_kernel`. Strict accelerated requests must fail
+rather than silently selecting scalar. Scalar performance receipts are baseline
+evidence only and must not claim speedup.
 
 Suggested scalar APIs:
 
@@ -347,7 +369,7 @@ A CPU receipt must make fallback impossible to hide:
     "latency_ms_p95": null
   },
   "parity": {
-    "reference_kernel": "qk256-scalar-gemv",
+    "reference_kernel": "qk256-scalar-i8s-scaled-gemv",
     "max_abs_error": 0.0,
     "mean_abs_error": 0.0
   }
@@ -361,6 +383,7 @@ A CPU receipt must make fallback impossible to hide:
 | CPU-BITNET-001 | Loader authority | `crates/bitnet-models/src/formats/gguf/loader.rs`, `crates/bitnet-models/src/gguf_simple.rs`, `crates/bitnet-models/src/lib.rs`, `crates/bitnet-cli/**` | One authoritative strict GGUF load path; minimal fallback impossible in strict proof mode; loader receipts say `loader.mode=real_gguf`. |
 | CPU-BITNET-002 | Tokenizer authority | `crates/bitnet-tokenizers/src/gguf_loader.rs`, `crates/bitnet-tokenizers/src/gguf_tokenizer.rs`, `crates/bitnet-tokenizers/src/auto.rs`, `crates/bitnet-tokenizers/src/universal.rs`, `crates/bitnet-cli/src/tokenizer_discovery.rs` | Deterministic precedence; strict mode fails rather than guessing; tokenizer source reaches receipts. |
 | CPU-BITNET-003 | Canonical packed layout | `crates/bitnet-qk256-layout-core/src/lib.rs`, `crates/bitnet-quantization/src/i2s_qk256.rs`, `crates/bitnet-quantization/src/qk256_dispatch.rs`, `crates/bitnet-models/src/quant/**`, `crates/bitnet-models/src/qk256_utils.rs` | Loader and kernels share one QK256/I2_S layout authority; byte-exact layout fixtures pass. |
+| CPU-SCALAR-000 | Scalar specs and tracker rails | `docs/specs/BITNET-SPEC-CPU-SCALAR-*.md`, `plans/cpu-scalar/implementation-plan.md`, `docs/bitnet/**`, `docs/tracking/campaigns/cpu-proof/active.toml` | Docs-only scalar contract defines precise kernel IDs, hot-path counters, parity direction, performance profiles, and claim boundaries. |
 | CPU-BITNET-004 | Scalar packed truth kernels | `crates/bitnet-quantization/src/i2s_qk256.rs`, `crates/bitnet-kernels/src/matmul_dispatch.rs`, `crates/bitnet-kernels/src/ffi.rs`, `crates/bitnet-kernels/src/ffi/bridge.rs`, `crates/bitnet-kernels/tests/**` | Scalar packed GEMV/GEMM are deterministic; SIMD kernels can compare against scalar packed output. |
 | CPU-BITNET-005 | AVX2 decode-first GEMV | `crates/bitnet-quantization/src/i2s_qk256_avx2.rs`, `crates/bitnet-kernels/src/matmul_dispatch.rs`, `crates/bitnet-kernels/src/dispatch_planner.rs`, `crates/bitnet-kernels/src/dispatch_table.rs`, `crates/bitnet-receipts/**`, `benches/**` | CPUID-gated AVX2 GEMV has scalar parity, records requested/selected kernel, and fails strict mode on fallback. |
 | CPU-BITNET-006 | CPU transformer decode ops | `crates/bitnet-kernels/src/cpu/**`, `crates/bitnet-transformer/**`, `crates/bitnet-inference/src/backends.rs`, `crates/bitnet-inference/**`, `tests/**` | One real-model decode step can run with real tensors; missing ops fail explicitly; KV-cache append/read is deterministic. |
@@ -374,11 +397,12 @@ A CPU receipt must make fallback impossible to hide:
 2. Tokenizer authority.
 3. Canonical packed layout.
 4. Scalar packed reference kernels.
-5. AVX2 decode GEMV.
-6. CPU transformer decode ops.
-7. Strict receipts and fallback enforcement.
-8. BitNet phase benchmarks.
-9. Wider ISA lanes.
+5. Scalar precise IDs, strict selection metadata, hot-path counters, answer receipts, and phase baselines.
+6. AVX2 decode GEMV.
+7. CPU transformer decode ops.
+8. Strict receipts and fallback enforcement.
+9. BitNet phase benchmarks.
+10. Wider ISA lanes.
 
 ### Suggested milestone timeline
 
@@ -414,6 +438,8 @@ Use this checklist when slicing implementation work:
 - [ ] Make tokenizer resolution explicit, deterministic, and receipt-visible.
 - [ ] Make `bitnet-qk256-layout-core` the one QK256/I2_S layout authority.
 - [ ] Land scalar packed GEMV/GEMM reference kernels before claiming SIMD speedups.
+- [ ] Split scalar receipts into precise F32/no-scale and scaled I2_S x I8_S kernel IDs.
+- [ ] Route inline-scale BitNet QK256 through selected scaled scalar metadata, not direct untracked calls.
 - [ ] Land AVX2 decode GEMV before wider x86 or ARM lanes.
 - [ ] Add RMSNorm, RoPE, KV-cache, attention score/value, embedding gather, and output-head helpers for CPU decode.
 - [ ] Record requested versus selected backend and kernel in receipts.
@@ -431,6 +457,12 @@ This document is intentionally a planning contract, not a claim that every refer
 - receipt schema version and whether CPU kernel fields already have equivalent names.
 
 Those details can change the patch shape, but not the required direction: authoritative GGUF/tokenizer loading, canonical packed layout, scalar truth kernels, decode-first AVX2, then wider ISA lanes.
+
+## I2_S lane note (2026-05-19)
+
+The official Microsoft 2B I2_S/QK256 route remains product-CLI-ready but not globally speed-qualified. New CPU work must preserve explicit scaled-I2_S×I8_S kernel identity and fallback-explicit receipts.
+
+See `docs/bitnet/i2s/README.md` and `plans/i2s/implementation-plan.md` for current lane sequencing.
 
 ## Related Documents
 

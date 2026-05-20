@@ -47,12 +47,16 @@ fn component_debug() {
     assert!(dbg.contains("Cli"));
 }
 
+fn clone_value<T: Clone>(value: &T) -> T {
+    value.clone()
+}
+
 #[test]
 fn component_clone_copy() {
     let c = RuntimeComponent::Server;
     let c2 = c; // Copy
     assert_eq!(c.label(), c2.label());
-    let c3 = c.clone();
+    let c3 = clone_value(&c);
     assert_eq!(c.label(), c3.label());
 }
 

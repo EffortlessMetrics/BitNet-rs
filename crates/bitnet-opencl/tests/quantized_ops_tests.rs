@@ -322,9 +322,9 @@ fn kernel_all_sources_returns_three() {
 
 #[test]
 fn kernel_workgroup_sizes_positive() {
-    assert!(quantized_kernels::DEQUANTIZE_I2S_WORKGROUP > 0);
-    assert!(quantized_kernels::TERNARY_MATMUL_WORKGROUP > 0);
-    assert!(quantized_kernels::QK256_DEQUANT_WORKGROUP > 0);
+    const { assert!(quantized_kernels::DEQUANTIZE_I2S_WORKGROUP > 0) };
+    const { assert!(quantized_kernels::TERNARY_MATMUL_WORKGROUP > 0) };
+    const { assert!(quantized_kernels::QK256_DEQUANT_WORKGROUP > 0) };
 }
 
 #[test]

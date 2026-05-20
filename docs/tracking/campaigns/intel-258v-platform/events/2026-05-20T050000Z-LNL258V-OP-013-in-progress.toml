@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T05:00:00Z"
+event = "in_progress"
+item = "LNL258V-OP-013"
+branch = "codex/lunar-lake/LNL258V-OP-013-ask-model-defaults"
+actor = "codex"
+summary = "Started Lunar Lake ask model-default and blocked-route ergonomics hardening."
+
+notes = [
+  "The slice makes blocked auto-route profiles fail closed before a model path is required.",
+  "Executable ask routes may use a committed local default model path only when the referenced artifact exists.",
+  "The scope preserves no successful new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]

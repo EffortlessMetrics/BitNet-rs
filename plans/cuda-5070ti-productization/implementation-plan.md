@@ -534,7 +534,7 @@ Revert the status/docs/server-smoke PR and demote the server row if needed.
 
 ## Work items: CUDA-SERVER-003 through CUDA-SERVER-006
 
-Status: CUDA-SERVER-003 merged; CUDA-SERVER-004, CUDA-SERVER-005, and CUDA-SERVER-006 proposed
+Status: CUDA-SERVER-003 and CUDA-SERVER-004 merged; CUDA-SERVER-005 in progress; CUDA-SERVER-006 proposed
 Linked proposal: BITNET-PROP-0002
 Linked specs: BITNET-SPEC-0007, BITNET-SPEC-0010
 Linked ADRs: BITNET-ADR-0004
@@ -569,6 +569,11 @@ shared-engine receipt validator.
 exact request model plus active artifact SHA-256 loaded through CUDA; missing or
 mismatched artifact identity, or a CPU-loaded active model, stays generic and
 cannot populate dense coverage or server-smoke claims.
+`CUDA-SERVER-005` refreshes the dense Qwen shared-engine server receipt from
+that hardened path and promotes `server_ready=true` only for the exact
+non-streaming RTX 5070 Ti `/v1/chat/completions` profile. Speedup, full
+residency, broad dense server readiness, production deployment readiness, and
+BitNet QK256 proof remain false/non-claims.
 
 ### Proof commands
 
@@ -583,6 +588,7 @@ cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070t
 
 ```text
 ci/hardware/windows-9950x3d-rtx5070ti/2026-05-15/server-strict-dense-qwen25-q8-smoke.json
+ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json
 ci/hardware/windows-9950x3d-rtx5070ti/<date>/server-strict-bitnet-i2s-qk256-smoke.json
 ```
 

@@ -137,8 +137,7 @@ mod ffi_tests {
 mod no_ffi {
     #[test]
     fn ffi_feature_disabled() {
-        // This test always passes if FFI is disabled
-        // Just confirms the test file compiles without FFI
-        assert!(true, "FFI feature not enabled, skipping wrapper tests");
+        // This test always passes if FFI is disabled. Reaching this point
+        // confirms the test file compiles without FFI.
     }
 }

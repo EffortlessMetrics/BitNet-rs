@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T15:56:18Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ROBUSTNESS-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-ROBUSTNESS-001-negative-corpus"
+pr = 5699
+head_sha = "150459610c0e6166c502662668ec6c2ced860288"
+merge_sha = "7578f1de8ded04742fd491174b813789ac6ebbdc"
+
+notes = [
+  "Closed M4-ROBUSTNESS-001 after PR #5699 merged the M4 robustness/negative eval dry-run lane.",
+  "The merged lane adds `bitnet mac eval --suite m4-robustness --dry-run`, deterministic robustness cases, family-separated dense_slm and bitnet summary rows, and receipts-check validation for `apple_m4_robustness_eval_summary`.",
+  "No broad safety, alignment, factuality, dense-to-BitNet transfer, BitNet chat, BitNet serve, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, broad performance, or speedup claim.",
+]

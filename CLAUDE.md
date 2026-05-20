@@ -2,6 +2,35 @@
 
 Essential guidance for working with the bitnet-rs codebase.
 
+## Repo Source-Of-Truth Stack
+
+BitNet-rs uses this linked source-of-truth stack:
+
+```text
+Roadmap → Proposal → Spec → ADR → Plan → Active goal → PR → Proof
+```
+
+Before making changes, read:
+
+1. `docs/reference/SPEC_SYSTEM.md`;
+2. `.bitnet-rs/goals/active.toml` when present, otherwise the campaign
+   `active.toml` explicitly named by the task;
+3. the linked implementation plan;
+4. the linked spec for the selected work item;
+5. any linked ADRs.
+
+Work on exactly one ready work item at a time. Do not create a new lane, mix
+proposal/spec/ADR/plan/runtime changes, broaden support claims, or hand-edit
+generated status unless the selected work item explicitly requires it. A change
+is ready only when the intended artifact exists, linked docs are updated, proof
+commands have run or are honestly marked unavailable, claim boundaries are
+respected, and `git diff --check` passes.
+
+Stop and report instead of guessing when the active goal is missing or stale,
+linked specs are missing, proof commands cannot run, generated status differs
+from committed status, requested work conflicts with an ADR, or unrelated staged
+changes exist.
+
 ## Project Identity
 
 - **Name:** bitnet-rs — 1-bit LLM inference engine in Rust
@@ -204,20 +233,24 @@ Campaign work items are authoritative for review and merge flow. For items with
 `review_mode = "codex_premerge"`,
 `merge_policy = "automerge_when_green"`, and
 `human_gate = "on_blocker_only"`, Codex agents are expected to edit, validate,
-commit, push, open or update the PR, address CI/bot/reviewer feedback, merge
-when GitHub reports the PR green and mergeable, and close out tracker PRs when
-required. Commit, push, PR creation, CI/bot/reviewer repair, merge, and tracker
-closeout are not human approval gates.
+commit, push, open or update the PR, refresh the agent-owned PR branch when
+needed through merge-from-main, rebase, `gh pr update-branch`, or
+`--force-with-lease` after branch/status/diff inspection, address
+CI/bot/reviewer feedback, merge when GitHub reports the PR green and mergeable,
+and close out tracker PRs when required. Commit, push, PR creation, agent-owned
+PR branch refresh, CI/bot/reviewer repair, merge, and tracker closeout are not
+human approval gates.
 
 Human involvement is required only for true blockers: permissions or branch
-protection prevent the merge, destructive data loss or secret/model-binary
-exposure is possible, kernel/math/tokenizer/loader semantics are in unresolved
-conflict, acceptance criteria conflict with repository policy, or a
-cost/exposure/release decision is outside the ticket scope.
+protection prevent the merge, direct mutation of `origin/main`, destructive
+cleanup, or secret/model-binary exposure is possible, kernel/math/tokenizer/
+loader semantics are in unresolved conflict, acceptance criteria conflict with
+repository policy, or a cost/exposure/release decision is outside the ticket
+scope.
 
 This policy supersedes older agent runbook wording that treats ordinary commit,
-push, PR creation, CI repair, merge, or tracker closeout as a human approval
-boundary for `codex_premerge` plus `automerge_when_green` plus
+push, PR creation, PR branch refresh, CI repair, merge, or tracker closeout as a
+human approval boundary for `codex_premerge` plus `automerge_when_green` plus
 `on_blocker_only` work items.
 
 ## Critical Gotchas

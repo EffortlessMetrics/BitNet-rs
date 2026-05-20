@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T14:01:39Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-DENSE-CHAT-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-DENSE-CHAT-001-cli-chat-conformance"
+pr = 5675
+head_sha = "b0f572012a2e332eebd025a57117673c0270a0d6"
+merge_sha = "13b5eea5b0c8155ed4f32ebb74c3936b6646ab6d"
+
+notes = [
+  "Closed M4-DENSE-CHAT-001 after PR #5675 merged the dense-only apple_m4_slm_chat_smoke route, validator, docs, and evidence receipts.",
+  "The merged evidence covers qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m on apple-m4-cpu-neon with fallback_used=false and per-turn receipts.",
+  "No BitNet chat behavior, BitNet serve behavior, broad quality, broad performance, full Metal inference, QK256 Apple support, Neural Engine execution, MPSGraph inference, MacBook evidence, or speedup claim.",
+]

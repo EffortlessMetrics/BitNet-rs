@@ -8,6 +8,11 @@ pub const RECEIPT_SCHEMA_VERSION: &str = "1.0.0";
 /// Alias for schema version (for consistency)
 pub const RECEIPT_SCHEMA: &str = RECEIPT_SCHEMA_VERSION;
 
+/// Reusable Apple M4 run identity contract for receipt families that need
+/// matching-history comparison across eval, benchmark, warm, chat, serve, and
+/// dashboard evidence.
+pub const M4_RUN_IDENTITY_CONTRACT_VERSION: &str = "m4-run-identity-v1";
+
 /// Artifact kind for the dense regular-LLM CUDA reference lane.
 ///
 /// This is deliberately separate from BitNet packed I2_S/QK256 CUDA receipt
@@ -238,6 +243,10 @@ pub(crate) const QWEN25_05B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen2.5-0.5b-instruc
 pub(crate) const QWEN25_05B_INSTRUCT_Q8_0_MODEL_FILE: &str = "qwen2.5-0.5b-instruct-q8_0.gguf";
 pub(crate) const QWEN25_05B_INSTRUCT_Q8_0_MODEL_SHA256: &str =
     "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e";
+pub(crate) const BITNET_B158_2B_4T_I2S_MODEL_ID: &str = "microsoft-bitnet-b1.58-2B-4T-i2s";
+pub(crate) const BITNET_B158_2B_4T_I2S_MODEL_FILE: &str = "ggml-model-i2_s.gguf";
+pub(crate) const BITNET_B158_2B_4T_I2S_MODEL_SHA256: &str =
+    "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162";
 pub(crate) const QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID: &str = "qwen3-0.6b-instruct-q8_0";
 pub(crate) const QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE: &str = "Qwen3-0.6B-Q8_0.gguf";
 pub(crate) const QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256: &str =

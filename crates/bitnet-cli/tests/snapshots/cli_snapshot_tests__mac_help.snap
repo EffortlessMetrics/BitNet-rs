@@ -10,6 +10,7 @@ Usage: bitnet mac [OPTIONS] <COMMAND>
 Commands:
   models                List Apple M4 model states, cache status, and selection guidance
   status                Summarize Apple M4 dense SLM, BitNet, disk/cache, receipt, and command readiness
+  evidence              Summarize committed M4 evidence, cache/disk state, regressions, and next command
   report-refresh        Generate a model-free advisory/nightly Apple M4 report refresh manifest
   regression-dashboard  Build a model-free dense SLM and BitNet regression dashboard from committed reports
   check                 Check the cached Apple M4 SLM model artifact and routing boundary
@@ -23,8 +24,11 @@ Commands:
   serve                 Serve local M4 health and readiness endpoints plus completions
   serve-check           Check a running M4 local server readiness and optional completion/receipt export
   chat                  Run multiple prompts in one resident Apple M4 CPU/NEON SLM session
+  chat-smoke            Run a fixed dense SLM resident chat conformance smoke and write a receipt
   validate              Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session
+  eval                  Dry-run supported Apple M4 eval suites and write receipt-backed summaries
   benchmark             Run release-mode dense SLM benchmark profiles for v2 M4 receipts
+  benchmark-preflight   Record benchmark environment preflight evidence without running model inference
   bitnet-proof          Validate M4 BitNet proof inputs without enabling BitNet chat/serve routing
   receipts-check        Check Apple M4 SLM answer/warm-session receipts for hidden fallback or overclaims
   regression            Compare Apple M4 dense-SLM or BitNet receipts against a stored local envelope

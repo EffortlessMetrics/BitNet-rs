@@ -1,0 +1,25 @@
+timestamp = "2026-05-18T11:53:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-BENCH-005"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5550
+branch = "codex/lunar-lake/LNL258V-BENCH-005-profile-timing-coverage"
+head_sha = "945cde6e3dfabbfc9e82e5f5bd306be6002b3774"
+merge_sha = "ccbb1f2b5b69a9a3d41d43c304da0e3f32873aef"
+summary = "Merged LNL258V-BENCH-005 timing-applicability coverage for Lunar Lake route-profile and regression artifacts."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5550",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+]
+
+notes = [
+  "Closeout records profile-specific timing coverage for promotion-eligible routes and blocked proxy/missing timing for candidate routes.",
+  "No new inference, route promotion, speedup, power-advantage, Arc/NPU acceleration, or BitNet QK256/I2_S behavior-change claim is made.",
+]

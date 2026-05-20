@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T00:25:00Z"
+event = "pr_open"
+item = "LNL258V-THERMAL-002"
+pr = 6007
+head_sha = "e5ce63a9dfd948ad686450a6e83437f9d14c06ee"
+branch = "codex/lunar-lake/LNL258V-THERMAL-002-temperature-availability"
+actor = "codex"
+summary = "Opened PR #6007 for the no-inference Lunar Lake thermal temperature availability diagnosis."
+
+notes = [
+  "The PR records Windows MSAcpi, thermal-zone counter, and Win32 temperature-probe source results from the 258V.",
+  "Thermal-zone visibility remains recorded, but zero, null, and sentinel temperature fields are classified as unavailable measured temperature evidence.",
+  "The PR makes no measured-temperature, new-inference, route-promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]

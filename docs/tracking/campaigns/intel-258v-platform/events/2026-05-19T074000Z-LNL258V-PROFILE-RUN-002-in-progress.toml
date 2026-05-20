@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T07:40:00Z"
+event = "in_progress"
+item = "LNL258V-PROFILE-RUN-002"
+branch = "codex/lunar-lake/LNL258V-PROFILE-RUN-002-validator"
+actor = "codex"
+summary = "Started Lunar Lake OpenVINO profile-run validator support."
+
+notes = [
+  "The branch teaches the Lunar Lake OpenVINO receipt validator to accept the explicit dense Qwen OpenVINO profile-run artifact shape from LNL258V-PROFILE-RUN-001.",
+  "The work normalizes profile-run runtime_api to openvino_genai while keeping LLMPipeline identity in selected_kernel_or_runtime, and preserves no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]

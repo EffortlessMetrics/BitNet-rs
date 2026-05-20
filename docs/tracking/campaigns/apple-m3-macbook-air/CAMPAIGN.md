@@ -77,18 +77,24 @@ artifacts to separate strict proof items.
 | M3MBA-016 | merged | Add bounded M3 Air Metal/MPSGraph backend visibility preflight receipts without model loads, downloads, or performance claims; merged in #5043. |
 | M3MBA-017 | merged | Align M3 Air device identity help and rejection surfaces across CLI config and Mac wrappers; merged in #5148. |
 | M3MBA-018 | merged | Refresh the roadmap and campaign state after M3MBA-017 and align staged M3 workflow evidence preservation with the selected-long-job policy; merged in #5225. |
-| M3MBA-019 | pr_open | #5388 refreshes the post-handoff roadmap so next M3 work is split into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4 handoff alignment tracks. |
+| M3MBA-019 | merged | #5388 refreshes the post-handoff roadmap so next M3 work is split into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4 handoff alignment tracks. |
+| M3MBA-020 | merged | #5937 encodes the post-handoff execution queue as concrete follow-on work items instead of leaving the lane at a roadmap reset. |
+| M3MBA-021 | merged | #5952 extends the shared device/profile model with a structured M3 Air host profile contract and strict unsupported-backend claim boundaries. |
+| M3MBA-022 | proposed | Add an M3 Air dense SLM accuracy comparison profile with prompt IDs, scoring policy, and comparable-evidence rules. |
+| M3MBA-023 | proposed | Add a bounded M3 Air performance profile that uses completed-run timeout provenance and phase artifact retention. |
+| M3MBA-024 | proposed | Unblock secondary BitNet artifacts through authority/storage preflight evidence before any new large download. |
+| M3MBA-025 | proposed | Align M3 accepted-artifact metadata with the separate M4 strict-proof checklist without manufacturing M4 proof. |
 
-Current focus: no M3 Air BitNet handoff item is active after `M3MBA-008`
-merged. The Microsoft 2B I2_S artifact is accepted only for the recorded M3 Air
-BitNet.cpp reference-runner context and is ready to seed separate M4
-strict-proof work with fresh M4 receipts. `M3MBA-006` and `M3MBA-007` remain
-blocked because the official 1bitLLM repositories do not expose the GGUF
-artifacts required by their command shapes, and they are not handoff targets
-until a future unblocking item records artifact authority and storage-safe
-preflight evidence. `M3MBA-019` owns the post-handoff roadmap reset so the lane
-can continue improving M3 device modeling, accuracy, and performance without
-turning blocked artifact candidates into hidden runtime claims.
+Current focus: `M3MBA-022` builds on the merged `M3MBA-021` device/profile
+contract with a dense SLM accuracy comparison profile. The Microsoft 2B I2_S artifact is accepted only for the
+recorded M3 Air BitNet.cpp reference-runner context and is ready to seed
+separate M4 strict-proof work with fresh M4 receipts. `M3MBA-006` and
+`M3MBA-007` remain blocked because the official 1bitLLM repositories do not
+expose the GGUF artifacts required by their command shapes, and they are not
+handoff targets until `M3MBA-024` records artifact authority and storage-safe
+preflight evidence. Accuracy, performance, and handoff-alignment work now use
+the structured M3 Air host/profile contract instead of broad Apple Silicon
+claims.
 
 ## Phase Roadmap
 
@@ -100,7 +106,27 @@ turning blocked artifact candidates into hidden runtime claims.
 | Storage hygiene | M3MBA-010 | Keep the MacBook lane usable for large artifacts without hiding local cache state. | Artifact ledger audit with retained/deleted state and free-space floor. |
 | Cross-lane synthesis | M3MBA-009 | Compare M3 dense SLM behavior against M4 and SLM CPU evidence without broad claims. | Synthesis report naming comparable receipts and non-comparable gaps. |
 | Strict-proof handoff | M3MBA-008 | Convert accepted artifact evidence into separate M4 proof work. | Handoff report only; no manufactured M4 receipt. |
-| Post-handoff execution | M3MBA-019 and successors | Keep the M3 Air lane moving after the Microsoft 2B handoff with explicit device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment tracks. | Updated roadmap and follow-on item boundaries; no new runtime claim. |
+| Post-handoff execution | M3MBA-019, M3MBA-020, M3MBA-021, M3MBA-022, M3MBA-023, M3MBA-024, M3MBA-025 | Keep the M3 Air lane moving after the Microsoft 2B handoff with explicit device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment tracks. | Updated roadmap, concrete follow-on item boundaries, and later receipt-backed implementation PRs; no manufactured runtime claim. |
+
+## Post-Handoff Execution Queue
+
+`M3MBA-019` named the tracks. `M3MBA-020` turns those tracks into reviewable
+work items so the next PRs have concrete ownership and validation surfaces.
+
+| Order | Work item | Lane slice | Exit evidence |
+|---|---|---|---|
+| 1 | `M3MBA-021` | Device-model hardening | Structured M3 Air host profile contract in shared device/config surfaces, with strict rejection for unsupported Metal, MPSGraph, Neural Engine, and hidden CPU fallback claims. |
+| 2 | `M3MBA-022` | Accuracy comparison | Dense SLM comparison profile with corpus, prompt IDs, scoring policy, receipt fields, and explicit comparable vs non-comparable decisions. |
+| 3 | `M3MBA-023` | Bounded performance | Selected M3 Air timing profile with cold/warm separation, power/thermal/storage fields, phase artifacts, and timeout caps derived from completed healthy runs plus cushion. |
+| 4 | `M3MBA-024` | Secondary artifact unblock | Official artifact availability, tokenizer authority, storage footprint, conversion or third-party approval needs, and cleanup plan before any new large download. |
+| 5 | `M3MBA-025` | M4 handoff alignment | Checklist mapping accepted M3 artifact metadata to separate M4 strict-proof requirements and unsupported claims. |
+
+The next implementation PR after `M3MBA-021` should be `M3MBA-022`. Accuracy
+and performance work should remain scoped to the exact M3 Air host and
+proof-lane labels now represented by the device/profile contract. Secondary
+BitNet artifact work can proceed in parallel with dense SLM accuracy only if it
+stays in preflight/reporting paths and does not start a new large local
+download.
 
 ## Operating Tracks
 

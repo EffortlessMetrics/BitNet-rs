@@ -4,15 +4,11 @@ Plans translate proposals, specs, and ADRs into PR-sized implementation work.
 They should tell a maintainer or agent what to do next, what not to touch, and
 which commands prove or disprove the claim.
 
-Plans are not active global goals. The active source of truth for executable
-work is still the campaign tracker:
-
-```text
-docs/tracking/campaigns/<campaign>/active.toml
-```
-
-Use plans for sequencing and proof commands. Use campaign manifests for live
-state, ownership, branch names, allowed paths, and merge policy.
+Plans are not generated status or product strategy. Use plans for sequencing and
+proof commands. Use `.bitnet-rs/goals/active.toml` as the repo-level agent
+entrypoint when present, and use campaign manifests for campaign-local live
+state, ownership, branch names, allowed paths, event history, generated
+dashboards, and merge policy.
 
 ## Source-Of-Truth Role
 
@@ -25,6 +21,7 @@ state, ownership, branch names, allowed paths, and merge policy.
 | Campaign `active.toml` | Active work state |
 | Campaign events | Append-only lifecycle history |
 | Closeout | What landed and what remains |
+| Handoff | Operator transfer context for follow-on work |
 
 ## Work Item Shape
 
@@ -63,3 +60,9 @@ Plans must not:
 - claim model answer readiness without the answer artifact gate,
 - claim hardware validation without lane-specific receipts,
 - claim CI budget enforcement unless policy TOMLs and workflow gates enforce it.
+
+## bitnet_b1_58-large control model
+
+- [bitnet-b158-large](bitnet-b158-large/README.md) sequences
+  `1bitLLM/bitnet_b1_58-large` as an artifact-authority and conversion-lane
+  control model before any backend or performance claim.

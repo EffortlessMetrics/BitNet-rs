@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T02:01:49Z"
+event = "merged"
+item = "LNL258V-BITNET-INTAKE-004"
+pr = 6064
+branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-004-open-stack-ledger"
+head_sha = "a49d1fb6f16dcde0c648c371b7f2bdafabd490dd"
+merge_sha = "28465b3b7824efc02c80d1dd6aa39d838ebb4aaa"
+actor = "codex"
+summary = "Merged PR #6064, expanding Lunar Lake BitNet semantic-intake watchpoints to the open A770 semantic stack."
+
+notes = [
+  "Merged evidence now indexes #4756, #4757, #4767, #4853, and #5064 as pending shared BitNet semantic rerun triggers.",
+  "Strict regression remains ready because none of the indexed A770 stack entries has merged to main.",
+  "POWER-006 remains the active low_power blocker for real battery-mode telemetry, energy-proxy, and benchmark-qualified power-advantage evidence.",
+]

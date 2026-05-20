@@ -1,0 +1,189 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_cpu_kaby_performance_validation",
+  "work_item": "SLM-CPU-029",
+  "baseline": "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse.json",
+  "after": "ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse.json",
+  "claim_boundary": {
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "q4_q5_claim": false,
+    "second_model_claim": false,
+    "server_claim": false,
+    "gpu_npu_openvino_uhd620_claim": false,
+    "qwen35_claim": false,
+    "bitnet_qk256_claim": false
+  },
+  "provenance_preserved": {
+    "model_sha256_match": true,
+    "selected_backend_match": true,
+    "runtime_api_match": true,
+    "fallback_false": true,
+    "strict_tokenizer_source_match": true
+  },
+  "behavior_oracle": {
+    "generated_token_ids_match_baseline": true,
+    "decoded_text_match_baseline": true,
+    "prompt_count_match": true,
+    "comparison_count": 6
+  },
+  "sampler_reuse": {
+    "baseline_sampler_recreated_per_prompt": true,
+    "baseline_sampler_reuse_policy": "recreated_per_prompt_for_deterministic_prompt_independence",
+    "after_sampler_recreated_per_prompt": false,
+    "after_sampler_reused_across_prompts": true,
+    "after_sampler_reused_prompt_count": 6,
+    "after_sampler_recreated_prompt_count": 0,
+    "after_sampler_reuse_policy": "single_sampler_reused_for_temperature_zero_prompt_independence",
+    "temperature_zero_only": true,
+    "rng_state_independence_preserved_for_sampling_modes": "nonzero-temperature sessions still recreate one sampler per prompt",
+    "kv_cache_reuse_policy_unchanged": true
+  },
+  "allocation_evidence": {
+    "method": "process_global_allocator_counter_delta",
+    "scope": "selected generic CPU SLM warm-session prompt hot path",
+    "claim_scope": "sampler object reuse is scoped to deterministic temperature-zero warm sessions; no broad performance improvement is claimed",
+    "hotspot_deltas": [
+      {
+        "component": "decode_total",
+        "alloc_bytes_before": 1388441024,
+        "alloc_bytes_after": 1388441024,
+        "alloc_bytes_delta": 0,
+        "alloc_count_before": 981747,
+        "alloc_count_after": 981747,
+        "alloc_count_delta": 0
+      },
+      {
+        "component": "model.forward",
+        "alloc_bytes_before": 1360183448,
+        "alloc_bytes_after": 1360183448,
+        "alloc_bytes_delta": 0,
+        "alloc_count_before": 979800,
+        "alloc_count_after": 979800,
+        "alloc_count_delta": 0
+      },
+      {
+        "component": "model.logits_and_extract",
+        "alloc_bytes_before": 27996098,
+        "alloc_bytes_after": 27996098,
+        "alloc_bytes_delta": 0,
+        "alloc_count_before": 692,
+        "alloc_count_after": 692,
+        "alloc_count_delta": 0
+      },
+      {
+        "component": "tokenizer.decode",
+        "alloc_bytes_before": 19150,
+        "alloc_bytes_after": 19150,
+        "alloc_bytes_delta": 0,
+        "alloc_count_before": 335,
+        "alloc_count_after": 335,
+        "alloc_count_delta": 0
+      }
+    ]
+  },
+  "comparisons": [
+    {
+      "prompt_key": "bounded_yes_no_water#0",
+      "generated_token_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "quality_passed_after": true,
+      "generated_token_ids": [
+        9454,
+        11,
+        3015,
+        374,
+        6509,
+        14401,
+        13,
+        151645
+      ],
+      "decoded_text": "Yes, water is considered wet.<|im_end|>"
+    },
+    {
+      "prompt_key": "bounded_yes_no_water#1",
+      "generated_token_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "quality_passed_after": true,
+      "generated_token_ids": [
+        9454,
+        11,
+        3015,
+        374,
+        6509,
+        14401,
+        13,
+        151645
+      ],
+      "decoded_text": "Yes, water is considered wet.<|im_end|>"
+    },
+    {
+      "prompt_key": "bounded_repeat_colors#0",
+      "generated_token_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "quality_passed_after": true,
+      "generated_token_ids": [
+        6033,
+        11,
+        6303,
+        11,
+        6176,
+        13,
+        151645
+      ],
+      "decoded_text": "Red, blue, green.<|im_end|>"
+    },
+    {
+      "prompt_key": "bounded_repeat_colors#1",
+      "generated_token_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "quality_passed_after": true,
+      "generated_token_ids": [
+        6033,
+        11,
+        6303,
+        11,
+        6176,
+        13,
+        151645
+      ],
+      "decoded_text": "Red, blue, green.<|im_end|>"
+    },
+    {
+      "prompt_key": "bounded_capital_france#0",
+      "generated_token_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "quality_passed_after": true,
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        3070,
+        59604,
+        334
+      ],
+      "decoded_text": "The capital of France is **Paris**"
+    },
+    {
+      "prompt_key": "bounded_capital_france#1",
+      "generated_token_ids_match_baseline": true,
+      "text_matches_baseline": true,
+      "quality_passed_after": true,
+      "generated_token_ids": [
+        785,
+        6722,
+        315,
+        9625,
+        374,
+        3070,
+        59604,
+        334
+      ],
+      "decoded_text": "The capital of France is **Paris**"
+    }
+  ],
+  "passed": true
+}

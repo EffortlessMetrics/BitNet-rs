@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T09:40:19Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-REPRO-004"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-REPRO-004-template-alias-validation"
+pr = 5610
+head_sha = "dcbba6b2c52bd2f49d9709044fc8541b015ed050"
+merge_sha = "585ad99d26a00eefd195838fe68f3e5c1d757d56"
+
+notes = [
+  "PR #5610 merged M4-REPRO-004, accepting canonical Qwen2.5 ChatML prompt-template aliases during prompt-generation identity validation.",
+  "The merge preserves rejection of genuinely different template families.",
+  "No runtime quality, benchmark speedup, BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, or broad performance claim.",
+]

@@ -1,0 +1,24 @@
+timestamp = "2026-05-18T16:00:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OPENVINO-DOCS-005"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 5605
+branch = "codex/lunar-lake/LNL258V-OPENVINO-DOCS-005-promotion-bitnet-boundary"
+head_sha = "9248fb72eba4ff3fd825db87b55a8915a73f5cd7"
+merge_sha = "f1719a556657f3cec40a88ebe1ae7264c42eecd7"
+summary = "Merged LNL258V-OPENVINO-DOCS-005, adding OpenVINO route-promotion and BitNet-boundary contract specs."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5605",
+  "docs/specs/BITNET-SPEC-OPENVINO-ROUTE-PROMOTION.md",
+  "docs/specs/BITNET-SPEC-OPENVINO-BITNET-BOUNDARY.md",
+  "plans/openvino-lunar-lake/implementation-plan.md",
+]
+
+notes = [
+  "The merged specs define exact-profile route promotion states/packages and separate OpenVINO dense SLM, OpenVINO BitNet subgraph, native OpenCL, NPU, server, and CPU BitNet reference proof families.",
+  "The closeout is tracker-only and preserves the no route-promotion, no speedup, no power-advantage, no broad dense SLM quality, no BitNet QK256/I2_S, no native OpenCL execution, no native NPU kernel execution, no full BitNet accelerator inference, no QK256 accelerator decode, and no server-readiness claim boundary.",
+]

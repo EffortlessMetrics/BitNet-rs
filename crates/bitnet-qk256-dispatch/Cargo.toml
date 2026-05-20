@@ -30,7 +30,9 @@ cuda = [
   "bitnet-kernels/cuda",
 ]
 metal = ["bitnet-common/metal"]
-gpu = ["cuda", "metal"]
+opencl = ["bitnet-common/opencl", "bitnet-quantization/opencl"]
+oneapi = ["bitnet-common/oneapi", "bitnet-quantization/oneapi", "opencl"]
+gpu = ["cuda", "metal", "opencl"]
 
 [lints]
 workspace = true

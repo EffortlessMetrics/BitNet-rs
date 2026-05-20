@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T11:40:00Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-005"
+pr = 6060
+head_sha = "51da9adbc4b1b4b355613708d3bdb6804b934d97"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-005-post-power-runbook"
+actor = "codex"
+summary = "Opened PR #6060 to refresh the Lunar Lake goal audit after POWER-007 and POWER-008."
+
+notes = [
+  "PR #6060 records that POWER-007 added the no-evidence low_power battery-mode runbook and POWER-008 linked it from the validation profile and campaign overview.",
+  "The audit still marks excellent support not complete because POWER-006 lacks real battery-mode telemetry, energy-proxy, and benchmark-qualified power-advantage evidence.",
+  "The PR makes no inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, A770 #5064 merged, stale BitNet, or BitNet QK256/I2_S behavior-change claim.",
+]

@@ -18,6 +18,7 @@ pub mod output_head_logits_audit;
 pub mod receipts;
 pub mod reference_compare;
 pub mod serve;
+pub mod support;
 pub mod template_util;
 pub mod transformer_layer_parity;
 
@@ -49,4 +50,5 @@ pub use output_head_logits_audit::OutputHeadLogitsAuditCommand;
 pub use receipts::ReceiptsCommand;
 pub use reference_compare::ReferenceCompareCommand;
 pub use serve::ServeCommand;
+pub use support::SupportCommand;
 pub use transformer_layer_parity::TransformerLayerParityCommand;

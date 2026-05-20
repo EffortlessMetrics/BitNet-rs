@@ -2,10 +2,10 @@ name: CI (Core)
 
 # Core gating checks that MUST pass for PR merges (Linux-only).
 # This workflow is designed to be fast, reliable, and reproducible locally via ci/local.sh.
-# Triggers are scoped to inputs that affect Rust compilation/tests plus campaign
-# tracking docs, because repository rules require this workflow's contexts before
-# every PR merge. Other docs and meta-only changes are handled by markdownlint,
-# link-check, docs-automation, and similar workflows.
+# Triggers include Rust inputs plus docs/policy/receipt surfaces that can use
+# the no-Rust fast path. Repository rules may still expect this workflow's
+# contexts before PR merges, so the workflow emits truthful success signals
+# without compiling Rust when no Rust inputs changed.
 #
 # CI cost / verification policy: see docs/ci/cost-and-verification-policy.md
 # (rationale for the well-below-$1-per-PR target and the verification ladder).
@@ -26,8 +26,17 @@ on:
       - 'rust-toolchain.toml'
       - 'Makefile'
 
-      # Documentation tracked in CI policy
-      - 'docs/tracking/**'
+      # Documentation, policy, and receipts handled by no-Rust fast paths
+      - 'docs/**'
+      - '*.md'
+      - 'README*'
+      - 'CHANGELOG*'
+      - 'CONTRIBUTING*'
+      - 'SECURITY*'
+      - 'COMPATIBILITY*'
+      - 'THIRD_PARTY*'
+      - 'ci/hardware/**'
+      - 'policy/**'
 
       # CI/Codex campaign definitions
       - '.codex/campaigns/**'
@@ -47,7 +56,16 @@ on:
       - 'tests/**'
       - 'tools/bitnet-task/**'
       - 'xtask/**'
-      - 'docs/tracking/**'
+      - 'docs/**'
+      - '*.md'
+      - 'README*'
+      - 'CHANGELOG*'
+      - 'CONTRIBUTING*'
+      - 'SECURITY*'
+      - 'COMPATIBILITY*'
+      - 'THIRD_PARTY*'
+      - 'ci/hardware/**'
+      - 'policy/**'
       - '.codex/campaigns/**'
       - 'fuzz/**'
       - 'Cargo.toml'
@@ -81,8 +99,15 @@ jobs:
     timeout-minutes: 5
     outputs:
       tracker_only: ${{ steps.classify.outputs.tracker_only }}
+      no_rust_inputs: ${{ steps.classify.outputs.no_rust_inputs }}
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+      tracker_or_campaign_only: ${{ steps.classify.outputs.tracker_or_campaign_only }}
+      hardware_receipt_only: ${{ steps.classify.outputs.hardware_receipt_only }}
+      policy_docs_only: ${{ steps.classify.outputs.policy_docs_only }}
+      fast_path_checks_required: ${{ steps.classify.outputs.fast_path_checks_required }}
+      changed_files: ${{ steps.classify.outputs.changed_files }}
     steps:
-      - name: Detect tracker-only PR
+      - name: Classify no-Rust PR shapes
         id: classify
         env:
           GH_TOKEN: ${{ github.token }}
@@ -94,6 +119,13 @@ jobs:
           set -euo pipefail
 
           tracker_only=false
+          no_rust_inputs=false
+          docs_only=false
+          tracker_or_campaign_only=false
+          hardware_receipt_only=false
+          policy_docs_only=false
+          fast_path_checks_required=false
+          changed_files=""
 
           if [ "${EVENT_NAME}" = "pull_request" ] && [ -n "${PR_NUMBER:-}" ]; then
             changed_files=$(gh api --paginate \
@@ -103,8 +135,19 @@ jobs:
             printf '%s\n' "$changed_files"
 
             tracker_only=true
+            no_rust_inputs=true
+            docs_only=true
+            tracker_or_campaign_only=true
+            hardware_receipt_only=true
+            policy_docs_only=true
             while IFS= read -r path; do
               [ -n "$path" ] || continue
+              case "$path" in
+                crates/*|crossval/*|tests/*|tools/bitnet-task/*|xtask/*|fuzz/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|Makefile)
+                  no_rust_inputs=false
+                  ;;
+              esac
+
               case "$path" in
                 docs/tracking/*|.codex/campaigns/*)
                   ;;
@@ -112,47 +155,132 @@ jobs:
                   tracker_only=false
                   ;;
               esac
+
+              case "$path" in
+                docs/tracking/*|.codex/campaigns/*)
+                  ;;
+                *)
+                  tracker_or_campaign_only=false
+                  ;;
+              esac
+
+              case "$path" in
+                docs/tracking/*|.codex/campaigns/*)
+                  docs_only=false
+                  ;;
+                docs/*|*.md|README*|CHANGELOG*|CONTRIBUTING*|SECURITY*|COMPATIBILITY*|THIRD_PARTY*)
+                  ;;
+                *)
+                  docs_only=false
+                  ;;
+              esac
+
+              case "$path" in
+                ci/hardware/*)
+                  ;;
+                *)
+                  hardware_receipt_only=false
+                  ;;
+              esac
+
+              case "$path" in
+                docs/ci/*|policy/*|codecov.yml)
+                  ;;
+                *)
+                  policy_docs_only=false
+                  ;;
+              esac
             done <<< "$changed_files"
 
             if [ -z "$changed_files" ]; then
               tracker_only=false
+              no_rust_inputs=false
+              docs_only=false
+              tracker_or_campaign_only=false
+              hardware_receipt_only=false
+              policy_docs_only=false
+            fi
+
+            if [ "${tracker_or_campaign_only}" = "true" ] || [ "${hardware_receipt_only}" = "true" ]; then
+              fast_path_checks_required=true
             fi
           fi
 
           echo "tracker_only=${tracker_only}" >> "$GITHUB_OUTPUT"
-          echo "tracker_only=${tracker_only}"
+          echo "no_rust_inputs=${no_rust_inputs}" >> "$GITHUB_OUTPUT"
+          echo "docs_only=${docs_only}" >> "$GITHUB_OUTPUT"
+          echo "tracker_or_campaign_only=${tracker_or_campaign_only}" >> "$GITHUB_OUTPUT"
+          echo "hardware_receipt_only=${hardware_receipt_only}" >> "$GITHUB_OUTPUT"
+          echo "policy_docs_only=${policy_docs_only}" >> "$GITHUB_OUTPUT"
+          echo "fast_path_checks_required=${fast_path_checks_required}" >> "$GITHUB_OUTPUT"
+          {
+            echo "changed_files<<EOF"
+            printf '%s\n' "$changed_files"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "tracker_only=${tracker_only}"
+            echo "no_rust_inputs=${no_rust_inputs}"
+            echo "docs_only=${docs_only}"
+            echo "tracker_or_campaign_only=${tracker_or_campaign_only}"
+            echo "hardware_receipt_only=${hardware_receipt_only}"
+            echo "policy_docs_only=${policy_docs_only}"
+            echo "fast_path_checks_required=${fast_path_checks_required}"
+          }
 
   tracker-fast-path:
-    name: Tracker Fast Path
+    name: No-Rust Fast Path
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     needs: [classify-changes]
-    if: needs.classify-changes.outputs.tracker_only == 'true'
-    env:
-      CARGO_TERM_COLOR: always
-      CARGO_INCREMENTAL: "0"
+    if: needs.classify-changes.outputs.fast_path_checks_required == 'true'
     steps:
+      - name: Tracker/campaign delegated checks
+        if: needs.classify-changes.outputs.tracker_or_campaign_only == 'true'
+        run: |
+          echo "Tracker/campaign-only change: CI Core is using the no-Rust fast path."
+          echo "Campaign doctor and generated dashboard freshness run in the Campaign Tracker workflow."
+
       - name: Checkout code
+        if: needs.classify-changes.outputs.hardware_receipt_only == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           fetch-depth: 0
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
-        with:
-          toolchain: "1.95.0"
+      - name: Hardware receipt JSON syntax
+        if: needs.classify-changes.outputs.hardware_receipt_only == 'true'
+        env:
+          CHANGED_FILES: ${{ needs.classify-changes.outputs.changed_files }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import sys
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
-        with:
-          shared-key: ci-core-tracker-fast-path
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          changed = [
+              line.strip()
+              for line in os.environ.get("CHANGED_FILES", "").splitlines()
+              if line.strip()
+          ]
+          receipts = [
+              pathlib.Path(path)
+              for path in changed
+              if path.startswith("ci/hardware/") and path.endswith(".json")
+          ]
+          failures = []
+          for receipt in receipts:
+              try:
+                  json.loads(receipt.read_text(encoding="utf-8"))
+              except Exception as exc:
+                  failures.append(f"{receipt}: {exc}")
 
-      - name: Campaign doctor
-        run: cargo run --locked -p xtask --no-default-features -- campaign doctor
-
-      - name: Generated dashboard freshness
-        run: cargo run --locked -p xtask --no-default-features -- campaign generate --check
+          if failures:
+              print("Invalid hardware receipt JSON:")
+              print("\n".join(failures))
+              sys.exit(1)
+          print(f"Validated {len(receipts)} changed hardware receipt JSON file(s).")
+          PY
 
   # Job 1: Build and test on Linux
   # Note: Job name kept as 'ubuntu-latest' for branch protection rule compatibility,
@@ -171,35 +299,127 @@ jobs:
       CARGO_INCREMENTAL: "0"
       INSTA_UPDATE: unseen
     steps:
-      - name: Tracker-only fast path
-        if: needs.classify-changes.outputs.tracker_only == 'true'
+      - name: No-Rust fast path
+        if: needs.classify-changes.outputs.no_rust_inputs == 'true'
         run: |
-          echo "Tracker-only PR: Rust build and test steps are covered by Tracker Fast Path."
+          echo "No Rust inputs changed: skipping Rust build and test steps."
 
       - name: Checkout code
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.95.0"
           components: clippy,rustfmt
 
       - name: Cache Rust dependencies
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-ubuntu
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      - name: Plan package selection
+        id: package-plan
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        env:
+          CHANGED_FILES: ${{ needs.classify-changes.outputs.changed_files }}
+          EVENT_NAME: ${{ github.event_name }}
+          LABELS_JSON: ${{ github.event_name == 'pull_request' && toJson(github.event.pull_request.labels.*.name) || '[]' }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/ci
+          printf '%s\n' "$CHANGED_FILES" > target/ci/changed-files.txt
+          cargo run --locked -p xtask --no-default-features -- ci plan \
+            --changed-file target/ci/changed-files.txt \
+            --labels-json "$LABELS_JSON" \
+            --json-out target/ci/ci-plan.json \
+            --print
+
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+          from pathlib import Path
+
+          plan = json.loads(Path("target/ci/ci-plan.json").read_text(encoding="utf-8"))
+          packages = plan.get("packages", {})
+          selected = list(dict.fromkeys(packages.get("selected", [])))
+
+          cpu_feature_packages = {
+              "bitnet",
+              "bitnet-common",
+              "bitnet-models",
+              "bitnet-tokenizers",
+              "bitnet-quantization",
+              "bitnet-kernels",
+              "bitnet-inference",
+              "bitnet-bdd-grid-core",
+              "bitnet-bdd-grid",
+              "bitnet-feature-contract",
+              "bitnet-testing-policy-core",
+              "bitnet-testing-scenarios-core",
+              "bitnet-runtime-feature-flags-core",
+              "bitnet-runtime-feature-flags",
+              "bitnet-startup-contract-core",
+              "bitnet-startup-contract-diagnostics",
+              "bitnet-startup-contract-guard",
+              "bitnet-runtime-context-core",
+              "bitnet-testing-scenarios-profile-core",
+              "bitnet-runtime-profile-contract-core",
+              "bitnet-testing-policy-runtime",
+              "bitnet-testing-policy-tests",
+              "bitnet-testing-policy-kit",
+              "bitnet-testing-profile",
+              "bitnet-testing-policy-contract",
+              "bitnet-testing-policy-interop",
+          }
+          default_feature_packages = {
+              "bitnet-prompt-templates",
+              "bitnet-receipts",
+              "bitnet-sampling",
+          }
+          no_feature_packages = {
+              "bitnet-logits",
+              "bitnet-gguf",
+              "bitnet-generation",
+              "bitnet-device-probe",
+              "bitnet-engine-core",
+          }
+          supported = cpu_feature_packages | default_feature_packages | no_feature_packages
+          unsupported = [package for package in selected if package not in supported]
+          broad = bool(packages.get("broad_sweep_required")) or bool(unsupported) or not selected
+          if os.environ.get("EVENT_NAME") != "pull_request" and not selected:
+              broad = True
+
+          def args(names):
+              return " ".join(f"-p {name}" for name in names)
+
+          print(f"broad_sweep_required={str(broad).lower()}")
+          print(f"selection_reason={packages.get('selection_reason', '')}")
+          print(f"selected_packages_csv={','.join(selected)}")
+          print(f"unsupported_packages_csv={','.join(unsupported)}")
+          print(f"cpu_package_args={args([p for p in selected if p in cpu_feature_packages])}")
+          print(f"default_package_args={args([p for p in selected if p in default_feature_packages])}")
+          print(f"no_feature_package_args={args([p for p in selected if p in no_feature_packages])}")
+          print(f"run_inference_golden={str(broad or 'bitnet-inference' in selected).lower()}")
+          print(f"run_avx2_quantization={str(broad or 'bitnet-quantization' in selected).lower()}")
+          print(f"run_avx2_kernels={str(broad or 'bitnet-kernels' in selected).lower()}")
+          PY
+
+          echo "Package selection:"
+          echo "  broad: $(grep '^broad_sweep_required=' "$GITHUB_OUTPUT" | tail -n1 | cut -d= -f2-)"
+          echo "  selected: $(grep '^selected_packages_csv=' "$GITHUB_OUTPUT" | tail -n1 | cut -d= -f2-)"
+          echo "  unsupported: $(grep '^unsupported_packages_csv=' "$GITHUB_OUTPUT" | tail -n1 | cut -d= -f2-)"
+
       - name: Check formatting
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         run: cargo fmt --all -- --check
 
       - name: Build core libs (CPU features)
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo build --locked \
             -p bitnet-common \
@@ -210,15 +430,40 @@ jobs:
             --no-default-features --features cpu
 
       - name: Build SRP microcrates
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo build --locked \
             -p bitnet-prompt-templates \
             -p bitnet-receipts \
             -p bitnet-sampling
 
+      - name: Build selected packages
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required != 'true'
+        env:
+          CPU_PACKAGE_ARGS: ${{ steps.package-plan.outputs.cpu_package_args }}
+          DEFAULT_PACKAGE_ARGS: ${{ steps.package-plan.outputs.default_package_args }}
+          NO_FEATURE_PACKAGE_ARGS: ${{ steps.package-plan.outputs.no_feature_package_args }}
+        run: |
+          set -euo pipefail
+          ran=false
+          if [ -n "$CPU_PACKAGE_ARGS" ]; then
+            cargo build --locked $CPU_PACKAGE_ARGS --no-default-features --features cpu
+            ran=true
+          fi
+          if [ -n "$DEFAULT_PACKAGE_ARGS" ]; then
+            cargo build --locked $DEFAULT_PACKAGE_ARGS
+            ran=true
+          fi
+          if [ -n "$NO_FEATURE_PACKAGE_ARGS" ]; then
+            cargo build --locked $NO_FEATURE_PACKAGE_ARGS --no-default-features
+            ran=true
+          fi
+          if [ "$ran" != "true" ]; then
+            echo "No selected packages to build."
+          fi
+
       - name: "Run unit tests: core libs"
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo test --locked \
             -p bitnet-common \
@@ -231,7 +476,7 @@ jobs:
             -- --nocapture
 
       - name: "Run unit tests: SRP microcrates"
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo test --locked \
             -p bitnet-prompt-templates \
@@ -246,14 +491,14 @@ jobs:
             --no-default-features
 
       - name: "Run tests: inference golden path"
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo test --locked \
             -p bitnet-inference --test cpu_golden_path \
             --no-default-features --features cpu
 
       - name: "Run unit tests: policy / BDD crates"
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
         run: |
           cargo test --locked \
             -p bitnet-bdd-grid-core \
@@ -277,8 +522,40 @@ jobs:
             -p bitnet-testing-policy-interop \
             --no-default-features --features cpu
 
+      - name: "Run unit tests: selected packages"
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required != 'true'
+        env:
+          CPU_PACKAGE_ARGS: ${{ steps.package-plan.outputs.cpu_package_args }}
+          DEFAULT_PACKAGE_ARGS: ${{ steps.package-plan.outputs.default_package_args }}
+          NO_FEATURE_PACKAGE_ARGS: ${{ steps.package-plan.outputs.no_feature_package_args }}
+        run: |
+          set -euo pipefail
+          ran=false
+          if [ -n "$CPU_PACKAGE_ARGS" ]; then
+            cargo test --locked $CPU_PACKAGE_ARGS --lib --no-default-features --features cpu -- --nocapture
+            ran=true
+          fi
+          if [ -n "$DEFAULT_PACKAGE_ARGS" ]; then
+            cargo test --locked $DEFAULT_PACKAGE_ARGS
+            ran=true
+          fi
+          if [ -n "$NO_FEATURE_PACKAGE_ARGS" ]; then
+            cargo test --locked $NO_FEATURE_PACKAGE_ARGS --no-default-features
+            ran=true
+          fi
+          if [ "$ran" != "true" ]; then
+            echo "No selected packages to test."
+          fi
+
+      - name: "Run tests: selected inference golden path"
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required != 'true' && steps.package-plan.outputs.run_inference_golden == 'true'
+        run: |
+          cargo test --locked \
+            -p bitnet-inference --test cpu_golden_path \
+            --no-default-features --features cpu
+
       - name: "Run unit tests: AVX2 quantization (x86_64 static +avx2)"
-        if: needs.classify-changes.outputs.tracker_only != 'true' && runner.os == 'Linux' && runner.arch == 'X64'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && runner.os == 'Linux' && runner.arch == 'X64' && steps.package-plan.outputs.run_avx2_quantization == 'true'
         env:
           RUSTFLAGS: "-D warnings -C target-feature=+avx2"
         run: |
@@ -289,7 +566,7 @@ jobs:
             -- --nocapture
 
       - name: "Run unit tests: AVX2 kernels (x86_64 static +avx2)"
-        if: needs.classify-changes.outputs.tracker_only != 'true' && runner.os == 'Linux' && runner.arch == 'X64'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && runner.os == 'Linux' && runner.arch == 'X64' && steps.package-plan.outputs.run_avx2_kernels == 'true'
         env:
           RUSTFLAGS: "-D warnings -C target-feature=+avx2"
         run: |
@@ -311,7 +588,7 @@ jobs:
     timeout-minutes: 20
     needs: [classify-changes]
     if: >-
-      needs.classify-changes.outputs.tracker_only != 'true' &&
+      needs.classify-changes.outputs.no_rust_inputs != 'true' &&
       (github.ref == 'refs/heads/main' ||
        github.event_name == 'workflow_dispatch' ||
        contains(github.event.pull_request.labels.*.name, 'bdd') ||
@@ -350,31 +627,31 @@ jobs:
       CARGO_TERM_COLOR: always
       CARGO_INCREMENTAL: "0"
     steps:
-      - name: Tracker-only fast path
-        if: needs.classify-changes.outputs.tracker_only == 'true'
+      - name: No-Rust fast path
+        if: needs.classify-changes.outputs.no_rust_inputs == 'true'
         run: |
-          echo "Tracker-only PR: clippy is covered by Tracker Fast Path."
+          echo "No Rust inputs changed: skipping clippy."
 
       - name: Checkout code
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.95.0"
           components: clippy
 
       - name: Cache Rust dependencies
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-clippy
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run clippy (core crates, libs only)
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         run: |
           cargo clippy --locked \
             -p bitnet-common \
@@ -462,30 +739,30 @@ jobs:
     timeout-minutes: 15
     needs: [classify-changes]
     steps:
-      - name: Tracker-only fast path
-        if: needs.classify-changes.outputs.tracker_only == 'true'
+      - name: No-Rust fast path
+        if: needs.classify-changes.outputs.no_rust_inputs == 'true'
         run: |
-          echo "Tracker-only PR: rustdoc is covered by Tracker Fast Path."
+          echo "No Rust inputs changed: skipping rustdoc."
 
       - name: Checkout code
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.95.0"
 
       - name: Cache Rust dependencies
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-docs
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build documentation
-        if: needs.classify-changes.outputs.tracker_only != 'true'
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
         env:
           RUSTDOCFLAGS: -A warnings
         run: cargo doc --locked --no-deps --workspace --no-default-features --features cpu
@@ -502,8 +779,12 @@ jobs:
         if: always()
         run: |
           echo "Core results:"
-          echo "  Tracker only: ${{ needs.classify-changes.outputs.tracker_only }}"
-          echo "  Tracker Fast Path: ${{ needs.tracker-fast-path.result }}"
+          echo "  No Rust inputs: ${{ needs.classify-changes.outputs.no_rust_inputs }}"
+          echo "  Docs only: ${{ needs.classify-changes.outputs.docs_only }}"
+          echo "  Tracker/campaign only: ${{ needs.classify-changes.outputs.tracker_or_campaign_only }}"
+          echo "  Hardware receipt only: ${{ needs.classify-changes.outputs.hardware_receipt_only }}"
+          echo "  Policy docs only: ${{ needs.classify-changes.outputs.policy_docs_only }}"
+          echo "  No-Rust Fast Path: ${{ needs.tracker-fast-path.result }}"
           echo "  Build & Test: ${{ needs.build-test-linux.result }}"
           echo "  Grid Check:   ${{ needs.grid-check.result }}"
           echo "  Clippy:       ${{ needs.clippy.result }}"
@@ -516,8 +797,12 @@ jobs:
           if [ "${{ needs.classify-changes.result }}" != "success" ]; then
             bad=1
           fi
-          if [ "${{ needs.classify-changes.outputs.tracker_only }}" = "true" ]; then
-            [ "${{ needs.tracker-fast-path.result }}" = "success" ] || bad=1
+          if [ "${{ needs.classify-changes.outputs.no_rust_inputs }}" = "true" ]; then
+            if [ "${{ needs.classify-changes.outputs.fast_path_checks_required }}" = "true" ]; then
+              [ "${{ needs.tracker-fast-path.result }}" = "success" ] || bad=1
+            else
+              [ "${{ needs.tracker-fast-path.result }}" = "skipped" ] || bad=1
+            fi
             for r in "${{ needs.build-test-linux.result }}" \
                      "${{ needs.clippy.result }}" \
                      "${{ needs.docs.result }}"; do

@@ -1,0 +1,69 @@
+id = "tl1"
+title = "TL1 ARM table lookup route"
+status = "active"
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+plan = "plans/tl1/implementation-plan.md"
+source_map = "docs/bitnet/tl1/README.md"
+
+objective = "Govern TL1 as an ARM-first table-lookup proof family with source-of-truth docs, an implementation plan, and compatibility-ledger boundaries before any runtime, kernel, artifact, or answer-quality claim."
+
+end_state = [
+  "TL1 source map, implementation plan, campaign tracker, and compatibility references exist.",
+  "TL1 is explicitly separated from I2_S/QK256 and TL2 proof families.",
+  "Future TL1 work has a route, layout, scalar, artifact, answer-quality, and promotion ladder.",
+]
+
+hard_constraints = [
+  "TL1 registration is not native BitNet-rs inference support.",
+  "Do not edit runtime code, kernels, model binaries, server inference, GPU/NPU execution, or BitNet QK256/I2_S kernels.",
+  "Do not claim answer quality, performance, CPU/Metal proof, or model compatibility until follow-up receipts prove them.",
+]
+
+[[work_item]]
+id = "TL1-PLAN-000"
+status = "ready"
+branch = "codex/add-tl1-as-arm-first-route"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Register the TL1 ARM-first table-lookup route as documentation and tracker scaffolding only. The slice must add the source map, implementation plan, campaign tracker entry, compatibility-ledger references, and status/index links without claiming native runtime support, model compatibility, answer quality, performance, CPU/Metal proof, server support, GPU/NPU execution, TL2 proof inheritance, or BitNet QK256/I2_S changes."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check tl1",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/apple-silicon-macbook/bitnet-candidate-matrix.toml",
+  "ci/model-artifacts/model-kernel-compatibility.toml",
+  "docs/apple-silicon/bitnet-candidate-matrix.md",
+  "docs/bitnet/tl1/README.md",
+  "docs/specs/INDEX.md",
+  "docs/tracking/campaigns/tl1/**",
+  "plans/tl1/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "models/**",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "TL2 proof inheritance",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "TL1 route scaffolding and proof-family boundaries exist.",
+  "Future TL1 work has a source map, plan, and tracker lane.",
+]
+must_not_claim = [
+  "Native BitNet-rs TL1 inference works.",
+  "TL1 answer quality is proven.",
+  "TL1 CPU, Metal, or server support is available.",
+  "TL1 performance is measured.",
+  "GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "TL1 inherits I2_S/QK256 or TL2 proof claims.",
+  "BitNet QK256/I2_S kernels are modified.",
+]

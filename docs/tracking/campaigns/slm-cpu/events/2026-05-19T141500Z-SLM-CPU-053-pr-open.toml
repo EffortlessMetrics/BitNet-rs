@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T14:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-053"
+event = "pr_open"
+pr = 5943
+head_sha = "8fc28262423bbb085510bdf1fb1e838f0a8b346b"
+branch = "codex/slm-cpu-053-runtime-proof-blocker"
+actor = "codex"
+
+notes = [
+  "Opened the implementation PR for the SLM-CPU-053 packed Q8_0 sidecar runtime proof gate.",
+  "The PR records the current production blocker instead of enabling packed sidecar compute.",
+  "Eager F32 Candle remains selected for production runtime; fallback_used=false and speedup_claim=false are preserved.",
+]

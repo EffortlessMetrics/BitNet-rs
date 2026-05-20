@@ -1,0 +1,290 @@
+{
+  "artifact_kind": "apple_m4_benchmark_preflight",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/preflight.json",
+  "benchmark_preflight": {
+    "background_load_notes_required_for_release_comparison": true,
+    "benchmark_profiles": [
+      "short_prompt_16_out",
+      "short_prompt_64_out",
+      "long_prompt_16_out",
+      "long_prompt_128_out",
+      "context_1k",
+      "context_4k",
+      "resident_25",
+      "resident_50",
+      "resident_100"
+    ],
+    "contract_version": "1.0.0",
+    "live_model_run": false,
+    "macos_build_required_for_release_comparison": true,
+    "model_cache_required_for_live_benchmark": true,
+    "preflight_must_match_before_interpreting_timing_drift": true,
+    "scope": "Apple M4 dense SLM benchmark environment preflight",
+    "timing_result_recorded": false
+  },
+  "broad_performance_claim": false,
+  "cache": {
+    "artifact_kind": "apple_m4_slm_model_cache_check",
+    "artifact_provenance": {
+      "artifact": {
+        "architecture": "qwen2",
+        "filename": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        "format": "gguf",
+        "quantization": "Q4_K_M",
+        "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "size_bytes": 1117320736
+      },
+      "artifact_kind": "m4_supported_model_provenance",
+      "claim_boundary": "Artifact provenance only for supported dense Qwen Apple M4 CPU/NEON model identity; runtime quality and performance require separate eval, benchmark, and regression receipts.",
+      "display_name": "Qwen2.5 1.5B Instruct Q4_K_M",
+      "id": "qwen2.5-1.5b-instruct-q4_k_m",
+      "license": {
+        "redistribution_boundary": "Upstream Hugging Face GGUF artifact is fetched by URL and pinned by revision, size, and SHA256; BitNet-rs does not vendor or redistribute the model file.",
+        "spdx": "apache-2.0"
+      },
+      "local_cache": {
+        "cache_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-1.5b-instruct-q4_k_m/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+        "metadata_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-1.5b-instruct-q4_k_m/bitnet-model-cache.json",
+        "path_role": "cache_path",
+        "symlink_status": "not_symlink",
+        "symlink_target": null,
+        "verify_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-1.5b-instruct-q4_k_m/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+      },
+      "prompt_template": {
+        "chat_template_present": true,
+        "identity": "qwen2.5",
+        "identity_sha256": "4a65eed368b066945e57bb625e89d33190ea4863abb1c53422d4f9118a6d5e81",
+        "source": "GGUF tokenizer.chat_template / Qwen2.5 ChatML identity"
+      },
+      "repair": {
+        "cache_state": "ready",
+        "command": "bitnet model verify qwen2.5-1.5b-instruct-q4_k_m --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "fetch_command": "bitnet model fetch qwen2.5-1.5b-instruct-q4_k_m --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "prune_command": "bitnet model prune qwen2.5-1.5b-instruct-q4_k_m --cache-dir /Users/steven/Library/Caches/bitnet-rs/models",
+        "verify_command": "bitnet model verify qwen2.5-1.5b-instruct-q4_k_m --cache-dir /Users/steven/Library/Caches/bitnet-rs/models"
+      },
+      "schema_version": "1.0.0",
+      "source": {
+        "manifests": [
+          "ci/quality/apple-m4-slm-model-breadth-qwen15-reference-sanity.toml",
+          "ci/quality/apple-m4-slm-model-breadth-qwen15-rust-m4-quality.toml",
+          "docs/slm/apple-m4-dense-slm-model-support-matrix.md"
+        ],
+        "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+        "revision": "91cad51170dc346986eccefdc2dd33a9da36ead9",
+        "url": "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+      },
+      "tokenizer": {
+        "authority": "qwen2",
+        "external_path": null,
+        "model": "gpt2",
+        "pre_tokenizer": "qwen2",
+        "sha256": null,
+        "sha256_status": "embedded_gguf_metadata_bound_to_model_sha256",
+        "source": "gguf_metadata"
+      }
+    },
+    "cache_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-1.5b-instruct-q4_k_m/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+    "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+    "display_name": "Qwen2.5 1.5B Instruct Q4_K_M",
+    "expected": {
+      "architecture": "qwen2",
+      "bytes": 1117320736,
+      "chat_template": true,
+      "filename": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "quantization": "Q4_K_M",
+      "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+      "revision": "91cad51170dc346986eccefdc2dd33a9da36ead9",
+      "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "tokenizer_model": "gpt2",
+      "tokenizer_pre": "qwen2"
+    },
+    "id": "qwen2.5-1.5b-instruct-q4_k_m",
+    "metadata_path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-1.5b-instruct-q4_k_m/bitnet-model-cache.json",
+    "metadata_present": true,
+    "next_step": null,
+    "present": true,
+    "ready": true,
+    "runtime_support": {
+      "apple_m4_cpu_neon": true,
+      "note": "Rust-native Apple M4 CPU/NEON larger Qwen-class SLM artifact; non-default."
+    },
+    "size_matches": true,
+    "stale_symlink": false,
+    "state": "ready",
+    "symlink_status": "not_symlink",
+    "symlink_target": null,
+    "verified": null
+  },
+  "claim_boundary": {
+    "benchmark_preflight_only": true,
+    "bitnet_evidence": false,
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "chat_enabled": false,
+    "dense_slm_only": true,
+    "full_metal_inference_claimed": false,
+    "live_model_run": false,
+    "macbook_evidence": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "serve_enabled": false,
+    "speedup_claim": false,
+    "timing_result_recorded": false
+  },
+  "comparison_readiness": {
+    "advisory_warnings": [],
+    "can_compare_timing": true,
+    "invalid_comparison_reasons": [],
+    "next_step": "Run release benchmark profiles and attach this preflight identity to the benchmark receipt.",
+    "skipped_or_invalid_comparison_reasons": [],
+    "status": "comparable_preflight"
+  },
+  "disk": {
+    "available_bytes": 9082830848,
+    "checked": true,
+    "guidance": "run `bitnet model prune --all` or set BITNET_MODEL_CACHE_DIR / --cache-dir when low_disk=true",
+    "low_disk": false,
+    "probe_path": "/Users/steven/Library/Caches/bitnet-rs/models",
+    "recommended_headroom_bytes": 3308383296
+  },
+  "environment": {
+    "background_load": {
+      "notes": [
+        "M4-BENCH-005 dense variance run; release binary freshly built; no intentional parallel model run; previous supported 0.5B dense variance runs completed in this session"
+      ],
+      "operator_recorded": true,
+      "source": "operator"
+    },
+    "hardware": {
+      "arm64": "1",
+      "brand_string": "Apple M4",
+      "expected_soc": "apple-m4",
+      "hw_model": "Mac16,10",
+      "soc_observed": "apple-m4",
+      "source": "sysctl"
+    },
+    "memory_pressure": {
+      "available": true,
+      "pressure_level": "1",
+      "source": "sysctl kern.memorystatus_vm_pressure_level",
+      "vm_stat_sample": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                              178828.\nPages active:                            276518.\nPages inactive:                          296137.\nPages speculative:                        26698.\nPages throttled:                              0.\nPages wired down:                        110099.\nPages purgeable:                           4615.\n\"Translation faults\":                9215222696.\nPages copy-on-write:                  207685212.\nPages zero filled:                   5438630902.\nPages reactivated:                    576361848.\nPages purged:                           8219012.\nFile-backed pages:                       224078.\nAnonymous pages:                         375275.\nPages stored in compressor:              333494.\nPages occupied by compressor:            125870.\nDecompressions:                       735154029.\nCompressions:                         983001957.\nPageins:                              108165476.\nPageouts:                                496282.\nSwapins:                                 191409.\nSwapouts:                                292352."
+    },
+    "os": {
+      "build_available": true,
+      "build_version": "25E253",
+      "fallback_version": "26.4.1",
+      "name": "macos",
+      "product_version": "26.4.1",
+      "source": "sw_vers"
+    },
+    "power_state": {
+      "ac_power": true,
+      "available": true,
+      "raw": "Now drawing from 'AC Power'",
+      "source": "pmset"
+    },
+    "thermal_pressure": {
+      "available": true,
+      "raw": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded",
+      "source": "pmset -g therm"
+    }
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generated_at": "2026-05-19T15:43:59.797340+00:00",
+  "machine": {
+    "expected_soc": "apple-m4",
+    "id": "apple-m4-mac-mini"
+  },
+  "model": {
+    "architecture": "qwen2",
+    "bytes": 1117320736,
+    "family": "qwen",
+    "file": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+    "id": "qwen2.5-1.5b-instruct-q4_k_m",
+    "quantization": "Q4_K_M",
+    "repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+    "revision": "91cad51170dc346986eccefdc2dd33a9da36ead9",
+    "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
+  },
+  "operator_command": "mac benchmark-preflight",
+  "requested_backend": "apple-m4-cpu-neon",
+  "run_identity": {
+    "artifact_kind": "apple_m4_benchmark_preflight",
+    "backend": {
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "binary": {
+      "binary_sha256": null,
+      "binary_sha256_status": "not_recorded_build_profile_used",
+      "build_profile": "release",
+      "crate_version": "0.2.1-dev"
+    },
+    "command": {
+      "class": "mac benchmark-preflight",
+      "live_model_run": false
+    },
+    "contract_version": "m4-run-identity-v1",
+    "evidence_family": "dense_slm_benchmark_preflight",
+    "evidence_identity": {
+      "corpus_id": "not_applicable",
+      "profile_id": "slm-benchmark-v2",
+      "scope": "benchmark_environment_preflight",
+      "seed": "not_applicable"
+    },
+    "git": {
+      "commit": "c1590c32e767226e4b2a28684142685f9dfde077",
+      "commit_source": "git_rev_parse"
+    },
+    "machine_id": "apple-m4-mac-mini",
+    "model": {
+      "family": "qwen",
+      "id": "qwen2.5-1.5b-instruct-q4_k_m",
+      "loader_mode": "not_loaded_preflight_only",
+      "quantization": "Q4_K_M",
+      "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "supported_prompt_template": {
+        "id": "qwen2.5",
+        "sha256": "4a65eed368b066945e57bb625e89d33190ea4863abb1c53422d4f9118a6d5e81",
+        "source": "GGUF tokenizer.chat_template / Qwen2.5 ChatML identity"
+      }
+    },
+    "os": {
+      "name": "macos",
+      "version": "26.4.1",
+      "version_source": "sw_vers"
+    },
+    "prompt_template": {
+      "id": "benchmark-preflight-no-prompt",
+      "identity_scope": "preflight_no_prompt",
+      "sha256": "02a16da841482add43b1c2f7ea8062c431cb19d5ca3e994e3b4adb6523052a8c"
+    },
+    "soc": "apple-m4",
+    "timing": {
+      "source": "preflight_snapshot_wall_clock_utc"
+    },
+    "tokenizer": {
+      "authority": "qwen2",
+      "pretokenizer_authority": "qwen2",
+      "sha256": "not_applicable",
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
+  "run_identity_sha256": "261485fee028d7c74db7d4c3397e2ce03e9edcf20dead7500c5aab3dba303889",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "speedup_claim": false,
+  "tokenizer": {
+    "authority": "qwen2",
+    "sha256": null,
+    "sha256_status": "not_applicable_gguf_metadata_authority"
+  }
+}

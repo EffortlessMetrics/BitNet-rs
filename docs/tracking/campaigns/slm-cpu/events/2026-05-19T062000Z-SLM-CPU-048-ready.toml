@@ -1,0 +1,15 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-19T06:20:00Z"
+event = "in_progress"
+item = "SLM-CPU-048"
+branch = "codex/slm-cpu-048-q8-sidecar-runtime-preflight"
+actor = "codex"
+summary = "Queued the next Q8_0 sidecar runtime preflight slice after SLM-CPU-047."
+
+notes = [
+  "SLM-CPU-048 is the next non-executing performance-gate slice after the sidecar equivalence gate.",
+  "The item must produce explicit runtime eligibility blockers before packed Q8_0 sidecar compute can be selected.",
+  "The production selector remains on eager F32 Candle unless generated-ID/text receipt equivalence and a production compute hook both exist.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

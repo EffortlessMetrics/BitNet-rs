@@ -7,22 +7,26 @@ the strict policy / CI economics rollout.
 ## What it aggregates
 
 The aggregator runs as a single GitHub Actions job
-(`.github/workflows/pr-gate.yml`) on every `pull_request`. It polls
-the GitHub Checks API for the conclusions of the upstream
-default-PR lanes that this rollout treats as authoritative:
+(`.github/workflows/pr-gate.yml`) on every `pull_request`. It computes
+`ci-plan.json` with `xtask ci plan`, reads `selected_lanes[]`, and polls the
+GitHub Checks API for the check runs mapped from lanes with `blocking = true`.
 
-* **CI Core Success** — the `ci-core-success` job inside
-  `.github/workflows/ci-core.yml`. Already aggregates Build & Test,
-  Clippy, Documentation, and BDD Grid Check.
-* **Policy** — the strict-policy lane added in PR 04
-  (`.github/workflows/policy.yml`). Runs `xtask check-file-policy`
-  with `--fail-on-error`, plus advisory runs of
-  `ci-lane-whitelist`, `lint-inheritance`, `clippy-exceptions`,
-  `no-panic-family`, and `policy-report`.
-* **`pr-check (no-features)`**, **`pr-check (cpu)`**, **`pr-check (cpu+full-cli)`** —
-  the 3-combo PR matrix in `.github/workflows/feature-matrix.yml`.
-  The `pr-check` matrix has no aggregator job, so each matrix label
-  is listed individually.
+Common selected blocking lanes map to these upstream checks:
+
+* **`ci-core-build-test`** -> **CI Core Success**.
+* **`feature-matrix-pr`** -> **`pr-check (no-features)`** and
+  **`pr-check (cpu)`**.
+* **`feature-matrix-full-cli`** -> **`pr-check (cpu+full-cli)`** when
+  CLI/server/validation/model-cache paths or the `full-cli` label select it.
+* **`policy`** -> **Policy**.
+* **`compatibility-msrv`** -> **Route MSRV Compatibility** and
+  **Minimum Supported Rust Version**.
+* **`gpu-native`** -> the five **`native-check (...)`** GPU-matrix compile
+  checks.
+* **`always-on-guards`** -> **Guards** and **Check PR Size**. If the PR has
+  `mechanical-change` or `ai-native`, **PR Size Guard** intentionally skips
+  **Check PR Size**; in that acknowledged-large-PR case, **PR Gate Success**
+  requires **Guards** but does not wait for **Check PR Size**.
 
 Lanes that are **not** required by `PR Gate Success`:
 
@@ -36,7 +40,7 @@ This list is intentional. Making the long-tail lanes required
 defeats the rollout's LEM-economics goal: `> 95%` of PRs should
 land for `< 35` LEM with the long-tail lanes opt-in.
 
-## Posture in this PR
+## Posture
 
 `PR Gate Success` is **not yet branch-protection-required**. The
 workflow runs on every PR and reports a single check, but branch
@@ -69,31 +73,39 @@ fire on the same `pull_request` event. Two patterns are common:
 
 This PR uses the Checks-API poll pattern because branch protection
 wants a single required check that returns a single conclusion on
-the PR head. The poll uses a 55-minute deadline (110 × 30 s); most
-default PRs converge in 10–15 minutes, while slower CI Core runs
-still have enough room for their final rollup job. The aggregator
-deadline must exceed the healthy cap of any selected upstream lane
-plus rollup and status propagation cushion.
+the PR head. The gate recomputes the same `ci-plan.json` as PR Plan
+instead of duplicating path-classification logic. The poll uses a
+55-minute deadline (110 × 30 s); most default PRs converge in 10–15
+minutes, while slower selected lanes still have enough room for their
+final rollup job. The aggregator deadline must exceed the healthy cap of
+any selected upstream lane plus rollup and status propagation cushion.
 
 ## Failure modes
 
-| Upstream lane status      | PR Gate Success verdict                |
-| ------------------------- | -------------------------------------- |
-| All `success`             | `success`                              |
-| Any `failure`             | `failure`                              |
-| Any `cancelled`/`timed_out`| `failure`                             |
-| Required lane `skipped`   | `failure` (required lanes must run)    |
-| Pending after 55 minutes  | `failure` (timeout)                    |
+| `ci-plan.json` lane state | Upstream check status | PR Gate Success verdict |
+| ------------------------- | --------------------- | ----------------------- |
+| Selected blocking         | `success`             | `success` when all selected blocking checks pass |
+| Selected blocking         | `failure`, `cancelled`, or `timed_out` | `failure` |
+| Selected blocking         | `skipped`             | `failure` |
+| Selected blocking         | Pending after 55 minutes | `failure` |
+| Selected advisory         | Any status            | Reported, not blocking |
+| Unselected                | `skipped` or missing  | Allowed |
 
-Optional lanes (none today) would be allowed to be `skipped`. The
-right place to encode "lane X is conditionally required when paths
-Y change" is the risk-pack routing layer added in PR 17, not the
-PR Gate Success workflow itself.
+Exception: **Check PR Size** may be omitted from the required upstream set when
+the PR carries `mechanical-change` or `ai-native`, because
+`.github/workflows/pr-size-guard.yml` deliberately skips that job for
+acknowledged large PRs.
+
+If `ci-plan.json` selects a blocking lane that PR Gate does not know how to map
+to check names, the gate fails closed. That makes route/schema drift visible
+instead of silently treating a selected proof lane as advisory.
 
 ## Operational notes
 
-* The aggregator depends on the `gh` CLI being available on the
-  runner. `ubuntu-22.04` ships with it.
+* The aggregator depends on the `gh` CLI and `jq` being available on the
+  runner. `ubuntu-22.04` ships with both.
+* The workflow checks out the PR and runs `cargo run --locked -p xtask
+  --no-default-features -- ci plan` before polling upstream checks.
 * `permissions: { checks: read, actions: read }` is sufficient to
   read the upstream check conclusions; no write permissions are
   granted.

@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T09:40:00Z"
+event = "pr_open"
+item = "LNL258V-THERMAL-001"
+pr = 5813
+head_sha = "43679a0d11da989128d1f4a311e053ac45e263c5"
+branch = "codex/lunar-lake/LNL258V-THERMAL-001-thermal-zone-probe"
+actor = "codex"
+summary = "Opened PR #5813 for Lunar Lake thermal-zone visibility telemetry."
+
+notes = [
+  "The PR records Windows thermal-zone counter visibility when measured thermal temperatures are unavailable and refreshes Lunar Lake telemetry, route-profile, benchmark, power-profile, regression, and comparison artifacts.",
+  "The claim boundary remains no measured thermal-temperature claim, no new inference, no route promotion, no speedup or power-advantage claim, no native accelerator claim, and no BitNet QK256/I2_S behavior change.",
+]

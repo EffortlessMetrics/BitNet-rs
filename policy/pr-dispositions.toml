@@ -1,0 +1,71 @@
+schema_version = "1.0"
+policy = "pr-dispositions"
+owner = "release/ci"
+status = "active"
+updated = "2026-05-19"
+
+# PR closure is a disposition event. A close reduces backlog only when one of
+# the valid close reasons is documented with the required links or evidence.
+
+[valid_close_reasons]
+merged = true
+duplicate = true
+superseded_by_landed_successor = true
+ported_successor_landed = true
+historical_evidence_captured = true
+no_unique_durable_value_after_audit = true
+
+[invalid_close_reasons]
+old = true
+stale = true
+behind_main = true
+root_closed = true
+parent_closed = true
+needs_restack = true
+not_based_on_main = true
+diagnostic_only = true
+noisy = true
+inconvenient = true
+
+[routing_states]
+stale_stack = "route_to_restack_or_successor_review"
+needs_restack = "route_to_restack"
+closed_parent = "review_child_content_on_own_merits"
+diagnostic_only = "classify_durable_or_transient_value"
+wrong_base = "retarget_or_rebase_where_safe"
+
+[requires_tracking_issue]
+close_with_intent_to_reopen = true
+close_with_intent_to_port = true
+close_with_intent_to_restack = true
+close_with_future_work_remaining = true
+
+[successor_rules]
+source_pr_may_close_before_successor_lands = false
+source_pr_requires_successor_link = true
+successor_must_be_landed_for_superseded_close = true
+tracking_issue_may_hold_remaining_future_work = true
+
+[identity_preservation]
+default_action = "preserve_original_pr_identity"
+replacement_pr_requires_explicit_consolidation = true
+replacement_pr_requires_source_link = true
+replacement_pr_requires_scope_reason = true
+
+[bulk_actions]
+bulk_close_allowed = false
+bulk_reopen_allowed = false
+bulk_recreate_allowed = false
+bulk_restack_allowed_without_approval = false
+
+[close_comment_fields]
+disposition = true
+reason = true
+source_pr = true
+landed_pr = true
+landed_commit = true
+duplicate_of = true
+historical_report = true
+tracking_issue = true
+audit_summary = true
+remaining_work = true

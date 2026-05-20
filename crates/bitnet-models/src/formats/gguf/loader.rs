@@ -4,6 +4,9 @@ mod tensor_loading;
 
 use super::{GgufReader, GgufTensorType, GgufTensors};
 use crate::architecture::{DenseQwenArchitecture, classify_dense_qwen_architecture};
+use crate::dense_gguf_q8_sidecar::{
+    DenseGgufQ8SidecarRegistry, dense_q8_payload_candidate_tensor_from_env,
+};
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
 use crate::names::{is_layernorm_weight, is_projection_weight};
 use crate::{BitNetModel, Model};
@@ -20,6 +23,8 @@ use tracing::{debug, info};
 type TensorLoadResult = Result<(Tensor, Vec<(String, Tensor)>, Option<CorrectionRecord>)>;
 type Qk256RawEntries = (Tensor, Vec<(String, Tensor)>, Option<f32>, usize);
 type Qk256RawEntriesResult = Result<Qk256RawEntries>;
+type DenseQ8SidecarLoadResult =
+    Result<(GgufTensors, std::collections::HashMap<String, Tensor>, DenseGgufQ8SidecarRegistry)>;
 
 pub(crate) const SMOLLM2_360M_CONTRACT_ID: &str = "smollm2_360m_instruct_q8_0";
 pub(crate) const SMOLLM2_360M_FINGERPRINT: &str =
@@ -1155,7 +1160,7 @@ impl FormatLoader for GgufLoader {
         }
 
         // Load tensors with fingerprint for policy matching (returns both regular and raw QK256 tensors)
-        let (tensors, raw_tensors) =
+        let (tensors, raw_tensors, dense_q8_sidecars) =
             self.load_tensors(&reader, device, config, &fingerprint, norm_validation_policy)?;
 
         if let Some(callback) = &config.progress_callback {
@@ -1163,7 +1168,13 @@ impl FormatLoader for GgufLoader {
         }
 
         // Create model instance (pass both tensors and raw_tensors for QK256 dispatch)
-        let model = BitNetModel::from_gguf(model_config, tensors, raw_tensors, *device)?;
+        let model = BitNetModel::from_gguf_with_dense_q8_sidecars(
+            model_config,
+            tensors,
+            raw_tensors,
+            dense_q8_sidecars,
+            *device,
+        )?;
 
         Ok(Box::new(model))
     }
@@ -1176,32 +1187,34 @@ impl GgufLoader {
         config: &BitNetConfig,
     ) -> Result<()> {
         let tensor_names = reader.tensor_names();
-        let has_any = |candidates: &[String]| -> bool {
+        Self::validate_strict_tensor_authority_names(&tensor_names, config)
+    }
+
+    fn validate_strict_tensor_authority_names(
+        tensor_names: &[&str],
+        config: &BitNetConfig,
+    ) -> Result<()> {
+        let has_any = |candidates: &[&str]| -> bool {
             candidates.iter().any(|candidate| tensor_names.iter().any(|name| name == candidate))
         };
 
         let mut missing = Vec::new();
 
-        let has_token_embedding = has_any(&[
-            "token_embd.weight".to_string(),
-            "tok_embeddings.weight".to_string(),
-            "embed_tokens.weight".to_string(),
-            "model.embed_tokens.weight".to_string(),
-            "transformer.wte.weight".to_string(),
+        let has_embeddings = has_any(&[
+            "token_embd.weight",
+            "tok_embeddings.weight",
+            "embed_tokens.weight",
+            "model.embed_tokens.weight",
+            "transformer.wte.weight",
         ]);
-        if !has_token_embedding {
+        if !has_embeddings {
             missing.push("token embedding weight".to_string());
         }
 
-        let has_output_head = has_any(&[
-            "output.weight".to_string(),
-            "lm_head.weight".to_string(),
-            "model.lm_head.weight".to_string(),
-            "head.weight".to_string(),
-        ]);
-        if !has_output_head && !has_token_embedding {
+        let has_output = has_any(&["output.weight", "lm_head.weight", "model.lm_head.weight"]);
+        if !has_output && !has_embeddings {
             missing.push("output/lm head weight".to_string());
-        } else if !has_output_head {
+        } else if !has_output {
             tracing::info!(
                 "Strict real_gguf load: no output/lm head tensor; using tied token embeddings"
             );
@@ -1230,7 +1243,10 @@ impl GgufLoader {
                             .map(move |suffix| format!("{}.{}.{}", prefix, layer_idx, suffix))
                     })
                     .collect();
-                if !has_any(&candidates) {
+                let has_group = candidates
+                    .iter()
+                    .any(|candidate| tensor_names.iter().any(|name| name == candidate));
+                if !has_group {
                     missing.push(format!("layer {} tensor group {:?}", layer_idx, suffix_group));
                 }
             }
@@ -2079,11 +2095,13 @@ impl GgufLoader {
         config: &LoadConfig,
         fingerprint: &str,
         norm_validation_policy: NormValidationPolicy,
-    ) -> Result<(GgufTensors, std::collections::HashMap<String, Tensor>)> {
+    ) -> DenseQ8SidecarLoadResult {
         let tensor_count = reader.tensor_count() as usize;
         let mut tensors = GgufTensors::new();
         let mut raw_tensors: std::collections::HashMap<String, Tensor> =
             std::collections::HashMap::new();
+        let mut dense_q8_sidecars = DenseGgufQ8SidecarRegistry::default();
+        let dense_q8_payload_candidate_tensor = dense_q8_payload_candidate_tensor_from_env();
 
         info!("Loading {} tensors", tensor_count);
 
@@ -2140,6 +2158,11 @@ impl GgufLoader {
                     norm_validation_policy,
                 )?;
             tensors.insert(tensor_info.name.clone(), candle_tensor);
+            dense_q8_sidecars.try_push_tensor_with_payload_candidate(
+                tensor_info,
+                tensor_data,
+                dense_q8_payload_candidate_tensor.as_deref(),
+            )?;
 
             // Store raw QK256 tensors if present.
             for (key, raw_tensor) in raw_qk256_entries {
@@ -2185,7 +2208,13 @@ impl GgufLoader {
             raw_tensors.len(),
             fingerprint
         );
-        Ok((tensors, raw_tensors))
+        if !dense_q8_sidecars.is_empty() {
+            info!(
+                "Carried {} inert dense Q8_0 sidecar descriptors; eager F32 Candle tensors remain the runtime path",
+                dense_q8_sidecars.descriptor_count()
+            );
+        }
+        Ok((tensors, raw_tensors, dense_q8_sidecars))
     }
 
     /// Validate tensor data integrity
@@ -2226,7 +2255,7 @@ impl GgufLoader {
 
 #[cfg(test)]
 mod tests {
-    use super::GgufLoader;
+    use super::*;
 
     #[test]
     fn q8_vocab_projection_uses_token_major_shape() {
@@ -2313,5 +2342,47 @@ mod tests {
             GgufLoader::f16_values_to_f32(&data, &[3, 2], "token_embd.weight").expect("f16 parse");
 
         assert_eq!(f32_values, values);
+    }
+
+    fn one_layer_config() -> BitNetConfig {
+        let mut config = BitNetConfig::default();
+        config.model.num_layers = 1;
+        config
+    }
+
+    fn one_layer_names_with_embedding() -> Vec<&'static str> {
+        vec![
+            "token_embd.weight",
+            "blk.0.attn_q.weight",
+            "blk.0.attn_k.weight",
+            "blk.0.attn_v.weight",
+            "blk.0.attn_output.weight",
+            "blk.0.ffn_gate.weight",
+            "blk.0.ffn_up.weight",
+            "blk.0.ffn_down.weight",
+            "blk.0.attn_norm.weight",
+            "blk.0.ffn_norm.weight",
+        ]
+    }
+
+    #[test]
+    fn strict_tensor_authority_allows_tied_lm_head_from_embeddings() -> Result<()> {
+        let names = one_layer_names_with_embedding();
+
+        GgufLoader::validate_strict_tensor_authority_names(&names, &one_layer_config())?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn strict_tensor_authority_rejects_missing_logits_source() {
+        let mut names = one_layer_names_with_embedding();
+        names.retain(|name| *name != "token_embd.weight");
+
+        let err = GgufLoader::validate_strict_tensor_authority_names(&names, &one_layer_config())
+            .expect_err("missing embeddings and output head should be rejected");
+        let msg = err.to_string();
+        assert!(msg.contains("token embedding weight"), "got: {msg}");
+        assert!(msg.contains("output/lm head weight"), "got: {msg}");
     }
 }

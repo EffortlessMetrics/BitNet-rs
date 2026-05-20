@@ -1,0 +1,15 @@
+timestamp = "2026-05-19T16:03:03Z"
+campaign = "intel-a770"
+item = "A770-003"
+event = "merged"
+pr = 5969
+head_sha = "f86bc087913a3c2251a8a97c730ac060b2ff7d18"
+merge_sha = "9deb49448c1884813a3d06d5ca6b2b73d1e7eda9"
+branch = "codex/intel-a770/A770-003-backend-identity"
+actor = "codex"
+
+notes = [
+  "Merged PR #5969, preserving Intel Arc A770 OpenCL requested and selected backend identity through config and backend-selection surfaces.",
+  "The merged change is identity-only and does not add A770 kernels, BitNet inference execution, route promotion, or speedup claims.",
+  "A770-004 remains the next follow-on for explicit receipt fields and logging propagation.",
+]

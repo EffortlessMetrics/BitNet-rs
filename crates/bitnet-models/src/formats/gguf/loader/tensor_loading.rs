@@ -147,7 +147,26 @@ fn load_i2s_tensor(
         return load_qk256_tensor(info, data, candle_device, model_config);
     }
 
-    load_dequantized_i2s_tensor(info, data, candle_device, policy_plan)
+    let logical_size = flavor.logical_size_bytes(nelems);
+    if data.len() < logical_size {
+        return Err(BitNetError::Validation(format!(
+            "I2_S '{}': available bytes {} shorter than logical {} for {:?}",
+            info.name,
+            data.len(),
+            logical_size,
+            flavor
+        )));
+    }
+    let logical_data = &data[..logical_size];
+    if data.len() > logical_size {
+        tracing::debug!(
+            "I2_S '{}': trimming {} GGUF alignment padding bytes before decode",
+            info.name,
+            data.len() - logical_size
+        );
+    }
+
+    load_dequantized_i2s_tensor(info, logical_data, candle_device, policy_plan)
 }
 
 fn validate_i2s_can_be_quantized(info: &TensorInfo) -> Result<()> {
@@ -375,6 +394,22 @@ fn load_dense_standard_quant_tensor(
         )));
     }
 
+    let boundary = dense_standard_quant_load_boundary(info);
+    debug!(
+        tensor = %boundary.tensor_name,
+        tensor_type = %boundary.tensor_type,
+        source_shape = ?boundary.source_shape,
+        candle_shape = ?boundary.candle_shape,
+        block_size = boundary.block_size,
+        element_size = boundary.element_size,
+        dequantizes_before_compute = boundary.dequantizes_before_compute,
+        materializes_f32_tensor = boundary.materializes_f32_tensor,
+        values_transposed = boundary.values_transposed,
+        shape_reshaped_without_transpose = boundary.shape_reshaped_without_transpose,
+        next_safe_change = boundary.next_safe_change,
+        "dense standard quant load boundary"
+    );
+
     let f32_data = GgufLoader::dequantize_supported_dense_standard_quant_to_f32(
         data,
         &info.shape,
@@ -412,6 +447,46 @@ fn dense_standard_quant_shape(info: &TensorInfo) -> Vec<usize> {
         vec![info.shape[1], info.shape[0]]
     } else {
         info.shape.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DenseStandardQuantLoadBoundary {
+    tensor_name: String,
+    tensor_type: &'static str,
+    source_shape: Vec<usize>,
+    candle_shape: Vec<usize>,
+    block_size: usize,
+    element_size: usize,
+    dequantizes_before_compute: bool,
+    materializes_f32_tensor: bool,
+    values_transposed: bool,
+    shape_reshaped_without_transpose: bool,
+    locality_boundary: &'static str,
+    next_safe_change: &'static str,
+}
+
+fn dense_standard_quant_load_boundary(info: &TensorInfo) -> DenseStandardQuantLoadBoundary {
+    let candle_shape = dense_standard_quant_shape(info);
+    DenseStandardQuantLoadBoundary {
+        tensor_name: info.name.clone(),
+        tensor_type: match info.tensor_type {
+            GgufTensorType::Q8_0 => "Q8_0",
+            GgufTensorType::Q5_0 => "Q5_0",
+            GgufTensorType::Q4_K => "Q4_K",
+            GgufTensorType::Q6_K => "Q6_K",
+            _ => "unsupported_dense_standard_quant",
+        },
+        source_shape: info.shape.clone(),
+        candle_shape: candle_shape.clone(),
+        block_size: info.tensor_type.block_size(),
+        element_size: info.tensor_type.element_size(),
+        dequantizes_before_compute: true,
+        materializes_f32_tensor: true,
+        values_transposed: false,
+        shape_reshaped_without_transpose: candle_shape != info.shape,
+        locality_boundary: "eager_dense_standard_quant_dequant_to_f32_before_candle_tensor",
+        next_safe_change: "replace the eager Vec<f32> plus Tensor::from_slice boundary only with a behavior-preserving Q8_0 dense linear locality path that keeps generated IDs and strict receipts unchanged",
     }
 }
 
@@ -637,5 +712,25 @@ mod tests {
 
         assert_eq!(shape, vec![32_768, 2]);
         assert_eq!(&values[..6], &[0.0, 1.0, 2.0, 3.0, 4.0, 5.0]);
+    }
+
+    #[test]
+    fn dense_standard_quant_load_boundary_records_q8_eager_dequant_locality_target() {
+        let boundary = dense_standard_quant_load_boundary(&info("blk.0.ffn_down.weight", &[2, 3]));
+
+        assert_eq!(boundary.tensor_type, "Q8_0");
+        assert_eq!(boundary.source_shape, vec![2, 3]);
+        assert_eq!(boundary.candle_shape, vec![3, 2]);
+        assert_eq!(boundary.block_size, 32);
+        assert_eq!(boundary.element_size, 34);
+        assert!(boundary.dequantizes_before_compute);
+        assert!(boundary.materializes_f32_tensor);
+        assert!(!boundary.values_transposed);
+        assert!(boundary.shape_reshaped_without_transpose);
+        assert_eq!(
+            boundary.locality_boundary,
+            "eager_dense_standard_quant_dequant_to_f32_before_candle_tensor"
+        );
+        assert!(boundary.next_safe_change.contains("Q8_0 dense linear locality path"));
     }
 }

@@ -1,0 +1,16 @@
+schema_version = "1.0"
+campaign = "ci-coverage"
+timestamp = "2026-05-18T21:25:07Z"
+event = "merged"
+item = "CI-COVERAGE-002"
+pr = 5775
+head_sha = "3646ec9157320ab0ef0295b47541a158012be9f3"
+merge_sha = "6f44b58f721cb373b4de7afa88bb34d34055264b"
+branch = "codex/coverage-container-cleanup-3394"
+actor = "codex"
+summary = "Recorded CI-COVERAGE-002 as merged so campaign doctor can validate the live coverage tracker state."
+
+notes = [
+  "PR #5775 moved coverage to the rust-ci job container and removed the hosted-runner disk cleanup workaround.",
+  "This tracker correction records the PR number and head SHA missing from the original pr_open event.",
+]

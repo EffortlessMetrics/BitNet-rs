@@ -157,6 +157,12 @@ See [docs/hardware/HARDWARE_MATRIX.md](docs/hardware/HARDWARE_MATRIX.md).
 
 ## Building
 
+Before building, run the local environment doctor to confirm the pinned Rust toolchain, Cargo metadata, default feature detection, and optional helper tools:
+
+```bash
+make doctor
+```
+
 ```bash
 cargo build --locked --no-default-features --features cpu
 cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli
@@ -184,6 +190,21 @@ RUSTFLAGS="-C target-cpu=native -C opt-level=3 -C lto=thin" \
 Nix: `nix develop && nix build .#bitnet-cli && nix flake check` - see [Nix guide](docs/kv-pool/NIX_FLAKE_USAGE.md).
 
 ## Testing
+
+For a fast local loop, use the development check wrapper:
+
+```bash
+scripts/dev-check.sh quick
+scripts/dev-check.sh all
+```
+
+The same single-command CPU check is available as a Cargo alias:
+
+```bash
+cargo dev-check
+```
+
+The underlying CI-style commands remain available when you need to run each gate manually:
 
 ```bash
 cargo nextest run --locked --workspace --no-default-features --features cpu
@@ -218,9 +239,10 @@ Near-term work is focused on:
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Before opening a PR:
+See [CONTRIBUTING.md](CONTRIBUTING.md). Before opening a PR, run the fast local wrapper first and then the fuller local CI gate when applicable:
 
 ```bash
+scripts/dev-check.sh all
 ./ci/local.sh
 ```
 

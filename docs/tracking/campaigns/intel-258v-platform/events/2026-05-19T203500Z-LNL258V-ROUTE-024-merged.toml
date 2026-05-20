@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T20:35:00Z"
+event = "merged"
+item = "LNL258V-ROUTE-024"
+pr = 5914
+branch = "codex/lunar-lake/LNL258V-ROUTE-024-npu-warm-resident"
+head_sha = "b7cd7b99d7c5b21cdca726ca1d7ab64732f0a643"
+merge_sha = "d179a86f48d3a42d84e7e39619f35a187443e58c"
+actor = "codex"
+summary = "Merged LNL258V-ROUTE-024, profile-promoting OpenVINO NPU only for warm_resident."
+
+notes = [
+  "OpenVINO GPU remains profile-promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy only.",
+  "OpenVINO NPU is profile-promoted only for warm_resident from existing resident-session evidence.",
+  "low_power and cold one-off NPU profiles remain blocked; no speedup, power-advantage, native NPU, acceleration, or BitNet QK256/I2_S behavior claim was added.",
+]

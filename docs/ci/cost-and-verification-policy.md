@@ -32,6 +32,27 @@ Rollout PRs must use the PR body sections from the rollout document so every
 change records default LEM before/after, lanes removed from default, preserved
 verification, boundaries, and validation.
 
+## PR burn-down write-action law
+
+Queue burn-down has its own CI economics rule:
+[PR Write-Action CI Economics](../specs/BITNET-SPEC-PR-CI-ECONOMICS.md).
+The machine-readable policy is `policy/pr-ci-actions.toml`.
+
+Closing, reopening, rebasing, pushing, retargeting, labeling, recreating, and
+rerunning workflows are write actions. They can trigger CI, status churn, review
+churn, or branch-protection recomputation. During PR queue recovery, do
+read-only archaeology first and write only when the current disposition, merge,
+or proof decision requires it.
+
+The default rules are:
+
+- no bulk write without explicit approval;
+- no CI for archaeology;
+- CI only for approved merge candidates, approved clean ports, branch refreshes
+  needed for current proof, failed required-check reruns with evidence, or other
+  required proof;
+- close/reopen/recreate actions must satisfy the PR queue disposition law.
+
 ## Cost target
 
 For ordinary PRs, our operating target is:
@@ -151,11 +172,14 @@ uploads the receipt directory with `if: always()`. Future M3 Air model, artifact
 or timing lanes should either reuse that pattern or explain why the selected
 lane can safely discard partial work.
 
-The shared macOS Apple Silicon PR workflow follows the same cancellation rule
-for started jobs. It is still bounded by per-job `timeout-minutes` and path
-filters, but it uses `cancel-in-progress: false` so platform-specific compile
-and test evidence is not thrown away by a later push after runner time has
-already been spent.
+The shared macOS Apple Silicon workflow follows the same cancellation rule only
+after Apple proof is selected. On pull requests, a cheap Linux routing job runs
+first; the `macos-14` jobs start only for labels `macos`, `apple-silicon`,
+`metal`, or `full-ci`, or for Mac/Metal-specific paths. Ordinary Rust PRs keep
+the branch-protection-compatible summary check, but they do not launch Apple
+Silicon runners. Once a selected macOS job starts, `cancel-in-progress: false`
+keeps platform-specific compile and test evidence from being thrown away by a
+later push after runner time has already been spent.
 
 ## Why the budget target is aggressive
 
@@ -205,6 +229,21 @@ the fuzz harness, Rust crates, lockfiles, toolchain, Cargo configuration, or
 the fuzz workflow itself. Docs / tracking-only PRs use the docs and campaign
 tracker lanes instead of spending CI minutes compiling fuzz targets that
 cannot be affected by the diff.
+
+Performance Baseline Tracking follows the same rule. Pull requests run only a
+cheap Linux route job unless `performance`, `perf`, or `full-ci` is present.
+The former default PR `cargo check --workspace --features cpu` smoke now runs
+only when performance tracking is selected, while the comprehensive benchmark
+matrix remains on schedule and manual dispatch.
+
+Test Telemetry is advisory observability, not a merge gate. Ordinary PRs run
+only its cheap route job; nextest/JUnit and slow-test summaries run on `main`,
+manual dispatch, or labels `test-telemetry`, `slow-tests`, and `full-ci`.
+
+MSRV compatibility is global-risk proof. Ordinary leaf implementation PRs run
+only the compatibility route job; the MSRV checks run for manifest, lockfile,
+toolchain, `.cargo`, public API, FFI, release/package surfaces, `main`, manual
+dispatch, or labels `msrv`, `compatibility`, and `full-ci`.
 
 The goal is not to spend less by testing less. **The goal is to spend less on
 unrelated work so we can afford more verification where the change actually
@@ -467,10 +506,28 @@ Python stacks or fetch external models unless explicitly requested.
 A docs-only PR should run docs and tracking checks. It should not compile the
 Rust workspace.
 
-Tracker-only PRs are the strict version of that rule. When the diff is limited
-to `docs/tracking/**` or `.codex/campaigns/**`, CI Core keeps emitting the
-required `CI Core Success` check but routes it through campaign doctor and
-generated-dashboard freshness instead of Rust build, clippy, and rustdoc jobs.
+CI Core treats no-Rust-input PRs as a first-class fast path. When the diff is
+limited to docs, campaign/tracker metadata, hardware receipts, or policy docs,
+CI Core keeps emitting the required `CI Core Success` check without running Rust
+build, test, clippy, rustdoc, or `xtask` jobs. Tracker/campaign-only changes are
+delegated to the dedicated Campaign Tracker workflow for campaign doctor and
+generated-dashboard freshness. Hardware receipt-only changes run changed-receipt
+JSON syntax checks inside CI Core. Pure docs and policy-docs changes rely on the
+dedicated docs, markdown, link, policy, and PR Gate lanes.
+
+For Rust-input PRs, CI Core uses `ci-plan.json` package selection for the
+Linux build/test surface. The selected package set is the union of changed
+workspace packages, direct dependents from `cargo metadata`, and risk-pack
+canaries. Manifest, toolchain, and shared-foundation changes still force the
+full core sweep because their blast radius is intentionally broader than a
+single package edge.
+
+Feature Matrix follows the same routing rule. Ordinary Rust PRs run the
+canonical `no-features` and `cpu` workspace compile checks. The heavier
+`cpu+full-cli` compile smoke runs only for CLI, server, validation,
+model-cache, manifest, lockfile, toolchain, or `.cargo` changes, or when a PR
+is explicitly labeled `full-cli`. The exhaustive feature matrix remains a deep
+lane for `feature-matrix`, `full-ci`, `main`, and manual dispatch.
 
 ## Operating metric
 

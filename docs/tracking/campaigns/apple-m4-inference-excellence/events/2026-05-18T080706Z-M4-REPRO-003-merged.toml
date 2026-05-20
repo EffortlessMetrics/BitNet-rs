@@ -1,0 +1,17 @@
+timestamp = "2026-05-18T08:07:06Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-REPRO-003"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-REPRO-003-template-registry"
+pr = 5549
+head_sha = "ce0cbd5fe5824525b527b71b2a73f432950b1aa2"
+merge_sha = "7ef399bdc5692374a2344b2e76b624bfbea275ba"
+
+notes = [
+  "Merged PR #5549, which adds prompt-generation identity evidence to M4 dense SLM and BitNet receipt surfaces.",
+  "Receipts now carry prompt template family/source/hash, tokenizer authority, stop criteria and hashes, generation parameters and hash, and overall prompt-generation identity for ask, answer-corpus eval, warm/chat-backed sessions, and serve completion paths.",
+  "Closeout is tracker-only: no runtime quality, benchmark speedup, BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, or broad performance claim.",
+]

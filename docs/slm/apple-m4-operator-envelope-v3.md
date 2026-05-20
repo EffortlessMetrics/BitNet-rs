@@ -21,6 +21,12 @@ The durable envelope is based on these committed evidence surfaces:
 | BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | comparable matching history exists |
 | Report dashboard | `target/apple-m4-inference-excellence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | refreshed by `M4-EXCELLENCE-003`; five families, 18 reports, and nine comparable groups |
 
+`M4-BENCH-002` validates the dense SLM benchmark surface above with
+`target/release/bitnet mac receipts-check ... --json` for all three supported
+Qwen summaries. The validation covers the receipt contract, full profile set,
+p50/p90/p99 and min/max timing fields, model SHA identity, backend/fallback
+state, generated text/token IDs, and dense-only claim boundaries.
+
 All durable refresh receipts used by this envelope keep the supported local M4
 route bounded to:
 
@@ -52,19 +58,41 @@ The model-free refresh sequence is:
 ```bash
 bitnet mac models
 bitnet mac status
+bitnet mac evidence \
+  --json-out target/apple-m4-inference-excellence/evidence-summary.json \
+  --json
 bitnet mac report-refresh \
   --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json \
+  --explain \
+  --open-targets \
   --json
 bitnet mac regression-dashboard \
   --json-out target/apple-m4-inference-excellence/regression-dashboard.json \
   --markdown-out target/apple-m4-inference-excellence/regression-dashboard.md \
+  --explain \
+  --open-targets \
   --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/regression-dashboard.json --json
+bitnet mac receipts-check target/apple-m4-inference-excellence/evidence-summary.json --json
 ```
+
+The `--explain` and `--open-targets` flags are operator affordances only. They
+print status meanings, per-family or per-group reasons, and openable receipt,
+Markdown, latest-report, and baseline-report targets without launching live
+inference or downloading models.
+
+`bitnet mac status` and `bitnet mac doctor` expose dense SLM and BitNet
+readiness as separate operator states. Dense readiness is tied to supported
+Qwen cache repair and the latest dense receipts. BitNet readiness is tied to
+the accepted artifact/tokenizer, one-shot ask, warm-session evidence, and
+explicit chat/serve-disabled boundaries.
 
 The live refresh sequence belongs only in advisory, scheduled, or release lanes:
 
 ```bash
+bitnet mac benchmark --calibrate \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/benchmark/calibration.json
+
 target/release/bitnet --device apple-m4-cpu-neon mac benchmark \
   --model-id <dense-model-id> \
   --profile short_prompt_16_out \
