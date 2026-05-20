@@ -74,6 +74,52 @@ Each route sample must keep `fallback_used=false`, preserve the route identity,
 and record answer-gate, timing, memory, power, and thermal context. If a route
 falls back or cannot run on battery, keep the failure as blocker evidence.
 
+Stage the battery route/profile sample receipts outside the committed evidence
+tree until both battery telemetry samples pass:
+
+```powershell
+New-Item -ItemType Directory -Force target/lunar-lake-battery/low-power
+```
+
+Capture the dense Qwen CPU `low_power` case with the answer-corpus fixture. Use
+the local GGUF path that is already accepted for this machine; changing it
+changes the evidence identity:
+
+```powershell
+$env:LNL258V_QWEN_GGUF = "C:/Users/szim9/AppData/Local/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf"
+
+target/debug/bitnet.exe answer-corpus `
+  --device cpu `
+  --model $env:LNL258V_QWEN_GGUF `
+  --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml `
+  --case-id low_power_route_evidence_copy `
+  --per-prompt-timeout-seconds 240 `
+  --json-out target/lunar-lake-battery/low-power/slm-answer-corpus-qwen25-cpu-low-power-battery.json
+```
+
+Capture the OpenVINO CPU/GPU/NPU comparison receipt on battery. The helper runs
+the requested devices over the corpus; the `low_power` slice is the evidence
+consumed for `POWER-006`, while the other cases remain comparison context:
+
+```powershell
+.venv/Scripts/python.exe scripts/openvino_genai_corpus_v2.py `
+  --model-dir models/openvino/qwen2.5-0.5b-instruct-int4-sym `
+  --corpus ci/quality/lunar-lake-answer-corpus-v2.yaml `
+  --devices CPU GPU.0 NPU `
+  --gguf-cpu-corpus-v2 target/lunar-lake-battery/low-power/slm-answer-corpus-qwen25-cpu-low-power-battery.json `
+  --json-out target/lunar-lake-battery/low-power/slm-openvino-cpu-gpu-npu-corpus-v2-battery.json `
+  --created-utc <battery-route-run-utc>
+```
+
+Review the staged receipts before refreshing committed artifacts:
+
+- CPU receipt includes `selected_case_ids=["low_power_route_evidence_copy"]`;
+- OpenVINO receipt includes `CPU`, `GPU.0`, and `NPU` device rows;
+- the `low_power` profile rows for dense CPU, OpenVINO GPU, and OpenVINO NPU
+  record `fallback_used=false` or preserve the failure as blocker evidence;
+- decoded output, answer gate, stop/EOS behavior, route identity, and timing
+  fields are present for the `low_power` rows.
+
 Do not use the already committed AC-only low-power corpus/profile receipts as
 battery evidence. They can remain comparison context only.
 
@@ -115,9 +161,28 @@ evidence later qualifies it against the CPU/GPU/NPU route matrix.
 ## Refresh Artifacts
 
 After valid battery telemetry and route/profile samples exist, rebuild the
-power, regression, comparison, and audit surfaces:
+route-profile, power, regression, comparison, and audit surfaces:
 
 ```powershell
+target/debug/bitnet.exe lunar-lake profile-compare `
+  --artifact-root ci/hardware/intel-258v/2026-05-08 `
+  --promotion-ledger lunar-lake-route-promotion.json `
+  --phase-comparison slm-openvino-cpu-gpu-npu-phase-comparison.json `
+  --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml `
+  --cpu-corpus-v2 target/lunar-lake-battery/low-power/slm-answer-corpus-qwen25-cpu-low-power-battery.json `
+  --openvino-corpus-v2 target/lunar-lake-battery/low-power/slm-openvino-cpu-gpu-npu-corpus-v2-battery.json `
+  --telemetry-context lunar-lake-power-thermal-context.json `
+  --gpu-quality-diagnosis lunar-lake-openvino-gpu-corpus-v2-diagnosis.json `
+  --npu-quality-diagnosis lunar-lake-openvino-npu-corpus-v2-diagnosis.json `
+  --npu-cold-start-diagnosis lunar-lake-openvino-npu-cold-start-diagnosis.json `
+  --npu-resident-session lunar-lake-openvino-npu-resident-session.json `
+  --npu-cache-experiment lunar-lake-openvino-npu-cache-experiment.json `
+  --openvino-budget-sensitivity lunar-lake-openvino-generation-budget-sensitivity.json `
+  --cpu-profile-run lunar-lake-cpu-profile-run.json `
+  --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json `
+  --created-utc <battery-run-end-utc> `
+  --strict
+
 target/debug/bitnet.exe lunar-lake power-profile `
   --artifact-root ci/hardware/intel-258v/2026-05-08 `
   --route-profile-comparison lunar-lake-route-profile-comparison.json `

@@ -1,0 +1,13 @@
+timestamp = "2026-05-20T20:52:57Z"
+campaign = "intel-258v-platform"
+item = "SWARM-LNL258V-POWER-006-RUNBOOK-002"
+event = "pr_open"
+pr = 86
+head_sha = "ba558fd3d8307951de5588afa083268b513fbe6f"
+branch = "codex/swarm-lnl258v-power006-runbook-matrix-commands"
+actor = "Codex"
+notes = [
+  "Opened PR #86 for the no-evidence POWER-006 battery runbook matrix command clarification.",
+  "The PR documents staged dense Qwen CPU and OpenVINO CPU/GPU/NPU low_power sample commands plus route-profile refresh wiring.",
+  "POWER-006 remains blocked on real battery-mode telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage.",
+]
