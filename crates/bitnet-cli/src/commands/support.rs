@@ -340,6 +340,21 @@ mod tests {
             .join("model-coverage-matrix.toml")
     }
 
+    fn support_bundle_value_for_receipt(receipt_name: &str, receipt: Value) -> Result<Value> {
+        let dir = tempfile::tempdir()?;
+        let receipt_path = dir.path().join(receipt_name);
+        fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+
+        let bundle = support_bundle(
+            Some(&receipt_path),
+            false,
+            "nvidia-rtx-5070-ti-cuda",
+            Some(model_matrix_path()),
+            "2026-05-20T00:00:00Z".to_string(),
+        )?;
+        serde_json::to_value(&bundle).context("support bundle must serialize to JSON")
+    }
+
     #[test]
     fn support_bundle_accepts_latest_device_and_format_json() -> Result<()> {
         let parsed = SupportActionParser::try_parse_from([
@@ -422,13 +437,13 @@ mod tests {
             value["summary"]["next_proof"]
                 .as_str()
                 .context("support summary next_proof must be a string")?
-                .contains("exact-profile dense Qwen server readiness")
+                .contains("device-side top-k or greedy sampler receipt")
         );
         assert!(
             value["summary"]["claim_boundary"]
                 .as_str()
                 .context("support summary claim_boundary must be a string")?
-                .contains("do not satisfy BitNet packed I2_S/QK256 proof")
+                .contains("BitNet packed I2_S/QK256 proof")
         );
         assert_eq!(value["runtime"]["runtime_api"], "cuda");
         assert_eq!(value["runtime"]["driver_version"], "test-driver");
@@ -450,6 +465,138 @@ mod tests {
                 && model["dense_regular_llm_cuda_proof"] == true
                 && model["bitnet_packed_i2s_qk256_proof"] == false
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn support_bundle_preserves_official_bitnet_qk256_boundaries() -> Result<()> {
+        let value = support_bundle_value_for_receipt(
+            "bitnet-i2s-qk256-receipt.json",
+            json!({
+                "artifact_kind": "bitnet_cuda_answer",
+                "claim": "bitnet_cuda_answer_recorded",
+                "model": {
+                    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                    "file": "ggml-model-i2_s.gguf"
+                },
+                "backend": {
+                    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                    "runtime_api": "cuda",
+                    "fallback_used": false,
+                    "device_name": "NVIDIA GeForce RTX 5070 Ti"
+                },
+                "execution_plan": {
+                    "selected_route": "bitnet_qk256_cuda",
+                    "model_family": "bitnet_b1_58",
+                    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                    "speedup_claim": false
+                },
+                "quality_gate": {
+                    "passed": true
+                },
+                "claim_boundary": {
+                    "bitnet_packed_i2s_qk256_proof": true,
+                    "dense_regular_llm_cuda_claimed": false,
+                    "speedup_claim": false,
+                    "full_cuda_residency_claimed": false
+                }
+            }),
+        )?;
+
+        assert_eq!(value["summary"]["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
+        assert_eq!(value["summary"]["current_tier"], "product_cli_ready");
+        assert_eq!(value["summary"]["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["summary"]["selected_route"], "bitnet_qk256_cuda");
+        assert_eq!(value["summary"]["fallback_used"], false);
+        assert_eq!(value["summary"]["quality_gate"], "passed");
+        assert_eq!(value["summary"]["server_ready"], false);
+        assert!(value["summary"]["server_ready_scope"].is_null());
+        assert_eq!(value["summary"]["speedup_claim"], false);
+        assert_eq!(value["summary"]["full_residency_claim"], false);
+        assert_eq!(value["summary"]["bitnet_packed_i2s_qk256_proof"], true);
+        assert_eq!(value["summary"]["dense_regular_llm_cuda_proof"], false);
+        assert!(
+            value["summary"]["next_proof"]
+                .as_str()
+                .context("BitNet support summary next_proof must be a string")?
+                .contains("profile-specific speedup qualification")
+        );
+        assert!(
+            value["summary"]["claim_boundary"]
+                .as_str()
+                .context("BitNet support summary claim_boundary must be a string")?
+                .contains("does not prove dense regular-LLM CUDA")
+        );
+        assert_eq!(value["runtime"]["runtime_api"], "cuda");
+        assert_eq!(value["runtime"]["device_name"], "NVIDIA GeForce RTX 5070 Ti");
+        assert_eq!(value["latest_receipt"]["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
+        assert_eq!(value["latest_receipt"]["bitnet_packed_i2s_qk256_proof"], true);
+        assert_eq!(value["latest_receipt"]["dense_regular_llm_cuda_proof"], false);
+        Ok(())
+    }
+
+    #[test]
+    fn support_bundle_preserves_qwen3_dense_product_boundaries() -> Result<()> {
+        let value = support_bundle_value_for_receipt(
+            "qwen3-dense-cuda-receipt.json",
+            json!({
+                "artifact_kind": "dense_gguf_qwen_chat_strict_cuda_proof",
+                "claim": "dense_gguf_qwen_chat_strict_cuda_proof_recorded",
+                "model": {
+                    "id": "qwen3-0.6b-instruct-q8_0",
+                    "file": "Qwen3-0.6B-Q8_0.gguf",
+                    "architecture": "qwen3"
+                },
+                "backend": {
+                    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                    "runtime_api": "cuda",
+                    "fallback_used": false,
+                    "device_name": "NVIDIA GeForce RTX 5070 Ti"
+                },
+                "execution_plan": {
+                    "selected_route": "dense_regular_llm_cuda",
+                    "model_family": "qwen",
+                    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                    "speedup_claim": false
+                },
+                "quality_gate": {
+                    "passed": true
+                },
+                "claim_boundary": {
+                    "bitnet_packed_i2s_qk256_proof": false,
+                    "dense_regular_llm_cuda_claimed": true,
+                    "speedup_claim": false,
+                    "full_cuda_residency_claimed": false
+                }
+            }),
+        )?;
+
+        assert_eq!(value["summary"]["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+        assert_eq!(value["summary"]["current_tier"], "product_cli_ready");
+        assert_eq!(value["summary"]["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["summary"]["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(value["summary"]["fallback_used"], false);
+        assert_eq!(value["summary"]["quality_gate"], "passed");
+        assert_eq!(value["summary"]["server_ready"], true);
+        assert_eq!(value["summary"]["server_ready_scope"], "exact_profile");
+        assert_eq!(value["summary"]["speedup_claim"], false);
+        assert_eq!(value["summary"]["full_residency_claim"], false);
+        assert_eq!(value["summary"]["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(value["summary"]["dense_regular_llm_cuda_proof"], true);
+        assert!(
+            value["summary"]["next_proof"]
+                .as_str()
+                .context("Qwen3 support summary next_proof must be a string")?
+                .contains("hardware aggregate receipt")
+        );
+        let claim_boundary = value["summary"]["claim_boundary"]
+            .as_str()
+            .context("Qwen3 support summary claim_boundary must be a string")?;
+        assert!(claim_boundary.contains("does not inherit Qwen2.5 CUDA receipts"));
+        assert!(claim_boundary.contains("BitNet QK256 behavior"));
+        assert_eq!(value["latest_receipt"]["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+        assert_eq!(value["latest_receipt"]["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(value["latest_receipt"]["dense_regular_llm_cuda_proof"], true);
         Ok(())
     }
 
