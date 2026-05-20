@@ -1122,7 +1122,7 @@ fn unsupported_benchmark_device_message(device: &str, profile: Option<&str>) -> 
     let profile_note = profile
         .map(|profile| {
             format!(
-                " Profile `{profile}` is recognized only for governed CUDA benchmark receipt reporting until live PERF-005 profile execution lands."
+                " Profile `{profile}` can run live only with --device {RTX_5070_TI_CUDA} for supported CUDA-BITNET-PERF-005 profiles, or with --cuda-benchmark-receipt for governed receipt reporting."
             )
         })
         .unwrap_or_default();

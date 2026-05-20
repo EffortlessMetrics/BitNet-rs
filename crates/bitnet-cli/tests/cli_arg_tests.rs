@@ -7035,6 +7035,70 @@ fn bench_cuda_device_fails_closed_without_cpu_fallback() -> Result<(), Box<dyn s
     Ok(())
 }
 
+/// Exact RTX 5070 Ti PERF-005 profiles enter the live strict CUDA dispatcher, not the legacy CPU benchmark.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_rtx5070ti_profile_enters_live_perf005_dispatch_without_cpu_fallback()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let model = dir.path().join("placeholder.gguf");
+    let receipt = dir.path().join("one-token.json");
+    std::fs::write(&model, b"placeholder")?;
+    let model_str = model.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "bench",
+            "--model",
+            model_str.as_str(),
+            "--device",
+            "nvidia-rtx-5070-ti-cuda",
+            "--profile",
+            "one_token",
+            "--output",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "PERF-005 profile `one_token` dispatches through strict RTX 5070 Ti CUDA generation",
+        ))
+        .stderr(predicate::str::contains("speedup_claim=false"))
+        .stderr(predicate::str::contains("legacy benchmark simulates benchmark work").not());
+    Ok(())
+}
+
+/// Defined PERF-005 profiles without a live runner fail closed instead of using proxy benchmark output.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_rtx5070ti_blocks_defined_perf005_profile_without_dispatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let model = dir.path().join("placeholder.gguf");
+    std::fs::write(&model, b"placeholder")?;
+    let model_str = model.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "bench",
+            "--model",
+            model_str.as_str(),
+            "--device",
+            "nvidia-rtx-5070-ti-cuda",
+            "--profile",
+            "prefill_512_decode_32",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains(
+            "PERF-005 profile `prefill_512_decode_32` is defined but does not yet have a live dispatcher",
+        ))
+        .stderr(predicate::str::contains("speedup_claim=false"))
+        .stderr(predicate::str::contains("full_residency_claim=false"));
+    Ok(())
+}
+
 /// `bench --device cuda --cuda-benchmark-receipt` reports governed CUDA benchmark evidence.
 #[cfg(feature = "full-cli")]
 #[test]

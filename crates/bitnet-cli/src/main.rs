@@ -1822,7 +1822,13 @@ async fn async_main() -> Result<()> {
         #[cfg(feature = "full-cli")]
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "cli-bench")]
-        Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
+        Some(Commands::Benchmark(cmd)) => {
+            if run_cuda_bitnet_perf005_benchmark_profile(&requested_backend_label, &cmd).await? {
+                Ok(())
+            } else {
+                cmd.execute(&config).await
+            }
+        }
         #[cfg(feature = "full-cli")]
         Some(Commands::Serve(cmd)) => cmd.execute(&config).await,
         Some(Commands::Tokenize { model, tokenizer, text, file, bos, json_out }) => {
@@ -4075,6 +4081,187 @@ where
 {
     if enabled {
         eprintln!("generation progress: {stage} {}", details());
+    }
+}
+
+#[cfg(feature = "cli-bench")]
+#[derive(Debug, Clone, Copy)]
+enum CudaBitnetPerf005ProfileKind {
+    SingleDecode { max_new_tokens: usize },
+    WarmSession3Turns,
+}
+
+#[cfg(feature = "cli-bench")]
+#[derive(Debug, Clone, Copy)]
+struct CudaBitnetPerf005ProfilePlan {
+    profile_id: &'static str,
+    kind: CudaBitnetPerf005ProfileKind,
+}
+
+#[cfg(feature = "cli-bench")]
+async fn run_cuda_bitnet_perf005_benchmark_profile(
+    requested_backend_label: &str,
+    command: &BenchmarkCommand,
+) -> Result<bool> {
+    if command.cuda_benchmark_receipt.is_some() || requested_backend_label != RTX_5070_TI_CUDA {
+        return Ok(false);
+    }
+
+    let Some(profile) = command.profile.as_deref() else {
+        return Ok(false);
+    };
+
+    let plan = cuda_bitnet_perf005_profile_plan(profile)?;
+    let model_path = command
+        .model
+        .clone()
+        .context("--model <PATH> is required for live CUDA-BITNET-PERF-005 profile dispatch")?;
+    if !model_path.exists() {
+        anyhow::bail!("Model file does not exist: {}", model_path.display());
+    }
+    if command.format != "text" {
+        anyhow::bail!(
+            "live CUDA-BITNET-PERF-005 profile dispatch writes inference receipts through --output and currently supports --format text only; use --cuda-benchmark-receipt for json/csv benchmark reports"
+        );
+    }
+
+    let receipt_path = command.output.clone().unwrap_or_else(|| {
+        std::path::PathBuf::from("target")
+            .join("bitnet")
+            .join("receipts")
+            .join("cuda-bitnet-perf005")
+            .join(format!("{}.json", plan.profile_id))
+    });
+
+    eprintln!(
+        "PERF-005 profile `{}` dispatches through strict RTX 5070 Ti CUDA generation; speedup_claim=false, full_residency_claim=false, server_ready=false",
+        plan.profile_id
+    );
+
+    match plan.kind {
+        CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens } => {
+            run_simple_generation(
+                requested_backend_label,
+                model_path,
+                "auto".to_string(),
+                None,
+                None,
+                perf005_prompt_for_profile(plan.profile_id).to_string(),
+                max_new_tokens,
+                0.0,
+                0,
+                1.0,
+                1.0,
+                Some(42),
+                false,
+                false,
+                true,
+                true,
+                Some(receipt_path),
+                None,
+                Some("bitnet_qk256_cuda".to_string()),
+                false,
+                false,
+                true,
+                true,
+                1,
+                BITNET_CPP_ANSWER_TEMPLATE.to_string(),
+                false,
+                None,
+                Vec::new(),
+                Vec::new(),
+                None,
+                10,
+                false,
+                None,
+                None,
+                false,
+                None,
+                false,
+                Some(plan.profile_id.to_string()),
+                false,
+                true,
+            )
+            .await
+        }
+        CudaBitnetPerf005ProfileKind::WarmSession3Turns => {
+            run_cuda_warm_session(
+                requested_backend_label,
+                model_path,
+                "auto".to_string(),
+                None,
+                vec![
+                    "Define entropy in one sentence.".to_string(),
+                    "Name one use for quantization.".to_string(),
+                    "Summarize why fallback rejection matters.".to_string(),
+                ],
+                16,
+                0.0,
+                0,
+                1.0,
+                1.0,
+                Some(42),
+                true,
+                true,
+                true,
+                true,
+                1,
+                BITNET_CPP_ANSWER_TEMPLATE.to_string(),
+                None,
+                Vec::new(),
+                Vec::new(),
+                false,
+                receipt_path,
+            )
+            .await
+        }
+    }?;
+
+    Ok(true)
+}
+
+#[cfg(feature = "cli-bench")]
+fn cuda_bitnet_perf005_profile_plan(profile: &str) -> Result<CudaBitnetPerf005ProfilePlan> {
+    match profile {
+        "one_token" => Ok(CudaBitnetPerf005ProfilePlan {
+            profile_id: "one_token",
+            kind: CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens: 1 },
+        }),
+        "short_decode_8" => Ok(CudaBitnetPerf005ProfilePlan {
+            profile_id: "short_decode_8",
+            kind: CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens: 8 },
+        }),
+        "short_decode_32" => Ok(CudaBitnetPerf005ProfilePlan {
+            profile_id: "short_decode_32",
+            kind: CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens: 32 },
+        }),
+        "warm_session_3_turns" => Ok(CudaBitnetPerf005ProfilePlan {
+            profile_id: "warm_session_3_turns",
+            kind: CudaBitnetPerf005ProfileKind::WarmSession3Turns,
+        }),
+        "prefill_128_decode_16"
+        | "prefill_512_decode_32"
+        | "warm_session_10_turns"
+        | "decode_128_from_warm_context" => {
+            anyhow::bail!(
+                "PERF-005 profile `{profile}` is defined but does not yet have a live dispatcher; next proof requires a dedicated prefill/warm-context runner receipt. speedup_claim=false, full_residency_claim=false"
+            );
+        }
+        _ => {
+            anyhow::bail!(
+                "unknown CUDA-BITNET-PERF-005 profile `{profile}`; live profiles: one_token, short_decode_8, short_decode_32, warm_session_3_turns; blocked profiles: prefill_128_decode_16, prefill_512_decode_32, warm_session_10_turns, decode_128_from_warm_context"
+            );
+        }
+    }
+}
+
+#[cfg(feature = "cli-bench")]
+fn perf005_prompt_for_profile(profile_id: &str) -> &'static str {
+    match profile_id {
+        "one_token" => "Define entropy.",
+        "short_decode_8" => "Define entropy in one sentence.",
+        "short_decode_32" => "Explain why verified local inference needs fallback rejection.",
+        _ => "Define entropy.",
     }
 }
 
