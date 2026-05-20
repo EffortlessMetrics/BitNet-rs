@@ -135,8 +135,8 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-STABILITY-HARNESS-001 | merged | Implement the mixed dense-model switch benchmark harness before recording soak evidence. |
 | M4-STABILITY-001 | merged | Run a mixed dense-model switch soak with cache reuse and memory-drift evidence. |
 | M4-STABILITY-002 | proposed | Add cache and disk-pressure repair receipts for operator flows. |
-| M4-STABILITY-003 | proposed | Define scheduled M4 trend-retention and stale-identity policy. |
-| M4-RELIABILITY-001 | proposed | Add recovery drills for cancellation, interruption, low disk, cache corruption, and restart. |
+| M4-STABILITY-003 | merged | Define scheduled M4 trend-retention and stale-identity policy. |
+| M4-RELIABILITY-001 | pr_open | Add recovery drills for cancellation, interruption, low disk, cache corruption, and restart. |
 | M4-OBS-001 | proposed | Correlate progress events, logs, receipts, and failure diagnostics. |
 | M4-SERVE-EX-001 | proposed | Refresh dense SLM local-server conformance receipts. |
 | M4-SERVE-EX-002 | proposed | Prove dense and BitNet streaming/failure semantics after BitNet serve is gated. |

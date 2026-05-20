@@ -1154,6 +1154,33 @@ M4 dense SLM and BitNet evidence. The policy keeps trend claims tied to
 receipts that can still be compared by identity, while letting dashboard and
 operator summaries be regenerated from those retained receipts.
 
+`M4-RELIABILITY-001` adds a bounded model-free recovery-drill receipt:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T194116Z/reliability-drills/summary.json
+```
+
+The receipt records eight required drill classes across dense SLM, BitNet
+one-shot ask, and BitNet warm routes:
+
+```text
+interrupted_generation
+client_cancellation
+timeout
+interrupted_receipt_write
+missing_cache
+corrupt_cache
+low_disk
+process_restart
+```
+
+Each drill records the expected failure receipt obligations, `fallback_used=false`,
+operator-visible stage and elapsed-time requirements, and retry guidance. This
+is recovery-diagnostics and receipt-contract evidence only. It does not execute
+fresh live model interruption, enable BitNet chat or serve, prove service
+production readiness, claim full Metal, QK256, Neural Engine, MPSGraph,
+MacBook evidence, speedup, broad quality, or broad performance.
+
 Retain these committed receipt families for each current supported M4 identity:
 
 ```text

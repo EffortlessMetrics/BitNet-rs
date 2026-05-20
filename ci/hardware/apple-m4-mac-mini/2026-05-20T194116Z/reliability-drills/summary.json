@@ -1,0 +1,491 @@
+{
+  "artifact_kind": "apple_m4_reliability_drills",
+  "claim_boundary": {
+    "bitnet_chat_enabled": false,
+    "bitnet_quality_claimed": false,
+    "bitnet_serve_enabled": false,
+    "broad_apple_silicon_claim": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dense_slm_and_bitnet_evidence_separated": true,
+    "fresh_runtime_interruption_proof": false,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence": false,
+    "model_free": true,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "no_live_model_run": true,
+    "no_model_download": true,
+    "qk256_apple_claimed": false,
+    "recovery_drill_receipts": true,
+    "service_production_readiness_claimed": false,
+    "speedup_claim": false
+  },
+  "drill_contract": {
+    "fault_injection_receipt_contract": true,
+    "fresh_runtime_interruption_proof": false,
+    "generic_pr_ci_safe": true,
+    "live_model_run": false,
+    "model_free": true,
+    "route_scope": "dense SLM plus BitNet one-shot ask and warm routes",
+    "routes_proven_by_this_receipt": "recovery diagnostics, receipt obligations, and retry guidance only"
+  },
+  "drill_count": 8,
+  "drill_ids": [
+    "interrupted_generation",
+    "client_cancellation",
+    "timeout",
+    "interrupted_receipt_write",
+    "missing_cache",
+    "corrupt_cache",
+    "low_disk",
+    "process_restart"
+  ],
+  "drills": [
+    {
+      "evidence_mode": "model_free_fault_injection_receipt_contract",
+      "expected_failure_receipt": {
+        "fallback_used": false,
+        "must_preserve_claim_boundary": true,
+        "must_record_elapsed_ms": true,
+        "must_record_retry_guidance": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": true,
+        "required": true,
+        "status": "failed"
+      },
+      "failure_stage": "generation_interrupted",
+      "id": "interrupted_generation",
+      "live_model_run": false,
+      "model_families": [
+        "dense_slm",
+        "bitnet"
+      ],
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "model/tokenizer identity or cache-repair target recorded when applicable",
+        "failure stage and operator-visible message recorded",
+        "retry guidance recorded",
+        "claim boundary preserved"
+      ],
+      "retry_guidance": [
+        "Stop generation cooperatively, then write a failed receipt with the last completed stage.",
+        "Retry with a smaller --max-new-tokens value or rerun the same prompt after confirming the previous receipt was written."
+      ],
+      "route_families": [
+        "dense_slm",
+        "bitnet_one_shot",
+        "bitnet_warm"
+      ],
+      "status": "pass"
+    },
+    {
+      "evidence_mode": "model_free_fault_injection_receipt_contract",
+      "expected_failure_receipt": {
+        "fallback_used": false,
+        "must_preserve_claim_boundary": true,
+        "must_record_elapsed_ms": true,
+        "must_record_retry_guidance": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": true,
+        "required": true,
+        "status": "cancelled"
+      },
+      "failure_stage": "client_cancelled",
+      "id": "client_cancellation",
+      "live_model_run": false,
+      "model_families": [
+        "dense_slm",
+        "bitnet"
+      ],
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "model/tokenizer identity or cache-repair target recorded when applicable",
+        "failure stage and operator-visible message recorded",
+        "retry guidance recorded",
+        "claim boundary preserved"
+      ],
+      "retry_guidance": [
+        "Record cancellation as an operator-visible outcome instead of silently dropping the run.",
+        "For chat or warm routes, exit between prompts or rerun with per-turn receipts enabled before using the aggregate receipt for claims."
+      ],
+      "route_families": [
+        "dense_slm",
+        "bitnet_one_shot",
+        "bitnet_warm"
+      ],
+      "status": "pass"
+    },
+    {
+      "evidence_mode": "model_free_fault_injection_receipt_contract",
+      "expected_failure_receipt": {
+        "fallback_used": false,
+        "must_preserve_claim_boundary": true,
+        "must_record_elapsed_ms": true,
+        "must_record_retry_guidance": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": false,
+        "required": true,
+        "status": "timed_out"
+      },
+      "failure_stage": "timeout_reached",
+      "id": "timeout",
+      "live_model_run": false,
+      "model_families": [
+        "dense_slm",
+        "bitnet"
+      ],
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "model/tokenizer identity or cache-repair target recorded when applicable",
+        "failure stage and operator-visible message recorded",
+        "retry guidance recorded",
+        "claim boundary preserved"
+      ],
+      "retry_guidance": [
+        "Record the configured timeout, reached stage, elapsed milliseconds, and empty or partial generation state.",
+        "Increase the timeout only after checking whether load, tokenizer, prefill, first-token, or decode time dominated the run."
+      ],
+      "route_families": [
+        "dense_slm",
+        "bitnet_one_shot",
+        "bitnet_warm"
+      ],
+      "status": "pass"
+    },
+    {
+      "evidence_mode": "model_free_fault_injection_receipt_contract",
+      "expected_failure_receipt": {
+        "fallback_used": false,
+        "must_preserve_claim_boundary": true,
+        "must_record_elapsed_ms": true,
+        "must_record_retry_guidance": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": true,
+        "required": true,
+        "status": "failed"
+      },
+      "failure_stage": "receipt_write_interrupted",
+      "id": "interrupted_receipt_write",
+      "live_model_run": false,
+      "model_families": [
+        "dense_slm",
+        "bitnet"
+      ],
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "model/tokenizer identity or cache-repair target recorded when applicable",
+        "failure stage and operator-visible message recorded",
+        "retry guidance recorded",
+        "claim boundary preserved"
+      ],
+      "retry_guidance": [
+        "Treat an interrupted receipt write as unusable until receipts-check passes on the replacement receipt.",
+        "Rerun the command with a fresh --json-out path and preserve the partial file only as diagnostic evidence."
+      ],
+      "route_families": [
+        "dense_slm",
+        "bitnet_one_shot",
+        "bitnet_warm"
+      ],
+      "status": "pass"
+    },
+    {
+      "evidence_mode": "model_free_fault_injection_receipt_contract",
+      "expected_failure_receipt": {
+        "fallback_used": false,
+        "must_preserve_claim_boundary": true,
+        "must_record_elapsed_ms": true,
+        "must_record_retry_guidance": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": false,
+        "required": true,
+        "status": "blocked"
+      },
+      "failure_stage": "model_cache_missing",
+      "id": "missing_cache",
+      "live_model_run": false,
+      "model_families": [
+        "dense_slm",
+        "bitnet"
+      ],
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "model/tokenizer identity or cache-repair target recorded when applicable",
+        "failure stage and operator-visible message recorded",
+        "retry guidance recorded",
+        "claim boundary preserved"
+      ],
+      "retry_guidance": [
+        "Run bitnet mac models and the recorded bitnet model fetch command for the selected model.",
+        "Do not substitute dense Qwen cache readiness for BitNet cache or tokenizer readiness."
+      ],
+      "route_families": [
+        "dense_slm",
+        "bitnet_one_shot",
+        "bitnet_warm"
+      ],
+      "status": "pass"
+    },
+    {
+      "evidence_mode": "model_free_fault_injection_receipt_contract",
+      "expected_failure_receipt": {
+        "fallback_used": false,
+        "must_preserve_claim_boundary": true,
+        "must_record_elapsed_ms": true,
+        "must_record_retry_guidance": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": false,
+        "required": true,
+        "status": "blocked"
+      },
+      "failure_stage": "model_cache_corrupt",
+      "id": "corrupt_cache",
+      "live_model_run": false,
+      "model_families": [
+        "dense_slm",
+        "bitnet"
+      ],
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "model/tokenizer identity or cache-repair target recorded when applicable",
+        "failure stage and operator-visible message recorded",
+        "retry guidance recorded",
+        "claim boundary preserved"
+      ],
+      "retry_guidance": [
+        "Run bitnet model verify for the exact model id and repair only the failed cache entry.",
+        "Record the expected SHA256 and observed failure before replacing the artifact."
+      ],
+      "route_families": [
+        "dense_slm",
+        "bitnet_one_shot",
+        "bitnet_warm"
+      ],
+      "status": "pass"
+    },
+    {
+      "evidence_mode": "model_free_fault_injection_receipt_contract",
+      "expected_failure_receipt": {
+        "fallback_used": false,
+        "must_preserve_claim_boundary": true,
+        "must_record_elapsed_ms": true,
+        "must_record_retry_guidance": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": false,
+        "required": true,
+        "status": "blocked"
+      },
+      "failure_stage": "low_disk_headroom",
+      "id": "low_disk",
+      "live_model_run": false,
+      "model_families": [
+        "dense_slm",
+        "bitnet"
+      ],
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "model/tokenizer identity or cache-repair target recorded when applicable",
+        "failure stage and operator-visible message recorded",
+        "retry guidance recorded",
+        "claim boundary preserved"
+      ],
+      "retry_guidance": [
+        "Run bitnet model prune --dry-run --json before deleting cache entries.",
+        "Move BITNET_MODEL_CACHE_DIR or free disk before fetching or running long BitNet or dense benchmark jobs."
+      ],
+      "route_families": [
+        "dense_slm",
+        "bitnet_one_shot",
+        "bitnet_warm"
+      ],
+      "status": "pass"
+    },
+    {
+      "evidence_mode": "model_free_fault_injection_receipt_contract",
+      "expected_failure_receipt": {
+        "fallback_used": false,
+        "must_preserve_claim_boundary": true,
+        "must_record_elapsed_ms": true,
+        "must_record_retry_guidance": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": true,
+        "required": true,
+        "status": "failed"
+      },
+      "failure_stage": "process_restarted",
+      "id": "process_restart",
+      "live_model_run": false,
+      "model_families": [
+        "dense_slm",
+        "bitnet"
+      ],
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "model/tokenizer identity or cache-repair target recorded when applicable",
+        "failure stage and operator-visible message recorded",
+        "retry guidance recorded",
+        "claim boundary preserved"
+      ],
+      "retry_guidance": [
+        "Assume resident state was lost and require a new aggregate receipt after restart.",
+        "Use per-turn receipts to identify the last completed prompt before rerunning the remaining prompts."
+      ],
+      "route_families": [
+        "dense_slm",
+        "bitnet_one_shot",
+        "bitnet_warm"
+      ],
+      "status": "pass"
+    }
+  ],
+  "fallback_used": false,
+  "generated_at": "2026-05-20T19:58:53.418181+00:00",
+  "machine": {
+    "id": "apple-m4-mac-mini",
+    "scope": "bounded local recovery-drill coverage"
+  },
+  "operator_command": "mac reliability-drill",
+  "operator_commands": {
+    "bitnet_status": "bitnet mac doctor --json --include-bitnet",
+    "cache_prune_preview": "bitnet model prune --dry-run --json",
+    "dense_status": "bitnet mac doctor --json",
+    "receipt_check": "bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-20T194116Z/reliability-drills/summary.json --json",
+    "run": "target/release/bitnet --device apple-m4-cpu-neon mac reliability-drill --json-out ci/hardware/apple-m4-mac-mini/2026-05-20T194116Z/reliability-drills/summary.json"
+  },
+  "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-20T194116Z/reliability-drills/summary.json",
+  "requested_backend": "apple-m4-cpu-neon",
+  "route_families_covered": [
+    "dense_slm",
+    "bitnet_one_shot",
+    "bitnet_warm"
+  ],
+  "route_family_count": 3,
+  "routes": {
+    "bitnet_one_shot": {
+      "disabled_surfaces": [
+        "chat",
+        "serve"
+      ],
+      "enabled_routes": [
+        "mac ask"
+      ],
+      "family": "bitnet_one_shot",
+      "receipt_surfaces": [
+        "BitNet one-shot ask success or failure receipt"
+      ]
+    },
+    "bitnet_warm": {
+      "disabled_surfaces": [
+        "chat",
+        "serve"
+      ],
+      "enabled_routes": [
+        "mac bitnet-warm"
+      ],
+      "family": "bitnet_warm",
+      "receipt_surfaces": [
+        "BitNet warm aggregate, per-turn, timeout, or failure receipt"
+      ]
+    },
+    "dense_slm": {
+      "enabled_routes": [
+        "mac ask",
+        "mac chat",
+        "mac serve"
+      ],
+      "family": "dense_slm",
+      "receipt_surfaces": [
+        "one-shot answer receipt",
+        "chat aggregate and per-turn receipts",
+        "local-server failure or per-request receipts"
+      ]
+    }
+  },
+  "run_identity": {
+    "artifact_kind": "apple_m4_reliability_drills",
+    "backend": {
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "binary": {
+      "binary_sha256": null,
+      "binary_sha256_status": "not_recorded_build_profile_used",
+      "build_profile": "debug",
+      "crate_version": "0.2.1-dev"
+    },
+    "command": {
+      "class": "mac reliability-drill",
+      "live_model_run": false
+    },
+    "contract_version": "m4-run-identity-v1",
+    "evidence_family": "operator",
+    "evidence_identity": {
+      "corpus_id": "not_applicable",
+      "profile_id": "not_applicable",
+      "scope": "recovery_drill_receipt_contract",
+      "seed": "not_applicable"
+    },
+    "git": {
+      "commit": "8531b501680d8a28c86586bf465a63cacc02a3fb",
+      "commit_source": "git_rev_parse"
+    },
+    "machine_id": "apple-m4-mac-mini",
+    "model": {
+      "id": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "not_applicable"
+    },
+    "os": {
+      "name": "macos",
+      "version": "26.4.1",
+      "version_source": "sw_vers"
+    },
+    "prompt_template": {
+      "id": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "243ffa2eeced1cbfa18357fe8edf03833381b9a83359bf0930ae5e8e862ab30e"
+    },
+    "soc": "apple-m4",
+    "timing": {
+      "source": "wall_clock_utc"
+    },
+    "tokenizer": {
+      "authority": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "not_applicable"
+    }
+  },
+  "run_identity_sha256": "977047d7e82d6768b02fde2348b27dc97fe473c2dbc60ee89bfac87ee5594599",
+  "runtime_api": "cpu",
+  "schema_version": "1.2.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "status": "ok",
+  "work_item": "M4-RELIABILITY-001"
+}

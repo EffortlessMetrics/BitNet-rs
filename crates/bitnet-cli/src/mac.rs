@@ -37,6 +37,8 @@ const MAC_REGRESSION_DASHBOARD_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-ops/regression-dashboard.json";
 const MAC_REGRESSION_DASHBOARD_DEFAULT_MARKDOWN: &str =
     "target/apple-m4-inference-ops/regression-dashboard.md";
+const MAC_RELIABILITY_DRILL_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-inference-excellence/reliability-drills/summary.json";
 const APPLE_M4_REPORT_ROOT: &str = "ci/hardware/apple-m4-mac-mini";
 const MAC_BITNET_WARM_DEFAULT_RECEIPT: &str = "target/apple-m4-local-answer/mac-bitnet-warm.json";
 const MAC_BITNET_BENCHMARK_DEFAULT_RECEIPT: &str =
@@ -171,6 +173,18 @@ const M4_ROBUSTNESS_REQUIRED_CATEGORIES: &[&str] = &[
     "format_trap",
     "unsupported_request",
 ];
+const M4_RELIABILITY_REQUIRED_DRILLS: &[&str] = &[
+    "interrupted_generation",
+    "client_cancellation",
+    "timeout",
+    "interrupted_receipt_write",
+    "missing_cache",
+    "corrupt_cache",
+    "low_disk",
+    "process_restart",
+];
+const M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES: &[&str] =
+    &["dense_slm", "bitnet_one_shot", "bitnet_warm"];
 const M4_ROBUSTNESS_MODEL_FAMILIES: &[&str] = &["dense_slm", "bitnet"];
 const M4_CONTEXT_SHORT_PROMPT_TOKENS: usize = 512;
 const M4_CONTEXT_1K_PROMPT_TOKENS: usize = 1_024;
@@ -587,6 +601,17 @@ enum MacAction {
         open_targets: bool,
 
         /// Emit JSON to stdout after writing --json-out and --markdown-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
+    /// Write bounded M4 recovery-drill coverage and retry-guidance receipts.
+    ReliabilityDrill {
+        /// Output strict M4 reliability-drill receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_RELIABILITY_DRILL_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Emit JSON to stdout after writing --json-out.
         #[arg(long, default_value_t = false)]
         json: bool,
     },
@@ -1433,6 +1458,10 @@ impl MacCommand {
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac regression-dashboard")?;
                 run_regression_dashboard(root, json_out, markdown_out, explain, open_targets, json)
+            }
+            MacAction::ReliabilityDrill { json_out, json } => {
+                ensure_supported_mac_device(explicit_device_label, "mac reliability-drill")?;
+                run_reliability_drill(json_out, json)
             }
             MacAction::Check { model_id, cache_dir, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac check")?;
@@ -3968,6 +3997,255 @@ fn run_regression_dashboard(
         }
     }
     Ok(())
+}
+
+fn run_reliability_drill(json_out: PathBuf, json: bool) -> Result<()> {
+    let receipt = apple_m4_reliability_drill_receipt(&json_out);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_reliability_drill_summary(&receipt, &json_out);
+    }
+    Ok(())
+}
+
+fn print_reliability_drill_summary(receipt: &serde_json::Value, json_out: &Path) {
+    println!(
+        "Mac reliability drills recorded: {} drills across {} route families ({})",
+        receipt["drill_count"].as_u64().unwrap_or_default(),
+        receipt["route_family_count"].as_u64().unwrap_or_default(),
+        json_out.display()
+    );
+    println!(
+        "Claim boundary: model-free recovery-drill coverage only; no live inference, BitNet chat/serve, full Metal, or broad performance claim."
+    );
+}
+
+fn apple_m4_reliability_drill_receipt(json_out: &Path) -> serde_json::Value {
+    let drills = apple_m4_reliability_drill_cases();
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_reliability_drills",
+        "mac reliability-drill",
+        "recovery_drill_receipt_contract",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    serde_json::json!({
+        "schema_version": "1.2.0",
+        "artifact_kind": "apple_m4_reliability_drills",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac reliability-drill",
+        "work_item": "M4-RELIABILITY-001",
+        "status": "ok",
+        "receipt_path": json_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "bounded local recovery-drill coverage",
+        },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
+        "drill_contract": {
+            "model_free": true,
+            "live_model_run": false,
+            "fault_injection_receipt_contract": true,
+            "route_scope": "dense SLM plus BitNet one-shot ask and warm routes",
+            "routes_proven_by_this_receipt": "recovery diagnostics, receipt obligations, and retry guidance only",
+            "fresh_runtime_interruption_proof": false,
+            "generic_pr_ci_safe": true,
+        },
+        "drill_ids": M4_RELIABILITY_REQUIRED_DRILLS,
+        "route_families_covered": M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES,
+        "drill_count": drills.len(),
+        "route_family_count": M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES.len(),
+        "routes": apple_m4_reliability_route_matrix_json(),
+        "drills": drills,
+        "operator_commands": {
+            "run": format!(
+                "target/release/bitnet --device {APPLE_M4_CPU_NEON} mac reliability-drill --json-out {}",
+                json_out.display()
+            ),
+            "receipt_check": format!("bitnet mac receipts-check {} --json", json_out.display()),
+            "dense_status": "bitnet mac doctor --json",
+            "bitnet_status": "bitnet mac doctor --json --include-bitnet",
+            "cache_prune_preview": "bitnet model prune --dry-run --json",
+        },
+        "claim_boundary": {
+            "recovery_drill_receipts": true,
+            "model_free": true,
+            "no_live_model_run": true,
+            "no_model_download": true,
+            "fresh_runtime_interruption_proof": false,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "service_production_readiness_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "bitnet_quality_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_reliability_route_matrix_json() -> serde_json::Value {
+    serde_json::json!({
+        "dense_slm": {
+            "family": "dense_slm",
+            "enabled_routes": ["mac ask", "mac chat", "mac serve"],
+            "receipt_surfaces": [
+                "one-shot answer receipt",
+                "chat aggregate and per-turn receipts",
+                "local-server failure or per-request receipts"
+            ],
+        },
+        "bitnet_one_shot": {
+            "family": "bitnet_one_shot",
+            "enabled_routes": ["mac ask"],
+            "receipt_surfaces": ["BitNet one-shot ask success or failure receipt"],
+            "disabled_surfaces": ["chat", "serve"],
+        },
+        "bitnet_warm": {
+            "family": "bitnet_warm",
+            "enabled_routes": ["mac bitnet-warm"],
+            "receipt_surfaces": ["BitNet warm aggregate, per-turn, timeout, or failure receipt"],
+            "disabled_surfaces": ["chat", "serve"],
+        },
+    })
+}
+
+fn apple_m4_reliability_drill_cases() -> Vec<serde_json::Value> {
+    vec![
+        apple_m4_reliability_drill_case(
+            "interrupted_generation",
+            "generation_interrupted",
+            "failed",
+            true,
+            &[
+                "Stop generation cooperatively, then write a failed receipt with the last completed stage.",
+                "Retry with a smaller --max-new-tokens value or rerun the same prompt after confirming the previous receipt was written.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "client_cancellation",
+            "client_cancelled",
+            "cancelled",
+            true,
+            &[
+                "Record cancellation as an operator-visible outcome instead of silently dropping the run.",
+                "For chat or warm routes, exit between prompts or rerun with per-turn receipts enabled before using the aggregate receipt for claims.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "timeout",
+            "timeout_reached",
+            "timed_out",
+            false,
+            &[
+                "Record the configured timeout, reached stage, elapsed milliseconds, and empty or partial generation state.",
+                "Increase the timeout only after checking whether load, tokenizer, prefill, first-token, or decode time dominated the run.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "interrupted_receipt_write",
+            "receipt_write_interrupted",
+            "failed",
+            true,
+            &[
+                "Treat an interrupted receipt write as unusable until receipts-check passes on the replacement receipt.",
+                "Rerun the command with a fresh --json-out path and preserve the partial file only as diagnostic evidence.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "missing_cache",
+            "model_cache_missing",
+            "blocked",
+            false,
+            &[
+                "Run bitnet mac models and the recorded bitnet model fetch command for the selected model.",
+                "Do not substitute dense Qwen cache readiness for BitNet cache or tokenizer readiness.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "corrupt_cache",
+            "model_cache_corrupt",
+            "blocked",
+            false,
+            &[
+                "Run bitnet model verify for the exact model id and repair only the failed cache entry.",
+                "Record the expected SHA256 and observed failure before replacing the artifact.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "low_disk",
+            "low_disk_headroom",
+            "blocked",
+            false,
+            &[
+                "Run bitnet model prune --dry-run --json before deleting cache entries.",
+                "Move BITNET_MODEL_CACHE_DIR or free disk before fetching or running long BitNet or dense benchmark jobs.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "process_restart",
+            "process_restarted",
+            "failed",
+            true,
+            &[
+                "Assume resident state was lost and require a new aggregate receipt after restart.",
+                "Use per-turn receipts to identify the last completed prompt before rerunning the remaining prompts.",
+            ],
+        ),
+    ]
+}
+
+fn apple_m4_reliability_drill_case(
+    id: &str,
+    failure_stage: &str,
+    receipt_status: &str,
+    partial_generation_allowed: bool,
+    retry_guidance: &[&str],
+) -> serde_json::Value {
+    serde_json::json!({
+        "id": id,
+        "status": "pass",
+        "model_families": ["dense_slm", "bitnet"],
+        "route_families": M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES,
+        "failure_stage": failure_stage,
+        "evidence_mode": "model_free_fault_injection_receipt_contract",
+        "live_model_run": false,
+        "expected_failure_receipt": {
+            "required": true,
+            "status": receipt_status,
+            "fallback_used": false,
+            "partial_generation_allowed": partial_generation_allowed,
+            "must_record_stage": true,
+            "must_record_elapsed_ms": true,
+            "must_record_retry_guidance": true,
+            "must_preserve_claim_boundary": true,
+        },
+        "receipt_obligations": [
+            "requested_backend=apple-m4-cpu-neon",
+            "selected_backend=apple-m4-cpu-neon",
+            "runtime_api=cpu",
+            "fallback_used=false",
+            "model/tokenizer identity or cache-repair target recorded when applicable",
+            "failure stage and operator-visible message recorded",
+            "retry guidance recorded",
+            "claim boundary preserved"
+        ],
+        "retry_guidance": retry_guidance,
+    })
 }
 
 fn apple_m4_regression_dashboard_receipt(
@@ -18517,6 +18795,8 @@ fn validate_mac_receipt_value(
         validate_apple_m4_report_refresh_manifest_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_regression_dashboard" {
         validate_apple_m4_regression_dashboard_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_reliability_drills" {
+        validate_apple_m4_reliability_drills_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -20803,6 +21083,172 @@ fn validate_apple_m4_regression_dashboard_receipt(
             path.display()
         );
     }
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_reliability_drills_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_reliability_drills")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac reliability-drill")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-RELIABILITY-001")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_bool_at(path, receipt, &["drill_contract", "model_free"], true)?;
+    require_bool_at(path, receipt, &["drill_contract", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["drill_contract", "fault_injection_receipt_contract"], true)?;
+    require_bool_at(path, receipt, &["drill_contract", "fresh_runtime_interruption_proof"], false)?;
+    require_bool_at(path, receipt, &["drill_contract", "generic_pr_ci_safe"], true)?;
+    require_string_array_equals(path, receipt, &["drill_ids"], M4_RELIABILITY_REQUIRED_DRILLS)?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["route_families_covered"],
+        M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES,
+    )?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["drill_count"],
+        M4_RELIABILITY_REQUIRED_DRILLS.len() as u64,
+    )?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["route_family_count"],
+        M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES.len() as u64,
+    )?;
+
+    for family in M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES {
+        require_exact_string_at(path, receipt, &["routes", family, "family"], family)?;
+        require_non_empty_string_array_at(path, receipt, &["routes", family, "enabled_routes"])?;
+        require_non_empty_string_array_at(path, receipt, &["routes", family, "receipt_surfaces"])?;
+    }
+
+    let drills = receipt["drills"].as_array().ok_or_else(|| {
+        anyhow!("{} reliability-drill receipt is missing drills array", path.display())
+    })?;
+    if drills.len() != M4_RELIABILITY_REQUIRED_DRILLS.len() {
+        anyhow::bail!(
+            "{} reliability-drill receipt must contain {} drills, got {}",
+            path.display(),
+            M4_RELIABILITY_REQUIRED_DRILLS.len(),
+            drills.len()
+        );
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    for drill in drills {
+        let id = require_non_empty_string_at(path, drill, &["id"])?;
+        if !M4_RELIABILITY_REQUIRED_DRILLS.contains(&id) {
+            anyhow::bail!(
+                "{} reliability-drill receipt has unexpected drill id {id:?}",
+                path.display()
+            );
+        }
+        if !seen.insert(id.to_string()) {
+            anyhow::bail!(
+                "{} reliability-drill receipt duplicates drill id {id:?}",
+                path.display()
+            );
+        }
+        require_exact_string_at(path, drill, &["status"], "pass")?;
+        require_string_array_equals(
+            path,
+            drill,
+            &["route_families"],
+            M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES,
+        )?;
+        require_non_empty_string_at(path, drill, &["failure_stage"])?;
+        require_exact_string_at(
+            path,
+            drill,
+            &["evidence_mode"],
+            "model_free_fault_injection_receipt_contract",
+        )?;
+        require_bool_at(path, drill, &["live_model_run"], false)?;
+        require_bool_at(path, drill, &["expected_failure_receipt", "required"], true)?;
+        require_bool_at(path, drill, &["expected_failure_receipt", "fallback_used"], false)?;
+        require_bool_at(path, drill, &["expected_failure_receipt", "must_record_stage"], true)?;
+        require_bool_at(
+            path,
+            drill,
+            &["expected_failure_receipt", "must_record_elapsed_ms"],
+            true,
+        )?;
+        require_bool_at(
+            path,
+            drill,
+            &["expected_failure_receipt", "must_record_retry_guidance"],
+            true,
+        )?;
+        require_bool_at(
+            path,
+            drill,
+            &["expected_failure_receipt", "must_preserve_claim_boundary"],
+            true,
+        )?;
+        let status =
+            require_non_empty_string_at(path, drill, &["expected_failure_receipt", "status"])?;
+        if !matches!(status, "failed" | "cancelled" | "timed_out" | "blocked") {
+            anyhow::bail!(
+                "{} reliability-drill {id} has unsupported expected status {status:?}",
+                path.display()
+            );
+        }
+        require_bool_value_at(
+            path,
+            drill,
+            &["expected_failure_receipt", "partial_generation_allowed"],
+        )?;
+        require_non_empty_string_array_at(path, drill, &["receipt_obligations"])?;
+        require_non_empty_string_array_at(path, drill, &["retry_guidance"])?;
+    }
+    for required in M4_RELIABILITY_REQUIRED_DRILLS {
+        if !seen.contains(*required) {
+            anyhow::bail!(
+                "{} reliability-drill receipt is missing required drill {required}",
+                path.display()
+            );
+        }
+    }
+
+    for field in ["run", "receipt_check", "dense_status", "bitnet_status", "cache_prune_preview"] {
+        require_non_empty_string_at(path, receipt, &["operator_commands", field])?;
+    }
+    require_bool_at(path, receipt, &["claim_boundary", "recovery_drill_receipts"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "model_free"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "fresh_runtime_interruption_proof"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "service_production_readiness_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
     Ok((Some(0), Some(0)))
 }
 
@@ -26383,6 +26829,55 @@ mod tests {
         assert_eq!(summary.artifact_kind, "bitnet_apple_m4_benchmark_v1");
         assert_eq!(summary.prompt_count, Some(4));
         assert_eq!(summary.generated_tokens, Some(8));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_accepts_reliability_drills() -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("reliability-drills.json");
+        let receipt = apple_m4_reliability_drill_receipt(&receipt_path);
+
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_reliability_drills");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(0));
+        assert_eq!(summary.generated_tokens, Some(0));
+        assert_eq!(receipt["work_item"], "M4-RELIABILITY-001");
+        assert_eq!(
+            receipt["drill_count"].as_u64(),
+            Some(M4_RELIABILITY_REQUIRED_DRILLS.len() as u64)
+        );
+        assert_eq!(receipt["claim_boundary"]["no_live_model_run"], true);
+        assert_eq!(receipt["claim_boundary"]["bitnet_chat_enabled"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_serve_enabled"], false);
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_rejects_reliability_drills_missing_required_case()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("reliability-drills.json");
+        let mut receipt = apple_m4_reliability_drill_receipt(&receipt_path);
+        receipt["drills"]
+            .as_array_mut()
+            .ok_or_else(|| std::io::Error::other("drills array"))?
+            .retain(|drill| drill["id"].as_str() != Some("low_disk"));
+
+        let err = match validate_mac_receipt_value(&receipt_path, &receipt) {
+            Ok(summary) => {
+                return Err(format!(
+                    "reliability drills without low_disk should fail, got {summary:?}"
+                )
+                .into());
+            }
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains("must contain"), "got: {err}");
         Ok(())
     }
 

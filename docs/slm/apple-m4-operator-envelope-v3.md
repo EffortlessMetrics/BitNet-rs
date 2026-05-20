@@ -218,6 +218,9 @@ target/release/bitnet --device apple-m4-cpu-neon mac bitnet-warm \
   --prompt 'Answer with a single digit: 2+2=' \
   --json-out ci/hardware/apple-m4-mac-mini/<date>/bitnet-productization/variable-warm-session.json
 
+target/release/bitnet --device apple-m4-cpu-neon mac reliability-drill \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/reliability-drills/summary.json
+
 target/release/bitnet mac receipts-check <new-receipt.json> --json
 target/release/bitnet mac regression <new-eval-or-benchmark.json> --baseline <matching-baseline.json>
 target/release/bitnet mac report-refresh --json
