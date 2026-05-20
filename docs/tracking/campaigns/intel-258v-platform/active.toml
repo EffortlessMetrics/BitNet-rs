@@ -8280,6 +8280,78 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SWARM-LNL258V-BITNET-INTAKE-005"
+status = "pr_open"
+pr = 42
+branch = "codex/swarm-lnl258v-bitnet-intake-closed-watchpoints"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SWARM-LNL258V-REG-001", "LNL258V-BITNET-INTAKE-004"]
+acceptance = "Refresh the native swarm Lunar Lake BitNet semantic-intake ledger after live GitHub verification shows old A770 shared BitNet semantic watchpoint PRs #4756, #4757, #4767, #4853, and #5064 are closed without merge. Record them as closed_unmerged, rebuild semantic-intake, strict regression, operator comparison, excellence audit, and goal checklist artifacts, and preserve no inference, route promotion, speedup, power-advantage, stale-BitNet, native accelerator, acceleration, broad quality, measured-temperature, battery-mode evidence, or BitNet QK256/I2_S behavior-change claims."
+commands = [
+  "gh pr view 4756 --repo EffortlessMetrics/BitNet-rs --json state,mergedAt,mergeCommit",
+  "gh pr view 4757 --repo EffortlessMetrics/BitNet-rs --json state,mergedAt,mergeCommit",
+  "gh pr view 4767 --repo EffortlessMetrics/BitNet-rs --json state,mergedAt,mergeCommit",
+  "gh pr view 4853 --repo EffortlessMetrics/BitNet-rs --json state,mergedAt,mergeCommit",
+  "gh pr view 5064 --repo EffortlessMetrics/BitNet-rs --json state,mergedAt,mergeCommit",
+  "target/debug/bitnet.exe lunar-lake bitnet-intake --artifact-root ci/hardware/intel-258v/2026-05-08 --source-changes lunar-lake-bitnet-semantic-source-changes.json --cpu-reference-bundle cpu-reference-bundle-after-semantic-fix.json --operator-comparison lunar-lake-operator-comparison.json --json-out lunar-lake-bitnet-semantic-intake.json --created-utc 2026-05-20T12:25:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-20T12:25:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-20T12:25:00Z --strict",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/campaigns/nvidia-5070ti/generated/status.md",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+]
+may_claim = [
+  "Live GitHub verification shows A770 PRs #4756, #4757, #4767, #4853, and #5064 are closed without merge commits.",
+  "Lunar Lake BitNet semantic intake now records zero pending shared changes, six closed shared changes, zero merged-to-main shared changes, and no rerun required.",
+  "Strict regression and operator comparison remain ready after the closed-unmerged watchpoint refresh.",
+  "POWER-006 remains blocked until real battery-mode low_power telemetry and energy-proxy evidence exist.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "A measured thermal temperature is available.",
+  "Battery-mode low_power evidence is available while the 258V remains on AC power.",
+  "Any indexed A770 semantic PR has merged to main.",
+  "Current Lunar Lake BitNet evidence is stale after a merged A770 semantic PR.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "SWARM-LNL258V-MIGRATE-001"
 status = "merged"
 branch = "codex/swarm-lnl258v-migrate-001-inventory"

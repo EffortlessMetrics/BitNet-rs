@@ -36,12 +36,12 @@
 | falcon-e-family | Falcon-E Family compact 1.58-bit lane | FE-000 | Do not commit model binaries. |
 | falcon3-family | Falcon3 multi-size BitNet-family onboarding | F3-000 | Do not commit model binaries. |
 | i2s | I2_S productization | I2S-DOCS-000 | Do not change runtime code in docs-only I2_S tracker slices. |
-| intel-258v-platform | Intel 258V platform validation | LNL258V-POWER-006 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
+| intel-258v-platform | Intel 258V platform validation | SWARM-LNL258V-BITNET-INTAKE-005 | 258V CPU proof is first priority; NPU and Arc proofs must compare against the 258V CPU reference before BitNet-adjacent parity claims. |
 | intel-a770 | Intel Arc A770 validation | A770-007 | OpenCL-first for native A770 proof. |
 | intel-npu | Intel NPU validation | NPU-013 | Device-node detection is not inference. |
 | llama3-8b-158 | Llama3 8B 1.58 supported-model candidate | LLAMA3-158-000 | Do not commit model binaries. |
 | model-artifacts | Model artifact answer authority | MODEL-ARTIFACT-002 | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
-| nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-DENSE-014 | CUDA visibility is not kernel execution. |
+| nvidia-5070ti | NVIDIA RTX 5070 Ti validation | CUDA-BITNET-PERF-005 | CUDA visibility is not kernel execution. |
 | official-bitnet-2b | Official Microsoft BitNet 2B productization | OFFICIAL-2B-000 | Do not commit model binaries. |
 | qwen36 | Qwen3.6 governed model family | QWEN36-DOCS-000 | Qwen3.6 registration is not native BitNet-rs inference support. |
 | server-real-inference | Server real inference | SERVER-005 | Do not reintroduce simulated inference. |
