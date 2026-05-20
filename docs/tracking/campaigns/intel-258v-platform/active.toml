@@ -8508,6 +8508,53 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SWARM-LNL258V-GOAL-AUDIT-001"
+status = "pr_open"
+pr = 34
+branch = "codex/swarm-lnl258v-goal-audit-current"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+acceptance = "Refresh the no-inference Lunar Lake excellence audit and goal artifact checklist after the native swarm strict proof and tracker closeout so the completion audit points at current swarm state, records SWARM-LNL258V-REG-001/#29 and closeout #32 as merged, records the live AC-only POWER-006 preflight blocker, and still marks excellent support not complete until real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage exist."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "scripts/**",
+  "models/**",
+  "ci/model-artifacts/**",
+]
+may_claim = [
+  "The completion audit now points at current swarm state after SWARM-LNL258V-REG-001/#29 and tracker closeout #32.",
+  "A live POWER-006 preflight remains blocked because the current machine reports AC power.",
+  "Excellent all-profile support remains not complete while low_power lacks real battery-mode evidence and benchmark-qualified power advantage.",
+]
+must_not_claim = [
+  "New inference was run by this audit refresh.",
+  "Any route promotion changed.",
+  "A speedup, power advantage, native accelerator, acceleration, broad quality, measured-temperature, battery-mode evidence, or BitNet QK256/I2_S behavior-change claim was added.",
+  "POWER-006 is complete.",
+]
+
+[[work_item]]
 id = "LNL258V-BITNET-INTAKE-002"
 status = "merged"
 pr = 5947

@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
-  "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-20T06:45:00Z",
+  "proof_stage": "swarm_objective_artifact_mapping_no_inference",
+  "created_utc": "2026-05-20T10:15:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "c5560df6f01a3dffb34249244731427446b3a547",
+  "source_revision": "f5acd924399b9d101fbc8936e70347bce11a3f75",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
-  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013/#6106 strict-regression-surface fields for BitNet CPU reference route evidence with closeout #6107 merged, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, merged BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run, A770-005/#6072 selected-device OpenCL smoke closeout #6079, and A770-006/#6110 selected-device OpenCL matmul_i2s CPU parity closeout #6112 as non-semantic adjacent accelerator evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable.",
+  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013/#6106 strict-regression-surface fields for BitNet CPU reference route evidence with closeout #6107 merged, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, merged BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run, A770-005/#6072 selected-device OpenCL smoke closeout #6079, and A770-006/#6110 selected-device OpenCL matmul_i2s CPU parity closeout #6112 as non-semantic adjacent accelerator evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable. In swarm, SWARM-LNL258V-REG-001/#29 proved strict regress and compare against the migrated receipts with no content drift, and tracker closeout #32 recorded that native swarm proof in the campaign tracker. This audit remains not_complete because a live telemetry-context --require-battery preflight still reports AC power and cannot satisfy POWER-006.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-006",
     "status": "blocked",
@@ -20,7 +20,10 @@
       "power-profile, regression-v2, operator-comparison, and excellence-audit artifacts are refreshed from battery-mode evidence",
       "operators follow docs/hardware/intel-258v-low-power-battery-runbook.md before collecting POWER-006 evidence",
       "low_power remains unpromoted unless answer gates, fallback=false, stable timing, and benchmark-qualified power advantage all pass"
-    ]
+    ],
+    "last_live_preflight_utc": "2026-05-20T09:55:00Z",
+    "last_live_preflight_status": "blocked_ac_power",
+    "last_live_preflight_evidence": "BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true"
   },
   "route_policy_snapshot": {
     "default_route_id": "dense_slm_default_cpu",
@@ -69,10 +72,27 @@
       "Profile-scoped OpenVINO GPU/NPU route policy is recorded only for committed promoted profiles.",
       "OpenVINO NPU warm_resident promotion is not a cold one-off or low_power promotion.",
       "OpenVINO routes are not native OpenCL or native NPU claims outside the recorded OpenVINO GenAI route evidence.",
-      "Dense Qwen SLM evidence is not BitNet QK256 or I2_S evidence."
+      "Dense Qwen SLM evidence is not BitNet QK256 or I2_S evidence.",
+      "The migrated swarm strict proof and tracker closeout are provenance evidence only; they do not change route promotion or low_power state."
     ]
   },
   "checklist": [
+    {
+      "id": "swarm_migration_strict_proof_and_tracker_closeout",
+      "status": "covered_no_evidence_claim",
+      "evidence": [
+        "ci/hardware/intel-258v/MIGRATION_MANIFEST.json",
+        "docs/migrations/lunar-lake-from-bitnet-rs.md",
+        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T095001Z-SWARM-LNL258V-REG-001-merged.toml",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/29",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/32"
+      ],
+      "notes": [
+        "SWARM-LNL258V-REG-001/#29 proves migrated strict regress and compare in swarm against committed receipts.",
+        "PR #32 records that proof in the native swarm tracker and updates generated Intel 258V status rows.",
+        "This is provenance and validation evidence only; it is not new inference, route promotion, speedup, power advantage, battery-mode evidence, or BitNet behavior change."
+      ]
+    },
     {
       "id": "low_power_battery_runbook_discoverability",
       "status": "covered_no_evidence_claim",
@@ -393,6 +413,11 @@
       "reason": "Battery-mode telemetry and low_power energy-proxy evidence are unavailable while the machine is on AC power."
     },
     {
+      "id": "swarm_power006_live_preflight",
+      "status": "blocked_ac_power",
+      "reason": "A live telemetry-context --require-battery preflight on 2026-05-20 reported AC power, so POWER-006 cannot be completed without a physical battery-mode run."
+    },
+    {
       "id": "thermal_temperature_readings",
       "status": "unavailable",
       "reason": "Thermal-zone visibility is indexed by readiness and regression, but usable measured temperature readings remain unavailable."
@@ -430,5 +455,6 @@
     "bitnet_qk256_or_i2s_behavior_changed": false,
     "bitnet_accelerator_full_inference_claim_added": false,
     "packed_qk256_accelerator_decode_claim_added": false
-  }
+  },
+  "swarm_revision": "f5acd924399b9d101fbc8936e70347bce11a3f75"
 }

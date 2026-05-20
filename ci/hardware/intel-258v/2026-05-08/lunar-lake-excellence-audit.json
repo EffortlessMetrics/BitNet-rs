@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
-  "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-20T06:45:00Z",
+  "proof_stage": "swarm_completion_audit_no_inference",
+  "created_utc": "2026-05-20T10:15:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "c5560df6f01a3dffb34249244731427446b3a547",
+  "source_revision": "f5acd924399b9d101fbc8936e70347bce11a3f75",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
   "excellent_support_ready": false,
-  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness, REG-011 gates route/profile and cold/warm evidence on route/model identity, OP-013 makes blocked auto routes fail closed before model resolution, OP-014 makes the blocked low_power auto ask surface point to the POWER-006 battery runbook and next battery-mode evidence, VALIDATE-003 carries that blocked low_power ask receipt into operator readiness so validate, regress, and compare all index the same runbook guidance, POWER-009/#6097 plus closeout #6099 are merged and carry the same runbook plus telemetry-context --require-battery guidance through power-profile evidence, REG-012/#6102 plus closeout #6103 are merged with Arc/NPU bounded proof coverage exposed as strict regression-surface indexed/ready fields without changing claims, and REG-013/#6106 plus closeout #6107 are merged with BitNet CPU reference route evidence exposed as strict regression-surface indexed/ready fields without changing BitNet behavior. ASK-006/ASK-007 index appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-004 is merged and closed out with pending A770 shared BitNet semantic stack watchpoints #4756, #4757, #4767, #4853, and #5064 indexed, POWER-007/POWER-008 make the physical battery-mode low_power runbook discoverable, and A770-005/#6072 plus closeout #6079 and A770-006/#6110 plus closeout #6112 landed adjacent selected-device OpenCL smoke/parity evidence without changing Lunar Lake BitNet semantic rerun state. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
+  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness, REG-011 gates route/profile and cold/warm evidence on route/model identity, OP-013 makes blocked auto routes fail closed before model resolution, OP-014 makes the blocked low_power auto ask surface point to the POWER-006 battery runbook and next battery-mode evidence, VALIDATE-003 carries that blocked low_power ask receipt into operator readiness so validate, regress, and compare all index the same runbook guidance, POWER-009/#6097 plus closeout #6099 are merged and carry the same runbook plus telemetry-context --require-battery guidance through power-profile evidence, REG-012/#6102 plus closeout #6103 are merged with Arc/NPU bounded proof coverage exposed as strict regression-surface indexed/ready fields without changing claims, and REG-013/#6106 plus closeout #6107 are merged with BitNet CPU reference route evidence exposed as strict regression-surface indexed/ready fields without changing BitNet behavior. ASK-006/ASK-007 index appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-004 is merged and closed out with pending A770 shared BitNet semantic stack watchpoints #4756, #4757, #4767, #4853, and #5064 indexed, POWER-007/POWER-008 make the physical battery-mode low_power runbook discoverable, and A770-005/#6072 plus closeout #6079 and A770-006/#6110 plus closeout #6112 landed adjacent selected-device OpenCL smoke/parity evidence without changing Lunar Lake BitNet semantic rerun state. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof. The swarm migration proof is now native tracker state: SWARM-LNL258V-REG-001/#29 merged as fb9db1577723a73682c63d49a3a6de893a2359cd, and tracker closeout #32 merged as f5acd924399b9d101fbc8936e70347bce11a3f75. A live telemetry-context --require-battery check on 2026-05-20 still reported AC power (BatteryStatus=2; EstimatedChargeRemaining=100; ac_power_inferred=true), so POWER-006 remains a physical battery-mode evidence blocker.",
   "tracker_state": {
     "active_item": "LNL258V-POWER-006",
     "active_item_status": "blocked",
@@ -70,7 +70,17 @@
     "last_bitnet_cpu_reference_surface_merge_sha": "5fb87bbb38a8e27a7b2847c59e0f6be496f3d3c2",
     "last_bitnet_cpu_reference_surface_closeout_pr": 6107,
     "last_bitnet_cpu_reference_surface_closeout_merge_sha": "72d86a72e7deaf8cdeed6a620f79dddf48ca5dd6",
-    "audit_refresh_scope": "no_inference_reg_013_closeout_refresh"
+    "audit_refresh_scope": "no_inference_swarm_post_reg001_closeout_refresh",
+    "last_swarm_migration_strict_proof_item": "SWARM-LNL258V-REG-001",
+    "last_swarm_migration_strict_proof_pr": 29,
+    "last_swarm_migration_strict_proof_merge_sha": "fb9db1577723a73682c63d49a3a6de893a2359cd",
+    "last_swarm_migration_strict_proof_merged_at": "2026-05-20T09:50:01Z",
+    "last_swarm_tracker_closeout_item": "SWARM-LNL258V-REG-001-CLOSEOUT",
+    "last_swarm_tracker_closeout_pr": 32,
+    "last_swarm_tracker_closeout_merge_sha": "f5acd924399b9d101fbc8936e70347bce11a3f75",
+    "last_swarm_tracker_closeout_merged_at": "2026-05-20T10:07:44Z",
+    "live_power006_preflight_utc": "2026-05-20T09:55:00Z",
+    "live_power006_preflight_status": "blocked_ac_power"
   },
   "command_surface": {
     "ask": {
@@ -414,14 +424,14 @@
     "A770-005/#6072 and closeout #6079 add selected-device OpenCL smoke evidence, and A770-006/#6110 plus closeout #6112 add selected-device OpenCL matmul_i2s CPU parity evidence; neither merges an indexed shared BitNet semantic fix and therefore neither stales Lunar Lake BitNet receipts.",
     "BitNet CPU reference route evidence is now an explicit strict-regression-surface gate, separate from dense Qwen SLM evidence.",
     "Arc/NPU bounded proof receipts are now explicit strict-regression-surface gates, but still remain bounded proof and not full accelerator inference.",
-    "BitNet accelerator inference and packed QK256 accelerator decode remain unclaimed."
+    "BitNet accelerator inference and packed QK256 accelerator decode remain unclaimed.",
+    "The migrated swarm tracker is current through SWARM-LNL258V-REG-001/#29 and tracker closeout #32, but excellent support still cannot complete until POWER-006 is run on battery power."
   ],
   "next_recommended_work": [
-    "Follow docs/hardware/intel-258v-low-power-battery-runbook.md, rerun lunar-lake telemetry-context --require-battery while on battery power, then rebuild low_power power-profile evidence.",
-    "LNL258V-POWER follow-up for benchmark-qualified low_power power advantage.",
-    "Continue NPU low-power follow-up before any low_power NPU promotion.",
-    "Monitor pending A770 semantic PRs #4756, #4757, #4767, #4853, and #5064; if any reaches main, rerun Lunar Lake BitNet CPU answer, parity, phase, operator readiness, regression, and comparison evidence before route decisions change.",
-    "Continue BitNet semantic-intake reruns after shared A770/CUDA/CPU semantic fixes."
+    "Physically run the 258V on battery power, then follow docs/hardware/intel-258v-low-power-battery-runbook.md to collect POWER-006 evidence.",
+    "Rerun lunar-lake telemetry-context --require-battery before and after the low_power route/profile matrix.",
+    "Rebuild the low_power energy proxy, power-profile evidence, strict regression, operator comparison, and completion audit from battery-mode evidence.",
+    "Keep monitoring pending A770 semantic PRs #4756, #4757, #4767, #4853, and #5064; rerun Lunar Lake BitNet evidence only if one reaches main."
   ],
   "evidence_index": {
     "operator_readiness": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-operator-readiness.json",
@@ -483,7 +493,12 @@
     "npu_rmsnorm_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
     "npu_linear_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
     "npu_ffn_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-ffn-subgraph-parity.json",
-    "cpu_profile_run": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-cpu-profile-run.json"
+    "cpu_profile_run": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-cpu-profile-run.json",
+    "swarm_migration_manifest": "ci/hardware/intel-258v/MIGRATION_MANIFEST.json",
+    "swarm_migration_doc": "docs/migrations/lunar-lake-from-bitnet-rs.md",
+    "swarm_reg_001_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/29",
+    "swarm_reg_001_closeout_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/32",
+    "swarm_reg_001_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T095001Z-SWARM-LNL258V-REG-001-merged.toml"
   },
   "claim_boundary": {
     "new_inference_run": false,
@@ -497,5 +512,6 @@
     "full_bitnet_accelerator_inference_claim": false,
     "bitnet_qk256_i2s_behavior_change": false,
     "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, Arc/NPU bounded proof surface flags, BitNet CPU reference surface flags, BitNet semantic-intake, BITNET-INTAKE-004 closeout, POWER-007/POWER-008 runbook discoverability, OP-014 low_power blocked-ask guidance, VALIDATE-003 blocked-ask readiness indexing, POWER-009/#6097 power-profile runbook guidance, POWER-009 closeout #6099, REG-012/#6102, REG-012 closeout #6103, REG-013/#6106, REG-013 closeout #6107, A770-006/#6110, A770-006 closeout #6112, and tracker evidence"
-  }
+  },
+  "swarm_revision": "f5acd924399b9d101fbc8936e70347bce11a3f75"
 }

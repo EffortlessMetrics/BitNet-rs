@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T10:20:58Z"
+campaign = "intel-258v-platform"
+item = "SWARM-LNL258V-GOAL-AUDIT-001"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/swarm-lnl258v-goal-audit-current"
+pr = 34
+head_sha = "7d369b83a03a17f008be2c08c5f19eab8fcbd02c"
+summary = "Opened the no-inference Lunar Lake swarm audit refresh PR."
+
+notes = [
+  "The PR refreshes the current swarm audit and goal checklist after SWARM-LNL258V-REG-001/#29 and tracker closeout #32.",
+  "The PR records the live POWER-006 preflight as blocked by AC power.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, broad quality, measured-temperature, battery-mode evidence, or BitNet QK256/I2_S behavior-change claim is added.",
+]
