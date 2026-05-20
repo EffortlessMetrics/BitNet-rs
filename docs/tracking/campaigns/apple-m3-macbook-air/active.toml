@@ -1222,8 +1222,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-025"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m3-macbook-air/M3MBA-025-m4-proof-alignment"
+pr = 78
 stackable = true
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

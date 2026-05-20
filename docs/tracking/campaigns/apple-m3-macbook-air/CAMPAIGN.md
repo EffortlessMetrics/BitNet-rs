@@ -83,11 +83,13 @@ artifacts to separate strict proof items.
 | M3MBA-022 | merged | #6043 adds an M3 Air dense SLM accuracy comparison profile with prompt IDs, scoring policy, and comparable-evidence rules. |
 | M3MBA-023 | merged | #57 adds a bounded M3 Air performance profile that uses completed-run timeout provenance and phase artifact retention. |
 | M3MBA-024 | merged | #67 preflights secondary BitNet artifact authority, storage, and cleanup gates before any new large download. |
-| M3MBA-025 | proposed | Align M3 accepted-artifact metadata with the separate M4 strict-proof checklist without manufacturing M4 proof. |
+| M3MBA-025 | in progress | Align M3 accepted-artifact metadata with the separate M4 strict-proof checklist without manufacturing M4 proof. |
 | M3MBA-026 | merged | #30 hardens server shared-engine receipts so all three configured M3 Air labels survive CUDA-active model metadata without implying live M3 Metal, MPSGraph, M4 proof, or BitNet proof. |
 
-Current focus: `M3MBA-025` is proposed as the next M3 Air handoff-alignment
-slice. `M3MBA-024` is merged as a no-download secondary BitNet artifact unblock
+Current focus: `M3MBA-025` is in progress as the next M3 Air handoff-alignment
+slice. It maps the accepted Microsoft 2B M3 reference-runner artifact metadata
+to separate M4 receipt requirements without turning M3 evidence into M4 proof.
+`M3MBA-024` is merged as a no-download secondary BitNet artifact unblock
 preflight that refreshes official source availability, tokenizer-authority
 needs, storage gates, conversion or third-party approval requirements, and
 cleanup planning before any new M3 Air large download.
@@ -130,7 +132,7 @@ work items so the next PRs have concrete ownership and validation surfaces.
 | 6 | `M3MBA-026` | Server receipt label hardening | CUDA-active model metadata cannot collapse configured M3 Air Metal, MPSGraph, or CPU/NEON labels into generic active-model backend wording or proof claims. |
 
 `M3MBA-022`, `M3MBA-023`, `M3MBA-024`, and `M3MBA-026` are merged. `M3MBA-025`
-is the next proposed handoff-alignment slice. Performance follow-ups should remain scoped to the exact M3 Air host and
+is the active handoff-alignment slice. Performance follow-ups should remain scoped to the exact M3 Air host and
 proof-lane labels now represented by the device/profile contract. Secondary
 BitNet artifact work can proceed in parallel with dense SLM accuracy only if it
 stays in preflight/reporting paths and does not start a new large local
