@@ -1431,9 +1431,12 @@ mod tests {
         let report = build_legacy_report(&scalar, &cuda);
 
         assert_ne!(report["summary"]["failed"], 0);
-        let shared = report["shared_contract"]["failed_rules"].as_array().unwrap();
-        assert!(shared.iter().any(|rule| rule == "artifact_kind_contract"));
-        assert!(shared.iter().any(|rule| rule == "strict_cpu_backend"));
+        let shared = report["shared_contract"]["failed_rules"].as_array();
+        assert!(shared.is_some(), "shared contract failed rules should be present");
+        if let Some(shared) = shared {
+            assert!(shared.iter().any(|rule| rule == "artifact_kind_contract"));
+            assert!(shared.iter().any(|rule| rule == "strict_cpu_backend"));
+        }
     }
 
     #[test]
