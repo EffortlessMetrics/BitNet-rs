@@ -1,5 +1,13 @@
+<!-- markdownlint-disable -->
+<!-- Historical artifact formatting intentionally preserved. -->
+
 # T5 Benchmark Validation - Final Summary
 ## PR #475 (feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2)
+
+> Historical validation artifact only. This report records the 2025 PR #475
+> benchmark-gate decision and must not be read as a current BitNet-rs support,
+> AVX2 speedup, CUDA/GPU, server-readiness, residency, or product-readiness
+> claim. Current claims must come from active receipts and claim gates.
 
 **Date**: 2025-10-30T08:30:00Z  
 **Validator**: benchmark-runner (Integrative Flow T5)  
@@ -16,7 +24,8 @@ T5 Performance Validation for PR #475 is **COMPLETE** and **PASSED** all product
 ✅ **Policy Compliance**: All governance requirements satisfied  
 ✅ **Neural Network SLO**: Inference ≤10s (2.8s measured), quantization >99%  
 ✅ **Performance Baseline**: No regressions detected vs baseline  
-✅ **AVX2 Optimization**: Phase 1 foundation complete (1.2× speedup)  
+✅ **AVX2 Optimization**: historical Phase 1 foundation result recorded; not a
+current accepted speedup claim
 ✅ **Infrastructure**: EnvGuard, receipts, device-aware dispatch ready  
 
 **Ready for merge** pending documentation review (T6).
@@ -132,7 +141,7 @@ TL2 quantize            4096    896 µs    4.57 Melem/s  ✅
 #### Phase 1 Foundation (Complete)
 ```
 Feature: AVX2 dequantization foundation
-Baseline speedup: 1.2× (measured)
+Baseline speedup: historical 1.2x measurement; not a current accepted claim
 Status: ✅ PASS
 Details:
   - Scalar kernel reference: Validated
@@ -147,7 +156,8 @@ Phase 2: FMA tiling (8-16 rows)    → +60% target speedup
 Phase 3: Load/prefetch optimization  → +30% target speedup
 Phase 4: SIMD LUT via permute      → +40% target speedup
 Combined target: ≥3× total speedup
-Current phase: Phase 1 (1.2× baseline, validated)
+Current phase in this historical report: Phase 1 baseline recorded; current
+speed claims require exact-profile receipts and claim review
 ```
 
 ### 5. Infrastructure Updates ✅ PASS
@@ -260,7 +270,7 @@ cargo bench --workspace --no-default-features --features cpu
    - Security CVE mitigated (non-production path)
    - All governance gates passed
 
-2. **Production SLO Compliance Validated**
+2. **Historical SLO Compliance Recorded**
    - Inference throughput: 45.2 tok/s (well within ≤10s SLO)
    - Actual latency: 2.8s for 128 tokens (vs 10s threshold)
    - Quantization accuracy: All types >99% (I2S 99.8%, TL1 99.6%, TL2 99.7%)
@@ -307,24 +317,24 @@ All performance validation requirements met. PR is **ready for documentation rev
 1. **Comprehensive Validation Coverage**
    - Five sequential quality gates completed (T1-T5)
    - 597+ tests passing with 100% success rate
-   - All neural network inference paths validated
+   - Historical gate recorded validation for the then-scoped inference paths
    - Cross-validation against C++ reference complete
 
-2. **Production Requirements Met**
+2. **Historical Requirements Recorded**
    - Inference SLO: 2.8s for 128 tokens (well within ≤10s)
    - Quantization accuracy: All types >99%
    - Cross-validation parity: ≤1e-5 tolerance
-   - Memory safety: GPU allocation validated, <10% overhead
+   - Memory safety: historical GPU allocation gate recorded <10% overhead
 
 3. **Performance Data Quality**
    - Measured baseline: 38.0 tok/s established
-   - Current performance: 45.2 tok/s (+19% uplift)
+   - Historical performance in this gate: 45.2 tok/s (+19% uplift)
    - Quantization benchmarks: Detailed across sizes and types
-   - No performance regressions detected
+   - No performance regressions detected in this historical gate
 
 4. **Infrastructure Robustness**
    - EnvGuard minimal overhead (<2%)
-   - Device-aware dispatch: Runtime detection validated
+   - Device-aware dispatch: runtime detection recorded by this historical gate
    - Receipt verification: Schema compliance verified
    - SIMD dispatch: All platforms covered
 
@@ -383,4 +393,3 @@ Validation Tools:
 **Status**: ✅ **PASS** → Ready for next gate (T6)  
 **Validator**: benchmark-runner (BitNet-rs Integrative Flow T5)  
 **Timestamp**: 2025-10-30T08:30:00Z
-
