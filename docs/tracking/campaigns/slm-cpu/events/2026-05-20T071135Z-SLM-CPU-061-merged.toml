@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T07:11:35Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-061"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6111
+head_sha = "d304e5fe1cee6bc92d4008f84e904ec924a8f826"
+merge_sha = "8952dd2a3cf1c134134560d71f12d5b6072c4322"
+summary = "Merged the real Qwen3 Q8_0 sidecar payload candidate slice."
+notes = [
+  "The merged slice wires one exact Qwen3 Q8_0 dense-linear tensor from real GGUF sidecar bytes into DenseLinearPackedQ8Payload behind the explicit opt-in gates.",
+  "Runtime selection remains gated by unchanged generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, dense hook-selection identity, model SHA, and fallback=false evidence.",
+  "The slice does not claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]
