@@ -9925,7 +9925,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-VALIDATE-003"
-status = "in_progress"
+status = "merged"
+pr = 6092
+head_sha = "a1d76337b52be2f5de18510206cf649326df60d0"
+merge_sha = "0c9e8847f2145de4fe1efe33408e50aa83c8c463"
 branch = "codex/lunar-lake/LNL258V-VALIDATE-003-blocked-ask-guidance"
 stackable = false
 review_mode = "codex_premerge"
