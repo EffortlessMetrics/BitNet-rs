@@ -1,0 +1,17 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+timestamp = "2026-05-20T17:20:28Z"
+item = "M3MBA-023"
+event = "merged"
+actor = "codex"
+pr = 57
+head_sha = "1b57890afa4b7866dac28efe9184f96cefdd6066"
+merge_sha = "7692ac2f0f116865b120862a5bf4996cca16bd97"
+branch = "codex/apple-m3-macbook-air/M3MBA-023-bounded-performance-profile"
+summary = "Merged PR #57, adding the bounded M3 Air performance profile and completed-run cap provenance wiring."
+
+notes = [
+  "The staged M3 Air workflow exposes the manual performance profile and records token budget, cold/warm sample shape, storage, thermal availability, and timeout-cap provenance in retained phase artifacts.",
+  "The CLI aggregate receipt now emits an M3 Air performance profile block for apple-m3-air-cpu-neon without changing M4 receipt semantics.",
+  "The merge does not claim a speedup, M4 Mac mini performance, broad Apple Silicon performance, Metal/MPSGraph/Neural Engine execution, QK256 support, or BitNet answer quality.",
+]
