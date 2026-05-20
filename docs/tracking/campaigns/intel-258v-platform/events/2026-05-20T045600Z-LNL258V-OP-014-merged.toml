@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T04:56:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-014"
+event = "merged"
+pr = 6087
+head_sha = "292cc9bcd789e77c3fed51dc105f74ba2ed0dfba"
+merge_sha = "050d1403e626b7c4cd91abd18ffa8054eb085c5a"
+actor = "codex"
+summary = "Merged low_power blocked-auto-route operator guidance hardening."
+
+notes = [
+  "Blocked low_power auto ask receipts now carry the POWER-006 battery runbook and next required battery-mode evidence.",
+  "Strict regression requires the low_power blocked ask runbook and telemetry-context --require-battery guidance.",
+  "No inference, model load, fallback, route promotion, speedup, power-advantage, native accelerator, acceleration, or BitNet QK256/I2_S behavior-change claim was made.",
+]
