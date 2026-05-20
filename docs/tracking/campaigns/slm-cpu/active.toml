@@ -2213,6 +2213,58 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-062"
+status = "ready"
+branch = "codex/slm-cpu-062-swarm-artifact-export"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-061"]
+acceptance = "Export the first Qwen3 Q8_0 packed-sidecar candidate package from bitnet-rs-swarm for BitNet-rs release-surface artifact-intake review. The package must identify the source swarm commit and include candidate summary, before receipt, after receipt, equivalence report, and either timing report or explicit timing-not-claimed report. The exported evidence must preserve model SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false, and must not claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-20/qwen3-real-q8-sidecar-payload-candidate.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/slm-cpu/**",
+  "docs/swarm/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "runtime code changes",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-062 is the swarm-side export gate for the first Qwen3 Q8_0 packed-sidecar candidate package.",
+  "The BitNet-rs release surface remains responsible for accepting or rejecting the exported artifact package.",
+]
+must_not_claim = [
+  "The exported package is accepted by the BitNet-rs release surface.",
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "Generated IDs or decoded text changed.",
+  "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, dense hook-selection identity, or fallback=false provenance changed.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-033"
 status = "merged"
 pr = 5603
