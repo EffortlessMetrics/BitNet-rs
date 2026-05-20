@@ -2236,6 +2236,48 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "M4-STABILITY-HARNESS-001"
+status = "pr_open"
+pr = 6131
+head_sha = "61d4b87d5826e429965c4e3696a06ea155ddac9f"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-HARNESS-001-mixed-model-profile"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M4-BENCH-002", "M4-EXCELLENCE-003"]
+acceptance = "Implement the `bitnet mac benchmark --profile mixed_model_switch` harness and receipt validation required by M4-STABILITY-001 before any mixed dense-model switch soak evidence is recorded: run one resident_25 child benchmark summary per supported dense M4 model identity, preserve per-model child receipts, validate cache/model identity separation, fallback=false backend selection, and memory summary fields, and keep the change harness-only without publishing live soak evidence."
+commands = [
+  "cargo test --locked -p bitnet-cli mac_receipts_check_accepts_mixed_model_switch_soak -- --nocapture",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_benchmark_accepts_mixed_model_switch_profile_before_release_gate -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/mac.rs",
+  "crates/bitnet-cli/tests/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/apple-m4-inference-excellence/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "models/**",
+  "ci/hardware/apple-m4-mac-mini/**/slm-soak/**",
+  "crates/bitnet-kernels/src/metal/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The M4 benchmark CLI exposes and validates a harness for future mixed dense-model switch soak receipts.",
+]
+must_not_claim = [
+  "The harness publishes or proves a live mixed-model switch soak.",
+  "The harness proves BitNet behavior, BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup, broad quality, or broad Apple Silicon performance.",
+]
+
+[[work_item]]
 id = "M4-STABILITY-001"
 status = "proposed"
 branch = "codex/apple-m4-inference-excellence/M4-STABILITY-001-mixed-model-soak"
@@ -2243,7 +2285,7 @@ stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
-blocked_by = ["M4-BENCH-002", "M4-EXCELLENCE-003"]
+blocked_by = ["M4-BENCH-002", "M4-EXCELLENCE-003", "M4-STABILITY-HARNESS-001"]
 acceptance = "Run and record a mixed dense-model switch soak across supported M4 dense SLM identities, proving cache reuse, model unload/reload behavior, fallback=false backend selection, bounded memory drift, and receipt separation per model identity."
 commands = [
   "target/release/bitnet --device apple-m4-cpu-neon mac benchmark --profile mixed_model_switch --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-soak/mixed-model-switch.json",

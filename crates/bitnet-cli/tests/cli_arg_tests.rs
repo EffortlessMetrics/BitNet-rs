@@ -4739,6 +4739,15 @@ fn mac_benchmark_accepts_resident_100_profile_before_release_gate() {
 }
 
 #[test]
+fn mac_benchmark_accepts_mixed_model_switch_profile_before_release_gate() {
+    bitnet()
+        .args(["mac", "benchmark", "--profile", "mixed_model_switch"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac benchmark must be run from a release build"));
+}
+
+#[test]
 fn mac_benchmark_accepts_repeat_flag_before_release_gate() {
     bitnet()
         .args(["mac", "benchmark", "--profile", "short_prompt_16_out", "--repeat", "2"])
