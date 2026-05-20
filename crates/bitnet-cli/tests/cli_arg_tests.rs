@@ -1518,6 +1518,258 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_context_dense_ask_blocks_beyond_recorded_4k_before_cache_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let receipt = dir.path().join("dense-context-guardrail.json");
+    let prompt = "dense context guardrail ".repeat(900);
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "ask",
+            prompt.as_str(),
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac ask context guardrail blocked request"))
+        .stderr(predicate::str::contains("unsupported_context_exceeds_recorded_evidence"))
+        .stderr(predicate::str::contains("receipt written"))
+        .stderr(predicate::str::contains("bitnet model fetch").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_context_guardrail");
+    assert_eq!(receipt_json["operator_command"], "mac ask");
+    assert_eq!(receipt_json["status"], "blocked");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["model_family"], "dense-slm");
+    assert_eq!(receipt_json["context_envelope"]["work_item"], "M4-CONTEXT-001");
+    assert_eq!(receipt_json["context_envelope"]["route"], "mac ask");
+    assert_eq!(receipt_json["context_envelope"]["allowed"], false);
+    assert_eq!(receipt_json["context_envelope"]["operator_class"], "unsupported");
+    assert_eq!(
+        receipt_json["context_envelope"]["status"],
+        "unsupported_context_exceeds_recorded_evidence"
+    );
+    assert_eq!(
+        receipt_json["context_envelope"]["recorded_envelope"]["evidence_profile"],
+        "beyond_context_4k"
+    );
+    assert_eq!(receipt_json["claim_boundary"]["live_generation_executed"], false);
+    assert_eq!(receipt_json["claim_boundary"]["unsupported_context_supported"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_context_guardrail"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_context_bitnet_ask_blocks_beyond_recorded_prompt_before_tokenizer_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("bitnet-context-guardrail.json");
+    let tokenizer = dir.path().join("missing-tokenizer.json");
+    let prompt = "bitnet context guardrail ".repeat(120);
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "ask",
+            prompt.as_str(),
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            tokenizer_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac ask context guardrail blocked request"))
+        .stderr(predicate::str::contains("unsupported_context_exceeds_recorded_evidence"))
+        .stderr(predicate::str::contains("receipt written"))
+        .stderr(predicate::str::contains("tokenizer is missing").not())
+        .stderr(predicate::str::contains("requires explicit tokenizer authority").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_context_guardrail");
+    assert_eq!(receipt_json["operator_command"], "mac ask");
+    assert_eq!(receipt_json["model_family"], "bitnet");
+    assert_eq!(receipt_json["model_id"], "microsoft-bitnet-b1.58-2B-4T-i2s");
+    assert_eq!(receipt_json["context_envelope"]["work_item"], "M4-CONTEXT-001");
+    assert_eq!(receipt_json["context_envelope"]["route"], "mac ask");
+    assert_eq!(receipt_json["context_envelope"]["allowed"], false);
+    assert_eq!(receipt_json["context_envelope"]["operator_class"], "unsupported");
+    assert_eq!(
+        receipt_json["context_envelope"]["recorded_envelope"]["evidence_profile"],
+        "beyond_bitnet_bounded_ask_warm"
+    );
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_chat_enabled"], false);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_serve_enabled"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_context_guardrail"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_context_dense_chat_blocks_beyond_recorded_4k_before_cache_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let receipt = dir.path().join("dense-chat-context-guardrail.json");
+    let prompt = "dense chat context guardrail ".repeat(700);
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "chat",
+            "--prompt",
+            prompt.as_str(),
+            "--prompt",
+            "second bounded turn",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac chat context guardrail blocked request"))
+        .stderr(predicate::str::contains("unsupported_context_exceeds_recorded_evidence"))
+        .stderr(predicate::str::contains("receipt written"))
+        .stderr(predicate::str::contains("mac chat requires at least two prompts").not())
+        .stderr(predicate::str::contains("bitnet model fetch").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_context_guardrail");
+    assert_eq!(receipt_json["operator_command"], "mac chat");
+    assert_eq!(receipt_json["model_family"], "dense-slm");
+    assert_eq!(receipt_json["context_envelope"]["route"], "mac chat");
+    assert_eq!(receipt_json["context_envelope"]["allowed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_context_guardrail"));
+    Ok(())
+}
+
+#[test]
+fn mac_context_dense_chat_smoke_blocks_large_system_before_cache_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let receipt = dir.path().join("chat-smoke-context-guardrail.json");
+    let system_prompt = "dense chat smoke system context guardrail ".repeat(600);
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "chat-smoke",
+            "--system",
+            system_prompt.as_str(),
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac chat-smoke context guardrail blocked request"))
+        .stderr(predicate::str::contains("unsupported_context_exceeds_recorded_evidence"))
+        .stderr(predicate::str::contains("receipt written"))
+        .stderr(predicate::str::contains("bitnet model fetch").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_context_guardrail");
+    assert_eq!(receipt_json["operator_command"], "mac chat-smoke");
+    assert_eq!(receipt_json["model_family"], "dense-slm");
+    assert_eq!(receipt_json["context_envelope"]["route"], "mac chat-smoke");
+    assert_eq!(receipt_json["context_envelope"]["allowed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_context_guardrail"));
+    Ok(())
+}
+
+#[test]
+fn mac_context_bitnet_warm_blocks_beyond_recorded_prompt_before_tokenizer_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("bitnet-warm-context-guardrail.json");
+    let tokenizer = dir.path().join("missing-tokenizer.json");
+    let prompt = "bitnet warm context guardrail ".repeat(120);
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--prompt",
+            prompt.as_str(),
+            "--prompt",
+            prompt.as_str(),
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            tokenizer_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac bitnet-warm context guardrail blocked request"))
+        .stderr(predicate::str::contains("unsupported_context_exceeds_recorded_evidence"))
+        .stderr(predicate::str::contains("receipt written"))
+        .stderr(predicate::str::contains("tokenizer is missing").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_context_guardrail");
+    assert_eq!(receipt_json["operator_command"], "mac bitnet-warm");
+    assert_eq!(receipt_json["model_family"], "bitnet");
+    assert_eq!(receipt_json["context_envelope"]["route"], "mac bitnet-warm");
+    assert_eq!(receipt_json["context_envelope"]["allowed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_context_guardrail"));
+    Ok(())
+}
+
+#[test]
 fn mac_bitnet_ask_timeout_seconds_is_bitnet_only_before_cache_lookup() {
     bitnet()
         .args(["mac", "ask", "What is 2+2?", "--timeout-seconds", "10"])

@@ -81,6 +81,51 @@ BitNet chat and serve without ready gates: disabled
 Metal/QK256/Neural Engine/MPSGraph/MacBook: unsupported
 ```
 
+## Context Guardrails
+
+`M4-CONTEXT-001` turns the class map into route-level guardrails for M4
+operator paths. The guardrail is evidence-scoped: it classifies a request
+against the recorded prompt/context envelope and records the result, but it does
+not create new long-context quality or performance proof.
+
+Current limits:
+
+| Family and route | Recorded prompt envelope | Guardrail result beyond envelope |
+|---|---:|---|
+| Dense SLM `mac ask`, dense `mac chat`, dense `mac chat-smoke`, dense `mac serve` | 4096 prompt tokens, matching the recorded dense `context_4k` profile | `unsupported` with a blocked `apple_m4_context_guardrail` receipt |
+| BitNet `mac ask`, BitNet `mac bitnet-warm`, gated BitNet `mac chat`, gated BitNet `mac serve` | 512 prompt tokens, matching bounded one-shot and warm-session evidence | `unsupported` with a blocked `apple_m4_context_guardrail` receipt |
+
+Requests inside the dense short prompt envelope remain `interactive` for the
+dense 0.5B models, `advisory` for dense 1.5B, and `advisory` for dense local
+server requests. Dense requests inside `context_1k` or `context_4k` are
+classified `batch`. BitNet requests inside the bounded envelope remain `batch`.
+BitNet chat and serve still require their existing gate receipts; the context
+guardrail does not enable those routes by itself.
+
+Every generated guardrail or successful route receipt records
+`context_envelope` with:
+
+```text
+contract_version
+work_item
+route
+model_family
+model_id
+operator_class
+status
+allowed
+prompt_tokens
+prompt_token_count_exact
+max_new_tokens
+requested_total_tokens
+recorded_envelope
+claim_boundary
+```
+
+Blocked guardrail receipts use `artifact_kind=apple_m4_context_guardrail`,
+`fallback_used=false`, `runtime_api=cpu`, prompt text omitted with SHA256 hashes
+only, and `claim_boundary.live_generation_executed=false`.
+
 ## Refresh Cadence
 
 Use this cadence to keep the M4 appliance measured without moving live hardware

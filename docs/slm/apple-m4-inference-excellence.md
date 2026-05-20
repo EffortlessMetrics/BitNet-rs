@@ -1125,6 +1125,24 @@ scheduled trend retention
 stale-identity aging
 ```
 
+`M4-CONTEXT-001` implements long-context guardrails for the M4 operator routes.
+Dense SLM `mac ask`, dense `mac chat`, dense `mac chat-smoke`, and dense
+`mac serve` classify requests against the recorded short, `context_1k`, and
+`context_4k` evidence envelopes. Requests beyond the recorded dense
+`context_4k` envelope fail closed with an `apple_m4_context_guardrail` receipt
+instead of falling through to cache lookup or generation. BitNet `mac ask`,
+`mac bitnet-warm`, and gated BitNet chat/serve routes classify requests against
+the bounded accepted-artifact ask/warm prompt evidence and fail closed beyond
+that boundary.
+
+The guardrail receipt records `context_envelope` fields for route, model family,
+model id, operator class, status, prompt-token count, exact-vs-estimated token
+authority, max-new-token budget, recorded evidence profile, and claim boundary.
+This is a routing and overclaim-prevention contract only; it does not prove new
+long-context quality, enable unsupported contexts, enable BitNet chat or serve,
+or widen Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality,
+or broad performance claims.
+
 CLI proof is route-specific. Dense SLM ask/chat conformance needs bounded
 multi-turn history, timeout/cancel behavior, per-turn receipts, generated text,
 token IDs, backend, fallback state, and model/tokenizer identity before the CLI
