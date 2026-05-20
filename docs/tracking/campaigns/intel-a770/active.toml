@@ -142,7 +142,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-005"
-status = "in_progress"
+status = "merged"
 pr = 6072
 branch = "codex/intel-a770/A770-005-opencl-smoke"
 stackable = false
