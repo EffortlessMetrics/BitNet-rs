@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T20:18:56Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-RELIABILITY-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-RELIABILITY-001-recovery-drills"
+pr = 6154
+merge_sha = "a89efed5fd8c25d56a1c845db8dc4d93d56e460f"
+
+notes = [
+  "PR #6154 merged the M4 reliability-drill receipt harness and model-free recovery-drill evidence.",
+  "The merged receipt covers interrupted generation, client cancellation, timeout, interrupted receipt write, missing cache, corrupt cache, low disk, process restart, and retry guidance across dense SLM, BitNet one-shot, and BitNet warm route families.",
+  "Closeout is tracker-only and records the already-merged PR; it does not add runtime evidence or enable routes.",
+  "No BitNet chat or serve, service production readiness, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, broad performance, or broad Apple Silicon claim is in scope.",
+]
