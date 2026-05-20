@@ -178,7 +178,7 @@ fn area_patterns() -> Vec<(&'static str, Vec<&'static str>)> {
         (
             "gpu",
             vec![
-                r"^crates/bitnet-kernels/",
+                r"^crates/bitnet-kernels/src/(cuda/|gpu/|metal/|opencl/|opencl_|bin/a770_|lib\.rs$)",
                 r"^crates/bitnet-gpu-hal/",
                 r"^crates/bitnet-device-probe/",
                 r"^crates/bitnet-device-config-core/",
@@ -1350,6 +1350,22 @@ mod tests {
         assert!(
             !plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
             "full matrix label supersedes the targeted full-cli smoke"
+        );
+    }
+
+    #[test]
+    fn non_gpu_kernel_helpers_do_not_select_gpu_native() {
+        let plan = build_plan(&s(&["crates/bitnet-kernels/src/env_bool.rs"]), &[]);
+
+        assert!(plan.classification.rust_inputs_changed);
+        assert!(!plan.classification.gpu_changed);
+        assert!(
+            !plan.selected_lanes.iter().any(|lane| lane.id == "gpu-native"),
+            "plain bitnet-kernels helper changes must not require GPU CI jobs that PR workflows skip"
+        );
+        assert!(
+            plan.selected_lanes.iter().any(|lane| lane.id == "ci-core-build-test"),
+            "kernel helper changes still need core Rust validation"
         );
     }
 
