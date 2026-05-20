@@ -10,8 +10,11 @@ use crate::names::is_projection_weight;
 use bitnet_common::{BitNetError, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::sync::Arc;
 
 pub const DENSE_GGUF_Q8_SIDECAR_REGISTRY_ARTIFACT_KIND: &str = "dense_gguf_q8_sidecar_registry";
+pub const DENSE_Q8_PAYLOAD_ENABLE_ENV: &str = "BITNET_DENSE_Q8_PAYLOAD_ENABLE";
+pub const DENSE_Q8_PAYLOAD_TENSOR_ENV: &str = "BITNET_DENSE_Q8_PAYLOAD_TENSOR";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DenseGgufQ8SidecarDescriptor {
@@ -27,6 +30,8 @@ pub struct DenseGgufQ8SidecarDescriptor {
     pub q8_block_count: usize,
     pub q8_payload_bytes: usize,
     pub packed_q8_bytes_sha256: String,
+    #[serde(skip_serializing, skip_deserializing, default)]
+    pub packed_q8_bytes: Option<Arc<[u8]>>,
     pub shape_reshaped_without_transpose: bool,
     pub eager_f32_runtime_preserved: bool,
     pub runtime_compute_enabled: bool,
@@ -82,7 +87,21 @@ impl DenseGgufQ8SidecarRegistry {
     }
 
     pub fn try_push_tensor(&mut self, info: &TensorInfo, data: &[u8]) -> Result<()> {
-        let Some(descriptor) = DenseGgufQ8SidecarDescriptor::from_tensor(info, data)? else {
+        self.try_push_tensor_with_payload_candidate(info, data, None)
+    }
+
+    pub fn try_push_tensor_with_payload_candidate(
+        &mut self,
+        info: &TensorInfo,
+        data: &[u8],
+        payload_candidate_tensor: Option<&str>,
+    ) -> Result<()> {
+        let Some(descriptor) = DenseGgufQ8SidecarDescriptor::from_tensor_with_payload_candidate(
+            info,
+            data,
+            payload_candidate_tensor,
+        )?
+        else {
             return Ok(());
         };
         self.descriptors.push(descriptor);
@@ -92,6 +111,14 @@ impl DenseGgufQ8SidecarRegistry {
 
 impl DenseGgufQ8SidecarDescriptor {
     pub fn from_tensor(info: &TensorInfo, data: &[u8]) -> Result<Option<Self>> {
+        Self::from_tensor_with_payload_candidate(info, data, None)
+    }
+
+    pub fn from_tensor_with_payload_candidate(
+        info: &TensorInfo,
+        data: &[u8],
+        payload_candidate_tensor: Option<&str>,
+    ) -> Result<Option<Self>> {
         if info.tensor_type != GgufTensorType::Q8_0 {
             return Ok(None);
         }
@@ -122,6 +149,8 @@ impl DenseGgufQ8SidecarDescriptor {
 
         let runtime_candle_shape = dense_q8_runtime_shape(info, role);
         let shape_reshaped_without_transpose = runtime_candle_shape != info.shape;
+        let packed_q8_bytes = (payload_candidate_tensor == Some(info.name.as_str()))
+            .then(|| Arc::<[u8]>::from(data[..q8_payload_bytes].to_vec().into_boxed_slice()));
 
         Ok(Some(Self {
             tensor_name: info.name.clone(),
@@ -136,6 +165,7 @@ impl DenseGgufQ8SidecarDescriptor {
             q8_block_count,
             q8_payload_bytes,
             packed_q8_bytes_sha256: bytes_sha256(&data[..q8_payload_bytes]),
+            packed_q8_bytes,
             shape_reshaped_without_transpose,
             eager_f32_runtime_preserved: true,
             runtime_compute_enabled: false,
@@ -145,6 +175,17 @@ impl DenseGgufQ8SidecarDescriptor {
             next_runtime_api_hook: "dense_linear_dispatch_q8_sidecar_candidate".to_string(),
         }))
     }
+}
+
+pub fn dense_q8_payload_candidate_tensor_from_env() -> Option<String> {
+    let enabled = std::env::var(DENSE_Q8_PAYLOAD_ENABLE_ENV).ok()?;
+    if !matches!(enabled.as_str(), "1" | "true" | "TRUE" | "yes" | "YES") {
+        return None;
+    }
+    std::env::var(DENSE_Q8_PAYLOAD_TENSOR_ENV).ok().and_then(|tensor| {
+        let tensor = tensor.trim();
+        (!tensor.is_empty()).then(|| tensor.to_string())
+    })
 }
 
 fn is_dense_linear_sidecar_role(role: DenseGgufTensorRole) -> bool {
@@ -228,6 +269,7 @@ mod tests {
         assert_eq!(descriptor.q8_block_count, 4);
         assert_eq!(descriptor.q8_payload_bytes, 136);
         assert_eq!(descriptor.packed_q8_bytes_sha256, bytes_sha256(&data[..136]));
+        assert!(descriptor.packed_q8_bytes.is_none());
         assert_ne!(descriptor.packed_q8_bytes_sha256, bytes_sha256(&data));
         assert_eq!(descriptor.runtime_candle_shape, vec![64, 2]);
         assert!(descriptor.shape_reshaped_without_transpose);
@@ -296,5 +338,43 @@ mod tests {
         };
 
         assert!(err.to_string().contains("expected at least 136"));
+    }
+
+    #[test]
+    fn dense_gguf_q8_sidecar_can_carry_exact_payload_candidate() {
+        let info = q8_info("blk.0.attn_q.weight", vec![2, 64], 136);
+        let mut data = vec![0u8; 136];
+        data.extend_from_slice(&[1, 2, 3, 4]);
+
+        let descriptor = DenseGgufQ8SidecarDescriptor::from_tensor_with_payload_candidate(
+            &info,
+            &data,
+            Some("blk.0.attn_q.weight"),
+        )
+        .expect("descriptor")
+        .expect("q8 descriptor");
+
+        let payload = descriptor.packed_q8_bytes.as_ref().expect("payload bytes");
+        assert_eq!(payload.len(), 136);
+        assert_eq!(&payload[..], &data[..136]);
+        assert_eq!(descriptor.packed_q8_bytes_sha256, bytes_sha256(payload));
+        assert!(descriptor.eager_f32_runtime_preserved);
+        assert!(!descriptor.runtime_compute_enabled);
+    }
+
+    #[test]
+    fn dense_gguf_q8_sidecar_payload_candidate_requires_exact_tensor_name() {
+        let info = q8_info("blk.0.attn_q.weight", vec![2, 64], 136);
+        let data = vec![0u8; 136];
+
+        let descriptor = DenseGgufQ8SidecarDescriptor::from_tensor_with_payload_candidate(
+            &info,
+            &data,
+            Some("blk.0.attn_k.weight"),
+        )
+        .expect("descriptor")
+        .expect("q8 descriptor");
+
+        assert!(descriptor.packed_q8_bytes.is_none());
     }
 }

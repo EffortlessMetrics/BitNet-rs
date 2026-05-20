@@ -439,6 +439,23 @@ descriptors by default, and one exact Qwen3 Q8_0 tensor path must be wired
 behind an opt-in gate and proved by before/after warm-session receipts before
 packed Q8_0 sidecar compute can be selected.
 
+SLM-CPU-061 wires one exact real Qwen3 Q8_0 dense-linear tensor into that
+payload-bearing hook contract behind an explicit opt-in gate. With
+`BITNET_DENSE_Q8_PAYLOAD_ENABLE=1` and
+`BITNET_DENSE_Q8_PAYLOAD_TENSOR=blk.0.attn_q.weight`, the production GGUF load
+attaches the packed bytes for `layers.0.attention.q_proj.weight` to a single
+`AttentionQ` hook boundary. The committed before/after warm-session receipts
+show the selected path remains `eager_f32_candle`, selected kernel remains
+`dense-f32-candle-linear`, `runtime_compute_enabled=false`,
+`dense_runtime_replaced=false`, and generated outputs are unchanged. The
+summary artifact
+`ci/slm-cpu/intel-i5-8250u/2026-05-20/qwen3-real-q8-sidecar-payload-candidate.json`
+records matching model SHA, strict GGUF tokenizer authority, prompt IDs,
+generated IDs, decoded text, selected CPU backend/kernel identity, and
+`fallback=false`. It does not claim packed Q8 compute, speedup, sustained
+throughput, Q4/Q5 support, accelerator execution, Qwen3.5 support, or BitNet
+QK256 changes.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when
