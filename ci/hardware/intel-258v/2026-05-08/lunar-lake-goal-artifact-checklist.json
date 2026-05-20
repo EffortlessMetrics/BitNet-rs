@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "swarm_objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-20T18:57:25Z",
+  "created_utc": "2026-05-20T19:58:48Z",
   "machine_id": "intel-258v",
-  "source_revision": "fb81b1b332f753f7b28fe402801a33ec938e95c4",
+  "source_revision": "3d0ca628133e03d2e5ec1ac9f53787d63681db72",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
-  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, low_power blocked-ask and power-profile runbook guidance, route/model identity gates, Arc/NPU bounded proof gates, and BitNet CPU reference gates. SWARM-LNL258V-BITNET-INTAKE-009/#66 corrected the direct-reference prompt-token comparison boundary and closeout #68 recorded the tracker merge; semantic intake is now ready with rerun_required=false and strict regression/operator comparison ready. The objective is still not complete because LNL258V-POWER-006 has no real battery-mode low_power route/profile telemetry, the current energy-proxy evidence is AC-only, thermal temperature readings remain unavailable, and no benchmark-qualified low_power power advantage exists. A770 #62 is recorded as adjacent selected-device QK256 scaled OpenCL fixture evidence only and does not change Lunar Lake route promotion or BitNet QK256/I2_S claims.",
+  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, low_power blocked-ask and power-profile runbook guidance, route/model identity gates, Arc/NPU bounded proof gates, and BitNet CPU reference gates. SWARM-LNL258V-BITNET-INTAKE-009/#66 corrected the direct-reference prompt-token comparison boundary and closeout #68 recorded the tracker merge; semantic intake is now ready with rerun_required=false and strict regression/operator comparison ready. The objective is still not complete because LNL258V-POWER-006 has no real battery-mode low_power route/profile telemetry, the current energy-proxy evidence is AC-only, thermal temperature readings remain unavailable, and no benchmark-qualified low_power power advantage exists. A770 #62 plus closeout #74 are recorded as adjacent selected-device QK256 scaled OpenCL fixture evidence only and do not change Lunar Lake route promotion or BitNet QK256/I2_S claims. CUDA PERF-005 report-contract tests from #75 are adjacent benchmark-report guard coverage only and are not a Lunar Lake semantic trigger.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-006",
     "status": "blocked",
@@ -373,8 +373,9 @@
       "notes": [
         "A770-005 adds selected-device OpenCL smoke evidence and its tracker closeout, which is adjacent accelerator proof.",
         "A770-006 adds selected-device OpenCL matmul_i2s CPU parity evidence and its tracker closeout, which is adjacent accelerator proof.",
-        "Swarm A770 #62 adds selected-device QK256 scaled OpenCL fixture evidence, which is adjacent accelerator evidence only.",
+        "Swarm A770 #62 adds selected-device QK256 scaled OpenCL fixture evidence, and closeout #74 records that tracker state.",
         "These A770 receipts do not promote Lunar Lake routes, prove native Arc/NPU inference, prove full BitNet accelerator inference, or change BitNet QK256/I2_S behavior.",
+        "CUDA PERF-005 report-contract tests from #75 are adjacent benchmark-report guard coverage only and do not trigger Lunar Lake BitNet semantic reruns.",
         "The current semantic-intake ledger is ready after SWARM-LNL258V-BITNET-INTAKE-009/#66; no stale merged shared BitNet fix currently requires Lunar Lake reruns."
       ]
     },
@@ -450,7 +451,12 @@
     {
       "id": "a770_qk256_scaled_opencl_fixture",
       "status": "adjacent_non_semantic_evidence",
-      "reason": "A770 #62 selected-device QK256 scaled OpenCL fixture evidence is not a Lunar Lake route-promotion, native accelerator, full BitNet inference, or QK256/I2_S behavior-change claim."
+      "reason": "A770 #62 selected-device QK256 scaled OpenCL fixture evidence and #74 tracker closeout are not a Lunar Lake route-promotion, native accelerator, full BitNet inference, or QK256/I2_S behavior-change claim."
+    },
+    {
+      "id": "cuda_perf005_report_contract",
+      "status": "adjacent_non_semantic_test_contract",
+      "reason": "CUDA PERF-005 report-contract tests from #75 are adjacent benchmark-report guard coverage only and are not Lunar Lake inference, power evidence, route promotion, or a shared BitNet semantic trigger."
     },
     {
       "id": "bitnet_accelerator_inference",
@@ -476,5 +482,5 @@
     "bitnet_accelerator_full_inference_claim_added": false,
     "packed_qk256_accelerator_decode_claim_added": false
   },
-  "swarm_revision": "fb81b1b332f753f7b28fe402801a33ec938e95c4"
+  "swarm_revision": "3d0ca628133e03d2e5ec1ac9f53787d63681db72"
 }
