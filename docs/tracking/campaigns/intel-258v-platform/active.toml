@@ -9466,9 +9466,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-007"
-status = "in_progress"
+status = "merged"
 pr = 6055
-head_sha = "4ee193e860d8bb91d5f7e5196cbd9c5e1a3c2068"
+head_sha = "da2fd6e59c81b916421b0afc2fcfe16a1faa67a9"
+merge_sha = "91979d3e27fc95e1e2bd8dde4384b4ef017e9bf4"
 branch = "codex/lunar-lake/LNL258V-POWER-007-battery-runbook"
 stackable = false
 review_mode = "codex_premerge"
