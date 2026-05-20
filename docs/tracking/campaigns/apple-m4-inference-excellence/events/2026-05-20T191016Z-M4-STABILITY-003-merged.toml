@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T19:10:16Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-003"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-003-trend-retention"
+pr = 6148
+merge_sha = "178db0d1f9903686f520bae1a2496cf9e8f45fcc"
+
+notes = [
+  "PR #6148 merged the scheduled M4 trend-retention and stale-identity policy.",
+  "The merged policy defines retained dense SLM and BitNet receipt families, regenerated summaries, stale identity aging, and operator-envelope refresh triggers.",
+  "Closeout is tracker-only and records the already-merged policy PR; it does not add runtime evidence or enable routes.",
+  "No BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, broad performance, or broad Apple Silicon claim is in scope.",
+]
