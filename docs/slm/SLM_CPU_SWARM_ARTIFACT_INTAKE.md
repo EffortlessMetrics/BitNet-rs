@@ -184,3 +184,13 @@ mixes in server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 work
 
 This keeps BitNet-rs boring: release artifacts come in only when they preserve
 the strict CPU proof contract.
+
+## First Intake Review
+
+`SLM-CPU-064` is the first release-surface review item for an audited package
+returned from `bitnet-rs-swarm`. It may accept, reject, or block a package
+against this gate, but it does not promote runtime code into BitNet-rs by
+itself.
+
+If the package passes, the follow-up runtime promotion item must still be
+separate and must repeat the same before/after receipt discipline.
