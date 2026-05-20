@@ -5,7 +5,8 @@
   "source_repo": "EffortlessMetrics/BitNet-rs",
   "target_repo": "EffortlessMetrics/bitnet-rs-swarm",
   "migration_pr": "SWARM-A770-MIGRATE-001",
-  "scope": "inventory_only_no_runtime_receipts_copied",
+  "scope": "inventory_reconciled_after_source_sync_no_new_runtime_receipts",
+  "reconciled_utc": "2026-05-20T08:55:00Z",
   "source_cutoff": {
     "latest_selected_device_item": "A770-007",
     "latest_selected_device_pr": 6113,
@@ -54,23 +55,42 @@
       "reason": "diagnostic-only layer trace tooling for later CPU/reference numerical attribution"
     }
   ],
-  "current_swarm_gap": {
-    "campaign_active_starts_at": "A770-003 ready",
+  "current_swarm_state": {
+    "campaign_active_reaches": "A770-007 merged",
     "source_cutoff_reaches": "A770-007 merged",
-    "campaign_state_missing": true,
-    "receipt_files_missing": true,
-    "capability_matrix_differs": true,
-    "selected_device_identity_report_missing": true,
+    "campaign_state_missing": false,
+    "receipt_files_missing": false,
+    "capability_matrix_differs": false,
+    "selected_device_identity_report_missing": false,
+    "campaign_events_present": true,
+    "hash_matches_source_cutoff": [
+      "ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-tiny-smoke.json",
+      "ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-parity.json",
+      "ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-selected-device-receipt-identity.json",
+      "ci/hardware/amd-5700x-intel-a770/a770-kernel-capability-matrix.json",
+      "docs/reports/2026-05-20-a770-selected-device-receipt-identity.md",
+      "docs/tracking/campaigns/intel-a770/active.toml"
+    ],
     "diagnostic_tooling_content_audit_needed": true
   },
-  "moved_in_this_pr": [
+  "moved_in_initial_inventory_pr": [
     "docs/migrations/a770-from-bitnet-rs.md",
     "ci/hardware/amd-5700x-intel-a770/MIGRATION_MANIFEST.json"
   ],
+  "updated_in_this_reconciliation": [
+    "docs/migrations/a770-from-bitnet-rs.md",
+    "ci/hardware/amd-5700x-intel-a770/MIGRATION_MANIFEST.json"
+  ],
+  "moved_by_source_sync_before_this_reconciliation": [
+    "A770-005 runtime receipt",
+    "A770-006 runtime receipt",
+    "A770-007 selected-device identity receipt",
+    "A770 selected-device identity report",
+    "A770 campaign active.toml through A770-007",
+    "A770 campaign events and generated status through A770-007",
+    "A770 kernel capability matrix matching source cutoff"
+  ],
   "not_moved_in_this_pr": [
-    "A770 runtime receipts",
-    "A770 campaign active.toml changes",
-    "A770 generated dashboards",
     "A770 runtime or diagnostic code",
     "old PR closures or dispositions",
     "model binaries or local caches"
@@ -79,40 +99,44 @@
     {
       "path": "ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-tiny-smoke.json",
       "source_exists": true,
-      "swarm_exists": false,
-      "planned_action": "copy_from_source_in_SWARM-A770-MIGRATE-002"
+      "swarm_exists": true,
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "consume_existing_swarm_receipt"
     },
     {
       "path": "ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-parity.json",
       "source_exists": true,
-      "swarm_exists": false,
-      "planned_action": "copy_from_source_in_SWARM-A770-MIGRATE-002"
+      "swarm_exists": true,
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "consume_existing_swarm_receipt"
     },
     {
       "path": "ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-selected-device-receipt-identity.json",
       "source_exists": true,
-      "swarm_exists": false,
-      "planned_action": "copy_from_source_in_SWARM-A770-MIGRATE-002"
+      "swarm_exists": true,
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "consume_existing_swarm_receipt"
     },
     {
       "path": "ci/hardware/amd-5700x-intel-a770/a770-kernel-capability-matrix.json",
       "source_exists": true,
       "swarm_exists": true,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "refresh_from_source_in_SWARM-A770-MIGRATE-002"
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "consume_existing_swarm_matrix"
     },
     {
       "path": "docs/reports/2026-05-20-a770-selected-device-receipt-identity.md",
       "source_exists": true,
-      "swarm_exists": false,
-      "planned_action": "copy_from_source_in_SWARM-A770-MIGRATE-002"
+      "swarm_exists": true,
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "consume_existing_swarm_report"
     },
     {
       "path": "docs/tracking/campaigns/intel-a770/active.toml",
       "source_exists": true,
       "swarm_exists": true,
-      "swarm_matches_source_cutoff": false,
-      "planned_action": "reconcile_with_migrated_from_bitnet_rs_events_in_SWARM-A770-MIGRATE-003"
+      "swarm_matches_source_cutoff": true,
+      "planned_action": "consume_existing_swarm_tracker_state"
     }
   ],
   "claim_boundaries": [
@@ -130,8 +154,6 @@
     "no completion claim"
   ],
   "next_swarm_items": [
-    "SWARM-A770-MIGRATE-002 carry latest A770 receipts, matrix, report, and events from source cutoff",
-    "SWARM-A770-MIGRATE-003 reconcile tracker with migrated_from_bitnet_rs events",
     "SWARM-A770-DIAG-001 content-audit durable A770 diagnostic tooling and old diagnostic stack",
     "SWARM-A770-QK256-001 continue real A770 QK256 OpenCL implementation after migration state exists",
     "SWARM-A770-BEHAVIOR-001 prove CPU/reference behavior and broad multi-token prompts before performance or residency claims"

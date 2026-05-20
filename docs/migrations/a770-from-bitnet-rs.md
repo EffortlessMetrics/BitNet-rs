@@ -4,11 +4,12 @@ This document is the handoff ledger for moving the Intel Arc A770 operating
 lane from `EffortlessMetrics/BitNet-rs` into
 `EffortlessMetrics/bitnet-rs-swarm`.
 
-The migration moves operating state, not old repository churn. This inventory PR
-does not copy A770 receipts, run inference, change OpenCL kernels, change BitNet
-QK256/I2_S behavior, or promote any A770 claim. It records the source cutoff,
-the accepted source state to carry, current swarm gaps, and the next migration
-work.
+The migration moves operating state, not old repository churn. The initial
+inventory PR recorded the source cutoff without running inference, changing
+OpenCL kernels, changing BitNet QK256/I2_S behavior, or promoting any A770
+claim. A later source-sync commit carried the accepted A770 receipts, matrix,
+report, tracker events, and tracker state into swarm. This document now records
+that reconciled state and the next work.
 
 ## Source Cutoff
 
@@ -52,33 +53,35 @@ The state to carry forward is:
   successor, duplicate, clean port, historical capture, or explicit content
   rejection is proven.
 
-## Current Swarm Gap
+## Current Swarm State
 
-The swarm checkout already contains an A770 campaign skeleton, route docs, and a
-kernel capability matrix, but it is not at the old-repo A770 cutoff. At this
-inventory point:
+The swarm checkout now contains the accepted A770 source-cutoff artifacts
+through `A770-007`. The following files are present and hash-match the
+`EffortlessMetrics/BitNet-rs` source checkout used for this reconciliation:
 
-- `docs/tracking/campaigns/intel-a770/active.toml` still starts at
-  `A770-003` as `ready`.
-- `docs/tracking/campaigns/intel-a770/generated/status.md` still shows only
-  `A770-003`.
-- `ci/hardware/amd-5700x-intel-a770/a770-kernel-capability-matrix.json` exists
-  but differs from the source cutoff.
-- the source A770-005, A770-006, and A770-007 receipts are missing from swarm.
-- the source A770 selected-device receipt identity report is missing from swarm.
-- the source A770 campaign events and closeout state are missing from swarm.
+- `ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-tiny-smoke.json`
+- `ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-parity.json`
+- `ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-selected-device-receipt-identity.json`
+- `ci/hardware/amd-5700x-intel-a770/a770-kernel-capability-matrix.json`
+- `docs/reports/2026-05-20-a770-selected-device-receipt-identity.md`
+- `docs/tracking/campaigns/intel-a770/active.toml`
 
-These gaps should be closed by controlled carry PRs. Do not synthesize swarm
-merge history for old BitNet-rs PRs.
+The A770 campaign status also reaches `A770-007` as merged, and the source
+A770 events through `A770-007` are present. This does not change the claim
+boundary: the evidence remains selected-device smoke/parity evidence, not
+BitNet inference, official QK256 production semantics, quality, speed,
+residency, or completion proof.
 
-## Moved In This PR
+## Inventory Ledger Updates
 
-This PR moves only the migration ledger:
+The initial inventory PR moved only the migration ledger:
 
 - `docs/migrations/a770-from-bitnet-rs.md`
 - `ci/hardware/amd-5700x-intel-a770/MIGRATION_MANIFEST.json`
 
-No A770 runtime receipt is copied in this inventory PR.
+The source-sync that followed carried the accepted A770-005, A770-006, and
+A770-007 receipt artifacts and tracker state. This reconciliation updates the
+ledger to match that current state; it does not add runtime proof.
 
 ## Not Moved
 
@@ -115,15 +118,10 @@ swarm carries it, verifies it, and advances the later gates.
 
 Recommended next PRs:
 
-1. `SWARM-A770-MIGRATE-002`: copy the latest accepted A770 receipts, capability
-   matrix, selected-device identity report, and campaign events from the source
-   cutoff; validate every moved JSON.
-2. `SWARM-A770-MIGRATE-003`: reconcile the swarm A770 tracker with
-   `migrated_from_bitnet_rs` events instead of synthetic swarm merge history.
-3. `SWARM-A770-DIAG-001`: content-audit #5946 and the older A770 diagnostic
+1. `SWARM-A770-DIAG-001`: content-audit #5946 and the older A770 diagnostic
    stack for exact missing numerical-attribution tooling before porting any
    diagnostic code.
-4. `SWARM-A770-QK256-001`: continue real A770 QK256 OpenCL implementation only
+2. `SWARM-A770-QK256-001`: continue real A770 QK256 OpenCL implementation only
    after the migrated selected-device state is available in swarm.
-5. `SWARM-A770-BEHAVIOR-001`: prove CPU/reference behavior and broad
+3. `SWARM-A770-BEHAVIOR-001`: prove CPU/reference behavior and broad
    multi-token prompts before A770 performance or residency claims.
