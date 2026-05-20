@@ -52,6 +52,9 @@ Roadmap
   `docs/adr/BITNET-ADR-0006-pr-closure-creates-backlog.md`,
   `docs/tracking/PR_QUEUE_DISPOSITION.md`, and
   `policy/pr-dispositions.toml`.
+- Generated tracking conflict rules belong in
+  `docs/specs/BITNET-SPEC-GENERATED-TRACKING.md` and
+  `policy/generated-tracking.toml`.
 
 ## Rules
 
@@ -60,7 +63,9 @@ Roadmap
 3. Specs define behavior; plans define sequencing.
 4. Proposals explain why; ADRs record durable decisions.
 5. Active goals tell agents what to do now and link to the plan/spec/ADR.
-6. Generated status is updated by tools, not by hand.
+6. Generated status is updated by tools, not by hand; conflicts are resolved by
+   repairing source manifests, events, generators, or checkers before
+   regenerating.
 7. Public claims require support-tier, hardware, model-artifact, or receipt proof.
 8. Policy exceptions require owner, reason, coverage, and review date.
 9. Closing a PR is a disposition event, not backlog reduction, unless the close
