@@ -467,6 +467,17 @@ enable BitNet chat or serve, prove dense SLM behavior, claim broad BitNet
 quality, claim broad Apple Silicon performance, or widen Metal, QK256, Neural
 Engine, MPSGraph, or MacBook support.
 
+`M4-BENCH-003` wires benchmark receipts into the direct
+`bitnet mac regression <current.json> --baseline <matching-baseline.json>`
+path after the dense and BitNet variance lanes. Direct regression now accepts
+`apple_m4_benchmark_variance_v1` baselines when the dense variance receipt is
+valid for timing comparison, continues to compare `apple_m4_slm_benchmark_v2`
+and `bitnet_apple_m4_benchmark_v1`, and labels drift warnings by category so
+timing, memory, and quality signals stay separate from identity failures. A
+dense variance receipt with `comparison_readiness.can_compare_timing=false`
+or non-empty `invalid_comparison_reasons` remains a comparison blocker, not a
+zero-warning timing result.
+
 ## Drift Thresholds
 
 `M4-EXCELLENCE-004` publishes the current family-specific drift policy in the

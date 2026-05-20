@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T09:50:00Z"
+event = "merged"
+item = "LNL258V-CI-001"
+pr = 6052
+head_sha = "6eaddb68fc2d933c632ed31ab94d5044ba3dfae7"
+merge_sha = "49346aa1187300f3d661b9cdb182e282e8fea105"
+branch = "codex/lunar-lake/LNL258V-CI-001-pr-plan-timeout"
+actor = "codex"
+summary = "Merged PR #6052, bounding Lunar Lake PR Plan/Gate controller plan construction."
+
+notes = [
+  "PR #6052 added 10-minute step timeouts to the PR Plan and PR Gate `xtask ci plan` construction steps.",
+  "The change was CI controller hardening only and did not alter Lunar Lake route evidence, route promotion, regression semantics, inference behavior, speedup, power-advantage, native accelerator, acceleration, broad quality, measured-temperature, or BitNet QK256/I2_S behavior claims.",
+  "The active Lunar Lake blocker remains LNL258V-POWER-006 for real battery-mode low_power telemetry and energy-proxy evidence.",
+]

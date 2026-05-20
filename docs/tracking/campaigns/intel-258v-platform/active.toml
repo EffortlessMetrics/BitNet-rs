@@ -9286,6 +9286,236 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-BITNET-INTAKE-003"
+status = "merged"
+pr = 6046
+head_sha = "a8b5ebd7553dda704c8cd0091a8256eb6cf32b24"
+merge_sha = "d5f77955b61d26692c2a155dce4992d2c3001aa1"
+branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-003-pending-5064"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-BITNET-INTAKE-002"]
+acceptance = "Refresh Lunar Lake BitNet semantic-intake evidence so pending stacked A770 PR #5064 is indexed as a shared BitNet semantic change that would require Lunar Lake BitNet reruns if it reaches main, while keeping strict regression ready because the change is pending, not merged-to-main. Refresh regression-v2, operator-comparison, and generated tracking without running inference or changing route promotion, speedup, power-advantage, acceleration, dense-SLM-as-BitNet-proof, native accelerator, or BitNet QK256/I2_S behavior claims."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::bitnet_semantic_intake_records_pending_stack_without_rerun -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::regression_bundle_v2_fails_when_bitnet_semantic_intake_requires_rerun -- --exact --nocapture",
+  "target/debug/bitnet.exe lunar-lake bitnet-intake --artifact-root ci/hardware/intel-258v/2026-05-08 --source-changes lunar-lake-bitnet-semantic-source-changes.json --cpu-reference-bundle cpu-reference-bundle-after-semantic-fix.json --operator-comparison lunar-lake-operator-comparison.json --json-out lunar-lake-bitnet-semantic-intake.json --created-utc 2026-05-20T08:00:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-20T08:00:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-20T08:00:00Z --strict",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Lunar Lake BitNet semantic intake indexes pending A770 #5064 as a shared semantic change that would require 258V reruns if merged to main.",
+  "Strict regression remains ready because A770 #5064 is pending, not merged-to-main, and stale_after_merged_count remains zero.",
+  "The active low_power blocker remains LNL258V-POWER-006 battery-mode telemetry and energy-proxy evidence.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "A770 #5064 has merged to main.",
+  "Current Lunar Lake BitNet evidence is stale before #5064 merges to main.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed on Lunar Lake.",
+]
+
+[[work_item]]
+id = "LNL258V-GOAL-AUDIT-004"
+status = "merged"
+pr = 6049
+head_sha = "aa2a375eff5bcf20191ac3599d82406f73307753"
+merge_sha = "65ce7fd5d7b3cabe9d857ed9b0901c8442e468fd"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-004-post-bitnet-intake"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-003", "LNL258V-OP-013", "LNL258V-ASK-006", "LNL258V-ASK-007", "LNL258V-BITNET-INTAKE-003"]
+acceptance = "Refresh the no-inference Lunar Lake excellence audit and goal artifact checklist after OP-013, ASK-006, ASK-007, and BITNET-INTAKE-003 so the completion audit records fail-closed ask model resolution, appliance-level ask_normal/ask_short auto GPU receipts, pending A770 #5064 semantic-intake watchpoint status, and the unchanged active LNL258V-POWER-006 battery-mode low_power blocker without running inference or changing route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, measured-temperature, or BitNet QK256/I2_S behavior claims."
+commands = [
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+]
+may_claim = [
+  "The Lunar Lake completion audit reflects OP-013 fail-closed default model resolution for blocked auto routes.",
+  "The audit reflects appliance-level ask_normal and ask_short auto GPU receipts indexed by strict regression and operator comparison.",
+  "The audit reflects BITNET-INTAKE-003 pending A770 #5064 semantic-intake watchpoint status with pending_shared_change_count=1 and stale_after_merged_count=0.",
+  "The audit still records excellent support as not complete because LNL258V-POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence.",
+  "The audit refresh is no-inference and leaves route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, measured-temperature, and BitNet QK256/I2_S behavior claims unchanged.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "A measured thermal temperature is available.",
+  "Battery-mode low_power evidence is available while the 258V remains on AC power.",
+  "A770 #5064 has merged to main.",
+  "Current Lunar Lake BitNet evidence is stale before #5064 merges to main.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
+id = "LNL258V-CI-001"
+status = "merged"
+pr = 6052
+head_sha = "6eaddb68fc2d933c632ed31ab94d5044ba3dfae7"
+merge_sha = "49346aa1187300f3d661b9cdb182e282e8fea105"
+branch = "codex/lunar-lake/LNL258V-CI-001-pr-plan-timeout"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-004"]
+acceptance = "Harden the PR Plan and PR Gate controller path after Lunar Lake tracker-only PRs #6049/#6050 showed long-running `xtask ci plan` steps even though local reproduction finished quickly. Add bounded timeouts to the PR-plan construction steps so controller jobs fail closed instead of hanging indefinitely, without changing route evidence, route promotion, regression semantics, inference behavior, speedup, power-advantage, native accelerator, acceleration, broad quality, measured-temperature, or BitNet QK256/I2_S behavior claims."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- lint-workflows",
+  "powershell -NoProfile -Command \"Get-Content .github/workflows/pr-plan.yml -Raw | Select-String 'timeout-minutes: 10' | Out-Null; Get-Content .github/workflows/pr-gate.yml -Raw | Select-String 'timeout-minutes: 10' | Out-Null\"",
+  "powershell -NoProfile -Command \"@('docs/tracking/campaigns/intel-258v-platform/active.toml','docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T091000Z-LNL258V-GOAL-AUDIT-004-pr-open.toml','docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T092000Z-LNL258V-GOAL-AUDIT-004-merged.toml','docs/tracking/campaigns/intel-258v-platform/generated/status.md','docs/tracking/generated/blocked-items.md','docs/tracking/generated/global-dashboard.md','docs/tracking/generated/lane-dashboard.md') | Set-Content -Path (Join-Path $env:TEMP 'bitnet-pr6050-changed.txt') -Encoding ascii\"",
+  "powershell -NoProfile -Command \"cargo run --locked -p xtask --no-default-features -- ci plan --changed-file (Join-Path $env:TEMP 'bitnet-pr6050-changed.txt') --labels-json '[]' --json-out (Join-Path $env:TEMP 'bitnet-pr6050-ci-plan.json') --print\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  ".github/workflows/pr-plan.yml",
+  ".github/workflows/pr-gate.yml",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "PR Plan and PR Gate now bound the `xtask ci plan` construction step so controller jobs fail closed instead of hanging indefinitely.",
+  "The local `xtask ci plan` reproduction for the GOAL-AUDIT-004 closeout tracker-only file set succeeds quickly.",
+  "The active Lunar Lake route evidence remains unchanged and LNL258V-POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "A measured thermal temperature is available.",
+  "Battery-mode low_power evidence is available while the 258V remains on AC power.",
+  "A770 #5064 has merged to main.",
+  "Current Lunar Lake BitNet evidence is stale before #5064 merges to main.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
+id = "LNL258V-POWER-007"
+status = "merged"
+pr = 6055
+head_sha = "da2fd6e59c81b916421b0afc2fcfe16a1faa67a9"
+merge_sha = "91979d3e27fc95e1e2bd8dde4384b4ef017e9bf4"
+branch = "codex/lunar-lake/LNL258V-POWER-007-battery-runbook"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-POWER-005"]
+acceptance = "Add a no-evidence, no-inference Lunar Lake low_power battery-mode operator runbook for POWER-006 so the physical battery run has explicit preflight, stop rules, before/after telemetry requirements, route/profile sampling requirements, energy-proxy refresh steps, artifact refresh steps, and low_power promotion gates. Preserve POWER-006 as blocked until a real battery-mode run exists and make no route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "npx --yes markdownlint-cli2@0.18.1 --config .markdownlint.jsonc docs/hardware/intel-258v-low-power-battery-runbook.md",
+  "powershell -NoProfile -Command \"Get-Content docs/hardware/intel-258v-low-power-battery-runbook.md -Raw | Select-String 'BatteryStatus=2' | Out-Null; Get-Content docs/hardware/intel-258v-low-power-battery-runbook.md -Raw | Select-String 'low_power remains blocked' | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/hardware/intel-258v-low-power-battery-runbook.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "A POWER-006 battery-mode operator runbook exists with preflight, stop rules, before/after telemetry, energy-proxy, artifact refresh, and promotion-gate instructions.",
+  "The runbook preserves POWER-006 as blocked until telemetry-context --require-battery passes on battery power and battery-mode route/profile evidence exists.",
+]
+must_not_claim = [
+  "Battery-mode low_power evidence is available while the 258V remains on AC power.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-006"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"

@@ -13886,8 +13886,8 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
-    fn lunar_lake_ask_default_model_path_uses_cpu_phase_receipt_when_present() -> anyhow::Result<()>
-    {
+    fn lunar_lake_ask_default_model_path_uses_cpu_phase_receipt_when_present()
+    -> Result<(), Box<dyn std::error::Error>> {
         let temp_dir = tempfile::tempdir()?;
         let artifact_root = temp_dir.path().join("artifacts");
         std::fs::create_dir_all(&artifact_root)?;
@@ -13922,8 +13922,8 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
-    fn lunar_lake_ask_default_model_path_uses_openvino_manifest_when_present() -> anyhow::Result<()>
-    {
+    fn lunar_lake_ask_default_model_path_uses_openvino_manifest_when_present()
+    -> Result<(), Box<dyn std::error::Error>> {
         let temp_dir = tempfile::tempdir()?;
         let artifact_root = temp_dir.path().join("artifacts");
         std::fs::create_dir_all(&artifact_root)?;
@@ -13958,7 +13958,8 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
-    fn lunar_lake_ask_default_model_path_prefers_explicit_model() -> anyhow::Result<()> {
+    fn lunar_lake_ask_default_model_path_prefers_explicit_model()
+    -> Result<(), Box<dyn std::error::Error>> {
         let temp_dir = tempfile::tempdir()?;
         let artifact_root = temp_dir.path().join("artifacts");
         let explicit = temp_dir.path().join("explicit.gguf");

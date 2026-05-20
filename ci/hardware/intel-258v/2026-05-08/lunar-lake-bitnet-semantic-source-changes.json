@@ -1,9 +1,24 @@
 {
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_bitnet_semantic_source_changes",
-  "created_utc": "2026-05-19T13:45:00Z",
+  "created_utc": "2026-05-20T08:00:00Z",
   "machine_id": "intel-258v",
   "changes": [
+    {
+      "source_lane": "a770",
+      "source_pr": 5064,
+      "title": "diag(reference): report truncated Qcur score samples",
+      "status": "pending_stack",
+      "base_ref": "a770/diag-score-kcur-history-attribution",
+      "head_sha": "7de548b57f9ebdb0e10cb3fac7de2fe51a501469",
+      "semantic_scope": [
+        "attention_score_key_f16_roundtrip",
+        "qk_attention_score_input_semantics",
+        "a770_reference_trace_diagnostics"
+      ],
+      "requires_lunar_lake_rerun_when_merged_to_main": true,
+      "claim_boundary": "pending stacked A770 PR includes a BitNet transformer attention_score_key_input f16-roundtrip semantic change plus diagnostic trace reporting; if merged to main it requires Lunar Lake BitNet reruns before route decisions update; no current Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
+    },
     {
       "source_lane": "a770",
       "source_pr": 5020,

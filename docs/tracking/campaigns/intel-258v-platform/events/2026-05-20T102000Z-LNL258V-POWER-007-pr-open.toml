@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T10:20:00Z"
+event = "pr_open"
+item = "LNL258V-POWER-007"
+pr = 6055
+head_sha = "4ee193e860d8bb91d5f7e5196cbd9c5e1a3c2068"
+branch = "codex/lunar-lake/LNL258V-POWER-007-battery-runbook"
+actor = "codex"
+summary = "Opened PR #6055 for the POWER-006 low_power battery-mode runbook."
+
+notes = [
+  "PR #6055 adds the no-evidence operator runbook for the eventual physical battery-mode low_power evidence run.",
+  "Validation covered markdownlint, runbook stop-rule content checks, campaign check, generated check, and diff whitespace.",
+  "The PR preserves POWER-006 as blocked until real battery telemetry and route/profile evidence exist, with no inference, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]

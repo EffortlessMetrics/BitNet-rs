@@ -1233,6 +1233,7 @@ struct RegressionCheckSummary {
 #[derive(Debug, Serialize)]
 struct RegressionWarning {
     profile_id: String,
+    category: String,
     field: String,
     baseline: f64,
     observed: f64,
@@ -2370,6 +2371,7 @@ fn apple_m4_status_readiness_json(
             "last_matching_receipts": {
                 "eval": report_inventory["dense_slm_eval_v2"].clone(),
                 "benchmark": report_inventory["dense_slm_benchmark_v2"].clone(),
+                "benchmark_variance": report_inventory["dense_slm_benchmark_variance"].clone(),
             },
             "claim_boundary": {
                 "dense_slm_only": true,
@@ -2397,6 +2399,7 @@ fn apple_m4_status_readiness_json(
             "last_matching_receipts": {
                 "eval": report_inventory["bitnet_eval"].clone(),
                 "benchmark": report_inventory["bitnet_benchmark"].clone(),
+                "benchmark_variance": report_inventory["bitnet_benchmark_variance"].clone(),
                 "variable_warm": report_inventory["bitnet_variable_warm"].clone(),
             },
             "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
@@ -2795,11 +2798,13 @@ fn apple_m4_report_inventory_json() -> serde_json::Value {
         "root": root,
         "dense_slm_eval_v2": latest_matching_report(&root, "slm-eval-v2", "summary.json"),
         "dense_slm_benchmark_v2": latest_matching_report(&root, "slm-benchmark-v2", "summary.json"),
+        "dense_slm_benchmark_variance": latest_matching_report(&root, "benchmark-variance", "summary.json"),
         "bitnet_eval": latest_of_matching_reports(&root, &[
             ("bitnet-eval-250", "answer-corpus.json"),
             ("bitnet-eval", "answer-corpus.json"),
         ]),
         "bitnet_benchmark": latest_matching_report(&root, "bitnet-benchmark", "summary.json"),
+        "bitnet_benchmark_variance": latest_matching_report(&root, "bitnet-benchmark-variance", "summary.json"),
         "bitnet_variable_warm": latest_matching_report(&root, "bitnet-productization", "variable-warm-session.json"),
     })
 }
@@ -2969,6 +2974,15 @@ fn apple_m4_report_refresh_families(root: &Path) -> Vec<serde_json::Value> {
             "local/advisory/nightly: regenerate v2 dense benchmark summaries in release mode, then validate committed summaries.",
         ),
         (
+            "dense_slm_benchmark_variance",
+            "dense_slm",
+            "benchmark-variance",
+            "summary.json",
+            "apple_m4_benchmark_variance_v1",
+            "Dense SLM repeat-run benchmark variance reports.",
+            "local/advisory/nightly: regenerate dense benchmark variance summaries, then validate committed summaries and only compare timing when comparison_readiness permits it.",
+        ),
+        (
             "bitnet_eval",
             "bitnet",
             "bitnet-eval",
@@ -2985,6 +2999,15 @@ fn apple_m4_report_refresh_families(root: &Path) -> Vec<serde_json::Value> {
             "bitnet_apple_m4_benchmark_v1",
             "BitNet one-shot ask and fixed-warm benchmark reports.",
             "local/advisory/nightly: regenerate BitNet one-shot/fixed-warm benchmark summaries, then validate the committed benchmark receipt.",
+        ),
+        (
+            "bitnet_benchmark_variance",
+            "bitnet",
+            "bitnet-benchmark-variance",
+            "summary.json",
+            "bitnet_apple_m4_benchmark_v1",
+            "BitNet one-shot ask and fixed-warm repeatability/variance reports.",
+            "local/advisory/nightly: regenerate BitNet one-shot/fixed-warm variance summaries, then validate the committed benchmark receipt.",
         ),
         (
             "bitnet_variable_warm",
@@ -3660,24 +3683,31 @@ fn apple_m4_dashboard_metrics_json(receipt: &serde_json::Value) -> serde_json::V
         },
         "speed": {
             "ttft_ms_p50": receipt["speed"]["ttft_ms_p50"].as_f64()
+                .or_else(|| receipt["metrics"]["speed"]["ttft_ms_p50"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["ttft_ms"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["timing"]["time_to_first_token_ms"]["p50_ms"].as_f64()),
             "input_tok_s_p50": receipt["speed"]["input_tok_s_p50"].as_f64()
+                .or_else(|| receipt["metrics"]["speed"]["input_tok_s_p50"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["input_tok_s"]["p50"].as_f64()),
             "output_tok_s_p50": receipt["speed"]["output_tok_s_p50"].as_f64()
+                .or_else(|| receipt["metrics"]["speed"]["output_tok_s_p50"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["output_tok_s"]["p50"].as_f64()),
             "decode_tok_s_p50": receipt["speed"]["decode_tok_s_p50"].as_f64()
+                .or_else(|| receipt["metrics"]["speed"]["decode_tok_s_p50"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["decode_tok_s"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["timing"]["steady_decode_tok_s"]["p50"].as_f64()),
             "total_wall_ms_p50": receipt["speed"]["total_wall_ms_p50"].as_f64()
+                .or_else(|| receipt["metrics"]["speed"]["total_wall_ms_p50"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["total_wall_ms"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["timing"]["total_session_ms"].as_f64()),
         },
         "memory": {
             "peak_memory_mb_p50": receipt["memory"]["peak_memory_mb"]["p50"].as_f64()
+                .or_else(|| receipt["metrics"]["memory"]["peak_memory_mb_p50"]["p50"].as_f64())
                 .or_else(|| receipt["memory"]["peak_memory_mb"].as_f64()),
             "resident_memory_bytes": receipt["memory"]["resident_memory_bytes"].as_u64(),
             "memory_drift_mb_p50": receipt["memory"]["memory_drift_mb"]["p50"].as_f64()
+                .or_else(|| receipt["metrics"]["memory"]["memory_drift_mb_p50"]["p50"].as_f64())
                 .or_else(|| receipt["stability"]["memory_drift_mb"].as_f64()),
         },
     })
@@ -9587,6 +9617,7 @@ fn apple_m4_doctor_readiness_json(
             "last_matching_receipts": {
                 "eval": report_inventory["dense_slm_eval_v2"].clone(),
                 "benchmark": report_inventory["dense_slm_benchmark_v2"].clone(),
+                "benchmark_variance": report_inventory["dense_slm_benchmark_variance"].clone(),
             },
             "claim_boundary": {
                 "dense_slm_only": true,
@@ -9614,6 +9645,7 @@ fn apple_m4_doctor_readiness_json(
             "last_matching_receipts": {
                 "eval": report_inventory["bitnet_eval"].clone(),
                 "benchmark": report_inventory["bitnet_benchmark"].clone(),
+                "benchmark_variance": report_inventory["bitnet_benchmark_variance"].clone(),
                 "variable_warm": report_inventory["bitnet_variable_warm"].clone(),
             },
             "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
@@ -13410,7 +13442,8 @@ fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: boo
                 );
                 for warning in &regression.warnings {
                     println!(
-                        "warning: {} {} baseline={} observed={} threshold={}%",
+                        "warning: {} {} {} baseline={} observed={} threshold={}%",
+                        warning.category,
                         warning.profile_id,
                         warning.field,
                         warning.baseline,
@@ -13487,7 +13520,8 @@ fn run_regression_check(
                 );
                 for warning in &regression.warnings {
                     println!(
-                        "warning: {} {} baseline={} observed={} threshold={}%",
+                        "warning: {} {} {} baseline={} observed={} threshold={}%",
+                        warning.category,
                         warning.profile_id,
                         warning.field,
                         warning.baseline,
@@ -13552,12 +13586,13 @@ fn load_regression_baseline(path: &Path) -> Result<RegressionBaseline> {
             | Some("slm_apple_m4_warm_session")
             | Some("apple_m4_slm_eval_summary")
             | Some("apple_m4_slm_benchmark_v2")
+            | Some("apple_m4_benchmark_variance_v1")
             | Some("bitnet_apple_m4_local_answer_corpus")
             | Some("bitnet_apple_m4_warm_session")
             | Some("bitnet_apple_m4_benchmark_v1")
     ) {
         anyhow::bail!(
-            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, apple_m4_slm_eval_summary, apple_m4_slm_benchmark_v2, bitnet_apple_m4_local_answer_corpus, bitnet_apple_m4_warm_session, or bitnet_apple_m4_benchmark_v1 receipt",
+            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, apple_m4_slm_eval_summary, apple_m4_slm_benchmark_v2, apple_m4_benchmark_variance_v1, bitnet_apple_m4_local_answer_corpus, bitnet_apple_m4_warm_session, or bitnet_apple_m4_benchmark_v1 receipt",
             path.display()
         );
     }
@@ -13581,6 +13616,9 @@ fn compare_mac_regression(
         }
         Some("apple_m4_slm_benchmark_v2") => {
             compare_dense_slm_benchmark_v2_regression(path, receipt, baseline)
+        }
+        Some("apple_m4_benchmark_variance_v1") => {
+            compare_apple_m4_benchmark_variance_regression(path, receipt, baseline)
         }
         Some("bitnet_apple_m4_local_answer_corpus") => {
             compare_bitnet_eval_answer_corpus_regression(path, receipt, baseline)
@@ -14088,6 +14126,107 @@ fn compare_dense_slm_benchmark_v2_regression(
                     &format!("memory.{metric}.{percentile}"),
                     regression_metric(baseline_profile, &["memory", metric, percentile])?,
                     regression_metric(profile, &["memory", metric, percentile])?,
+                    threshold,
+                );
+            }
+        }
+    }
+
+    Ok(RegressionCheckSummary {
+        baseline_path: baseline.path.clone(),
+        advisory: true,
+        matched_context: true,
+        warning_count: warnings.len(),
+        warnings,
+    })
+}
+
+fn compare_apple_m4_benchmark_variance_regression(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline: &RegressionBaseline,
+) -> Result<RegressionCheckSummary> {
+    const DECODE_TOK_S_LOWER_PCT: f64 = 12.5;
+    const THROUGHPUT_LOWER_PCT: f64 = 15.0;
+    const LATENCY_HIGHER_PCT: f64 = 15.0;
+    const LOAD_HIGHER_PCT: f64 = 20.0;
+    const SAMPLING_HIGHER_PCT: f64 = 20.0;
+    const PEAK_MEMORY_MB_HIGHER_PCT: f64 = 10.0;
+    const MEMORY_DRIFT_MB_HIGHER_PCT: f64 = 15.0;
+
+    ensure_benchmark_variance_regression_context_matches(
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+    )?;
+
+    let mut warnings = Vec::new();
+    for summary_percentile in ["p50", "p90", "p99"] {
+        for variance_stat in ["p50", "p90", "p99"] {
+            for (metric, threshold) in [
+                ("cold_load_ms", LOAD_HIGHER_PCT),
+                ("tokenizer_load_ms", LOAD_HIGHER_PCT),
+                ("prompt_tokenize_ms", LATENCY_HIGHER_PCT),
+                ("prefill_ms", LATENCY_HIGHER_PCT),
+                ("ttft_ms", LATENCY_HIGHER_PCT),
+                ("sampling_ms_per_token", SAMPLING_HIGHER_PCT),
+                ("total_wall_ms", LATENCY_HIGHER_PCT),
+            ] {
+                let field = format!("{metric}_{summary_percentile}");
+                compare_higher_is_worse(
+                    &mut warnings,
+                    "benchmark_variance:timing",
+                    &format!("metrics.speed.{field}.{variance_stat}"),
+                    regression_metric(
+                        &baseline.receipt,
+                        &["metrics", "speed", field.as_str(), variance_stat],
+                    )?,
+                    regression_metric(
+                        receipt,
+                        &["metrics", "speed", field.as_str(), variance_stat],
+                    )?,
+                    threshold,
+                );
+            }
+            for (metric, threshold) in [
+                ("input_tok_s", THROUGHPUT_LOWER_PCT),
+                ("output_tok_s", THROUGHPUT_LOWER_PCT),
+                ("decode_tok_s", DECODE_TOK_S_LOWER_PCT),
+            ] {
+                let field = format!("{metric}_{summary_percentile}");
+                compare_lower_is_worse(
+                    &mut warnings,
+                    "benchmark_variance:timing",
+                    &format!("metrics.speed.{field}.{variance_stat}"),
+                    regression_metric(
+                        &baseline.receipt,
+                        &["metrics", "speed", field.as_str(), variance_stat],
+                    )?,
+                    regression_metric(
+                        receipt,
+                        &["metrics", "speed", field.as_str(), variance_stat],
+                    )?,
+                    threshold,
+                );
+            }
+            for (metric, threshold) in [
+                ("peak_memory_mb", PEAK_MEMORY_MB_HIGHER_PCT),
+                ("memory_drift_mb", MEMORY_DRIFT_MB_HIGHER_PCT),
+            ] {
+                let field = format!("{metric}_{summary_percentile}");
+                compare_higher_is_worse(
+                    &mut warnings,
+                    "benchmark_variance:memory",
+                    &format!("metrics.memory.{field}.{variance_stat}"),
+                    regression_metric(
+                        &baseline.receipt,
+                        &["metrics", "memory", field.as_str(), variance_stat],
+                    )?,
+                    regression_metric(
+                        receipt,
+                        &["metrics", "memory", field.as_str(), variance_stat],
+                    )?,
                     threshold,
                 );
             }
@@ -15773,6 +15912,216 @@ fn ensure_slm_benchmark_v2_regression_context_matches(
     Ok(())
 }
 
+fn ensure_benchmark_variance_regression_context_matches(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    ensure_benchmark_variance_comparable(path, receipt)?;
+    ensure_benchmark_variance_comparable(baseline_path, baseline)?;
+
+    for (label, observed, expected) in [
+        ("schema_version", receipt["schema_version"].as_str(), baseline["schema_version"].as_str()),
+        ("artifact_kind", receipt["artifact_kind"].as_str(), baseline["artifact_kind"].as_str()),
+        ("profile_set", receipt["profile_set"].as_str(), baseline["profile_set"].as_str()),
+        (
+            "requested_backend",
+            receipt["requested_backend"].as_str(),
+            baseline["requested_backend"].as_str(),
+        ),
+        (
+            "selected_backend",
+            receipt["selected_backend"].as_str(),
+            baseline["selected_backend"].as_str(),
+        ),
+        ("runtime_api", receipt["runtime_api"].as_str(), baseline["runtime_api"].as_str()),
+        (
+            "build.profile",
+            receipt["build"]["profile"].as_str(),
+            baseline["build"]["profile"].as_str(),
+        ),
+        (
+            "model_cache.id",
+            receipt["model_cache"]["id"].as_str(),
+            baseline["model_cache"]["id"].as_str(),
+        ),
+        (
+            "model_cache.sha256",
+            receipt["model_cache"]["sha256"].as_str(),
+            baseline["model_cache"]["sha256"].as_str(),
+        ),
+        (
+            "model_cache.architecture",
+            receipt["model_cache"]["architecture"].as_str(),
+            baseline["model_cache"]["architecture"].as_str(),
+        ),
+        (
+            "model_cache.quantization",
+            receipt["model_cache"]["quantization"].as_str(),
+            baseline["model_cache"]["quantization"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_model",
+            receipt["model_cache"]["tokenizer_model"].as_str(),
+            baseline["model_cache"]["tokenizer_model"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_pre",
+            receipt["model_cache"]["tokenizer_pre"].as_str(),
+            baseline["model_cache"]["tokenizer_pre"].as_str(),
+        ),
+        (
+            "evidence.child_artifact_kind",
+            receipt["evidence"]["child_artifact_kind"].as_str(),
+            baseline["evidence"]["child_artifact_kind"].as_str(),
+        ),
+        (
+            "evidence.operator_command",
+            receipt["evidence"]["operator_command"].as_str(),
+            baseline["evidence"]["operator_command"].as_str(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+
+    for (label, observed, expected) in [
+        (
+            "repeat.requested",
+            receipt["repeat"]["requested"].as_u64(),
+            baseline["repeat"]["requested"].as_u64(),
+        ),
+        (
+            "repeat.completed",
+            receipt["repeat"]["completed"].as_u64(),
+            baseline["repeat"]["completed"].as_u64(),
+        ),
+        (
+            "repeat.profile_count",
+            receipt["repeat"]["profile_count"].as_u64(),
+            baseline["repeat"]["profile_count"].as_u64(),
+        ),
+        (
+            "repeat.sample_count",
+            receipt["repeat"]["sample_count"].as_u64(),
+            baseline["repeat"]["sample_count"].as_u64(),
+        ),
+        ("prompt_count", receipt["prompt_count"].as_u64(), baseline["prompt_count"].as_u64()),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+
+    for (label, observed, expected) in [
+        ("fallback_used", receipt["fallback_used"].as_bool(), baseline["fallback_used"].as_bool()),
+        (
+            "build.release_mode",
+            receipt["build"]["release_mode"].as_bool(),
+            baseline["build"]["release_mode"].as_bool(),
+        ),
+        (
+            "evidence.generated_text_recorded",
+            receipt["evidence"]["generated_text_recorded"].as_bool(),
+            baseline["evidence"]["generated_text_recorded"].as_bool(),
+        ),
+        (
+            "evidence.generated_token_ids_recorded",
+            receipt["evidence"]["generated_token_ids_recorded"].as_bool(),
+            baseline["evidence"]["generated_token_ids_recorded"].as_bool(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+
+    if receipt["profiles_required"] != baseline["profiles_required"] {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: profiles_required mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+
+    for flag in ["dense_slm_only", "variance_harness_only"] {
+        if receipt["mac_claim_boundary"][flag].as_bool() != Some(true)
+            || baseline["mac_claim_boundary"][flag].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: mac_claim_boundary.{flag} must remain true",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in [
+        "final_variance_envelope",
+        "broad_model_quality_claim",
+        "broad_performance_claim",
+        "speedup_claim",
+        "bitnet_quality_claimed",
+        "bitnet_performance_claimed",
+        "full_metal_inference_claimed",
+        "mpsgraph_inference_claimed",
+        "neural_engine_execution_claimed",
+        "qk256_apple_claimed",
+        "macbook_evidence",
+    ] {
+        if receipt["mac_claim_boundary"][flag].as_bool() != Some(false)
+            || baseline["mac_claim_boundary"][flag].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: mac_claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn ensure_benchmark_variance_comparable(path: &Path, receipt: &serde_json::Value) -> Result<()> {
+    let reasons = receipt["invalid_comparison_reasons"]
+        .as_array()
+        .map(|reasons| {
+            reasons
+                .iter()
+                .filter_map(|reason| reason.as_str().map(str::to_string))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let readiness = &receipt["comparison_readiness"];
+    let timing_disabled = readiness["can_compare_timing"].as_bool() == Some(false)
+        || readiness["status"].as_str() == Some("invalid_for_comparison");
+    if timing_disabled || !reasons.is_empty() {
+        let reason_text = if reasons.is_empty() {
+            "comparison_readiness.can_compare_timing=false".to_string()
+        } else {
+            reasons.join(", ")
+        };
+        anyhow::bail!(
+            "{} benchmark variance receipt is invalid for timing regression comparison: {reason_text}",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
 fn ensure_warm_session_regression_context_matches(
     path: &Path,
     receipt: &serde_json::Value,
@@ -16517,6 +16866,7 @@ fn compare_lower_is_worse(
     if baseline > 0.0 && observed < baseline * (1.0 - threshold_percent / 100.0) {
         warnings.push(RegressionWarning {
             profile_id: profile_id.to_string(),
+            category: regression_warning_category(field).to_string(),
             field: field.to_string(),
             baseline: round3(baseline),
             observed: round3(observed),
@@ -16537,12 +16887,36 @@ fn compare_higher_is_worse(
     if observed > baseline * (1.0 + threshold_percent / 100.0) {
         warnings.push(RegressionWarning {
             profile_id: profile_id.to_string(),
+            category: regression_warning_category(field).to_string(),
             field: field.to_string(),
             baseline: round3(baseline),
             observed: round3(observed),
             threshold_percent,
             direction: "higher_is_worse".to_string(),
         });
+    }
+}
+
+fn regression_warning_category(field: &str) -> &'static str {
+    if field.starts_with("memory.") || field.contains(".memory.") {
+        "memory"
+    } else if field.starts_with("speed.")
+        || field.starts_with("timing.")
+        || field.starts_with("throughput.")
+        || field.starts_with("metrics.speed.")
+        || field.contains(".timing.")
+        || field.contains(".throughput.")
+    {
+        "timing"
+    } else if field.starts_with("accuracy.")
+        || field.starts_with("quality_summary.")
+        || field.starts_with("scoring_summary.")
+        || field.starts_with("task_families.")
+        || field.starts_with("reference_comparison.")
+    {
+        "quality"
+    } else {
+        "other"
     }
 }
 
@@ -22615,6 +22989,17 @@ mod tests {
         })
     }
 
+    fn test_benchmark_profile_summary_with_timing_memory(
+        profile_id: &str,
+        ttft_ms: f64,
+        peak_memory_mb: f64,
+    ) -> serde_json::Value {
+        let mut profile = test_valid_benchmark_profile_summary(profile_id);
+        profile["timing"]["time_to_first_token_ms"] = benchmark_stat_json(&[ttft_ms]);
+        profile["memory"]["peak_memory_mb"] = benchmark_stat_json(&[peak_memory_mb]);
+        profile
+    }
+
     fn test_timeout_profile_summary(
         dir: &Path,
         model: &VerifiedCachedModel,
@@ -22781,6 +23166,53 @@ mod tests {
             "mac_claim_boundary": test_dense_benchmark_claim_boundary_json(true),
             "speedup_claim": false,
         })
+    }
+
+    fn write_test_benchmark_variance_receipt(
+        dir: &Path,
+        model: &VerifiedCachedModel,
+        name: &str,
+        ttft_ms: f64,
+        peak_memory_mb: f64,
+        invalid_comparison_reasons: Vec<String>,
+    ) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let mut child_summaries = Vec::new();
+        let mut child_paths = Vec::new();
+        for index in 1..=2 {
+            let child_path = dir.join(format!("{name}-run-{index:02}.json"));
+            let child = test_benchmark_v2_receipt(
+                model,
+                child_path.clone(),
+                vec![
+                    test_benchmark_profile_summary_with_timing_memory(
+                        "short_prompt_16_out",
+                        ttft_ms,
+                        peak_memory_mb,
+                    ),
+                    test_benchmark_profile_summary_with_timing_memory(
+                        "short_prompt_64_out",
+                        ttft_ms,
+                        peak_memory_mb,
+                    ),
+                ],
+            );
+            std::fs::write(&child_path, serde_json::to_vec_pretty(&child)?)?;
+            child_paths.push(child_path);
+            child_summaries.push(child);
+        }
+
+        let parent_path = dir.join(format!("{name}.json"));
+        let child_summary_receipts =
+            child_paths.iter().map(|path| path.display().to_string()).collect::<Vec<_>>();
+        let parent = test_benchmark_variance_receipt(
+            model,
+            &parent_path,
+            &child_summaries,
+            child_summary_receipts,
+            invalid_comparison_reasons,
+        );
+        std::fs::write(&parent_path, serde_json::to_vec_pretty(&parent)?)?;
+        Ok(parent_path)
     }
 
     fn test_model_cache_json(model: &VerifiedCachedModel) -> serde_json::Value {
@@ -23041,6 +23473,105 @@ mod tests {
             Some("invalid_for_comparison")
         );
         assert_eq!(variance["metrics"]["speed"]["ttft_ms_p50"]["count"].as_u64(), Some(2));
+        Ok(())
+    }
+
+    #[test]
+    fn benchmark_variance_regression_reports_timing_and_memory_separately()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let baseline_path = write_test_benchmark_variance_receipt(
+            temp.path(),
+            &model,
+            "baseline",
+            10.0,
+            128.0,
+            Vec::new(),
+        )?;
+        let current_path = write_test_benchmark_variance_receipt(
+            temp.path(),
+            &model,
+            "current",
+            20.0,
+            160.0,
+            Vec::new(),
+        )?;
+
+        let baseline = load_regression_baseline(&baseline_path)?;
+        let current: serde_json::Value = serde_json::from_slice(&std::fs::read(&current_path)?)?;
+        validate_mac_receipt_value(&current_path, &current)?;
+        let regression = compare_mac_regression(&current_path, &current, &baseline)?;
+
+        assert!(regression.warning_count > 0);
+        assert!(regression.warnings.iter().any(|warning| {
+            warning.category == "timing"
+                && warning.profile_id == "benchmark_variance:timing"
+                && warning.field.starts_with("metrics.speed.ttft_ms_")
+        }));
+        assert!(regression.warnings.iter().any(|warning| {
+            warning.category == "memory"
+                && warning.profile_id == "benchmark_variance:memory"
+                && warning.field.starts_with("metrics.memory.peak_memory_mb_")
+        }));
+        assert!(!regression.warnings.iter().any(|warning| warning.category == "quality"));
+        Ok(())
+    }
+
+    #[test]
+    fn benchmark_variance_regression_rejects_identity_mismatch()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let baseline_path = write_test_benchmark_variance_receipt(
+            temp.path(),
+            &model,
+            "baseline",
+            10.0,
+            128.0,
+            Vec::new(),
+        )?;
+        let baseline = load_regression_baseline(&baseline_path)?;
+        let mut current = baseline.receipt.clone();
+        current["model_cache"]["id"] = serde_json::json!("qwen2.5-other");
+
+        let err = compare_mac_regression(Path::new("current.json"), &current, &baseline)
+            .expect_err("mismatched benchmark variance identity should not compare")
+            .to_string();
+
+        assert!(err.contains("model_cache.id mismatch"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn benchmark_variance_regression_rejects_invalid_timing_comparison()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let baseline_path = write_test_benchmark_variance_receipt(
+            temp.path(),
+            &model,
+            "baseline",
+            10.0,
+            128.0,
+            Vec::new(),
+        )?;
+        let baseline = load_regression_baseline(&baseline_path)?;
+        let mut current = baseline.receipt.clone();
+        current["comparison_readiness"] = serde_json::json!({
+            "status": "invalid_for_comparison",
+            "can_compare_timing": false,
+            "invalid_comparison_reasons": ["profile_timeout_exceeded:context_4k:720s"],
+        });
+        current["invalid_comparison_reasons"] =
+            serde_json::json!(["profile_timeout_exceeded:context_4k:720s"]);
+
+        let err = compare_mac_regression(Path::new("current.json"), &current, &baseline)
+            .expect_err("invalid benchmark variance timing should not compare")
+            .to_string();
+
+        assert!(err.contains("invalid for timing regression comparison"), "got: {err}");
+        assert!(err.contains("profile_timeout_exceeded:context_4k:720s"), "got: {err}");
         Ok(())
     }
 

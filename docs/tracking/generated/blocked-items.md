@@ -88,7 +88,7 @@
 | apple-m4-inference-excellence | M4-BENCH-010 | M4-BENCH-008, M4-BENCH-009 | merged |
 | apple-m4-inference-excellence | M4-BENCH-008 | M4-BENCH-002 | merged |
 | apple-m4-inference-excellence | M4-BENCH-006 | M4-BENCH-005, M4-BITNET-EX-003, M4-BITNET-EX-004 | merged |
-| apple-m4-inference-excellence | M4-BENCH-003 | M4-BENCH-005, M4-BENCH-006, M4-EXCELLENCE-003 | proposed |
+| apple-m4-inference-excellence | M4-BENCH-003 | M4-BENCH-005, M4-BENCH-006, M4-EXCELLENCE-003 | in_progress |
 | apple-m4-inference-excellence | M4-BITNET-REG-001 | M4-EXCELLENCE-002, M4-EXCELLENCE-004 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-002 | M4-BITNET-EX-001 | merged |
 | apple-m4-inference-excellence | M4-BITNET-EX-003 | M4-BITNET-EX-001 | merged |
@@ -396,6 +396,10 @@
 | intel-258v-platform | LNL258V-OP-013 | LNL258V-REG-011 | merged |
 | intel-258v-platform | LNL258V-ASK-006 | LNL258V-OP-013 | merged |
 | intel-258v-platform | LNL258V-ASK-007 | LNL258V-ASK-006 | merged |
+| intel-258v-platform | LNL258V-BITNET-INTAKE-003 | LNL258V-BITNET-INTAKE-002 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-004 | LNL258V-GOAL-AUDIT-003, LNL258V-OP-013, LNL258V-ASK-006, LNL258V-ASK-007, LNL258V-BITNET-INTAKE-003 | merged |
+| intel-258v-platform | LNL258V-CI-001 | LNL258V-GOAL-AUDIT-004 | merged |
+| intel-258v-platform | LNL258V-POWER-007 | LNL258V-POWER-005 | merged |
 | intel-258v-platform | LNL258V-POWER-006 | LNL258V-POWER-005 | blocked |
 | intel-258v-platform | LNL258V-POWER-005 | LNL258V-POWER-004, LNL258V-ASK-005 | merged |
 | intel-258v-platform | LNL258V-ASK-005 | LNL258V-ROUTE-024 | merged |

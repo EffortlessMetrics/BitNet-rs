@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T10:10:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-007"
+branch = "codex/lunar-lake/LNL258V-POWER-007-battery-runbook"
+actor = "codex"
+summary = "Started a no-evidence battery-mode runbook slice for the blocked POWER-006 low_power route evidence run."
+
+notes = [
+  "The current 258V machine remains on AC power, so POWER-006 cannot collect real battery-mode low_power telemetry yet.",
+  "This slice documents preflight, strict stop rules, before/after battery telemetry requirements, route/profile sample requirements, energy-proxy refresh, artifact refresh, and promotion gates.",
+  "The slice preserves no new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]
