@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T05:12:05Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-060"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6085
+head_sha = "cca8b5385672f8150021a88ab9ffca078fe5e561"
+merge_sha = "6e2f7837e0f90317122ffe34eca355fe285f4abe"
+summary = "Merged the payload-bearing packed Q8_0 sidecar hook contract slice."
+notes = [
+  "The merged slice adds DenseLinearPackedQ8Payload and hook-boundary receipt fields while keeping packed Q8 runtime compute disabled by default.",
+  "Generated-ID/text preservation, strict tokenizer authority, selected CPU backend/kernel identity, dense hook-selection identity, model SHA, and fallback=false remain required before broader runtime selection.",
+]
