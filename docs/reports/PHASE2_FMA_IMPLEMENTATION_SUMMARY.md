@@ -1,5 +1,11 @@
 # Phase 2 FMA Tiling Implementation - Summary Report
 
+> Claim boundary: this is a historical implementation summary from an older
+> optimization branch. FMA, AVX2, theoretical speedup, combined speedup, and
+> ready-for-review wording records that dated context only. Current support,
+> speed, backend execution, quality, and product-readiness claims must come
+> from active receipts, model coverage, status docs, specs, and claim gates.
+
 **Date:** 2025-10-24
 **Implementer:** Claude Code Assistant
 **Status:** ✅ IMPLEMENTED (Foundation Complete)

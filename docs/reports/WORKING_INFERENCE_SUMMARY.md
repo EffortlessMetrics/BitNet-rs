@@ -1,5 +1,11 @@
 # Working Inference - Implementation Summary
 
+> Claim boundary: this is a historical implementation summary from an older
+> branch. Inference-working, performance, AVX2, baseline, receipt, and
+> mock-elimination wording records that dated context only. Current support,
+> speed, backend execution, quality, and product-readiness claims must come
+> from active receipts, model coverage, status docs, specs, and claim gates.
+
 **Date:** 2025-10-24
 **Completion Status:** ✅ All tasks complete
 **Branch:** `feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2`

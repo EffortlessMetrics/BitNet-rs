@@ -1,5 +1,11 @@
 # Sprint-2 Lockdown Complete - BitNet-rs MVP v0.1.0
 
+> Claim boundary: this is a historical planning closeout. Ready-to-execute,
+> CUDA, AVX2, speedup, throughput, MVP, and performance-target wording records
+> that dated planning context only. Current support, speed, backend execution,
+> quality, and product-readiness claims must come from active receipts, model
+> coverage, status docs, specs, and claim gates.
+
 **Date**: November 11, 2025
 **Status**: ✅ All tasks complete, Sprint-2 ready to execute
 **Milestone**: MVP v0.1.0 (2025-12-31)
