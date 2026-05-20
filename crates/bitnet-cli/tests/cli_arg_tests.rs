@@ -726,12 +726,31 @@ fn mac_eval_long_context_dry_run_writes_contract_summary() -> Result<(), Box<dyn
 }
 
 #[test]
-fn mac_eval_long_context_requires_dry_run_until_live_receipts_exist() {
+fn mac_eval_long_context_live_requires_ready_model_cache_before_receipt()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache_dir = dir.path().join("cache");
+    let receipt = dir.path().join("long-context-live.json");
+    let cache_str = cache_dir.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
     bitnet()
-        .args(["mac", "eval", "--suite", "m4-long-context"])
+        .args([
+            "mac",
+            "eval",
+            "--suite",
+            "m4-long-context",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("currently supports only --dry-run contract receipts"));
+        .stderr(predicate::str::contains("cached Apple M4 SLM model"))
+        .stderr(predicate::str::contains("is not ready"));
+    assert!(!receipt.exists(), "preflight failure should not write a proof receipt");
+    Ok(())
 }
 
 #[test]
@@ -8122,6 +8141,138 @@ fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract()
     assert_eq!(receipt["cases"][9]["quality"]["scoring"]["forbidden_tokens"][0], "maybe");
     assert_eq!(receipt["claim_boundary"]["bounded_slm_answer_smoke_passed"], false);
     assert_eq!(receipt["claim_boundary"]["broad_performance_claimed"], false);
+    Ok(())
+}
+
+/// `answer-corpus --dry-run` validates the Apple M4 long-context live corpus contract.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_long_context_dry_run_preserves_context_profiles()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let out = dir.path().join("apple-m4-long-context-answer-corpus.json");
+    let corpus = workspace_path("ci/quality/apple-m4-long-context-answer-corpus.yaml");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            "missing.gguf",
+            "--model-id",
+            "qwen2.5-0.5b-instruct-q8_0",
+            "--corpus",
+            corpus_str.as_str(),
+            "--json-out",
+            out_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(out)?)?;
+    assert_eq!(receipt["corpus"]["id"], "apple-m4-long-context-answer-corpus-v1");
+    assert_eq!(receipt["corpus"]["name"], "apple-m4-long-context-answer-corpus-v1");
+    assert_eq!(receipt["corpus"]["metadata"]["work_item"], "M4-CONTEXT-002");
+    assert_eq!(receipt["corpus"]["case_count"], 4);
+    assert_eq!(receipt["quality_summary"]["not_run"], 4);
+    assert_eq!(receipt["scoring_summary"]["enabled"], true);
+    assert_eq!(receipt["scoring_summary"]["total"], 4);
+    assert_eq!(receipt["profile_summary"]["context_1k"]["total"], 2);
+    assert_eq!(receipt["profile_summary"]["context_4k"]["total"], 1);
+    assert_eq!(receipt["profile_summary"]["unsupported_boundary"]["total"], 1);
+    assert_eq!(
+        receipt["corpus"]["metadata"]["claim_boundary"]["dense_slm_evidence_proves_bitnet"],
+        false
+    );
+    assert_eq!(
+        receipt["corpus"]["metadata"]["claim_boundary"]["bitnet_long_context_proven"],
+        false
+    );
+    Ok(())
+}
+
+/// `mac receipts-check` accepts the annotated M4-CONTEXT-002 long-context answer-corpus shape.
+#[cfg(feature = "full-cli")]
+#[test]
+fn mac_receipts_check_accepts_long_context_answer_corpus_shape()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let out = dir.path().join("apple-m4-long-context-answer-corpus.json");
+    let corpus = workspace_path("ci/quality/apple-m4-long-context-answer-corpus.yaml");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            "missing.gguf",
+            "--model-id",
+            "qwen2.5-0.5b-instruct-q8_0",
+            "--corpus",
+            corpus_str.as_str(),
+            "--json-out",
+            out_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&out)?)?;
+    receipt["artifact_kind"] = serde_json::json!("apple_m4_long_context_answer_corpus");
+    receipt["suite"] = serde_json::json!("m4-long-context");
+    receipt["work_item"] = serde_json::json!("M4-CONTEXT-002");
+    receipt["model_id"] = serde_json::json!("qwen2.5-0.5b-instruct-q8_0");
+    receipt["model_sha256"] =
+        serde_json::json!("ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e");
+    receipt["quality_summary"]["passed"] = serde_json::json!(4);
+    receipt["quality_summary"]["failed"] = serde_json::json!(0);
+    receipt["quality_summary"]["timeout"] = serde_json::json!(0);
+    receipt["quality_summary"]["not_run"] = serde_json::json!(0);
+    receipt["scoring_summary"]["passed"] = serde_json::json!(4);
+    receipt["scoring_summary"]["failed"] = serde_json::json!(0);
+    receipt["scoring_summary"]["not_run"] = serde_json::json!(0);
+    receipt["m4_context_proof"] = serde_json::json!({
+        "suite": "m4-long-context",
+        "work_item": "M4-CONTEXT-002",
+        "source_answer_corpus": "ci/quality/apple-m4-long-context-answer-corpus.yaml",
+        "tested_model_id": "qwen2.5-0.5b-instruct-q8_0",
+        "tested_model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+        "tested_backend": "apple-m4-cpu-neon",
+        "quality_gate_passed": true,
+        "live_quality_receipt_published": true,
+        "benchmark_receipt_required": true,
+        "profiles_required": ["context_1k", "context_4k", "unsupported_boundary"],
+        "bitnet_long_context": {
+            "status": "unsupported_until_bitnet_long_context_receipts_exist",
+            "dense_slm_evidence_proves_bitnet": false
+        }
+    });
+    receipt["claim_boundary"]["dense_slm_evidence_proves_bitnet"] = serde_json::json!(false);
+    receipt["claim_boundary"]["bitnet_long_context_proven"] = serde_json::json!(false);
+    receipt["claim_boundary"]["long_context_quality_receipt"] = serde_json::json!(true);
+    receipt["claim_boundary"]["long_context_quality_gate_passed"] = serde_json::json!(true);
+    receipt["claim_boundary"]["macbook_evidence"] = serde_json::json!(false);
+    for case in receipt["cases"].as_array_mut().ok_or("missing cases")? {
+        case["status"] = serde_json::json!("passed");
+        case["quality"]["passed"] = serde_json::json!(true);
+        case["quality"]["generated_tokens"] = serde_json::json!(1);
+    }
+    std::fs::write(&out, serde_json::to_vec_pretty(&receipt)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", out_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_long_context_answer_corpus"))
+        .stdout(predicate::str::contains("\"prompt_count\": 4"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 4"));
     Ok(())
 }
 

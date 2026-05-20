@@ -44,7 +44,7 @@ cases:
   category: table_extraction
   profile: context_1k
   question: |
-    Use the table only. Answer with the route ID for the row where family is BitNet and state is bounded.
+    Use the table only. Return exactly the route_id for the row where family is BitNet and state is bounded. Do not add any words before or after the route_id.
 
     | family | state | route_id |
     | dense_slm | interactive | dense-ask |
@@ -83,7 +83,7 @@ cases:
   question: |
     This case defines the expected unsupported boundary behavior for prompts beyond recorded context evidence. If a request exceeds the recorded context envelope, the operator-visible state should be UNSUPPORTED_CONTEXT rather than a silent quality claim.
 
-    What state should be reported?
+    What state should be reported? Answer exactly UNSUPPORTED_CONTEXT.
   max_new_tokens: 16
   scoring:
     kind: normalized_match
