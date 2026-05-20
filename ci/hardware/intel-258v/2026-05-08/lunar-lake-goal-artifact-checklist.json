@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-20T11:30:00Z",
+  "created_utc": "2026-05-20T12:15:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "9e1326cf7b8ad0c420fa8f12cb2925e7fe7993e4",
+  "source_revision": "822325ba6acaab744aa2bc4762cca23ce3c60946",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
-  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-003 indexing of pending A770 #5064, and POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable.",
+  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, and POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-006",
     "status": "blocked",
@@ -254,7 +254,7 @@
       "notes": [
         "BitNet CPU reference evidence is tracked separately from dense Qwen SLM success.",
         "Strict regression indexes semantic-intake state so shared BitNet fixes can stale Lunar Lake evidence.",
-        "BITNET-INTAKE-003 records pending A770 #5064 as a shared semantic rerun trigger with pending_shared_change_count=1 and stale_after_merged_count=0."
+        "BITNET-INTAKE-004 records pending A770 shared BitNet semantic PRs #4756, #4757, #4767, #4853, and #5064 as rerun triggers with pending_shared_change_count=5 and stale_after_merged_count=0."
       ]
     },
     {
@@ -295,7 +295,7 @@
       ],
       "notes": [
         "Strict regression indexes answer corpus v2, route profile comparison, cold/warm benchmark, durability, BitNet semantic intake, power profile evidence, thermal temperature availability, and operator ask receipts.",
-        "Strict regression records ask_normal_auto_ask_ready=true, ask_short_auto_ask_ready=true, and pending A770 #5064 without requiring reruns before that stack reaches main.",
+        "Strict regression records ask_normal_auto_ask_ready=true, ask_short_auto_ask_ready=true, and pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064 without requiring reruns before those stacks reach main.",
         "Strict regression now fails closed if route-profile or cold/warm benchmark evidence lacks route/model identity, tokenizer/template identity, or model SHA256-or-explicit-gap coverage.",
         "POWER-006 remains the active low_power battery-mode blocker."
       ]
@@ -334,9 +334,9 @@
       "reason": "No benchmark-qualified low_power power advantage exists from battery-mode evidence."
     },
     {
-      "id": "pending_a770_5064_semantic_stack",
+      "id": "pending_a770_semantic_stack",
       "status": "pending_watchpoint",
-      "reason": "A770 #5064 is indexed as pending shared BitNet semantic work; Lunar Lake reruns become required only if it reaches main."
+      "reason": "A770 #4756, #4757, #4767, #4853, and #5064 are indexed as pending shared BitNet semantic work; Lunar Lake reruns become required only when one reaches main."
     },
     {
       "id": "bitnet_accelerator_inference",
