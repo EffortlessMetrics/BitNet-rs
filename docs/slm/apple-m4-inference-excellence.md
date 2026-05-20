@@ -853,6 +853,50 @@ the first repaired 250-case baseline until a second repaired receipt exists.
 whether the next honest step is 500-case expansion, continued repair, or
 freezing the current BitNet quality envelope.
 
+`M4-BITNET-EX-015` now adds the second repaired 250-case BitNet CPU/NEON
+receipt:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T0133Z/bitnet-eval-250-repaired/answer-corpus.json
+```
+
+The run used the same accepted Microsoft I2_S GGUF SHA
+`4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162`,
+external tokenizer SHA
+`e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7`,
+`bitnetcpp-answer` prompt template, strict tokenizer, greedy deterministic
+generation, and `apple-m4-cpu-neon` backend with `fallback_used=false`.
+`mac receipts-check` passed for both the aggregate receipt and receipt
+directory. The aggregate records 250/250 child receipts, 2,043 generated
+tokens, and zero timeouts.
+
+Matched-context regression against
+`2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus.json` is advisory and
+`matched_context=true`, but it reports quality regressions: quality summary
+199/250 versus 205/250 baseline, scoring summary 202/250 versus 210/250
+baseline, and 26 quality/task-family warnings. The next decision is therefore
+**keep repairing**, not 500-case expansion and not freezing a stronger BitNet
+quality envelope.
+
+| Family | Current Passed / Total | Baseline Passed / Total | Delta |
+| --- | ---: | ---: | ---: |
+| arithmetic_exact | 14 / 15 | 14 / 15 | 0 |
+| numeric_tolerance | 21 / 35 | 24 / 35 | -3 |
+| fixed_table_qa | 30 / 35 | 30 / 35 | 0 |
+| format_constrained_json | 19 / 20 | 20 / 20 | -1 |
+| closed_label_classification | 17 / 20 | 18 / 20 | -1 |
+| synthetic_extraction | 19 / 25 | 19 / 25 | 0 |
+| ordering_sorting | 16 / 20 | 17 / 20 | -1 |
+| rewrite_normalized | 15 / 20 | 15 / 20 | 0 |
+| constrained_summary | 27 / 30 | 26 / 30 | +1 |
+| required_forbidden_tokens | 21 / 30 | 22 / 30 | -1 |
+
+The observed wall run lasted about 5h08m from harness start to aggregate
+timestamp. Case latency distribution was p50 20.2s, p90 58.2s, p99 105.2s, and
+max 117.7s; the slowest cases were constrained-summary and
+required/forbidden-token prompts. This is timing evidence for this repaired
+BitNet eval run only, not a broad BitNet performance claim.
+
 `M4-BITNET-EX-013` now stages the repair as a dry-run-only corpus/scorer
 contract update. The repaired 250-case corpus is version `2.1.0` and keeps the
 same accepted Microsoft I2_S GGUF identity, external tokenizer authority, and
