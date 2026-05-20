@@ -265,6 +265,14 @@ function Get-SourceCode {
             } else {
                 # Checkout the specified tag or branch.
                 Invoke-Git @("checkout", $Tag)
+                $CheckoutBranch = git rev-parse --abbrev-ref HEAD
+                if ($LASTEXITCODE -ne 0) {
+                    throw "git rev-parse --abbrev-ref HEAD failed after checkout"
+                }
+                if ($CheckoutBranch -eq $Tag) {
+                    Write-Info "Checked out branch $Tag; fast-forwarding to origin/$Tag"
+                    Invoke-Git @("reset", "--hard", "origin/$Tag")
+                }
                 Invoke-Git @("submodule", "update", "--init", "--recursive")
             }
         }
