@@ -1223,6 +1223,15 @@ disabled
 unsupported
 ```
 
+`M4-OPS-SLO-001` publishes those classes in
+`docs/slm/apple-m4-operator-envelope-v3.md`. The class map ties each dense Qwen
+ask/chat route, dense local-server route, BitNet one-shot/warm route, gated
+BitNet chat/serve route, and unsupported Apple backend route to the exact
+committed evidence identity, max context or profile guidance, timing
+expectation, and memory/disk posture. The map is an operator expectation layer
+only; it does not enable a disabled route or turn bounded receipts into broad
+quality or performance claims.
+
 ## Release Gates
 
 Before the public M4 expectation envelope changes, a go/no-go matrix should say
