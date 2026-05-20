@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-20T12:30:00Z",
+  "created_utc": "2026-05-20T13:10:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "6f8ca7859e202194a923c717d7530f759d5cee08",
+  "source_revision": "5265445b4e9a5cd4f70679ec62c9bdd47036a5a8",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
   "excellent_support_ready": false,
-  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness, REG-011 gates route/profile and cold/warm evidence on route/model identity, OP-013 makes blocked auto routes fail closed before model resolution, ASK-006/ASK-007 index appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-004 is merged and closed out with pending A770 shared BitNet semantic stack watchpoints #4756, #4757, #4767, #4853, and #5064 indexed, and POWER-007/POWER-008 make the physical battery-mode low_power runbook discoverable. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
+  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness, REG-011 gates route/profile and cold/warm evidence on route/model identity, OP-013 makes blocked auto routes fail closed before model resolution, ASK-006/ASK-007 index appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-004 is merged and closed out with pending A770 shared BitNet semantic stack watchpoints #4756, #4757, #4767, #4853, and #5064 indexed, POWER-007/POWER-008 make the physical battery-mode low_power runbook discoverable, and A770-005/#6072 plus closeout #6079 landed selected-device OpenCL smoke evidence without changing Lunar Lake BitNet semantic rerun state. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
   "tracker_state": {
     "active_item": "LNL258V-POWER-006",
     "active_item_status": "blocked",
@@ -40,9 +40,13 @@
     "last_merged_power_runbook_links_item": "LNL258V-POWER-008",
     "last_merged_power_runbook_links_pr": 6057,
     "last_merged_power_runbook_links_merge_sha": "43db1ed843b2d6635c6f9cbb101691f38b02b9ae",
-    "last_closeout_pr": 6066,
-    "last_closeout_merge_sha": "41c5ecf8c92be5875dc142988f65cd451c37287d",
-    "audit_refresh_scope": "no_inference_post_bitnet_intake_004_closeout_refresh"
+    "last_closeout_pr": 6079,
+    "last_closeout_merge_sha": "70b79c78228a4da323aa216f74562e0c54ce005f",
+    "last_a770_opencl_smoke_pr": 6072,
+    "last_a770_opencl_smoke_merge_sha": "b995c5110866d1920538fff2d9019fcd3803e3c5",
+    "last_a770_opencl_smoke_closeout_pr": 6079,
+    "last_a770_opencl_smoke_closeout_merge_sha": "70b79c78228a4da323aa216f74562e0c54ce005f",
+    "audit_refresh_scope": "no_inference_post_a770_005_closeout_refresh"
   },
   "command_surface": {
     "ask": {
@@ -365,6 +369,7 @@
     "low_power has an AC-only energy-proxy receipt, but still lacks battery-mode sample and benchmark-qualified power advantage.",
     "Thermal zone visibility is recorded, but temperature readings remain unavailable.",
     "Pending A770 shared BitNet semantic PRs #4756, #4757, #4767, #4853, and #5064 are indexed; Lunar Lake BitNet reruns become required only when one reaches main.",
+    "A770-005/#6072 and closeout #6079 add selected-device OpenCL smoke and tracker evidence, but do not merge an indexed shared BitNet semantic fix and therefore do not stale Lunar Lake BitNet receipts.",
     "BitNet accelerator inference and packed QK256 accelerator decode remain unclaimed."
   ],
   "next_recommended_work": [
@@ -384,6 +389,8 @@
     "ask_007_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T073000Z-LNL258V-ASK-007-merged.toml",
     "bitnet_intake_004_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T020149Z-LNL258V-BITNET-INTAKE-004-merged.toml",
     "bitnet_intake_004_closeout_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6066",
+    "a770_005_opencl_smoke_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6072",
+    "a770_005_closeout_pr": "https://github.com/EffortlessMetrics/BitNet-rs/pull/6079",
     "reg_010_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T005500Z-LNL258V-REG-010-merged.toml",
     "validate_002_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T012000Z-LNL258V-VALIDATE-002-merged.toml",
     "reg_011_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T040000Z-LNL258V-REG-011-merged.toml",

@@ -9472,6 +9472,59 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-GOAL-AUDIT-007"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-007-post-a770-opencl-smoke"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-006"]
+acceptance = "Refresh the no-inference Lunar Lake excellence audit and goal artifact checklist after A770-005/#6072 and closeout #6079 so source_revision points at current main, selected-device A770 OpenCL smoke is recorded as adjacent non-semantic accelerator evidence, pending shared BitNet semantic watchpoints remain #4756, #4757, #4767, #4853, and #5064, and excellent support remains not complete because POWER-006 still lacks battery-mode low_power telemetry, energy-proxy, and benchmark-qualified power-advantage evidence. Preserve no inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, stale BitNet, A770 semantic PR merged-to-main, or BitNet QK256/I2_S behavior-change claims."
+commands = [
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | Select-String '5265445b4e9a5cd4f70679ec62c9bdd47036a5a8' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | Select-String 'A770-005/#6072' | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+]
+may_claim = [
+  "The Lunar Lake completion audit now reflects A770-005/#6072 selected-device OpenCL smoke and closeout #6079 as adjacent non-semantic accelerator evidence.",
+  "The audit records that A770 #4756, #4757, #4767, #4853, and #5064 remain pending shared BitNet semantic watchpoints and Lunar Lake BitNet reruns become required only if one reaches main.",
+  "The audit records that POWER-006 remains blocked until telemetry-context --require-battery passes on battery power and battery-mode route/profile evidence exists.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "A measured thermal temperature is available.",
+  "Battery-mode low_power evidence is available while the 258V remains on AC power.",
+  "Any indexed A770 semantic PR has merged to main.",
+  "Current Lunar Lake BitNet evidence is stale before an indexed A770 semantic PR merges to main.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-GOAL-AUDIT-006"
 status = "merged"
 pr = 6067
