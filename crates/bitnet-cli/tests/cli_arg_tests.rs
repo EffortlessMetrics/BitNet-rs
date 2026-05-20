@@ -7003,6 +7003,7 @@ fn bench_help_documents_no_cuda_fallback() {
         .success()
         .stdout(predicate::str::contains("only cpu/auto"))
         .stdout(predicate::str::contains("--cuda-benchmark-receipt"))
+        .stdout(predicate::str::contains("--profile"))
         .stdout(predicate::str::contains("receipt-backed CUDA"));
 }
 
@@ -7016,12 +7017,21 @@ fn bench_cuda_device_fails_closed_without_cpu_fallback() -> Result<(), Box<dyn s
     let model_str = model.to_string_lossy().into_owned();
 
     bitnet()
-        .args(["bench", "--model", model_str.as_str(), "--device", "cuda"])
+        .args([
+            "bench",
+            "--model",
+            model_str.as_str(),
+            "--device",
+            "cuda",
+            "--profile",
+            "one_token",
+        ])
         .assert()
         .failure()
         .stderr(predicate::str::contains("does not support device label 'cuda'"))
         .stderr(predicate::str::contains("must not silently fall back to CPU"))
-        .stderr(predicate::str::contains("CPU fallback cannot count as CUDA execution"));
+        .stderr(predicate::str::contains("CPU fallback cannot count as CUDA execution"))
+        .stderr(predicate::str::contains("Profile `one_token`"));
     Ok(())
 }
 
@@ -7088,6 +7098,71 @@ fn bench_cuda_benchmark_receipt_reports_json() -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
+/// Governed CUDA benchmark receipt reports can be narrowed to one exact profile.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_cuda_benchmark_receipt_profile_filters_json() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("dense-qwen-benchmark-qualification.json");
+    write_governed_cuda_benchmark_receipt(&receipt)?;
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    let output = bitnet()
+        .args([
+            "bench",
+            "--device",
+            "cuda",
+            "--cuda-benchmark-receipt",
+            receipt_str.as_str(),
+            "--profile",
+            "short_decode_8",
+            "--format",
+            "json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let report: serde_json::Value = serde_json::from_slice(&output)?;
+
+    assert_eq!(report["profile_count"], 1);
+    assert_eq!(report["profiles"].as_array().expect("profiles array").len(), 1);
+    assert_eq!(report["profiles"][0]["profile"], "short_decode_8");
+    assert_eq!(report["fallback_used"], false);
+    assert_eq!(report["speedup_claim"], false);
+    Ok(())
+}
+
+/// Unknown governed CUDA benchmark profiles fail closed instead of reporting all profiles.
+#[cfg(feature = "full-cli")]
+#[test]
+fn bench_cuda_benchmark_receipt_unknown_profile_fails_closed()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("dense-qwen-benchmark-qualification.json");
+    write_governed_cuda_benchmark_receipt(&receipt)?;
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "bench",
+            "--device",
+            "cuda",
+            "--cuda-benchmark-receipt",
+            receipt_str.as_str(),
+            "--profile",
+            "prefill_512_decode_32",
+            "--format",
+            "json",
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("profile `prefill_512_decode_32` was not found"))
+        .stderr(predicate::str::contains("available profiles: one_token, short_decode_8"));
+    Ok(())
+}
+
 /// Governed CUDA benchmark receipt reports support profile CSV output.
 #[cfg(feature = "full-cli")]
 #[test]
@@ -7147,6 +7222,17 @@ fn write_governed_cuda_benchmark_receipt(path: &std::path::Path) -> std::io::Res
       "cuda_total_ms_mean": 2.0,
       "host_to_device_ms": 3.0,
       "device_to_host_ms": 0.1,
+      "quality_passed": true,
+      "fallback_free": true,
+      "benchmark_qualified_speedup": false
+    },
+    {
+      "profile": "short_decode_8",
+      "decision": "not_accepted",
+      "cpu_total_ms_mean": 3.0,
+      "cuda_total_ms_mean": 4.0,
+      "host_to_device_ms": 3.5,
+      "device_to_host_ms": 0.2,
       "quality_passed": true,
       "fallback_free": true,
       "benchmark_qualified_speedup": false
