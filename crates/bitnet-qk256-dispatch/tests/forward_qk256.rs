@@ -1,9 +1,20 @@
 use bitnet_common::{BitNetError, Result};
 use bitnet_qk256_dispatch::{forward_qk256, forward_qk256_with_scale, qk256_dispatch_status};
 use candle_core::{Device, Tensor};
+use std::sync::{Mutex, MutexGuard, OnceLock};
+
+#[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+use bitnet_qk256_dispatch::qk256_cpu_hot_path_counters;
+
+static QK256_DISPATCH_TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+fn qk256_dispatch_test_lock() -> MutexGuard<'static, ()> {
+    QK256_DISPATCH_TEST_LOCK.get_or_init(|| Mutex::new(())).lock().expect("lock poisoned")
+}
 
 #[test]
 fn forward_qk256_supports_rank2_input() -> Result<()> {
+    let _guard = qk256_dispatch_test_lock();
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device)?;
     let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device)?;
@@ -18,6 +29,7 @@ fn forward_qk256_supports_rank2_input() -> Result<()> {
 
 #[test]
 fn forward_qk256_supports_rank3_input() -> Result<()> {
+    let _guard = qk256_dispatch_test_lock();
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 2 * 2 * 256], (2, 2, 256), &device)?;
     let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device)?;
@@ -36,10 +48,11 @@ fn forward_qk256_supports_rank3_input() -> Result<()> {
 
 #[test]
 fn forward_qk256_rank3_preserves_varied_token_rows() -> Result<()> {
+    let _guard = qk256_dispatch_test_lock();
     let device = Device::Cpu;
     let mut input_rows = Vec::with_capacity(2 * 2 * 256);
     for value in [1.0f32, 2.0, -1.0, 0.5] {
-        input_rows.extend(std::iter::repeat(value).take(256));
+        input_rows.extend(std::iter::repeat_n(value, 256));
     }
     let input = Tensor::from_vec(input_rows, (2, 2, 256), &device)?;
     let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device)?;
@@ -64,6 +77,7 @@ fn forward_qk256_rank3_preserves_varied_token_rows() -> Result<()> {
 
 #[test]
 fn forward_qk256_with_scale_uses_bitnet_i8s_activation_path() -> Result<()> {
+    let _guard = qk256_dispatch_test_lock();
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device)?;
     let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device)?;
@@ -83,6 +97,7 @@ fn forward_qk256_with_scale_uses_bitnet_i8s_activation_path() -> Result<()> {
 
 #[test]
 fn forward_qk256_rejects_dimension_mismatch() -> Result<()> {
+    let _guard = qk256_dispatch_test_lock();
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 128], (1, 128), &device)?;
     let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device)?;
@@ -99,6 +114,7 @@ fn forward_qk256_rejects_dimension_mismatch() -> Result<()> {
 
 #[test]
 fn cpu_hot_path_audit_distinguishes_no_scale_and_scaled_paths() -> Result<()> {
+    let _guard = qk256_dispatch_test_lock();
     bitnet_qk256_dispatch::reset_qk256_dispatch_coverage();
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device)?;
@@ -120,7 +136,37 @@ fn cpu_hot_path_audit_distinguishes_no_scale_and_scaled_paths() -> Result<()> {
 }
 
 #[test]
+#[cfg(all(target_arch = "x86_64", feature = "avx2"))]
+fn cpu_hot_path_audit_proves_explicit_avx2_no_scale_route_when_enabled() -> Result<()> {
+    let _guard = qk256_dispatch_test_lock();
+    if !(is_x86_feature_detected!("avx2") && is_x86_feature_detected!("fma")) {
+        eprintln!("Skipping explicit AVX2 route proof: AVX2/FMA not available");
+        return Ok(());
+    }
+
+    bitnet_qk256_dispatch::reset_qk256_dispatch_coverage();
+    let device = Device::Cpu;
+    let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device)?;
+    let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device)?;
+
+    let out = forward_qk256(&input, &qk, "layers.0.attention.q_proj.weight.qk256_qs")?;
+    assert_eq!(out.dims(), &[1, 1]);
+    let out_vals = out.to_vec2::<f32>()?;
+    assert!((out_vals[0][0] - 256.0).abs() < 1e-4);
+
+    let counters = qk256_cpu_hot_path_counters();
+    assert_eq!(counters.qk256_f32_scalar_gemv_invocations, 0);
+    assert_eq!(counters.qk256_f32_avx2_gemv_invocations, 1);
+    assert_eq!(counters.qk256_i8s_scaled_scalar_invocations, 0);
+    assert_eq!(counters.qk256_i8s_scaled_avx2_invocations, 0);
+    assert_eq!(counters.selected_kernel.as_deref(), Some("qk256-f32-avx2-gemv"));
+    assert_eq!(counters.qk256_execution_path, "no_scale_f32");
+    Ok(())
+}
+
+#[test]
 fn qk256_dispatch_status_keeps_opencl_non_claiming() {
+    let _guard = qk256_dispatch_test_lock();
     let status = qk256_dispatch_status();
 
     assert_eq!(status.compiled_opencl, cfg!(feature = "opencl"));
