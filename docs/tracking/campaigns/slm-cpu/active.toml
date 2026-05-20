@@ -2156,9 +2156,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-061"
-status = "pr_open"
+status = "merged"
 pr = 6111
-head_sha = "c3de3f88b2398731068f0500491cf0bfb9c89aa5"
+head_sha = "d304e5fe1cee6bc92d4008f84e904ec924a8f826"
+merge_sha = "8952dd2a3cf1c134134560d71f12d5b6072c4322"
 branch = "codex/slm-cpu-061-real-q8-sidecar-payload-candidate"
 stackable = false
 review_mode = "codex_premerge"
