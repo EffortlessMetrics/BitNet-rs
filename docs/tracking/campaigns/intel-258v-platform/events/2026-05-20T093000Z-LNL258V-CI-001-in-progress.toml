@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T09:30:00Z"
+event = "in_progress"
+item = "LNL258V-CI-001"
+branch = "codex/lunar-lake/LNL258V-CI-001-pr-plan-timeout"
+actor = "codex"
+summary = "Started a narrow CI hardening slice after tracker-only Lunar Lake PRs left PR Plan/Gate controller steps running in `xtask ci plan`."
+
+notes = [
+  "Local reproduction of `xtask ci plan` for the GOAL-AUDIT-004 closeout tracker-only file set completed quickly, while GitHub PR Plan/Gate controller jobs were still in progress.",
+  "The slice adds bounded timeouts around the PR-plan construction steps so controller jobs fail closed instead of hanging indefinitely.",
+  "POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence while the 258V is on AC power.",
+  "The slice preserves no new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, stale-BitNet-evidence, or BitNet QK256/I2_S behavior-change claims.",
+]

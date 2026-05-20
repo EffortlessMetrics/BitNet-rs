@@ -642,6 +642,35 @@ before/after, fallback status, model hash, tokenizer metadata, prompt set,
 repeat count, and token budget are all recorded. Otherwise the run is
 diagnostic-only.
 
+## Accuracy Comparison Profile
+
+`M3MBA-022` adds a distinct `mac validate --profile-set accuracy` route for the
+M3 Air dense SLM lane. It reuses the established
+`ci/quality/apple-m4-slm-quality-corpus.yaml` corpus and `mac receipts-check`
+contract, but it records an explicit `accuracy_comparison_profile` block before
+any cross-lane comparison claim is allowed.
+
+The profile must record:
+
+```text
+work_item = M3MBA-022
+device = apple-m3-air-cpu-neon
+corpus path, name, sha256, case_count, repeat_runs, max_new_tokens
+prompt_ids with case_id, prompt_index, repeat_index
+generated_token_ids_recorded = true for every prompt
+decoded_text_recorded = true for every prompt
+scoring_policy.mechanical_scoring_only = true
+comparison_grade_claim_made = false
+M4 and SLM-CPU evidence marked non-comparable until a fresh matching receipt is selected
+```
+
+The staged hardware workflow exposes `profile_set=accuracy` so a selected M3
+run can emit the same preflight/model-fetch phase evidence as smoke/operator
+runs while preserving the comparison boundary. This is still dense SLM evidence:
+it does not claim BitNet answer quality, M4 Mac mini performance, full Metal
+inference, MPSGraph inference, Neural Engine execution, QK256 support, broad
+quality, or broad Apple Silicon performance.
+
 ## Artifact Ledger
 
 Large model downloads should have a small committed ledger entry in the relevant

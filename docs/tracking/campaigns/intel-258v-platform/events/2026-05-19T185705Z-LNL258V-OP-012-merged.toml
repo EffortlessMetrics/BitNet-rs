@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T18:57:05Z"
+event = "merged"
+item = "LNL258V-OP-012"
+pr = 5990
+branch = "codex/lunar-lake/LNL258V-OP-012-readiness-route-reasons"
+head_sha = "035bbc7e3154bb097e079514a565be11253749fc"
+merge_sha = "5aedf1d241e4953c7b78f079f400097d320297da"
+actor = "codex"
+previous_status = "ready"
+new_status = "merged"
+summary = "Merged LNL258V-OP-012, aligning Lunar Lake operator-readiness route reasons with profile-scoped route policy."
+
+notes = [
+  "The operator-readiness route reasons now describe dense Qwen CPU as the default route id and regression baseline while explaining profile-scoped auto routing for promoted GPU/NPU profiles.",
+  "The refreshed regression-v2 and operator-comparison artifacts carry the updated route reason text.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]

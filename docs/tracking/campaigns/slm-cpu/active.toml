@@ -3087,6 +3087,362 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-052"
+status = "merged"
+pr = 5921
+head_sha = "d803a63446c6aec5935cd39b35885f91f00d8ba7"
+merge_sha = "d9bd53cbdc87207698a6d8d58604731a405604c7"
+branch = "codex/slm-cpu-052-selector-update-impl"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-051"]
+acceptance = "Implement the first behavior-preserving packed Q8_0 sidecar selector update after SLM-CPU-051. The slice may allow the dense-linear selector to choose a packed Q8_0 sidecar candidate only for the exact evidence-scoped Qwen3 Q8_0 appliance profile where generated-ID/text equivalence, strict tokenizer authority, selected CPU backend/kernel, model SHA, and fallback=false are proven against the eager F32 Candle oracle. If runtime sidecar execution remains blocked, the slice must record the blocker explicitly. Any before/after receipt must preserve prompt IDs, generated IDs, decoded text, loader/tokenizer provenance, backend/kernel identity, and fallback=false before claiming even a bounded improvement. It must not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-models --lib dense_gguf_q8 --no-default-features",
+  "cargo test --locked -p bitnet-models --no-default-features",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "SLM-CPU-052 is the next Qwen3 Q8_0 Kaby dense-linear selector update gate after the selector-readiness report.",
+  "Any packed Q8_0 sidecar selector update must preserve the eager F32 Candle behavior oracle before it can claim a bounded improvement.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecar runtime execution is enabled before generated-ID/text receipt equivalence and strict provenance are preserved.",
+  "A runtime speedup is proven without before/after receipts.",
+  "Sustained 8250U throughput is proven.",
+  "Generated IDs or decoded text changed.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-053"
+status = "merged"
+pr = 5943
+head_sha = "2ee3ddd8932af8d12054ddfcc6772e81549ee833"
+merge_sha = "570ae6c50cbd76d01469d9f136b46583df1c59b8"
+branch = "codex/slm-cpu-053-runtime-proof-blocker"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-052"]
+acceptance = "Add the first evidence-scoped packed Q8_0 sidecar runtime execution proof after SLM-CPU-052. The slice may route only the exact proven dense-linear tensor or minimal tensor set through packed Q8_0 sidecar compute when selector-update proof is supplied, while preserving the eager F32 Candle path as the default and preserving the Qwen3 Q8_0 appliance behavior oracle. It must emit or validate before/after receipts proving identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, fallback_used=false, and speedup_claim=false before claiming even a bounded runtime improvement. If runtime execution cannot be enabled safely, the slice must instead record the precise blocker and keep packed sidecar compute disabled. It must not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-models --lib dense_gguf_q8 --no-default-features",
+  "cargo test --locked -p bitnet-models --no-default-features",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --allocation-audit --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-19\\qwen3-packed-q8-sidecar-runtime-proof.json",
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-proof-validation.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-053 is the first possible packed Q8_0 sidecar runtime execution proof gate after the behavior-preserving selector update.",
+  "Any runtime improvement is bounded to the exact receipt-proven Qwen3 Q8_0 Kaby appliance profile and must keep speedup_claim=false unless a later benchmark item records a separate performance claim.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "Generated IDs or decoded text changed.",
+  "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, or fallback=false provenance changed.",
+  "A sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-054"
+status = "merged"
+pr = 5992
+head_sha = "db81e20444019f253b612f6e53bb6291201f5524"
+merge_sha = "8157d160c4a66d3982f90589debef9406c3ace19"
+branch = "codex/slm-cpu-054-sidecar-runtime-hook"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-053"]
+acceptance = "Burn down the SLM-CPU-053 packed Q8_0 sidecar runtime blocker by adding the narrow production dense-linear runtime hook or proving the exact remaining hook/API gap. The slice must keep eager_f32_candle as the default Qwen3 Q8_0 Kaby behavior oracle unless before/after receipts prove identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, and fallback_used=false. If packed sidecar compute is not safely enabled, emit an updated blocker artifact that names the remaining gap and keeps sidecar_runtime_compute_allowed=false. It must preserve speedup_claim=false unless a later performance item records separate bounded timing evidence, and must not claim sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-models --lib dense_gguf_q8 --no-default-features",
+  "cargo test --locked -p bitnet-models --no-default-features",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --allocation-audit --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-19\\qwen3-packed-q8-sidecar-runtime-hook.json",
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-hook-validation.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-054 is the next packed Q8_0 sidecar runtime-hook blocker burn-down after SLM-CPU-053.",
+  "The default Qwen3 Q8_0 Kaby runtime path remains eager_f32_candle unless before/after generated-ID and decoded-text receipts prove a sidecar path is behavior-preserving.",
+  "Any enabled sidecar runtime path is evidence-scoped to the exact Qwen3 Q8_0 Kaby appliance profile and remains speedup_claim=false until a later bounded performance item records timing evidence.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "Generated IDs or decoded text changed.",
+  "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, or fallback=false provenance changed.",
+  "A sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-055"
+status = "merged"
+pr = 6008
+head_sha = "b8823a533829db1f199a02ebe9c70201fa87463d"
+merge_sha = "d6a99278d8a931a3e0ba1d38acf4a541a97b3705"
+branch = "codex/slm-cpu-055-production-dense-linear-hook-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-054"]
+acceptance = "Add the first production dense-linear hook contract after SLM-CPU-054 so transformer dense linear calls can receive an explicit eager-F32 selection or a selected Q8_0 sidecar descriptor without enabling packed sidecar compute by default. The slice must preserve eager_f32_candle as the default Qwen3 Q8_0 Kaby behavior oracle unless before/after receipts prove identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, and fallback_used=false. If packed runtime compute remains disabled, it must emit a machine-checkable hook-contract or blocker artifact naming the remaining dispatch/receipt gap. It must not claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-models --lib dense_gguf_q8 --no-default-features",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-common/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-055 is the next packed Q8_0 sidecar production-hook contract gate after SLM-CPU-054.",
+  "The transformer dense-linear path has an explicit contract for eager-F32 selection or a selected Q8_0 sidecar descriptor before any packed compute can be enabled.",
+  "The default Qwen3 Q8_0 Kaby runtime path remains eager_f32_candle unless before/after generated-ID and decoded-text receipts prove a sidecar path is behavior-preserving.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "Generated IDs or decoded text changed.",
+  "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, or fallback=false provenance changed.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-056"
+status = "merged"
+pr = 6018
+head_sha = "0abc84dde3f2a03b8ae691f1ac04c087bc041a2e"
+merge_sha = "3f56b26f9a1dc510667f8c93d9ff0bdcec01e286"
+branch = "codex/slm-cpu-056-production-dense-linear-hook-impl"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-055"]
+acceptance = "Implement the first production dense-linear hook boundary defined by SLM-CPU-055 without enabling packed Q8_0 sidecar compute by default. The hook must let transformer dense linear calls report an explicit eager-F32 selection or a selected Q8_0 sidecar descriptor while preserving the current Qwen3 Q8_0 Kaby behavior oracle. Any before/after artifact must prove identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, and fallback_used=false. If packed runtime compute remains disabled, emit a machine-checkable blocker artifact naming the remaining runtime or receipt gap. It must not claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-models --lib dense_gguf_q8 --no-default-features",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-common/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-cli/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-056 is the first implementation slice for the production dense-linear hook contract added by SLM-CPU-055.",
+  "The transformer dense-linear path can report explicit eager-F32 selection or selected Q8_0 sidecar descriptor state without enabling packed compute by default.",
+  "The default Qwen3 Q8_0 Kaby runtime path remains eager_f32_candle unless before/after generated-ID and decoded-text receipts prove a sidecar path is behavior-preserving.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "Generated IDs or decoded text changed.",
+  "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, or fallback=false provenance changed.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-057"
+status = "merged"
+pr = 6045
+head_sha = "80d707d65973a884066d607fd04f07cc18dbd0c2"
+merge_sha = "c19c7a51d4edf11d6a459df6ccda8efcab081ca2"
+branch = "codex/slm-cpu-057-dense-hook-receipt-gate"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-056"]
+acceptance = "Use the SLM-CPU-056 production dense-linear hook boundary to add or prove the next receipt gate for Qwen3 Q8_0 dense hook selection before any packed Q8_0 sidecar compute can be enabled. The slice must keep eager_f32_candle as the default behavior oracle unless before/after Qwen3 Q8_0 warm-session receipts prove identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook selection identity, and fallback_used=false. If packed runtime compute remains disabled, emit a machine-checkable blocker artifact naming the remaining compute-kernel or receipt gap. It must not claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu",
+  "cargo test --locked -p bitnet-models --lib dense_gguf_q8 --no-default-features",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-common/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts/**",
+  "crates/bitnet-receipts-core/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-057 is the next receipt/proof gate after the production dense-linear hook boundary added by SLM-CPU-056.",
+  "The Qwen3 Q8_0 dense-linear hook selection can be recorded or its remaining receipt gap can be precisely named.",
+  "The default Qwen3 Q8_0 Kaby runtime path remains eager_f32_candle unless before/after generated-ID and decoded-text receipts prove a sidecar path is behavior-preserving.",
+]
+must_not_claim = [
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "Generated IDs or decoded text changed.",
+  "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, or fallback=false provenance changed.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-024"
 status = "merged"
 pr = 5342

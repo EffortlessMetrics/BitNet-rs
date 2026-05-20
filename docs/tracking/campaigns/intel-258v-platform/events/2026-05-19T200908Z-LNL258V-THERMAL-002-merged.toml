@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T20:09:08Z"
+event = "merged"
+item = "LNL258V-THERMAL-002"
+pr = 6007
+branch = "codex/lunar-lake/LNL258V-THERMAL-002-temperature-availability"
+head_sha = "d632550023d656f984e952c62ddafbfb6b968d78"
+merge_sha = "f57e33636626c9db5bda18d5868a8335736504db"
+actor = "codex"
+summary = "Merged LNL258V-THERMAL-002, recording Lunar Lake thermal temperature availability diagnosis evidence."
+
+notes = [
+  "The merged diagnosis records Windows MSAcpi, thermal-zone counter, and Win32 temperature-probe source results from the 258V.",
+  "Thermal-zone visibility remains recorded, but zero, null, and sentinel temperature fields are classified as unavailable measured temperature evidence.",
+  "No measured-temperature, inference, route-promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]

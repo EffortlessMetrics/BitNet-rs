@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T18:03:00Z"
+event = "merged"
+item = "LNL258V-OP-011"
+pr = 5986
+branch = "codex/lunar-lake/LNL258V-OP-011-readable-low-power-blockers"
+head_sha = "686b83fcfddb56bad89517b01bb7bb4e554356c4"
+merge_sha = "93218894b1f48af9b172993a922a5e71d9b1fa28"
+actor = "codex"
+summary = "Merged LNL258V-OP-011 after making low_power auto-route blockers readable."
+
+notes = [
+  "The merged PR preserves machine-readable blocker IDs while adding readable explanations for auto_default, low_power_power_advantage_unproven, and benchmark_qualified_speedup_or_power_advantage.",
+  "The blocked low_power ask, regression-v2 bundle, operator comparison, and generated dashboards were refreshed.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]

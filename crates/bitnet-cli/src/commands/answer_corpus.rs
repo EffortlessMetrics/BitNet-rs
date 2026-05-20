@@ -80,6 +80,9 @@ const ANSWER_RECEIPT_CHECKED_RULES: &[&str] = &[
     "timing_first_token_ms_recorded",
     "timing_decode_total_ms_recorded",
     "latency_total_ms_recorded",
+    "qk256_hot_path_recorded",
+    "qk256_hot_path_invocations_positive",
+    "qk256_hot_path_materialization_audited",
 ];
 const ANSWER_CORPUS_SCORING_KINDS: &[&str] = &[
     "exact_match",
@@ -686,10 +689,13 @@ impl AnswerCorpusCommand {
             "timing": run_receipt.get("timing").cloned().unwrap_or(Value::Null),
             "latency": run_receipt.get("latency").cloned().unwrap_or(Value::Null),
             "throughput": run_receipt.get("throughput").cloned().unwrap_or(Value::Null),
+            "execution_coverage": run_receipt.get("execution_coverage").cloned().unwrap_or(Value::Null),
+            "qk256_hot_path": run_receipt.get("qk256_hot_path").cloned().unwrap_or(Value::Null),
             "execution_plan": run_receipt.get("execution_plan").cloned().unwrap_or(Value::Null),
             "kernel": {
                 "selected_kernel": run_receipt["kernel"]["kernel_id"].clone(),
                 "family": run_receipt["kernel"]["family"].clone(),
+                "hot_path_kernel": run_receipt["kernel"]["hot_path_kernel_id"].clone(),
             },
             "loader": {
                 "mode": run_receipt["loader"]["mode"].clone(),
@@ -2802,6 +2808,8 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
         {
             failed.push("dense_slm_execution_coverage_not_bitnet_qk256".to_string());
         }
+    } else if model_family == "bitnet" && expected_backend == "cpu" {
+        failed.extend(qk256_hot_path_failed_rules(run_receipt));
     }
     if is_cuda_answer_corpus_device(expected_backend) {
         let cuda_kernel_recorded = selected_kernel.contains("cuda")
@@ -2896,6 +2904,56 @@ fn json_contains_bitnet_dense_forbidden(value: &Value) -> bool {
         }),
         _ => false,
     }
+}
+
+fn qk256_hot_path_failed_rules(run_receipt: &Value) -> Vec<String> {
+    let mut failed = Vec::new();
+    let hot_path = &run_receipt["qk256_hot_path"];
+    if !hot_path.is_object() {
+        failed.push("qk256_hot_path_recorded".to_string());
+        return failed;
+    }
+
+    for field in [
+        "qk256_f32_scalar_gemv_invocations",
+        "qk256_f32_avx2_gemv_invocations",
+        "qk256_i8s_scaled_scalar_invocations",
+        "qk256_i8s_scaled_avx2_invocations",
+        "qk256_flat_bytes_extracted_count",
+        "input_rows_materialized_count",
+        "output_rows_allocated_count",
+        "no_scale_f32_gemv_invocations",
+        "scaled_i2s_i8s_gemv_invocations",
+        "audited_tensor_materialization_count",
+    ] {
+        if hot_path[field].as_u64().is_none() {
+            failed.push(format!("qk256_hot_path_{field}_recorded"));
+        }
+    }
+
+    let total_invocations = hot_path["no_scale_f32_gemv_invocations"]
+        .as_u64()
+        .unwrap_or(0)
+        .saturating_add(hot_path["scaled_i2s_i8s_gemv_invocations"].as_u64().unwrap_or(0));
+    if total_invocations == 0 {
+        failed.push("qk256_hot_path_invocations_positive".to_string());
+    }
+
+    if hot_path["audited_tensor_materialization_count"].as_u64().unwrap_or(0) == 0 {
+        failed.push("qk256_hot_path_materialization_audited".to_string());
+    }
+
+    if hot_path["qk256_execution_path"].as_str().unwrap_or_default().is_empty() {
+        failed.push("qk256_hot_path_execution_path_recorded".to_string());
+    }
+    if hot_path["selected_kernel"].as_str().unwrap_or_default().is_empty() {
+        failed.push("qk256_hot_path_selected_kernel_recorded".to_string());
+    }
+    if truthy_bool_at_any(hot_path, &[&["speedup_claim"][..], &["math_changed"][..]]) {
+        failed.push("qk256_hot_path_no_speedup_or_math_change_claim".to_string());
+    }
+
+    failed
 }
 
 fn answer_receipt_required_case_fields() -> &'static [&'static str] {
@@ -4064,6 +4122,22 @@ cases:
                 "pretokenizer_authority": "llama-bpe"
             },
             "kernel": { "kernel_id": kernel_id },
+            "qk256_hot_path": {
+                "qk256_f32_scalar_gemv_invocations": 0,
+                "qk256_f32_avx2_gemv_invocations": 0,
+                "qk256_i8s_scaled_scalar_invocations": 1,
+                "qk256_i8s_scaled_avx2_invocations": 0,
+                "qk256_flat_bytes_extracted_count": 1,
+                "input_rows_materialized_count": 1,
+                "output_rows_allocated_count": 1,
+                "no_scale_f32_gemv_invocations": 0,
+                "scaled_i2s_i8s_gemv_invocations": 1,
+                "audited_tensor_materialization_count": 3,
+                "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+                "qk256_execution_path": "scaled_i2s_i8s",
+                "math_changed": false,
+                "speedup_claim": false
+            },
             "tokens": {
                 "prompt": 3,
                 "generated": 1,
@@ -4098,6 +4172,33 @@ cases:
             strict_answer_receipt_fixture("cpu", "cpu-rust", "cpu", "i2_s-avx2-reference");
 
         assert!(answer_receipt_failed_rules(&receipt, "cpu").is_empty());
+    }
+
+    #[test]
+    fn cpu_answer_receipt_rejects_missing_qk256_hot_path_counters() {
+        let mut receipt =
+            strict_answer_receipt_fixture("cpu", "cpu-rust", "cpu", "i2_s-avx2-reference");
+        if let Some(receipt) = receipt.as_object_mut() {
+            receipt.remove("qk256_hot_path");
+        }
+
+        let failed = answer_receipt_failed_rules(&receipt, "cpu");
+
+        assert!(failed.contains(&"qk256_hot_path_recorded".to_string()));
+    }
+
+    #[test]
+    fn cpu_answer_receipt_rejects_zero_qk256_hot_path_invocations() {
+        let mut receipt =
+            strict_answer_receipt_fixture("cpu", "cpu-rust", "cpu", "i2_s-avx2-reference");
+        receipt["qk256_hot_path"]["qk256_i8s_scaled_scalar_invocations"] = json!(0);
+        receipt["qk256_hot_path"]["scaled_i2s_i8s_gemv_invocations"] = json!(0);
+        receipt["qk256_hot_path"]["audited_tensor_materialization_count"] = json!(0);
+
+        let failed = answer_receipt_failed_rules(&receipt, "cpu");
+
+        assert!(failed.contains(&"qk256_hot_path_invocations_positive".to_string()));
+        assert!(failed.contains(&"qk256_hot_path_materialization_audited".to_string()));
     }
 
     #[test]

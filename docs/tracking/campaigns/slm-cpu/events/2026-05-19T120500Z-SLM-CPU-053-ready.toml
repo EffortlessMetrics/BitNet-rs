@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T12:05:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-053"
+event = "in_progress"
+from = "proposed"
+to = "ready"
+actor = "codex"
+
+notes = [
+  "Queued the first packed Q8_0 sidecar runtime execution proof gate after SLM-CPU-052.",
+  "The item must preserve the Qwen3 Q8_0 appliance behavior oracle with identical prompt IDs, generated IDs, decoded text, strict tokenizer authority, CPU backend/kernel identity, model SHA, and fallback=false before any bounded improvement claim.",
+  "No sustained throughput, broad answer quality, Q4/Q5 runtime, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

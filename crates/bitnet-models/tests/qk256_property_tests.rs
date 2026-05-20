@@ -126,7 +126,8 @@ proptest! {
     /// Property: Unpacking is deterministic (same input yields same output)
     #[test]
     fn prop_unpack_qk256_block_deterministic(packed_bytes in prop::collection::vec(any::<u8>(), QK256_PACKED_BYTES)) {
-        let packed_arr: [u8; QK256_PACKED_BYTES] = packed_bytes.try_into().unwrap();
+        let mut packed_arr = [0u8; QK256_PACKED_BYTES];
+        packed_arr.copy_from_slice(&packed_bytes);
 
         let mut codes1 = [0u8; QK256_BLOCK];
         let mut codes2 = [0u8; QK256_BLOCK];

@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T23:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-057"
+event = "in_progress"
+actor = "codex"
+previous_status = "untracked"
+new_status = "ready"
+summary = "Queued the next dense hook-selection receipt gate after SLM-CPU-056."
+notes = [
+  "Added SLM-CPU-057 as the next ready item after PR #6018 merged the production dense-linear hook boundary.",
+  "The item is scoped to recording or proving the Qwen3 Q8_0 dense hook-selection receipt gate before packed Q8_0 sidecar compute can be enabled.",
+  "The default runtime remains eager_f32_candle unless before/after receipts prove identical generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, dense hook selection identity, and fallback=false.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

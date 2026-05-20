@@ -3,9 +3,14 @@
 mod backend;
 mod config;
 mod parse;
+mod profile;
 mod resolve;
 
 pub use config::DeviceConfig;
+pub use profile::{
+    DeviceProfileContract, DeviceProfileLabel, DeviceProfileStoragePolicy,
+    DeviceProfileUnsupportedClaim, ThermalPolicy,
+};
 
 #[cfg(test)]
 mod tests {
@@ -33,6 +38,7 @@ mod tests {
             parse_device("nvidia-rtx-5070-ti-wgpu"),
             Some(DeviceConfig::NvidiaRtx5070TiWgpu)
         );
+        assert_eq!(parse_device("intel-a770-opencl"), Some(DeviceConfig::IntelA770OpenCl));
         assert_eq!(parse_device("metal"), Some(DeviceConfig::Metal));
         assert_eq!(parse_device("mpsgraph"), Some(DeviceConfig::MpsGraph));
         assert_eq!(parse_device("apple-m4-metal"), Some(DeviceConfig::AppleM4Metal));
@@ -82,6 +88,43 @@ mod tests {
     }
 
     #[test]
+    fn apple_m3_air_profile_contract_is_shared_across_lane_labels() {
+        let metal = DeviceConfig::AppleM3AirMetal.device_profile_contract();
+        let mpsgraph = DeviceConfig::AppleM3AirMpsGraph.device_profile_contract();
+        let cpu = DeviceConfig::AppleM3AirCpuNeon.device_profile_contract();
+        assert!(metal.is_some());
+        assert_eq!(metal, mpsgraph);
+        assert_eq!(metal, cpu);
+
+        let Some(contract) = metal else {
+            return;
+        };
+        assert_eq!(contract.profile_id, "apple-m3-macbook-air");
+        assert_eq!(contract.soc_family, "Apple M3");
+        assert_eq!(contract.thermal_policy, super::ThermalPolicy::FanlessMobile);
+        assert_eq!(contract.storage.cache_root_required, true);
+        assert_eq!(contract.storage.large_artifact_sweep_allowed, true);
+        assert_eq!(contract.storage.model_binaries_committed, false);
+        assert_eq!(
+            contract.label("apple-m3-air-metal").map(|label| label.execution_available),
+            Some(false)
+        );
+        assert_eq!(
+            contract.label("apple-m3-air-mpsgraph").map(|label| label.execution_available),
+            Some(false)
+        );
+        assert_eq!(
+            contract.label("apple-m3-air-cpu-neon").map(|label| label.execution_available),
+            Some(true)
+        );
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::MetalModelInference));
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::MpsGraphModelInference));
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::NeuralEngineExecution));
+        assert!(contract.rejects(super::DeviceProfileUnsupportedClaim::Qk256AppleSilicon));
+        assert!(DeviceConfig::AppleM4CpuNeon.device_profile_contract().is_none());
+    }
+
+    #[test]
     fn rtx_5070_ti_backend_labels_do_not_alias_legacy_gpu_labels() {
         let generic_gpu = DeviceConfig::Gpu(0);
         let generic_cuda = DeviceConfig::Gpu(0);
@@ -94,6 +137,20 @@ mod tests {
         assert_ne!(rtx_cuda.backend_label(), generic_cuda.backend_label());
         assert_ne!(rtx_wgpu.backend_label(), generic_gpu.backend_label());
         assert_ne!(rtx_wgpu.backend_label(), generic_cuda.backend_label());
+    }
+
+    #[test]
+    fn intel_a770_opencl_backend_label_does_not_alias_generic_gpu_or_oneapi() {
+        let generic_gpu = DeviceConfig::Gpu(0);
+        let generic_opencl_alias = DeviceConfig::Gpu(0);
+        let a770 = DeviceConfig::IntelA770OpenCl;
+
+        assert_eq!(a770.backend_label(), "intel-a770-opencl");
+        assert_eq!(a770.backend_request().to_string(), "intel-a770-opencl");
+        assert_eq!(a770.resolve(), bitnet_common::Device::OpenCL(0));
+        assert_ne!(a770.backend_label(), generic_gpu.backend_label());
+        assert_ne!(a770.backend_label(), generic_opencl_alias.backend_label());
+        assert_ne!(a770.backend_request(), bitnet_common::BackendRequest::OneApi);
     }
 
     #[test]
@@ -214,6 +271,7 @@ mod tests {
             DeviceConfig::OpenVinoNpu,
             DeviceConfig::NvidiaRtx5070TiCuda,
             DeviceConfig::NvidiaRtx5070TiWgpu,
+            DeviceConfig::IntelA770OpenCl,
             DeviceConfig::Metal,
             DeviceConfig::MpsGraph,
             DeviceConfig::AppleM4Metal,

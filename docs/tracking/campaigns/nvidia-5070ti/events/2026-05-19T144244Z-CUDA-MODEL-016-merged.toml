@@ -1,0 +1,22 @@
+timestamp = "2026-05-19T14:42:44Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-016"
+event = "merged"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+pr = 5941
+branch = "codex/cuda-model-016-qwen3-repeated-comparator-receipt"
+head_sha = "b725aecde350a33e40235b81adec2bb9eec78fb8"
+merge_sha = "e602f3280b5d3b1109632568299e53ed2cd74407"
+summary = "Merged PR #5941 for the Qwen3 repeated comparator receipt validator and generator contract."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5941",
+  "crates/bitnet-bench-receipts/src/bin/qwen3_cuda_repeated_comparator_receipt.rs",
+  "docs/reports/CUDA_MODEL_016_QWEN3_REPEATED_COMPARATOR_RECEIPT_CONTRACT.md",
+]
+
+notes = [
+  "The merge preserves no speedup, no benchmark-qualified speed, no full CUDA residency, no broad dense GGUF readiness, no Qwen2.5 inheritance, and no BitNet QK256 proof claims.",
+]

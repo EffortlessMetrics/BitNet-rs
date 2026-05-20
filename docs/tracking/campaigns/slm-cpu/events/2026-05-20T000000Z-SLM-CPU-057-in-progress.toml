@@ -1,0 +1,12 @@
+timestamp = "2026-05-20T00:00:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-057"
+event = "in_progress"
+actor = "codex"
+previous_status = "ready"
+new_status = "in_progress"
+summary = "Started the dense hook-selection receipt gate after SLM-CPU-056."
+notes = [
+  "Warm-session receipts must record dense Q8 hook-selection identity before packed sidecar compute can be enabled.",
+  "The default runtime remains eager_f32_candle and no speedup or packed runtime compute claim is made.",
+]

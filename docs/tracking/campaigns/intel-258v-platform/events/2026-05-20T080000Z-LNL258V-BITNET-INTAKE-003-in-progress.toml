@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T08:00:00Z"
+event = "in_progress"
+item = "LNL258V-BITNET-INTAKE-003"
+branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-003-pending-5064"
+actor = "codex"
+summary = "Started a narrow Lunar Lake BitNet semantic-intake refresh for pending A770 #5064."
+
+notes = [
+  "A live PR audit found that A770 #5064 is titled as diagnostic Qcur sample reporting but the stacked diff also changes BitNet attention_score_key_input semantics to f16 roundtrip.",
+  "The slice indexes #5064 as pending shared BitNet semantic work that will require Lunar Lake reruns only if it reaches main.",
+  "POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence.",
+]

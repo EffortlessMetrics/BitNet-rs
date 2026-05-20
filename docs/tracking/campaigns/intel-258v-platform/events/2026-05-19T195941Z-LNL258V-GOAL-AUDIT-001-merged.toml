@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T19:59:41Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-001"
+pr = 6005
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-001-artifact-checklist"
+head_sha = "a4d5884e0b30c514d1cefb2e21141472f532257d"
+merge_sha = "144461887f930fac51815feb52bb5dd0e058fec9"
+actor = "codex"
+summary = "Merged LNL258V-GOAL-AUDIT-001, adding the no-inference Lunar Lake goal artifact checklist."
+
+notes = [
+  "The merged checklist maps the current Lunar Lake objective to committed operator, regression, route, telemetry, dense Qwen, OpenVINO, low_power, and BitNet evidence.",
+  "The checklist records excellent support as not complete because LNL258V-POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]

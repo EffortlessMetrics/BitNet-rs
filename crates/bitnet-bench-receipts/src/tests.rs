@@ -853,6 +853,78 @@ fn dense_gguf_qwen_repeated_comparator_rejects_duplicate_source_path() {
 }
 
 #[test]
+fn qwen3_cuda_repeated_comparator_receipt_validates() -> Result<(), ReceiptError> {
+    let receipt = sample_qwen3_cuda_repeated_comparator_receipt();
+    validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt)?;
+    Ok(())
+}
+
+#[test]
+fn qwen3_cuda_repeated_comparator_rejects_short_decode_32_token_drift() {
+    let mut receipt = sample_qwen3_cuda_repeated_comparator_receipt();
+    receipt["profiles"][2]["runs"][0]["generated_tokens"] = json!(8);
+
+    let err =
+        validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt).unwrap_err().to_string();
+    assert!(err.contains("generated_tokens"), "unexpected error: {err}");
+}
+
+#[test]
+fn qwen3_cuda_repeated_comparator_rejects_qwen25_inheritance() {
+    let mut receipt = sample_qwen3_cuda_repeated_comparator_receipt();
+    receipt["qwen25_proof_inherited"] = json!(true);
+
+    let err =
+        validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt).unwrap_err().to_string();
+    assert!(err.contains("qwen25_proof_inherited"), "unexpected error: {err}");
+}
+
+#[test]
+fn qwen3_cuda_repeated_comparator_rejects_bitnet_packed_proof() {
+    let mut receipt = sample_qwen3_cuda_repeated_comparator_receipt();
+    receipt["profiles"][0]["runs"][0]["bitnet_packed_i2s_qk256_proof"] = json!(true);
+
+    let err =
+        validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt).unwrap_err().to_string();
+    assert!(err.contains("bitnet_packed_i2s_qk256_proof"), "unexpected error: {err}");
+}
+
+#[test]
+fn qwen3_cuda_repeated_comparator_rejects_missing_decode_128_profile() -> Result<(), String> {
+    let mut receipt = sample_qwen3_cuda_repeated_comparator_receipt();
+    let duplicate_profile = receipt["profiles"][0].clone();
+    json_array_mut(&mut receipt, "/profiles")?.pop();
+    json_array_mut(&mut receipt, "/profiles")?.push(duplicate_profile);
+
+    let err =
+        expect_validation_error(validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt))?;
+    assert!(err.contains("decode_128_from_warm_context"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
+fn qwen3_cuda_repeated_comparator_rejects_extra_profile() -> Result<(), String> {
+    let mut receipt = sample_qwen3_cuda_repeated_comparator_receipt();
+    let extra_profile = receipt["profiles"][0].clone();
+    json_array_mut(&mut receipt, "/profiles")?.push(extra_profile);
+
+    let err =
+        expect_validation_error(validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt))?;
+    assert!(err.contains("exactly 5"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
+fn qwen3_cuda_repeated_comparator_rejects_profile_count_drift() {
+    let mut receipt = sample_qwen3_cuda_repeated_comparator_receipt();
+    receipt["comparator_summary"]["profiles_recorded"] = json!(6);
+
+    let err =
+        validate_qwen3_cuda_repeated_comparator_receipt_json(&receipt).unwrap_err().to_string();
+    assert!(err.contains("profiles_recorded"), "unexpected error: {err}");
+}
+
+#[test]
 fn dense_gguf_qwen_benchmark_qualification_receipt_validates() {
     let receipt = sample_dense_gguf_qwen_benchmark_qualification_receipt();
     validate_dense_gguf_qwen_benchmark_qualification_receipt_json(&receipt).unwrap();
@@ -1343,6 +1415,289 @@ fn dense_qwen_u64_summary() -> serde_json::Value {
         "mean": 1.0,
         "max": 1
     })
+}
+
+fn sample_qwen3_cuda_repeated_comparator_receipt() -> serde_json::Value {
+    json!({
+        "schema": 1,
+        "artifact_kind": "qwen3_cuda_repeated_comparator",
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+        "timestamp_utc": "2026-05-19T16:00:00Z",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "reference_backend": "amd-9950x3d-cpu-avx512",
+        "runtime_api": "cuda",
+        "selected_route": "dense_regular_llm_cuda",
+        "claim": "qwen3_cuda_repeated_comparator",
+        "fallback_used": false,
+        "fallback_backend": null,
+        "fallback_reason": null,
+        "speedup_claim": false,
+        "benchmark_qualified_speedup": false,
+        "full_cuda_residency_claimed": false,
+        "dense_gguf_inference_claimed": false,
+        "broad_dense_gguf_ready_claimed": false,
+        "qwen25_proof_inherited": false,
+        "server_ready_claimed": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "claim_boundary": {
+            "qwen3_cuda_repeated_comparator_claimed": true,
+            "qwen_one_token_cuda_claimed": true,
+            "qwen_short_decode_cuda_claimed": true,
+            "qwen_warm_session_cuda_claimed": true,
+            "qwen_chat_cuda_claimed": true,
+            "server_ready_claimed": false,
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false,
+            "full_cuda_residency_claimed": false,
+            "broad_dense_gguf_ready_claimed": false,
+            "qwen25_proof_inherited": false,
+            "bitnet_packed_i2s_qk256_proof": false
+        },
+        "model": {
+            "id": "qwen3-0.6b-instruct-q8_0",
+            "architecture": "qwen3",
+            "model_family": "qwen",
+            "artifact_kind": "dense_gguf",
+            "file": "Qwen3-0.6B-Q8_0.gguf",
+            "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+        },
+        "tokenizer_prompt_authority": {
+            "tokenizer_authority": "contract_authoritative",
+            "prompt_authority": "contract_authoritative",
+            "prompt_template": "qwen-chat-raw-deterministic",
+            "prompt_policy": "profile-local deterministic prompts; same tokenizer and prompt policy across all runs",
+            "deterministic_prompt": true
+        },
+        "execution_plan": {
+            "planner_version": "cuda-planner-qwen3-product",
+            "model_family": "qwen",
+            "quantization": "dense_gguf_q8_0_qwen3_product_contract",
+            "selected_route": "dense_regular_llm_cuda",
+            "requested_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "strict_fallback_policy": "reject",
+            "dense_regular_llm_cuda": true,
+            "bitnet_packed_qk256_cuda": false,
+            "fallback_used": false,
+            "strict_cuda_ready": true,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false,
+            "cuda_dense_regular_llm_ops": 8112,
+            "cuda_bitnet_qk256_ops": 0,
+            "cpu_fallback_ops": 0,
+            "unsupported_ops": 0
+        },
+        "proof_inputs": {
+            "one_token": qwen3_profile_proof_input("one_token"),
+            "short_decode_8": qwen3_profile_proof_input("short_decode_8"),
+            "short_decode_32": qwen3_profile_proof_input("short_decode_32"),
+            "warm_session_3_turns": qwen3_profile_proof_input("warm_session_3_turns"),
+            "decode_128_from_warm_context": qwen3_profile_proof_input("decode_128_from_warm_context")
+        },
+        "profiles": [
+            qwen3_comparator_profile("one_token"),
+            qwen3_comparator_profile("short_decode_8"),
+            qwen3_comparator_profile("short_decode_32"),
+            qwen3_comparator_profile("warm_session_3_turns"),
+            qwen3_comparator_profile("decode_128_from_warm_context")
+        ],
+        "comparator_summary": {
+            "status": "repeated_comparator_only",
+            "profiles_recorded": 5,
+            "min_runs_per_backend": 3,
+            "total_cpu_runs": 15,
+            "total_cuda_runs": 15,
+            "fallback_free": true,
+            "same_artifact_sha": true,
+            "same_tokenizer_prompt_policy": true,
+            "deterministic_generation_policy": true,
+            "generated_tokens_compared": true,
+            "speedup_claim_allowed": false,
+            "benchmark_qualified_speedup": false,
+            "accepted_speedup_profiles": [],
+            "remaining_qualification_blockers": [
+                "profile-specific speedup thresholds remain unreviewed",
+                "pure host-to-device timing remains separated from the model-load envelope"
+            ],
+            "next_step": "CUDA-MODEL benchmark qualification review after repeated hardware receipts land"
+        },
+        "transfer_timing": {
+            "status": "host_to_device_model_load_envelope_device_to_host_measured",
+            "source": "Qwen3 source receipts record H2D model-load envelopes and D2H wall-clock timing",
+            "host_to_device_bytes_recorded": true,
+            "device_to_host_bytes_recorded": true,
+            "host_to_device_timing_recorded": true,
+            "device_to_host_timing_recorded": true,
+            "pure_host_to_device_timing_recorded": false
+        },
+        "hardware_context": {
+            "vram_bytes": 17094475776u64,
+            "power_draw_watts_min": 32.0,
+            "power_draw_watts_max": 50.0,
+            "temperature_c_min": 44.0,
+            "temperature_c_max": 47.0,
+            "source": "NVML fields recorded in Qwen3 strict CUDA proof receipts"
+        },
+        "cuda": {
+            "available": true,
+            "device_count": 1,
+            "device_name": "NVIDIA GeForce RTX 5070 Ti",
+            "compute_capability": "12.0",
+            "driver_version": "591.86",
+            "cuda_runtime_version": "12.9",
+            "cuda_toolkit_version": "12.9",
+            "nvrtc_version": "12.9",
+            "vram_bytes": 17094475776u64
+        },
+        "claim_boundaries": [
+            "speedup_claim=false; repeated CPU/CUDA comparator evidence is not a speedup qualification.",
+            "benchmark_qualified_speedup=false until a separate exact-profile review accepts a profile.",
+            "Qwen3 repeated comparator evidence cannot inherit Qwen2.5 evidence.",
+            "dense_regular_llm_cuda receipts cannot satisfy BitNet packed I2S/QK256 proof."
+        ]
+    })
+}
+
+fn qwen3_profile_proof_input(profile: &str) -> serde_json::Value {
+    json!({
+        "path": format!("ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/{profile}/"),
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "artifact_kind": "qwen3_profile_repeated_runs"
+    })
+}
+
+fn qwen3_comparator_profile(profile: &str) -> serde_json::Value {
+    json!({
+        "profile": profile,
+        "status": "repeated_same_artifact_cpu_cuda_comparator",
+        "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+        "cuda_backend": "nvidia-rtx-5070-ti-cuda",
+        "runtime_api": "cuda",
+        "selected_route": "dense_regular_llm_cuda",
+        "run_count": 3,
+        "cpu_runs": 3,
+        "cuda_runs": 3,
+        "min_runs_per_backend": 3,
+        "fallback_free": true,
+        "same_artifact_sha": true,
+        "same_tokenizer_prompt_policy": true,
+        "deterministic_generation_policy": true,
+        "generated_token_ids_match": true,
+        "first_divergence_report": "none",
+        "speedup_claim": false,
+        "benchmark_qualified_speedup": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "full_cuda_residency_claimed": false,
+        "server_ready_claimed": false,
+        "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured",
+        "model_load_ms": dense_qwen_number_summary(),
+        "tokenizer_load_ms": dense_qwen_number_summary(),
+        "prompt_render_ms": dense_qwen_number_summary(),
+        "tokenize_ms": dense_qwen_number_summary(),
+        "cuda_context_init_ms": dense_qwen_number_summary(),
+        "weight_upload_ms": dense_qwen_number_summary(),
+        "cpu_total_ms": dense_qwen_number_summary(),
+        "cuda_total_ms": dense_qwen_number_summary(),
+        "prefill_ms": dense_qwen_number_summary(),
+        "first_token_ms": dense_qwen_number_summary(),
+        "decode_total_ms": dense_qwen_number_summary(),
+        "steady_tok_per_s": dense_qwen_number_summary(),
+        "kernel_time_ms": dense_qwen_number_summary(),
+        "launch_count": dense_qwen_u64_summary(),
+        "host_to_device_bytes": dense_qwen_u64_summary(),
+        "host_to_device_ms": dense_qwen_number_summary(),
+        "device_to_host_bytes": dense_qwen_u64_summary(),
+        "device_to_host_ms": dense_qwen_number_summary(),
+        "vram_high_water_bytes": dense_qwen_u64_summary(),
+        "runs": [
+            qwen3_comparator_run(profile, 1),
+            qwen3_comparator_run(profile, 2),
+            qwen3_comparator_run(profile, 3)
+        ]
+    })
+}
+
+fn qwen3_comparator_run(profile: &str, index: u64) -> serde_json::Value {
+    let mut run = json!({
+        "run_id": format!("run-{index:02}"),
+        "profile": profile,
+        "source_receipt_path": format!("ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-{index:02}/{profile}.json"),
+        "source_receipt_sha256": format!("{:064x}", 100 + index),
+        "source_artifact_kind": qwen3_source_artifact_kind(profile),
+        "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+        "prompt_template": "qwen-chat-raw-deterministic",
+        "prompt_token_count": 8,
+        "generation_policy": "greedy",
+        "deterministic_generation": true,
+        "generated_tokens": qwen3_generated_tokens(profile),
+        "generated_token_ids_sha256": "638e3358dd291728156e5d98d5fc9cb7e66afa992c8cd16833c85a552572aa4f",
+        "generated_token_ids_match": true,
+        "first_divergence_report": "none",
+        "top_k_compared": true,
+        "fallback_used": false,
+        "quality_passed": true,
+        "parity_passed": true,
+        "speedup_claim": false,
+        "benchmark_qualified_speedup": false,
+        "bitnet_packed_i2s_qk256_proof": false,
+        "full_cuda_residency_claimed": false,
+        "server_ready_claimed": false,
+        "timing": {
+            "model_load_ms": 4000.0,
+            "tokenizer_load_ms": 100.0,
+            "prompt_render_ms": 1.0,
+            "tokenize_ms": 1.0,
+            "cuda_context_init_ms": 10.0,
+            "weight_upload_ms": 3900.0,
+            "cpu_total_ms": 3000.0,
+            "cuda_total_ms": 5000.0,
+            "prefill_ms": 100.0,
+            "first_token_ms": 100.0,
+            "decode_total_ms": 100.0,
+            "steady_tok_per_s": 10.0,
+            "kernel_time_ms": 90.0,
+            "launch_count": 1,
+            "kernel_invocations": 1,
+            "host_to_device_bytes": 639446688u64,
+            "host_to_device_ms": 3900.0,
+            "host_to_device_ms_source": "wall_clock_model_load_with_cuda_weight_upload",
+            "device_to_host_bytes": 607744u64,
+            "device_to_host_ms": 1.0,
+            "device_to_host_ms_source": "wall_clock_extract_logits_2d_local",
+            "vram_high_water_bytes": 17094475776u64,
+            "power_temperature_context": "NVML power and temperature sampled during source receipt"
+        }
+    });
+    if profile == "warm_session_3_turns" {
+        run["turns_count"] = json!(3);
+    }
+    if profile == "decode_128_from_warm_context" {
+        run["warm_context_reused"] = json!(true);
+    }
+    run
+}
+
+fn qwen3_source_artifact_kind(profile: &str) -> &'static str {
+    match profile {
+        "one_token" => "dense_gguf_qwen_one_token_strict_cuda_proof",
+        "warm_session_3_turns" => "dense_gguf_qwen_warm_session_strict_cuda_proof",
+        "decode_128_from_warm_context" => "dense_gguf_qwen_warm_decode_strict_cuda_proof",
+        _ => "dense_gguf_qwen_short_decode_strict_cuda_proof",
+    }
+}
+
+fn qwen3_generated_tokens(profile: &str) -> u64 {
+    match profile {
+        "one_token" => 1,
+        "short_decode_8" => 8,
+        "short_decode_32" => 32,
+        "warm_session_3_turns" => 24,
+        "decode_128_from_warm_context" => 128,
+        _ => 0,
+    }
 }
 
 fn sample_dense_gguf_qwen_benchmark_qualification_receipt() -> serde_json::Value {

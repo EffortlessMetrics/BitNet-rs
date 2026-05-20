@@ -35,7 +35,7 @@ bitnet receipts explain --latest
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Microsoft BitNet 2B I2_S/QK256 | BitNet | `product_cli_ready` | `bitnet_qk256_cuda` | yes | yes | reviewed | no | no | Official packed I2_S/QK256 only. |
 | Qwen2.5 0.5B Q8_0 | dense SLM | `product_cli_ready` | `dense_regular_llm_cuda` | yes | yes | reviewed | no | exact profile only | Dense regular-LLM CUDA only; not BitNet proof. |
-| Qwen3 0.6B Q8_0 | dense SLM candidate | `accelerator_answer_ready` | `dense_regular_llm_cuda` | proof receipt only | proof receipt only | reviewed | no | no | Own Qwen3 receipts only; not Qwen2.5 or BitNet proof. |
+| Qwen3 0.6B Q8_0 | dense SLM | `product_cli_ready` | `dense_regular_llm_cuda` | yes | yes | reviewed | no | exact profile only | Own Qwen3 receipts only; not Qwen2.5 or BitNet proof. |
 | SmolLM2 360M Q8_0 | dense SLM candidate | `structurally_valid` | none | no | no | no | no | no | CPU quality is blocked pending same-prompt reference comparator capture. |
 | Llama 3.2 1B | dense SLM candidate | `registered` | none | no | no | no | no | no | Artifact, tokenizer, prompt, CPU sanity, and route plan still required. |
 | Llama 3.2 3B | dense SLM candidate | `registered` | none | no | no | no | no | no | Memory envelope plus full proof ladder still required. |
@@ -47,7 +47,8 @@ bitnet receipts explain --latest
   It does not imply speedup, full residency, or server readiness.
 - `accelerator_answer_ready` means strict accelerator receipts exist for the
   scoped model and route. It does not imply broad product UX readiness.
-- Qwen3 proof receipts are not yet a product CLI readiness claim.
+- Qwen3 product CLI and server-readiness claims are scoped to Qwen3 receipts
+  only; they do not inherit Qwen2.5 or BitNet proof.
 - Dense SLM CUDA proof is first-class CUDA product evidence, but it never proves
   BitNet packed I2_S/QK256 behavior.
 - BitNet QK256 CUDA proof never proves dense regular-LLM CUDA behavior.
@@ -57,9 +58,9 @@ bitnet receipts explain --latest
   strict RTX 5070 Ti CUDA proof.
 - `speedup_claim=false` remains correct until a governed benchmark
   qualification receipt accepts an exact model/profile.
-- `server_ready=true` is exact-profile only. The dense Qwen row is ready only
-  for the refreshed non-streaming RTX 5070 Ti shared-engine
-  `/v1/chat/completions` receipt; it does not imply broad dense serving,
+- `server_ready=true` is exact-profile only. Dense Qwen2.5 and Qwen3 are ready
+  only for their own refreshed non-streaming RTX 5070 Ti shared-engine
+  `/v1/chat/completions` receipts; this does not imply broad dense serving,
   concurrency, deployment readiness, speedup, full residency, or BitNet proof.
 
 ## Next Proofs
@@ -67,8 +68,8 @@ bitnet receipts explain --latest
 | Row | Next proof |
 | --- | --- |
 | `bitnet_official_2b_i2s_qk256` | Profile-specific speedup qualification and deeper residency/transfer timing. |
-| `dense_qwen25_05b_q8_cuda` | Exact-profile server readiness is promoted by `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json`; later work still needs governed speedup/full-residency evidence and separate BitNet server proof. |
-| `dense_qwen3_06b_q8_candidate` | Exact-profile server-readiness review against `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json`; repeated same-artifact comparator evidence remains required before speed or benchmark-qualified claims. |
+| `dense_qwen25_05b_q8_cuda` | Post-OPS requalification keeps speedup, benchmark-qualified speed, and full residency false. Next proof is a refreshed exact-profile comparator with reduced D2H or device top-k sampling, pure H2D timing, and phase residency; exact-profile server readiness remains limited to `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json`. |
+| `dense_qwen3_06b_q8_candidate` | Exact-profile server readiness is promoted by `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json`; the `qwen3_cuda_repeated_comparator` contract and generator exist, but hardware aggregate comparator evidence and a separate review remain required before speed or benchmark-qualified claims. |
 | `dense_smollm2_360m_candidate` | Same-prompt SmolLM2 first-token/top-k or checkpoint comparator capture using the SLM-CPU-022 contract. |
 | Later dense SLM / small-LLM candidates | Artifact contract, tokenizer/prompt authority, CPU answer sanity, all-layer plan, boundary fixtures, strict CUDA proof, warm session, and benchmark review. |
 

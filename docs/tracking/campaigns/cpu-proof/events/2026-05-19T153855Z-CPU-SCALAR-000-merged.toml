@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T15:38:55Z"
+campaign = "cpu-proof"
+item = "CPU-SCALAR-000"
+event = "merged"
+pr = 5559
+head_sha = "3d33c2324e9474753cd0fd2b29344168528fb2ce"
+merge_sha = "2fa488420140fd80f532781c18340adda88cc116"
+actor = "codex"
+
+notes = [
+  "Merged #5559 added the docs-only scalar CPU kernel contract, hot-path, parity, performance specs, CPU scalar implementation plan, CPU path plan updates, and kernel matrix boundaries.",
+  "The closeout records precise scalar kernel IDs, hot-path counters, parity direction, performance profile fields, implementation sequencing, and claim boundaries as documented.",
+  "No runtime scalar kernel IDs, scaled scalar selection metadata, strict scalar answer-corpus proof, scalar performance, speedup, GPU/NPU, or server inference claim was made.",
+]

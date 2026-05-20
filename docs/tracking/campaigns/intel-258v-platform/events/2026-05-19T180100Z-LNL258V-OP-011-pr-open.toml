@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T18:01:00Z"
+event = "pr_open"
+item = "LNL258V-OP-011"
+pr = 5986
+branch = "codex/lunar-lake/LNL258V-OP-011-readable-low-power-blockers"
+head_sha = "686b83fcfddb56bad89517b01bb7bb4e554356c4"
+actor = "codex"
+summary = "Opened LNL258V-OP-011 to make fail-closed low_power auto-route blockers readable."
+
+notes = [
+  "PR #5986 keeps the existing blocker IDs while explaining auto_default, low_power_power_advantage_unproven, and benchmark_qualified_speedup_or_power_advantage in user-readable terms.",
+  "The blocked low_power ask, regression-v2 bundle, operator comparison, and generated dashboards were refreshed.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim is added.",
+]

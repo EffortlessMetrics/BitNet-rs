@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T07:30:00Z"
+event = "merged"
+item = "LNL258V-ASK-007"
+pr = 6041
+branch = "codex/lunar-lake/LNL258V-ASK-007-auto-gpu-ask-short"
+head_sha = "aab012d418858a46fc7d09c5544f3731b380b147"
+merge_sha = "b08d5fe4081ae4e0ac83b8d5f9c8b0870c63b5eb"
+actor = "codex"
+summary = "Merged LNL258V-ASK-007, indexing the ask_short auto GPU ask receipt."
+
+notes = [
+  "PR #6041 added the ask_short auto GPU ask receipt to strict regression and operator comparison.",
+  "Regression v2 now records ask_short_ask_receipt_indexed=true and ask_short_auto_ask_ready=true.",
+  "The merge preserves no new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]

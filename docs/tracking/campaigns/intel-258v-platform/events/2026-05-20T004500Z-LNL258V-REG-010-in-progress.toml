@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T00:45:00Z"
+event = "in_progress"
+item = "LNL258V-REG-010"
+branch = "codex/lunar-lake/LNL258V-REG-010-thermal-availability"
+actor = "codex"
+summary = "Started strict regression indexing for Lunar Lake thermal temperature availability evidence."
+
+notes = [
+  "The work wires lunar-lake-thermal-temperature-availability.json into regression v2 and operator comparison artifacts.",
+  "Strict regression records thermal-zone visibility, no usable measured temperature readings, measured-temperature claim status, and claim-boundary preservation.",
+  "The scope makes no new-inference, route-promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]

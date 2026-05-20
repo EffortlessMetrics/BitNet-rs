@@ -17,6 +17,7 @@ OpenVINO, UHD 620, Qwen3.5, or BitNet QK256.
 | Repetition-penalty logits reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse-validation.json` | Validates that default repetition-penalty decode steps reuse a host logits scratch buffer instead of allocating fresh logits vectors, while preserving generated IDs/text |
 | Warm-session sampler reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json` | Validates that the temperature-zero warm-session profile reuses one sampler across prompts while preserving generated IDs/text and strict provenance |
 | Prompt token cache | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache-validation.json` | Validates that repeated rendered prompts reuse token IDs while preserving generated IDs/text and strict provenance |
+| Packed Q8_0 sidecar runtime proof gate | `ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-proof-validation.json` | Records that packed Q8_0 sidecar runtime execution remains blocked because production dispatch still preserves eager F32 and no after-execution receipts exist |
 
 All rows use:
 
@@ -269,6 +270,142 @@ speedup_claim = false
 Readiness here means only that the next selector PR has the required proof
 inputs. It is not packed Q8_0 production execution and it is not a speedup
 claim.
+
+SLM-CPU-052 is that next selector-update gate. It starts from the SLM-CPU-051
+readiness artifact and adds an explicit selector-update receipt plus an opt-in
+selector path for the packed Q8_0 sidecar candidate. The ordinary dense Q8_0
+selector still preserves eager F32 Candle unless the selector-update proof is
+supplied.
+
+```text
+artifact_kind = dense_gguf_q8_selector_update
+previous_selected_path = eager_f32_candle
+selected_path = packed_q8_sidecar | eager_f32_candle
+selected_kernel = dense-q8-sidecar-linear | dense-f32-candle-linear
+selector_update_applied = true | false
+sidecar_runtime_compute_allowed = true | false
+runtime_blockers = [] | ...
+speedup_claim = false
+```
+
+The update may select the packed sidecar only where the eager F32 Candle oracle
+and the packed Q8_0 candidate preserve the same prompt IDs, generated IDs,
+decoded text, strict tokenizer authority, selected CPU backend/kernel, model
+SHA, and `fallback=false`. It is a behavior-preserving selector update, not a
+sustained-throughput or portable CPU-performance claim.
+
+SLM-CPU-053 is the next runtime gate. It may enable packed Q8_0 sidecar compute
+only for the exact evidence-scoped tensor or minimal tensor set covered by the
+selector-update proof, and only with before/after receipts proving unchanged
+model SHA, tokenizer source and strictness, prompt IDs, generated IDs, decoded
+text, selected CPU backend/kernel identity, and `fallback=false`. If that proof
+cannot be produced, the runtime must stay on eager F32 Candle and record the
+specific blocker. This remains a behavior-preserving Kaby appliance slice, not
+a sustained-throughput, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256
+claim.
+
+The first SLM-CPU-053 runtime gate records the blocker instead of enabling
+packed sidecar compute:
+
+```text
+artifact_kind = dense_gguf_q8_runtime_execution_proof
+execution_status = blocked
+selector_update_status = applied_to_packed_sidecar_candidate
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+production_runtime_hook_invoked = false
+runtime_compute_enabled = false
+sidecar_runtime_compute_allowed = false
+runtime_blockers =
+  production_dispatch_still_eager_f32
+  packed_runtime_compute_disabled
+  production_runtime_hook_missing
+  before_after_receipts_missing
+eager_f32_runtime_preserved = true
+dense_runtime_replaced = false
+fallback_used = false
+speedup_claim = false
+```
+
+This closes only the runtime proof gate for the current state: packed Q8_0
+sidecar compute is still disabled until a later PR adds the production forward
+hook and after-execution receipts for the same Qwen3 Q8_0 behavior oracle.
+
+SLM-CPU-054 makes that remaining hook/API gap machine-checkable instead of
+treating it as an implicit prose blocker. It consumes the SLM-CPU-053 runtime
+proof shape and records the exact production gaps that still prevent packed
+Q8_0 sidecar compute from being selected:
+
+```text
+artifact_kind = dense_gguf_q8_runtime_hook_gap
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+production_runtime_hook_invoked = false
+runtime_compute_enabled = false
+sidecar_runtime_compute_allowed = false
+api_gaps =
+  production_dispatch_still_eager_f32
+  packed_runtime_compute_still_disabled
+  transformer_dense_linear_hook_missing
+  before_after_receipt_capture_missing
+fallback_used = false
+speedup_claim = false
+```
+
+The next safe step remains a production dense-linear hook that receives the
+selected Q8_0 sidecar descriptor and emits before/after Qwen3 Q8_0 behavior
+receipts before enabling packed sidecar compute. SLM-CPU-054 does not replace
+the eager F32 Candle runtime path and does not claim speedup.
+
+SLM-CPU-055 is the next contract gate for that step. It should add the first
+production dense-linear hook boundary so transformer dense linear calls can
+receive either an explicit eager-F32 selection or a selected Q8_0 sidecar
+descriptor. The default runtime must remain eager F32 Candle unless before/after
+receipts prove identical model SHA, tokenizer authority, prompt IDs, generated
+IDs, decoded text, selected CPU backend/kernel identity, and `fallback=false`.
+If packed compute remains disabled, the slice must emit a machine-checkable
+hook-contract or blocker artifact instead of making a speedup claim.
+
+SLM-CPU-056 implements that hook boundary in the production transformer path.
+Dense Q8_0 sidecar descriptors can now reach transformer attention and MLP
+dense-linear calls as an explicit hook registry, and each call records whether
+the selected descriptor is present. The runtime selection still remains:
+
+```text
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+runtime_compute_enabled = false
+dense_runtime_replaced = false
+speedup_claim = false
+```
+
+The machine-checkable artifact
+`ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-production-dense-linear-hook-boundary.json`
+records the remaining packed-compute and receipt gaps. The slice does not
+enable packed Q8_0 sidecar execution or claim any performance improvement.
+
+SLM-CPU-057 adds the next receipt gate on top of that boundary. Qwen3 Q8_0
+warm-session aggregate and per-prompt receipts now carry a
+`dense_q8_hook_selection` object so a future packed sidecar candidate must
+preserve the hook-selection identity as well as model SHA, tokenizer
+source/strictness, prompt IDs, generated IDs, decoded text, selected CPU
+backend/kernel identity, and `fallback=false`.
+
+The default runtime still remains:
+
+```text
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+runtime_compute_enabled = false
+dense_runtime_replaced = false
+speedup_claim = false
+```
+
+The machine-checkable blocker artifact
+`ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-dense-hook-receipt-gate.json`
+records that packed Q8_0 sidecar compute is still disabled until a packed
+compute kernel exists and before/after Qwen3 Q8_0 warm-session receipts prove
+identical generated output and dense hook-selection identity.
 
 ## Greedy Sampler Fast Path
 

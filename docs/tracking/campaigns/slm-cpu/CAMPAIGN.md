@@ -102,6 +102,12 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-049 | merged | Added the generated-ID/text receipt equivalence gate before any packed Q8_0 sidecar runtime selection or speedup claim. |
 | SLM-CPU-050 | merged | Added the production-compute-hook availability surface while keeping eager F32 Candle selected until later behavior-preserving selector evidence exists. |
 | SLM-CPU-051 | merged | Add the selector-readiness gate that names the evidence required before a later packed Q8_0 runtime selector update. |
+| SLM-CPU-052 | merged | #5921 implemented the first behavior-preserving selector update while preserving eager F32 Candle as the runtime oracle unless generated-ID/text evidence allows a packed Q8_0 candidate. |
+| SLM-CPU-053 | merged | #5943 validated the first packed Q8_0 sidecar runtime execution proof gate and recorded that production runtime execution remains blocked by eager F32 dispatch, disabled packed runtime compute, missing production runtime hook, and missing before/after receipts. |
+| SLM-CPU-054 | merged | #5992 recorded the remaining packed Q8_0 sidecar runtime hook/API gap while keeping eager F32 Candle as the default behavior oracle and sidecar_runtime_compute_allowed=false. |
+| SLM-CPU-055 | merged | #6008 added the first production dense-linear hook contract gate so transformer dense linear calls can receive an explicit eager-F32 selection or selected Q8_0 sidecar descriptor while keeping packed compute disabled until before/after behavior receipts exist. |
+| SLM-CPU-056 | merged | #6018 implemented the first production dense-linear hook boundary from SLM-CPU-055 without enabling packed Q8_0 sidecar compute by default or weakening the Qwen3 Q8_0 Kaby behavior oracle. |
+| SLM-CPU-057 | merged | #6045 added the next Qwen3 Q8_0 dense hook-selection receipt gate before any packed Q8_0 sidecar compute can be enabled. |
 
 ## Review Policy
 

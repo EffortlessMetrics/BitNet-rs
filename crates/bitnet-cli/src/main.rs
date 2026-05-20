@@ -3773,6 +3773,34 @@ fn greedy_top1_token_id(logits: &[f32]) -> Option<u32> {
         .map(|(token_id, _)| token_id as u32)
 }
 
+fn greedy_effective_top1_token_id(
+    logits: &[f32],
+    context_tokens: &[u32],
+    repetition_penalty: f32,
+) -> Option<u32> {
+    if repetition_penalty <= 0.0
+        || !repetition_penalty.is_finite()
+        || repetition_penalty == 1.0
+        || context_tokens.is_empty()
+    {
+        return greedy_top1_token_id(logits);
+    }
+
+    let mut effective_logits = logits.to_vec();
+    let inv_penalty = 1.0 / repetition_penalty;
+    for &token in context_tokens {
+        if let Some(logit) = effective_logits.get_mut(token as usize) {
+            if *logit > 0.0 {
+                *logit *= inv_penalty;
+            } else {
+                *logit *= repetition_penalty;
+            }
+        }
+    }
+
+    greedy_top1_token_id(&effective_logits)
+}
+
 fn qwen_trace_path() -> Option<std::path::PathBuf> {
     std::env::var("BITNET_QWEN_TRACE_JSONL")
         .ok()
@@ -4608,19 +4636,22 @@ async fn run_simple_generation(
     // BITNET_TRACE_TIMING=1: Enable timing instrumentation
     let timing_enabled = std::env::var("BITNET_TRACE_TIMING").as_deref() == Ok("1");
 
-    // Generation loop: incremental decoding
+    // Generation loop: prompt prefill followed by incremental decoding.
     //
-    // Each step:
-    //   1. Embed ONLY the new token (last in sequence)
+    // Before this loop, prompt prefill embeds and forwards every prompt token
+    // except the last one. Step 0 embeds the last prompt token, so the first
+    // generated token sees the complete rendered prompt context.
+    //
+    // Each subsequent step:
+    //   1. Embed only the newly generated token
     //   2. Forward pass uses KV cache for historical context
-    //   3. No need to re-embed previous tokens (O(N) not O(N²))
     //
     // Historical context is maintained via:
     //   - KV cache: stores key/value tensors from previous steps
     //   - `tokens` vector: tracks full sequence for stop detection/logging
     //
-    // Performance impact: This changes embedding from O(N²) to O(N), providing
-    // ~50× speedup for 100-token generation (avoids re-embedding 1+2+...+N tokens).
+    // Performance impact: this avoids O(N^2) full-context re-embedding while
+    // preserving complete prompt context for the first generated token.
     let mut decode_step_ms = Vec::with_capacity(max_new_tokens);
     let mut embed_step_ms = Vec::with_capacity(max_new_tokens);
     let mut forward_step_ms = Vec::with_capacity(max_new_tokens);
@@ -4871,12 +4902,17 @@ async fn run_simple_generation(
         // Assert greedy invariant if requested
         if assert_greedy && greedy && dump_logit_steps.is_some_and(|max_steps| step_idx < max_steps)
         {
-            let Some(best_i) = greedy_top1_token else {
+            let Some(best_i) =
+                greedy_effective_top1_token_id(&logits_vec, &generated_tokens, repetition_penalty)
+            else {
                 anyhow::bail!("No finite logits found for --assert-greedy at step {step_idx}");
             };
             if next_token != best_i {
-                eprintln!("ERROR: Non-argmax token chosen in --greedy at step {}", step_idx);
-                eprintln!("  argmax={} but chosen={}", best_i, next_token);
+                eprintln!(
+                    "ERROR: Non-effective-argmax token chosen in --greedy at step {}",
+                    step_idx
+                );
+                eprintln!("  effective_argmax={} but chosen={}", best_i, next_token);
                 std::process::exit(EXIT_ARGMAX_MISMATCH);
             }
         }
@@ -5471,6 +5507,7 @@ async fn run_simple_generation(
                 "unsupported_ops": bitnet_linear_coverage.unsupported_ops.clone(),
                 "execution_claim": bitnet_linear_coverage.execution_claim,
             },
+            "qk256_hot_path": qk256_cpu_hot_path_receipt(&qk256_cpu_hot_path),
             "kernel": {
                 "family": kernel_family,
                 "implementation": kernel_implementation,
@@ -5603,6 +5640,7 @@ async fn run_simple_generation(
                     "execution_claim": "dense_slm_cpu_reference_answer_smoke",
                 }),
             );
+            object.remove("qk256_hot_path");
             object.insert(
                 "kernel".to_string(),
                 serde_json::json!({
@@ -7639,6 +7677,39 @@ fn qk256_dispatch_coverage_receipt(
     })
 }
 
+fn qk256_cpu_hot_path_receipt(
+    counters: &bitnet_qk256_dispatch::Qk256CpuHotPathCounters,
+) -> serde_json::Value {
+    let no_scale_f32_gemv_invocations = counters
+        .qk256_f32_scalar_gemv_invocations
+        .saturating_add(counters.qk256_f32_avx2_gemv_invocations);
+    let scaled_i2s_i8s_gemv_invocations = counters
+        .qk256_i8s_scaled_scalar_invocations
+        .saturating_add(counters.qk256_i8s_scaled_avx2_invocations);
+
+    serde_json::json!({
+        "counter_source": "bitnet_qk256_dispatch::qk256_cpu_hot_path_counters",
+        "qk256_f32_scalar_gemv_invocations": counters.qk256_f32_scalar_gemv_invocations,
+        "qk256_f32_avx2_gemv_invocations": counters.qk256_f32_avx2_gemv_invocations,
+        "qk256_i8s_scaled_scalar_invocations": counters.qk256_i8s_scaled_scalar_invocations,
+        "qk256_i8s_scaled_avx2_invocations": counters.qk256_i8s_scaled_avx2_invocations,
+        "qk256_flat_bytes_extracted_count": counters.qk256_flat_bytes_extracted_count,
+        "input_rows_materialized_count": counters.input_rows_materialized_count,
+        "output_rows_allocated_count": counters.output_rows_allocated_count,
+        "no_scale_f32_gemv_invocations": no_scale_f32_gemv_invocations,
+        "scaled_i2s_i8s_gemv_invocations": scaled_i2s_i8s_gemv_invocations,
+        "audited_tensor_materialization_count": counters
+            .qk256_flat_bytes_extracted_count
+            .saturating_add(counters.input_rows_materialized_count)
+            .saturating_add(counters.output_rows_allocated_count),
+        "requested_kernel": counters.requested_kernel.as_deref(),
+        "selected_kernel": counters.selected_kernel.as_deref(),
+        "qk256_execution_path": counters.qk256_execution_path,
+        "math_changed": false,
+        "speedup_claim": false,
+    })
+}
+
 #[cfg(feature = "full-cli")]
 fn qk256_cuda_runtime_stats_delta(
     before: &bitnet_qk256_dispatch::Qk256CudaRuntimeStats,
@@ -8104,6 +8175,7 @@ async fn run_slm_warm_session(
         format!("Failed to load real model for warm session: {}", model_path.display())
     })?;
     let config = loaded_model.config().clone();
+    let dense_q8_hook_selection = loaded_model.dense_q8_hook_selection_receipt();
     let model: Arc<dyn Model> = Arc::from(loaded_model);
     let model_load_ms = elapsed_ms(model_load_start);
     let loader_mode = detect_loader_mode_for_path(&model_path, is_hf_directory);
@@ -8648,6 +8720,7 @@ async fn run_slm_warm_session(
                 "implementation": kernel_implementation,
                 "kernel_id": selected_kernel.as_str(),
             },
+            "dense_q8_hook_selection": dense_q8_hook_selection.clone(),
             "execution": {
                 "phase": "warm_session_decode",
                 "prompt_tokens": prompt_token_count,
@@ -8979,6 +9052,7 @@ async fn run_slm_warm_session(
             "fallback_used": backend_identity.fallback_used,
             "fallback_reason": backend_identity.fallback_reason.as_deref(),
         },
+        "dense_q8_hook_selection": dense_q8_hook_selection,
         "cpu": {
             "model": cpu_model.as_str(),
             "arch": std::env::consts::ARCH,
@@ -10194,7 +10268,7 @@ fn slm_cpu_warm_session_normalize_windows_verbatim_path(
 
 fn resolve_ask_question(question: Option<String>, question_arg: Option<String>) -> Result<String> {
     question.or(question_arg).ok_or_else(|| {
-        anyhow::anyhow!("ask requires a question via --question or positional QUESTION")
+        anyhow::anyhow!("ask requires a question via --question, --prompt, or positional QUESTION")
     })
 }
 
@@ -10250,7 +10324,7 @@ async fn run_lunar_lake_ask(
     route_profile_comparison: std::path::PathBuf,
     profile: String,
     route_id: String,
-    model: std::path::PathBuf,
+    model: Option<std::path::PathBuf>,
     tokenizer: Option<std::path::PathBuf>,
     question: String,
     max_new_tokens: usize,
@@ -10274,6 +10348,17 @@ async fn run_lunar_lake_ask(
         Ok(selection) => selection,
         Err(err) => {
             let error = err.to_string();
+            let blocked_route_selection =
+                commands::lunar_lake::explain_blocked_operator_ask_route_selection(
+                    &artifact_root,
+                    &promotion_ledger,
+                    Some(&route_profile_comparison),
+                    &route_id,
+                    requested_backend_label,
+                    &profile,
+                )
+                .ok()
+                .flatten();
             let blocked_receipt =
                 build_lunar_lake_operator_ask_blocked_receipt(LunarLakeAskBlockedReceiptContext {
                     artifact_root: &artifact_root,
@@ -10286,12 +10371,14 @@ async fn run_lunar_lake_ask(
                     question: &question,
                     max_new_tokens,
                     error: &error,
+                    route_selection: blocked_route_selection.as_ref(),
                 });
             write_json_output(Some(&receipt_path), &blocked_receipt)?;
             anyhow::bail!("{error}");
         }
     };
     let route = route_selection.route.clone();
+    let model = resolve_lunar_lake_ask_model_path(&artifact_root, &route, model.as_deref())?;
     let source_run_path = source_run_receipt_path(&receipt_path);
 
     let operator_receipt_path = if operator_receipt.is_absolute() || operator_receipt.exists() {
@@ -10397,6 +10484,113 @@ async fn run_lunar_lake_ask(
     write_json_output(Some(&receipt_path), &receipt)?;
     println!("Lunar Lake ask receipt written to {}", receipt_path.display());
     Ok(())
+}
+
+#[cfg(feature = "full-cli")]
+fn resolve_lunar_lake_ask_model_path(
+    artifact_root: &std::path::Path,
+    route: &commands::lunar_lake::OperatorRoute,
+    explicit_model: Option<&std::path::Path>,
+) -> Result<std::path::PathBuf> {
+    if let Some(model) = explicit_model {
+        return Ok(model.to_path_buf());
+    }
+
+    let candidates = default_lunar_lake_ask_model_path_candidates(artifact_root, route)?;
+    if let Some(path) = candidates.iter().find(|path| path.exists()) {
+        return Ok(path.clone());
+    }
+
+    let candidate_list = if candidates.is_empty() {
+        "none".to_string()
+    } else {
+        candidates.iter().map(|path| path.display().to_string()).collect::<Vec<_>>().join(", ")
+    };
+    anyhow::bail!(
+        "lunar-lake ask requires --model for executable route `{}` because no committed local default model path exists; checked: {}",
+        route.route_id,
+        candidate_list
+    )
+}
+
+#[cfg(feature = "full-cli")]
+fn default_lunar_lake_ask_model_path_candidates(
+    artifact_root: &std::path::Path,
+    route: &commands::lunar_lake::OperatorRoute,
+) -> Result<Vec<std::path::PathBuf>> {
+    match route.runtime_api.as_str() {
+        "openvino_genai" => Ok(default_lunar_lake_openvino_model_candidates(artifact_root)),
+        "cpu" => Ok(default_lunar_lake_cpu_model_candidates(artifact_root)),
+        runtime => anyhow::bail!(
+            "lunar-lake ask route `{}` has no default model resolver for runtime `{}`",
+            route.route_id,
+            runtime
+        ),
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn default_lunar_lake_openvino_model_candidates(
+    artifact_root: &std::path::Path,
+) -> Vec<std::path::PathBuf> {
+    let manifest_path = artifact_root.join("slm-openvino-ir-qwen25-int4-sym-manifest.json");
+    let mut candidates = Vec::new();
+    if let Some(manifest) = read_optional_json(&manifest_path)
+        && let Some(path) = json_pointer_string(&manifest, "/export_contract/expected_output_dir")
+    {
+        candidates.push(std::path::PathBuf::from(path));
+    }
+    candidates.push(std::path::PathBuf::from("models/openvino/qwen2.5-0.5b-instruct-int4-sym"));
+    dedupe_paths(candidates)
+}
+
+#[cfg(feature = "full-cli")]
+fn default_lunar_lake_cpu_model_candidates(
+    artifact_root: &std::path::Path,
+) -> Vec<std::path::PathBuf> {
+    let mut candidates = Vec::new();
+
+    let phase_path = artifact_root.join("slm-phase-warm-session-qwen25-cpu.json");
+    if let Some(phase) = read_optional_json(&phase_path)
+        && let Some(path) = json_pointer_string(&phase, "/model/path")
+    {
+        candidates.push(std::path::PathBuf::from(path));
+    }
+
+    let manifest_path = artifact_root.join("slm-artifact-manifest.json");
+    if let Some(manifest) = read_optional_json(&manifest_path)
+        && let Some(path) =
+            json_pointer_string(&manifest, "/selected_candidate/expected_local_path")
+    {
+        candidates.push(std::path::PathBuf::from(path));
+    }
+
+    candidates.push(std::path::PathBuf::from("models/slm/qwen2.5-0.5b-instruct-q8_0.gguf"));
+    dedupe_paths(candidates)
+}
+
+#[cfg(feature = "full-cli")]
+fn read_optional_json(path: &std::path::Path) -> Option<serde_json::Value> {
+    let bytes = std::fs::read(path).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+
+#[cfg(feature = "full-cli")]
+fn json_pointer_string(value: &serde_json::Value, pointer: &str) -> Option<String> {
+    value.pointer(pointer).and_then(serde_json::Value::as_str).map(str::to_string)
+}
+
+#[cfg(feature = "full-cli")]
+fn dedupe_paths(paths: Vec<std::path::PathBuf>) -> Vec<std::path::PathBuf> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut deduped = Vec::new();
+    for path in paths {
+        let key = path.to_string_lossy().to_string();
+        if seen.insert(key) {
+            deduped.push(path);
+        }
+    }
+    deduped
 }
 
 #[cfg(feature = "full-cli")]
@@ -10542,12 +10736,42 @@ struct LunarLakeAskBlockedReceiptContext<'a> {
     question: &'a str,
     max_new_tokens: usize,
     error: &'a str,
+    route_selection: Option<&'a commands::lunar_lake::BlockedOperatorAskRouteSelection>,
 }
 
 #[cfg(feature = "full-cli")]
 fn build_lunar_lake_operator_ask_blocked_receipt(
     ctx: LunarLakeAskBlockedReceiptContext<'_>,
 ) -> serde_json::Value {
+    let candidate_routes =
+        ctx.route_selection.map(|selection| selection.candidate_routes.clone()).unwrap_or_default();
+    let why_not_cpu =
+        ctx.route_selection.map(|selection| selection.why_not_cpu.clone()).unwrap_or_default();
+    let why_not_gpu =
+        ctx.route_selection.map(|selection| selection.why_not_gpu.clone()).unwrap_or_default();
+    let why_not_npu =
+        ctx.route_selection.map(|selection| selection.why_not_npu.clone()).unwrap_or_default();
+    let promotion_status = ctx
+        .route_selection
+        .map(|selection| selection.promotion_status.clone())
+        .unwrap_or_else(|| "route_selection_blocked".to_string());
+    let selection_source = ctx
+        .route_selection
+        .map(|selection| selection.selection_source.clone())
+        .unwrap_or_else(|| "route_selection_error".to_string());
+    let route_reason = ctx
+        .route_selection
+        .map(|selection| selection.route_reason.clone())
+        .unwrap_or_else(|| ctx.error.to_string());
+    let promotion_ledger = ctx
+        .route_selection
+        .and_then(|selection| selection.promotion_ledger.clone())
+        .unwrap_or_else(|| ctx.promotion_ledger.display().to_string());
+    let route_profile_comparison = ctx
+        .route_selection
+        .and_then(|selection| selection.route_profile_comparison.clone())
+        .unwrap_or_else(|| ctx.route_profile_comparison.display().to_string());
+
     serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": "lunar_lake_operator_ask_blocked",
@@ -10564,10 +10788,19 @@ fn build_lunar_lake_operator_ask_blocked_receipt(
         "selected_route": serde_json::Value::Null,
         "selected_backend": serde_json::Value::Null,
         "runtime_api": serde_json::Value::Null,
+        "promotion_status": promotion_status,
         "route_selection_status": "blocked",
+        "route_selection_blocked": true,
         "route_selection_error": ctx.error,
+        "route_reason": route_reason,
+        "why_not_cpu": why_not_cpu,
+        "why_not_gpu": why_not_gpu,
+        "why_not_npu": why_not_npu,
+        "candidate_routes": candidate_routes,
         "question": ctx.question,
         "max_new_tokens": ctx.max_new_tokens,
+        "model_path_required": false,
+        "model_resolution": "not_required_for_blocked_auto_route_before_execution",
         "fallback_used": false,
         "answer_gate_passed": serde_json::Value::Null,
         "new_inference_executed": false,
@@ -10575,9 +10808,32 @@ fn build_lunar_lake_operator_ask_blocked_receipt(
         "acceleration_claim": false,
         "power_advantage_claim": false,
         "bitnet_qk256_i2s_claim": false,
+        "route_selection": {
+            "requested_device": ctx.requested_device,
+            "requested_route": ctx.requested_route,
+            "profile_id": ctx.profile_id,
+            "selected_route": serde_json::Value::Null,
+            "selected_backend": serde_json::Value::Null,
+            "runtime_api": serde_json::Value::Null,
+            "promotion_status": promotion_status,
+            "selection_source": selection_source,
+            "route_selection_status": "blocked",
+            "route_selection_blocked": true,
+            "route_selection_error": ctx.error,
+            "route_reason": route_reason,
+            "why_not_cpu": why_not_cpu,
+            "why_not_gpu": why_not_gpu,
+            "why_not_npu": why_not_npu,
+            "candidate_routes": candidate_routes,
+            "promotion_ledger": promotion_ledger,
+            "route_profile_comparison": route_profile_comparison,
+            "model_path_required": false,
+            "model_resolution": "not_required_for_blocked_auto_route_before_execution",
+        },
         "claim_boundary": {
             "route_selection_blocked": true,
             "new_inference_executed": false,
+            "model_loaded": false,
             "fallback_used": false,
             "route_promotion_changed": false,
             "default_route_changed": false,
@@ -12430,6 +12686,29 @@ mod tests {
     }
 
     #[test]
+    fn greedy_effective_top1_applies_repetition_penalty() {
+        let logits = [10.0, 9.0];
+
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[], 2.0), Some(0));
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[0], 2.0), Some(1));
+    }
+
+    #[test]
+    fn greedy_effective_top1_uses_count_aware_penalty() {
+        let logits = [10.0, 3.0];
+
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[0], 2.0), Some(0));
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[0, 0], 2.0), Some(1));
+    }
+
+    #[test]
+    fn greedy_effective_top1_keeps_lowest_token_id_tie_break() {
+        let logits = [1.0, 1.0, 0.0];
+
+        assert_eq!(greedy_effective_top1_token_id(&logits, &[], 1.0), Some(0));
+    }
+
+    #[test]
     #[cfg(feature = "full-cli")]
     fn no_think_appends_qwen_suffix() {
         let prompt = "<|im_start|>system\nYou are helpful.<|im_end|>\n<|im_start|>user\n2+2?<|im_end|>\n<|im_start|>assistant\n";
@@ -13207,6 +13486,31 @@ mod tests {
     }
 
     #[test]
+    fn qk256_cpu_hot_path_receipt_distinguishes_scaled_and_materialized_paths() {
+        let counters = bitnet_qk256_dispatch::Qk256CpuHotPathCounters {
+            qk256_f32_scalar_gemv_invocations: 1,
+            qk256_f32_avx2_gemv_invocations: 0,
+            qk256_i8s_scaled_scalar_invocations: 2,
+            qk256_i8s_scaled_avx2_invocations: 0,
+            qk256_flat_bytes_extracted_count: 3,
+            input_rows_materialized_count: 4,
+            output_rows_allocated_count: 5,
+            requested_kernel: Some("scalar".to_string()),
+            selected_kernel: Some("mixed-qk256-cpu-hot-paths".to_string()),
+            qk256_execution_path: "mixed_scaled_and_no_scale",
+        };
+
+        let receipt = qk256_cpu_hot_path_receipt(&counters);
+
+        assert_eq!(receipt["no_scale_f32_gemv_invocations"], 1);
+        assert_eq!(receipt["scaled_i2s_i8s_gemv_invocations"], 2);
+        assert_eq!(receipt["audited_tensor_materialization_count"], 12);
+        assert_eq!(receipt["selected_kernel"], "mixed-qk256-cpu-hot-paths");
+        assert_eq!(receipt["math_changed"], false);
+        assert_eq!(receipt["speedup_claim"], false);
+    }
+
+    #[test]
     fn cuda_execution_residency_receipt_records_measured_qk256_accounting() {
         let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
             bitnet_linear_layers_total: 4,
@@ -13517,6 +13821,34 @@ mod tests {
                 question: "What is 2+2?",
                 max_new_tokens: 4,
                 error: "no promoted Lunar Lake auto route for profile `low_power`; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage",
+                route_selection: Some(&commands::lunar_lake::BlockedOperatorAskRouteSelection {
+                    requested_device: "auto".to_string(),
+                    requested_route: "auto".to_string(),
+                    profile_id: "low_power".to_string(),
+                    route_selection_status: "blocked".to_string(),
+                    promotion_status: "no_promoted_route".to_string(),
+                    selection_source: "promotion_ledger_auto_blocked".to_string(),
+                    route_reason: "no promoted Lunar Lake auto route for profile `low_power`"
+                        .to_string(),
+                    candidate_routes: vec![
+                        commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
+                        "dense_slm_openvino_gpu_candidate".to_string(),
+                        "dense_slm_openvino_npu_candidate".to_string(),
+                    ],
+                    why_not_cpu: vec!["route is not promoted for profile `low_power`".to_string()],
+                    why_not_gpu: vec![
+                        "route blocker for profile `low_power`: low_power_power_advantage_unproven"
+                            .to_string(),
+                    ],
+                    why_not_npu: vec![
+                        "missing evidence: benchmark_qualified_speedup_or_power_advantage"
+                            .to_string(),
+                    ],
+                    promotion_ledger: Some("lunar-lake-route-promotion.json".to_string()),
+                    route_profile_comparison: Some(
+                        "lunar-lake-route-profile-comparison.json".to_string(),
+                    ),
+                }),
             },
         );
 
@@ -13528,14 +13860,133 @@ mod tests {
         assert_eq!(receipt["selected_route"], serde_json::Value::Null);
         assert_eq!(receipt["fallback_used"], false);
         assert_eq!(receipt["new_inference_executed"], false);
+        assert_eq!(receipt["model_path_required"], false);
+        assert_eq!(
+            receipt["model_resolution"],
+            "not_required_for_blocked_auto_route_before_execution"
+        );
+        assert_eq!(receipt["route_selection_blocked"], true);
+        assert_eq!(receipt["promotion_status"], "no_promoted_route");
+        assert_eq!(receipt["route_selection"]["selection_source"], "promotion_ledger_auto_blocked");
+        assert_eq!(receipt["route_selection"]["model_path_required"], false);
+        assert!(receipt["candidate_routes"].as_array().is_some_and(|items| items.len() == 3));
+        assert!(receipt["why_not_cpu"].as_array().is_some_and(|items| !items.is_empty()));
+        assert!(receipt["why_not_gpu"].as_array().is_some_and(|items| !items.is_empty()));
+        assert!(receipt["why_not_npu"].as_array().is_some_and(|items| !items.is_empty()));
+        assert!(receipt["route_selection"]["why_not_npu"].as_array().is_some_and(|items| {
+            items.iter().any(|item| item.as_str().is_some_and(|value| value.contains("benchmark")))
+        }));
         assert_eq!(receipt["claim_boundary"]["route_selection_blocked"], true);
         assert_eq!(receipt["claim_boundary"]["new_inference_executed"], false);
+        assert_eq!(receipt["claim_boundary"]["model_loaded"], false);
         assert_eq!(receipt["claim_boundary"]["route_promotion_changed"], false);
         assert!(
             receipt["route_selection_error"].as_str().is_some_and(
                 |error| error.contains("benchmark_qualified_speedup_or_power_advantage")
             )
         );
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_ask_default_model_path_uses_cpu_phase_receipt_when_present() -> Result<()> {
+        let temp_dir = tempfile::tempdir().context("temp dir")?;
+        let artifact_root = temp_dir.path().join("artifacts");
+        std::fs::create_dir_all(&artifact_root).context("artifact root")?;
+        let model_path = temp_dir.path().join("qwen2.5-0.5b-instruct-q8_0.gguf");
+        std::fs::write(&model_path, b"fake gguf fixture").context("model file")?;
+        std::fs::write(
+            artifact_root.join("slm-phase-warm-session-qwen25-cpu.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "artifact_kind": "slm_phase_warm_session",
+                "model": {"path": model_path}
+            }))
+            .context("phase json")?,
+        )
+        .context("phase receipt")?;
+
+        let route = commands::lunar_lake::OperatorRoute {
+            route_id: commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
+            workload: "ask".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct Q8_0 GGUF".to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            runtime_api: "cpu".to_string(),
+            selected_kernel_or_runtime: "dense-qwen-cpu-reference".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            route_reason: "test route".to_string(),
+            answer_gate_evidence: None,
+            phase_evidence: None,
+            acceleration_claim: false,
+        };
+
+        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, None)
+            .context("resolved default CPU model path")?;
+        assert_eq!(resolved, model_path);
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_ask_default_model_path_uses_openvino_manifest_when_present() -> Result<()> {
+        let temp_dir = tempfile::tempdir().context("temp dir")?;
+        let artifact_root = temp_dir.path().join("artifacts");
+        std::fs::create_dir_all(&artifact_root).context("artifact root")?;
+        let model_dir = temp_dir.path().join("openvino-model");
+        std::fs::create_dir_all(&model_dir).context("model dir")?;
+        std::fs::write(
+            artifact_root.join("slm-openvino-ir-qwen25-int4-sym-manifest.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_ir_manifest",
+                "export_contract": {"expected_output_dir": model_dir}
+            }))
+            .context("manifest json")?,
+        )
+        .context("manifest receipt")?;
+
+        let route = commands::lunar_lake::OperatorRoute {
+            route_id: "dense_slm_openvino_gpu_candidate".to_string(),
+            workload: "ask".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM".to_string(),
+            selected_backend: "openvino-gpu".to_string(),
+            runtime_api: "openvino_genai".to_string(),
+            selected_kernel_or_runtime: "openvino-genai-llmpipeline-gpu0".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            route_reason: "test route".to_string(),
+            answer_gate_evidence: None,
+            phase_evidence: None,
+            acceleration_claim: false,
+        };
+
+        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, None)
+            .context("resolved default OpenVINO model path")?;
+        assert_eq!(resolved, model_dir);
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_ask_default_model_path_prefers_explicit_model() -> Result<()> {
+        let temp_dir = tempfile::tempdir().context("temp dir")?;
+        let artifact_root = temp_dir.path().join("artifacts");
+        let explicit = temp_dir.path().join("explicit.gguf");
+        let route = commands::lunar_lake::OperatorRoute {
+            route_id: commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
+            workload: "ask".to_string(),
+            selected_model: "Qwen2.5-0.5B-Instruct Q8_0 GGUF".to_string(),
+            selected_backend: "cpu-rust".to_string(),
+            runtime_api: "cpu".to_string(),
+            selected_kernel_or_runtime: "dense-qwen-cpu-reference".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            route_reason: "test route".to_string(),
+            answer_gate_evidence: None,
+            phase_evidence: None,
+            acceleration_claim: false,
+        };
+
+        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, Some(&explicit))
+            .context("explicit model is accepted")?;
+        assert_eq!(resolved, explicit);
+        Ok(())
     }
 
     #[cfg(feature = "full-cli")]

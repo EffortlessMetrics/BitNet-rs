@@ -1,0 +1,35 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-022"
+event = "merged"
+timestamp = "2026-05-20T01:45:46Z"
+actor = "codex"
+pr = 6043
+head_sha = "d48dc056beb693947f20686337ad0e4b0bccd91a"
+merge_sha = "822325ba6acaab744aa2bc4762cca23ce3c60946"
+branch = "codex/apple-m3-macbook-air/M3MBA-022-accuracy-comparison-profile"
+
+summary = "Merged #6043 with the M3 Air dense SLM accuracy comparison profile and advanced the lane toward bounded performance profiling."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/6043",
+  ".github/workflows/apple-m3-air-dense-slm.yml",
+  "crates/bitnet-cli/src/mac.rs",
+  "docs/apple-silicon/m3-macbook-air-roadmap.md",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+]
+
+notes = [
+  "M3MBA-022 wires the accuracy profile set for the M3 Air CPU/NEON dense SLM lane.",
+  "The profile records the reused corpus identity, scoring policy, prompt IDs, token budget, and comparison-readiness boundaries in the receipt contract.",
+  "Receipt validation rejects missing or malformed M3 accuracy-comparison metadata before any comparison-grade claim.",
+  "No new M3 Air accuracy run, BitNet quality proof, M4 replacement claim, Metal/MPSGraph/Neural Engine execution claim, QK256 claim, or broad quality/performance claim is made.",
+]
+
+validation = [
+  "Hosted PR #6043 checks passed, including CI Core Success, PR Gate Success, Policy, Feature Matrix, Validation Gates, campaign tracker, docs, clippy, and Build & Test.",
+  "Build & Test completed in about 27 minutes; the run confirmed selected long CI jobs need enough cap to finish instead of being canceled just before completion.",
+  "Local validation before PR included cargo fmt, bitnet-cli apple_m3 tests, campaign check, campaign doctor, campaign generate --check, and git diff --check.",
+  "A post-merge no-panic policy check passed locally after syncing current main.",
+]

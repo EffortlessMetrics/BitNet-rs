@@ -1,0 +1,13 @@
+timestamp = "2026-05-19T16:16:53Z"
+campaign = "intel-a770"
+item = "A770-005"
+event = "blocked"
+branch = "codex/intel-a770/A770-005-hardware-blocked"
+actor = "codex"
+
+notes = [
+  "A770-005 requires selected-device Intel Arc A770 OpenCL smoke evidence and cannot be run on the current 258V host.",
+  "Current Windows video controller is Intel(R) Arc(TM) 140V GPU (16GB), PCI DEV_64A0, driver 32.0.101.7026.",
+  "A770 selected-device smoke requires an Intel Arc A770 DEV_56A0 host with OpenCL visibility; clinfo is not installed on this machine.",
+  "No tiny A770 OpenCL smoke, CPU/OpenCL parity, BitNet inference, packed QK256, speedup, route promotion, or trusted-partial acceleration claim is made.",
+]

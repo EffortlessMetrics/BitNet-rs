@@ -1,0 +1,40 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-021"
+event = "pr_open"
+timestamp = "2026-05-19T13:45:00Z"
+actor = "codex"
+pr = 5952
+head_sha = "47e27d6511093b669153ab270752eac7e1e49990"
+branch = "codex/apple-m3-macbook-air/M3MBA-021-device-profile-contract"
+
+summary = "Opened #5952 with the M3 Air device/profile contract implementation."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5952",
+  "crates/bitnet-device-config-core/src/profile.rs",
+  "crates/bitnet-device-config-core/src/lib.rs",
+  "crates/bitnet-device-probe/src/apple_receipts.rs",
+  "crates/bitnet-device-probe/src/lib.rs",
+  "crates/bitnet-device-probe/tests/apple_backend_receipts.rs",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+]
+
+notes = [
+  "The PR adds a structured M3 Air host/profile contract for CPU/NEON, Metal, and MPSGraph labels.",
+  "Metal and MPSGraph remain visibility/request identities with execution_available=false.",
+  "The receipt-facing contract records fanless mobile thermal policy, storage/cache constraints, and unsupported claims.",
+  "No M3 inference, artifact download, M4 proof, Metal model inference, MPSGraph model inference, Neural Engine execution, QK256, or performance claim is made.",
+]
+
+validation = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-device-config-core --no-default-features",
+  "cargo test --locked -p bitnet-device-probe --no-default-features apple",
+  "cargo test --locked -p bitnet-cli-config-core --no-default-features apple_m3",
+  "target/debug/xtask campaign check apple-m3-macbook-air",
+  "target/debug/xtask campaign doctor",
+  "target/debug/xtask campaign generate --check",
+  "git diff --check",
+]

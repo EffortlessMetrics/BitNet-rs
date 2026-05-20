@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "slm_cpu_packed_q8_sidecar_runtime_proof_validation",
+  "work_item": "SLM-CPU-053",
+  "source_artifact": "ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-proof.json",
+  "validation_passed": true,
+  "runtime_execution_enabled": false,
+  "runtime_execution_blocked": true,
+  "packed_q8_sidecar_compute_disabled": true,
+  "default_runtime_path_preserved": true,
+  "fallback_used": false,
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "blockers": [
+    "production_dispatch_still_eager_f32",
+    "packed_runtime_compute_disabled",
+    "production_runtime_hook_missing",
+    "before_after_receipts_missing"
+  ],
+  "validated_fields": {
+    "artifact_kind": "dense_gguf_q8_runtime_execution_proof",
+    "execution_status": "blocked",
+    "selected_path": "eager_f32_candle",
+    "selected_kernel": "dense-f32-candle-linear",
+    "sidecar_runtime_compute_allowed": false,
+    "eager_f32_runtime_preserved": true,
+    "dense_runtime_replaced": false,
+    "fallback_used": false,
+    "speedup_claim": false
+  },
+  "claim_boundary": {
+    "no_new_model_inference": true,
+    "no_runtime_speedup_claim": true,
+    "no_broad_answer_quality_claim": true,
+    "no_q4_q5_runtime_support": true,
+    "no_server_gpu_npu_openvino_uhd620_claim": true,
+    "no_qwen35_or_hybrid_claim": true,
+    "no_bitnet_qk256_claim": true
+  }
+}

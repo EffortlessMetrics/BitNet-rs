@@ -161,7 +161,16 @@ fn area_patterns() -> Vec<(&'static str, Vec<&'static str>)> {
             vec![
                 r"^crates/",
                 r"^tests/",
+                r"^tests-new/",
+                r"^tools/",
                 r"^xtask/",
+                r"^xtask-build-helper/",
+                r"^src/",
+                r"^examples/",
+                r"^benches/",
+                r"^scripts/.*\.rs$",
+                r"^build\.rs$",
+                r"^Makefile$",
                 r"^Cargo\.(toml|lock)$",
                 r"^rust-toolchain\.toml$",
             ],
@@ -487,9 +496,16 @@ fn is_rust_input_path(path: &str) -> bool {
     path.starts_with("crates/")
         || path.starts_with("crossval/")
         || path.starts_with("tests/")
-        || path.starts_with("tools/bitnet-task/")
+        || path.starts_with("tests-new/")
+        || path.starts_with("tools/")
         || path.starts_with("xtask/")
+        || path.starts_with("xtask-build-helper/")
         || path.starts_with("fuzz/")
+        || path.starts_with("src/")
+        || path.starts_with("examples/")
+        || path.starts_with("benches/")
+        || (path.starts_with("scripts/") && path.ends_with(".rs"))
+        || path == "build.rs"
         || path == "Cargo.toml"
         || path == "Cargo.lock"
         || path == "rust-toolchain.toml"
@@ -743,13 +759,13 @@ fn workspace_package_graph() -> Result<WorkspacePackageGraph> {
             let Some(path) = dep.path.as_ref() else {
                 continue;
             };
-            if let Some(dep_name) = package_by_root.get(&normalized_path_key(path)) {
-                if dep_name != &package.name {
-                    direct_dependents_by_dependency
-                        .entry(dep_name.clone())
-                        .or_default()
-                        .insert(package.name.clone());
-                }
+            if let Some(dep_name) = package_by_root.get(&normalized_path_key(path))
+                && dep_name != &package.name
+            {
+                direct_dependents_by_dependency
+                    .entry(dep_name.clone())
+                    .or_default()
+                    .insert(package.name.clone());
             }
         }
     }
@@ -1293,6 +1309,36 @@ mod tests {
             plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
             "full-cli label should opt back into the cpu+full-cli smoke"
         );
+    }
+
+    #[test]
+    fn package_mapped_paths_are_rust_inputs() {
+        for path in [
+            "src/lib.rs",
+            "examples/simple_demo.rs",
+            "benches/quantization_ops.rs",
+            "build.rs",
+            "tests-new/lib.rs",
+            "tools/migrate-gen-config/src/main.rs",
+            "xtask-build-helper/src/lib.rs",
+            "scripts/off-workspace-helper.rs",
+        ] {
+            assert!(is_rust_input_path(path), "{path} should run Rust CI planning");
+            let plan = build_plan(&s(&[path]), &[]);
+            assert!(
+                plan.selected_lanes.iter().any(|lane| lane.id == "ci-core-build-test"),
+                "{path} should select CI Core"
+            );
+        }
+    }
+
+    #[test]
+    fn root_package_paths_require_broad_sweep() {
+        let plan = build_plan(&s(&["src/lib.rs", "build.rs"]), &[]);
+
+        assert!(!plan.classification.no_rust_inputs);
+        assert_eq!(plan.packages.changed, vec!["bitnet".to_string()]);
+        assert!(plan.packages.broad_sweep_required);
     }
 
     #[test]

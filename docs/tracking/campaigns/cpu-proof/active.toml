@@ -806,7 +806,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-AVX512-000"
-status = "in_progress"
+status = "merged"
+pr = 5554
+head_sha = "18ec173922bea3c858aaaa9f8194fe62cd6ac1b9"
+merge_sha = "f3e1986ecb48b55cc0258127d2e378d50400e8ce"
 branch = "codex/cpu-avx512-kernel-contract"
 stackable = false
 review_mode = "codex_premerge"
@@ -849,7 +852,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-SCALAR-000"
-status = "ready"
+status = "merged"
+pr = 5559
+head_sha = "3d33c2324e9474753cd0fd2b29344168528fb2ce"
+merge_sha = "2fa488420140fd80f532781c18340adda88cc116"
 branch = "codex/cpu-scalar-000-docs-contract"
 stackable = false
 review_mode = "codex_premerge"
@@ -895,7 +901,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-AVX2-HOTPATH-000"
-status = "in_progress"
+status = "merged"
+pr = 5547
+head_sha = "c54e80f230fcf8acdb9f2631002a71c89dcc1161"
+merge_sha = "4be4bce6e9573a665de0bf2469bc2c7a2fdad053"
 branch = "codex/cpu-avx2-hotpath-000-docs-plan"
 stackable = false
 review_mode = "codex_premerge"
@@ -935,7 +944,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "CPU-AVX2-HOTPATH-001"
-status = "ready"
+status = "merged"
+pr = 5963
+head_sha = "455ff1268289308b0da5b896524467160130d514"
+merge_sha = "0789396eb13476c576a9c4860353e5be13478e11"
 branch = "codex/cpu-avx2-hotpath-001-counters"
 stackable = false
 review_mode = "codex_premerge"

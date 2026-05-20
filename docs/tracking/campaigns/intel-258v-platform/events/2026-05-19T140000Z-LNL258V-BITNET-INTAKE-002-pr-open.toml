@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T14:00:00Z"
+event = "pr_open"
+item = "LNL258V-BITNET-INTAKE-002"
+branch = "codex/lunar-lake/bitnet-intake-closed-source-status"
+pr = 5947
+head_sha = "bb737fd137f10651a3f8b729e594a9b8a2cf7080"
+actor = "codex"
+summary = "Opened LNL258V-BITNET-INTAKE-002 to classify closed shared BitNet semantic source changes."
+
+notes = [
+  "PR #5947 teaches Lunar Lake semantic-intake receipts to keep closed or superseded shared changes out of the active pending count.",
+  "A770 #5020 is refreshed as closed_unmerged with no Lunar Lake rerun requirement.",
+  "The PR preserves no new inference, no route promotion, no speedup, no power-advantage, no acceleration, no dense-SLM-as-BitNet proof, and no BitNet QK256/I2_S behavior-change claims.",
+]

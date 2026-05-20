@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T21:44:00Z"
+event = "merged"
+item = "LNL258V-ROUTE-025"
+pr = 6024
+head_sha = "7bc75d15b24aff1a16c4ff5f8b8314841f23d0a2"
+merge_sha = "fa3a86e75ab99196accfb67288bdbbd1a6522bda"
+actor = "codex"
+summary = "Merged the Lunar Lake route/model identity refresh."
+
+notes = [
+  "Route-profile and cold/warm benchmark rows now record selected_model plus manifest-backed model, tokenizer/template, quantization, backend/runtime identity coverage.",
+  "OpenVINO IR route rows keep the no-local-binary-SHA256 gap explicit while linking to the committed source model revision and export contract manifest.",
+  "The merge made no new-inference, route-promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]

@@ -23,7 +23,10 @@ Common selected blocking lanes map to these upstream checks:
   **Minimum Supported Rust Version**.
 * **`gpu-native`** -> the five **`native-check (...)`** GPU-matrix compile
   checks.
-* **`always-on-guards`** -> **Guards** and **Check PR Size**.
+* **`always-on-guards`** -> **Guards** and **Check PR Size**. If the PR has
+  `mechanical-change` or `ai-native`, **PR Size Guard** intentionally skips
+  **Check PR Size**; in that acknowledged-large-PR case, **PR Gate Success**
+  requires **Guards** but does not wait for **Check PR Size**.
 
 Lanes that are **not** required by `PR Gate Success`:
 
@@ -87,6 +90,11 @@ any selected upstream lane plus rollup and status propagation cushion.
 | Selected blocking         | Pending after 55 minutes | `failure` |
 | Selected advisory         | Any status            | Reported, not blocking |
 | Unselected                | `skipped` or missing  | Allowed |
+
+Exception: **Check PR Size** may be omitted from the required upstream set when
+the PR carries `mechanical-change` or `ai-native`, because
+`.github/workflows/pr-size-guard.yml` deliberately skips that job for
+acknowledged large PRs.
 
 If `ci-plan.json` selects a blocking lane that PR Gate does not know how to map
 to check names, the gate fails closed. That makes route/schema drift visible

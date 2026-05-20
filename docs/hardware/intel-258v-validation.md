@@ -68,6 +68,21 @@ Record these before moving any 258V hardware lane beyond `scaffold`:
 | Shared memory pressure | 32GB LPDDR5X is shared by CPU/GPU/NPU. |
 | Power mode / thermal profile | Laptop results depend heavily on power policy. |
 
+## Low-Power Battery Runbook
+
+The current `low_power` route-policy blocker is real battery-mode telemetry and
+energy-proxy evidence. The operator checklist for that physical run is:
+
+```text
+docs/hardware/intel-258v-low-power-battery-runbook.md
+```
+
+Use that runbook before attempting `LNL258V-POWER-006`. It records the strict
+AC/charging stop rule, required before/after battery telemetry receipts,
+route/profile sample requirements, energy-proxy refresh, artifact refresh, and
+promotion gates. AC-only samples remain blocker evidence and must not be
+renamed into battery-mode artifacts or used for a power-advantage claim.
+
 ## Claim Boundary
 
 - CPU AVX2 correctness does not count as Arc 140V or NPU execution.
@@ -891,12 +906,12 @@ ci/hardware/intel-258v/2026-05-08/cpu-semantic-diagnosis.json
 
 The diagnosis keeps two boundaries separate. The first actionable semantic
 blocker is prompt policy: the external HF `apply_chat_template` reference omits
-BOS and preserves a trailing `Assistant: ` generation-prompt space, while the
-current BitNet-rs metadata-authority path prepends BOS and renders `Assistant:`
-without that trailing space. The separate evidence blocker is external reference
-instrumentation: generated-token IDs and first-token logits/top-k remain
-unavailable from the current external runner evidence, so external logits parity
-is not proven.
+BOS and preserves a trailing generation-prompt space after `Assistant:`, while
+the current BitNet-rs metadata-authority path prepends BOS and renders
+`Assistant:` without that trailing space. The separate evidence blocker is
+external reference instrumentation: generated-token IDs and first-token
+logits/top-k remain unavailable from the current external runner evidence, so
+external logits parity is not proven.
 
 The artifact also summarizes the evidence that is not currently first-failing:
 QK256/I2_S/I8_S fixture semantics match the canonical oracle, output-head and
@@ -1040,7 +1055,7 @@ ci/hardware/intel-258v/2026-05-08/hf-prompt-token-reference-parity-after-prompt-
 `CPU258V-028` removes the prompt-policy mismatch classified by `CPU258V-027`.
 The BitNet answer-ready template now preserves the official HF
 `apply_chat_template` generation prompt boundary, including the trailing
-`Assistant: ` space, and the metadata-authoritative path no longer prepends an
+space after `Assistant:`, and the metadata-authoritative path no longer prepends an
 executor BOS after rendering that chat template.
 
 Current result:

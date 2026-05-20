@@ -1,0 +1,14 @@
+timestamp = "2026-05-19T17:46:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-054"
+event = "pr_open"
+pr = 5983
+head_sha = "9636dac244ede712b4b603e1d08aec341902dbf6"
+branch = "codex/slm-cpu-054-sidecar-runtime-hook"
+actor = "codex"
+
+notes = [
+  "Opened the tracker PR for the SLM-CPU-054 packed Q8_0 sidecar runtime-hook blocker burn-down.",
+  "The PR keeps eager F32 Candle as the default Qwen3 Q8_0 Kaby behavior oracle unless before/after receipts prove behavior preservation.",
+  "No sidecar speedup, sustained throughput, broad answer-quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

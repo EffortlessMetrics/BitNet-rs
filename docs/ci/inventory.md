@@ -25,7 +25,7 @@ view is the whitelist itself, validated by `xtask ci-lane-whitelist check`.
 | `coverage.yml`                    | (deep, not yet whitelisted)                         | Main / nightly                      |
 | `crossval.yml`                    | (deep, not yet whitelisted)                         | Labels                              |
 | `property-tests.yml`              | (deep, not yet whitelisted)                         | Labels + scheduled                  |
-| `fuzz-ci.yml`, `fuzz-nightly.yml`, `nightly-fuzz.yml` | (deep, not yet whitelisted)     | Scheduled                           |
+| `fuzz-ci.yml`                     | (deep, not yet whitelisted)                         | PR build + scheduled matrix         |
 | `model-gates.yml`, `validation.yml`, `gguf_build_and_validate.yml` | (deep) | Labels                              |
 | `intel-gpu-*.yml`, `rocm-smoke.yml`, `gpu-smoke.yml`, `gpu.yml`, `a770-nightly.yml` | (gpu deep) | Labels / scheduled |
 | `tl-lut-nightly.yml`, `tl-lut-stress.yml`, `quant-matrix.yml` | (deep)         | Scheduled                           |

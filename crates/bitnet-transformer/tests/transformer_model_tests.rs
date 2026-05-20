@@ -14,7 +14,9 @@
 
 use bitnet_common::config::{BitNetConfig, ModelConfig};
 use bitnet_transformer::{
-    DenseLinearOutputStorageApiBoundary, KVCache, TransformerForwardWorkspace, TransformerModel,
+    DenseLinearOutputStorageApiBoundary, DenseLinearRuntimeHookBoundary,
+    DenseLinearRuntimeHookDescriptor, DenseLinearRuntimeHookRegistry, KVCache,
+    TransformerForwardWorkspace, TransformerModel,
 };
 use candle_core::{DType, Device, Tensor};
 use candle_nn::{Linear, VarBuilder};
@@ -263,6 +265,131 @@ fn dense_linear_output_storage_boundary_records_candle_tensor_blocker() -> anyho
         boundary.reason.contains("Tensor::matmul")
             && boundary.reason.contains("caller-provided output-storage")
     );
+    Ok(())
+}
+
+#[test]
+fn dense_linear_runtime_hook_boundary_defaults_to_eager_f32() -> anyhow::Result<()> {
+    let model = make_model(8, 16, 2)?;
+
+    let boundary = model.dense_linear_runtime_hook_boundary("layers.0.attention.q_proj.weight");
+
+    assert_eq!(boundary.selected_path, "eager_f32_candle");
+    assert_eq!(boundary.selected_kernel, "dense-f32-candle-linear");
+    assert!(!boundary.sidecar_descriptor_present);
+    assert!(!boundary.runtime_compute_enabled);
+    assert!(boundary.preserves_eager_f32());
+    assert!(!boundary.speedup_claim);
+    Ok(())
+}
+
+#[test]
+fn dense_linear_runtime_hook_boundary_accepts_inert_q8_sidecar_descriptor() -> anyhow::Result<()> {
+    let config = tiny_config(8, 16, 2);
+    let device = Device::Cpu;
+    let vb = VarBuilder::zeros(DType::F32, &device);
+    let mut hooks = DenseLinearRuntimeHookRegistry::default();
+    hooks.insert(
+        "layers.0.attention.q_proj.weight".to_string(),
+        DenseLinearRuntimeHookDescriptor {
+            tensor_name: "blk.0.attn_q.weight".to_string(),
+            role: "AttentionQ".to_string(),
+            sidecar_payload_sha256: Some("abc123".to_string()),
+            runtime_compute_enabled: false,
+        },
+    );
+    let model = TransformerModel::new_with_tensors_and_dense_linear_hooks(
+        config,
+        vb,
+        Default::default(),
+        hooks,
+    )?;
+
+    let boundary = model.dense_linear_runtime_hook_boundary("layers.0.attention.q_proj.weight");
+
+    assert_eq!(boundary.selected_path, "eager_f32_candle");
+    assert_eq!(boundary.selected_kernel, "dense-f32-candle-linear");
+    assert!(boundary.sidecar_descriptor_present);
+    assert_eq!(boundary.sidecar_role.as_deref(), Some("AttentionQ"));
+    assert_eq!(boundary.sidecar_payload_sha256.as_deref(), Some("abc123"));
+    assert!(!boundary.runtime_compute_enabled);
+    assert!(boundary.preserves_eager_f32());
+    assert!(boundary.generated_id_preservation_required_before_runtime_use);
+    Ok(())
+}
+
+#[test]
+fn dense_linear_runtime_hook_boundaries_report_sorted_receipt_identity() -> anyhow::Result<()> {
+    let config = tiny_config(8, 16, 2);
+    let device = Device::Cpu;
+    let vb = VarBuilder::zeros(DType::F32, &device);
+    let mut hooks = DenseLinearRuntimeHookRegistry::default();
+    hooks.insert(
+        "layers.0.feed_forward.down_proj.weight".to_string(),
+        DenseLinearRuntimeHookDescriptor {
+            tensor_name: "blk.0.ffn_down.weight".to_string(),
+            role: "MlpDown".to_string(),
+            sidecar_payload_sha256: Some("sha256:down".to_string()),
+            runtime_compute_enabled: false,
+        },
+    );
+    hooks.insert(
+        "layers.0.attention.q_proj.weight".to_string(),
+        DenseLinearRuntimeHookDescriptor {
+            tensor_name: "blk.0.attn_q.weight".to_string(),
+            role: "AttentionQ".to_string(),
+            sidecar_payload_sha256: Some("sha256:q".to_string()),
+            runtime_compute_enabled: false,
+        },
+    );
+    let model = TransformerModel::new_with_tensors_and_dense_linear_hooks(
+        config,
+        vb,
+        Default::default(),
+        hooks,
+    )?;
+
+    let boundaries = model.dense_linear_runtime_hook_boundaries();
+
+    assert_eq!(boundaries.len(), 2);
+    assert_eq!(boundaries[0].tensor_name, "layers.0.attention.q_proj.weight");
+    assert_eq!(boundaries[1].tensor_name, "layers.0.feed_forward.down_proj.weight");
+    assert!(boundaries.iter().all(DenseLinearRuntimeHookBoundary::preserves_eager_f32));
+    assert!(boundaries.iter().all(|boundary| boundary.sidecar_descriptor_present));
+    assert!(boundaries.iter().all(|boundary| !boundary.runtime_compute_enabled));
+    Ok(())
+}
+
+#[test]
+fn dense_linear_runtime_hook_boundary_does_not_enable_packed_compute() -> anyhow::Result<()> {
+    let config = tiny_config(8, 16, 2);
+    let device = Device::Cpu;
+    let vb = VarBuilder::zeros(DType::F32, &device);
+    let mut hooks = DenseLinearRuntimeHookRegistry::default();
+    hooks.insert(
+        "layers.0.attention.q_proj.weight".to_string(),
+        DenseLinearRuntimeHookDescriptor {
+            tensor_name: "blk.0.attn_q.weight".to_string(),
+            role: "AttentionQ".to_string(),
+            sidecar_payload_sha256: Some("sha256:future".to_string()),
+            runtime_compute_enabled: true,
+        },
+    );
+    let model = TransformerModel::new_with_tensors_and_dense_linear_hooks(
+        config,
+        vb,
+        Default::default(),
+        hooks,
+    )?;
+
+    let boundary = model.dense_linear_runtime_hook_boundary("layers.0.attention.q_proj.weight");
+
+    assert_eq!(boundary.selected_path, "eager_f32_candle");
+    assert_eq!(boundary.selected_kernel, "dense-f32-candle-linear");
+    assert!(boundary.sidecar_descriptor_present);
+    assert!(!boundary.runtime_compute_enabled);
+    assert!(!boundary.dense_runtime_replaced);
+    assert!(boundary.preserves_eager_f32());
     Ok(())
 }
 

@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T21:50:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-005"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6023
+merge_sha = "419e56d9662ef9b599cc1258976470067fe5c0e3"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-005-repeatability-variance"
+
+notes = [
+  "Merged PR #6023, publishing M4 dense Qwen benchmark repeatability and variance receipts for the supported dense SLM identities.",
+  "The merged evidence records preflight plus release-mode repeat=2 aggregate receipts for qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m on apple-m4-cpu-neon.",
+  "All three aggregate receipts validate with fallback_used=false and preserve timeout-aware invalid-comparison reasons; timing comparison remains invalid where calibrated profiles timed out.",
+  "No BitNet timing variance, BitNet chat/serve behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]

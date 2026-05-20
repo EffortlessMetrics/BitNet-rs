@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T06:40:00Z"
+event = "merged"
+item = "LNL258V-ASK-006"
+pr = 6038
+branch = "codex/lunar-lake/LNL258V-ASK-006-auto-gpu-ask-normal"
+head_sha = "2b5688c5e8ea7fb7e2ae0fd9e476bf52d91f0d86"
+merge_sha = "403e2a8e287ab5782cc6f5d37b8e8cee70a8406f"
+actor = "codex"
+summary = "Merged LNL258V-ASK-006, indexing the ask_normal auto GPU ask receipt."
+
+notes = [
+  "The merge records a live ask_normal auto ask through the profile-promoted OpenVINO GPU route without an explicit --model.",
+  "Strict regression and operator comparison now index the ask_normal auto ask receipt.",
+  "The merge preserves no route-promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]

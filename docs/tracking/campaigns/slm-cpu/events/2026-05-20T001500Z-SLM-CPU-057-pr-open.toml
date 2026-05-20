@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T00:15:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-057"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6045
+head_sha = "5e8e0940937bd868073bc49f3abe3e0c96b6beb8"
+summary = "Opened PR #6045 for the dense hook-selection receipt gate."
+notes = [
+  "The PR records dense Q8 hook-selection identity in warm-session receipts while preserving eager_f32_candle.",
+  "Packed Q8_0 sidecar compute remains disabled and no speedup or sustained throughput claim is made.",
+]

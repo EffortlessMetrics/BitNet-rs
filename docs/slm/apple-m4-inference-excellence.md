@@ -372,7 +372,111 @@ The committed harness smoke at
 `ci/hardware/apple-m4-mac-mini/2026-05-19T0746Z/benchmark-variance/harness-smoke.json`
 uses `qwen2.5-0.5b-instruct-q8_0`, `short_prompt_16_out`, and `--repeat 2`.
 It is harness evidence only. `M4-BENCH-005` remains responsible for publishing
-live dense and BitNet variance envelopes.
+live dense Qwen variance envelopes for the supported M4 dense SLM identities.
+BitNet one-shot and warm-session timing variance stays in `M4-BENCH-006`,
+using the accepted BitNet artifact and external tokenizer authority.
+
+`M4-BENCH-009` closes the timeout-policy gap found while starting the live
+dense variance run. The calibration receipt already declared per-profile
+timeout rules, including `context_4k=720s`, but `mac benchmark` did not enforce
+them. A local diagnostic run of the default dense model produced a first
+`context_4k` prompt at roughly 1,032.7s, so that attempt is non-comparable and
+must not be published as a variance envelope. The benchmark now runs each dense
+profile through a child `slm-warm-session` process, kills the child when the
+calibrated profile timeout is reached, writes an
+`apple_m4_slm_benchmark_profile_timeout` receipt, and keeps that profile
+invalid for envelope comparison. The committed enforcement smoke at
+`ci/hardware/apple-m4-mac-mini/2026-05-19T0939Z/benchmark-timeout-enforcement/harness-smoke.json`
+uses `qwen2.5-0.5b-instruct-q8_0`, `short_prompt_16_out`, and `--repeat 2` to
+prove the child-process benchmark path still validates for a bounded profile.
+
+`M4-BENCH-010` is the timeout-aware aggregation prerequisite found by the first
+live `M4-BENCH-005` attempt. The default Q8 dense model reached the enforced
+`context_4k` boundary at 720 seconds, wrote a valid
+`apple_m4_slm_benchmark_profile_timeout` receipt with
+`status=invalid_for_comparison`, `fallback_used=false`, and
+`profile_timeout_exceeded:context_4k:720s`, then the variance command aborted
+instead of writing a parent aggregate. The aggregate path now treats timed-out
+profiles as invalid profile entries, skips them from timing and throughput
+samples, propagates invalid-comparison reasons into child
+`apple_m4_slm_benchmark_v2` and parent `apple_m4_benchmark_variance_v1`
+receipts, and validates those receipts without converting timeout evidence into
+a successful timing sample. This is still a prerequisite only:
+`M4-BENCH-005` remains responsible for the live dense Qwen variance envelopes,
+and BitNet variance remains `M4-BENCH-006`.
+
+`M4-BENCH-005` publishes the first live dense Qwen repeatability receipts from
+`ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/`. Each
+supported dense Qwen identity was checked with `bitnet mac benchmark-preflight`
+and then run through release-mode
+`bitnet --device apple-m4-cpu-neon mac benchmark --repeat 2` over the nine
+required profiles. The aggregate receipts validate as
+`apple_m4_benchmark_variance_v1`, record `fallback_used=false`, preserve raw
+repeat samples with no outlier filtering, and carry dense-only claim
+boundaries.
+
+| Model | Repeats | Samples | Prompt runs | Generated tokens | Comparison status | Invalid-comparison reasons |
+|---|---:|---:|---:|---:|---|---|
+| `qwen2.5-0.5b-instruct-q8_0` | 2 | 18 | 402 | 4300 | `invalid_for_comparison` | `profile_timeout_exceeded:context_4k:720s` |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 2 | 18 | 402 | 4780 | `invalid_for_comparison` | `profile_timeout_exceeded:context_4k:720s` |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 2 | 18 | 402 | 3586 | `invalid_for_comparison` | `profile_timeout_exceeded:long_prompt_128_out:420s`; `profile_timeout_exceeded:context_1k:360s`; `profile_timeout_exceeded:context_4k:720s` |
+
+These receipts are useful repeatability and timeout-behavior evidence, not
+final comparable timing envelopes. Because at least one calibrated profile
+timed out for every model, `comparison_readiness.can_compare_timing=false` and
+timing drift must not be interpreted from these aggregates. BitNet one-shot and
+warm-session variance remains scoped to `M4-BENCH-006`; this evidence does not
+claim BitNet timing variance, BitNet chat or serve behavior, Metal, QK256,
+Neural Engine, MPSGraph, MacBook evidence, speedup, broad model quality, or
+broad Apple Silicon performance.
+
+`M4-BENCH-006` publishes the first explicit BitNet repeatability and variance
+receipt for the accepted Microsoft I2_S artifact/tokenizer identity:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json
+```
+
+The release-mode command repeats the full `mac bitnet-benchmark` contract twice.
+Each repeat runs one `mac ask` prompt and one fixed three-prompt warm session,
+then the parent aggregate records repeat count, completed count, path count,
+sample count, child summary receipts, timeout-stage accounting, raw p50/p90/p99
+bands, min/max samples, outlier policy, and advisory-vs-failure threshold
+language. The aggregate and all child receipts validate through
+`target/release/bitnet mac receipts-check ... --json`.
+
+| Field | Value |
+|---|---:|
+| Repeats requested/completed | 2 / 2 |
+| Path samples | 4 |
+| Prompt runs | 8 |
+| Generated tokens | 16 |
+| Timeouts | 0 |
+| TTFT p50/p90/p99 | 7491 / 8486 / 8486 ms |
+| Input tok/s p50/p90/p99 | 2.422 / 2.428 / 2.428 |
+| Output tok/s p50/p90/p99 | 0.251 / 0.251 / 0.251 |
+| Decode tok/s p50/p90/p99 | 2.082 / 2.083 / 2.083 |
+| Peak memory p50/p90/p99 | 4322.875 / 4327.438 / 4327.438 MB |
+
+The receipt preserves model SHA
+`4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162`, tokenizer
+SHA `e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7`,
+`selected_backend=apple-m4-cpu-neon`, and `fallback_used=false`. It is bounded
+BitNet one-shot and fixed warm-session variance evidence only; it does not
+enable BitNet chat or serve, prove dense SLM behavior, claim broad BitNet
+quality, claim broad Apple Silicon performance, or widen Metal, QK256, Neural
+Engine, MPSGraph, or MacBook support.
+
+`M4-BENCH-003` wires benchmark receipts into the direct
+`bitnet mac regression <current.json> --baseline <matching-baseline.json>`
+path after the dense and BitNet variance lanes. Direct regression now accepts
+`apple_m4_benchmark_variance_v1` baselines when the dense variance receipt is
+valid for timing comparison, continues to compare `apple_m4_slm_benchmark_v2`
+and `bitnet_apple_m4_benchmark_v1`, and labels drift warnings by category so
+timing, memory, and quality signals stay separate from identity failures. A
+dense variance receipt with `comparison_readiness.can_compare_timing=false`
+or non-empty `invalid_comparison_reasons` remains a comparison blocker, not a
+zero-warning timing result.
 
 ## Drift Thresholds
 

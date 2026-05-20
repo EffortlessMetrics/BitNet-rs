@@ -5,13 +5,14 @@ use bitnet_repl_core::{ReplInput, parse_repl_input};
 use clap::{ArgAction, Args, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::ffi::OsString;
 use std::io::{self, BufRead, IsTerminal, Read, Write};
 #[cfg(unix)]
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
-#[cfg(unix)]
 use std::process::Command;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
@@ -167,6 +168,8 @@ const M4_ROBUSTNESS_MODEL_FAMILIES: &[&str] = &["dense_slm", "bitnet"];
 enum MacValidateProfileSet {
     /// Run the deterministic smoke corpus once.
     Smoke,
+    /// Run the deterministic quality corpus as an M3 accuracy comparison profile.
+    Accuracy,
     /// Run bounded 16/32/64 warm-answer timing profiles and write an aggregate summary.
     Operator,
     /// Run release-mode 16/32/64/128 warm-answer timing profiles.
@@ -708,6 +711,10 @@ enum MacAction {
         #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 8)]
         max_new_tokens: usize,
 
+        /// Number of full one-shot plus fixed-warm benchmark runs to aggregate.
+        #[arg(long, default_value_t = 1)]
+        repeat: usize,
+
         /// Number of CPU threads to use (0 = all cores; deterministic mode may override).
         #[arg(long, default_value_t = 0)]
         threads: usize,
@@ -1010,7 +1017,7 @@ enum MacAction {
         #[arg(long, default_value_t = 2)]
         corpus_repeat_runs: usize,
 
-        /// Validation profile set. Use operator for 16/32/64 profiles or performance for release-mode 16/32/64/128 profiles.
+        /// Validation profile set. Use accuracy for M3 comparison metadata, operator for 16/32/64 profiles, or performance for release-mode 16/32/64/128 profiles.
         #[arg(long, value_enum, default_value_t = MacValidateProfileSet::Smoke)]
         profile_set: MacValidateProfileSet,
 
@@ -1226,6 +1233,7 @@ struct RegressionCheckSummary {
 #[derive(Debug, Serialize)]
 struct RegressionWarning {
     profile_id: String,
+    category: String,
     field: String,
     baseline: f64,
     observed: f64,
@@ -1416,6 +1424,7 @@ impl MacCommand {
                 tokenizer,
                 one_shot_prompt,
                 max_new_tokens,
+                repeat,
                 threads,
                 progress,
                 quiet,
@@ -1429,6 +1438,7 @@ impl MacCommand {
                     tokenizer,
                     one_shot_prompt,
                     max_new_tokens,
+                    repeat,
                     threads,
                     progress,
                     quiet,
@@ -2361,6 +2371,7 @@ fn apple_m4_status_readiness_json(
             "last_matching_receipts": {
                 "eval": report_inventory["dense_slm_eval_v2"].clone(),
                 "benchmark": report_inventory["dense_slm_benchmark_v2"].clone(),
+                "benchmark_variance": report_inventory["dense_slm_benchmark_variance"].clone(),
             },
             "claim_boundary": {
                 "dense_slm_only": true,
@@ -2388,6 +2399,7 @@ fn apple_m4_status_readiness_json(
             "last_matching_receipts": {
                 "eval": report_inventory["bitnet_eval"].clone(),
                 "benchmark": report_inventory["bitnet_benchmark"].clone(),
+                "benchmark_variance": report_inventory["bitnet_benchmark_variance"].clone(),
                 "variable_warm": report_inventory["bitnet_variable_warm"].clone(),
             },
             "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
@@ -2786,11 +2798,13 @@ fn apple_m4_report_inventory_json() -> serde_json::Value {
         "root": root,
         "dense_slm_eval_v2": latest_matching_report(&root, "slm-eval-v2", "summary.json"),
         "dense_slm_benchmark_v2": latest_matching_report(&root, "slm-benchmark-v2", "summary.json"),
+        "dense_slm_benchmark_variance": latest_matching_report(&root, "benchmark-variance", "summary.json"),
         "bitnet_eval": latest_of_matching_reports(&root, &[
             ("bitnet-eval-250", "answer-corpus.json"),
             ("bitnet-eval", "answer-corpus.json"),
         ]),
         "bitnet_benchmark": latest_matching_report(&root, "bitnet-benchmark", "summary.json"),
+        "bitnet_benchmark_variance": latest_matching_report(&root, "bitnet-benchmark-variance", "summary.json"),
         "bitnet_variable_warm": latest_matching_report(&root, "bitnet-productization", "variable-warm-session.json"),
     })
 }
@@ -2960,6 +2974,15 @@ fn apple_m4_report_refresh_families(root: &Path) -> Vec<serde_json::Value> {
             "local/advisory/nightly: regenerate v2 dense benchmark summaries in release mode, then validate committed summaries.",
         ),
         (
+            "dense_slm_benchmark_variance",
+            "dense_slm",
+            "benchmark-variance",
+            "summary.json",
+            "apple_m4_benchmark_variance_v1",
+            "Dense SLM repeat-run benchmark variance reports.",
+            "local/advisory/nightly: regenerate dense benchmark variance summaries, then validate committed summaries and only compare timing when comparison_readiness permits it.",
+        ),
+        (
             "bitnet_eval",
             "bitnet",
             "bitnet-eval",
@@ -2976,6 +2999,15 @@ fn apple_m4_report_refresh_families(root: &Path) -> Vec<serde_json::Value> {
             "bitnet_apple_m4_benchmark_v1",
             "BitNet one-shot ask and fixed-warm benchmark reports.",
             "local/advisory/nightly: regenerate BitNet one-shot/fixed-warm benchmark summaries, then validate the committed benchmark receipt.",
+        ),
+        (
+            "bitnet_benchmark_variance",
+            "bitnet",
+            "bitnet-benchmark-variance",
+            "summary.json",
+            "bitnet_apple_m4_benchmark_v1",
+            "BitNet one-shot ask and fixed-warm repeatability/variance reports.",
+            "local/advisory/nightly: regenerate BitNet one-shot/fixed-warm variance summaries, then validate the committed benchmark receipt.",
         ),
         (
             "bitnet_variable_warm",
@@ -3651,24 +3683,31 @@ fn apple_m4_dashboard_metrics_json(receipt: &serde_json::Value) -> serde_json::V
         },
         "speed": {
             "ttft_ms_p50": receipt["speed"]["ttft_ms_p50"].as_f64()
+                .or_else(|| receipt["metrics"]["speed"]["ttft_ms_p50"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["ttft_ms"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["timing"]["time_to_first_token_ms"]["p50_ms"].as_f64()),
             "input_tok_s_p50": receipt["speed"]["input_tok_s_p50"].as_f64()
+                .or_else(|| receipt["metrics"]["speed"]["input_tok_s_p50"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["input_tok_s"]["p50"].as_f64()),
             "output_tok_s_p50": receipt["speed"]["output_tok_s_p50"].as_f64()
+                .or_else(|| receipt["metrics"]["speed"]["output_tok_s_p50"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["output_tok_s"]["p50"].as_f64()),
             "decode_tok_s_p50": receipt["speed"]["decode_tok_s_p50"].as_f64()
+                .or_else(|| receipt["metrics"]["speed"]["decode_tok_s_p50"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["decode_tok_s"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["timing"]["steady_decode_tok_s"]["p50"].as_f64()),
             "total_wall_ms_p50": receipt["speed"]["total_wall_ms_p50"].as_f64()
+                .or_else(|| receipt["metrics"]["speed"]["total_wall_ms_p50"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["total_wall_ms"]["p50"].as_f64())
                 .or_else(|| receipt["speed"]["timing"]["total_session_ms"].as_f64()),
         },
         "memory": {
             "peak_memory_mb_p50": receipt["memory"]["peak_memory_mb"]["p50"].as_f64()
+                .or_else(|| receipt["metrics"]["memory"]["peak_memory_mb_p50"]["p50"].as_f64())
                 .or_else(|| receipt["memory"]["peak_memory_mb"].as_f64()),
             "resident_memory_bytes": receipt["memory"]["resident_memory_bytes"].as_u64(),
             "memory_drift_mb_p50": receipt["memory"]["memory_drift_mb"]["p50"].as_f64()
+                .or_else(|| receipt["metrics"]["memory"]["memory_drift_mb_p50"]["p50"].as_f64())
                 .or_else(|| receipt["stability"]["memory_drift_mb"].as_f64()),
         },
     })
@@ -6645,6 +6684,7 @@ struct BitnetBenchmarkRun<'a> {
     tokenizer: Option<PathBuf>,
     one_shot_prompt: String,
     max_new_tokens: usize,
+    repeat: usize,
     threads: usize,
     progress: bool,
     quiet: bool,
@@ -6740,6 +6780,7 @@ async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
         tokenizer,
         one_shot_prompt,
         max_new_tokens,
+        repeat,
         threads,
         progress,
         quiet,
@@ -6748,18 +6789,136 @@ async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
     if max_new_tokens == 0 {
         anyhow::bail!("`bitnet mac bitnet-benchmark` requires --max-new-tokens greater than zero");
     }
+    if repeat == 0 {
+        anyhow::bail!("`bitnet mac bitnet-benchmark` requires --repeat greater than zero");
+    }
     if one_shot_prompt.trim().is_empty() {
         anyhow::bail!("`bitnet mac bitnet-benchmark` requires a non-empty --one-shot-prompt");
     }
 
     let output_dir = json_out.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from("."));
-    let receipt_dir = output_dir.join("receipts");
-    std::fs::create_dir_all(&receipt_dir)
-        .with_context(|| format!("failed to create {}", receipt_dir.display()))?;
-    let ask_receipt = receipt_dir.join("bitnet-mac-ask-benchmark.json");
-    let warm_receipt = receipt_dir.join("bitnet-mac-bitnet-warm-benchmark.json");
+    if repeat == 1 {
+        let receipt_dir = output_dir.join("receipts");
+        let ask_receipt = receipt_dir.join("bitnet-mac-ask-benchmark.json");
+        let warm_receipt = receipt_dir.join("bitnet-mac-bitnet-warm-benchmark.json");
+        let summary = run_bitnet_benchmark_once(BitnetBenchmarkOnceRun {
+            model_id,
+            cache_dir,
+            model_path,
+            tokenizer,
+            one_shot_prompt,
+            max_new_tokens,
+            threads,
+            progress,
+            quiet,
+            ask_receipt,
+            warm_receipt,
+            summary_path: json_out.clone(),
+            benchmark_start_peak_mb: peak_memory_mb(),
+        })
+        .await?;
+        if !quiet {
+            println!(
+                "Mac BitNet benchmark summary written to {} (one-shot + fixed warm, chat=false, serve=false)",
+                json_out.display()
+            );
+        }
+        validate_mac_receipt_value(&json_out, &summary)?;
+        return Ok(());
+    }
 
     let benchmark_start_peak_mb = peak_memory_mb();
+    let summary_root = output_dir.join("summary-runs");
+    let mut child_summaries = Vec::with_capacity(repeat);
+    let mut child_summary_receipts = Vec::with_capacity(repeat);
+    for index in 1..=repeat {
+        if progress && !quiet {
+            eprintln!("mac bitnet-benchmark: repeat {index}/{repeat}");
+        }
+        let run_dir = summary_root.join(format!("run-{index:02}"));
+        let receipt_dir = run_dir.join("receipts");
+        let child_summary_path = run_dir.join("summary.json");
+        let child_summary = run_bitnet_benchmark_once(BitnetBenchmarkOnceRun {
+            model_id,
+            cache_dir: cache_dir.clone(),
+            model_path: model_path.clone(),
+            tokenizer: tokenizer.clone(),
+            one_shot_prompt: one_shot_prompt.clone(),
+            max_new_tokens,
+            threads,
+            progress,
+            quiet,
+            ask_receipt: receipt_dir.join("bitnet-mac-ask-benchmark.json"),
+            warm_receipt: receipt_dir.join("bitnet-mac-bitnet-warm-benchmark.json"),
+            summary_path: child_summary_path.clone(),
+            benchmark_start_peak_mb: peak_memory_mb(),
+        })
+        .await?;
+        child_summary_receipts.push(child_summary_path.display().to_string());
+        child_summaries.push(child_summary);
+    }
+    let summary = bitnet_benchmark_repeat_summary(
+        &json_out,
+        repeat,
+        &child_summary_receipts,
+        &child_summaries,
+        benchmark_start_peak_mb,
+    )?;
+    std::fs::write(&json_out, serde_json::to_vec_pretty(&summary)?)
+        .with_context(|| format!("failed to write {}", json_out.display()))?;
+    validate_mac_receipt_value(&json_out, &summary)?;
+    if !quiet {
+        println!(
+            "Mac BitNet benchmark summary written to {} (repeats: {}, one-shot + fixed warm, chat=false, serve=false)",
+            json_out.display(),
+            repeat
+        );
+    }
+    Ok(())
+}
+
+struct BitnetBenchmarkOnceRun<'a> {
+    model_id: &'a str,
+    cache_dir: Option<PathBuf>,
+    model_path: Option<PathBuf>,
+    tokenizer: Option<PathBuf>,
+    one_shot_prompt: String,
+    max_new_tokens: usize,
+    threads: usize,
+    progress: bool,
+    quiet: bool,
+    ask_receipt: PathBuf,
+    warm_receipt: PathBuf,
+    summary_path: PathBuf,
+    benchmark_start_peak_mb: Option<f64>,
+}
+
+async fn run_bitnet_benchmark_once(
+    request: BitnetBenchmarkOnceRun<'_>,
+) -> Result<serde_json::Value> {
+    let BitnetBenchmarkOnceRun {
+        model_id,
+        cache_dir,
+        model_path,
+        tokenizer,
+        one_shot_prompt,
+        max_new_tokens,
+        threads,
+        progress,
+        quiet,
+        ask_receipt,
+        warm_receipt,
+        summary_path,
+        benchmark_start_peak_mb,
+    } = request;
+    if let Some(parent) = ask_receipt.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
+    if let Some(parent) = warm_receipt.parent() {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create {}", parent.display()))?;
+    }
     if progress && !quiet {
         eprintln!("mac bitnet-benchmark: running one-shot ask path");
     }
@@ -6805,23 +6964,350 @@ async fn run_bitnet_benchmark(request: BitnetBenchmarkRun<'_>) -> Result<()> {
     let ask = read_json_receipt(&ask_receipt)?;
     let warm = read_json_receipt(&warm_receipt)?;
     let summary = bitnet_benchmark_summary(
-        &json_out,
+        &summary_path,
         &ask_receipt,
         &ask,
         &warm_receipt,
         &warm,
         benchmark_start_peak_mb,
     )?;
-    std::fs::write(&json_out, serde_json::to_vec_pretty(&summary)?)
-        .with_context(|| format!("failed to write {}", json_out.display()))?;
-    validate_mac_receipt_value(&json_out, &summary)?;
-    if !quiet {
-        println!(
-            "Mac BitNet benchmark summary written to {} (one-shot + fixed warm, chat=false, serve=false)",
-            json_out.display()
+    std::fs::write(&summary_path, serde_json::to_vec_pretty(&summary)?)
+        .with_context(|| format!("failed to write {}", summary_path.display()))?;
+    validate_mac_receipt_value(&summary_path, &summary)?;
+    Ok(summary)
+}
+
+fn bitnet_benchmark_repeat_summary(
+    json_out: &Path,
+    repeat: usize,
+    child_summary_receipts: &[String],
+    child_summaries: &[serde_json::Value],
+    benchmark_start_peak_mb: Option<f64>,
+) -> Result<serde_json::Value> {
+    if child_summaries.is_empty() {
+        anyhow::bail!("BitNet benchmark repeat summary requires at least one child summary");
+    }
+    let one_shot_summary = bitnet_benchmark_repeat_path_summary(
+        child_summaries,
+        "one_shot",
+        "one_shot_mac_ask",
+        "mac ask",
+        false,
+    )?;
+    let warm_summary = bitnet_benchmark_repeat_path_summary(
+        child_summaries,
+        "fixed_warm",
+        "fixed_warm_session",
+        "mac bitnet-warm",
+        true,
+    )?;
+    let mut all_samples = BitnetBenchmarkMetricSamples::default();
+    all_samples.extend_from_summary(&one_shot_summary);
+    all_samples.extend_from_summary(&warm_summary);
+
+    let prompt_count = one_shot_summary["prompt_count"].as_u64().unwrap_or_default()
+        + warm_summary["prompt_count"].as_u64().unwrap_or_default();
+    let generated_tokens = one_shot_summary["generated_tokens"].as_u64().unwrap_or_default()
+        + warm_summary["generated_tokens"].as_u64().unwrap_or_default();
+    let memory_end_peak_mb = peak_memory_mb();
+    let mut memory = all_samples.memory_json();
+    if let Some(object) = memory.as_object_mut() {
+        object
+            .insert("start_peak_memory_mb".to_string(), optional_f64_json(benchmark_start_peak_mb));
+        object.insert("end_peak_memory_mb".to_string(), optional_f64_json(memory_end_peak_mb));
+        object.insert(
+            "process_peak_drift_mb".to_string(),
+            optional_f64_json(memory_delta_mb(benchmark_start_peak_mb, memory_end_peak_mb)),
         );
     }
-    Ok(())
+
+    let first = &child_summaries[0];
+    let model_path = first["model"]["path"].as_str().unwrap_or_default();
+    let tokenizer_path =
+        first["tokenizer"]["path"].as_str().unwrap_or(BITNET_M4_DEFAULT_TOKENIZER_PATH);
+    let timeout_reasons = child_summaries
+        .iter()
+        .filter_map(|summary| summary["timeout_boundary"]["status"].as_str())
+        .filter(|status| *status != "not_reached")
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    let one_shot_receipts = child_summaries
+        .iter()
+        .filter_map(|summary| {
+            summary["evidence"]["one_shot_receipt"].as_str().map(ToString::to_string)
+        })
+        .collect::<Vec<_>>();
+    let warm_session_receipts = child_summaries
+        .iter()
+        .filter_map(|summary| {
+            summary["evidence"]["warm_session_receipt"].as_str().map(ToString::to_string)
+        })
+        .collect::<Vec<_>>();
+    let warm_prompt_receipts = child_summaries
+        .iter()
+        .filter_map(|summary| summary["evidence"]["warm_prompt_receipts"].as_array())
+        .flatten()
+        .filter_map(|receipt| receipt.as_str().map(ToString::to_string))
+        .collect::<Vec<_>>();
+
+    Ok(serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "benchmark_set": "bitnet-one-shot-fixed-warm-v1",
+        "repeat": {
+            "requested": repeat,
+            "completed": child_summaries.len(),
+            "path_count": 2,
+            "sample_count": child_summaries.len() * 2,
+            "child_summary_receipts": child_summary_receipts,
+        },
+        "paths": {
+            "one_shot": one_shot_summary,
+            "fixed_warm": warm_summary,
+        },
+        "prompt_count": prompt_count,
+        "generated_tokens": generated_tokens,
+        "speed": all_samples.speed_json(),
+        "memory": memory,
+        "timeout_boundary": {
+            "enforced": false,
+            "reached": false,
+            "status": "not_reached",
+            "timeout_seconds": serde_json::Value::Null,
+            "partial_failure_receipt": false,
+            "timeout_stage_accounting": {
+                "timeouts": timeout_reasons.len(),
+                "statuses": timeout_reasons,
+            },
+        },
+        "build": {
+            "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
+            "release_mode": !cfg!(debug_assertions),
+        },
+        "model": {
+            "id": BITNET_M4_MODEL_ID,
+            "family": "bitnet",
+            "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+            "file": "ggml-model-i2_s.gguf",
+            "path": model_path,
+            "sha256": BITNET_M4_EXPECTED_MODEL_SHA256,
+            "bytes": first["model"]["bytes"].as_u64(),
+            "architecture": "bitnet_b1_58",
+            "quantization": "I2_S",
+            "answer_ready_artifact_available": true,
+            "answer_ready": {
+                "state": "answer_ready"
+            }
+        },
+        "tokenizer": {
+            "source": "external_tokenizer_json",
+            "path": tokenizer_path,
+            "sha256": BITNET_M4_EXPECTED_TOKENIZER_SHA256,
+            "authority": "llama-bpe",
+            "pretokenizer_authority": "llama-bpe",
+            "strict": true
+        },
+        "prompt_template": BITNET_M4_PROMPT_TEMPLATE,
+        "benchmark_contract": {
+            "scope": "Apple M4 Mac mini BitNet repeated one-shot and fixed-warm benchmark v1",
+            "path_execution_model": "repeat full mac ask plus fixed-prompt resident warm-session benchmark runs",
+            "one_shot_loaded_independently": true,
+            "fixed_warm_model_tokenizer_reuse_visible": true,
+            "cold_load_separated": true,
+            "repeatability": {
+                "run_count": child_summaries.len(),
+                "outlier_handling": "none",
+                "variance_band": "min/max and p50/p90/p99 over raw repeated child benchmark path samples",
+                "advisory_vs_failure": "timing and memory drift are advisory unless a later lane opts into fail-on-drift",
+            },
+            "percentiles": ["p50", "p90", "p99"],
+            "input_tok_s_definition": "prompt_tokens / (prompt_tokenize_ms + prefill_ms)",
+            "output_tok_s_definition": "generated_tokens / total_prompt_wall_ms",
+            "decode_tok_s_definition": "generated_tokens / decode_total_ms",
+            "memory_drift_definition": "ru_maxrss process peak delta when available; monotonic peak, not live RSS",
+            "timeout_boundary_recorded": true,
+            "thresholds_are_claim_bounds_not_speed_guarantees": true
+        },
+        "evidence": {
+            "child_summary_receipts": child_summary_receipts,
+            "one_shot_receipt": one_shot_receipts.first().cloned().unwrap_or_default(),
+            "one_shot_receipts": one_shot_receipts,
+            "warm_session_receipt": warm_session_receipts.first().cloned().unwrap_or_default(),
+            "warm_session_receipts": warm_session_receipts,
+            "warm_prompt_receipts": warm_prompt_receipts,
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "operator_commands": ["mac ask", "mac bitnet-warm"],
+        },
+        "mac_claim_boundary": {
+            "bitnet_benchmark": true,
+            "one_shot_mac_ask": true,
+            "fixed_warm_session": true,
+            "accepted_i2s_artifact_only": true,
+            "dense_slm_evidence_used": false,
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "bitnet_quality_claimed": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claimed": false
+        },
+        "bitnet_quality_claimed": false,
+        "broad_performance_claim": false,
+        "speedup_claim": false,
+    }))
+}
+
+fn bitnet_benchmark_repeat_path_summary(
+    child_summaries: &[serde_json::Value],
+    path_key: &str,
+    expected_path_id: &str,
+    expected_operator_command: &str,
+    require_resident_reuse: bool,
+) -> Result<serde_json::Value> {
+    let mut path_summaries = Vec::with_capacity(child_summaries.len());
+    for summary in child_summaries {
+        let path_summary = summary["paths"].get(path_key).ok_or_else(|| {
+            anyhow!("BitNet benchmark child summary is missing {path_key} path summary")
+        })?;
+        validate_bitnet_benchmark_path_summary(
+            Path::new("bitnet-benchmark-repeat-child"),
+            path_summary,
+            expected_path_id,
+            expected_operator_command,
+            require_resident_reuse,
+        )?;
+        path_summaries.push(path_summary.clone());
+    }
+
+    let prompt_count = path_summaries
+        .iter()
+        .map(|summary| summary["prompt_count"].as_u64().unwrap_or_default())
+        .sum::<u64>();
+    let generated_tokens = path_summaries
+        .iter()
+        .map(|summary| summary["generated_tokens"].as_u64().unwrap_or_default())
+        .sum::<u64>();
+    let quality_passed =
+        path_summaries.iter().all(|summary| summary["quality_passed"].as_bool() == Some(true));
+    let receipt_paths = path_summaries
+        .iter()
+        .filter_map(|summary| summary["receipt_path"].as_str().map(ToString::to_string))
+        .collect::<Vec<_>>();
+
+    let prompt_tokens = collect_bitnet_path_stat_samples(&path_summaries, &["prompt_tokens"]);
+    let output_tokens = collect_bitnet_path_stat_samples(&path_summaries, &["output_tokens"]);
+    let model_load_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "model_load_ms"]);
+    let tokenizer_load_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "tokenizer_load_ms"]);
+    let prompt_tokenize_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "prompt_tokenize_ms"]);
+    let prefill_ms = collect_bitnet_path_stat_samples(&path_summaries, &["timing", "prefill_ms"]);
+    let ttft_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "time_to_first_token_ms"]);
+    let decode_total_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "decode_total_ms"]);
+    let sampling_ms_per_token =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "sampling_ms_per_token"]);
+    let total_wall_ms =
+        collect_bitnet_path_stat_samples(&path_summaries, &["timing", "total_wall_ms"]);
+    let input_tok_s = collect_bitnet_path_stat_samples(
+        &path_summaries,
+        &["throughput", "input_tokens_per_second"],
+    );
+    let output_tok_s = collect_bitnet_path_stat_samples(
+        &path_summaries,
+        &["throughput", "output_tokens_per_second"],
+    );
+    let decode_tok_s = collect_bitnet_path_stat_samples(
+        &path_summaries,
+        &["throughput", "decode_tokens_per_second"],
+    );
+    let peak_memory_mb =
+        collect_bitnet_path_stat_samples(&path_summaries, &["memory", "peak_memory_mb"]);
+    let memory_drift_mb =
+        collect_bitnet_path_stat_samples(&path_summaries, &["memory", "memory_drift_mb"]);
+
+    let mut object = serde_json::json!({
+        "path_id": expected_path_id,
+        "operator_command": expected_operator_command,
+        "receipt_path": format!("repeat:{path_key}"),
+        "receipt_paths": receipt_paths,
+        "prompt_count": prompt_count,
+        "generated_tokens": generated_tokens,
+        "model_loaded_once": true,
+        "tokenizer_loaded_once": true,
+        "quality_passed": quality_passed,
+        "repeat": {
+            "completed": path_summaries.len(),
+            "sample_count": path_summaries.len(),
+            "outlier_handling": "none",
+        },
+        "prompt_tokens": benchmark_stat_json(&prompt_tokens),
+        "output_tokens": benchmark_stat_json(&output_tokens),
+        "timing": {
+            "model_load_ms": benchmark_stat_json(&model_load_ms),
+            "tokenizer_load_ms": benchmark_stat_json(&tokenizer_load_ms),
+            "prompt_tokenize_ms": benchmark_stat_json(&prompt_tokenize_ms),
+            "prefill_ms": benchmark_stat_json(&prefill_ms),
+            "time_to_first_token_ms": benchmark_stat_json(&ttft_ms),
+            "decode_total_ms": benchmark_stat_json(&decode_total_ms),
+            "sampling_ms_per_token": benchmark_stat_json(&sampling_ms_per_token),
+            "total_wall_ms": benchmark_stat_json(&total_wall_ms),
+        },
+        "throughput": {
+            "input_tokens_per_second": benchmark_stat_json(&input_tok_s),
+            "output_tokens_per_second": benchmark_stat_json(&output_tok_s),
+            "decode_tokens_per_second": benchmark_stat_json(&decode_tok_s),
+        },
+        "memory": {
+            "peak_memory_mb": benchmark_stat_json(&peak_memory_mb),
+            "memory_drift_mb": benchmark_stat_json(&memory_drift_mb),
+            "source": "getrusage.ru_maxrss process peak",
+        },
+        "timeout_boundary": {
+            "enforced": false,
+            "reached": false,
+            "status": "not_reached",
+        },
+        "claim_boundary": {
+            "scope": "repeated BitNet benchmark path summaries for this accepted artifact, backend, and machine only",
+            "chat_enabled": false,
+            "serve_enabled": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    });
+    if require_resident_reuse {
+        object["reuse_scope"] = serde_json::json!("resident_session");
+    }
+    Ok(object)
+}
+
+fn collect_bitnet_path_stat_samples(summaries: &[serde_json::Value], path: &[&str]) -> Vec<f64> {
+    let mut out = Vec::new();
+    for summary in summaries {
+        let mut value = summary;
+        for key in path {
+            value = &value[*key];
+        }
+        out.extend(benchmark_stat_samples(value));
+    }
+    out
 }
 
 fn bitnet_benchmark_summary(
@@ -9131,6 +9617,7 @@ fn apple_m4_doctor_readiness_json(
             "last_matching_receipts": {
                 "eval": report_inventory["dense_slm_eval_v2"].clone(),
                 "benchmark": report_inventory["dense_slm_benchmark_v2"].clone(),
+                "benchmark_variance": report_inventory["dense_slm_benchmark_variance"].clone(),
             },
             "claim_boundary": {
                 "dense_slm_only": true,
@@ -9158,6 +9645,7 @@ fn apple_m4_doctor_readiness_json(
             "last_matching_receipts": {
                 "eval": report_inventory["bitnet_eval"].clone(),
                 "benchmark": report_inventory["bitnet_benchmark"].clone(),
+                "benchmark_variance": report_inventory["bitnet_benchmark_variance"].clone(),
                 "variable_warm": report_inventory["bitnet_variable_warm"].clone(),
             },
             "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
@@ -9654,7 +10142,14 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
             "mac validate --profile-set performance must be run from a release build; use `cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- mac validate --profile-set performance ...`"
         );
     }
+    if profile_set == MacValidateProfileSet::Accuracy && requested_backend != APPLE_M3_AIR_CPU_NEON
+    {
+        anyhow::bail!(
+            "mac validate --profile-set accuracy is currently scoped to --device {APPLE_M3_AIR_CPU_NEON}"
+        );
+    }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    let accuracy_profile = profile_set == MacValidateProfileSet::Accuracy;
     if profile_set == MacValidateProfileSet::Operator {
         if metal_prefill_qkv_phase {
             anyhow::bail!(
@@ -9694,7 +10189,7 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
         model.path.clone(),
         "auto".to_string(),
         None,
-        Some(corpus),
+        Some(corpus.clone()),
         corpus_repeat_runs,
         Vec::new(),
         max_new_tokens,
@@ -9725,6 +10220,133 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
     )
     .await?;
     annotate_and_validate_mac_receipt(&json_out, &model, "mac validate")?;
+    if accuracy_profile {
+        annotate_m3_accuracy_comparison_profile(
+            &json_out,
+            requested_backend,
+            &corpus,
+            corpus_repeat_runs,
+            max_new_tokens,
+        )?;
+    }
+    Ok(())
+}
+
+fn annotate_m3_accuracy_comparison_profile(
+    path: &Path,
+    requested_backend: &str,
+    corpus: &Path,
+    corpus_repeat_runs: usize,
+    max_new_tokens: usize,
+) -> Result<()> {
+    if requested_backend != APPLE_M3_AIR_CPU_NEON {
+        anyhow::bail!(
+            "mac validate --profile-set accuracy is currently scoped to --device {APPLE_M3_AIR_CPU_NEON}"
+        );
+    }
+
+    let bytes = std::fs::read(path)
+        .with_context(|| format!("failed to read Mac receipt {}", path.display()))?;
+    let mut receipt: serde_json::Value = serde_json::from_slice(&bytes)
+        .with_context(|| format!("invalid Mac receipt {}", path.display()))?;
+    let summary = validate_mac_receipt_value(path, &receipt)?;
+    if summary.artifact_kind != "slm_apple_m3_air_warm_session" {
+        anyhow::bail!(
+            "{} M3 accuracy profile must annotate an M3 Air warm-session receipt, got {}",
+            path.display(),
+            summary.artifact_kind
+        );
+    }
+
+    let corpus_bytes =
+        std::fs::read(corpus).with_context(|| format!("failed to read {}", corpus.display()))?;
+    let corpus_sha256 = sha256_hex(&corpus_bytes);
+    let prompts = receipt["prompts"].as_array().ok_or_else(|| {
+        anyhow!("{} M3 accuracy profile requires prompt summaries", path.display())
+    })?;
+
+    let mut seen_case_ids = std::collections::BTreeSet::new();
+    let mut prompt_ids = Vec::with_capacity(prompts.len());
+    for (index, prompt) in prompts.iter().enumerate() {
+        let case_id = prompt["case_id"].as_str().ok_or_else(|| {
+            anyhow!("{} M3 accuracy prompt {index} is missing case_id", path.display())
+        })?;
+        seen_case_ids.insert(case_id.to_string());
+        prompt_ids.push(serde_json::json!({
+            "case_id": case_id,
+            "prompt_index": prompt["prompt_index"].clone(),
+            "repeat_index": prompt["repeat_index"].clone(),
+            "generated_token_ids_recorded": prompt["generated_token_ids"]
+                .as_array()
+                .is_some_and(|ids| !ids.is_empty()),
+            "decoded_text_recorded": prompt["text"]
+                .as_str()
+                .is_some_and(|text| !text.trim().is_empty()),
+        }));
+    }
+
+    let profile = serde_json::json!({
+        "work_item": "M3MBA-022",
+        "profile_set": "accuracy",
+        "device": APPLE_M3_AIR_CPU_NEON,
+        "corpus": {
+            "path": corpus.display().to_string(),
+            "sha256": corpus_sha256,
+            "name": receipt["corpus"]["name"].clone(),
+            "artifact_kind": receipt["corpus"]["artifact_kind"].clone(),
+            "case_count": seen_case_ids.len(),
+            "repeat_runs": corpus_repeat_runs,
+            "max_new_tokens": max_new_tokens,
+        },
+        "prompt_ids": prompt_ids,
+        "prompt_identity_contract": {
+            "case_id_required": true,
+            "prompt_index_required": true,
+            "repeat_index_required": true,
+            "generated_token_ids_required": true,
+            "decoded_text_required": true,
+            "tokenizer_authority_required": true,
+            "fallback_status_required": true,
+        },
+        "scoring_policy": {
+            "source": "ci/quality/apple-m4-slm-quality-corpus.yaml gate rules",
+            "mechanical_scoring_only": true,
+            "llm_judge_required": false,
+            "accepted_gate_kinds": ["contains_any", "starts_with_any"],
+            "broad_answer_quality_claim": false,
+        },
+        "comparison_readiness": {
+            "status": "m3_accuracy_profile_ready",
+            "comparison_grade_claim_made": false,
+            "m3_air_dense_slm_receipt": true,
+            "m4_mac_mini_comparable_without_fresh_matching_receipt": false,
+            "slm_cpu_comparable_without_fresh_matching_receipt": false,
+            "non_comparable_evidence": [
+                "M4 Mac mini receipts use a different machine identity and must remain separate until a matching-profile receipt is selected.",
+                "SLM CPU receipts use a different hardware/backend context and must remain separate until a matching-profile receipt is selected."
+            ]
+        },
+        "claim_boundary": {
+            "dense_slm_accuracy_profile": true,
+            "bitnet_quality_claimed": false,
+            "m4_performance_claimed": false,
+            "slm_cpu_equivalence_claimed": false,
+            "broad_quality_claim": false,
+            "broad_performance_claim": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false
+        }
+    });
+
+    let object = receipt
+        .as_object_mut()
+        .ok_or_else(|| anyhow!("Mac receipt {} is not a JSON object", path.display()))?;
+    object.insert("accuracy_comparison_profile".to_string(), profile);
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)
+        .with_context(|| format!("failed to update Mac receipt {}", path.display()))?;
+    validate_mac_receipt_value(path, &receipt)?;
     Ok(())
 }
 
@@ -9841,6 +10463,9 @@ struct BenchmarkMetricSamples {
 
 impl BenchmarkMetricSamples {
     fn extend_from_profile(&mut self, profile: &serde_json::Value) {
+        if profile["status"].as_str() == Some("invalid_for_comparison") {
+            return;
+        }
         self.cold_load_ms.extend(benchmark_stat_samples(&profile["timing"]["cold_load_ms"]));
         self.tokenizer_load_ms
             .extend(benchmark_stat_samples(&profile["timing"]["tokenizer_load_ms"]));
@@ -9990,44 +10615,36 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
             eprintln!("mac benchmark: running {profile_id}");
         }
         let profile_start_peak_mb = peak_memory_mb();
-        crate::run_slm_warm_session(
+        let profile_result = run_benchmark_profile_warm_session(BenchmarkProfileRun {
             requested_backend,
-            model.path.clone(),
-            "auto".to_string(),
-            None,
-            None,
-            1,
-            spec.prompts.clone(),
-            spec.max_new_tokens,
-            0.0,
-            1,
-            1.0,
-            1.1,
-            None,
-            true,
-            true,
-            true,
-            true,
+            model,
+            spec: &spec,
             threads,
-            QWEN_PROMPT_TEMPLATE.to_string(),
-            false,
-            None,
-            vec!["<|im_end|>".to_string()],
-            Vec::new(),
-            true,
-            false,
             allocation_audit,
-            crate::SlmWarmSessionOutput::new(false, progress, quiet)
-                .with_model_sha256_override(Some(model.sha256.clone())),
-            1,
-            1,
-            receipt_path.clone(),
-        )
-        .await?;
-        annotate_and_validate_mac_receipt(&receipt_path, model, "mac benchmark")?;
+            progress,
+            quiet,
+            receipt_path: &receipt_path,
+        })?;
+        if profile_result.timed_out {
+            let timeout_receipt = read_json_receipt(&receipt_path)?;
+            let summary = validate_mac_receipt_value(&receipt_path, &timeout_receipt)?;
+            println!(
+                "Mac receipt checked: {} ({}, generated_tokens={:?})",
+                receipt_path.display(),
+                summary.artifact_kind,
+                summary.generated_tokens
+            );
+        } else {
+            annotate_and_validate_mac_receipt(&receipt_path, model, "mac benchmark")?;
+        }
         let receipt = read_json_receipt(&receipt_path)?;
-        let summary =
-            benchmark_profile_summary(&spec, &receipt_path, &receipt, profile_start_peak_mb)?;
+        let summary = benchmark_profile_summary(
+            &spec,
+            &receipt_path,
+            &receipt,
+            profile_start_peak_mb,
+            profile_result.peak_memory_mb,
+        )?;
         all_samples.extend_from_profile(&summary);
         summaries.push(summary);
     }
@@ -10054,6 +10671,9 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
             optional_f64_json(memory_delta_mb(benchmark_start_peak_mb, memory_end_peak_mb)),
         );
     }
+    let invalid_comparison_reasons = benchmark_profile_invalid_comparison_reasons(&summaries);
+    let comparison_status =
+        if invalid_comparison_reasons.is_empty() { "comparable" } else { "invalid_for_comparison" };
 
     let aggregate = serde_json::json!({
         "schema_version": "1.1.0",
@@ -10109,9 +10729,15 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
             "input_tok_s_definition": "prompt_tokens / (prompt_tokenize_ms + prefill_ms)",
             "output_tok_s_definition": "generated_tokens / total_prompt_wall_ms",
             "decode_tok_s_definition": "generated_tokens / decode_total_ms",
-            "memory_drift_definition": "per-profile ru_maxrss process peak delta; monotonic peak, not live RSS",
+            "memory_drift_definition": "per-profile child process peak RSS; child exits between profiles",
             "thresholds_are_claim_bounds_not_speed_guarantees": true
         },
+        "comparison_readiness": {
+            "status": comparison_status,
+            "can_compare_timing": invalid_comparison_reasons.is_empty(),
+            "invalid_comparison_reasons": invalid_comparison_reasons.clone(),
+        },
+        "invalid_comparison_reasons": invalid_comparison_reasons,
         "evidence": {
             "profile_receipts": summaries
                 .iter()
@@ -10146,6 +10772,226 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
         profile_ids_display
     );
     Ok(aggregate)
+}
+
+struct BenchmarkProfileRun<'a> {
+    requested_backend: &'a str,
+    model: &'a VerifiedCachedModel,
+    spec: &'a BenchmarkProfileSpec,
+    threads: usize,
+    allocation_audit: bool,
+    progress: bool,
+    quiet: bool,
+    receipt_path: &'a Path,
+}
+
+struct BenchmarkProfileRunResult {
+    peak_memory_mb: Option<f64>,
+    timed_out: bool,
+}
+
+fn run_benchmark_profile_warm_session(
+    request: BenchmarkProfileRun<'_>,
+) -> Result<BenchmarkProfileRunResult> {
+    let profile_id = request.spec.profile.id();
+    let timeout = Duration::from_secs(benchmark_calibration_profile_timeout_seconds(profile_id));
+    let exe = std::env::current_exe().context("failed to resolve current bitnet executable")?;
+    let args = benchmark_profile_warm_session_args(&request);
+    let mut command = Command::new(&exe);
+    command.args(&args);
+    if request.progress && !request.quiet {
+        command.stdout(std::process::Stdio::inherit());
+        command.stderr(std::process::Stdio::inherit());
+    } else {
+        command.stdout(std::process::Stdio::null());
+        command.stderr(std::process::Stdio::null());
+    }
+    let mut child = command
+        .spawn()
+        .with_context(|| format!("failed to spawn benchmark profile child {}", exe.display()))?;
+    let child_id = child.id();
+    let started = Instant::now();
+    let mut peak_memory_mb = process_rss_mb(child_id);
+    loop {
+        if let Some(status) = child.try_wait()? {
+            if status.success() {
+                return Ok(BenchmarkProfileRunResult { peak_memory_mb, timed_out: false });
+            }
+            anyhow::bail!(
+                "benchmark profile {profile_id} child exited with status {status}; receipt path {}",
+                request.receipt_path.display()
+            );
+        }
+        if let Some(rss) = process_rss_mb(child_id) {
+            peak_memory_mb = Some(peak_memory_mb.map_or(rss, |peak| peak.max(rss)));
+        }
+        if started.elapsed() >= timeout {
+            let _ = child.kill();
+            let status = child.wait().ok();
+            let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+            write_benchmark_profile_timeout_receipt(
+                request.receipt_path,
+                request.model,
+                request.requested_backend,
+                request.spec,
+                timeout,
+                elapsed_ms,
+                peak_memory_mb,
+                status.and_then(|status| status.code()),
+            )?;
+            return Ok(BenchmarkProfileRunResult { peak_memory_mb, timed_out: true });
+        }
+        std::thread::sleep(Duration::from_millis(250));
+    }
+}
+
+fn benchmark_profile_warm_session_args(request: &BenchmarkProfileRun<'_>) -> Vec<OsString> {
+    let mut args = vec![
+        OsString::from("slm-warm-session"),
+        OsString::from("--device"),
+        OsString::from(request.requested_backend),
+        OsString::from("--model"),
+        request.model.path.as_os_str().to_os_string(),
+        OsString::from("--model-format"),
+        OsString::from("auto"),
+    ];
+    for prompt in &request.spec.prompts {
+        args.push(OsString::from("--prompt"));
+        args.push(OsString::from(prompt));
+    }
+    args.extend([
+        OsString::from("--max-new-tokens"),
+        OsString::from(request.spec.max_new_tokens.to_string()),
+        OsString::from("--temperature"),
+        OsString::from("0"),
+        OsString::from("--top-k"),
+        OsString::from("1"),
+        OsString::from("--top-p"),
+        OsString::from("1.0"),
+        OsString::from("--repetition-penalty"),
+        OsString::from("1.1"),
+        OsString::from("--strict-tokenizer"),
+        OsString::from("--strict-loader"),
+        OsString::from("--greedy"),
+        OsString::from("--deterministic"),
+        OsString::from("--threads"),
+        OsString::from(request.threads.to_string()),
+        OsString::from("--prompt-template"),
+        OsString::from(QWEN_PROMPT_TEMPLATE),
+        OsString::from("--stop"),
+        OsString::from("<|im_end|>"),
+        OsString::from("--fail-on-quality"),
+        OsString::from("--min-generated-tokens"),
+        OsString::from("1"),
+        OsString::from("--min-distinct-generated-tokens"),
+        OsString::from("1"),
+        OsString::from("--json-out"),
+        request.receipt_path.as_os_str().to_os_string(),
+    ]);
+    if request.allocation_audit {
+        args.push(OsString::from("--allocation-audit"));
+    }
+    if request.progress {
+        args.push(OsString::from("--progress"));
+    }
+    if request.quiet {
+        args.push(OsString::from("--quiet"));
+    }
+    args
+}
+
+fn write_benchmark_profile_timeout_receipt(
+    path: &Path,
+    model: &VerifiedCachedModel,
+    requested_backend: &str,
+    spec: &BenchmarkProfileSpec,
+    timeout: Duration,
+    elapsed_ms: f64,
+    peak_memory_mb: Option<f64>,
+    exit_code: Option<i32>,
+) -> Result<()> {
+    let profile_id = spec.profile.id();
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_slm_benchmark_profile_timeout",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": path.display().to_string(),
+        "operator_command": "mac benchmark",
+        "status": "invalid_for_comparison",
+        "requested_backend": requested_backend,
+        "selected_backend": requested_backend,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "profile_set": "slm-benchmark-v2",
+        "profile_id": profile_id,
+        "scenario": spec.scenario,
+        "requested_max_new_tokens": spec.max_new_tokens,
+        "target_context_tokens": spec.target_context_tokens,
+        "prompt_count": spec.prompts.len(),
+        "generated_tokens": 0,
+        "timeout_boundary": {
+            "configured_seconds": timeout.as_secs(),
+            "elapsed_ms": round3(elapsed_ms),
+            "reached": true,
+            "enforced": true,
+            "behavior": "child warm-session process killed; profile marked invalid for envelope comparison",
+        },
+        "invalid_comparison_reasons": [
+            format!("profile_timeout_exceeded:{profile_id}:{}s", timeout.as_secs())
+        ],
+        "child_process": {
+            "mode": "slm-warm-session subprocess",
+            "exit_code": exit_code,
+            "killed_on_timeout": true,
+        },
+        "model_cache": {
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        },
+        "memory": {
+            "peak_memory_mb": optional_f64_json(peak_memory_mb),
+            "source": "parent-polled child RSS before timeout kill",
+        },
+        "mac_claim_boundary": {
+            "dense_slm_only": true,
+            "benchmark_profile_timeout": true,
+            "bounded_benchmark_profiles_only": true,
+            "final_variance_envelope": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "bitnet_quality_claimed": false,
+            "bitnet_performance_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false
+        },
+        "speedup_claim": false,
+    });
+    write_json_receipt(path, &receipt)
+}
+
+fn process_rss_mb(pid: u32) -> Option<f64> {
+    let output = Command::new("ps").args(["-o", "rss=", "-p", &pid.to_string()]).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let rss_kb = text.trim().parse::<f64>().ok()?;
+    Some(round3(rss_kb / 1024.0))
 }
 
 async fn run_benchmark_variance(request: MacBenchmarkSummaryRun<'_>, repeat: usize) -> Result<()> {
@@ -10206,6 +11052,9 @@ async fn run_benchmark_variance(request: MacBenchmarkSummaryRun<'_>, repeat: usi
         .cloned()
         .unwrap_or_default();
     let profile_count = profiles_required.len();
+    let invalid_comparison_reasons = benchmark_profile_invalid_comparison_reasons(&child_summaries);
+    let comparison_status =
+        if invalid_comparison_reasons.is_empty() { "comparable" } else { "invalid_for_comparison" };
     let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": "apple_m4_benchmark_variance_v1",
@@ -10248,7 +11097,12 @@ async fn run_benchmark_variance(request: MacBenchmarkSummaryRun<'_>, repeat: usi
             "method": "none",
             "reason": "raw repeat samples are preserved; M4-BENCH-005 may define filtering policy for published envelopes",
         },
-        "invalid_comparison_reasons": [],
+        "comparison_readiness": {
+            "status": comparison_status,
+            "can_compare_timing": invalid_comparison_reasons.is_empty(),
+            "invalid_comparison_reasons": invalid_comparison_reasons.clone(),
+        },
+        "invalid_comparison_reasons": invalid_comparison_reasons,
         "build": {
             "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
             "release_mode": !cfg!(debug_assertions),
@@ -11144,8 +11998,44 @@ fn benchmark_profile_summary(
     path: &Path,
     receipt: &serde_json::Value,
     profile_start_peak_mb: Option<f64>,
+    profile_peak_memory_mb: Option<f64>,
 ) -> Result<serde_json::Value> {
     let profile_id = spec.profile.id();
+    if receipt["artifact_kind"].as_str() == Some("apple_m4_slm_benchmark_profile_timeout") {
+        let timeout_profile_id = receipt["profile_id"].as_str().unwrap_or_default();
+        if timeout_profile_id != profile_id {
+            anyhow::bail!(
+                "benchmark timeout profile id mismatch: expected {profile_id}, got {timeout_profile_id:?}"
+            );
+        }
+        let prompt_count = receipt["prompt_count"].as_u64().unwrap_or(spec.prompts.len() as u64);
+        return Ok(serde_json::json!({
+            "profile_id": profile_id,
+            "receipt_path": path.display().to_string(),
+            "status": "invalid_for_comparison",
+            "scenario": receipt["scenario"].as_str().unwrap_or(spec.scenario),
+            "requested_max_new_tokens": receipt["requested_max_new_tokens"].as_u64().unwrap_or(spec.max_new_tokens as u64),
+            "prompt_count": prompt_count,
+            "target_context_tokens": receipt["target_context_tokens"].clone(),
+            "generated_tokens": 0,
+            "quality_passed": false,
+            "model_loaded_once": false,
+            "tokenizer_loaded_once": false,
+            "reuse_scope": "profile_timeout",
+            "timeout_boundary": receipt["timeout_boundary"].clone(),
+            "invalid_comparison_reasons": receipt["invalid_comparison_reasons"].clone(),
+            "memory": {
+                "peak_memory_mb": benchmark_stat_json(&optional_sample(receipt["memory"]["peak_memory_mb"].as_f64().or(profile_peak_memory_mb))),
+                "memory_drift_mb": benchmark_stat_json(&[]),
+                "source": receipt["memory"]["source"].as_str().unwrap_or("parent-polled child RSS before timeout kill"),
+            },
+            "claim_boundary": {
+                "scope": "this profile timed out under the calibrated boundary and is invalid for timing comparison",
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+            },
+        }));
+    }
     let prompt_count = receipt["session"]["prompt_count"].as_u64().unwrap_or_default();
     let quality_passed = receipt["quality_summary"]["passed"].as_bool().unwrap_or(false);
     if prompt_count == 0 || !quality_passed {
@@ -11206,8 +12096,17 @@ fn benchmark_profile_summary(
         generated_total += generated_token_count as u64;
     }
 
-    let profile_end_peak_mb = peak_memory_mb();
-    let memory_drift_mb = memory_delta_mb(profile_start_peak_mb, profile_end_peak_mb);
+    let profile_end_peak_mb = profile_peak_memory_mb.or_else(peak_memory_mb);
+    let memory_drift_mb = if profile_peak_memory_mb.is_some() {
+        Some(0.0)
+    } else {
+        memory_delta_mb(profile_start_peak_mb, profile_end_peak_mb)
+    };
+    let memory_source = if profile_peak_memory_mb.is_some() {
+        "child process peak RSS sampled by benchmark parent; drift set to 0 because the child exits per profile"
+    } else {
+        "getrusage.ru_maxrss process peak delta"
+    };
     Ok(serde_json::json!({
         "profile_id": profile_id,
         "receipt_path": path.display().to_string(),
@@ -11240,7 +12139,7 @@ fn benchmark_profile_summary(
         "memory": {
             "peak_memory_mb": benchmark_stat_json(&optional_sample(profile_end_peak_mb)),
             "memory_drift_mb": benchmark_stat_json(&optional_sample(memory_drift_mb)),
-            "source": "getrusage.ru_maxrss process peak delta",
+            "source": memory_source,
         },
         "claim_boundary": {
             "scope": "this profile, model, backend, and machine receipt only",
@@ -11249,6 +12148,24 @@ fn benchmark_profile_summary(
         },
         "allocation_audit": receipt["allocation_audit"].clone(),
     }))
+}
+
+fn benchmark_profile_invalid_comparison_reasons(profiles: &[serde_json::Value]) -> Vec<String> {
+    let mut reasons = Vec::new();
+    for profile in profiles {
+        let Some(profile_reasons) = profile["invalid_comparison_reasons"].as_array() else {
+            continue;
+        };
+        for reason in profile_reasons {
+            let Some(reason) = reason.as_str() else {
+                continue;
+            };
+            if !reasons.iter().any(|existing| existing == reason) {
+                reasons.push(reason.to_string());
+            }
+        }
+    }
+    reasons
 }
 
 fn push_positive_rate(out: &mut Vec<f64>, numerator: f64, denominator_ms: f64) {
@@ -12525,7 +13442,8 @@ fn run_receipts_check(path: &Path, regression_baseline: Option<&Path>, json: boo
                 );
                 for warning in &regression.warnings {
                     println!(
-                        "warning: {} {} baseline={} observed={} threshold={}%",
+                        "warning: {} {} {} baseline={} observed={} threshold={}%",
+                        warning.category,
                         warning.profile_id,
                         warning.field,
                         warning.baseline,
@@ -12602,7 +13520,8 @@ fn run_regression_check(
                 );
                 for warning in &regression.warnings {
                     println!(
-                        "warning: {} {} baseline={} observed={} threshold={}%",
+                        "warning: {} {} {} baseline={} observed={} threshold={}%",
+                        warning.category,
                         warning.profile_id,
                         warning.field,
                         warning.baseline,
@@ -12667,12 +13586,13 @@ fn load_regression_baseline(path: &Path) -> Result<RegressionBaseline> {
             | Some("slm_apple_m4_warm_session")
             | Some("apple_m4_slm_eval_summary")
             | Some("apple_m4_slm_benchmark_v2")
+            | Some("apple_m4_benchmark_variance_v1")
             | Some("bitnet_apple_m4_local_answer_corpus")
             | Some("bitnet_apple_m4_warm_session")
             | Some("bitnet_apple_m4_benchmark_v1")
     ) {
         anyhow::bail!(
-            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, apple_m4_slm_eval_summary, apple_m4_slm_benchmark_v2, bitnet_apple_m4_local_answer_corpus, bitnet_apple_m4_warm_session, or bitnet_apple_m4_benchmark_v1 receipt",
+            "regression baseline {} must be an apple_m4_slm_performance_profiles, slm_apple_m4_warm_session, apple_m4_slm_eval_summary, apple_m4_slm_benchmark_v2, apple_m4_benchmark_variance_v1, bitnet_apple_m4_local_answer_corpus, bitnet_apple_m4_warm_session, or bitnet_apple_m4_benchmark_v1 receipt",
             path.display()
         );
     }
@@ -12696,6 +13616,9 @@ fn compare_mac_regression(
         }
         Some("apple_m4_slm_benchmark_v2") => {
             compare_dense_slm_benchmark_v2_regression(path, receipt, baseline)
+        }
+        Some("apple_m4_benchmark_variance_v1") => {
+            compare_apple_m4_benchmark_variance_regression(path, receipt, baseline)
         }
         Some("bitnet_apple_m4_local_answer_corpus") => {
             compare_bitnet_eval_answer_corpus_regression(path, receipt, baseline)
@@ -13203,6 +14126,107 @@ fn compare_dense_slm_benchmark_v2_regression(
                     &format!("memory.{metric}.{percentile}"),
                     regression_metric(baseline_profile, &["memory", metric, percentile])?,
                     regression_metric(profile, &["memory", metric, percentile])?,
+                    threshold,
+                );
+            }
+        }
+    }
+
+    Ok(RegressionCheckSummary {
+        baseline_path: baseline.path.clone(),
+        advisory: true,
+        matched_context: true,
+        warning_count: warnings.len(),
+        warnings,
+    })
+}
+
+fn compare_apple_m4_benchmark_variance_regression(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline: &RegressionBaseline,
+) -> Result<RegressionCheckSummary> {
+    const DECODE_TOK_S_LOWER_PCT: f64 = 12.5;
+    const THROUGHPUT_LOWER_PCT: f64 = 15.0;
+    const LATENCY_HIGHER_PCT: f64 = 15.0;
+    const LOAD_HIGHER_PCT: f64 = 20.0;
+    const SAMPLING_HIGHER_PCT: f64 = 20.0;
+    const PEAK_MEMORY_MB_HIGHER_PCT: f64 = 10.0;
+    const MEMORY_DRIFT_MB_HIGHER_PCT: f64 = 15.0;
+
+    ensure_benchmark_variance_regression_context_matches(
+        path,
+        receipt,
+        &baseline.path,
+        &baseline.receipt,
+    )?;
+
+    let mut warnings = Vec::new();
+    for summary_percentile in ["p50", "p90", "p99"] {
+        for variance_stat in ["p50", "p90", "p99"] {
+            for (metric, threshold) in [
+                ("cold_load_ms", LOAD_HIGHER_PCT),
+                ("tokenizer_load_ms", LOAD_HIGHER_PCT),
+                ("prompt_tokenize_ms", LATENCY_HIGHER_PCT),
+                ("prefill_ms", LATENCY_HIGHER_PCT),
+                ("ttft_ms", LATENCY_HIGHER_PCT),
+                ("sampling_ms_per_token", SAMPLING_HIGHER_PCT),
+                ("total_wall_ms", LATENCY_HIGHER_PCT),
+            ] {
+                let field = format!("{metric}_{summary_percentile}");
+                compare_higher_is_worse(
+                    &mut warnings,
+                    "benchmark_variance:timing",
+                    &format!("metrics.speed.{field}.{variance_stat}"),
+                    regression_metric(
+                        &baseline.receipt,
+                        &["metrics", "speed", field.as_str(), variance_stat],
+                    )?,
+                    regression_metric(
+                        receipt,
+                        &["metrics", "speed", field.as_str(), variance_stat],
+                    )?,
+                    threshold,
+                );
+            }
+            for (metric, threshold) in [
+                ("input_tok_s", THROUGHPUT_LOWER_PCT),
+                ("output_tok_s", THROUGHPUT_LOWER_PCT),
+                ("decode_tok_s", DECODE_TOK_S_LOWER_PCT),
+            ] {
+                let field = format!("{metric}_{summary_percentile}");
+                compare_lower_is_worse(
+                    &mut warnings,
+                    "benchmark_variance:timing",
+                    &format!("metrics.speed.{field}.{variance_stat}"),
+                    regression_metric(
+                        &baseline.receipt,
+                        &["metrics", "speed", field.as_str(), variance_stat],
+                    )?,
+                    regression_metric(
+                        receipt,
+                        &["metrics", "speed", field.as_str(), variance_stat],
+                    )?,
+                    threshold,
+                );
+            }
+            for (metric, threshold) in [
+                ("peak_memory_mb", PEAK_MEMORY_MB_HIGHER_PCT),
+                ("memory_drift_mb", MEMORY_DRIFT_MB_HIGHER_PCT),
+            ] {
+                let field = format!("{metric}_{summary_percentile}");
+                compare_higher_is_worse(
+                    &mut warnings,
+                    "benchmark_variance:memory",
+                    &format!("metrics.memory.{field}.{variance_stat}"),
+                    regression_metric(
+                        &baseline.receipt,
+                        &["metrics", "memory", field.as_str(), variance_stat],
+                    )?,
+                    regression_metric(
+                        receipt,
+                        &["metrics", "memory", field.as_str(), variance_stat],
+                    )?,
                     threshold,
                 );
             }
@@ -14888,6 +15912,216 @@ fn ensure_slm_benchmark_v2_regression_context_matches(
     Ok(())
 }
 
+fn ensure_benchmark_variance_regression_context_matches(
+    path: &Path,
+    receipt: &serde_json::Value,
+    baseline_path: &Path,
+    baseline: &serde_json::Value,
+) -> Result<()> {
+    ensure_benchmark_variance_comparable(path, receipt)?;
+    ensure_benchmark_variance_comparable(baseline_path, baseline)?;
+
+    for (label, observed, expected) in [
+        ("schema_version", receipt["schema_version"].as_str(), baseline["schema_version"].as_str()),
+        ("artifact_kind", receipt["artifact_kind"].as_str(), baseline["artifact_kind"].as_str()),
+        ("profile_set", receipt["profile_set"].as_str(), baseline["profile_set"].as_str()),
+        (
+            "requested_backend",
+            receipt["requested_backend"].as_str(),
+            baseline["requested_backend"].as_str(),
+        ),
+        (
+            "selected_backend",
+            receipt["selected_backend"].as_str(),
+            baseline["selected_backend"].as_str(),
+        ),
+        ("runtime_api", receipt["runtime_api"].as_str(), baseline["runtime_api"].as_str()),
+        (
+            "build.profile",
+            receipt["build"]["profile"].as_str(),
+            baseline["build"]["profile"].as_str(),
+        ),
+        (
+            "model_cache.id",
+            receipt["model_cache"]["id"].as_str(),
+            baseline["model_cache"]["id"].as_str(),
+        ),
+        (
+            "model_cache.sha256",
+            receipt["model_cache"]["sha256"].as_str(),
+            baseline["model_cache"]["sha256"].as_str(),
+        ),
+        (
+            "model_cache.architecture",
+            receipt["model_cache"]["architecture"].as_str(),
+            baseline["model_cache"]["architecture"].as_str(),
+        ),
+        (
+            "model_cache.quantization",
+            receipt["model_cache"]["quantization"].as_str(),
+            baseline["model_cache"]["quantization"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_model",
+            receipt["model_cache"]["tokenizer_model"].as_str(),
+            baseline["model_cache"]["tokenizer_model"].as_str(),
+        ),
+        (
+            "model_cache.tokenizer_pre",
+            receipt["model_cache"]["tokenizer_pre"].as_str(),
+            baseline["model_cache"]["tokenizer_pre"].as_str(),
+        ),
+        (
+            "evidence.child_artifact_kind",
+            receipt["evidence"]["child_artifact_kind"].as_str(),
+            baseline["evidence"]["child_artifact_kind"].as_str(),
+        ),
+        (
+            "evidence.operator_command",
+            receipt["evidence"]["operator_command"].as_str(),
+            baseline["evidence"]["operator_command"].as_str(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+
+    for (label, observed, expected) in [
+        (
+            "repeat.requested",
+            receipt["repeat"]["requested"].as_u64(),
+            baseline["repeat"]["requested"].as_u64(),
+        ),
+        (
+            "repeat.completed",
+            receipt["repeat"]["completed"].as_u64(),
+            baseline["repeat"]["completed"].as_u64(),
+        ),
+        (
+            "repeat.profile_count",
+            receipt["repeat"]["profile_count"].as_u64(),
+            baseline["repeat"]["profile_count"].as_u64(),
+        ),
+        (
+            "repeat.sample_count",
+            receipt["repeat"]["sample_count"].as_u64(),
+            baseline["repeat"]["sample_count"].as_u64(),
+        ),
+        ("prompt_count", receipt["prompt_count"].as_u64(), baseline["prompt_count"].as_u64()),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch (observed={observed:?}, baseline={expected:?})",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+
+    for (label, observed, expected) in [
+        ("fallback_used", receipt["fallback_used"].as_bool(), baseline["fallback_used"].as_bool()),
+        (
+            "build.release_mode",
+            receipt["build"]["release_mode"].as_bool(),
+            baseline["build"]["release_mode"].as_bool(),
+        ),
+        (
+            "evidence.generated_text_recorded",
+            receipt["evidence"]["generated_text_recorded"].as_bool(),
+            baseline["evidence"]["generated_text_recorded"].as_bool(),
+        ),
+        (
+            "evidence.generated_token_ids_recorded",
+            receipt["evidence"]["generated_token_ids_recorded"].as_bool(),
+            baseline["evidence"]["generated_token_ids_recorded"].as_bool(),
+        ),
+    ] {
+        if observed.is_none() || expected.is_none() || observed != expected {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: {label} mismatch",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+
+    if receipt["profiles_required"] != baseline["profiles_required"] {
+        anyhow::bail!(
+            "{} cannot be compared to baseline {}: profiles_required mismatch",
+            path.display(),
+            baseline_path.display()
+        );
+    }
+
+    for flag in ["dense_slm_only", "variance_harness_only"] {
+        if receipt["mac_claim_boundary"][flag].as_bool() != Some(true)
+            || baseline["mac_claim_boundary"][flag].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: mac_claim_boundary.{flag} must remain true",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    for flag in [
+        "final_variance_envelope",
+        "broad_model_quality_claim",
+        "broad_performance_claim",
+        "speedup_claim",
+        "bitnet_quality_claimed",
+        "bitnet_performance_claimed",
+        "full_metal_inference_claimed",
+        "mpsgraph_inference_claimed",
+        "neural_engine_execution_claimed",
+        "qk256_apple_claimed",
+        "macbook_evidence",
+    ] {
+        if receipt["mac_claim_boundary"][flag].as_bool() != Some(false)
+            || baseline["mac_claim_boundary"][flag].as_bool() != Some(false)
+        {
+            anyhow::bail!(
+                "{} cannot be compared to baseline {}: mac_claim_boundary.{flag} must remain false",
+                path.display(),
+                baseline_path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn ensure_benchmark_variance_comparable(path: &Path, receipt: &serde_json::Value) -> Result<()> {
+    let reasons = receipt["invalid_comparison_reasons"]
+        .as_array()
+        .map(|reasons| {
+            reasons
+                .iter()
+                .filter_map(|reason| reason.as_str().map(str::to_string))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let readiness = &receipt["comparison_readiness"];
+    let timing_disabled = readiness["can_compare_timing"].as_bool() == Some(false)
+        || readiness["status"].as_str() == Some("invalid_for_comparison");
+    if timing_disabled || !reasons.is_empty() {
+        let reason_text = if reasons.is_empty() {
+            "comparison_readiness.can_compare_timing=false".to_string()
+        } else {
+            reasons.join(", ")
+        };
+        anyhow::bail!(
+            "{} benchmark variance receipt is invalid for timing regression comparison: {reason_text}",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
 fn ensure_warm_session_regression_context_matches(
     path: &Path,
     receipt: &serde_json::Value,
@@ -15632,6 +16866,7 @@ fn compare_lower_is_worse(
     if baseline > 0.0 && observed < baseline * (1.0 - threshold_percent / 100.0) {
         warnings.push(RegressionWarning {
             profile_id: profile_id.to_string(),
+            category: regression_warning_category(field).to_string(),
             field: field.to_string(),
             baseline: round3(baseline),
             observed: round3(observed),
@@ -15652,12 +16887,36 @@ fn compare_higher_is_worse(
     if observed > baseline * (1.0 + threshold_percent / 100.0) {
         warnings.push(RegressionWarning {
             profile_id: profile_id.to_string(),
+            category: regression_warning_category(field).to_string(),
             field: field.to_string(),
             baseline: round3(baseline),
             observed: round3(observed),
             threshold_percent,
             direction: "higher_is_worse".to_string(),
         });
+    }
+}
+
+fn regression_warning_category(field: &str) -> &'static str {
+    if field.starts_with("memory.") || field.contains(".memory.") {
+        "memory"
+    } else if field.starts_with("speed.")
+        || field.starts_with("timing.")
+        || field.starts_with("throughput.")
+        || field.starts_with("metrics.speed.")
+        || field.contains(".timing.")
+        || field.contains(".throughput.")
+    {
+        "timing"
+    } else if field.starts_with("accuracy.")
+        || field.starts_with("quality_summary.")
+        || field.starts_with("scoring_summary.")
+        || field.starts_with("task_families.")
+        || field.starts_with("reference_comparison.")
+    {
+        "quality"
+    } else {
+        "other"
     }
 }
 
@@ -15756,6 +17015,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_larger_corpus_decision_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
         validate_slm_benchmark_v2_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_slm_benchmark_profile_timeout" {
+        validate_slm_benchmark_profile_timeout_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_benchmark_variance_v1" {
         validate_apple_m4_benchmark_variance_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_benchmark_calibration" {
@@ -18915,6 +20176,48 @@ fn validate_bitnet_benchmark_v1_receipt(
     require_non_empty_string_array_at(path, receipt, &["evidence", "warm_prompt_receipts"])?;
     require_non_empty_string_array_at(path, receipt, &["evidence", "operator_commands"])?;
 
+    let repeat = json_value_at(receipt, &["repeat"]);
+    if !repeat.is_null() {
+        let repeat_requested = require_u64_at(path, receipt, &["repeat", "requested"], true)?;
+        let repeat_completed = require_u64_at(path, receipt, &["repeat", "completed"], true)?;
+        let path_count = require_u64_at(path, receipt, &["repeat", "path_count"], true)?;
+        let sample_count = require_u64_at(path, receipt, &["repeat", "sample_count"], true)?;
+        require_non_empty_string_array_at(path, receipt, &["repeat", "child_summary_receipts"])?;
+        require_non_empty_string_array_at(path, receipt, &["evidence", "child_summary_receipts"])?;
+        if repeat_completed < 2 {
+            anyhow::bail!(
+                "{} BitNet benchmark repeat completed count must be at least 2",
+                path.display()
+            );
+        }
+        if repeat_requested != repeat_completed {
+            anyhow::bail!(
+                "{} BitNet benchmark repeat requested and completed counts must match",
+                path.display()
+            );
+        }
+        if path_count != 2 || sample_count != repeat_completed * path_count {
+            anyhow::bail!(
+                "{} BitNet benchmark repeat sample_count must equal completed paths",
+                path.display()
+            );
+        }
+        let child_receipts = json_value_at(receipt, &["repeat", "child_summary_receipts"])
+            .as_array()
+            .ok_or_else(|| {
+                anyhow!(
+                    "{} BitNet benchmark repeat child_summary_receipts must be an array",
+                    path.display()
+                )
+            })?;
+        if child_receipts.len() as u64 != repeat_completed {
+            anyhow::bail!(
+                "{} BitNet benchmark repeat child_summary_receipts length must equal completed repeats",
+                path.display()
+            );
+        }
+    }
+
     require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_benchmark"], true)?;
     require_bool_at(path, receipt, &["mac_claim_boundary", "one_shot_mac_ask"], true)?;
     require_bool_at(path, receipt, &["mac_claim_boundary", "fixed_warm_session"], true)?;
@@ -19144,6 +20447,7 @@ fn validate_slm_benchmark_v2_receipt(
     let mut generated_tokens_total = 0u64;
     let mut seen_profiles = std::collections::BTreeSet::new();
     let mut observed_profile_ids = Vec::with_capacity(profiles.len());
+    let mut has_invalid_profile = false;
     for profile in profiles {
         let profile_id = require_non_empty_string_at(path, profile, &["profile_id"])?;
         if !M4_SLM_BENCHMARK_V2_PROFILES.contains(&profile_id) {
@@ -19161,7 +20465,25 @@ fn validate_slm_benchmark_v2_receipt(
         observed_profile_ids.push(profile_id.to_string());
         require_non_empty_string_at(path, profile, &["receipt_path"])?;
         let prompt_count = require_u64_at(path, profile, &["prompt_count"], true)?;
-        let generated_tokens = require_u64_at(path, profile, &["generated_tokens"], true)?;
+        let generated_tokens = require_u64_at(path, profile, &["generated_tokens"], false)?;
+        if profile["status"].as_str() == Some("invalid_for_comparison") {
+            has_invalid_profile = true;
+            require_bool_at(path, profile, &["quality_passed"], false)?;
+            require_u64_exact(path, profile, &["generated_tokens"], 0)?;
+            require_non_empty_string_array_at(path, profile, &["invalid_comparison_reasons"])?;
+            require_positive_number_at(path, profile, &["timeout_boundary", "elapsed_ms"])?;
+            require_bool_at(path, profile, &["timeout_boundary", "reached"], true)?;
+            require_bool_at(path, profile, &["timeout_boundary", "enforced"], true)?;
+            prompt_count_total += prompt_count;
+            generated_tokens_total += generated_tokens;
+            continue;
+        }
+        if generated_tokens == 0 {
+            anyhow::bail!(
+                "{} SLM benchmark v2 profile {profile_id:?} generated_tokens must be greater than zero",
+                path.display()
+            );
+        }
         require_bool_at(path, profile, &["quality_passed"], true)?;
         require_bool_at(path, profile, &["model_loaded_once"], true)?;
         require_bool_at(path, profile, &["tokenizer_loaded_once"], true)?;
@@ -19181,6 +20503,21 @@ fn validate_slm_benchmark_v2_receipt(
 
         prompt_count_total += prompt_count;
         generated_tokens_total += generated_tokens;
+    }
+    if has_invalid_profile {
+        require_non_empty_string_array_at(path, receipt, &["invalid_comparison_reasons"])?;
+        require_exact_string_at(
+            path,
+            receipt,
+            &["comparison_readiness", "status"],
+            "invalid_for_comparison",
+        )?;
+        require_bool_at(path, receipt, &["comparison_readiness", "can_compare_timing"], false)?;
+        require_non_empty_string_array_at(
+            path,
+            receipt,
+            &["comparison_readiness", "invalid_comparison_reasons"],
+        )?;
     }
     if requires_explicit_contract {
         let profiles_required =
@@ -19222,6 +20559,82 @@ fn validate_slm_benchmark_v2_receipt(
     }
 
     Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
+}
+
+fn validate_slm_benchmark_profile_timeout_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "apple_m4_slm_benchmark_profile_timeout",
+    )?;
+    require_exact_string_at(path, receipt, &["status"], "invalid_for_comparison")?;
+    require_exact_string_at(path, receipt, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    require_exact_string_at(path, receipt, &["profile_set"], "slm-benchmark-v2")?;
+    let profile_id = require_non_empty_string_at(path, receipt, &["profile_id"])?;
+    if !M4_SLM_BENCHMARK_V2_PROFILES.contains(&profile_id) {
+        anyhow::bail!(
+            "{} benchmark timeout profile_id {profile_id:?} is not part of the v2 profile contract",
+            path.display()
+        );
+    }
+    require_non_empty_string_at(path, receipt, &["scenario"])?;
+    require_u64_at(path, receipt, &["requested_max_new_tokens"], true)?;
+    require_u64_at(path, receipt, &["prompt_count"], true)?;
+    require_u64_exact(path, receipt, &["generated_tokens"], 0)?;
+    require_u64_at(path, receipt, &["timeout_boundary", "configured_seconds"], true)?;
+    require_positive_number_at(path, receipt, &["timeout_boundary", "elapsed_ms"])?;
+    require_bool_at(path, receipt, &["timeout_boundary", "reached"], true)?;
+    require_bool_at(path, receipt, &["timeout_boundary", "enforced"], true)?;
+    require_non_empty_string_at(path, receipt, &["timeout_boundary", "behavior"])?;
+    require_non_empty_string_array_at(path, receipt, &["invalid_comparison_reasons"])?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["child_process", "mode"],
+        "slm-warm-session subprocess",
+    )?;
+    require_bool_at(path, receipt, &["child_process", "killed_on_timeout"], true)?;
+    require_non_empty_string_at(path, receipt, &["model_cache", "id"])?;
+    require_non_empty_string_at(path, receipt, &["model_cache", "sha256"])?;
+    require_non_empty_string_at(path, receipt, &["model_cache", "tokenizer_pre"])?;
+    require_non_empty_string_at(path, receipt, &["memory", "source"])?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "benchmark_profile_timeout"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "bounded_benchmark_profiles_only"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "final_variance_envelope"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "speedup_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_performance_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "neural_engine_execution_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "macbook_evidence"], false)?;
+
+    Ok((
+        receipt["prompt_count"].as_u64().map(|value| value as usize),
+        receipt["generated_tokens"].as_u64().map(|value| value as usize),
+    ))
 }
 
 fn validate_apple_m4_benchmark_variance_receipt(
@@ -19334,9 +20747,27 @@ fn validate_apple_m4_benchmark_variance_receipt(
     require_non_empty_string_at(path, receipt, &["variance_band", "advisory_vs_failure"])?;
     require_non_empty_string_at(path, receipt, &["outlier_handling", "method"])?;
     require_non_empty_string_at(path, receipt, &["outlier_handling", "reason"])?;
-    json_value_at(receipt, &["invalid_comparison_reasons"]).as_array().ok_or_else(|| {
-        anyhow!("{} benchmark variance invalid_comparison_reasons must be an array", path.display())
-    })?;
+    let invalid_comparison_reasons =
+        json_value_at(receipt, &["invalid_comparison_reasons"]).as_array().ok_or_else(|| {
+            anyhow!(
+                "{} benchmark variance invalid_comparison_reasons must be an array",
+                path.display()
+            )
+        })?;
+    if !invalid_comparison_reasons.is_empty() {
+        require_exact_string_at(
+            path,
+            receipt,
+            &["comparison_readiness", "status"],
+            "invalid_for_comparison",
+        )?;
+        require_bool_at(path, receipt, &["comparison_readiness", "can_compare_timing"], false)?;
+        require_non_empty_string_array_at(
+            path,
+            receipt,
+            &["comparison_readiness", "invalid_comparison_reasons"],
+        )?;
+    }
 
     require_non_empty_string_array_at(path, receipt, &["evidence", "child_summary_receipts"])?;
     let child_receipts = json_value_at(receipt, &["evidence", "child_summary_receipts"]);
@@ -20878,7 +22309,140 @@ fn validate_warm_session_receipt(
     if dense_quality_corpus {
         validate_dense_slm_quality_corpus_determinism(path, receipt, prompts)?;
     }
+    if !receipt["accuracy_comparison_profile"].is_null() {
+        validate_m3_accuracy_comparison_profile(path, receipt, expected_backend, prompts)?;
+    }
     Ok((Some(prompts.len()), Some(generated_total)))
+}
+
+fn validate_m3_accuracy_comparison_profile(
+    path: &Path,
+    receipt: &serde_json::Value,
+    expected_backend: &str,
+    prompts: &[serde_json::Value],
+) -> Result<()> {
+    if expected_backend != APPLE_M3_AIR_CPU_NEON {
+        anyhow::bail!(
+            "{} accuracy_comparison_profile is only valid for {APPLE_M3_AIR_CPU_NEON}",
+            path.display()
+        );
+    }
+    let profile = &receipt["accuracy_comparison_profile"];
+    require_exact_string_at(path, profile, &["work_item"], "M3MBA-022")?;
+    require_exact_string_at(path, profile, &["profile_set"], "accuracy")?;
+    require_exact_string_at(path, profile, &["device"], APPLE_M3_AIR_CPU_NEON)?;
+    require_exact_string_at(
+        path,
+        profile,
+        &["corpus", "artifact_kind"],
+        "apple_m4_slm_quality_corpus",
+    )?;
+    require_non_empty_string_at(path, profile, &["corpus", "path"])?;
+    let corpus_sha = require_non_empty_string_at(path, profile, &["corpus", "sha256"])?;
+    if !is_sha256_hex(corpus_sha) {
+        anyhow::bail!("{} accuracy corpus sha256 must be a SHA256 hex digest", path.display());
+    }
+    let case_count = require_u64_at(path, profile, &["corpus", "case_count"], true)?;
+    let repeat_runs = require_u64_at(path, profile, &["corpus", "repeat_runs"], true)?;
+    if case_count == 0 || repeat_runs < 2 {
+        anyhow::bail!(
+            "{} accuracy profile requires at least one case and repeated runs",
+            path.display()
+        );
+    }
+    let prompt_ids = profile["prompt_ids"].as_array().ok_or_else(|| {
+        anyhow!("{} accuracy_comparison_profile.prompt_ids must be an array", path.display())
+    })?;
+    if prompt_ids.len() != prompts.len() {
+        anyhow::bail!(
+            "{} accuracy prompt_ids length must match warm-session prompts",
+            path.display()
+        );
+    }
+    if prompt_ids.len() as u64 != case_count.saturating_mul(repeat_runs) {
+        anyhow::bail!(
+            "{} accuracy prompt_ids length must equal corpus.case_count * corpus.repeat_runs",
+            path.display()
+        );
+    }
+    let mut seen_case_ids = std::collections::BTreeSet::new();
+    for (index, prompt_id) in prompt_ids.iter().enumerate() {
+        let case_id = require_non_empty_string_at(path, prompt_id, &["case_id"])?;
+        seen_case_ids.insert(case_id.to_string());
+        if prompt_id["prompt_index"].as_u64().is_none()
+            || prompt_id["repeat_index"].as_u64().is_none()
+        {
+            anyhow::bail!(
+                "{} accuracy prompt_ids[{index}] must record prompt_index and repeat_index",
+                path.display()
+            );
+        }
+        require_bool_at(path, prompt_id, &["generated_token_ids_recorded"], true)?;
+        require_bool_at(path, prompt_id, &["decoded_text_recorded"], true)?;
+    }
+    if seen_case_ids.len() as u64 != case_count {
+        anyhow::bail!(
+            "{} accuracy corpus.case_count must match distinct prompt case IDs",
+            path.display()
+        );
+    }
+    for field in [
+        "case_id_required",
+        "prompt_index_required",
+        "repeat_index_required",
+        "generated_token_ids_required",
+        "decoded_text_required",
+        "tokenizer_authority_required",
+        "fallback_status_required",
+    ] {
+        require_bool_at(path, profile, &["prompt_identity_contract", field], true)?;
+    }
+    require_bool_at(path, profile, &["scoring_policy", "mechanical_scoring_only"], true)?;
+    require_bool_at(path, profile, &["scoring_policy", "llm_judge_required"], false)?;
+    require_bool_at(path, profile, &["scoring_policy", "broad_answer_quality_claim"], false)?;
+    require_exact_string_at(
+        path,
+        profile,
+        &["comparison_readiness", "status"],
+        "m3_accuracy_profile_ready",
+    )?;
+    require_bool_at(
+        path,
+        profile,
+        &["comparison_readiness", "comparison_grade_claim_made"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        profile,
+        &["comparison_readiness", "m4_mac_mini_comparable_without_fresh_matching_receipt"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        profile,
+        &["comparison_readiness", "slm_cpu_comparable_without_fresh_matching_receipt"],
+        false,
+    )?;
+    require_non_empty_string_array_at(
+        path,
+        profile,
+        &["comparison_readiness", "non_comparable_evidence"],
+    )?;
+    for field in [
+        "bitnet_quality_claimed",
+        "m4_performance_claimed",
+        "slm_cpu_equivalence_claimed",
+        "broad_quality_claim",
+        "broad_performance_claim",
+        "full_metal_inference_claimed",
+        "mpsgraph_inference_claimed",
+        "neural_engine_execution_claimed",
+        "qk256_apple_claimed",
+    ] {
+        require_bool_at(path, profile, &["claim_boundary", field], false)?;
+    }
+    Ok(())
 }
 
 fn validate_dense_slm_quality_corpus_header(
@@ -21381,6 +22945,328 @@ mod tests {
         }
     }
 
+    fn test_valid_benchmark_profile_summary(profile_id: &str) -> serde_json::Value {
+        serde_json::json!({
+            "profile_id": profile_id,
+            "receipt_path": format!("{profile_id}.json"),
+            "scenario": "short_prompt",
+            "requested_max_new_tokens": 16,
+            "prompt_count": 1,
+            "target_context_tokens": serde_json::Value::Null,
+            "generated_tokens": 2,
+            "quality_passed": true,
+            "model_loaded_once": true,
+            "tokenizer_loaded_once": true,
+            "reuse_scope": "resident_session",
+            "prompt_tokens": benchmark_stat_json(&[5.0]),
+            "output_tokens": benchmark_stat_json(&[2.0]),
+            "timing": {
+                "cold_load_ms": benchmark_stat_json(&[3.0]),
+                "tokenizer_load_ms": benchmark_stat_json(&[2.0]),
+                "prompt_tokenize_ms": benchmark_stat_json(&[1.0]),
+                "prefill_ms": benchmark_stat_json(&[4.0]),
+                "time_to_first_token_ms": benchmark_stat_json(&[10.0]),
+                "decode_total_ms": benchmark_stat_json(&[5.0]),
+                "sampling_ms_per_token": benchmark_stat_json(&[0.5]),
+                "total_wall_ms": benchmark_stat_json(&[15.0]),
+            },
+            "throughput": {
+                "input_tokens_per_second": benchmark_stat_json(&[1000.0]),
+                "output_tokens_per_second": benchmark_stat_json(&[133.333]),
+                "decode_tokens_per_second": benchmark_stat_json(&[400.0]),
+            },
+            "memory": {
+                "peak_memory_mb": benchmark_stat_json(&[128.0]),
+                "memory_drift_mb": benchmark_stat_json(&[0.0]),
+                "source": "test fixture",
+            },
+            "claim_boundary": {
+                "scope": "test fixture",
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+            },
+            "allocation_audit": serde_json::Value::Null,
+        })
+    }
+
+    fn test_benchmark_profile_summary_with_timing_memory(
+        profile_id: &str,
+        ttft_ms: f64,
+        peak_memory_mb: f64,
+    ) -> serde_json::Value {
+        let mut profile = test_valid_benchmark_profile_summary(profile_id);
+        profile["timing"]["time_to_first_token_ms"] = benchmark_stat_json(&[ttft_ms]);
+        profile["memory"]["peak_memory_mb"] = benchmark_stat_json(&[peak_memory_mb]);
+        profile
+    }
+
+    fn test_timeout_profile_summary(
+        dir: &Path,
+        model: &VerifiedCachedModel,
+    ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+        let spec = benchmark_profile_spec(MacBenchmarkProfile::Context4k);
+        let receipt_path = dir.join("context_4k-timeout.json");
+        write_benchmark_profile_timeout_receipt(
+            &receipt_path,
+            model,
+            APPLE_M4_CPU_NEON,
+            &spec,
+            Duration::from_secs(benchmark_calibration_profile_timeout_seconds("context_4k")),
+            720_250.0,
+            Some(4096.0),
+            None,
+        )?;
+        let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt_path)?)?;
+        Ok(benchmark_profile_summary(&spec, &receipt_path, &receipt, Some(128.0), Some(4096.0))?)
+    }
+
+    fn test_benchmark_v2_receipt(
+        model: &VerifiedCachedModel,
+        path: PathBuf,
+        profiles: Vec<serde_json::Value>,
+    ) -> serde_json::Value {
+        let mut samples = BenchmarkMetricSamples::default();
+        for profile in &profiles {
+            samples.extend_from_profile(profile);
+        }
+        let invalid_comparison_reasons = benchmark_profile_invalid_comparison_reasons(&profiles);
+        let comparison_status = if invalid_comparison_reasons.is_empty() {
+            "comparable"
+        } else {
+            "invalid_for_comparison"
+        };
+        let prompt_count =
+            profiles.iter().filter_map(|profile| profile["prompt_count"].as_u64()).sum::<u64>();
+        let generated_tokens =
+            profiles.iter().filter_map(|profile| profile["generated_tokens"].as_u64()).sum::<u64>();
+        let profiles_required = profiles
+            .iter()
+            .filter_map(|profile| profile["profile_id"].as_str().map(str::to_string))
+            .collect::<Vec<_>>();
+        serde_json::json!({
+            "schema_version": "1.1.0",
+            "artifact_kind": "apple_m4_slm_benchmark_v2",
+            "timestamp": "2026-05-19T10:00:00Z",
+            "artifact_path": path.display().to_string(),
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "fallback_reason": serde_json::Value::Null,
+            "profile_set": "slm-benchmark-v2",
+            "profiles_required": profiles_required,
+            "profiles": profiles,
+            "prompt_count": prompt_count,
+            "generated_tokens": generated_tokens,
+            "speed": samples.speed_json(),
+            "memory": samples.memory_json(),
+            "build": {
+                "profile": "release",
+                "release_mode": true,
+            },
+            "model_cache": test_model_cache_json(model),
+            "benchmark_contract": test_benchmark_contract_json(),
+            "comparison_readiness": {
+                "status": comparison_status,
+                "can_compare_timing": invalid_comparison_reasons.is_empty(),
+                "invalid_comparison_reasons": invalid_comparison_reasons.clone(),
+            },
+            "invalid_comparison_reasons": invalid_comparison_reasons,
+            "evidence": {
+                "profile_receipts": ["short_prompt_16_out.json", "context_4k-timeout.json"],
+                "generated_text_recorded": true,
+                "generated_token_ids_recorded": true,
+                "operator_command": "mac benchmark",
+            },
+            "mac_claim_boundary": test_dense_benchmark_claim_boundary_json(false),
+            "speedup_claim": false,
+        })
+    }
+
+    fn test_benchmark_variance_receipt(
+        model: &VerifiedCachedModel,
+        path: &Path,
+        child_summaries: &[serde_json::Value],
+        child_summary_receipts: Vec<String>,
+        invalid_comparison_reasons: Vec<String>,
+    ) -> serde_json::Value {
+        let comparison_status = if invalid_comparison_reasons.is_empty() {
+            "comparable"
+        } else {
+            "invalid_for_comparison"
+        };
+        let prompt_count = child_summaries
+            .iter()
+            .filter_map(|summary| summary["prompt_count"].as_u64())
+            .sum::<u64>();
+        let generated_tokens = child_summaries
+            .iter()
+            .filter_map(|summary| summary["generated_tokens"].as_u64())
+            .sum::<u64>();
+        serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "apple_m4_benchmark_variance_v1",
+            "timestamp": "2026-05-19T10:00:00Z",
+            "artifact_path": path.display().to_string(),
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "fallback_reason": serde_json::Value::Null,
+            "profile_set": "slm-benchmark-v2",
+            "profiles_required": child_summaries[0]["profiles_required"].clone(),
+            "prompt_count": prompt_count,
+            "generated_tokens": generated_tokens,
+            "repeat": {
+                "requested": child_summaries.len(),
+                "completed": child_summaries.len(),
+                "profile_count": 2,
+                "sample_count": child_summaries.len() * 2,
+            },
+            "metrics": {
+                "speed": benchmark_variance_metric_json(
+                    child_summaries,
+                    "speed",
+                    M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS,
+                ),
+                "memory": benchmark_variance_metric_json(
+                    child_summaries,
+                    "memory",
+                    &["peak_memory_mb", "memory_drift_mb"],
+                ),
+            },
+            "variance_band": {
+                "method": "test fixture",
+                "reported_stats": ["count", "p50", "p90", "p99", "min", "max", "samples"],
+                "threshold_derivation": "test fixture",
+                "advisory_vs_failure": "test fixture",
+            },
+            "outlier_handling": {
+                "method": "none",
+                "reason": "test fixture",
+            },
+            "comparison_readiness": {
+                "status": comparison_status,
+                "can_compare_timing": invalid_comparison_reasons.is_empty(),
+                "invalid_comparison_reasons": invalid_comparison_reasons.clone(),
+            },
+            "invalid_comparison_reasons": invalid_comparison_reasons,
+            "build": {
+                "profile": "release",
+                "release_mode": true,
+            },
+            "model_cache": test_model_cache_json(model),
+            "evidence": {
+                "child_summary_receipts": child_summary_receipts,
+                "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+                "generated_text_recorded": true,
+                "generated_token_ids_recorded": true,
+                "operator_command": "mac benchmark --repeat",
+            },
+            "mac_claim_boundary": test_dense_benchmark_claim_boundary_json(true),
+            "speedup_claim": false,
+        })
+    }
+
+    fn write_test_benchmark_variance_receipt(
+        dir: &Path,
+        model: &VerifiedCachedModel,
+        name: &str,
+        ttft_ms: f64,
+        peak_memory_mb: f64,
+        invalid_comparison_reasons: Vec<String>,
+    ) -> Result<PathBuf, Box<dyn std::error::Error>> {
+        let mut child_summaries = Vec::new();
+        let mut child_paths = Vec::new();
+        for index in 1..=2 {
+            let child_path = dir.join(format!("{name}-run-{index:02}.json"));
+            let child = test_benchmark_v2_receipt(
+                model,
+                child_path.clone(),
+                vec![
+                    test_benchmark_profile_summary_with_timing_memory(
+                        "short_prompt_16_out",
+                        ttft_ms,
+                        peak_memory_mb,
+                    ),
+                    test_benchmark_profile_summary_with_timing_memory(
+                        "short_prompt_64_out",
+                        ttft_ms,
+                        peak_memory_mb,
+                    ),
+                ],
+            );
+            std::fs::write(&child_path, serde_json::to_vec_pretty(&child)?)?;
+            child_paths.push(child_path);
+            child_summaries.push(child);
+        }
+
+        let parent_path = dir.join(format!("{name}.json"));
+        let child_summary_receipts =
+            child_paths.iter().map(|path| path.display().to_string()).collect::<Vec<_>>();
+        let parent = test_benchmark_variance_receipt(
+            model,
+            &parent_path,
+            &child_summaries,
+            child_summary_receipts,
+            invalid_comparison_reasons,
+        );
+        std::fs::write(&parent_path, serde_json::to_vec_pretty(&parent)?)?;
+        Ok(parent_path)
+    }
+
+    fn test_model_cache_json(model: &VerifiedCachedModel) -> serde_json::Value {
+        serde_json::json!({
+            "id": model.id,
+            "display_name": model.display_name,
+            "cache_root": model.cache_root,
+            "path": model.path,
+            "sha256": model.sha256,
+            "bytes": model.bytes,
+            "architecture": model.architecture,
+            "quantization": model.quantization,
+            "tokenizer_model": model.tokenizer_model,
+            "tokenizer_pre": model.tokenizer_pre,
+            "chat_template": model.chat_template,
+            "support_note": model.support_note,
+        })
+    }
+
+    fn test_benchmark_contract_json() -> serde_json::Value {
+        serde_json::json!({
+            "contract_version": "1.1.0",
+            "scope": "Apple M4 Mac mini dense SLM benchmark v2",
+            "profile_execution_model": "one resident warm-session run per named profile",
+            "supported_profiles": M4_SLM_BENCHMARK_V2_PROFILES,
+            "required_metrics": {
+                "timing": M4_SLM_BENCHMARK_V2_TIMING_METRICS,
+                "throughput": M4_SLM_BENCHMARK_V2_THROUGHPUT_METRICS,
+                "memory": M4_SLM_BENCHMARK_V2_MEMORY_METRICS,
+                "aggregate_speed": M4_SLM_BENCHMARK_V2_AGGREGATE_SPEED_METRICS,
+            },
+        })
+    }
+
+    fn test_dense_benchmark_claim_boundary_json(variance: bool) -> serde_json::Value {
+        serde_json::json!({
+            "dense_slm_only": true,
+            "timing_profile": !variance,
+            "variance_harness_only": variance,
+            "bounded_benchmark_profiles_only": true,
+            "final_variance_envelope": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "bitnet_quality_claimed": false,
+            "bitnet_performance_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false,
+        })
+    }
+
     fn test_state() -> Result<(tempfile::TempDir, MacServeState), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
         let receipt_dir = temp.path().join("receipts");
@@ -21447,6 +23333,249 @@ mod tests {
     }
 
     #[test]
+    fn benchmark_profile_child_args_preserve_warm_session_contract()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let spec = benchmark_profile_spec(MacBenchmarkProfile::ShortPrompt16Out);
+        let receipt_path = temp.path().join("short_prompt_16_out.json");
+        let request = BenchmarkProfileRun {
+            requested_backend: APPLE_M4_CPU_NEON,
+            model: &model,
+            spec: &spec,
+            threads: 2,
+            allocation_audit: true,
+            progress: true,
+            quiet: false,
+            receipt_path: &receipt_path,
+        };
+
+        let args = benchmark_profile_warm_session_args(&request)
+            .into_iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        let receipt_path_text = receipt_path.display().to_string();
+
+        assert_eq!(args.first().map(String::as_str), Some("slm-warm-session"));
+        assert!(args.windows(2).any(|pair| pair == ["--device", APPLE_M4_CPU_NEON]));
+        assert!(args.windows(2).any(|pair| pair == ["--prompt-template", QWEN_PROMPT_TEMPLATE]));
+        assert!(args.windows(2).any(|pair| pair == ["--threads", "2"]));
+        assert!(
+            args.windows(2).any(|pair| pair[0] == "--json-out" && pair[1] == receipt_path_text)
+        );
+        assert!(args.contains(&"--strict-loader".to_string()));
+        assert!(args.contains(&"--strict-tokenizer".to_string()));
+        assert!(args.contains(&"--greedy".to_string()));
+        assert!(args.contains(&"--deterministic".to_string()));
+        assert!(args.contains(&"--fail-on-quality".to_string()));
+        assert!(args.contains(&"--allocation-audit".to_string()));
+        assert!(args.contains(&"--progress".to_string()));
+        assert_eq!(args.iter().filter(|arg| arg.as_str() == "--prompt").count(), 5);
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_accepts_benchmark_profile_timeout()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let spec = benchmark_profile_spec(MacBenchmarkProfile::Context4k);
+        let receipt_path = temp.path().join("context_4k-timeout.json");
+
+        write_benchmark_profile_timeout_receipt(
+            &receipt_path,
+            &model,
+            APPLE_M4_CPU_NEON,
+            &spec,
+            Duration::from_secs(benchmark_calibration_profile_timeout_seconds("context_4k")),
+            720_250.0,
+            Some(4096.0),
+            None,
+        )?;
+
+        let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt_path)?)?;
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_slm_benchmark_profile_timeout");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(3));
+        assert_eq!(summary.generated_tokens, Some(0));
+        assert_eq!(receipt["status"].as_str(), Some("invalid_for_comparison"));
+        assert_eq!(receipt["timeout_boundary"]["enforced"].as_bool(), Some(true));
+        Ok(())
+    }
+
+    #[test]
+    fn slm_benchmark_v2_accepts_timeout_profile_without_timing_sample()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let timeout_profile = test_timeout_profile_summary(temp.path(), &model)?;
+        let valid_profile = test_valid_benchmark_profile_summary("short_prompt_16_out");
+        let receipt = test_benchmark_v2_receipt(
+            &model,
+            temp.path().join("run-01.json"),
+            vec![valid_profile, timeout_profile],
+        );
+
+        let summary = validate_mac_receipt_value(Path::new("run-01.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_slm_benchmark_v2");
+        assert_eq!(summary.prompt_count, Some(4));
+        assert_eq!(summary.generated_tokens, Some(2));
+        assert_eq!(
+            receipt["comparison_readiness"]["status"].as_str(),
+            Some("invalid_for_comparison")
+        );
+        assert_eq!(receipt["speed"]["ttft_ms_p50"].as_f64(), Some(10.0));
+        Ok(())
+    }
+
+    #[test]
+    fn benchmark_variance_accepts_timeout_aware_child_summaries()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let child_paths = [temp.path().join("run-01.json"), temp.path().join("run-02.json")];
+        let mut child_summaries = Vec::new();
+        for child_path in &child_paths {
+            let timeout_profile = test_timeout_profile_summary(temp.path(), &model)?;
+            let valid_profile = test_valid_benchmark_profile_summary("short_prompt_16_out");
+            let child = test_benchmark_v2_receipt(
+                &model,
+                child_path.clone(),
+                vec![valid_profile, timeout_profile],
+            );
+            std::fs::write(&child_path, serde_json::to_vec_pretty(&child)?)?;
+            child_summaries.push(child);
+        }
+        let parent_path = temp.path().join("variance.json");
+        let child_summary_receipts =
+            child_paths.iter().map(|path| path.display().to_string()).collect::<Vec<_>>();
+        let invalid_comparison_reasons =
+            benchmark_profile_invalid_comparison_reasons(&child_summaries);
+        let variance = test_benchmark_variance_receipt(
+            &model,
+            &parent_path,
+            &child_summaries,
+            child_summary_receipts,
+            invalid_comparison_reasons,
+        );
+
+        let summary = validate_mac_receipt_value(&parent_path, &variance)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_benchmark_variance_v1");
+        assert_eq!(summary.prompt_count, Some(8));
+        assert_eq!(summary.generated_tokens, Some(4));
+        assert_eq!(
+            variance["comparison_readiness"]["status"].as_str(),
+            Some("invalid_for_comparison")
+        );
+        assert_eq!(variance["metrics"]["speed"]["ttft_ms_p50"]["count"].as_u64(), Some(2));
+        Ok(())
+    }
+
+    #[test]
+    fn benchmark_variance_regression_reports_timing_and_memory_separately()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let baseline_path = write_test_benchmark_variance_receipt(
+            temp.path(),
+            &model,
+            "baseline",
+            10.0,
+            128.0,
+            Vec::new(),
+        )?;
+        let current_path = write_test_benchmark_variance_receipt(
+            temp.path(),
+            &model,
+            "current",
+            20.0,
+            160.0,
+            Vec::new(),
+        )?;
+
+        let baseline = load_regression_baseline(&baseline_path)?;
+        let current: serde_json::Value = serde_json::from_slice(&std::fs::read(&current_path)?)?;
+        validate_mac_receipt_value(&current_path, &current)?;
+        let regression = compare_mac_regression(&current_path, &current, &baseline)?;
+
+        assert!(regression.warning_count > 0);
+        assert!(regression.warnings.iter().any(|warning| {
+            warning.category == "timing"
+                && warning.profile_id == "benchmark_variance:timing"
+                && warning.field.starts_with("metrics.speed.ttft_ms_")
+        }));
+        assert!(regression.warnings.iter().any(|warning| {
+            warning.category == "memory"
+                && warning.profile_id == "benchmark_variance:memory"
+                && warning.field.starts_with("metrics.memory.peak_memory_mb_")
+        }));
+        assert!(!regression.warnings.iter().any(|warning| warning.category == "quality"));
+        Ok(())
+    }
+
+    #[test]
+    fn benchmark_variance_regression_rejects_identity_mismatch()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let baseline_path = write_test_benchmark_variance_receipt(
+            temp.path(),
+            &model,
+            "baseline",
+            10.0,
+            128.0,
+            Vec::new(),
+        )?;
+        let baseline = load_regression_baseline(&baseline_path)?;
+        let mut current = baseline.receipt.clone();
+        current["model_cache"]["id"] = serde_json::json!("qwen2.5-other");
+
+        let err = compare_mac_regression(Path::new("current.json"), &current, &baseline)
+            .expect_err("mismatched benchmark variance identity should not compare")
+            .to_string();
+
+        assert!(err.contains("model_cache.id mismatch"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn benchmark_variance_regression_rejects_invalid_timing_comparison()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let model = test_verified_model(temp.path());
+        let baseline_path = write_test_benchmark_variance_receipt(
+            temp.path(),
+            &model,
+            "baseline",
+            10.0,
+            128.0,
+            Vec::new(),
+        )?;
+        let baseline = load_regression_baseline(&baseline_path)?;
+        let mut current = baseline.receipt.clone();
+        current["comparison_readiness"] = serde_json::json!({
+            "status": "invalid_for_comparison",
+            "can_compare_timing": false,
+            "invalid_comparison_reasons": ["profile_timeout_exceeded:context_4k:720s"],
+        });
+        current["invalid_comparison_reasons"] =
+            serde_json::json!(["profile_timeout_exceeded:context_4k:720s"]);
+
+        let err = compare_mac_regression(Path::new("current.json"), &current, &baseline)
+            .expect_err("invalid benchmark variance timing should not compare")
+            .to_string();
+
+        assert!(err.contains("invalid for timing regression comparison"), "got: {err}");
+        assert!(err.contains("profile_timeout_exceeded:context_4k:720s"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
     fn mac_receipts_check_accepts_m3_warm_session_prompt_backend()
     -> Result<(), Box<dyn std::error::Error>> {
         let receipt = test_m3_warm_session_receipt();
@@ -21491,6 +23620,21 @@ mod tests {
         assert_eq!(summary.selected_backend, APPLE_M3_AIR_CPU_NEON);
         assert_eq!(summary.prompt_count, Some(3));
         assert_eq!(summary.generated_tokens, Some(112));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_accepts_apple_m3_accuracy_comparison_profile()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let receipt = test_m3_accuracy_comparison_profile_receipt();
+
+        let summary = validate_mac_receipt_value(Path::new("m3-accuracy.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "slm_apple_m3_air_warm_session");
+        assert_eq!(summary.requested_backend, APPLE_M3_AIR_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M3_AIR_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(2));
+        assert_eq!(summary.generated_tokens, Some(4));
         Ok(())
     }
 
@@ -21760,6 +23904,34 @@ mod tests {
         assert_eq!(summary.artifact_kind, "bitnet_apple_m4_benchmark_v1");
         assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
         assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(4));
+        assert_eq!(summary.generated_tokens, Some(8));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_accepts_bitnet_benchmark_v1_repeat()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut receipt = test_bitnet_benchmark_v1_receipt();
+        receipt["repeat"] = serde_json::json!({
+            "requested": 2,
+            "completed": 2,
+            "path_count": 2,
+            "sample_count": 4,
+            "child_summary_receipts": [
+                "summary-runs/run-01/summary.json",
+                "summary-runs/run-02/summary.json"
+            ]
+        });
+        receipt["evidence"]["child_summary_receipts"] = serde_json::json!([
+            "summary-runs/run-01/summary.json",
+            "summary-runs/run-02/summary.json"
+        ]);
+
+        let summary =
+            validate_mac_receipt_value(Path::new("bitnet-benchmark-repeat.json"), &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "bitnet_apple_m4_benchmark_v1");
         assert_eq!(summary.prompt_count, Some(4));
         assert_eq!(summary.generated_tokens, Some(8));
         Ok(())
@@ -22306,6 +24478,129 @@ mod tests {
                     }
                 }
             ]
+        })
+    }
+
+    fn test_m3_accuracy_comparison_profile_receipt() -> serde_json::Value {
+        let prompt = |repeat_index: u64| {
+            serde_json::json!({
+                "case_id": "math_2_plus_2",
+                "prompt_index": 0,
+                "repeat_index": repeat_index,
+                "backend": {
+                    "requested_backend": APPLE_M3_AIR_CPU_NEON,
+                    "selected_backend": APPLE_M3_AIR_CPU_NEON,
+                    "runtime_api": "cpu",
+                    "fallback_used": false
+                },
+                "text": "4",
+                "generated_tokens": 2,
+                "generated_token_ids": [1, 2],
+                "quality": {
+                    "passed": true,
+                    "valid_utf8": true,
+                    "non_empty": true,
+                    "non_degenerate": true,
+                    "failed_rules": [],
+                    "distinct_generated_tokens": 2
+                }
+            })
+        };
+        serde_json::json!({
+            "artifact_kind": "slm_apple_m3_air_warm_session",
+            "requested_backend": APPLE_M3_AIR_CPU_NEON,
+            "selected_backend": APPLE_M3_AIR_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "backend": {
+                "requested_backend": APPLE_M3_AIR_CPU_NEON,
+                "selected_backend": APPLE_M3_AIR_CPU_NEON,
+                "runtime_api": "cpu",
+                "fallback_used": false
+            },
+            "session": {
+                "model_loaded_once": true,
+                "tokenizer_loaded_once": true
+            },
+            "corpus": {
+                "artifact_kind": "test_warm_session"
+            },
+            "quality_summary": {
+                "passed": true
+            },
+            "prompts": [
+                prompt(0),
+                prompt(1)
+            ],
+            "accuracy_comparison_profile": {
+                "work_item": "M3MBA-022",
+                "profile_set": "accuracy",
+                "device": APPLE_M3_AIR_CPU_NEON,
+                "corpus": {
+                    "path": "ci/quality/apple-m4-slm-quality-corpus.yaml",
+                    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "name": "apple-m4-slm-quality-determinism-v2",
+                    "artifact_kind": "apple_m4_slm_quality_corpus",
+                    "case_count": 1,
+                    "repeat_runs": 2,
+                    "max_new_tokens": 32
+                },
+                "prompt_ids": [
+                    {
+                        "case_id": "math_2_plus_2",
+                        "prompt_index": 0,
+                        "repeat_index": 0,
+                        "generated_token_ids_recorded": true,
+                        "decoded_text_recorded": true
+                    },
+                    {
+                        "case_id": "math_2_plus_2",
+                        "prompt_index": 0,
+                        "repeat_index": 1,
+                        "generated_token_ids_recorded": true,
+                        "decoded_text_recorded": true
+                    }
+                ],
+                "prompt_identity_contract": {
+                    "case_id_required": true,
+                    "prompt_index_required": true,
+                    "repeat_index_required": true,
+                    "generated_token_ids_required": true,
+                    "decoded_text_required": true,
+                    "tokenizer_authority_required": true,
+                    "fallback_status_required": true
+                },
+                "scoring_policy": {
+                    "source": "ci/quality/apple-m4-slm-quality-corpus.yaml gate rules",
+                    "mechanical_scoring_only": true,
+                    "llm_judge_required": false,
+                    "accepted_gate_kinds": ["contains_any", "starts_with_any"],
+                    "broad_answer_quality_claim": false
+                },
+                "comparison_readiness": {
+                    "status": "m3_accuracy_profile_ready",
+                    "comparison_grade_claim_made": false,
+                    "m3_air_dense_slm_receipt": true,
+                    "m4_mac_mini_comparable_without_fresh_matching_receipt": false,
+                    "slm_cpu_comparable_without_fresh_matching_receipt": false,
+                    "non_comparable_evidence": [
+                        "M4 Mac mini receipts use a different machine identity.",
+                        "SLM CPU receipts use a different hardware/backend context."
+                    ]
+                },
+                "claim_boundary": {
+                    "dense_slm_accuracy_profile": true,
+                    "bitnet_quality_claimed": false,
+                    "m4_performance_claimed": false,
+                    "slm_cpu_equivalence_claimed": false,
+                    "broad_quality_claim": false,
+                    "broad_performance_claim": false,
+                    "full_metal_inference_claimed": false,
+                    "mpsgraph_inference_claimed": false,
+                    "neural_engine_execution_claimed": false,
+                    "qk256_apple_claimed": false
+                }
+            }
         })
     }
 

@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T09:10:00Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-004"
+pr = 6049
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-004-post-bitnet-intake"
+head_sha = "aa2a375eff5bcf20191ac3599d82406f73307753"
+actor = "codex"
+summary = "Opened LNL258V-GOAL-AUDIT-004 to refresh the no-inference Lunar Lake goal audit after appliance ask and BitNet intake updates."
+
+notes = [
+  "PR #6049 refreshes the excellence audit and goal artifact checklist after OP-013, ASK-006, ASK-007, and BITNET-INTAKE-003.",
+  "The refreshed audit records ask_normal/ask_short auto GPU ask receipts and pending A770 #5064 semantic-intake watchpoint status.",
+  "The PR keeps excellent support marked not complete because LNL258V-POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence.",
+  "The PR preserves no new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, stale-BitNet-evidence, or BitNet QK256/I2_S behavior-change claims.",
+]

@@ -13,7 +13,9 @@ pub mod runtimes;
 pub use apple_receipts::{
     APPLE_M3_AIR_MACHINE_ID, APPLE_M3_AIR_METAL_BACKEND, APPLE_M3_AIR_MPSGRAPH_BACKEND,
     APPLE_VISIBILITY_PREFLIGHT_KIND, AppleBackendReceipt, AppleBackendVisibilityPreflight,
-    AppleReceiptError, AppleResolvedDevice, AppleRuntimeVisibility, AppleVisibilityClaimBoundary,
+    AppleM3AirHostProfileContract, AppleM3AirProofLabel, AppleM3AirStoragePolicy,
+    AppleM3AirUnsupportedClaim, AppleReceiptError, AppleResolvedDevice, AppleRuntimeVisibility,
+    AppleVisibilityClaimBoundary,
 };
 
 #[cfg(feature = "metal")]
@@ -39,8 +41,11 @@ pub use apple_mpsgraph::{
 
 pub mod intel_arc;
 pub use intel_arc::{
-    IntelArcCapabilities, IntelArcTier, detect_intel_arc, detect_intel_arc_by_pci_id,
-    is_arc_alchemist,
+    INTEL_ARC_A770_OPENCL_BACKEND, INTEL_ARC_A770_PCI_DEVICE_ID,
+    INTEL_ARC_A770_PROOF_STAGE_RUNTIME_DETECTED, INTEL_ARC_A770_REQUESTED_BACKEND,
+    IntelArcA770RuntimeProbe, IntelArcCapabilities, IntelArcTier, detect_intel_arc,
+    detect_intel_arc_by_pci_id, is_arc_alchemist, probe_intel_arc_a770_runtime,
+    probe_intel_arc_a770_runtime_from_probes,
 };
 
 pub mod nvidia_cuda;

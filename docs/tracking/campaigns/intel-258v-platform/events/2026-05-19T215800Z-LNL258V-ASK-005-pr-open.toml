@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T21:58:00Z"
+event = "pr_open"
+item = "LNL258V-ASK-005"
+pr = 5920
+branch = "codex/lunar-lake/LNL258V-ASK-005-auto-npu-warm-resident"
+head_sha = "3620271f6bb47b62607691691e581701ece98979"
+actor = "codex"
+summary = "Opened LNL258V-ASK-005 to index a live auto warm_resident ask receipt for the profile-promoted OpenVINO NPU route."
+
+notes = [
+  "PR #5920 records a bounded auto warm_resident ask selecting dense_slm_openvino_npu_candidate with selected_backend=openvino-npu, runtime_api=openvino_genai, answer_gate_passed=true, and fallback_used=false.",
+  "Strict regression v2 now indexes the warm_resident auto ask receipt and carries it into the operator comparison receipt.",
+  "No speedup, power-advantage, native NPU, acceleration, broad quality, full BitNet accelerator, or BitNet QK256/I2_S behavior claim is added.",
+]

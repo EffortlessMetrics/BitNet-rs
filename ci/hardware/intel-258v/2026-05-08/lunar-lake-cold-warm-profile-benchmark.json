@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_cold_warm_profile_benchmark",
   "proof_stage": "profile_timing_qualification_no_promotion_change",
-  "created_utc": "2026-05-19T20:55:00Z",
+  "created_utc": "2026-05-20T03:25:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -21,8 +21,26 @@
           "route_id": "dense_slm_default_cpu",
           "route_status": "promoted",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
+          "model_identity": {
+            "identity_source": "dense_slm_gguf_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "gguf",
+            "model_artifact": "qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+            "repo_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+            "quantization": "Q8_0",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -88,8 +106,28 @@
           "route_id": "dense_slm_openvino_gpu_candidate",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -173,8 +211,28 @@
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -276,8 +334,28 @@
           "route_id": "dense_slm_openvino_gpu_candidate",
           "route_status": "promoted",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -359,8 +437,26 @@
           "route_id": "dense_slm_default_cpu",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
+          "model_identity": {
+            "identity_source": "dense_slm_gguf_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "gguf",
+            "model_artifact": "qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+            "repo_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+            "quantization": "Q8_0",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -445,8 +541,28 @@
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -548,8 +664,28 @@
           "route_id": "dense_slm_openvino_gpu_candidate",
           "route_status": "promoted",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -631,8 +767,26 @@
           "route_id": "dense_slm_default_cpu",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
+          "model_identity": {
+            "identity_source": "dense_slm_gguf_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "gguf",
+            "model_artifact": "qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+            "repo_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+            "quantization": "Q8_0",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -717,8 +871,28 @@
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -820,8 +994,28 @@
           "route_id": "dense_slm_openvino_gpu_candidate",
           "route_status": "promoted",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -849,10 +1043,10 @@
               "pipeline_construct_and_generation_wall_time",
               "direct_openvino_generated_token_ids",
               "profile_timing_from_openvino_profile_run_case_prefill_heavy_route_policy_long_context",
-              "corpus_v2_profile_regression_evidence_indexed"
+              "corpus_v2_profile_regression_evidence_indexed",
+              "benchmark_qualified_latency_advantage"
             ],
             "known_gaps": [
-              "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
             ]
           },
@@ -871,16 +1065,13 @@
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
             "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 27986.539,
+            "baseline_total_response_ms": 1373681.117,
             "route_total_response_ms": 6161.384100015741,
-            "route_to_baseline_total_response_ratio": 0.2201552717903325,
+            "route_to_baseline_total_response_ratio": 0.004485308871007608,
             "observed_total_response_lower_than_baseline": true,
-            "benchmark_qualified": false,
-            "qualification_status": "diagnostic_only_not_benchmark_qualified",
-            "qualification_blockers": [
-              "baseline route dense_slm_default_cpu is not benchmark-reference-ready for profile prefill_heavy",
-              "benchmark-qualified advantage is false; comparison is diagnostic only"
-            ],
+            "benchmark_qualified": true,
+            "qualification_status": "benchmark_qualified",
+            "qualification_blockers": [],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy",
@@ -897,19 +1088,36 @@
             ]
           },
           "critical_timing_present": true,
-          "benchmark_qualified_advantage": false,
+          "benchmark_qualified_advantage": true,
           "promotion_blocked": false,
           "blockers": [
-            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
-            "benchmark-qualified speedup or power advantage missing"
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
           ]
         },
         {
           "route_id": "dense_slm_default_cpu",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
+          "model_identity": {
+            "identity_source": "dense_slm_gguf_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "gguf",
+            "model_artifact": "qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+            "repo_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+            "quantization": "Q8_0",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -918,55 +1126,52 @@
             "source_receipts": [
               "lunar-lake-operator-ask-math-brief.json",
               "slm-phase-warm-session-qwen25-cpu.json",
-              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json",
+              "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-profile-run.json"
             ],
-            "prompt_tokens": 38,
-            "cold_load_ms": 14250.931,
-            "tokenize_ms": 482.325,
+            "prompt_tokens": 2734,
+            "cold_load_ms": 3988.648,
+            "tokenize_ms": 357.075,
             "prefill_ms": 9361.503,
-            "first_token_ms": 9726.0,
-            "decode_total_ms": 3242.064,
-            "generation_total_ms": 3242.064,
-            "total_response_ms": 27986.539,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 2.78,
+            "first_token_ms": 1356488.0,
+            "decode_total_ms": 1369402.851,
+            "generation_total_ms": 1369402.851,
+            "total_response_ms": 1373681.117,
+            "output_tokens": 16,
+            "throughput_tokens_per_s": 1.162,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
               "warm_decode_128",
+              "profile_timing_from_rust_gguf_cpu_profile_run_case_prefill_heavy_route_policy_long_context",
               "telemetry_context_indexed"
             ],
-            "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile prefill_heavy"
-            ]
+            "known_gaps": []
           },
           "timing_applicability": {
             "profile_id": "prefill_heavy",
             "required_prompt_tokens": ">=2048",
             "required_output_tokens": "<=64",
-            "measured_prompt_tokens": 38,
-            "measured_output_tokens": 9,
-            "timing_matches_profile": false,
+            "measured_prompt_tokens": 2734,
+            "measured_output_tokens": 16,
+            "timing_matches_profile": true,
             "notes": [
-              "prompt timing count 38 does not satisfy `>=2048`",
-              "output timing count 9 satisfies `<=64`"
+              "prompt timing count 2734 satisfies `>=2048`",
+              "output timing count 16 satisfies `<=64`"
             ]
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_openvino_gpu_candidate",
             "baseline_route_status": "promoted",
             "baseline_total_response_ms": 6161.384100015741,
-            "route_total_response_ms": 27986.539,
-            "route_to_baseline_total_response_ratio": 4.542248713228007,
+            "route_total_response_ms": 1373681.117,
+            "route_to_baseline_total_response_ratio": 222.95008632824735,
             "observed_total_response_lower_than_baseline": false,
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
-              "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "route timing is not profile-specific for profile prefill_heavy",
-              "timing evidence is not profile-specific for profile prefill_heavy"
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -987,18 +1192,35 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile prefill_heavy",
-            "bounded math ask only; not expanded profile regression corpus",
-            "route not promoted for profile prefill_heavy",
-            "timing evidence is not profile-specific for profile prefill_heavy"
+            "route not promoted for profile prefill_heavy"
           ]
         },
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1048,20 +1270,20 @@
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
             "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 27986.539,
+            "baseline_total_response_ms": 1373681.117,
             "route_total_response_ms": 73652.33009997616,
-            "route_to_baseline_total_response_ratio": 2.631705553158115,
-            "observed_total_response_lower_than_baseline": false,
+            "route_to_baseline_total_response_ratio": 0.05361675951462915,
+            "observed_total_response_lower_than_baseline": true,
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-              "baseline route dense_slm_default_cpu is not benchmark-reference-ready for profile prefill_heavy",
               "benchmark-qualified advantage is false; comparison is diagnostic only"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile prefill_heavy",
+              "lower observed total response still requires route-promotion evidence before use",
               "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
@@ -1086,7 +1308,7 @@
         }
       ],
       "profile_gaps": [
-        "prefill_heavy route dense_slm_default_cpu remains blocked: Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile prefill_heavy; bounded math ask only; not expanded profile regression corpus; route not promoted for profile prefill_heavy; timing evidence is not profile-specific for profile prefill_heavy",
+        "prefill_heavy route dense_slm_default_cpu remains blocked: route not promoted for profile prefill_heavy",
         "prefill_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; route not promoted for profile prefill_heavy"
       ]
     },
@@ -1102,8 +1324,28 @@
           "route_id": "dense_slm_openvino_gpu_candidate",
           "route_status": "promoted",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1131,10 +1373,10 @@
               "pipeline_construct_and_generation_wall_time",
               "direct_openvino_generated_token_ids",
               "profile_timing_from_openvino_profile_run_case_decode_heavy_route_policy_long_generation",
-              "corpus_v2_profile_regression_evidence_indexed"
+              "corpus_v2_profile_regression_evidence_indexed",
+              "benchmark_qualified_latency_advantage"
             ],
             "known_gaps": [
-              "benchmark-qualified speedup or power advantage missing",
               "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
             ]
           },
@@ -1153,16 +1395,13 @@
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
             "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 27986.539,
+            "baseline_total_response_ms": 123115.592,
             "route_total_response_ms": 13423.639300026,
-            "route_to_baseline_total_response_ratio": 0.4796462792353852,
+            "route_to_baseline_total_response_ratio": 0.1090328128384096,
             "observed_total_response_lower_than_baseline": true,
-            "benchmark_qualified": false,
-            "qualification_status": "diagnostic_only_not_benchmark_qualified",
-            "qualification_blockers": [
-              "baseline route dense_slm_default_cpu is not benchmark-reference-ready for profile decode_heavy",
-              "benchmark-qualified advantage is false; comparison is diagnostic only"
-            ],
+            "benchmark_qualified": true,
+            "qualification_status": "benchmark_qualified",
+            "qualification_blockers": [],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy",
@@ -1179,19 +1418,36 @@
             ]
           },
           "critical_timing_present": true,
-          "benchmark_qualified_advantage": false,
+          "benchmark_qualified_advantage": true,
           "promotion_blocked": false,
           "blockers": [
-            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile",
-            "benchmark-qualified speedup or power advantage missing"
+            "OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile"
           ]
         },
         {
           "route_id": "dense_slm_default_cpu",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
+          "model_identity": {
+            "identity_source": "dense_slm_gguf_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "gguf",
+            "model_artifact": "qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+            "repo_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+            "quantization": "Q8_0",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1200,55 +1456,52 @@
             "source_receipts": [
               "lunar-lake-operator-ask-math-brief.json",
               "slm-phase-warm-session-qwen25-cpu.json",
-              "slm-openvino-cpu-gpu-npu-phase-comparison.json"
+              "slm-openvino-cpu-gpu-npu-phase-comparison.json",
+              "ci/hardware/intel-258v/2026-05-08/lunar-lake-cpu-profile-run.json"
             ],
-            "prompt_tokens": 38,
-            "cold_load_ms": 14250.931,
-            "tokenize_ms": 482.325,
+            "prompt_tokens": 67,
+            "cold_load_ms": 3748.651,
+            "tokenize_ms": 342.633,
             "prefill_ms": 9361.503,
-            "first_token_ms": 9726.0,
-            "decode_total_ms": 3242.064,
-            "generation_total_ms": 3242.064,
-            "total_response_ms": 27986.539,
-            "output_tokens": 9,
-            "throughput_tokens_per_s": 2.78,
+            "first_token_ms": 7443.0,
+            "decode_total_ms": 119077.073,
+            "generation_total_ms": 119077.073,
+            "total_response_ms": 123115.592,
+            "output_tokens": 512,
+            "throughput_tokens_per_s": 4.578,
             "phase_coverage": [
               "operator_ask_math_brief",
               "cpu_timing_model_load_tokenize_prefill_first_token_decode",
               "warm_prefill_512",
               "warm_decode_128",
+              "profile_timing_from_rust_gguf_cpu_profile_run_case_decode_heavy_route_policy_long_generation",
               "telemetry_context_indexed"
             ],
-            "known_gaps": [
-              "bounded math ask only; not expanded profile regression corpus",
-              "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile decode_heavy"
-            ]
+            "known_gaps": []
           },
           "timing_applicability": {
             "profile_id": "decode_heavy",
             "required_prompt_tokens": "<=256",
             "required_output_tokens": ">=512",
-            "measured_prompt_tokens": 38,
-            "measured_output_tokens": 9,
-            "timing_matches_profile": false,
+            "measured_prompt_tokens": 67,
+            "measured_output_tokens": 512,
+            "timing_matches_profile": true,
             "notes": [
-              "prompt timing count 38 satisfies `<=256`",
-              "output timing count 9 does not satisfy `>=512`"
+              "prompt timing count 67 satisfies `<=256`",
+              "output timing count 512 satisfies `>=512`"
             ]
           },
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_openvino_gpu_candidate",
             "baseline_route_status": "promoted",
             "baseline_total_response_ms": 13423.639300026,
-            "route_total_response_ms": 27986.539,
-            "route_to_baseline_total_response_ratio": 2.0848697118929436,
+            "route_total_response_ms": 123115.592,
+            "route_to_baseline_total_response_ratio": 9.17155096679047,
             "observed_total_response_lower_than_baseline": false,
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
-              "benchmark-qualified advantage is false; comparison is diagnostic only",
-              "route timing is not profile-specific for profile decode_heavy",
-              "timing evidence is not profile-specific for profile decode_heavy"
+              "benchmark-qualified advantage is false; comparison is diagnostic only"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
@@ -1269,18 +1522,35 @@
           "benchmark_qualified_advantage": false,
           "promotion_blocked": true,
           "blockers": [
-            "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile decode_heavy",
-            "bounded math ask only; not expanded profile regression corpus",
-            "route not promoted for profile decode_heavy",
-            "timing evidence is not profile-specific for profile decode_heavy"
+            "route not promoted for profile decode_heavy"
           ]
         },
         {
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1330,20 +1600,20 @@
           "route_advantage_context": {
             "baseline_route_id": "dense_slm_default_cpu",
             "baseline_route_status": "candidate",
-            "baseline_total_response_ms": 27986.539,
+            "baseline_total_response_ms": 123115.592,
             "route_total_response_ms": 94153.83029999072,
-            "route_to_baseline_total_response_ratio": 3.364254161616437,
-            "observed_total_response_lower_than_baseline": false,
+            "route_to_baseline_total_response_ratio": 0.7647595951940085,
+            "observed_total_response_lower_than_baseline": true,
             "benchmark_qualified": false,
             "qualification_status": "diagnostic_only_not_benchmark_qualified",
             "qualification_blockers": [
               "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-              "baseline route dense_slm_default_cpu is not benchmark-reference-ready for profile decode_heavy",
               "benchmark-qualified advantage is false; comparison is diagnostic only"
             ],
             "notes": [
               "observed total response comparison is route-policy evidence, not a speedup claim",
               "baseline route dense_slm_default_cpu remains the comparison reference for profile decode_heavy",
+              "lower observed total response still requires route-promotion evidence before use",
               "route remains unpromoted; benchmark qualification does not change route selection"
             ]
           },
@@ -1368,7 +1638,7 @@
         }
       ],
       "profile_gaps": [
-        "decode_heavy route dense_slm_default_cpu remains blocked: Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile decode_heavy; bounded math ask only; not expanded profile regression corpus; route not promoted for profile decode_heavy; timing evidence is not profile-specific for profile decode_heavy",
+        "decode_heavy route dense_slm_default_cpu remains blocked: route not promoted for profile decode_heavy",
         "decode_heavy route dense_slm_openvino_npu_candidate remains blocked: NPU cold start is openvino_pipeline_load_or_device_compile_dominated; OpenVINO receipts do not expose prefill_512/decode_128 splits for every profile; benchmark-qualified speedup or power advantage missing; route not promoted for profile decode_heavy"
       ]
     },
@@ -1381,8 +1651,26 @@
           "route_id": "dense_slm_default_cpu",
           "route_status": "promoted",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
+          "model_identity": {
+            "identity_source": "dense_slm_gguf_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "gguf",
+            "model_artifact": "qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+            "repo_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+            "quantization": "Q8_0",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1460,8 +1748,26 @@
           "route_id": "dense_slm_default_cpu",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
+          "model_identity": {
+            "identity_source": "dense_slm_gguf_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "gguf",
+            "model_artifact": "qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+            "repo_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+            "quantization": "Q8_0",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1529,8 +1835,28 @@
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1620,8 +1946,28 @@
           "route_id": "dense_slm_openvino_gpu_candidate",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1726,8 +2072,28 @@
           "route_id": "dense_slm_openvino_npu_candidate",
           "route_status": "promoted",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-npu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1807,8 +2173,26 @@
           "route_id": "dense_slm_default_cpu",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
           "selected_backend": "cpu-rust",
           "runtime_api": "cpu",
+          "model_identity": {
+            "identity_source": "dense_slm_gguf_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-artifact-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "gguf",
+            "model_artifact": "qwen2.5-0.5b-instruct-q8_0.gguf",
+            "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+            "repo_revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+            "quantization": "Q8_0",
+            "tokenizer_source": "gguf_metadata",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>"
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1893,8 +2277,28 @@
           "route_id": "dense_slm_openvino_gpu_candidate",
           "route_status": "candidate",
           "ledger_route_status": "promoted",
+          "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
           "selected_backend": "openvino-gpu",
           "runtime_api": "openvino_genai",
+          "model_identity": {
+            "identity_source": "dense_slm_openvino_ir_manifest",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/slm-openvino-ir-qwen25-int4-sym-manifest.json",
+            "selected_model": "Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM",
+            "model_name": "qwen2.5-0.5b-instruct",
+            "model_family": "qwen",
+            "model_format": "openvino_ir",
+            "model_artifact": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+            "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+            "repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+            "quantization": "int4_symmetric",
+            "tokenizer_source": "hf_tokenizer_export",
+            "tokenizer_family": "qwen2",
+            "prompt_template": "qwen2.5",
+            "stop_token_policy": "EOS/EOT token 151645 <|im_end|>; PAD/BOS token 151643 <|endoftext|>",
+            "known_gaps": [
+              "OpenVINO IR model binaries are not committed; manifest pins source model revision and export contract instead of a local binary SHA256"
+            ]
+          },
           "fallback_used": false,
           "answer_gate_passed": true,
           "phase_timing_present": true,
@@ -1989,8 +2393,24 @@
           "route_id": "bitnet_reference_cpu",
           "route_status": "promoted",
           "ledger_route_status": "promoted",
+          "selected_model": "microsoft/bitnet-b1.58-2B-4T GGUF I2_S",
           "selected_backend": "intel-258v-cpu-avx2",
           "runtime_api": "cpu",
+          "model_identity": {
+            "identity_source": "bitnet_cpu_reference_bundle",
+            "manifest_receipt": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+            "selected_model": "microsoft/bitnet-b1.58-2B-4T GGUF I2_S",
+            "model_name": "ggml-model-i2_s.gguf",
+            "model_family": "bitnet_b1_58",
+            "model_format": "gguf",
+            "model_artifact": "ggml-model-i2_s.gguf",
+            "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+            "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+            "quantization": "I2_S",
+            "tokenizer_source": "explicit",
+            "tokenizer_family": "llama3",
+            "prompt_template": "metadata_authoritative_bitnetcpp_answer_after_prompt_fix"
+          },
           "fallback_used": false,
           "answer_gate_passed": null,
           "phase_timing_present": false,
@@ -2054,20 +2474,45 @@
   ],
   "timing_coverage": {
     "route_count": 23,
-    "profile_specific_route_count": 21,
-    "proxy_or_missing_route_count": 2,
+    "profile_specific_route_count": 23,
+    "proxy_or_missing_route_count": 0,
     "promotion_eligible_route_count": 8,
     "promotion_eligible_profile_specific_route_count": 8,
     "candidate_route_count": 14,
     "candidate_proxy_or_missing_route_count": 0,
     "promotion_eligible_routes_have_profile_specific_timing": true,
     "proxy_or_missing_timing_routes_blocked": true,
-    "proxy_or_missing_routes": [
-      "decode_heavy:dense_slm_default_cpu",
-      "prefill_heavy:dense_slm_default_cpu"
-    ],
+    "proxy_or_missing_routes": [],
     "promotion_eligible_proxy_or_missing_routes": [],
     "unblocked_proxy_or_missing_routes": []
+  },
+  "route_model_identity_coverage": {
+    "route_row_count": 23,
+    "route_rows_with_identity": 23,
+    "route_rows_with_model_hash": 9,
+    "route_rows_with_tokenizer_template": 23,
+    "route_rows_without_model_hash_with_known_gap": 14,
+    "all_route_rows_have_identity": true,
+    "all_route_rows_have_tokenizer_template": true,
+    "model_hash_or_explicit_gap_for_all_route_rows": true,
+    "routes_without_model_hash": [
+      "ask_normal:dense_slm_openvino_gpu_candidate",
+      "ask_normal:dense_slm_openvino_npu_candidate",
+      "ask_short:dense_slm_openvino_gpu_candidate",
+      "ask_short:dense_slm_openvino_npu_candidate",
+      "decode_heavy:dense_slm_openvino_gpu_candidate",
+      "decode_heavy:dense_slm_openvino_npu_candidate",
+      "low_power:dense_slm_openvino_gpu_candidate",
+      "low_power:dense_slm_openvino_npu_candidate",
+      "prefill_heavy:dense_slm_openvino_gpu_candidate",
+      "prefill_heavy:dense_slm_openvino_npu_candidate",
+      "regression_tiny:dense_slm_openvino_gpu_candidate",
+      "regression_tiny:dense_slm_openvino_npu_candidate",
+      "warm_resident:dense_slm_openvino_gpu_candidate",
+      "warm_resident:dense_slm_openvino_npu_candidate"
+    ],
+    "routes_without_model_hash_missing_known_gap": [],
+    "routes_without_tokenizer_template": []
   },
   "route_promotion_scope": {
     "openvino_gpu_promoted_profiles": [

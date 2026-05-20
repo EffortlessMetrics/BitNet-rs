@@ -18,6 +18,8 @@ pub enum DeviceConfig {
     NvidiaRtx5070TiCuda,
     /// Preserve the RTX 5070 Ti WGPU reference-lane backend identity.
     NvidiaRtx5070TiWgpu,
+    /// Preserve the Intel Arc A770 native OpenCL proof-lane backend identity.
+    IntelA770OpenCl,
     /// Preserve a native Metal backend identity.
     Metal,
     /// Preserve an MPSGraph graph/reference backend identity.

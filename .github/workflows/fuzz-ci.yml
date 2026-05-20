@@ -30,7 +30,7 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
-  # Always-on: build a representative fuzz subset on PR/push, and the full set on schedule/manual.
+  # Always-on: build a representative fuzz subset on PR/push, and the scheduled matrix on schedule/manual.
   fuzz-build:
     name: Fuzz targets build
     runs-on: ubuntu-22.04
@@ -57,7 +57,10 @@ jobs:
           workspaces: fuzz -> target
 
       - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz --locked --force
+        # Skip rebuild when the binary cache hit; cargo install will no-op when
+        # the same version is already installed. Avoid `--force` so the cached
+        # ~/.cargo/bin/cargo-fuzz keyed on fuzz/Cargo.lock is actually used.
+        run: command -v cargo-fuzz >/dev/null 2>&1 || cargo install cargo-fuzz --locked
 
       - name: Build fuzz targets
         run: |
@@ -99,6 +102,9 @@ jobs:
               runtime_context_parse_no_panic
               validation_no_panic
               vocab_size_extraction
+              batch_norm_params
+              prefix_cache_ops
+              broadcast_shape_fuzz
             )
           else
             # Keep PR/push coverage broad enough to catch compile regressions without timing out.
@@ -119,7 +125,7 @@ jobs:
           RUSTUP_TOOLCHAIN: nightly
           RUSTFLAGS: -C debuginfo=0
 
-  # Scheduled only: run each fuzz target for a short time to catch new crashes
+  # Scheduled only: run each selected fuzz target for a short time to catch new crashes
   fuzz-run:
     name: "Fuzz run (${{ matrix.target }})"
     runs-on: ubuntu-22.04
@@ -129,8 +135,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Complete list of fuzz targets — must match fuzz/Cargo.toml [[bin]] entries.
-        # When adding a new fuzz target, add it here AND in fuzz-nightly.yml matrix.
+        # Selected nightly coverage matrix. fuzz/Cargo.toml has more registered
+        # targets; this list is the CI-cost-controlled scheduled subset. The
+        # consolidated workflow replaces the former fuzz-nightly.yml and
+        # nightly-fuzz.yml runs that fired at the same 02:00 UTC slot.
         target:
           # Quantization
           - quantization_i2s
@@ -173,6 +181,10 @@ jobs:
           - runtime_context_parse_no_panic
           - validation_no_panic
           - vocab_size_extraction
+          # Numerics & cache structures
+          - batch_norm_params
+          - prefix_cache_ops
+          - broadcast_shape_fuzz
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -182,13 +194,27 @@ jobs:
         with:
           toolchain: nightly
 
+      - name: Cache cargo-fuzz binary
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
+        with:
+          path: ~/.cargo/bin/cargo-fuzz
+          key: cargo-fuzz-${{ runner.os }}-${{ hashFiles('fuzz/Cargo.lock') }}
+
+      - name: Restore fuzz corpus
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: |
+            fuzz-corpus-${{ matrix.target }}-
+
       - name: Rust cache
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           key: fuzz-run-${{ matrix.target }}
 
       - name: Install cargo-fuzz
-        run: cargo install cargo-fuzz --locked --force
+        run: command -v cargo-fuzz >/dev/null 2>&1 || cargo install cargo-fuzz --locked
 
       - name: Run fuzz target (60 seconds)
         run: |

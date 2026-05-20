@@ -10,6 +10,10 @@ Coverage row: `dense_qwen3_06b_q8_candidate`
 
 Rejected for `server_ready=true`.
 
+Supersession note: this report records the original CUDA-MODEL-014 decision.
+CUDA-MODEL-014B later accepted exact-profile Qwen3 server readiness after
+CUDA-MODEL-013 committed the missing current-source server-smoke receipt.
+
 Qwen3 0.6B Q8_0 is product CLI-ready for bounded normal `ask` and `chat`
 paths on the RTX 5070 Ti `dense_regular_llm_cuda` route, but the repository
 does not yet contain a current-source Qwen3 server-smoke receipt for the exact

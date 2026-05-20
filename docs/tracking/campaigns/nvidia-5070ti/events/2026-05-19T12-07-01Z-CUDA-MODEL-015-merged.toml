@@ -1,0 +1,22 @@
+timestamp = "2026-05-19T12:07:01Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-015"
+event = "merged"
+pr = 5931
+head_sha = "ded4f8d55fd3f5e1163f6dd9585c77ac886156a2"
+merge_sha = "f0221874619a6bf63f5c213a4fd4bc142dc63e52"
+actor = "codex"
+from = "pr_open"
+to = "merged"
+branch = "codex/cuda-model-015-qwen3-repeated-comparator-plan"
+summary = "Merged PR #5931 queuing the Qwen3 repeated same-artifact CPU/CUDA comparator baseline."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5931",
+  "docs/reports/CUDA_MODEL_015_QWEN3_REPEATED_COMPARATOR_BASELINE.md",
+]
+
+notes = [
+  "The merged PR records that Qwen3 still needs repeated CPU/CUDA comparator evidence before benchmark-qualified or speedup review.",
+  "No runtime code, model coverage, server readiness, speedup, full residency, broad dense GGUF, Qwen2.5 inheritance, or BitNet packed I2_S/QK256 proof claim changed.",
+]

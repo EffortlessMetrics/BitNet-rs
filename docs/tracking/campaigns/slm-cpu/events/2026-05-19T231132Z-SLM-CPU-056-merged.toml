@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T23:11:32Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-056"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6018
+head_sha = "0abc84dde3f2a03b8ae691f1ac04c087bc041a2e"
+merge_sha = "3f56b26f9a1dc510667f8c93d9ff0bdcec01e286"
+summary = "Merged the production dense-linear hook implementation slice."
+notes = [
+  "Merged PR #6018 as 3f56b26f9a1dc510667f8c93d9ff0bdcec01e286.",
+  "The PR added the production dense-linear hook boundary for transformer dense linear calls.",
+  "The merged slice keeps eager_f32_candle as the Qwen3 Q8_0 Kaby behavior oracle and does not enable packed Q8_0 sidecar compute by default.",
+  "The artifact records explicit eager-F32 selection and selected Q8_0 sidecar descriptor state without claiming speedup, sustained throughput, Q4/Q5 runtime support, accelerator execution, Qwen3.5 support, or BitNet QK256 changes.",
+]

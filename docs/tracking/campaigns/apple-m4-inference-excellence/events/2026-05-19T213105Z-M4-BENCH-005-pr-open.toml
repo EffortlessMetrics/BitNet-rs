@@ -1,0 +1,18 @@
+timestamp = "2026-05-19T21:31:05Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-005"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6023
+head_sha = "f7db299d128511663664f078a867051bfa729613"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-005-repeatability-variance"
+
+notes = [
+  "Opened PR #6023 for M4 dense Qwen benchmark repeatability and variance evidence.",
+  "The PR publishes preflight plus release-mode repeat=2 aggregate receipts for qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m on apple-m4-cpu-neon.",
+  "All three aggregate receipts validate with fallback_used=false, but comparison readiness remains invalid_for_comparison because calibrated profiles timed out.",
+  "BitNet one-shot and warm-session variance remains scoped to M4-BENCH-006.",
+  "No BitNet timing variance, BitNet chat/serve behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

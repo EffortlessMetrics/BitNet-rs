@@ -58,6 +58,8 @@ pub enum BackendRequest {
     Hip,
     /// Require Intel oneAPI specifically.
     OneApi,
+    /// Require the Intel Arc A770 native OpenCL proof lane.
+    IntelA770OpenCl,
     /// Require Intel NPU identity without treating it as GPU, Metal, or CPU fallback.
     IntelNpu,
     /// Require Intel NPU through the OpenVINO runtime.
@@ -92,6 +94,7 @@ impl BackendRequest {
             "nvidia-rtx-5070-ti-wgpu" => Some(BackendRequest::NvidiaRtx5070TiWgpu),
             "hip" | "rocm" => Some(BackendRequest::Hip),
             "oneapi" => Some(BackendRequest::OneApi),
+            "intel-a770-opencl" | "a770-opencl" => Some(BackendRequest::IntelA770OpenCl),
             "npu" | "intel-npu" => Some(BackendRequest::IntelNpu),
             "openvino-npu" | "intel-npu-openvino" => Some(BackendRequest::OpenVinoNpu),
             "metal" => Some(BackendRequest::Metal),
@@ -118,6 +121,7 @@ impl fmt::Display for BackendRequest {
             BackendRequest::NvidiaRtx5070TiWgpu => write!(f, "nvidia-rtx-5070-ti-wgpu"),
             BackendRequest::Hip => write!(f, "hip"),
             BackendRequest::OneApi => write!(f, "oneapi"),
+            BackendRequest::IntelA770OpenCl => write!(f, "intel-a770-opencl"),
             BackendRequest::IntelNpu => write!(f, "intel-npu"),
             BackendRequest::OpenVinoNpu => write!(f, "openvino-npu"),
             BackendRequest::Metal => write!(f, "metal"),
@@ -176,6 +180,9 @@ impl BackendSelectionResult {
             (BackendRequest::NvidiaRtx5070TiCuda, KernelBackend::Cuda) => {
                 "nvidia-rtx-5070-ti-cuda".to_string()
             }
+            (BackendRequest::IntelA770OpenCl, KernelBackend::OpenCL) => {
+                "intel-a770-opencl".to_string()
+            }
             _ => self.selected.to_string(),
         }
     }
@@ -186,7 +193,7 @@ impl BackendSelectionResult {
             "cuda" | "nvidia-rtx-5070-ti-cuda" => "cuda",
             "hip" => "hip",
             "oneapi" => "oneapi",
-            "opencl" => "opencl",
+            "opencl" | "intel-a770-opencl" => "opencl",
             "apple-m4-metal" | "apple-m3-air-metal" | "metal" => "metal",
             "apple-m4-mpsgraph" | "apple-m3-air-mpsgraph" | "mpsgraph" => "mpsgraph",
             _ => "cpu",
@@ -202,6 +209,7 @@ impl BackendSelectionResult {
             BackendRequest::Cuda => self.selected != KernelBackend::Cuda,
             BackendRequest::Hip => self.selected != KernelBackend::Hip,
             BackendRequest::OneApi => self.selected != KernelBackend::OneApi,
+            BackendRequest::IntelA770OpenCl => self.requested_backend() != self.selected_backend(),
             BackendRequest::NvidiaRtx5070TiCuda
             | BackendRequest::NvidiaRtx5070TiWgpu
             | BackendRequest::IntelNpu
@@ -344,6 +352,22 @@ pub fn select_backend(
                 });
             }
         }
+        BackendRequest::IntelA770OpenCl => {
+            // The A770 lane is strict and label-preserving. Device verification
+            // and kernel proof land in later work items; CPU fallback is never
+            // OpenCL proof.
+            if caps.opencl_compiled && caps.opencl_runtime {
+                (
+                    KernelBackend::OpenCL,
+                    "Intel Arc A770 OpenCL backend requested; OpenCL runtime available".to_string(),
+                )
+            } else {
+                return Err(BackendSelectionError::RequestedUnavailable {
+                    requested: request,
+                    available: detected.clone(),
+                });
+            }
+        }
         BackendRequest::IntelNpu | BackendRequest::OpenVinoNpu => {
             // NPU-002 preserves the requested identity only. Runtime probing and
             // OpenVINO graph execution land later, so CPU/GPU fallback is never
@@ -471,6 +495,22 @@ mod tests {
         }
     }
 
+    fn opencl_caps() -> KernelCapabilities {
+        KernelCapabilities {
+            cpu_rust: true,
+            cuda_compiled: false,
+            cuda_runtime: false,
+            hip_compiled: false,
+            hip_runtime: false,
+            oneapi_compiled: false,
+            oneapi_runtime: false,
+            opencl_compiled: true,
+            opencl_runtime: true,
+            cpp_ffi: false,
+            simd_level: SimdLevel::Avx2,
+        }
+    }
+
     #[test]
     fn auto_selects_cpu_when_only_cpu() {
         let result = select_backend(BackendRequest::Auto, &cpu_only_caps()).unwrap();
@@ -574,6 +614,21 @@ mod tests {
     }
 
     #[test]
+    fn intel_a770_opencl_label_parses_without_aliasing_generic_gpu() {
+        assert_eq!(
+            BackendRequest::from_label("intel-a770-opencl"),
+            Some(BackendRequest::IntelA770OpenCl)
+        );
+        assert_eq!(
+            BackendRequest::from_label("a770-opencl"),
+            Some(BackendRequest::IntelA770OpenCl)
+        );
+        assert_ne!(BackendRequest::from_label("intel-a770-opencl"), Some(BackendRequest::Gpu));
+        assert_ne!(BackendRequest::from_label("intel-a770-opencl"), Some(BackendRequest::OneApi));
+        assert_eq!(BackendRequest::IntelA770OpenCl.to_string(), "intel-a770-opencl");
+    }
+
+    #[test]
     fn intel_npu_labels_parse_without_aliasing() {
         assert_eq!(BackendRequest::from_label("npu"), Some(BackendRequest::IntelNpu));
         assert_eq!(BackendRequest::from_label("intel-npu"), Some(BackendRequest::IntelNpu));
@@ -620,6 +675,33 @@ mod tests {
 
         assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
         assert!(err.to_string().contains("nvidia-rtx-5070-ti-wgpu"));
+    }
+
+    #[test]
+    fn intel_a770_opencl_request_preserves_identity_when_opencl_available()
+    -> Result<(), BackendSelectionError> {
+        let result = select_backend(BackendRequest::IntelA770OpenCl, &opencl_caps())?;
+
+        assert_eq!(result.selected, KernelBackend::OpenCL);
+        assert_eq!(result.requested_backend(), "intel-a770-opencl");
+        assert_eq!(result.selected_backend(), "intel-a770-opencl");
+        assert_eq!(result.runtime_api(), "opencl");
+        assert!(!result.fallback_used());
+
+        let summary = result.identity_summary();
+        assert!(summary.contains("requested_backend=intel-a770-opencl"), "got: {summary}");
+        assert!(summary.contains("selected_backend=intel-a770-opencl"), "got: {summary}");
+        assert!(summary.contains("runtime_api=opencl"), "got: {summary}");
+        assert!(summary.contains("fallback_used=false"), "got: {summary}");
+        Ok(())
+    }
+
+    #[test]
+    fn intel_a770_opencl_request_is_strict_without_opencl_runtime() {
+        let err = select_backend(BackendRequest::IntelA770OpenCl, &cpu_only_caps()).unwrap_err();
+
+        assert!(matches!(err, BackendSelectionError::RequestedUnavailable { .. }));
+        assert!(err.to_string().contains("intel-a770-opencl"));
     }
 
     #[test]

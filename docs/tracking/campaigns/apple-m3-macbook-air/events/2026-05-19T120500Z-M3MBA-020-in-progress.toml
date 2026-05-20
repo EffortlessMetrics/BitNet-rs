@@ -1,0 +1,27 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-020"
+event = "in_progress"
+timestamp = "2026-05-19T12:05:00Z"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-020-execution-roadmap"
+
+summary = "Started the post-handoff M3 Air execution-roadmap slice so the merged M3MBA-019 roadmap reset becomes concrete follow-on work items."
+
+artifacts = [
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+]
+
+notes = [
+  "This is a tracker and roadmap slice only.",
+  "No M3 Air model inference, BitNet artifact download, runtime behavior change, M4 Mac mini proof, Metal inference, MPSGraph inference, Neural Engine execution, QK256 support, or performance claim is made.",
+]
+
+validation = [
+  "cargo fmt --all -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]

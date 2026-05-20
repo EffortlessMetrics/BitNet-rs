@@ -1,0 +1,21 @@
+timestamp = "2026-05-19T11:34:32Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-015"
+event = "pr_open"
+pr = 5931
+head_sha = "17c9ce6db387860a0cdaaa82e7872f1e1835d18c"
+actor = "codex"
+from = "in_progress"
+to = "pr_open"
+branch = "codex/cuda-model-015-qwen3-repeated-comparator-plan"
+summary = "Opened PR #5931 to queue the Qwen3 repeated same-artifact CPU/CUDA comparator baseline."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/BitNet-rs/pull/5931",
+  "docs/reports/CUDA_MODEL_015_QWEN3_REPEATED_COMPARATOR_BASELINE.md",
+]
+
+notes = [
+  "The PR records that the existing Qwen3 benchmark review is not speed or benchmark-qualified evidence because runs_per_backend=1 and repeated_evidence=false.",
+  "The PR does not change runtime code, model coverage, server readiness, speedup, full residency, broad dense GGUF, Qwen2.5 inheritance, or BitNet packed I2_S/QK256 proof claims.",
+]

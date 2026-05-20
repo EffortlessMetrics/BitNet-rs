@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T11:04:38Z"
+event = "merged"
+item = "LNL258V-POWER-005"
+pr = 5924
+branch = "codex/lunar-lake/LNL258V-POWER-005-battery-telemetry-guard"
+head_sha = "3d0bc0361074d5aa7fb237525abd312c6bffd957"
+merge_sha = "f8f52f7c256243305c63a4527b48dd4056473e28"
+actor = "codex"
+summary = "Merged LNL258V-POWER-005 to add a fail-closed battery-mode telemetry guard for low_power evidence."
+
+notes = [
+  "The merged slice records --require-battery requirement status, writes the AC-blocked battery telemetry receipt, and wires it into power-profile, regression, comparison, and excellence-audit artifacts.",
+  "low_power remains unpromoted until a real battery-mode sample plus benchmark-qualified power advantage exists.",
+  "No new inference, route promotion, speedup, power-advantage, native accelerator, acceleration, or BitNet QK256/I2_S behavior-change claim is made.",
+]

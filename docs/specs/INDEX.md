@@ -1,5 +1,48 @@
 # Specs Index
 
+## Common Local Inference Status Contracts
+
+Use these specs before changing the machine-readable support surfaces for
+model readiness, receipt explanation, or support bundles:
+
+1. [Model Readiness Status Surface](BITNET-SPEC-MODEL-READINESS-STATUS-SURFACE.md)
+   - Defines the stable `bitnet model status --format json` dashboard fields,
+     tier semantics, readiness booleans, backend/route/fallback provenance, and
+     proof-family booleans.
+2. [Receipt Explain Schema](BITNET-SPEC-RECEIPT-EXPLAIN-SCHEMA.md)
+   - Defines the normalized `bitnet receipts explain --format json` shape,
+     flat support aliases, nested diagnostic objects, unknown-vs-false
+     semantics, and promotion warnings.
+3. [Support Bundle](BITNET-SPEC-SUPPORT-BUNDLE.md)
+   - Defines `bitnet support bundle --latest --device <device> --format json`
+     as a read-only issue artifact that embeds model status and receipt
+     explanation without promoting claims. The older
+     [Support Bundle Schema](BITNET-SPEC-SUPPORT-BUNDLE-SCHEMA.md) URL remains
+     as a compatibility pointer.
+4. [CUDA Support Issue](BITNET-SPEC-CUDA-SUPPORT-ISSUE.md)
+   - Defines the receipt-backed CUDA issue template contract, required support
+     bundle field, JSON rendering, and claim-boundary checklist.
+
+Do not remove or repurpose support JSON fields without a schema-version bump.
+Do not let status, receipt explanation, or support bundles infer speedup,
+residency, broad server readiness, or cross-family proof.
+
+## PR Queue And CI Operations
+
+Use these specs before closing, replacing, restacking, or otherwise writing to
+PR queue state:
+
+1. [PR Queue Disposition](BITNET-SPEC-PR-QUEUE-DISPOSITION.md)
+   - Defines valid close reasons, invalid close reasons, routing states,
+     successor requirements, and PR identity preservation.
+2. [PR Write-Action CI Economics](BITNET-SPEC-PR-CI-ECONOMICS.md)
+   - Defines queue write actions, no-CI-for-archaeology, bulk-write limits,
+     rerun rules, and allowed CI spend during burn-down.
+
+Wrong base, stale stack, closed parent, and needs-restack are routing states,
+not close reasons. Queue writes should follow content review and should spend
+CI only on current merge candidates, clean ports, or required proof.
+
 ## TL1 ARM-First Table-Lookup Route
 
 Use these artifacts before implementing or claiming TL1 support:
@@ -325,6 +368,20 @@ execution claims. Claims require distinct selected kernel IDs, strict fallback
 truth, invocation counters, parity, and profile/sustained receipts.
 
 ## A770 BitNet Productization
+
+Use these artifacts before processing the A770 diagnostic branch chain or
+closing/replacing A770 diagnostic PRs:
+
+1. [A770 Diagnostic Lineage](BITNET-SPEC-A770-DIAGNOSTIC-LINEAGE.md)
+   - Defines durable versus transient diagnostic content, lineage frontiers,
+     successor rules, forbidden batch actions, and the no-claim boundary for
+     diagnostic evidence.
+2. [A770 Diagnostic Lineage Plan](../../plans/a770-diagnostic-lineage/implementation-plan.md)
+   - Sequences lineage policy/checker work before narrow runtime salvage slices.
+
+Do not bulk-close, bulk-reopen, bulk-recreate, or treat diagnostic-only as
+disposable. Diagnostic lineage can route runtime salvage, but it does not prove
+A770 support, quality, speed, residency, or selected execution.
 
 Use these specs before implementing or claiming A770 BitNet product support:
 
