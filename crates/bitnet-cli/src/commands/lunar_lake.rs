@@ -1036,6 +1036,10 @@ pub struct RegressionSurfaceSummary {
     #[serde(default)]
     pub bitnet_semantic_intake_indexed: bool,
     #[serde(default)]
+    pub bitnet_cpu_reference_evidence_indexed: bool,
+    #[serde(default)]
+    pub bitnet_cpu_reference_evidence_ready: bool,
+    #[serde(default)]
     pub power_profile_evidence_indexed: bool,
     #[serde(default)]
     pub thermal_temperature_availability_indexed: bool,
@@ -1098,6 +1102,8 @@ impl Default for RegressionSurfaceSummary {
             cold_warm_benchmark_indexed: false,
             durability_bundle_indexed: false,
             bitnet_semantic_intake_indexed: false,
+            bitnet_cpu_reference_evidence_indexed: false,
+            bitnet_cpu_reference_evidence_ready: false,
             power_profile_evidence_indexed: false,
             thermal_temperature_availability_indexed: false,
             thermal_temperature_available: false,
@@ -4193,6 +4199,24 @@ fn build_regression_surface_summary(
     blocked_ask_receipt: Option<&BlockedAskRegressionSummary>,
     operator: &LunarLakeOperatorReceipt,
 ) -> RegressionSurfaceSummary {
+    let bitnet_cpu_reference_evidence_ids = [
+        "bitnet_cpu_reference_bundle",
+        "bitnet_external_reference_boundary",
+        "bitnet_external_direct_token_boundary",
+        "bitnet_first_token_direct_classifier",
+        "bitnet_i2s_gemv_gemm_microbench",
+        "bitnet_i2s_tiling_thread_matrix",
+        "bitnet_i2s_applied_thread_matrix",
+        "bitnet_embedding_quantization_evidence",
+    ];
+    let bitnet_cpu_reference_route_indexed =
+        operator.routes.iter().any(|route| route.route_id == "bitnet_reference_cpu");
+    let bitnet_cpu_reference_evidence_indexed = bitnet_cpu_reference_route_indexed
+        && bitnet_cpu_reference_evidence_ids
+            .iter()
+            .all(|id| operator.evidence.iter().any(|item| item.evidence_id == *id && item.present));
+    let bitnet_cpu_reference_evidence_ready = route_ok(operator, "bitnet_reference_cpu")
+        && bitnet_cpu_reference_evidence_ids.iter().all(|id| evidence_ok(&operator.evidence, id));
     let arc_npu_bounded_evidence_ids = [
         "arc140v_native_opencl_parity",
         "npu_rmsnorm_static_subgraph",
@@ -4210,6 +4234,8 @@ fn build_regression_surface_summary(
         cold_warm_benchmark_indexed: cold_warm_benchmark.is_some(),
         durability_bundle_indexed: durability_bundle.is_some(),
         bitnet_semantic_intake_indexed: bitnet_semantic_intake.is_some(),
+        bitnet_cpu_reference_evidence_indexed,
+        bitnet_cpu_reference_evidence_ready,
         power_profile_evidence_indexed: power_profile_evidence.is_some(),
         thermal_temperature_availability_indexed: thermal_temperature_availability.is_some(),
         thermal_temperature_available: thermal_temperature_availability
@@ -4423,6 +4449,16 @@ fn build_regression_surface_summary(
         }
     } else {
         summary.gaps.push("BitNet semantic intake is not indexed".to_string());
+    }
+
+    if !summary.bitnet_cpu_reference_evidence_indexed {
+        summary.gaps.push(
+            "BitNet CPU reference route evidence is not indexed in operator readiness".to_string(),
+        );
+    } else if !summary.bitnet_cpu_reference_evidence_ready {
+        summary
+            .gaps
+            .push("BitNet CPU reference route evidence is not regression-ready".to_string());
     }
 
     if let Some(power) = power_profile_evidence {
@@ -16409,6 +16445,8 @@ mod tests {
         regression.regression_surface.durability_bundle_indexed = true;
         regression.regression_surface.cold_warm_benchmark_ready = true;
         regression.regression_surface.durability_stability_proven = true;
+        regression.regression_surface.bitnet_cpu_reference_evidence_indexed = true;
+        regression.regression_surface.bitnet_cpu_reference_evidence_ready = true;
         regression.regression_surface.ask_short_ask_receipt_indexed = true;
         regression.regression_surface.ask_short_auto_ask_ready = true;
         regression.regression_surface.warm_resident_ask_receipt_indexed = true;
@@ -16477,6 +16515,8 @@ mod tests {
         assert!(comparison.regression_surface.cold_warm_benchmark_indexed);
         assert!(comparison.regression_surface.durability_bundle_indexed);
         assert!(comparison.regression_surface.durability_stability_proven);
+        assert!(comparison.regression_surface.bitnet_cpu_reference_evidence_indexed);
+        assert!(comparison.regression_surface.bitnet_cpu_reference_evidence_ready);
         assert!(comparison.regression_surface.ask_short_ask_receipt_indexed);
         assert!(comparison.regression_surface.ask_short_auto_ask_ready);
         assert!(comparison.regression_surface.warm_resident_ask_receipt_indexed);
@@ -20140,6 +20180,8 @@ mod tests {
         assert!(bundle.regression_surface.durability_bundle_indexed);
         assert!(bundle.regression_surface.durability_stability_proven);
         assert!(bundle.regression_surface.bitnet_semantic_intake_indexed);
+        assert!(bundle.regression_surface.bitnet_cpu_reference_evidence_indexed);
+        assert!(bundle.regression_surface.bitnet_cpu_reference_evidence_ready);
         assert!(bundle.regression_surface.power_profile_evidence_indexed);
         assert!(bundle.regression_surface.arc_npu_bounded_evidence_indexed);
         assert!(bundle.regression_surface.arc_npu_bounded_evidence_ready);
@@ -20479,6 +20521,64 @@ mod tests {
         assert!(ready.warm_resident_ask_receipt_indexed);
         assert!(ready.warm_resident_auto_ask_ready);
         assert!(ready.strict_ready, "{:?}", ready.gaps);
+        Ok(())
+    }
+
+    #[test]
+    fn regression_surface_requires_bitnet_cpu_reference_evidence() -> Result<()> {
+        let route_profiles = ready_route_profile_regression_with_npu_warm_resident();
+        let cold_warm = ready_cold_warm_regression_with_npu_warm_resident();
+        let corpus = ready_answer_corpus_v2_summary();
+        let durability = ready_durability_summary();
+        let intake = ready_bitnet_semantic_intake_summary();
+        let power = ready_power_profile_summary();
+        let ask = ready_operator_ask_summary();
+        let mut missing_operator = ready_operator_receipt_with_arc_npu_bounded_evidence();
+        missing_operator.routes.retain(|route| route.route_id != "bitnet_reference_cpu");
+        missing_operator.evidence.retain(|item| !item.evidence_id.starts_with("bitnet_"));
+
+        let missing = build_regression_surface_summary(
+            Some(&corpus),
+            Some(&route_profiles),
+            Some(&cold_warm),
+            Some(&durability),
+            Some(&intake),
+            Some(&power),
+            None,
+            None,
+            None,
+            Some(&ask),
+            None,
+            &missing_operator,
+        );
+        assert!(!missing.strict_ready);
+        assert!(!missing.bitnet_cpu_reference_evidence_indexed);
+        assert!(!missing.bitnet_cpu_reference_evidence_ready);
+        assert!(
+            missing
+                .gaps
+                .iter()
+                .any(|gap| { gap.contains("BitNet CPU reference route evidence is not indexed") })
+        );
+
+        let operator = ready_operator_receipt_with_arc_npu_bounded_evidence();
+        let ready = build_regression_surface_summary(
+            Some(&corpus),
+            Some(&route_profiles),
+            Some(&cold_warm),
+            Some(&durability),
+            Some(&intake),
+            Some(&power),
+            None,
+            None,
+            None,
+            Some(&ask),
+            None,
+            &operator,
+        );
+        assert!(ready.strict_ready, "{:?}", ready.gaps);
+        assert!(ready.bitnet_cpu_reference_evidence_indexed);
+        assert!(ready.bitnet_cpu_reference_evidence_ready);
         Ok(())
     }
 
@@ -21799,12 +21899,20 @@ mod tests {
             artifact_root: DEFAULT_ARTIFACT_ROOT.to_string(),
             operator_ready: true,
             default_route: dense_slm_cpu_route(),
-            routes: vec![dense_slm_cpu_route()],
+            routes: vec![dense_slm_cpu_route(), bitnet_cpu_route()],
             route_policy: None,
             power_profile_evidence: None,
             thermal_temperature_availability: None,
             blocked_ask_receipt: None,
             evidence: vec![
+                ready_bitnet_cpu_reference_evidence("bitnet_cpu_reference_bundle"),
+                ready_bitnet_cpu_reference_evidence("bitnet_external_reference_boundary"),
+                ready_bitnet_cpu_reference_evidence("bitnet_external_direct_token_boundary"),
+                ready_bitnet_cpu_reference_evidence("bitnet_first_token_direct_classifier"),
+                ready_bitnet_cpu_reference_evidence("bitnet_i2s_gemv_gemm_microbench"),
+                ready_bitnet_cpu_reference_evidence("bitnet_i2s_tiling_thread_matrix"),
+                ready_bitnet_cpu_reference_evidence("bitnet_i2s_applied_thread_matrix"),
+                ready_bitnet_cpu_reference_evidence("bitnet_embedding_quantization_evidence"),
                 ready_arc_npu_bounded_evidence("arc140v_native_opencl_parity"),
                 ready_arc_npu_bounded_evidence("npu_rmsnorm_static_subgraph"),
                 ready_arc_npu_bounded_evidence("npu_linear_static_subgraph"),
@@ -21820,6 +21928,23 @@ mod tests {
                 qk256_accelerator_decode_claimed: false,
                 hidden_fallback_allowed: false,
             },
+        }
+    }
+
+    fn ready_bitnet_cpu_reference_evidence(evidence_id: &str) -> EvidenceStatus {
+        EvidenceStatus {
+            evidence_id: evidence_id.to_string(),
+            path: format!("{evidence_id}.json"),
+            present: true,
+            artifact_kind: Some("bitnet_cpu_reference_receipt".to_string()),
+            requested_backend: None,
+            selected_backend: Some("intel-258v-cpu-avx2".to_string()),
+            runtime_api: Some("cpu".to_string()),
+            fallback_used: Some(false),
+            answer_gate_passed: Some(true),
+            phase_timing_present: Some(true),
+            speedup_claim: Some(false),
+            issues: Vec::new(),
         }
     }
 
