@@ -10253,6 +10253,60 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-GOAL-AUDIT-011"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-011-post-reg012"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-REG-012"]
+acceptance = "Refresh the no-inference Lunar Lake excellence audit and goal artifact checklist after REG-012 and closeout #6103 so source_revision points at current main, the completion audit records REG-012/#6102 and closeout #6103 as merged strict-regression Arc/NPU bounded proof surface hardening, and excellent support remains not complete because POWER-006 still lacks battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage. Preserve no inference, model load, fallback, route promotion, speedup, power-advantage, battery-mode evidence, measured-temperature, native accelerator, acceleration, broad quality, stale BitNet, A770 semantic PR merged-to-main, or BitNet QK256/I2_S behavior-change claims."
+commands = [
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | Select-String 'db0f3d05a8584ea682e7cb06eeb2b443a5514f89' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | Select-String 'REG-012/#6102' | Out-Null\"",
+  "target/debug/xtask.exe campaign check intel-258v-platform",
+  "target/debug/xtask.exe campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/**",
+]
+may_claim = [
+  "The no-inference completion audit now records REG-012/#6102 and closeout #6103 as merged strict-regression Arc/NPU bounded proof surface hardening.",
+  "The goal checklist still marks excellent support not complete while POWER-006 lacks real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any model was loaded by this PR.",
+  "Any fallback behavior changed.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Battery-mode low_power evidence is now available.",
+  "Measured temperature readings are now available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "A770 shared BitNet semantic changes have merged to main.",
+  "BitNet semantic-intake reruns are complete.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-006"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
