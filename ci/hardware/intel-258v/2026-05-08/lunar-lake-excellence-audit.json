@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "swarm_completion_audit_no_inference",
-  "created_utc": "2026-05-20T19:58:48Z",
+  "created_utc": "2026-05-20T22:35:02Z",
   "machine_id": "intel-258v",
-  "source_revision": "3d0ca628133e03d2e5ec1ac9f53787d63681db72",
+  "source_revision": "7afc97e08c82a879236ff17736acfaf49a325007",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_bitnet_intake_ready_low_power_blocked",
   "excellent_support_ready": false,
-  "reason": "The platform is operator-ready and profile-aware: dense Qwen CPU remains the control route, OpenVINO GPU is profile-promoted for committed interactive/prefill/decode profiles, OpenVINO NPU is promoted only for warm_resident from resident-session evidence, and low_power remains blocked. SWARM-LNL258V-BITNET-INTAKE-009/#66 corrected the direct BitNet.cpp reference prompt-token comparison boundary by preserving raw BOS-bearing prompt IDs while comparing local scalar/AVX2 prompt IDs against expected_prompt_token_ids_without_local_bos; closeout #68 marked that work merged. The refreshed semantic intake reports intake_ready=true, rerun_required=false, stale_after_merged_count=0, strict regression-v2 passes, and operator comparison is ready. A770 #62 adds selected-device QK256 scaled OpenCL fixture evidence in swarm main, and #74 records its tracker closeout, but that remains adjacent accelerator evidence only: it does not change Lunar Lake route policy, prove native Arc/NPU inference, prove BitNet accelerator inference, or change QK256/I2_S behavior. CUDA PERF-005 report-contract tests from #75 are adjacent benchmark-report guard coverage only and are not a Lunar Lake semantic trigger. Excellent all-profile support is still not complete because LNL258V-POWER-006 requires a physical battery-mode low_power run with before/after telemetry, energy-proxy evidence, stable fallback-free route/profile receipts, measured thermal context where available, and benchmark-qualified power advantage before any low_power promotion.",
+  "reason": "The platform is operator-ready and profile-aware: dense Qwen CPU remains the control route, OpenVINO GPU is profile-promoted for committed interactive/prefill/decode profiles, OpenVINO NPU is promoted only for warm_resident from resident-session evidence, and low_power remains blocked. SWARM-LNL258V-BITNET-INTAKE-009/#66 corrected the direct BitNet.cpp reference prompt-token comparison boundary by preserving raw BOS-bearing prompt IDs while comparing local scalar/AVX2 prompt IDs against expected_prompt_token_ids_without_local_bos; closeout #68 marked that work merged. The refreshed semantic intake reports intake_ready=true, rerun_required=false, stale_after_merged_count=0, strict regression-v2 passes, and operator comparison is ready. A770 #62 adds selected-device QK256 scaled OpenCL fixture evidence in swarm main, #74 records its tracker closeout, and A770 #80/#93 add a strict A770 OpenCL QK256 fail-closed fallback guard, but these remain adjacent accelerator/control-plane evidence only: they do not change Lunar Lake route policy, prove native Arc/NPU inference, prove BitNet accelerator inference, or change QK256/I2_S behavior. CI #90 narrows native-GPU CI routing for plain kernel helper edits and is control-plane coverage only. CUDA PERF-005 report-contract tests from #75 are adjacent benchmark-report guard coverage only and are not a Lunar Lake semantic trigger. Excellent all-profile support is still not complete because LNL258V-POWER-006 requires a physical battery-mode low_power run with before/after telemetry, energy-proxy evidence, stable fallback-free route/profile receipts, measured thermal context where available, and benchmark-qualified power advantage before any low_power promotion.",
   "tracker_state": {
     "active_item": "LNL258V-POWER-006",
     "active_item_status": "blocked",
@@ -70,7 +70,7 @@
     "last_bitnet_cpu_reference_surface_merge_sha": "5fb87bbb38a8e27a7b2847c59e0f6be496f3d3c2",
     "last_bitnet_cpu_reference_surface_closeout_pr": 6107,
     "last_bitnet_cpu_reference_surface_closeout_merge_sha": "72d86a72e7deaf8cdeed6a620f79dddf48ca5dd6",
-    "audit_refresh_scope": "no_inference_swarm_post_a770009_closeout_cuda_perf005_contract_refresh",
+    "audit_refresh_scope": "no_inference_swarm_post_a770010_strict_fallback_guard_ci90_control_plane_refresh",
     "last_swarm_migration_strict_proof_item": "SWARM-LNL258V-REG-001",
     "last_swarm_migration_strict_proof_pr": 29,
     "last_swarm_migration_strict_proof_merge_sha": "fb9db1577723a73682c63d49a3a6de893a2359cd",
@@ -105,7 +105,19 @@
     "last_swarm_a770_qk256_scaled_fixture_closeout_scope": "tracker_closeout_only_no_lunar_lake_route_or_semantic_change",
     "last_swarm_cuda_perf005_report_contract_pr": 75,
     "last_swarm_cuda_perf005_report_contract_merge_sha": "e55d6b02481f9e3575bf431779d27f7958652199",
-    "last_swarm_cuda_perf005_report_contract_scope": "adjacent_cuda_perf005_benchmark_report_test_contract_not_lunar_lake_semantic_trigger"
+    "last_swarm_cuda_perf005_report_contract_scope": "adjacent_cuda_perf005_benchmark_report_test_contract_not_lunar_lake_semantic_trigger",
+    "last_swarm_a770_qk256_strict_fallback_guard_pr": 80,
+    "last_swarm_a770_qk256_strict_fallback_guard_head_sha": "a1149c1e8cb0c7bf058833f39db771fd17664bdd",
+    "last_swarm_a770_qk256_strict_fallback_guard_merge_sha": "3718c41735634ea515fcefdca3ee6e0990df3bfa",
+    "last_swarm_a770_qk256_strict_fallback_guard_merged_at": "2026-05-20T21:55:27Z",
+    "last_swarm_a770_qk256_strict_fallback_guard_scope": "adjacent_selected_device_strict_fallback_guard_not_lunar_lake_route_or_semantic_change",
+    "last_swarm_a770_qk256_strict_fallback_guard_closeout_pr": 93,
+    "last_swarm_a770_qk256_strict_fallback_guard_closeout_merge_sha": "b6ec4615d73568583511a48cb292e55a58f4a52d",
+    "last_swarm_a770_qk256_strict_fallback_guard_closeout_merged_at": "2026-05-20T22:17:24Z",
+    "last_swarm_ci_gpu_helper_pr": 90,
+    "last_swarm_ci_gpu_helper_merge_sha": "7afc97e08c82a879236ff17736acfaf49a325007",
+    "last_swarm_ci_gpu_helper_merged_at": "2026-05-20T22:26:54Z",
+    "last_swarm_ci_gpu_helper_scope": "ci_control_plane_only_plain_kernel_helpers_no_longer_select_native_gpu_lane"
   },
   "command_surface": {
     "ask": {
@@ -448,7 +460,8 @@
     "low_power has AC-only blocked telemetry and energy-proxy receipts, but still lacks battery-mode before/after telemetry, repeated low_power route/profile evidence, and benchmark-qualified power advantage.",
     "Thermal zone visibility is recorded, but usable measured temperature readings remain unavailable.",
     "OpenVINO NPU is promoted only for warm_resident; cold-start blockers are preserved for cold profiles and no native NPU claim is made.",
-    "A770 #62 selected-device QK256 scaled OpenCL fixture evidence and #74 tracker closeout are adjacent accelerator proof only and are not a Lunar Lake route promotion, native Arc/NPU inference, full BitNet accelerator inference, or QK256/I2_S behavior-change claim.",
+    "A770 #62 selected-device QK256 scaled OpenCL fixture evidence, #74 tracker closeout, and #80/#93 strict A770 QK256 fallback guard are adjacent accelerator/control-plane proof only and are not a Lunar Lake route promotion, native Arc/NPU inference, full BitNet accelerator inference, or QK256/I2_S behavior-change claim.",
+    "CI #90 is native-GPU lane routing control-plane coverage for plain kernel helper edits only and is not Lunar Lake inference, route policy, power evidence, or a shared BitNet semantic fix.",
     "CUDA PERF-005 report-contract tests from #75 are adjacent benchmark-report guard coverage only and are not Lunar Lake inference, route policy, power evidence, or a shared BitNet semantic fix.",
     "BitNet CPU reference route evidence remains a strict-regression surface gate separate from dense Qwen SLM evidence.",
     "Arc/NPU bounded proof receipts remain bounded kernel or subgraph proof, not full accelerator inference.",
@@ -533,6 +546,9 @@
     "swarm_a770_qk256_scaled_fixture_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/62",
     "swarm_a770_qk256_scaled_fixture_closeout_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/74",
     "swarm_cuda_perf005_report_contract_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/75",
+    "swarm_a770_qk256_strict_fallback_guard_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/80",
+    "swarm_a770_qk256_strict_fallback_guard_closeout_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/93",
+    "swarm_ci_gpu_helper_routing_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/90",
     "swarm_a770_qk256_scaled_fixture": "ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-qk256-i8s-scaled-fixture.json"
   },
   "claim_boundary": {
@@ -546,7 +562,7 @@
     "measured_temperature_claim": false,
     "full_bitnet_accelerator_inference_claim": false,
     "bitnet_qk256_i2s_behavior_change": false,
-    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, Arc/NPU bounded proof surface flags, BitNet CPU reference surface flags, BitNet semantic-intake, BITNET-INTAKE-004 closeout, POWER-007/POWER-008 runbook discoverability, OP-014 low_power blocked-ask guidance, VALIDATE-003 blocked-ask readiness indexing, POWER-009/#6097 power-profile runbook guidance, POWER-009 closeout #6099, REG-012/#6102, REG-012 closeout #6103, REG-013/#6106, REG-013 closeout #6107, A770-006/#6110, A770-006 closeout #6112, SWARM-LNL258V-BITNET-INTAKE-006/#45 closeout #46, live GitHub verification that A770 #43 merged after the prior Lunar Lake intake cutoff, A770-009/#62 selected-device QK256 scaled fixture closeout #74, and CUDA PERF-005 report-contract tests #75"
+    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, Arc/NPU bounded proof surface flags, BitNet CPU reference surface flags, BitNet semantic-intake, BITNET-INTAKE-004 closeout, POWER-007/POWER-008 runbook discoverability, OP-014 low_power blocked-ask guidance, VALIDATE-003 blocked-ask readiness indexing, POWER-009/#6097 power-profile runbook guidance, POWER-009 closeout #6099, REG-012/#6102, REG-012 closeout #6103, REG-013/#6106, REG-013 closeout #6107, A770-006/#6110, A770-006 closeout #6112, SWARM-LNL258V-BITNET-INTAKE-006/#45 closeout #46, live GitHub verification that A770 #43 merged after the prior Lunar Lake intake cutoff, A770-009/#62 selected-device QK256 scaled fixture closeout #74, CUDA PERF-005 report-contract tests #75, A770-010/#80 strict fallback guard closeout #93, and CI #90 gpu-helper lane routing control-plane coverage"
   },
-  "swarm_revision": "3d0ca628133e03d2e5ec1ac9f53787d63681db72"
+  "swarm_revision": "7afc97e08c82a879236ff17736acfaf49a325007"
 }

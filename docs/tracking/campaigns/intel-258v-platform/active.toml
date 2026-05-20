@@ -8280,6 +8280,57 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SWARM-LNL258V-GOAL-AUDIT-004"
+status = "in_progress"
+branch = "codex/swarm-lnl258v-goal-audit-004-post-a770010-ci90"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-POWER-006"]
+acceptance = "Refresh the no-inference Lunar Lake excellence audit and goal artifact checklist after A770-010 strict QK256 fallback guard closeout and CI #90 gpu-helper routing landed, recording both as adjacent control-plane evidence only while preserving POWER-006 as the active low_power blocker and preserving no inference, route-promotion, speedup, power-advantage, battery-mode, measured-temperature, native accelerator, broad quality, shared BitNet semantic trigger, or BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+]
+may_claim = [
+  "The Lunar Lake no-inference audit artifacts are refreshed to mention A770-010/#80/#93 and CI #90 as adjacent control-plane evidence.",
+  "POWER-006 remains the active low_power blocker until real battery-mode telemetry, energy-proxy evidence, measured thermal context where available, and benchmark-qualified power advantage exist.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Battery-mode low_power evidence was collected by this PR.",
+  "Measured thermal temperature readings are available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "A770-010 is a shared BitNet semantic trigger for Lunar Lake reruns.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "SWARM-LNL258V-BITNET-INTAKE-009"
 status = "merged"
 pr = 66
