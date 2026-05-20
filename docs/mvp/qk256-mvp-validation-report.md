@@ -1,5 +1,11 @@
 # QK256 MVP Validation Report
 
+> Claim boundary: this is a historical MVP validation report from 2025-10-17.
+> Its production-ready, speedup, GPU, and throughput wording records that older
+> report context only. Current BitNet-rs support, readiness, speed, residency,
+> fallback, and route claims must come from active model coverage, receipts,
+> status docs, specs, and claim gates.
+
 **Date:** 2025-10-17
 **Status:** ✅ **MVP COMPLETE - DEMO READY**
 **Version:** 1.0.0

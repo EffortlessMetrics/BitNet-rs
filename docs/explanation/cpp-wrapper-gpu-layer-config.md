@@ -7,16 +7,24 @@
 **Related Issues**: Socket 5 GPU Support
 **Date**: 2025-10-25
 
+> Claim boundary: this is a draft design specification. Expected speedups,
+> GPU-offload behavior, fallback behavior, and benchmark thresholds are design
+> targets until current-source receipts, model coverage, status docs, specs, and
+> claim gates prove them for an exact model/backend/profile.
+
 ---
 
 ## Executive Summary
 
 This specification defines the architecture for enabling GPU layer configuration in the BitNet-rs C++ FFI wrapper (`crossval/src/bitnet_cpp_wrapper.cc`). Currently, GPU layer offloading is disabled at lines 408-410, forcing all inference to run on CPU despite the infrastructure accepting an `n_gpu_layers` parameter. This represents a **MEDIUM-priority optimization opportunity** to unlock GPU acceleration for cross-validation workflows.
 
-**Key Impact**:
-- **Performance**: Expected 5-50× speedup for GPU-accelerated inference (model-size dependent)
-- **Memory**: GPU VRAM usage scales with layer count (estimate: ~100-500MB per billion parameters offloaded)
-- **Compatibility**: Graceful fallback to CPU when GPU unavailable or VRAM insufficient
+**Key Impact Targets**:
+- **Performance**: target 5-50× speedup for GPU-accelerated inference,
+  model-size dependent and receipt-gated
+- **Memory**: estimated GPU VRAM usage scales with layer count (~100-500MB per
+  billion parameters offloaded)
+- **Compatibility**: target graceful fallback to CPU when GPU unavailable or
+  VRAM insufficient, with explicit receipt evidence required
 
 **Scope**: This specification covers Socket 1 (Persistent Context API) GPU configuration only. Socket 5 (dedicated GPU API) remains a v0.3 future consideration.
 

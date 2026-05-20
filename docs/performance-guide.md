@@ -2,6 +2,12 @@
 
 Comprehensive guide to optimizing BitNet-rs performance for different use cases and hardware configurations.
 
+> Claim boundary: this guide describes optimization surfaces and historical
+> targets. It does not prove current speedup, CUDA/GPU readiness, server
+> readiness, residency, fallback behavior, or product readiness for any model.
+> Current performance and hardware claims must come from active receipts, model
+> coverage, status docs, specs, and claim gates.
+
 ## Table of Contents
 
 - [Performance Overview](#performance-overview)
@@ -15,7 +21,7 @@ Comprehensive guide to optimizing BitNet-rs performance for different use cases 
 
 ## Performance Overview
 
-BitNet-rs is designed for high-performance inference with several optimization strategies:
+BitNet-rs contains several optimization surfaces:
 
 - **SIMD Kernels**: Vectorized operations for CPU (AVX2, NEON)
 - **GPU Acceleration**: CUDA kernels for parallel processing
@@ -23,7 +29,9 @@ BitNet-rs is designed for high-performance inference with several optimization s
 - **Memory Efficiency**: Zero-copy operations and memory pooling
 - **Async Processing**: Non-blocking I/O and concurrent execution
 
-### Performance Targets
+### Historical Performance Targets
+
+These targets are planning values, not current support or speedup claims.
 
 | Hardware | Model Size | Target Latency | Target Throughput |
 |----------|------------|----------------|-------------------|

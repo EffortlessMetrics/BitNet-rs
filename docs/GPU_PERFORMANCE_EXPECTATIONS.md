@@ -1,10 +1,16 @@
 # GPU Performance Expectations
 
+> Claim boundary: this page records historical targets and estimates, not
+> current speedup, CUDA readiness, server readiness, residency, or
+> product-readiness proof. Current hardware and model claims must come from
+> active model coverage, receipts, status docs, specs, and claim gates.
+
 Expected inference throughput targets and memory requirements for BitNet-rs
 GPU backends. These are **targets and estimates** — actual performance depends
 on model quantization format, batch size, prompt length, and driver version.
 
-> **Current status (v0.1.0-qna-mvp)**: CUDA is the production GPU backend.
+> **Historical status note (v0.1.0-qna-mvp)**: CUDA was treated as the planned
+> GPU backend in this older target document.
 > QK256 scalar kernels are ~0.1 tok/s (MVP limitation). I2_S BitNet32-F16
 > format is 10–20× faster. See [COMPATIBILITY.md](../COMPATIBILITY.md) and
 > [GPU_COMPATIBILITY_MATRIX.md](GPU_COMPATIBILITY_MATRIX.md) for backend status.
