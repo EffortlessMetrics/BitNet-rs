@@ -1,0 +1,13 @@
+timestamp = "2026-05-20T08:05:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-063"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+summary = "Start the SLM-CPU-063 release-surface intake gate for audited Kaby SLM artifacts produced by bitnet-rs-swarm."
+notes = [
+  "The gate defines the evidence package required before a swarm-side packed Q8_0 compute candidate can return to BitNet-rs.",
+  "The work is docs/tracker only and preserves the Qwen3 Q8_0 and Qwen2.5 Q8_0 strict CPU behavior oracle.",
+  "No runtime, receipt schema, model artifact, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, Q4/Q5, throughput, or BitNet QK256 claim is made.",
+]

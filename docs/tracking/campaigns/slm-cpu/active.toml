@@ -2268,7 +2268,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-063"
-status = "ready"
+status = "in_progress"
 branch = "codex/slm-cpu-063-swarm-artifact-intake-gate"
 stackable = false
 review_mode = "codex_premerge"
