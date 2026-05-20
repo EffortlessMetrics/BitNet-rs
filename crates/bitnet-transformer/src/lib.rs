@@ -146,7 +146,9 @@ impl DenseLinearRuntimeHookBoundary {
             sidecar_matrix_rows: payload.map(|payload| payload.matrix_rows),
             sidecar_matrix_cols: payload.map(|payload| payload.matrix_cols),
             sidecar_payload_contract_valid: payload.is_some_and(|payload| {
-                payload.shape_matches_matvec_contract() && payload.payload_len_matches_contract()
+                payload.tensor_name == descriptor.tensor_name
+                    && payload.shape_matches_matvec_contract()
+                    && payload.payload_len_matches_contract()
             }),
             runtime_compute_enabled: false,
             eager_f32_runtime_preserved: true,
