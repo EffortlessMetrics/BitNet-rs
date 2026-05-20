@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_readiness",
   "proof_stage": "operator_routes_indexed",
-  "created_utc": "2026-05-20T05:15:00Z",
+  "created_utc": "2026-05-20T05:30:10Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_ready": true,
@@ -235,6 +235,14 @@
     "energy_proxy_recorded": true,
     "energy_proxy_source": "energy_proxy_receipt",
     "thermal_context_recorded": true,
+    "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
+    "next_required_evidence": [
+      "rerun telemetry-context --require-battery on battery power before collecting low_power route samples",
+      "collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix",
+      "rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision",
+      "record thermal temperatures if available; current thermal evidence is zone visibility only",
+      "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
+    ],
     "claim_boundary_preserved": true,
     "regression_ready": true,
     "gaps": [],

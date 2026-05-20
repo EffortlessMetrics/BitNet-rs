@@ -1278,6 +1278,10 @@ pub struct PowerProfileRegressionSummary {
     pub energy_proxy_recorded: bool,
     pub energy_proxy_source: Option<String>,
     pub thermal_context_recorded: bool,
+    #[serde(default)]
+    pub operator_runbook: Option<String>,
+    #[serde(default)]
+    pub next_required_evidence: Vec<String>,
     pub claim_boundary_preserved: bool,
     pub regression_ready: bool,
     pub gaps: Vec<String>,
@@ -2387,6 +2391,8 @@ pub struct LunarLakePowerProfileEvidence {
     pub low_power_promotion_ready: bool,
     pub power_advantage_proven: bool,
     pub gaps: Vec<String>,
+    #[serde(default)]
+    pub operator_runbook: Option<String>,
     pub next_required_evidence: Vec<String>,
     pub claim_boundary: PowerProfileClaimBoundary,
 }
@@ -5181,6 +5187,22 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
                 .to_string(),
         );
     }
+    if !power.telemetry.battery_mode_sample_recorded {
+        if power.operator_runbook.as_deref() != Some(LOW_POWER_BATTERY_RUNBOOK) {
+            gaps.push(format!(
+                "low_power power-profile evidence must point to {LOW_POWER_BATTERY_RUNBOOK}"
+            ));
+        }
+        if !power
+            .next_required_evidence
+            .iter()
+            .any(|item| item.contains("telemetry-context --require-battery"))
+        {
+            gaps.push(
+                "low_power power-profile evidence must name telemetry-context --require-battery as next evidence".to_string(),
+            );
+        }
+    }
 
     let mut blockers = power.gaps.clone();
     for route in &power.low_power_routes {
@@ -5202,6 +5224,8 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
         energy_proxy_recorded: power.telemetry.energy_proxy_recorded,
         energy_proxy_source: power.telemetry.energy_proxy_source,
         thermal_context_recorded: power.telemetry.thermal_context_recorded,
+        operator_runbook: power.operator_runbook,
+        next_required_evidence: power.next_required_evidence,
         claim_boundary_preserved,
         regression_ready: gaps.is_empty(),
         gaps,
@@ -5860,6 +5884,8 @@ fn power_profile_regression_notes(summary: &PowerProfileRegressionSummary) -> Ve
         format!("energy_proxy_recorded={}", summary.energy_proxy_recorded),
         format!("energy_proxy_source={}", summary.energy_proxy_source.as_deref().unwrap_or("none")),
         format!("thermal_context_recorded={}", summary.thermal_context_recorded),
+        format!("operator_runbook={}", summary.operator_runbook.as_deref().unwrap_or("none")),
+        format!("next_required_evidence={}", join_or_none(&summary.next_required_evidence)),
         format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
         format!("blocker_count={}", summary.blockers.len()),
     ];
@@ -8539,10 +8565,10 @@ pub fn build_power_profile_evidence_with_created_utc(
         && input_claim_boundary_preserved
         && !low_power_routes.is_empty();
 
+    let operator_runbook = Some(LOW_POWER_BATTERY_RUNBOOK.to_string());
     let mut next_required_evidence = Vec::new();
     if !telemetry.battery_mode_sample_recorded {
-        next_required_evidence
-            .push("collect AC and battery samples for the same route/profile matrix".to_string());
+        next_required_evidence.extend(blocked_operator_ask_next_required_evidence("low_power"));
     }
     if !telemetry.energy_proxy_recorded {
         next_required_evidence.push(
@@ -8564,6 +8590,13 @@ pub fn build_power_profile_evidence_with_created_utc(
         "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
             .to_string(),
     );
+    let mut deduped_next_required_evidence = Vec::new();
+    for item in next_required_evidence {
+        if !deduped_next_required_evidence.contains(&item) {
+            deduped_next_required_evidence.push(item);
+        }
+    }
+    let next_required_evidence = deduped_next_required_evidence;
 
     Ok(LunarLakePowerProfileEvidence {
         schema_version: "1.0.0".to_string(),
@@ -8585,6 +8618,7 @@ pub fn build_power_profile_evidence_with_created_utc(
         low_power_promotion_ready,
         power_advantage_proven,
         gaps,
+        operator_runbook,
         next_required_evidence,
         claim_boundary: PowerProfileClaimBoundary {
             new_inference_executed: false,
@@ -19275,6 +19309,24 @@ mod tests {
                 .any(|gap| gap.contains("AC-only; battery comparison evidence is missing"))
         );
         assert!(receipt.gaps.iter().any(|gap| gap.contains("energy proxy evidence is missing")));
+        assert_eq!(receipt.operator_runbook.as_deref(), Some(LOW_POWER_BATTERY_RUNBOOK));
+        assert!(
+            receipt
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("telemetry-context --require-battery"))
+        );
+        let power_profile_path = temp.path().join("power-profile.json");
+        fs::write(&power_profile_path, serde_json::to_vec_pretty(&receipt)?)?;
+        let summary = inspect_power_profile_regression(&power_profile_path)?;
+        assert!(summary.regression_ready, "{:?}", summary.gaps);
+        assert_eq!(summary.operator_runbook.as_deref(), Some(LOW_POWER_BATTERY_RUNBOOK));
+        assert!(
+            summary
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("telemetry-context --require-battery"))
+        );
         let npu = receipt
             .low_power_routes
             .iter()
@@ -21679,6 +21731,8 @@ mod tests {
             energy_proxy_recorded: false,
             energy_proxy_source: None,
             thermal_context_recorded: false,
+            operator_runbook: Some(LOW_POWER_BATTERY_RUNBOOK.to_string()),
+            next_required_evidence: blocked_operator_ask_next_required_evidence("low_power"),
             claim_boundary_preserved: true,
             regression_ready: true,
             gaps: vec![],
