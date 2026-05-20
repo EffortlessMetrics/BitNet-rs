@@ -1,3 +1,11 @@
+> **Archived planning-doc claim boundary**
+>
+> This file is a historical TDD/sprint planning or completion artifact from
+> active development. Complete, successful, ready, passing, implementation,
+> GPU, tokenizer, model-loading, performance, and production wording below is
+> historical context only and is not a current test, implementation, backend,
+> model, quality, performance, product, or release claim. Current claims must
+> come from active docs, trackers, receipts, specs, and claim gates.
 # BitNet-rs TDD Scaffold Implementation - Final Sprint Summary
 
 **Sprint Dates**: 2025-10-20 (Sprints #4 & #5)
