@@ -5,7 +5,8 @@ Linked proposal:
 [BITNET-PROP-0003](../proposals/BITNET-PROP-0003-native-rust-inference-product.md)
 Linked specs:
 [BITNET-SPEC-0013](BITNET-SPEC-0013-model-onboarding-proof-ladder.md),
-[BITNET-SPEC-0014](BITNET-SPEC-0014-runtime-performance-contract.md)
+[BITNET-SPEC-0014](BITNET-SPEC-0014-runtime-performance-contract.md),
+[BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE](BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE.md)
 Linked ADRs:
 [BITNET-ADR-0005](../adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md)
 Applies to: `bitnet model status --format json`, receipt explanation
@@ -30,6 +31,7 @@ The status surface summarizes existing authorities:
 - [Model Coverage Matrix](../model-artifacts/MODEL_COVERAGE_MATRIX.md);
 - [Model Onboarding Proof Ladder](BITNET-SPEC-0013-model-onboarding-proof-ladder.md);
 - [Runtime Performance Contract](BITNET-SPEC-0014-runtime-performance-contract.md);
+- [Proof-family non-inheritance](BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE.md);
 - [Proof-family ADR](../adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md);
 - `ci/hardware/**` receipts;
 - campaign active manifests and events under `docs/tracking/campaigns/**`.

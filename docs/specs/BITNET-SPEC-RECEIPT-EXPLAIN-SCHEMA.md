@@ -6,7 +6,8 @@ Linked proposal:
 Linked specs:
 [BITNET-SPEC-MODEL-READINESS-STATUS-SURFACE](BITNET-SPEC-MODEL-READINESS-STATUS-SURFACE.md),
 [BITNET-SPEC-0013](BITNET-SPEC-0013-model-onboarding-proof-ladder.md),
-[BITNET-SPEC-0014](BITNET-SPEC-0014-runtime-performance-contract.md)
+[BITNET-SPEC-0014](BITNET-SPEC-0014-runtime-performance-contract.md),
+[BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE](BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE.md)
 Linked ADRs:
 [BITNET-ADR-0005](../adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md)
 Applies to: `bitnet receipts explain <receipt> --format json`,
@@ -28,6 +29,7 @@ Receipt explanation summarizes:
 - `ci/model-artifacts/model-coverage-matrix.toml`;
 - [Model readiness/status surface](BITNET-SPEC-MODEL-READINESS-STATUS-SURFACE.md);
 - [Runtime Performance Contract](BITNET-SPEC-0014-runtime-performance-contract.md);
+- [Proof-family non-inheritance](BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE.md);
 - [Proof-family ADR](../adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md).
 
 The raw receipt is evidence for what happened. The model coverage row is the
