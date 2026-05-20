@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T01:50:00Z"
+campaign = "intel-258v-platform"
+event = "in_progress"
+item = "LNL258V-BITNET-INTAKE-004"
+actor = "codex"
+from = "proposed"
+to = "in_progress"
+branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-004-open-stack-ledger"
+summary = "Started a narrow Lunar Lake BitNet semantic-intake refresh for open stacked A770 semantic fixes."
+notes = [
+  "A live PR audit found open stacked A770 semantic PRs #4756, #4757, #4767, and #4853 in addition to the already indexed #5064.",
+  "The slice indexes those pending changes as shared BitNet semantic work that will require Lunar Lake reruns only if any reaches main.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made.",
+  "POWER-006 remains blocked on real battery-mode low_power telemetry and energy-proxy evidence.",
+]
