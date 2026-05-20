@@ -7127,7 +7127,7 @@ fn bench_cuda_benchmark_receipt_profile_filters_json() -> Result<(), Box<dyn std
     let report: serde_json::Value = serde_json::from_slice(&output)?;
 
     assert_eq!(report["profile_count"], 1);
-    assert_eq!(report["profiles"].as_array().expect("profiles array").len(), 1);
+    assert_eq!(report["profiles"].as_array().ok_or("profiles array")?.len(), 1);
     assert_eq!(report["profiles"][0]["profile"], "short_decode_8");
     assert_eq!(report["fallback_used"], false);
     assert_eq!(report["speedup_claim"], false);
