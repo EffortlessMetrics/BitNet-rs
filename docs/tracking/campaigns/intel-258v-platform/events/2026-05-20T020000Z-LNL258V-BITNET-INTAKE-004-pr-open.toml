@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T02:00:00Z"
+event = "pr_open"
+item = "LNL258V-BITNET-INTAKE-004"
+pr = 6064
+branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-004-open-stack-ledger"
+head_sha = "a49d1fb6f16dcde0c648c371b7f2bdafabd490dd"
+actor = "codex"
+summary = "Opened PR #6064 to expand Lunar Lake BitNet semantic-intake watchpoints for the open A770 stack."
+
+notes = [
+  "The PR indexed pending stacked A770 semantic PRs #4756, #4757, #4767, and #4853 alongside #5064.",
+  "The refreshed intake kept pending_shared_change_count=5, stale_after_merged_count=0, and rerun_required=false.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim was made.",
+]
