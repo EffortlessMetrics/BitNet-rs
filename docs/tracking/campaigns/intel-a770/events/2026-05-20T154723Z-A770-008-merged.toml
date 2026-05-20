@@ -1,0 +1,13 @@
+timestamp = "2026-05-20T15:47:23Z"
+campaign = "intel-a770"
+item = "A770-008"
+event = "merged"
+pr = 53
+head_sha = "62c3dd1900421889226221034be55111a839a4ea"
+merge_sha = "1a3f917fa09a130d96ac57a49a88c0da90fea222"
+branch = "codex/intel-a770/A770-008-benchmark-baseline"
+actor = "Codex"
+notes = [
+  "Merged PR #53 after hosted CI passed, recording the selected-device OpenCL matmul_i2s diagnostic benchmark baseline.",
+  "The committed receipt remains a toy fixture benchmark only with benchmark_claim_allowed=false, speedup_claim=false, bitnet_inference=false, and qk256_decode=false.",
+]

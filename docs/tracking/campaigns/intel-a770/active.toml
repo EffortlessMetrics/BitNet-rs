@@ -292,9 +292,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-008"
-status = "in_progress"
+status = "merged"
 pr = 53
-head_sha = "79ddc68cb719986ab38b0524799f59364680bb43"
+head_sha = "62c3dd1900421889226221034be55111a839a4ea"
+merge_sha = "1a3f917fa09a130d96ac57a49a88c0da90fea222"
 branch = "codex/intel-a770/A770-008-benchmark-baseline"
 stackable = false
 review_mode = "codex_premerge"
