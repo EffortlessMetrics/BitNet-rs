@@ -62,6 +62,9 @@ const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpu
 const MAC_ROBUSTNESS_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-robustness-corpus.yaml";
 const MAC_ROBUSTNESS_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-excellence/robustness/summary.json";
+const MAC_LONG_CONTEXT_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-long-context-corpus.yaml";
+const MAC_LONG_CONTEXT_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-inference-excellence/context/answer-corpus.json";
 const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
 const MAC_SMOKE_EXPECTED_FRAGMENT: &str = "4";
 const MAC_CHAT_SMOKE_SYSTEM_PROMPT: &str = "You are a concise local assistant.";
@@ -255,12 +258,30 @@ enum MacEvalSuite {
     /// Dry-run the dense SLM and BitNet negative/robustness corpus.
     #[value(name = "m4-robustness")]
     M4Robustness,
+    /// Dry-run the Apple M4 long-context quality corpus contract.
+    #[value(name = "m4-long-context")]
+    M4LongContext,
 }
 
 impl MacEvalSuite {
     const fn id(self) -> &'static str {
         match self {
             Self::M4Robustness => "m4-robustness",
+            Self::M4LongContext => "m4-long-context",
+        }
+    }
+
+    const fn default_corpus(self) -> &'static str {
+        match self {
+            Self::M4Robustness => MAC_ROBUSTNESS_DEFAULT_CORPUS,
+            Self::M4LongContext => MAC_LONG_CONTEXT_DEFAULT_CORPUS,
+        }
+    }
+
+    const fn default_receipt(self) -> &'static str {
+        match self {
+            Self::M4Robustness => MAC_ROBUSTNESS_DEFAULT_RECEIPT,
+            Self::M4LongContext => MAC_LONG_CONTEXT_DEFAULT_RECEIPT,
         }
     }
 }
@@ -303,6 +324,9 @@ enum MacBenchmarkProfile {
     /// Long prompts with a 128-token output budget.
     #[value(name = "long_prompt_128_out")]
     LongPrompt128Out,
+    /// Context profile group alias covering context_1k and context_4k.
+    #[value(name = "context")]
+    Context,
     /// Synthetic context prompt targeting roughly 1k input tokens.
     #[value(name = "context_1k")]
     Context1k,
@@ -330,6 +354,7 @@ impl MacBenchmarkProfile {
             Self::ShortPrompt64Out => "short_prompt_64_out",
             Self::LongPrompt16Out => "long_prompt_16_out",
             Self::LongPrompt128Out => "long_prompt_128_out",
+            Self::Context => "context",
             Self::Context1k => "context_1k",
             Self::Context4k => "context_4k",
             Self::Resident25 => "resident_25",
@@ -419,6 +444,41 @@ struct MacRobustnessScoring {
     forbidden_tokens: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     schema: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MacLongContextCorpus {
+    schema: u64,
+    artifact_kind: String,
+    name: String,
+    description: String,
+    #[serde(default)]
+    metadata: serde_json::Value,
+    #[serde(default)]
+    defaults: MacLongContextDefaults,
+    cases: Vec<MacLongContextCase>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct MacLongContextDefaults {
+    #[serde(default)]
+    families: Vec<String>,
+    #[serde(default)]
+    family_prompt_templates: std::collections::BTreeMap<String, String>,
+    #[serde(default)]
+    max_new_tokens: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MacLongContextCase {
+    id: String,
+    category: String,
+    #[serde(default)]
+    profile: Option<String>,
+    question: String,
+    #[serde(default)]
+    max_new_tokens: Option<usize>,
+    scoring: MacRobustnessScoring,
 }
 
 /// Run Apple M4 local operator flows with strict receipts.
@@ -1134,17 +1194,17 @@ enum MacAction {
         #[arg(long, value_enum)]
         suite: MacEvalSuite,
 
-        /// Deterministic robustness corpus.
-        #[arg(long, value_name = "PATH", default_value = MAC_ROBUSTNESS_DEFAULT_CORPUS)]
-        corpus: PathBuf,
+        /// Deterministic eval corpus. Defaults depend on --suite.
+        #[arg(long, value_name = "PATH")]
+        corpus: Option<PathBuf>,
 
         /// Do not invoke model generation; validate suite shape and emit not-run rows.
         #[arg(long, default_value_t = false)]
         dry_run: bool,
 
         /// Output eval summary receipt.
-        #[arg(long, value_name = "PATH", default_value = MAC_ROBUSTNESS_DEFAULT_RECEIPT)]
-        json_out: PathBuf,
+        #[arg(long, value_name = "PATH")]
+        json_out: Option<PathBuf>,
 
         /// Emit JSON to stdout after writing --json-out.
         #[arg(long, default_value_t = false)]
@@ -1808,7 +1868,13 @@ impl MacCommand {
             }
             MacAction::Eval { suite, corpus, dry_run, json_out, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac eval")?;
-                run_mac_eval(suite, corpus, dry_run, json_out, json)
+                run_mac_eval(
+                    suite,
+                    corpus.unwrap_or_else(|| PathBuf::from(suite.default_corpus())),
+                    dry_run,
+                    json_out.unwrap_or_else(|| PathBuf::from(suite.default_receipt())),
+                    json,
+                )
             }
             MacAction::Benchmark {
                 calibrate,
@@ -1902,6 +1968,9 @@ fn run_mac_eval(
     json_out: PathBuf,
     json: bool,
 ) -> Result<()> {
+    if suite == MacEvalSuite::M4LongContext {
+        return run_mac_long_context_eval(corpus_path, dry_run, json_out, json);
+    }
     if !dry_run {
         anyhow::bail!(
             "mac eval --suite {} currently supports only --dry-run; live robustness execution needs a separate receipt-gated item",
@@ -1923,6 +1992,36 @@ fn run_mac_eval(
         );
         println!(
             "Claim boundary: robustness cases are mechanically scored and separated by dense SLM vs BitNet; no broad safety, alignment, factuality, Metal, QK256, Neural Engine, MPSGraph, or speedup claim."
+        );
+    }
+    Ok(())
+}
+
+fn run_mac_long_context_eval(
+    corpus_path: PathBuf,
+    dry_run: bool,
+    json_out: PathBuf,
+    json: bool,
+) -> Result<()> {
+    if !dry_run {
+        anyhow::bail!(
+            "mac eval --suite m4-long-context currently supports only --dry-run contract receipts; live M4-CONTEXT-002 evidence must be produced by the release answer-corpus and benchmark routes before any long-context proof claim"
+        );
+    }
+    let (corpus, corpus_sha256) = load_mac_long_context_corpus(&corpus_path)?;
+    let receipt = mac_long_context_eval_summary_receipt(&corpus_path, corpus_sha256, &corpus);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        println!(
+            "Apple M4 eval suite: m4-long-context (dry-run, cases={}, receipt={})",
+            receipt["expanded_case_count"].as_u64().unwrap_or(0),
+            json_out.display()
+        );
+        println!(
+            "Claim boundary: long-context cases are a mechanical contract only until live answer-corpus and benchmark receipts are published; dense SLM rows and BitNet unsupported boundaries remain separate."
         );
     }
     Ok(())
@@ -2018,17 +2117,105 @@ fn validate_mac_robustness_corpus(path: &Path, corpus: &MacRobustnessCorpus) -> 
     Ok(())
 }
 
+fn load_mac_long_context_corpus(path: &Path) -> Result<(MacLongContextCorpus, String)> {
+    let bytes =
+        std::fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let corpus: MacLongContextCorpus = serde_yaml::from_slice(&bytes)
+        .with_context(|| format!("failed to parse {}", path.display()))?;
+    validate_mac_long_context_corpus(path, &corpus)?;
+    Ok((corpus, sha256_hex(&bytes)))
+}
+
+fn validate_mac_long_context_corpus(path: &Path, corpus: &MacLongContextCorpus) -> Result<()> {
+    if corpus.schema != 1 {
+        anyhow::bail!(
+            "{} unsupported long-context corpus schema {}",
+            path.display(),
+            corpus.schema
+        );
+    }
+    if corpus.artifact_kind != "apple_m4_long_context_corpus" {
+        anyhow::bail!(
+            "{} unexpected long-context corpus artifact_kind {}",
+            path.display(),
+            corpus.artifact_kind
+        );
+    }
+    if corpus.cases.is_empty() {
+        anyhow::bail!("{} long-context corpus must contain at least one case", path.display());
+    }
+    for required_family in ["dense_slm", "bitnet"] {
+        if !corpus.defaults.families.iter().any(|family| family == required_family) {
+            anyhow::bail!(
+                "{} long-context corpus defaults.families must include {required_family}",
+                path.display()
+            );
+        }
+        if !corpus.defaults.family_prompt_templates.contains_key(required_family) {
+            anyhow::bail!(
+                "{} long-context corpus defaults.family_prompt_templates missing {required_family}",
+                path.display()
+            );
+        }
+    }
+    let mut case_ids = std::collections::BTreeSet::new();
+    let mut categories = std::collections::BTreeSet::new();
+    for case in &corpus.cases {
+        if case.id.trim().is_empty() {
+            anyhow::bail!("{} long-context corpus case has empty id", path.display());
+        }
+        if !case_ids.insert(case.id.as_str()) {
+            anyhow::bail!(
+                "{} long-context corpus case id `{}` is duplicated",
+                path.display(),
+                case.id
+            );
+        }
+        if case.question.trim().is_empty() {
+            anyhow::bail!(
+                "{} long-context corpus case `{}` has empty question",
+                path.display(),
+                case.id
+            );
+        }
+        validate_mac_scoring_contract(path, "long-context", &case.id, &case.scoring)?;
+        categories.insert(case.category.as_str());
+    }
+    for required_category in [
+        "retrieval_copy",
+        "table_extraction",
+        "late_context_instruction_following",
+        "truncation_behavior",
+    ] {
+        if !categories.contains(required_category) {
+            anyhow::bail!(
+                "{} long-context corpus must include category {required_category}",
+                path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
 fn validate_mac_robustness_scoring(path: &Path, case: &MacRobustnessCase) -> Result<()> {
-    let scoring = &case.scoring;
+    validate_mac_scoring_contract(path, "robustness", &case.id, &case.scoring)
+}
+
+fn validate_mac_scoring_contract(
+    path: &Path,
+    suite_label: &str,
+    case_id: &str,
+    scoring: &MacRobustnessScoring,
+) -> Result<()> {
     match scoring.kind.as_str() {
         "exact_match" | "normalized_match" => {
             if scoring.expected.as_ref().is_none_or(|value| value.trim().is_empty())
                 && scoring.expected_normalized.as_ref().is_none_or(|value| value.trim().is_empty())
             {
                 anyhow::bail!(
-                    "{} robustness case `{}` scoring `{}` requires expected or expected_normalized",
+                    "{} {suite_label} case `{}` scoring `{}` requires expected or expected_normalized",
                     path.display(),
-                    case.id,
+                    case_id,
                     scoring.kind
                 );
             }
@@ -2036,18 +2223,18 @@ fn validate_mac_robustness_scoring(path: &Path, case: &MacRobustnessCase) -> Res
         "required_keywords" => {
             if scoring.required_keywords.as_ref().is_none_or(Vec::is_empty) {
                 anyhow::bail!(
-                    "{} robustness case `{}` required_keywords scoring needs required_keywords",
+                    "{} {suite_label} case `{}` required_keywords scoring needs required_keywords",
                     path.display(),
-                    case.id
+                    case_id
                 );
             }
         }
         "forbidden_tokens" => {
             if scoring.forbidden_tokens.as_ref().is_none_or(Vec::is_empty) {
                 anyhow::bail!(
-                    "{} robustness case `{}` forbidden_tokens scoring needs forbidden_tokens",
+                    "{} {suite_label} case `{}` forbidden_tokens scoring needs forbidden_tokens",
                     path.display(),
-                    case.id
+                    case_id
                 );
             }
         }
@@ -2056,25 +2243,25 @@ fn validate_mac_robustness_scoring(path: &Path, case: &MacRobustnessCase) -> Res
                 && scoring.forbidden_tokens.as_ref().is_none_or(Vec::is_empty)
             {
                 anyhow::bail!(
-                    "{} robustness case `{}` required_forbidden_tokens scoring needs required_keywords or forbidden_tokens",
+                    "{} {suite_label} case `{}` required_forbidden_tokens scoring needs required_keywords or forbidden_tokens",
                     path.display(),
-                    case.id
+                    case_id
                 );
             }
         }
         "json_schema" => {
             if scoring.schema.is_none() {
                 anyhow::bail!(
-                    "{} robustness case `{}` json_schema scoring needs schema",
+                    "{} {suite_label} case `{}` json_schema scoring needs schema",
                     path.display(),
-                    case.id
+                    case_id
                 );
             }
         }
         other => anyhow::bail!(
-            "{} robustness case `{}` has unsupported scoring kind `{other}`",
+            "{} {suite_label} case `{}` has unsupported scoring kind `{other}`",
             path.display(),
-            case.id
+            case_id
         ),
     }
     Ok(())
@@ -2189,6 +2376,127 @@ fn mac_robustness_eval_summary_receipt(
     })
 }
 
+fn mac_long_context_eval_summary_receipt(
+    corpus_path: &Path,
+    corpus_sha256: String,
+    corpus: &MacLongContextCorpus,
+) -> serde_json::Value {
+    let families = ["dense_slm", "bitnet"];
+    let expanded_cases = families
+        .iter()
+        .flat_map(|family| long_context_case_rows_for_family(corpus, family))
+        .collect::<Vec<_>>();
+    let family_summaries = families
+        .iter()
+        .map(|family| {
+            let rows = long_context_case_rows_for_family(corpus, family);
+            let supported = *family == "dense_slm";
+            serde_json::json!({
+                "model_family": family,
+                "receipt_family": format!("{family}_long_context"),
+                "prompt_template": long_context_prompt_template(corpus, family),
+                "model_identity": if *family == "dense_slm" {
+                    robustness_model_identity("dense_slm")
+                } else {
+                    robustness_model_identity("bitnet")
+                },
+                "dry_run": true,
+                "long_context_supported_for_live_run": supported,
+                "unsupported_boundary": if supported {
+                    serde_json::Value::Null
+                } else {
+                    serde_json::json!({
+                        "status": "unsupported_until_bitnet_long_context_receipts_exist",
+                        "reason": "BitNet ask/warm evidence does not prove BitNet long-context behavior",
+                        "dense_slm_evidence_proves_bitnet": false
+                    })
+                },
+                "cases_total": rows.len(),
+                "cases_executed": 0,
+                "generated_tokens": 0,
+                "scoring_summary": robustness_scoring_summary(&rows),
+                "category_summary": long_context_category_summary(&rows),
+                "cases": rows,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_long_context_eval_summary",
+        "suite": "m4-long-context",
+        "work_item": "M4-CONTEXT-HARNESS-001",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "model_family": "dense_slm_and_bitnet",
+        "dry_run": true,
+        "expanded_case_count": expanded_cases.len(),
+        "generated_tokens": 0,
+        "corpus": {
+            "schema": corpus.schema,
+            "artifact_kind": &corpus.artifact_kind,
+            "name": &corpus.name,
+            "description": &corpus.description,
+            "path": corpus_path.display().to_string(),
+            "sha256": corpus_sha256,
+            "case_count": corpus.cases.len(),
+            "metadata": &corpus.metadata,
+            "mechanical_scoring_only": true,
+            "required_llm_judge": false,
+            "defaults": {
+                "families": &corpus.defaults.families,
+                "family_prompt_templates": &corpus.defaults.family_prompt_templates,
+                "max_new_tokens": corpus.defaults.max_new_tokens,
+            },
+        },
+        "coverage": {
+            "retrieval_copy": long_context_has_category(corpus, "retrieval_copy"),
+            "table_extraction": long_context_has_category(corpus, "table_extraction"),
+            "late_context_instruction_following": long_context_has_category(corpus, "late_context_instruction_following"),
+            "truncation_behavior": long_context_has_category(corpus, "truncation_behavior"),
+            "input_throughput_receipt_required": true,
+            "ttft_receipt_required": true,
+            "decode_throughput_receipt_required": true,
+            "memory_receipt_required": true,
+            "unsupported_context_boundaries_required": true,
+        },
+        "scoring_summary": robustness_scoring_summary(&expanded_cases),
+        "category_summary": long_context_category_summary(&expanded_cases),
+        "families": family_summaries,
+        "evidence_status": {
+            "live_quality_receipts_published": false,
+            "live_timing_receipts_published": false,
+            "contract_ready_for_m4_context_proof": true,
+            "next_required_work": [
+                "wire live m4-long-context execution to publish quality receipts under ci/hardware/apple-m4-mac-mini/<date>/context/answer-corpus.json",
+                "target/release/bitnet mac benchmark --profile context --json-out ci/hardware/apple-m4-mac-mini/<date>/context/benchmark.json"
+            ]
+        },
+        "claim_boundary": {
+            "long_context_contract_only": true,
+            "live_long_context_quality_claim": false,
+            "live_long_context_timing_claim": false,
+            "long_context_proof_applies_to_untested_context_lengths": false,
+            "long_context_proof_applies_to_untested_model_identities": false,
+            "dense_slm_evidence_proves_bitnet": false,
+            "bitnet_evidence_proves_dense_slm": false,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        }
+    })
+}
+
 fn robustness_case_rows_for_family(
     corpus: &MacRobustnessCorpus,
     family: &str,
@@ -2261,6 +2569,54 @@ fn robustness_model_identity(family: &str) -> serde_json::Value {
     }
 }
 
+fn long_context_case_rows_for_family(
+    corpus: &MacLongContextCorpus,
+    family: &str,
+) -> Vec<serde_json::Value> {
+    corpus
+        .cases
+        .iter()
+        .map(|case| {
+            serde_json::json!({
+                "id": &case.id,
+                "category": &case.category,
+                "profile": case.profile.as_deref().unwrap_or("long_context"),
+                "model_family": family,
+                "prompt_template": long_context_prompt_template(corpus, family),
+                "max_new_tokens": case.max_new_tokens.or(corpus.defaults.max_new_tokens),
+                "status": "not_run",
+                "dry_run": true,
+                "quality": {
+                    "passed": serde_json::Value::Null,
+                    "scoring": serde_json::to_value(&case.scoring).unwrap_or(serde_json::Value::Null),
+                },
+                "scoring": serde_json::to_value(&case.scoring).unwrap_or(serde_json::Value::Null),
+                "unsupported_boundary": if family == "bitnet" {
+                    serde_json::json!({
+                        "status": "unsupported_until_bitnet_long_context_receipts_exist",
+                        "dense_slm_evidence_proves_bitnet": false
+                    })
+                } else {
+                    serde_json::Value::Null
+                }
+            })
+        })
+        .collect()
+}
+
+fn long_context_prompt_template(corpus: &MacLongContextCorpus, family: &str) -> String {
+    corpus
+        .defaults
+        .family_prompt_templates
+        .get(family)
+        .cloned()
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
+fn long_context_has_category(corpus: &MacLongContextCorpus, category: &str) -> bool {
+    corpus.cases.iter().any(|case| case.category == category)
+}
+
 fn robustness_scoring_summary(rows: &[serde_json::Value]) -> serde_json::Value {
     let mut kinds = std::collections::BTreeSet::new();
     for row in rows {
@@ -2279,8 +2635,27 @@ fn robustness_scoring_summary(rows: &[serde_json::Value]) -> serde_json::Value {
 }
 
 fn robustness_category_summary(rows: &[serde_json::Value]) -> serde_json::Value {
+    category_summary_for(rows, M4_ROBUSTNESS_REQUIRED_CATEGORIES)
+}
+
+fn long_context_category_summary(rows: &[serde_json::Value]) -> serde_json::Value {
+    category_summary_for(
+        rows,
+        &[
+            "retrieval_copy",
+            "table_extraction",
+            "late_context_instruction_following",
+            "truncation_behavior",
+        ],
+    )
+}
+
+fn category_summary_for(
+    rows: &[serde_json::Value],
+    required_categories: &[&str],
+) -> serde_json::Value {
     let mut categories = serde_json::Map::new();
-    for required_category in M4_ROBUSTNESS_REQUIRED_CATEGORIES {
+    for required_category in required_categories {
         let total =
             rows.iter().filter(|row| row["category"].as_str() == Some(required_category)).count();
         categories.insert(
@@ -11127,7 +11502,7 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
             "mac benchmark must be run from a release build; use `cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet` and then `target/release/bitnet mac benchmark ...`"
         );
     }
-    let profiles = dedupe_benchmark_profiles(profiles)?;
+    let profiles = dedupe_benchmark_profiles(expand_benchmark_profile_aliases(profiles))?;
     if profiles.contains(&MacBenchmarkProfile::MixedModelSwitch) {
         if model_id != model_cache::M4_SLM_RUNTIME_MODEL_ID {
             anyhow::bail!(
@@ -12659,6 +13034,20 @@ fn dedupe_benchmark_profiles(
     Ok(deduped)
 }
 
+fn expand_benchmark_profile_aliases(
+    profiles: Vec<MacBenchmarkProfile>,
+) -> Vec<MacBenchmarkProfile> {
+    profiles
+        .into_iter()
+        .flat_map(|profile| match profile {
+            MacBenchmarkProfile::Context => {
+                vec![MacBenchmarkProfile::Context1k, MacBenchmarkProfile::Context4k]
+            }
+            other => vec![other],
+        })
+        .collect()
+}
+
 fn benchmark_profile_spec(profile: MacBenchmarkProfile) -> BenchmarkProfileSpec {
     match profile {
         MacBenchmarkProfile::ShortPrompt16Out => BenchmarkProfileSpec {
@@ -12688,6 +13077,13 @@ fn benchmark_profile_spec(profile: MacBenchmarkProfile) -> BenchmarkProfileSpec 
             prompts: long_benchmark_prompts(),
             target_context_tokens: None,
             scenario: "long_prompt",
+        },
+        MacBenchmarkProfile::Context => BenchmarkProfileSpec {
+            profile: MacBenchmarkProfile::Context4k,
+            max_new_tokens: 16,
+            prompts: context_benchmark_prompts(4_000, 3),
+            target_context_tokens: Some(4_000),
+            scenario: "synthetic_context",
         },
         MacBenchmarkProfile::Context1k => BenchmarkProfileSpec {
             profile,
@@ -17899,6 +18295,8 @@ fn validate_mac_receipt_value(
         validate_dense_slm_reference_vs_rust_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_robustness_eval_summary" {
         validate_m4_robustness_eval_summary_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_long_context_eval_summary" {
+        validate_m4_long_context_eval_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_chat_smoke" {
         validate_dense_slm_chat_smoke_receipt(path, receipt, requested_backend.as_str())?
     } else if artifact_kind == "bitnet_apple_m4_local_answer_corpus" {
@@ -18245,6 +18643,180 @@ fn validate_m4_robustness_eval_summary_receipt(
     if observed_total != expanded_case_count {
         anyhow::bail!(
             "{} robustness family totals must sum to expanded_case_count",
+            path.display()
+        );
+    }
+    Ok((Some(expanded_case_count as usize), Some(0)))
+}
+
+fn validate_m4_long_context_eval_summary_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["suite"], "m4-long-context")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-CONTEXT-HARNESS-001")?;
+    require_bool_at(path, receipt, &["dry_run"], true)?;
+    require_bool_at(path, receipt, &["corpus", "mechanical_scoring_only"], true)?;
+    require_bool_at(path, receipt, &["corpus", "required_llm_judge"], false)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["corpus", "artifact_kind"],
+        "apple_m4_long_context_corpus",
+    )?;
+    require_non_empty_string_at(path, receipt, &["corpus", "path"])?;
+    require_non_empty_string_at(path, receipt, &["corpus", "sha256"])?;
+    for coverage_path in [
+        &["coverage", "retrieval_copy"][..],
+        &["coverage", "table_extraction"][..],
+        &["coverage", "late_context_instruction_following"][..],
+        &["coverage", "truncation_behavior"][..],
+        &["coverage", "input_throughput_receipt_required"][..],
+        &["coverage", "ttft_receipt_required"][..],
+        &["coverage", "decode_throughput_receipt_required"][..],
+        &["coverage", "memory_receipt_required"][..],
+        &["coverage", "unsupported_context_boundaries_required"][..],
+    ] {
+        require_bool_at(path, receipt, coverage_path, true)?;
+    }
+    for claim_path in [
+        &["claim_boundary", "live_long_context_quality_claim"][..],
+        &["claim_boundary", "live_long_context_timing_claim"][..],
+        &["claim_boundary", "long_context_proof_applies_to_untested_context_lengths"][..],
+        &["claim_boundary", "long_context_proof_applies_to_untested_model_identities"][..],
+        &["claim_boundary", "dense_slm_evidence_proves_bitnet"][..],
+        &["claim_boundary", "bitnet_evidence_proves_dense_slm"][..],
+        &["claim_boundary", "bitnet_chat_enabled"][..],
+        &["claim_boundary", "bitnet_serve_enabled"][..],
+        &["claim_boundary", "full_metal_inference_claimed"][..],
+        &["claim_boundary", "qk256_apple_claimed"][..],
+        &["claim_boundary", "neural_engine_execution_claimed"][..],
+        &["claim_boundary", "mpsgraph_inference_claimed"][..],
+        &["claim_boundary", "macbook_evidence"][..],
+        &["claim_boundary", "broad_model_quality_claim"][..],
+        &["claim_boundary", "broad_performance_claim"][..],
+        &["claim_boundary", "speedup_claim"][..],
+    ] {
+        require_bool_at(path, receipt, claim_path, false)?;
+    }
+    require_bool_at(path, receipt, &["claim_boundary", "long_context_contract_only"], true)?;
+    require_bool_at(path, receipt, &["evidence_status", "live_quality_receipts_published"], false)?;
+    require_bool_at(path, receipt, &["evidence_status", "live_timing_receipts_published"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["evidence_status", "contract_ready_for_m4_context_proof"],
+        true,
+    )?;
+
+    let top_total = require_u64_at(path, receipt, &["scoring_summary", "total"], true)?;
+    require_u64_exact(path, receipt, &["scoring_summary", "passed"], 0)?;
+    require_u64_exact(path, receipt, &["scoring_summary", "failed"], 0)?;
+    let top_not_run = require_u64_at(path, receipt, &["scoring_summary", "not_run"], true)?;
+    if top_not_run != top_total {
+        anyhow::bail!(
+            "{} long-context dry-run receipt scoring_summary.not_run must equal total",
+            path.display()
+        );
+    }
+    require_u64_exact(path, receipt, &["generated_tokens"], 0)?;
+    let expanded_case_count = require_u64_at(path, receipt, &["expanded_case_count"], true)?;
+    if expanded_case_count != top_total {
+        anyhow::bail!(
+            "{} long-context dry-run expanded_case_count must match scoring_summary.total",
+            path.display()
+        );
+    }
+
+    let families = receipt["families"].as_array().ok_or_else(|| {
+        anyhow!("{} long-context receipt must include families array", path.display())
+    })?;
+    if families.len() != 2 {
+        anyhow::bail!(
+            "{} long-context receipt must include dense_slm and bitnet family summaries",
+            path.display()
+        );
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    let mut observed_total = 0_u64;
+    for family in families {
+        let family_name = require_non_empty_string_at(path, family, &["model_family"])?;
+        if !["dense_slm", "bitnet"].contains(&family_name) {
+            anyhow::bail!(
+                "{} long-context receipt has unsupported model_family {family_name}",
+                path.display()
+            );
+        }
+        if !seen.insert(family_name) {
+            anyhow::bail!(
+                "{} long-context receipt has duplicate model_family {family_name}",
+                path.display()
+            );
+        }
+        let expected_template = match family_name {
+            "dense_slm" => QWEN_PROMPT_TEMPLATE,
+            "bitnet" => BITNET_M4_PROMPT_TEMPLATE,
+            _ => anyhow::bail!(
+                "{} long-context receipt has unsupported model_family {family_name}",
+                path.display()
+            ),
+        };
+        require_exact_string_at(path, family, &["prompt_template"], expected_template)?;
+        require_bool_at(path, family, &["dry_run"], true)?;
+        require_u64_exact(path, family, &["cases_executed"], 0)?;
+        require_u64_exact(path, family, &["generated_tokens"], 0)?;
+        if family_name == "dense_slm" {
+            require_bool_at(path, family, &["long_context_supported_for_live_run"], true)?;
+        } else {
+            require_bool_at(path, family, &["long_context_supported_for_live_run"], false)?;
+            require_bool_at(
+                path,
+                family,
+                &["unsupported_boundary", "dense_slm_evidence_proves_bitnet"],
+                false,
+            )?;
+        }
+        let cases_total = require_u64_at(path, family, &["cases_total"], true)?;
+        observed_total = observed_total.saturating_add(cases_total);
+        let scoring_total = require_u64_at(path, family, &["scoring_summary", "total"], true)?;
+        if scoring_total != cases_total {
+            anyhow::bail!(
+                "{} long-context family {family_name} scoring total must match cases_total",
+                path.display()
+            );
+        }
+        let cases = family["cases"].as_array().ok_or_else(|| {
+            anyhow!("{} long-context family {family_name} must include cases", path.display())
+        })?;
+        if cases.len() as u64 != cases_total {
+            anyhow::bail!(
+                "{} long-context family {family_name} cases length must match cases_total",
+                path.display()
+            );
+        }
+        for case in cases {
+            require_non_empty_string_at(path, case, &["id"])?;
+            require_non_empty_string_at(path, case, &["category"])?;
+            require_non_empty_string_at(path, case, &["profile"])?;
+            require_exact_string_at(path, case, &["model_family"], family_name)?;
+            require_exact_string_at(path, case, &["prompt_template"], expected_template)?;
+            require_exact_string_at(path, case, &["status"], "not_run")?;
+            require_bool_at(path, case, &["dry_run"], true)?;
+            require_non_empty_string_at(path, case, &["quality", "scoring", "kind"])?;
+        }
+    }
+    for family in ["dense_slm", "bitnet"] {
+        if !seen.contains(family) {
+            anyhow::bail!(
+                "{} long-context receipt is missing model_family {family}",
+                path.display()
+            );
+        }
+    }
+    if observed_total != expanded_case_count {
+        anyhow::bail!(
+            "{} long-context family totals must sum to expanded_case_count",
             path.display()
         );
     }
@@ -24255,6 +24827,35 @@ mod tests {
         assert!(err.contains(APPLE_M3_AIR_MPSGRAPH), "got: {err}");
         assert!(err.contains(APPLE_M3_AIR_CPU_NEON), "got: {err}");
         assert!(err.contains("hidden CPU fallback"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn mac_benchmark_context_alias_expands_to_context_profiles() -> Result<()> {
+        let expanded = expand_benchmark_profile_aliases(vec![
+            MacBenchmarkProfile::ShortPrompt16Out,
+            MacBenchmarkProfile::Context,
+            MacBenchmarkProfile::Context1k,
+        ]);
+        assert_eq!(
+            expanded,
+            vec![
+                MacBenchmarkProfile::ShortPrompt16Out,
+                MacBenchmarkProfile::Context1k,
+                MacBenchmarkProfile::Context4k,
+                MacBenchmarkProfile::Context1k,
+            ]
+        );
+
+        let deduped = dedupe_benchmark_profiles(expanded)?;
+        assert_eq!(
+            deduped,
+            vec![
+                MacBenchmarkProfile::ShortPrompt16Out,
+                MacBenchmarkProfile::Context1k,
+                MacBenchmarkProfile::Context4k,
+            ]
+        );
         Ok(())
     }
 
