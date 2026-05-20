@@ -1999,13 +1999,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CONTEXT-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-002-long-context-proof"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-CONTEXT-001", "M4-BENCH-007", "M4-REPRO-003", "M4-CONTEXT-HARNESS-001"]
+pr = 6145
 acceptance = "Run and publish long-context M4 quality and timing receipts for supported dense SLMs and the accepted BitNet artifact where supported, covering retrieval/copy, table extraction, late-context instruction following, truncation behavior, input throughput, TTFT, decode throughput, memory, fallback state, and explicit unsupported-context boundaries."
 commands = [
   "target/release/bitnet mac eval --suite m4-long-context --json-out ci/hardware/apple-m4-mac-mini/<date>/context/answer-corpus.json",

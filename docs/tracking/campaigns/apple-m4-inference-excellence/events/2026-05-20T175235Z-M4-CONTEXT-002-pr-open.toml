@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T17:52:35Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CONTEXT-002"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-002-long-context-proof"
+pr = 6145
+head_sha = "eefbf5a1963c02c7ef8f9e017f2fb51909bdfc8d"
+
+notes = [
+  "Opened PR #6145 to publish M4 long-context quality and timing receipts for the tested default dense SLM identity.",
+  "The PR records release `bitnet mac eval --suite m4-long-context` evidence with 4/4 mechanical cases passing for qwen2.5-0.5b-instruct-q8_0 on apple-m4-cpu-neon with fallback_used=false.",
+  "The matching context benchmark records context_1k completion and an enforced context_4k 720s timeout, so the aggregate is invalid for timing comparison and not a performance envelope promotion.",
+  "No BitNet long-context proof, BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, broad performance, or broad Apple Silicon claim is in scope.",
+]
