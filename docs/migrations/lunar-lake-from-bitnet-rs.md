@@ -135,7 +135,9 @@ This migration inventory makes no new technical claim:
 ## Swarm Strict Regression Proof
 
 `SWARM-LNL258V-REG-001` reran the migrated strict validation surface in the
-swarm checkout at revision `30fc1c4c1b93a720884281b36641542684dc50cf`.
+swarm checkout. The final proof head was
+`dd9a1203c132b69aef79e1439fb20a309b695f5e`, and PR #29 merged that proof as
+`fb9db1577723a73682c63d49a3a6de893a2359cd` at `2026-05-20T09:50:01Z`.
 
 The proof commands were:
 
@@ -179,6 +181,8 @@ regression or comparison receipts:
 This proof still makes no new inference, route promotion, speedup,
 power-advantage, acceleration, broad-quality, or BitNet QK256/I2_S behavior
 claim.
+
+The native swarm tracker row for this proof is `SWARM-LNL258V-REG-001`.
 
 ## Next Swarm Work
 

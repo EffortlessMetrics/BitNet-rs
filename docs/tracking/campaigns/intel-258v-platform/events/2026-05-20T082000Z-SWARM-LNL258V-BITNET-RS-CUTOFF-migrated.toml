@@ -3,6 +3,8 @@ campaign = "intel-258v-platform"
 item = "SWARM-LNL258V-BITNET-RS-CUTOFF"
 event = "migrated_from_bitnet_rs"
 actor = "codex"
+pr = 24
+head_sha = "85ff6f1e4de7c2066af02840c4e9bd21da15308e"
 merge_sha = "32f82e16889f20f264e69cfb90866bbb98c0ea74"
 branch = "codex/swarm-lnl258v-migrate-004-tracker"
 source_repo = "EffortlessMetrics/BitNet-rs"
@@ -12,6 +14,7 @@ source_cutoff_merge_sha = "32f82e16889f20f264e69cfb90866bbb98c0ea74"
 source_cutoff_closeout_pr = 6117
 source_cutoff_closeout_merge_sha = "c2b0c6a55e3e643234d5b5b87132bd9558a1dcd6"
 target_repo = "EffortlessMetrics/bitnet-rs-swarm"
+target_merge_sha = "30fc1c4c1b93a720884281b36641542684dc50cf"
 summary = "Recorded the accepted BitNet-rs Lunar Lake operating cutoff as migrated state in swarm tracker history."
 
 migrated_items = [

@@ -8402,6 +8402,9 @@ must_not_claim = [
 [[work_item]]
 id = "SWARM-LNL258V-BITNET-RS-CUTOFF"
 status = "merged"
+pr = 24
+head_sha = "85ff6f1e4de7c2066af02840c4e9bd21da15308e"
+merge_sha = "30fc1c4c1b93a720884281b36641542684dc50cf"
 branch = "codex/swarm-lnl258v-migrate-004-tracker"
 migration_status = "merged_from_bitnet_rs"
 source_repo = "EffortlessMetrics/BitNet-rs"
@@ -8450,6 +8453,58 @@ must_not_claim = [
   "A770 selected-device evidence proves Lunar Lake acceleration or route promotion.",
   "Any route promotion changed.",
   "A speedup, power advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]
+
+[[work_item]]
+id = "SWARM-LNL258V-REG-001"
+status = "merged"
+pr = 29
+head_sha = "dd9a1203c132b69aef79e1439fb20a309b695f5e"
+merge_sha = "fb9db1577723a73682c63d49a3a6de893a2359cd"
+branch = "codex/swarm-lnl258v-reg-001-proof"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SWARM-LNL258V-BITNET-RS-CUTOFF"]
+acceptance = "Record the native swarm strict-regression proof PR for the migrated Lunar Lake operating state: strict regress and compare passed in swarm against the migrated receipts, the rerun produced no committed receipt content drift, BitNet semantic intake remained ready with no rerun required, and no inference, route promotion, speedup, power-advantage, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/MIGRATION_MANIFEST.json",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-20T06:20:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-20T06:20:10Z --strict",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/MIGRATION_MANIFEST.json",
+  "docs/migrations/lunar-lake-from-bitnet-rs.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "scripts/**",
+  "models/**",
+  "ci/model-artifacts/**",
+]
+may_claim = [
+  "Strict Lunar Lake regression and comparison passed in swarm against the migrated operating receipts.",
+  "The strict proof rerun produced no committed receipt content drift.",
+  "BitNet semantic intake remained ready with rerun_required=false.",
+  "LNL258V-POWER-006 remains the active low_power battery-mode evidence blocker after the strict proof.",
+]
+must_not_claim = [
+  "New inference was run by the strict proof.",
+  "Any route promotion changed.",
+  "A speedup, power advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+  "Battery-mode low_power evidence is available.",
 ]
 
 [[work_item]]
