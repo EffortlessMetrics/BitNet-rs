@@ -425,6 +425,20 @@ evidence-scoped payload-bearing sidecar candidate and prove one tensor path with
 before/after Qwen3 Q8_0 warm-session receipts before broader selection or
 timing claims.
 
+SLM-CPU-060 adds that payload-bearing hook contract without enabling runtime
+compute. `DenseLinearRuntimeHookDescriptor` can now carry an optional
+`DenseLinearPackedQ8Payload` for a single evidence-scoped tensor path, and the
+transformer boundary reports payload byte count, Q8 block count, matrix shape,
+and contract validity. The selected production path remains `eager_f32_candle`
+with `dense-f32-candle-linear`, `runtime_compute_enabled=false`,
+`dense_runtime_replaced=false`, and `speedup_claim=false`. The committed
+contract artifact
+`ci/slm-cpu/intel-i5-8250u/2026-05-20/qwen3-payload-bearing-q8-sidecar-hook-contract.json`
+records the remaining gate: production loading still attaches metadata-only
+descriptors by default, and one exact Qwen3 Q8_0 tensor path must be wired
+behind an opt-in gate and proved by before/after warm-session receipts before
+packed Q8_0 sidecar compute can be selected.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when

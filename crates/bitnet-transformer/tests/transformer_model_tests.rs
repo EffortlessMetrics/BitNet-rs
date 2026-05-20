@@ -14,9 +14,9 @@
 
 use bitnet_common::config::{BitNetConfig, ModelConfig};
 use bitnet_transformer::{
-    DenseLinearOutputStorageApiBoundary, DenseLinearRuntimeHookBoundary,
-    DenseLinearRuntimeHookDescriptor, DenseLinearRuntimeHookRegistry, KVCache,
-    TransformerForwardWorkspace, TransformerModel,
+    DenseLinearOutputStorageApiBoundary, DenseLinearPackedQ8Payload,
+    DenseLinearRuntimeHookBoundary, DenseLinearRuntimeHookDescriptor,
+    DenseLinearRuntimeHookRegistry, KVCache, TransformerForwardWorkspace, TransformerModel,
 };
 use candle_core::{DType, Device, Tensor};
 use candle_nn::{Linear, VarBuilder};
@@ -295,6 +295,7 @@ fn dense_linear_runtime_hook_boundary_accepts_inert_q8_sidecar_descriptor() -> a
             tensor_name: "blk.0.attn_q.weight".to_string(),
             role: "AttentionQ".to_string(),
             sidecar_payload_sha256: Some("abc123".to_string()),
+            packed_q8_payload: None,
             runtime_compute_enabled: false,
         },
     );
@@ -312,6 +313,58 @@ fn dense_linear_runtime_hook_boundary_accepts_inert_q8_sidecar_descriptor() -> a
     assert!(boundary.sidecar_descriptor_present);
     assert_eq!(boundary.sidecar_role.as_deref(), Some("AttentionQ"));
     assert_eq!(boundary.sidecar_payload_sha256.as_deref(), Some("abc123"));
+    assert!(!boundary.sidecar_payload_bytes_available);
+    assert_eq!(boundary.sidecar_payload_bytes, None);
+    assert!(!boundary.sidecar_payload_contract_valid);
+    assert!(!boundary.runtime_compute_enabled);
+    assert!(boundary.preserves_eager_f32());
+    assert!(boundary.generated_id_preservation_required_before_runtime_use);
+    Ok(())
+}
+
+#[test]
+fn dense_linear_runtime_hook_boundary_can_carry_payload_without_enabling_compute()
+-> anyhow::Result<()> {
+    let config = tiny_config(8, 16, 2);
+    let device = Device::Cpu;
+    let vb = VarBuilder::zeros(DType::F32, &device);
+    let payload_bytes = vec![0_u8; 68];
+    let mut hooks = DenseLinearRuntimeHookRegistry::default();
+    hooks.insert(
+        "layers.0.attention.q_proj.weight".to_string(),
+        DenseLinearRuntimeHookDescriptor {
+            tensor_name: "blk.0.attn_q.weight".to_string(),
+            role: "AttentionQ".to_string(),
+            sidecar_payload_sha256: Some("sha256:payload".to_string()),
+            packed_q8_payload: Some(DenseLinearPackedQ8Payload {
+                tensor_name: "blk.0.attn_q.weight".to_string(),
+                packed_q8_bytes: std::sync::Arc::from(payload_bytes.into_boxed_slice()),
+                q8_block_size: 32,
+                q8_block_count: 2,
+                matrix_rows: 8,
+                matrix_cols: 8,
+            }),
+            runtime_compute_enabled: true,
+        },
+    );
+    let model = TransformerModel::new_with_tensors_and_dense_linear_hooks(
+        config,
+        vb,
+        Default::default(),
+        hooks,
+    )?;
+
+    let boundary = model.dense_linear_runtime_hook_boundary("layers.0.attention.q_proj.weight");
+
+    assert_eq!(boundary.selected_path, "eager_f32_candle");
+    assert_eq!(boundary.selected_kernel, "dense-f32-candle-linear");
+    assert!(boundary.sidecar_descriptor_present);
+    assert!(boundary.sidecar_payload_bytes_available);
+    assert_eq!(boundary.sidecar_payload_bytes, Some(68));
+    assert_eq!(boundary.sidecar_q8_block_count, Some(2));
+    assert_eq!(boundary.sidecar_matrix_rows, Some(8));
+    assert_eq!(boundary.sidecar_matrix_cols, Some(8));
+    assert!(boundary.sidecar_payload_contract_valid);
     assert!(!boundary.runtime_compute_enabled);
     assert!(boundary.preserves_eager_f32());
     assert!(boundary.generated_id_preservation_required_before_runtime_use);
@@ -330,6 +383,7 @@ fn dense_linear_runtime_hook_boundaries_report_sorted_receipt_identity() -> anyh
             tensor_name: "blk.0.ffn_down.weight".to_string(),
             role: "MlpDown".to_string(),
             sidecar_payload_sha256: Some("sha256:down".to_string()),
+            packed_q8_payload: None,
             runtime_compute_enabled: false,
         },
     );
@@ -339,6 +393,7 @@ fn dense_linear_runtime_hook_boundaries_report_sorted_receipt_identity() -> anyh
             tensor_name: "blk.0.attn_q.weight".to_string(),
             role: "AttentionQ".to_string(),
             sidecar_payload_sha256: Some("sha256:q".to_string()),
+            packed_q8_payload: None,
             runtime_compute_enabled: false,
         },
     );
@@ -372,6 +427,7 @@ fn dense_linear_runtime_hook_boundary_does_not_enable_packed_compute() -> anyhow
             tensor_name: "blk.0.attn_q.weight".to_string(),
             role: "AttentionQ".to_string(),
             sidecar_payload_sha256: Some("sha256:future".to_string()),
+            packed_q8_payload: None,
             runtime_compute_enabled: true,
         },
     );
