@@ -4,7 +4,7 @@ This directory contains patch source material. Only patches under `patches/bitne
 
 ## Directory Layout
 
-- `patches/bitnet_cpp/*.patch`: patches applied to the external BitNet.cpp checkout by `ci/apply_patches.ps1` and `ci/apply_patches.sh`.
+- `patches/bitnet_cpp/*.patch` and `patches/bitnet_cpp/*.diff`: patches applied to the external BitNet.cpp checkout by `ci/apply_patches.ps1` and `ci/apply_patches.sh`.
 - `patches/*.patch`: source material for this repository. These files are not applied to the external BitNet.cpp checkout unless they are deliberately moved into `patches/bitnet_cpp/`.
 
 ## 🎯 Policy Overview
