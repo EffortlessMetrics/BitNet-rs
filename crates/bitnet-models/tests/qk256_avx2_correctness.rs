@@ -33,8 +33,6 @@ use bitnet_models::quant::i2s_qk256_avx2::gemv_qk256_avx2;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
-/// Code-to-weight mapping for QK256 format
-///
 /// Tolerance for floating-point comparison
 ///
 /// This is set to 1e-4 to account for:
@@ -51,7 +49,7 @@ const TOLERANCE: f32 = 1e-4;
 ///
 /// Each byte contains 4 codes in the format:
 /// ```text
-/// byte = code0 | (code1 << 2) | (code2 << 4) | (code3 << 6)
+/// byte = (code0 << 6) | (code1 << 4) | (code2 << 2) | code3
 /// ```
 ///
 /// # Arguments
@@ -73,7 +71,7 @@ fn generate_random_quantized_data(num_bytes: usize, seed: u64) -> Vec<u8> {
         let c2 = rng.random_range(0..4u8);
         let c3 = rng.random_range(0..4u8);
 
-        let byte = c0 | (c1 << 2) | (c2 << 4) | (c3 << 6);
+        let byte = (c0 << 6) | (c1 << 4) | (c2 << 2) | c3;
         data.push(byte);
     }
 
@@ -410,10 +408,10 @@ fn test_qk256_avx2_random_seeds() {
 ///
 /// This validates correctness for uniform quantized data.
 #[test]
-fn test_qk256_avx2_uniform_codes() {
+fn test_qk256_avx2_uniform_codes() -> Result<(), Box<dyn std::error::Error>> {
     if !is_x86_feature_detected!("avx2") {
         eprintln!("Skipping AVX2 test - not available");
-        return;
+        return Ok(());
     }
 
     const COLS: usize = 512;
@@ -432,8 +430,7 @@ fn test_qk256_avx2_uniform_codes() {
         let scalar_result = gemv_qk256_row(&qs_data, &x, COLS);
 
         let mut y_avx2 = vec![0.0f32; 1];
-        gemv_qk256_avx2(&qs_data, &x, &mut y_avx2, 1, COLS, BLOCKS * QK256_PACKED_BYTES)
-            .expect("AVX2 GEMV should succeed");
+        gemv_qk256_avx2(&qs_data, &x, &mut y_avx2, 1, COLS, BLOCKS * QK256_PACKED_BYTES)?;
         let avx2_result = y_avx2[0];
 
         // Compare scalar and AVX2 results
@@ -475,6 +472,7 @@ fn test_qk256_avx2_uniform_codes() {
     }
 
     println!("✅ Uniform codes test passed (all 4 code values)");
+    Ok(())
 }
 
 /// Test with zero input vector
