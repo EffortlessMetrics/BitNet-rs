@@ -8175,6 +8175,7 @@ async fn run_slm_warm_session(
         format!("Failed to load real model for warm session: {}", model_path.display())
     })?;
     let config = loaded_model.config().clone();
+    let dense_q8_hook_selection = loaded_model.dense_q8_hook_selection_receipt();
     let model: Arc<dyn Model> = Arc::from(loaded_model);
     let model_load_ms = elapsed_ms(model_load_start);
     let loader_mode = detect_loader_mode_for_path(&model_path, is_hf_directory);
@@ -8719,6 +8720,7 @@ async fn run_slm_warm_session(
                 "implementation": kernel_implementation,
                 "kernel_id": selected_kernel.as_str(),
             },
+            "dense_q8_hook_selection": dense_q8_hook_selection.clone(),
             "execution": {
                 "phase": "warm_session_decode",
                 "prompt_tokens": prompt_token_count,
@@ -9050,6 +9052,7 @@ async fn run_slm_warm_session(
             "fallback_used": backend_identity.fallback_used,
             "fallback_reason": backend_identity.fallback_reason.as_deref(),
         },
+        "dense_q8_hook_selection": dense_q8_hook_selection,
         "cpu": {
             "model": cpu_model.as_str(),
             "arch": std::env::consts::ARCH,
