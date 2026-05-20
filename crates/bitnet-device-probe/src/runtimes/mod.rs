@@ -10,7 +10,10 @@ pub mod opencl;
 pub mod openvino;
 
 pub use level_zero::LevelZeroProbe;
-pub use opencl::{OpenClRuntimeDevice, OpenClRuntimeProbe, OpenClTinyKernelSmoke};
+pub use opencl::{
+    OpenClRuntimeDevice, OpenClRuntimeProbe, OpenClTinyKernelSmoke,
+    run_a770_opencl_tiny_kernel_smoke, run_arc140v_opencl_tiny_kernel_smoke,
+};
 pub use openvino::{
     OpenVinoDeviceProbe, OpenVinoGpuTinyGraphSmoke, OpenVinoNpuBitnetSubgraphParity,
     OpenVinoNpuTinyGraphSmoke, OpenVinoProbe, OpenVinoPropertyProbe,
