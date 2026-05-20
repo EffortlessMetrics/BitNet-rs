@@ -1,0 +1,12 @@
+timestamp = "2026-05-20T14:24:52Z"
+campaign = "intel-a770"
+item = "A770-008"
+event = "in_progress"
+branch = "codex/intel-a770/A770-008-benchmark-baseline"
+actor = "codex"
+
+notes = [
+  "Started A770-008 after A770-006R landed the explicit matmul_i2s operand contract.",
+  "This slice records a diagnostic benchmark baseline for the selected-device A770 OpenCL matmul_i2s parity fixture.",
+  "The benchmark receipt remains claim-closed and does not promote speedup, official BitNet QK256 production semantics, BitNet inference, trusted partial acceleration, full residency, answer quality, or completion.",
+]

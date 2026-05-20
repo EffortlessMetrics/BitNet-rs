@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T15:07:18Z"
+campaign = "intel-a770"
+item = "A770-008"
+event = "pr_open"
+pr = 53
+head_sha = "be0f5d6d3f506e1e9ce5038526500cd49a845876"
+branch = "codex/intel-a770/A770-008-benchmark-baseline"
+actor = "codex"
+
+notes = [
+  "Opened PR #53 for the A770-008 selected-device OpenCL matmul_i2s diagnostic benchmark baseline.",
+  "The receipt records selected_backend=intel-arc-a770-opencl, runtime_api=opencl, fallback_used=false, exact CPU parity, timing samples, and benchmark_claim_allowed=false.",
+  "No speedup, official BitNet QK256 production semantics, BitNet inference, trusted partial acceleration, full residency, answer quality, or completion claim is promoted.",
+]

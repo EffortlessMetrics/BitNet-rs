@@ -289,3 +289,43 @@ must_not_claim = [
   "Full A770 residency is proven.",
   "Performance speedup is proven.",
 ]
+
+[[work_item]]
+id = "A770-008"
+status = "in_progress"
+pr = 53
+head_sha = "79ddc68cb719986ab38b0524799f59364680bb43"
+branch = "codex/intel-a770/A770-008-benchmark-baseline"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-006R"]
+acceptance = "Record a diagnostic benchmark baseline for the selected-device A770 OpenCL matmul_i2s parity fixture without promoting speedup, official QK256, BitNet inference, or residency claims."
+commands = [
+  "cargo test --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity",
+  "cargo run --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity -- --benchmark --iterations 30 --warmup 5 --receipt ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-benchmark-baseline.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/bin/a770_opencl_parity.rs",
+  "ci/hardware/amd-5700x-intel-a770/**",
+  "docs/tracking/campaigns/intel-a770/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A diagnostic benchmark baseline exists for the selected-device A770 OpenCL matmul_i2s parity fixture.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are proven.",
+  "BitNet inference works on A770.",
+  "A770 trusted partial acceleration is claim-grade.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "The diagnostic toy fixture proves production answer quality.",
+]

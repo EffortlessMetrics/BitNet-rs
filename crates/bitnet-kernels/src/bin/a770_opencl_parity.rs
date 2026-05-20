@@ -1,4 +1,10 @@
-use std::{env, error::Error, io, path::PathBuf};
+use std::{
+    env,
+    error::Error,
+    io,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 use bitnet_kernels::a770_opencl_fixture::{
     A770_MATMUL_I2S_ACTIVATIONS, A770_MATMUL_I2S_K, A770_MATMUL_I2S_M, A770_MATMUL_I2S_N,
@@ -17,9 +23,9 @@ const RECEIPT_ENV: &str = "BITNET_A770_OPENCL_PARITY_RECEIPT";
 const TOLERANCE: f32 = 1.0e-6;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let receipt_path = receipt_path_from_args()?;
-    let receipt = run_a770_matmul_i2s_parity()?;
-    if let Some(path) = receipt_path {
+    let args = parse_args()?;
+    let receipt = run_a770_matmul_i2s(args.mode)?;
+    if let Some(path) = args.receipt_path {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
@@ -29,9 +35,30 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn receipt_path_from_args() -> Result<Option<PathBuf>, Box<dyn Error>> {
+#[derive(Debug)]
+struct CliArgs {
+    receipt_path: Option<PathBuf>,
+    mode: RunMode,
+}
+
+#[derive(Debug)]
+enum RunMode {
+    Parity,
+    Benchmark(BenchmarkConfig),
+}
+
+#[derive(Clone, Copy, Debug)]
+struct BenchmarkConfig {
+    iterations: usize,
+    warmup_iterations: usize,
+}
+
+fn parse_args() -> Result<CliArgs, Box<dyn Error>> {
     let mut args = env::args().skip(1);
     let mut receipt = env::var_os(RECEIPT_ENV).map(PathBuf::from);
+    let mut benchmark = false;
+    let mut iterations = 30usize;
+    let mut warmup_iterations = 5usize;
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--receipt" => {
@@ -39,16 +66,45 @@ fn receipt_path_from_args() -> Result<Option<PathBuf>, Box<dyn Error>> {
                     args.next().ok_or_else(|| io_error("--receipt requires a path argument"))?;
                 receipt = Some(PathBuf::from(path));
             }
+            "--benchmark" => benchmark = true,
+            "--iterations" => {
+                let value = args.next().ok_or_else(|| io_error("--iterations requires a value"))?;
+                iterations = parse_positive_usize("--iterations", &value)?;
+            }
+            "--warmup" => {
+                let value = args.next().ok_or_else(|| io_error("--warmup requires a value"))?;
+                warmup_iterations = parse_usize("--warmup", &value)?;
+            }
             "--help" | "-h" => {
-                println!(
-                    "Usage: a770-opencl-parity [--receipt <path>]\n\nRuns selected Intel Arc A770 OpenCL matmul_i2s parity against a CPU reference."
-                );
+                println!(concat!(
+                    "Usage: a770-opencl-parity [--receipt <path>] [--benchmark] ",
+                    "[--iterations <N>] [--warmup <N>]\n\n",
+                    "Runs selected Intel Arc A770 OpenCL matmul_i2s parity against a CPU reference.\n",
+                    "With --benchmark, records a diagnostic kernel baseline receipt without speed claims."
+                ));
                 std::process::exit(0);
             }
             other => return Err(io_error(format!("unknown argument {other:?}"))),
         }
     }
-    Ok(receipt)
+    let mode = if benchmark {
+        RunMode::Benchmark(BenchmarkConfig { iterations, warmup_iterations })
+    } else {
+        RunMode::Parity
+    };
+    Ok(CliArgs { receipt_path: receipt, mode })
+}
+
+fn parse_positive_usize(flag: &str, value: &str) -> Result<usize, Box<dyn Error>> {
+    let parsed = parse_usize(flag, value)?;
+    if parsed == 0 {
+        return Err(io_error(format!("{flag} must be greater than zero")));
+    }
+    Ok(parsed)
+}
+
+fn parse_usize(flag: &str, value: &str) -> Result<usize, Box<dyn Error>> {
+    value.parse::<usize>().map_err(|err| io_error(format!("invalid {flag} value {value:?}: {err}")))
 }
 
 #[derive(Debug)]
@@ -66,17 +122,43 @@ struct A770OpenClParityReceipt {
     activation_values: usize,
     max_abs_error: f32,
     mean_abs_error: f32,
+    benchmark: Option<BenchmarkSummary>,
+}
+
+#[derive(Debug)]
+struct BenchmarkSummary {
+    iterations: usize,
+    warmup_iterations: usize,
+    cpu_reference_total_ms: f64,
+    cpu_reference_avg_ms: f64,
+    opencl_kernel_total_ms: f64,
+    opencl_kernel_avg_ms: f64,
+    cpu_reference_samples_ms: Vec<f64>,
+    opencl_kernel_samples_ms: Vec<f64>,
+    initial_host_to_device_bytes: usize,
+    device_to_host_bytes: usize,
+    kernel_invocations: usize,
 }
 
 impl A770OpenClParityReceipt {
     fn to_json(&self) -> String {
+        let (work_item, proof_family, proof_stage) = if self.benchmark.is_some() {
+            (
+                "A770-008",
+                "a770_opencl_matmul_i2s_benchmark_baseline",
+                "diagnostic_benchmark_candidate",
+            )
+        } else {
+            ("A770-006R", "a770_opencl_matmul_i2s_cpu_parity", "cpu_opencl_parity_tested")
+        };
+        let benchmark_json = self.benchmark_json();
         format!(
             concat!(
                 "{{\n",
                 "  \"campaign\": \"intel-a770\",\n",
-                "  \"work_item\": \"A770-006R\",\n",
-                "  \"proof_family\": \"a770_opencl_matmul_i2s_cpu_parity\",\n",
-                "  \"proof_stage\": \"cpu_opencl_parity_tested\",\n",
+                "  \"work_item\": \"{}\",\n",
+                "  \"proof_family\": \"{}\",\n",
+                "  \"proof_stage\": \"{}\",\n",
                 "  \"requested_backend\": \"intel-arc-a770\",\n",
                 "  \"selected_backend\": \"intel-arc-a770-opencl\",\n",
                 "  \"runtime_api\": \"opencl\",\n",
@@ -99,6 +181,11 @@ impl A770OpenClParityReceipt {
                 "  \"tolerance\": {},\n",
                 "  \"max_abs_error\": {},\n",
                 "  \"mean_abs_error\": {},\n",
+                "  \"benchmark\": {},\n",
+                "  \"benchmark_candidate\": {},\n",
+                "  \"benchmark_profile\": {},\n",
+                "  \"benchmark_claim_allowed\": false,\n",
+                "  \"speedup_claim\": false,\n",
                 "  \"passed\": true,\n",
                 "  \"opencl_execution\": true,\n",
                 "  \"cpu_reference\": true,\n",
@@ -121,6 +208,9 @@ impl A770OpenClParityReceipt {
                 "  ]\n",
                 "}}\n"
             ),
+            work_item,
+            proof_family,
+            proof_stage,
             json_escape(&self.runtime_device),
             self.platform_index,
             self.device_index,
@@ -134,12 +224,62 @@ impl A770OpenClParityReceipt {
             self.activation_values,
             TOLERANCE,
             self.max_abs_error,
-            self.mean_abs_error
+            self.mean_abs_error,
+            benchmark_json,
+            self.benchmark.is_some(),
+            if self.benchmark.is_some() { "\"matmul_i2s_kernel_baseline\"" } else { "null" },
+        )
+    }
+
+    fn benchmark_json(&self) -> String {
+        let Some(benchmark) = &self.benchmark else {
+            return "null".to_string();
+        };
+        format!(
+            concat!(
+                "{{\n",
+                "    \"scope\": \"kernel_only_after_initial_upload\",\n",
+                "    \"iterations\": {},\n",
+                "    \"warmup_iterations\": {},\n",
+                "    \"cpu_reference\": {{\n",
+                "      \"implementation\": \"scalar_fixture_reference\",\n",
+                "      \"total_ms\": {},\n",
+                "      \"avg_ms\": {},\n",
+                "      \"samples_ms\": {}\n",
+                "    }},\n",
+                "    \"opencl_kernel\": {{\n",
+                "      \"total_ms\": {},\n",
+                "      \"avg_ms\": {},\n",
+                "      \"samples_ms\": {},\n",
+                "      \"kernel_invocations\": {}\n",
+                "    }},\n",
+                "    \"transfer_bytes\": {{\n",
+                "      \"initial_host_to_device\": {},\n",
+                "      \"device_to_host\": {}\n",
+                "    }},\n",
+                "    \"cpu_avx2_applicable\": false,\n",
+                "    \"profile_timing_applicable\": true,\n",
+                "    \"quality_passed\": false,\n",
+                "    \"quality_gate\": \"not_applicable_toy_fixture\",\n",
+                "    \"performance_claim_allowed\": false\n",
+                "  }}"
+            ),
+            benchmark.iterations,
+            benchmark.warmup_iterations,
+            format_f64(benchmark.cpu_reference_total_ms),
+            format_f64(benchmark.cpu_reference_avg_ms),
+            format_f64_array(&benchmark.cpu_reference_samples_ms),
+            format_f64(benchmark.opencl_kernel_total_ms),
+            format_f64(benchmark.opencl_kernel_avg_ms),
+            format_f64_array(&benchmark.opencl_kernel_samples_ms),
+            benchmark.kernel_invocations,
+            benchmark.initial_host_to_device_bytes,
+            benchmark.device_to_host_bytes
         )
     }
 }
 
-fn run_a770_matmul_i2s_parity() -> Result<A770OpenClParityReceipt, Box<dyn Error>> {
+fn run_a770_matmul_i2s(mode: RunMode) -> Result<A770OpenClParityReceipt, Box<dyn Error>> {
     let selected = find_a770_device()?;
     let context = Context::from_device(&selected.device)
         .map_err(|err| io_error(format!("failed to create OpenCL context: {err}")))?;
@@ -194,6 +334,20 @@ fn run_a770_matmul_i2s_parity() -> Result<A770OpenClParityReceipt, Box<dyn Error
             .map_err(|err| io_error(format!("failed to write input B buffer: {err}")))?;
     }
 
+    let benchmark = match mode {
+        RunMode::Parity => None,
+        RunMode::Benchmark(config) => Some(run_benchmark(
+            config,
+            &queue,
+            &kernel,
+            &buf_a,
+            &buf_b,
+            &buf_out,
+            &mut actual,
+            packed_weights.len(),
+        )?),
+    };
+
     let matrix_m = M as u32;
     let matrix_n = N as u32;
     let matrix_k = K as u32;
@@ -245,7 +399,89 @@ fn run_a770_matmul_i2s_parity() -> Result<A770OpenClParityReceipt, Box<dyn Error
         activation_values: A770_MATMUL_I2S_ACTIVATIONS.len(),
         max_abs_error,
         mean_abs_error,
+        benchmark,
     })
+}
+
+fn run_benchmark(
+    config: BenchmarkConfig,
+    queue: &CommandQueue,
+    kernel: &Kernel,
+    buf_a: &Buffer<i8>,
+    buf_b: &Buffer<u8>,
+    buf_out: &Buffer<f32>,
+    actual: &mut [f32],
+    packed_weight_bytes: usize,
+) -> Result<BenchmarkSummary, Box<dyn Error>> {
+    for _ in 0..config.warmup_iterations {
+        enqueue_matmul_i2s(queue, kernel, buf_a, buf_b, buf_out)?;
+    }
+
+    let mut cpu_samples = Vec::with_capacity(config.iterations);
+    let mut cpu_total = Duration::ZERO;
+    for _ in 0..config.iterations {
+        let start = Instant::now();
+        let _ = a770_matmul_i2s_cpu_reference();
+        let elapsed = start.elapsed();
+        cpu_total += elapsed;
+        cpu_samples.push(duration_ms(elapsed));
+    }
+
+    let mut opencl_samples = Vec::with_capacity(config.iterations);
+    let mut opencl_total = Duration::ZERO;
+    for _ in 0..config.iterations {
+        let start = Instant::now();
+        enqueue_matmul_i2s(queue, kernel, buf_a, buf_b, buf_out)?;
+        let elapsed = start.elapsed();
+        opencl_total += elapsed;
+        opencl_samples.push(duration_ms(elapsed));
+    }
+
+    unsafe {
+        queue
+            .enqueue_read_buffer(buf_out, CL_BLOCKING, 0, actual, &[])
+            .map_err(|err| io_error(format!("failed to read benchmark output buffer: {err}")))?;
+    }
+
+    Ok(BenchmarkSummary {
+        iterations: config.iterations,
+        warmup_iterations: config.warmup_iterations,
+        cpu_reference_total_ms: duration_ms(cpu_total),
+        cpu_reference_avg_ms: duration_ms(cpu_total) / config.iterations as f64,
+        opencl_kernel_total_ms: duration_ms(opencl_total),
+        opencl_kernel_avg_ms: duration_ms(opencl_total) / config.iterations as f64,
+        cpu_reference_samples_ms: cpu_samples,
+        opencl_kernel_samples_ms: opencl_samples,
+        initial_host_to_device_bytes: A770_MATMUL_I2S_ACTIVATIONS.len() + packed_weight_bytes,
+        device_to_host_bytes: std::mem::size_of_val(actual),
+        kernel_invocations: config.iterations,
+    })
+}
+
+fn enqueue_matmul_i2s(
+    queue: &CommandQueue,
+    kernel: &Kernel,
+    buf_a: &Buffer<i8>,
+    buf_b: &Buffer<u8>,
+    buf_out: &Buffer<f32>,
+) -> Result<(), Box<dyn Error>> {
+    let matrix_m = A770_MATMUL_I2S_M as u32;
+    let matrix_n = A770_MATMUL_I2S_N as u32;
+    let matrix_k = A770_MATMUL_I2S_K as u32;
+    let event = unsafe {
+        ExecuteKernel::new(kernel)
+            .set_arg(&buf_a.get())
+            .set_arg(&buf_b.get())
+            .set_arg(&buf_out.get())
+            .set_arg(&matrix_m)
+            .set_arg(&matrix_n)
+            .set_arg(&matrix_k)
+            .set_global_work_sizes(&[A770_MATMUL_I2S_M, A770_MATMUL_I2S_N])
+            .enqueue_nd_range(queue)
+            .map_err(|err| io_error(format!("failed to enqueue matmul_i2s kernel: {err}")))?
+    };
+    event.wait().map_err(|err| io_error(format!("matmul_i2s kernel wait failed: {err}")))?;
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -312,6 +548,91 @@ fn json_escape(value: &str) -> String {
     escaped
 }
 
+fn duration_ms(duration: Duration) -> f64 {
+    duration.as_secs_f64() * 1000.0
+}
+
+fn format_f64(value: f64) -> String {
+    format!("{value:.9}")
+}
+
+fn format_f64_array(values: &[f64]) -> String {
+    let mut output = String::from("[");
+    for (index, value) in values.iter().enumerate() {
+        if index > 0 {
+            output.push_str(", ");
+        }
+        output.push_str(&format_f64(*value));
+    }
+    output.push(']');
+    output
+}
+
 fn io_error(message: impl Into<String>) -> Box<dyn Error> {
     Box::new(io::Error::other(message.into()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_receipt(benchmark: Option<BenchmarkSummary>) -> A770OpenClParityReceipt {
+        A770OpenClParityReceipt {
+            runtime_device: "Intel(R) Arc(TM) A770 Graphics".to_string(),
+            platform_index: 0,
+            device_index: 1,
+            platform_name: "Intel OpenCL".to_string(),
+            vendor: "Intel(R) Corporation".to_string(),
+            driver_version: "test".to_string(),
+            matrix_m: A770_MATMUL_I2S_M,
+            matrix_n: A770_MATMUL_I2S_N,
+            matrix_k: A770_MATMUL_I2S_K,
+            packed_weight_bytes: 6,
+            activation_values: A770_MATMUL_I2S_ACTIVATIONS.len(),
+            max_abs_error: 0.0,
+            mean_abs_error: 0.0,
+            benchmark,
+        }
+    }
+
+    #[test]
+    fn benchmark_receipt_stays_claim_closed() {
+        let receipt = sample_receipt(Some(BenchmarkSummary {
+            iterations: 2,
+            warmup_iterations: 1,
+            cpu_reference_total_ms: 0.2,
+            cpu_reference_avg_ms: 0.1,
+            opencl_kernel_total_ms: 0.4,
+            opencl_kernel_avg_ms: 0.2,
+            cpu_reference_samples_ms: vec![0.09, 0.11],
+            opencl_kernel_samples_ms: vec![0.19, 0.21],
+            initial_host_to_device_bytes: 22,
+            device_to_host_bytes: 24,
+            kernel_invocations: 2,
+        }));
+        let json = receipt.to_json();
+
+        assert!(json.contains("\"work_item\": \"A770-008\""));
+        assert!(json.contains("\"benchmark_candidate\": true"));
+        assert!(json.contains("\"benchmark_claim_allowed\": false"));
+        assert!(json.contains("\"speedup_claim\": false"));
+        assert!(json.contains("\"claim_allowed\": false"));
+        assert!(json.contains("\"quality_gate\": \"not_applicable_toy_fixture\""));
+        assert!(json.contains("\"Official BitNet QK256 production semantics are proven\""));
+    }
+
+    #[test]
+    fn parity_receipt_keeps_existing_work_item() {
+        let json = sample_receipt(None).to_json();
+
+        assert!(json.contains("\"work_item\": \"A770-006R\""));
+        assert!(json.contains("\"benchmark\": null"));
+        assert!(json.contains("\"benchmark_candidate\": false"));
+    }
+
+    #[test]
+    fn benchmark_iterations_must_be_positive() {
+        let err = parse_positive_usize("--iterations", "0").expect_err("zero rejected");
+        assert!(err.to_string().contains("--iterations must be greater than zero"));
+    }
 }

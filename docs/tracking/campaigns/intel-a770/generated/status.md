@@ -16,6 +16,7 @@
 | A770-006 | merged | #6110 | `codex/intel-a770/A770-006-opencl-parity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add CPU/OpenCL parity for a minimal kernel or subgraph without promoting official BitNet QK256 inference. |
 | A770-007 | merged | #6113 | `codex/intel-a770/A770-007-receipt-identity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record selected-device receipt identity for the validated smoke/parity path before any performance or trusted-partial claim. |
 | A770-006R | merged | #43 | `codex/intel-a770/A770-006R-matmul-i2s-operand-contract` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Refresh the selected-device OpenCL matmul_i2s parity harness so operand A is explicit int8 activations and operand B is explicit packed I2_S weights, without promoting benchmark, QK256, or inference claims. |
+| A770-008 | in_progress | #53 | `codex/intel-a770/A770-008-benchmark-baseline` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record a diagnostic benchmark baseline for the selected-device A770 OpenCL matmul_i2s parity fixture without promoting speedup, official QK256, BitNet inference, or residency claims. |
 
 ## Hard Constraints
 
