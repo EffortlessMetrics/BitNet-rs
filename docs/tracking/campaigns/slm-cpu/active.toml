@@ -2042,8 +2042,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-059"
-status = "ready"
-branch = "codex/slm-cpu-059-packed-q8-kernel-proof-gate"
+status = "pr_open"
+pr = 6078
+head_sha = "223f87e471f43911bb5757f934c0a3151352eb7f"
+branch = "codex/slm-cpu-059-packed-q8-kernel-proof"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
