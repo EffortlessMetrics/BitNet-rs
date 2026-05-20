@@ -162,6 +162,11 @@ pub enum LunarLakeAction {
         #[arg(long, default_value = THERMAL_TEMPERATURE_AVAILABILITY_FILE)]
         thermal_temperature_availability: Option<PathBuf>,
 
+        /// Blocked low_power auto ask receipt to index in readiness.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = BLOCKED_AUTO_ASK_RECEIPT)]
+        blocked_ask_receipt: Option<PathBuf>,
+
         /// Output JSON readiness receipt to file.
         #[arg(long)]
         json_out: Option<PathBuf>,
@@ -900,6 +905,8 @@ pub struct LunarLakeOperatorReceipt {
     pub power_profile_evidence: Option<PowerProfileRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thermal_temperature_availability: Option<ThermalTemperatureAvailabilityRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked_ask_receipt: Option<BlockedAskRegressionSummary>,
     pub evidence: Vec<EvidenceStatus>,
     pub gaps: Vec<String>,
     pub claim_boundary: ClaimBoundary,
@@ -2624,6 +2631,7 @@ impl LunarLakeCommand {
                 route_profile_comparison,
                 power_profile_evidence,
                 thermal_temperature_availability,
+                blocked_ask_receipt,
                 json_out,
                 created_utc,
                 strict,
@@ -2638,6 +2646,7 @@ impl LunarLakeCommand {
                             route_profile_comparison.as_deref(),
                             power_profile_evidence.as_deref(),
                             thermal_temperature_availability.as_deref(),
+                            blocked_ask_receipt.as_deref(),
                         )?
                     }
                     None => build_operator_readiness_receipt_with_route_policy(
@@ -2646,6 +2655,7 @@ impl LunarLakeCommand {
                         route_profile_comparison.as_deref(),
                         power_profile_evidence.as_deref(),
                         thermal_temperature_availability.as_deref(),
+                        blocked_ask_receipt.as_deref(),
                     )?,
                 };
                 write_or_print_receipt(&receipt, json_out.as_deref())?;
@@ -3190,6 +3200,7 @@ pub fn build_operator_readiness_receipt_with_route_policy(
     route_profile_comparison: Option<&Path>,
     power_profile_evidence: Option<&Path>,
     thermal_temperature_availability: Option<&Path>,
+    blocked_ask_receipt: Option<&Path>,
 ) -> Result<LunarLakeOperatorReceipt> {
     build_operator_readiness_receipt_with_created_utc_and_route_policy(
         root,
@@ -3198,6 +3209,7 @@ pub fn build_operator_readiness_receipt_with_route_policy(
         route_profile_comparison,
         power_profile_evidence,
         thermal_temperature_availability,
+        blocked_ask_receipt,
     )
 }
 
@@ -3213,6 +3225,7 @@ pub fn build_operator_readiness_receipt_with_created_utc(
         None,
         None,
         None,
+        None,
     )
 }
 
@@ -3223,6 +3236,7 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
     route_profile_comparison: Option<&Path>,
     power_profile_evidence: Option<&Path>,
     thermal_temperature_availability: Option<&Path>,
+    blocked_ask_receipt: Option<&Path>,
 ) -> Result<LunarLakeOperatorReceipt> {
     let evidence = vec![
         inspect_receipt(
@@ -3437,6 +3451,24 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
     } else {
         None
     };
+    let blocked_ask_receipt = if let Some(path) = blocked_ask_receipt {
+        let path = resolve_receipt_path(root, path);
+        if path.exists() {
+            let summary = inspect_blocked_ask_regression(&path)?;
+            if !summary.regression_ready {
+                gaps.push(format!(
+                    "blocked low_power ask receipt is not readiness-ready: {}",
+                    summary.gaps.join(", ")
+                ));
+            }
+            Some(summary)
+        } else {
+            gaps.push(format!("missing blocked low_power ask receipt: {}", path.display()));
+            None
+        }
+    } else {
+        None
+    };
 
     let default_route = dense_slm_cpu_route();
     let routes = vec![
@@ -3459,6 +3491,7 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
         route_policy,
         power_profile_evidence,
         thermal_temperature_availability,
+        blocked_ask_receipt,
         evidence,
         gaps,
         claim_boundary: ClaimBoundary {
@@ -15960,6 +15993,7 @@ mod tests {
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             None,
             None,
+            None,
         )?;
 
         assert!(receipt.operator_ready, "{:?}", receipt.gaps);
@@ -16090,6 +16124,7 @@ mod tests {
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new(POWER_PROFILE_EVIDENCE_FILE)),
             Some(Path::new(THERMAL_TEMPERATURE_AVAILABILITY_FILE)),
+            None,
         )?;
 
         assert!(receipt.operator_ready, "{:?}", receipt.gaps);
@@ -16107,6 +16142,97 @@ mod tests {
         assert_eq!(thermal.usable_temperature_reading_count, 0);
         assert!(!thermal.measured_temperature_claim);
         assert!(thermal.claim_boundary_preserved);
+        Ok(())
+    }
+
+    #[test]
+    fn operator_readiness_indexes_blocked_ask_guidance() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_minimal_route_policy(temp.path())?;
+        write_json(
+            temp.path(),
+            BLOCKED_AUTO_ASK_RECEIPT,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_operator_ask_blocked",
+                "proof_stage": "operator_route_selection_blocked_no_inference",
+                "machine_id": "intel-258v",
+                "requested_device": "auto",
+                "requested_route": "auto",
+                "profile_id": "low_power",
+                "selected_route": null,
+                "selected_backend": null,
+                "runtime_api": null,
+                "model_path_required": false,
+                "model_loaded": false,
+                "model_resolution": "not_required_for_blocked_auto_route_before_execution",
+                "promotion_status": "no_promoted_route",
+                "route_selection_status": "blocked",
+                "route_selection_blocked": true,
+                "route_selection_error": format!(
+                    "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage; operator_runbook={LOW_POWER_BATTERY_RUNBOOK}"
+                ),
+                "candidate_routes": [
+                    "dense_slm_default_cpu",
+                    "dense_slm_openvino_gpu_candidate",
+                    "dense_slm_openvino_npu_candidate"
+                ],
+                "why_not_cpu": ["route is not promoted for profile `low_power`"],
+                "why_not_gpu": [
+                    "route blocker for profile `low_power`: low_power_power_advantage_unproven"
+                ],
+                "why_not_npu": [
+                    "missing evidence: benchmark_qualified_speedup_or_power_advantage"
+                ],
+                "operator_runbook": LOW_POWER_BATTERY_RUNBOOK,
+                "next_required_evidence": blocked_operator_ask_next_required_evidence("low_power"),
+                "fallback_used": false,
+                "new_inference_executed": false,
+                "speedup_claim": false,
+                "acceleration_claim": false,
+                "power_advantage_claim": false,
+                "bitnet_qk256_i2s_claim": false,
+                "claim_boundary": {
+                    "route_selection_blocked": true,
+                    "new_inference_executed": false,
+                    "fallback_used": false,
+                    "model_loaded": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_accelerator_claim": false,
+                    "bitnet_qk256_i2s_claim": false
+                }
+            }),
+        )?;
+
+        let receipt = build_operator_readiness_receipt_with_created_utc_and_route_policy(
+            temp.path(),
+            "2026-05-20T05:10:00Z".to_string(),
+            Some(Path::new(ROUTE_PROMOTION_LEDGER)),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            None,
+            None,
+            Some(Path::new(BLOCKED_AUTO_ASK_RECEIPT)),
+        )?;
+
+        assert!(receipt.operator_ready, "{:?}", receipt.gaps);
+        let blocked =
+            receipt.blocked_ask_receipt.as_ref().context("missing blocked ask summary")?;
+        assert!(blocked.regression_ready, "{:?}", blocked.gaps);
+        assert_eq!(blocked.profile_id, "low_power");
+        assert!(blocked.route_selection_blocked);
+        assert!(!blocked.model_path_required);
+        assert!(!blocked.model_loaded);
+        assert_eq!(blocked.operator_runbook.as_deref(), Some(LOW_POWER_BATTERY_RUNBOOK));
+        assert!(
+            blocked
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("telemetry-context --require-battery"))
+        );
         Ok(())
     }
 
@@ -16329,6 +16455,7 @@ mod tests {
             "2026-05-19T14:30:00Z".to_string(),
             Some(Path::new(ROUTE_PROMOTION_LEDGER)),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            None,
             None,
             None,
         )?;

@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T05:15:00Z"
+item = "LNL258V-VALIDATE-003"
+event = "in_progress"
+branch = "codex/lunar-lake/LNL258V-VALIDATE-003-blocked-ask-guidance"
+actor = "codex"
+summary = "Started wiring the blocked low_power auto-ask receipt into Lunar Lake operator readiness."
+
+notes = [
+  "The validate surface should index the same low_power runbook and next-required-evidence guidance already enforced by strict regression and operator comparison.",
+  "This item preserves the OP-014 boundary: no inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, or BitNet QK256/I2_S behavior change.",
+]
