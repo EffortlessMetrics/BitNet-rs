@@ -9466,9 +9466,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-008"
-status = "in_progress"
+status = "merged"
 pr = 6057
-head_sha = "b11c614b94200c158c1d531cd92113f62a88af29"
+head_sha = "3193f08fb880e7a3d45193a8959eb168ecedb780"
+merge_sha = "43db1ed843b2d6635c6f9cbb101691f38b02b9ae"
 branch = "codex/lunar-lake/LNL258V-POWER-008-runbook-links"
 stackable = false
 review_mode = "codex_premerge"
