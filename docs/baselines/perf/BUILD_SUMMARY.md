@@ -1,5 +1,11 @@
 # Phase 2 Timing Build Summary
 
+> Claim boundary: this baseline records a dated local build and timing context.
+> Throughput, SIMD, AVX, and bottleneck wording here must not be read as current
+> product support, backend execution, or exact-profile speed claims. Current
+> performance claims require active receipts, benchmark review, status docs,
+> specs, and claim gates.
+
 ## Build Status: SUCCESS ✓
 
 ### Build Details
