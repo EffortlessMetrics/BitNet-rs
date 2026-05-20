@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T18:57:25Z"
+campaign = "intel-258v-platform"
+item = "SWARM-LNL258V-GOAL-AUDIT-002"
+event = "in_progress"
+from = "ready"
+to = "in_progress"
+actor = "codex"
+branch = "codex/swarm-lnl258v-goal-audit-002-post-intake009"
+summary = "Refresh no-inference Lunar Lake completion audit after BITNET-INTAKE-009 and closeout #68."
+
+notes = [
+  "Scope is limited to the excellence audit, goal artifact checklist, and tracker dashboards.",
+  "The refresh records that SWARM-LNL258V-BITNET-INTAKE-009/#66 corrected the direct-reference prompt-token comparison boundary and closeout #68 marked the tracker item merged.",
+  "The refresh removes the stale A770 #43 rerun blocker from the audit because current semantic intake, strict regression-v2, and operator comparison are ready.",
+  "POWER-006 remains blocked while the current 258V is on AC power and no battery-mode low_power power advantage is proven.",
+]

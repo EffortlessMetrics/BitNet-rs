@@ -1,0 +1,18 @@
+timestamp = "2026-05-20T19:00:30Z"
+campaign = "intel-258v-platform"
+item = "SWARM-LNL258V-GOAL-AUDIT-002"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/swarm-lnl258v-goal-audit-002-post-intake009"
+pr = 69
+head_sha = "28d9c18387c36db41f668ad65b5160845b8956b7"
+summary = "Opened PR #69 to refresh the no-inference Lunar Lake completion audit after BITNET-INTAKE-009."
+
+notes = [
+  "The PR records that semantic intake, strict regression-v2, and operator comparison are ready after SWARM-LNL258V-BITNET-INTAKE-009/#66.",
+  "The PR removes the stale A770 #43 rerun blocker from the audit and keeps POWER-006 as the remaining active low_power blocker.",
+  "The PR records A770 #62 selected-device QK256 scaled OpenCL fixture evidence as adjacent non-semantic evidence only.",
+  "No inference, route promotion, speedup, power-advantage, battery-mode evidence, measured-temperature, native accelerator, broad quality, first-token logits parity, full generated sequence parity, or BitNet QK256/I2_S behavior-change claim is made.",
+]
