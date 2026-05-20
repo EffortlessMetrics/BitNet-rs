@@ -1090,7 +1090,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-022"
-status = "in_progress"
+status = "merged"
+pr = 6043
+head_sha = "d48dc056beb693947f20686337ad0e4b0bccd91a"
+merge_sha = "822325ba6acaab744aa2bc4762cca23ce3c60946"
 branch = "codex/apple-m3-macbook-air/M3MBA-022-accuracy-comparison-profile"
 stackable = false
 review_mode = "codex_premerge"
