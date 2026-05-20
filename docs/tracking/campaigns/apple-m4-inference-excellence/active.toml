@@ -2237,9 +2237,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-STABILITY-HARNESS-001"
-status = "pr_open"
+status = "merged"
 pr = 6131
-head_sha = "61d4b87d5826e429965c4e3696a06ea155ddac9f"
+head_sha = "6dcf19ce033000e42628ead5ea6aa05e50c6d847"
+merge_sha = "17288cc07e2f78e724b3a76d166cf493a9ed9a3b"
 branch = "codex/apple-m4-inference-excellence/M4-STABILITY-HARNESS-001-mixed-model-profile"
 stackable = false
 review_mode = "codex_premerge"
