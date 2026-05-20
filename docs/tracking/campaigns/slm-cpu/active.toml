@@ -2214,7 +2214,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-062"
-status = "ready"
+status = "pr_open"
+pr = 31
 branch = "codex/slm-cpu-062-swarm-artifact-export"
 stackable = false
 review_mode = "codex_premerge"
@@ -2223,7 +2224,9 @@ human_gate = "on_blocker_only"
 blocked_by = ["SLM-CPU-061"]
 acceptance = "Export the first Qwen3 Q8_0 packed-sidecar candidate package from bitnet-rs-swarm for BitNet-rs release-surface artifact-intake review. The package must identify the source swarm commit and include candidate summary, before receipt, after receipt, equivalence report, and either timing report or explicit timing-not-claimed report. The exported evidence must preserve model SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false, and must not claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
 commands = [
-  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-20/qwen3-real-q8-sidecar-payload-candidate.json",
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-062-swarm-export/candidate_summary.json",
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-062-swarm-export/equivalence_report.json",
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-062-swarm-export/timing_not_claimed.json",
   "cargo run -p xtask --no-default-features -- campaign generate",
   "cargo run -p xtask --no-default-features -- campaign doctor",
   "git diff --check",

@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_swarm_timing_not_claimed",
+  "work_item": "SLM-CPU-062",
+  "source_repository": "EffortlessMetrics/bitnet-rs-swarm",
+  "source_commit": "4b91a9d17977317aa8b320610cecc58e2195f08b",
+  "reason": "SLM-CPU-062 exports behavior-preserving candidate evidence for release-surface intake; it does not make a new timing, speedup, or sustained-throughput claim.",
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "timing_report_present": false,
+  "timing_inputs": {
+    "before_receipt": "before_receipt.json",
+    "after_receipt": "after_receipt.json",
+    "note": "Receipts may contain warm-session timing fields from prior evidence, but this export package does not compare or claim timing improvement."
+  }
+}

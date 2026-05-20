@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T09:53:41Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-062"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 31
+branch = "codex/slm-cpu-062-swarm-artifact-export"
+notes = [
+  "Opened #31 to export the first Qwen3 Q8_0 packed-sidecar candidate package from bitnet-rs-swarm for BitNet-rs release-surface artifact-intake review.",
+  "The package includes candidate summary, before receipt, after receipt, equivalence report, source commit pointer, and explicit timing-not-claimed report.",
+  "Rebased #31 on current main after branch protection required the PR branch to be up to date.",
+  "The PR does not claim BitNet-rs release-surface acceptance, speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes.",
+]
