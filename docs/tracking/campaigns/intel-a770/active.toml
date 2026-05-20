@@ -142,8 +142,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-005"
-status = "in_progress"
+status = "merged"
 pr = 6072
+head_sha = "f2e137d17ae9a52bb761c336e254b0e4bf8a63db"
+merge_sha = "b995c5110866d1920538fff2d9019fcd3803e3c5"
 branch = "codex/intel-a770/A770-005-opencl-smoke"
 stackable = false
 review_mode = "codex_premerge"

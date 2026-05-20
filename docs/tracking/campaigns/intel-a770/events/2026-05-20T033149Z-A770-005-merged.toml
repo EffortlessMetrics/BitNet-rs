@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T03:31:49Z"
+campaign = "intel-a770"
+item = "A770-005"
+event = "merged"
+actor = "codex"
+pr = 6072
+branch = "codex/intel-a770/A770-005-opencl-smoke"
+head_sha = "f2e137d17ae9a52bb761c336e254b0e4bf8a63db"
+merge_sha = "b995c5110866d1920538fff2d9019fcd3803e3c5"
+summary = "Merged PR #6072 with selected-device Intel Arc A770 OpenCL tiny vector-add smoke evidence."
+notes = [
+  "The committed receipt records Intel(R) Arc(TM) A770 Graphics selected through native OpenCL with fallback_used=false for the tiny vector-add smoke.",
+  "A770-005 proves only a tiny selected-device OpenCL smoke; it does not prove BitNet inference, packed QK256 execution, trusted-partial acceleration, residency, performance, or completion.",
+  "A770-006 remains the next proposed boundary for CPU/OpenCL parity on a minimal kernel or subgraph without promoting official BitNet QK256 inference.",
+]
