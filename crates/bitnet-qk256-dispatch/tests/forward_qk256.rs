@@ -9,7 +9,10 @@ use bitnet_qk256_dispatch::qk256_cpu_hot_path_counters;
 static QK256_DISPATCH_TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 fn qk256_dispatch_test_lock() -> MutexGuard<'static, ()> {
-    QK256_DISPATCH_TEST_LOCK.get_or_init(|| Mutex::new(())).lock().expect("lock poisoned")
+    match QK256_DISPATCH_TEST_LOCK.get_or_init(|| Mutex::new(())).lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
 }
 
 #[test]
