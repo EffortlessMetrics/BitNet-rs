@@ -1,0 +1,31 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-026"
+event = "in_progress"
+timestamp = "2026-05-20T08:22:37Z"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-020-server-device-labels"
+
+summary = "Started the M3 Air server device-label CUDA-active receipt hardening slice."
+
+artifacts = [
+  "crates/bitnet-server/src/lib.rs",
+  "docs/apple-silicon/m3-macbook-air-roadmap.md",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+]
+
+notes = [
+  "The server shared-engine receipt path must preserve apple-m3-air-metal, apple-m3-air-mpsgraph, and apple-m3-air-cpu-neon as configured M3 Air backend identities even when the active model reports a CUDA device.",
+  "This item does not enable M3 Air Metal or MPSGraph model inference.",
+  "No live M3 model run, artifact download, M4 proof, Neural Engine, QK256, or broad Apple Silicon performance claim is made.",
+]
+
+validation = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-server --no-default-features server_shared_engine_receipt_preserves_m3_air_configured_backend_labels",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]

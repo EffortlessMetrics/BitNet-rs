@@ -1253,3 +1253,46 @@ must_not_claim = [
   "Rust Apple backend accepted the artifact.",
   "QK256 works on Apple Silicon.",
 ]
+
+[[work_item]]
+id = "M3MBA-026"
+status = "pr_open"
+pr = 30
+head_sha = "5373abbfacf1a90501e5570f554839f5dad7fd71"
+branch = "codex/apple-m3-macbook-air/M3MBA-020-server-device-labels"
+stackable = true
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["M3MBA-021"]
+acceptance = "Harden the shared server device-model receipt path so apple-m3-air-metal, apple-m3-air-mpsgraph, and apple-m3-air-cpu-neon preserve their configured backend identity in server shared-engine receipts even when the active model reports a CUDA device, without collapsing into generic active-model device labels or M4 proof wording."
+commands = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-server --no-default-features server_shared_engine_receipt_preserves_m3_air_configured_backend_labels",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-server/**",
+  "docs/apple-silicon/**",
+  "docs/tracking/campaigns/apple-m3-macbook-air/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/qk256/**",
+  "ci/hardware/**",
+  "models/**",
+]
+may_claim = [
+  "Server shared-engine receipts preserve all three M3 Air configured backend labels as M3 Air identities when the active model reports a CUDA device.",
+]
+must_not_claim = [
+  "M3 Air Metal model inference works.",
+  "M3 Air MPSGraph model inference works.",
+  "M3 Air evidence is M4 Mac mini proof.",
+  "Any live M3 model inference was run.",
+]

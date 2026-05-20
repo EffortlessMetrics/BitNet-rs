@@ -2652,6 +2652,63 @@ mod tests {
     }
 
     #[test]
+    fn server_shared_engine_receipt_preserves_m3_air_configured_backend_labels() {
+        let request = ChatCompletionRequest {
+            model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
+            messages: vec![ChatCompletionMessage {
+                role: "user".to_string(),
+                content: "What is working capital?".to_string(),
+            }],
+            max_tokens: Some(16),
+            temperature: Some(0.0),
+            top_p: Some(1.0),
+            stream: Some(false),
+        };
+        let usage =
+            ChatCompletionUsage { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 };
+        let metadata = ModelMetadata {
+            model_id: "model-1".to_string(),
+            model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
+            model_sha256: Some(
+                "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e".to_string(),
+            ),
+            device: "Cuda(0)".to_string(),
+            quantization_type: "Q8_0".to_string(),
+            loaded_at: SystemTime::UNIX_EPOCH,
+            size_mb: 512,
+            parameters: 500_000_000,
+            context_length: 32_768,
+            inference_count: 0,
+            avg_tokens_per_second: 0.0,
+        };
+
+        for (configured_device, expected_label) in [
+            (DeviceConfig::AppleM3AirMetal, "apple-m3-air-metal"),
+            (DeviceConfig::AppleM3AirMpsGraph, "apple-m3-air-mpsgraph"),
+            (DeviceConfig::AppleM3AirCpuNeon, "apple-m3-air-cpu-neon"),
+        ] {
+            let receipt = build_server_shared_engine_receipt(
+                "request-1",
+                &request,
+                &metadata,
+                &configured_device,
+                "chatml",
+                &usage,
+                "Working capital is current assets minus current liabilities.",
+                25,
+                None,
+            );
+
+            assert_eq!(receipt.requested_backend, expected_label);
+            assert_eq!(receipt.selected_backend, expected_label);
+            assert_eq!(receipt.runtime_api, "cuda");
+            assert!(!receipt.server_smoke_response_claimed);
+            assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
+            assert!(!receipt.bitnet_packed_i2s_qk256_proof);
+        }
+    }
+
+    #[test]
     fn server_shared_engine_receipt_requires_exact_qwen_artifact_for_dense_claims() {
         let request = ChatCompletionRequest {
             model: "qwen2.5-0.5b-instruct-q8_0".to_string(),

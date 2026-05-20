@@ -901,12 +901,15 @@ execution queue.
 
 ## Post-Handoff Near-Term Order
 
-1. Merge `M3MBA-019` so the roadmap, campaign prose, and generated tracker agree
-   with the post-handoff state.
-2. Create the next device-model hardening item only around concrete M3 Air
-   receipt, help, or rejection behavior that keeps CPU/NEON, Metal, and MPSGraph
-   labels distinct.
-3. Create the next accuracy comparison item around bounded dense SLM receipts
+1. `M3MBA-019` is merged; keep the roadmap, campaign prose, and generated
+   tracker aligned with the post-handoff state.
+2. `M3MBA-020` and `M3MBA-021` are merged, and `M3MBA-026` is the active
+   device-model hardening follow-up. It is limited to server shared-engine
+   receipt backend labeling so CPU/NEON, Metal, and MPSGraph M3 Air identities
+   remain distinct from generic active-model devices and M4 proof labels even
+   when the active model reports CUDA metadata.
+3. Use `M3MBA-022` as the merged accuracy comparison baseline around bounded
+   dense SLM receipts
    with exact prompt IDs, generated IDs, tokenizer authority, backend identity,
    fallback state, and comparable/non-comparable decisions.
 4. Create the next M3 performance item only from completed-run actuals with
