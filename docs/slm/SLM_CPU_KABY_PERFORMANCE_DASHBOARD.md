@@ -384,6 +384,29 @@ The machine-checkable artifact
 records the remaining packed-compute and receipt gaps. The slice does not
 enable packed Q8_0 sidecar execution or claim any performance improvement.
 
+SLM-CPU-057 adds the next receipt gate on top of that boundary. Qwen3 Q8_0
+warm-session aggregate and per-prompt receipts now carry a
+`dense_q8_hook_selection` object so a future packed sidecar candidate must
+preserve the hook-selection identity as well as model SHA, tokenizer
+source/strictness, prompt IDs, generated IDs, decoded text, selected CPU
+backend/kernel identity, and `fallback=false`.
+
+The default runtime still remains:
+
+```text
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+runtime_compute_enabled = false
+dense_runtime_replaced = false
+speedup_claim = false
+```
+
+The machine-checkable blocker artifact
+`ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-dense-hook-receipt-gate.json`
+records that packed Q8_0 sidecar compute is still disabled until a packed
+compute kernel exists and before/after Qwen3 Q8_0 warm-session receipts prove
+identical generated output and dense hook-selection identity.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when

@@ -1420,6 +1420,17 @@ impl TransformerModel {
         dense_linear_runtime_hook_boundary(tensor_name, &self.dense_linear_hooks)
     }
 
+    pub fn dense_linear_runtime_hook_boundaries(&self) -> Vec<DenseLinearRuntimeHookBoundary> {
+        let mut tensor_names: Vec<_> = self.dense_linear_hooks.keys().cloned().collect();
+        tensor_names.sort();
+        tensor_names
+            .into_iter()
+            .map(|tensor_name| {
+                dense_linear_runtime_hook_boundary(&tensor_name, &self.dense_linear_hooks)
+            })
+            .collect()
+    }
+
     pub fn embed(&self, tokens: &[u32]) -> Result<Tensor> {
         let token_ids = Tensor::from_vec(tokens.to_vec(), &[1, tokens.len()], &self.device)?;
 

@@ -107,7 +107,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-054 | merged | #5992 recorded the remaining packed Q8_0 sidecar runtime hook/API gap while keeping eager F32 Candle as the default behavior oracle and sidecar_runtime_compute_allowed=false. |
 | SLM-CPU-055 | merged | #6008 added the first production dense-linear hook contract gate so transformer dense linear calls can receive an explicit eager-F32 selection or selected Q8_0 sidecar descriptor while keeping packed compute disabled until before/after behavior receipts exist. |
 | SLM-CPU-056 | merged | #6018 implemented the first production dense-linear hook boundary from SLM-CPU-055 without enabling packed Q8_0 sidecar compute by default or weakening the Qwen3 Q8_0 Kaby behavior oracle. |
-| SLM-CPU-057 | ready | Add or prove the next Qwen3 Q8_0 dense hook-selection receipt gate before any packed Q8_0 sidecar compute can be enabled. |
+| SLM-CPU-057 | pr_open | #6045 adds the next Qwen3 Q8_0 dense hook-selection receipt gate before any packed Q8_0 sidecar compute can be enabled. |
 
 ## Review Policy
 

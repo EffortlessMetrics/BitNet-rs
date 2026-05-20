@@ -8175,6 +8175,7 @@ async fn run_slm_warm_session(
         format!("Failed to load real model for warm session: {}", model_path.display())
     })?;
     let config = loaded_model.config().clone();
+    let dense_q8_hook_selection = loaded_model.dense_q8_hook_selection_receipt();
     let model: Arc<dyn Model> = Arc::from(loaded_model);
     let model_load_ms = elapsed_ms(model_load_start);
     let loader_mode = detect_loader_mode_for_path(&model_path, is_hf_directory);
@@ -8719,6 +8720,7 @@ async fn run_slm_warm_session(
                 "implementation": kernel_implementation,
                 "kernel_id": selected_kernel.as_str(),
             },
+            "dense_q8_hook_selection": dense_q8_hook_selection.clone(),
             "execution": {
                 "phase": "warm_session_decode",
                 "prompt_tokens": prompt_token_count,
@@ -9050,6 +9052,7 @@ async fn run_slm_warm_session(
             "fallback_used": backend_identity.fallback_used,
             "fallback_reason": backend_identity.fallback_reason.as_deref(),
         },
+        "dense_q8_hook_selection": dense_q8_hook_selection,
         "cpu": {
             "model": cpu_model.as_str(),
             "arch": std::env::consts::ARCH,
@@ -13886,21 +13889,20 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
-    fn lunar_lake_ask_default_model_path_uses_cpu_phase_receipt_when_present() {
-        let temp_dir = tempfile::tempdir().expect("temp dir");
+    fn lunar_lake_ask_default_model_path_uses_cpu_phase_receipt_when_present()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempfile::tempdir()?;
         let artifact_root = temp_dir.path().join("artifacts");
-        std::fs::create_dir_all(&artifact_root).expect("artifact root");
+        std::fs::create_dir_all(&artifact_root)?;
         let model_path = temp_dir.path().join("qwen2.5-0.5b-instruct-q8_0.gguf");
-        std::fs::write(&model_path, b"fake gguf fixture").expect("model file");
+        std::fs::write(&model_path, b"fake gguf fixture")?;
         std::fs::write(
             artifact_root.join("slm-phase-warm-session-qwen25-cpu.json"),
             serde_json::to_vec_pretty(&serde_json::json!({
                 "artifact_kind": "slm_phase_warm_session",
                 "model": {"path": model_path}
-            }))
-            .expect("phase json"),
-        )
-        .expect("phase receipt");
+            }))?,
+        )?;
 
         let route = commands::lunar_lake::OperatorRoute {
             route_id: commands::lunar_lake::DEFAULT_ASK_ROUTE.to_string(),
@@ -13916,28 +13918,27 @@ mod tests {
             acceleration_claim: false,
         };
 
-        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, None)
-            .expect("resolved default CPU model path");
+        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, None)?;
         assert_eq!(resolved, model_path);
+        Ok(())
     }
 
     #[cfg(feature = "full-cli")]
     #[test]
-    fn lunar_lake_ask_default_model_path_uses_openvino_manifest_when_present() {
-        let temp_dir = tempfile::tempdir().expect("temp dir");
+    fn lunar_lake_ask_default_model_path_uses_openvino_manifest_when_present()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempfile::tempdir()?;
         let artifact_root = temp_dir.path().join("artifacts");
-        std::fs::create_dir_all(&artifact_root).expect("artifact root");
+        std::fs::create_dir_all(&artifact_root)?;
         let model_dir = temp_dir.path().join("openvino-model");
-        std::fs::create_dir_all(&model_dir).expect("model dir");
+        std::fs::create_dir_all(&model_dir)?;
         std::fs::write(
             artifact_root.join("slm-openvino-ir-qwen25-int4-sym-manifest.json"),
             serde_json::to_vec_pretty(&serde_json::json!({
                 "artifact_kind": "intel_258v_dense_slm_openvino_ir_manifest",
                 "export_contract": {"expected_output_dir": model_dir}
-            }))
-            .expect("manifest json"),
-        )
-        .expect("manifest receipt");
+            }))?,
+        )?;
 
         let route = commands::lunar_lake::OperatorRoute {
             route_id: "dense_slm_openvino_gpu_candidate".to_string(),
@@ -13953,15 +13954,16 @@ mod tests {
             acceleration_claim: false,
         };
 
-        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, None)
-            .expect("resolved default OpenVINO model path");
+        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, None)?;
         assert_eq!(resolved, model_dir);
+        Ok(())
     }
 
     #[cfg(feature = "full-cli")]
     #[test]
-    fn lunar_lake_ask_default_model_path_prefers_explicit_model() {
-        let temp_dir = tempfile::tempdir().expect("temp dir");
+    fn lunar_lake_ask_default_model_path_prefers_explicit_model()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempfile::tempdir()?;
         let artifact_root = temp_dir.path().join("artifacts");
         let explicit = temp_dir.path().join("explicit.gguf");
         let route = commands::lunar_lake::OperatorRoute {
@@ -13978,9 +13980,9 @@ mod tests {
             acceleration_claim: false,
         };
 
-        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, Some(&explicit))
-            .expect("explicit model is accepted");
+        let resolved = resolve_lunar_lake_ask_model_path(&artifact_root, &route, Some(&explicit))?;
         assert_eq!(resolved, explicit);
+        Ok(())
     }
 
     #[cfg(feature = "full-cli")]

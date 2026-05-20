@@ -21,6 +21,27 @@ pub trait Model: Send + Sync {
     ) -> Result<ConcreteTensor>;
     fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor>;
     fn logits(&self, hidden: &ConcreteTensor) -> Result<ConcreteTensor>;
+    fn dense_q8_hook_selection_receipt(&self) -> serde_json::Value {
+        serde_json::json!({
+            "schema": 1,
+            "artifact_kind": "dense_gguf_q8_hook_selection_receipt_gate",
+            "selected_path": "eager_f32_candle",
+            "selected_kernel": "dense-f32-candle-linear",
+            "sidecar_descriptor_count": 0,
+            "hook_boundary_count": 0,
+            "sidecar_descriptors_reached_transformer": false,
+            "example_boundary": serde_json::Value::Null,
+            "all_boundaries_preserve_eager_f32": true,
+            "runtime_compute_enabled": false,
+            "dense_runtime_replaced": false,
+            "speedup_claim": false,
+            "fallback_used": false,
+            "remaining_blockers": [
+                "dense_q8_sidecar_registry_missing_or_not_exposed_for_model_trait_object"
+            ],
+            "next_safe_step": "use a strict dense GGUF model with carried Q8_0 sidecar descriptors before evaluating packed sidecar compute"
+        })
+    }
 }
 
 /// BitNet model implementation
@@ -200,6 +221,61 @@ impl BitNetModel {
         select_dense_q8_runtime(tensor_name, &self.dense_q8_sidecars)
     }
 
+    /// Receipt-oriented dense-linear hook selection identity.
+    ///
+    /// This is intentionally observational. It records which Q8_0 sidecar
+    /// descriptors reached the transformer hook boundary while preserving the
+    /// eager F32 Candle runtime path until behavior-preserving after receipts
+    /// and a packed compute kernel exist.
+    pub fn dense_q8_hook_selection_receipt(&self) -> serde_json::Value {
+        let hook_boundaries = self
+            .transformer
+            .as_ref()
+            .map(|transformer| transformer.dense_linear_runtime_hook_boundaries())
+            .unwrap_or_default();
+        let example = hook_boundaries.first();
+        let sidecar_descriptor_count = self.dense_q8_sidecars.descriptor_count();
+        let hook_boundary_count = hook_boundaries.len();
+        let sidecar_descriptors_reached_transformer = hook_boundary_count > 0
+            && hook_boundaries.iter().any(|boundary| {
+                boundary.sidecar_descriptor_present && boundary.preserves_eager_f32()
+            });
+
+        serde_json::json!({
+            "schema": 1,
+            "artifact_kind": "dense_gguf_q8_hook_selection_receipt_gate",
+            "selected_path": "eager_f32_candle",
+            "selected_kernel": "dense-f32-candle-linear",
+            "sidecar_descriptor_count": sidecar_descriptor_count,
+            "hook_boundary_count": hook_boundary_count,
+            "sidecar_descriptors_reached_transformer": sidecar_descriptors_reached_transformer,
+            "example_boundary": example.map(|boundary| serde_json::json!({
+                "tensor_name": boundary.tensor_name,
+                "selected_path": boundary.selected_path,
+                "selected_kernel": boundary.selected_kernel,
+                "sidecar_descriptor_present": boundary.sidecar_descriptor_present,
+                "sidecar_role": boundary.sidecar_role,
+                "sidecar_payload_sha256": boundary.sidecar_payload_sha256,
+                "runtime_compute_enabled": boundary.runtime_compute_enabled,
+                "eager_f32_runtime_preserved": boundary.eager_f32_runtime_preserved,
+                "dense_runtime_replaced": boundary.dense_runtime_replaced,
+                "speedup_claim": boundary.speedup_claim,
+                "generated_id_preservation_required_before_runtime_use": boundary.generated_id_preservation_required_before_runtime_use,
+                "next_receipt_gate": boundary.next_receipt_gate,
+            })),
+            "all_boundaries_preserve_eager_f32": hook_boundaries.iter().all(|boundary| boundary.preserves_eager_f32()),
+            "runtime_compute_enabled": false,
+            "dense_runtime_replaced": false,
+            "speedup_claim": false,
+            "fallback_used": false,
+            "remaining_blockers": [
+                "packed_q8_sidecar_compute_kernel_not_enabled",
+                "before_after_qwen3_q8_warm_session_receipts_with_hook_selection_identity_missing"
+            ],
+            "next_safe_step": "run before/after Qwen3 Q8_0 warm-session receipts that record identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook selection identity, and fallback_used=false before enabling packed sidecar compute"
+        })
+    }
+
     /// Convert ConcreteTensor to Candle tensor
     fn to_candle_tensor(&self, tensor: &ConcreteTensor) -> Result<CandleTensor> {
         match tensor {
@@ -348,5 +424,9 @@ impl Model for BitNetModel {
         let hidden_tensor = self.to_candle_tensor(hidden)?;
         let logits = transformer.logits(&hidden_tensor)?;
         Ok(self.candle_to_concrete(logits))
+    }
+
+    fn dense_q8_hook_selection_receipt(&self) -> serde_json::Value {
+        BitNetModel::dense_q8_hook_selection_receipt(self)
     }
 }
