@@ -1,15 +1,22 @@
 # Quantization Support
 
-This document describes the quantization formats and device-aware acceleration supported by BitNet-rs.
+This document describes BitNet-rs quantization formats and device-aware
+acceleration surfaces.
+
+> Claim boundary: feature flags, kernel names, and acceleration surfaces here do
+> not by themselves prove product readiness, speedup, server readiness, fallback
+> behavior, or full residency. Current hardware and model claims must be checked
+> against active model coverage, receipts, status docs, specs, and claim gates.
 
 ## Supported Quantization Formats
 
-BitNet-rs supports multiple quantization formats with advanced device-aware acceleration:
+BitNet-rs contains multiple quantization formats with device-aware acceleration
+surfaces:
 
 ### I2S - Native Rust Implementation (Issue #261)
 
-- Native Rust implementation with intelligent GPU/CPU selection and automatic fallback
-- Device-aware quantization with CUDA kernel acceleration (feature-gated) and CPU SIMD optimization
+- Native Rust implementation with device selection and explicit fallback reporting
+- Device-aware quantization surfaces with feature-gated CUDA kernels and CPU SIMD optimization
 - **Accuracy**: Target ≥99.8% correlation with FP32 reference (defined in test fixtures; formal measurement pending)
 - **Performance**: Hardware-dependent; SIMD-optimised. QK256 path uses scalar kernels (~0.1 tok/s for 2B models).
 - 2-bit signed quantization with optimized bit-packing (4 values per byte)

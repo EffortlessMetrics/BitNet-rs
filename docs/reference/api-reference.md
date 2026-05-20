@@ -2,6 +2,12 @@
 
 This document provides comprehensive API reference for BitNet Rust library and production inference server.
 
+> Claim boundary: API endpoints, feature flags, and examples in this reference
+> describe interface shape. They do not prove current server readiness, CUDA/GPU
+> support, speedup, residency, fallback behavior, or product readiness for any
+> model. Use active receipts, model coverage, status docs, specs, and claim
+> gates for current claims.
+
 ## Production Inference Server API
 
 The BitNet-rs production inference server provides enterprise-grade HTTP API endpoints for neural network inference with comprehensive model management, monitoring, and security features.
