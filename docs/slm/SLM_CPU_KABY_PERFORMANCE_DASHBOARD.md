@@ -837,3 +837,30 @@ Qwen3.5 support
 BitNet QK256 changes
 portable performance across other CPUs
 ```
+
+## Release-Surface Boundary
+
+After SLM-CPU-061, BitNet-rs keeps the Kaby Lake SLM lane as the audited
+release and evidence surface. The committed Qwen3 Q8_0 and Qwen2.5 Q8_0
+strict CPU receipts remain the behavior oracle for any future dense packed-Q8
+candidate.
+
+Further packed Q8_0 compute-candidate development should happen in
+`bitnet-rs-swarm`. A candidate can return to BitNet-rs only as an audited
+release/evidence artifact that preserves:
+
+```text
+model SHA
+strict GGUF tokenizer authority
+prompt IDs
+generated IDs
+decoded text
+selected CPU backend/kernel identity
+dense hook-selection identity
+fallback_used=false
+speedup_claim=false unless a separate bounded timing receipt proves otherwise
+```
+
+This boundary does not claim a new runtime compute path, speedup, sustained
+throughput, broad answer quality, Q4/Q5 runtime support, server execution,
+accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
