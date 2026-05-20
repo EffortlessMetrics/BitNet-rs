@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-20T12:15:00Z",
+  "created_utc": "2026-05-20T12:30:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "822325ba6acaab744aa2bc4762cca23ce3c60946",
+  "source_revision": "4dfdd1c6bb77d875b5741203f495b8eb6df22537",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
-  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, and POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable.",
+  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, merged BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, and POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-006",
     "status": "blocked",
@@ -249,7 +249,8 @@
         "cpu-qk256-i8s-semantic-audit.json",
         "output-head-logits-index-audit.json",
         "cpu-bitnet-perf-001-i2s-microbench.json",
-        "lunar-lake-bitnet-semantic-intake.json"
+        "lunar-lake-bitnet-semantic-intake.json",
+        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T020149Z-LNL258V-BITNET-INTAKE-004-merged.toml"
       ],
       "notes": [
         "BitNet CPU reference evidence is tracked separately from dense Qwen SLM success.",
@@ -312,7 +313,7 @@
       ],
       "notes": [
         "The platform is well instrumented and profile-aware, but not yet excellent across all requested profiles.",
-        "The post-POWER-008 command surface carries appliance ask receipts, route/model identity readiness, semantic-intake watchpoints, runbook discoverability, and the current power and thermal gaps into readiness, regression, comparison, and operator guidance.",
+        "The post-BITNET-INTAKE-004 closeout command surface carries appliance ask receipts, route/model identity readiness, semantic-intake watchpoints, runbook discoverability, and the current power and thermal gaps into readiness, regression, comparison, and operator guidance.",
         "Remaining gaps are low_power promotion, battery-mode power evidence, thermal readings, and full BitNet accelerator proof."
       ]
     }
