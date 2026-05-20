@@ -8281,9 +8281,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SWARM-LNL258V-BITNET-INTAKE-009"
-status = "pr_open"
+status = "merged"
 pr = 66
-head_sha = "67839b5eef0f7a88a2946fa8c8b668b5ec14a1fc"
+head_sha = "0494a04a44d0964a0166464dd4fbf65769e1e071"
+merge_sha = "8f225406936b92a891b2533fe56fea95151c2edd"
 branch = "codex/swarm-lnl258v-bitnet-prompt-009-direct-ref-bos"
 stackable = false
 review_mode = "codex_premerge"

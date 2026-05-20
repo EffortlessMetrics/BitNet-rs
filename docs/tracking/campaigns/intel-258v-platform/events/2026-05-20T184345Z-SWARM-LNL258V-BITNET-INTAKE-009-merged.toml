@@ -1,0 +1,20 @@
+timestamp = "2026-05-20T18:43:45Z"
+campaign = "intel-258v-platform"
+item = "SWARM-LNL258V-BITNET-INTAKE-009"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+branch = "codex/swarm-lnl258v-bitnet-prompt-009-direct-ref-bos"
+pr = 66
+head_sha = "0494a04a44d0964a0166464dd4fbf65769e1e071"
+merge_sha = "8f225406936b92a891b2533fe56fea95151c2edd"
+merged_at = "2026-05-20T18:26:59Z"
+summary = "Merged PR #66, correcting the Lunar Lake direct BitNet.cpp reference prompt-token comparison boundary."
+
+notes = [
+  "PR #66 preserves raw direct-reference prompt IDs while comparing local scalar and AVX2 prompt IDs against expected_prompt_token_ids_without_local_bos.",
+  "The refreshed after-A770-43 first-token divergence classification records prompt-token exact matches and no divergence at the first generated token boundary.",
+  "The CPU reference bundle, BitNet semantic intake, strict regression-v2, operator readiness, and operator comparison remain ready after the classifier correction.",
+  "The PR preserved no new model inference, route promotion, speedup, power-advantage, measured-temperature, battery-mode evidence, native accelerator, acceleration, first-token logits parity, full generated-sequence parity, broad BitNet quality, or BitNet QK256/I2_S behavior-change claim.",
+]
