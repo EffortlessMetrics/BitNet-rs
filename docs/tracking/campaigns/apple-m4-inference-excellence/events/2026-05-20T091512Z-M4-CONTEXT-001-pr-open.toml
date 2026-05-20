@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T09:15:12Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CONTEXT-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-001-long-context-guardrails"
+pr = 6130
+head_sha = "67e31a2ab752ef8c65f23db4be92acd6c7e7685f"
+
+notes = [
+  "Opened PR #6130 to add long-context envelope guardrails for M4 dense SLM and BitNet operator routes.",
+  "The PR adds context_envelope classification and apple_m4_context_guardrail receipts for blocked dense ask/chat/chat-smoke/serve and BitNet ask/warm/chat/serve contexts beyond recorded evidence.",
+  "The implementation annotates successful M4 route receipts where prompt-token authority is available and validates the new context guardrail receipt contract through mac receipts-check.",
+  "No long-context quality proof, unsupported-context support, BitNet chat/serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
