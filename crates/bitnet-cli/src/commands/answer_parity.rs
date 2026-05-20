@@ -504,10 +504,10 @@ fn answer_corpus_artifact_kind_allowed(kind: Option<&str>) -> bool {
 }
 
 fn strict_cpu_backend(receipt: &Value) -> bool {
-    receipt["backend"]["requested_backend"] == "cpu"
-        && receipt["backend"]["selected_backend"] == "cpu"
-        && receipt["backend"]["runtime_api"] == "cpu"
-        && receipt["backend"]["fallback_used"] == false
+    backend_str(receipt, "requested_backend") == Some("cpu")
+        && matches!(backend_str(receipt, "selected_backend"), Some("cpu" | "cpu-rust"))
+        && backend_str(receipt, "runtime_api") == Some("cpu")
+        && receipt_fallback_used(receipt) == Some(false)
 }
 
 fn generic_backend_contract(backend: Option<&serde_json::Map<String, Value>>) -> bool {
@@ -1364,6 +1364,20 @@ mod tests {
 
         let failed = report["cases"][0]["failed_rules"].as_array().unwrap();
         assert!(failed.iter().any(|rule| rule == "scalar_logits_dump_recorded"));
+    }
+
+    #[test]
+    fn legacy_parity_accepts_cpu_rust_selected_backend() {
+        let mut scalar = receipt("i2_s-scalar-reference", &[4], "4", logits());
+        let mut avx2 = receipt("i2_s-avx2-reference", &[4], "4", logits());
+        scalar["backend"]["selected_backend"] = json!("cpu-rust");
+        avx2["backend"]["selected_backend"] = json!("cpu-rust");
+
+        let report = build_legacy_report(&scalar, &avx2);
+
+        assert_eq!(report["summary"]["failed"], 0);
+        let shared = report["shared_contract"]["failed_rules"].as_array().unwrap();
+        assert!(!shared.iter().any(|rule| rule == "strict_cpu_backend"));
     }
 
     #[test]

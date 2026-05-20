@@ -1,0 +1,619 @@
+{
+  "artifact_kind": "strict_bitnet_cpu_reference",
+  "artifact_path": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-corpus-scalar-after-a770-43-runs\\repeat_colors.json",
+  "bitnet": {
+    "activation_quantization": "A8",
+    "execution_phase": "decode",
+    "fallback_layout": null,
+    "kernel_family": "i2_s",
+    "kernel_format": "i2_s",
+    "layout_source": "gguf_packed_i2_s_reference",
+    "per_token_weight_upload": false,
+    "quantization": "W1.58A8",
+    "weight_quantization": "W1.58",
+    "weights_uploaded_once": false
+  },
+  "counts": {
+    "n_kv": 24,
+    "n_tensors": 332,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "x86_64",
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "threads": 1
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 4,
+    "phase": "decode",
+    "prompt_tokens": 12,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "bitnet_linear_layers_on_cuda": 0,
+    "bitnet_linear_layers_total": 3150,
+    "execution_claim": "cpu_reference",
+    "input_rows_materialized_count": 3150,
+    "output_rows_allocated_count": 3150,
+    "qk256_execution_path": "scaled_i2s_i8s",
+    "qk256_f32_avx2_gemv_invocations": 0,
+    "qk256_f32_scalar_gemv_invocations": 0,
+    "qk256_flat_bytes_extracted_count": 3150,
+    "qk256_i8s_scaled_avx2_invocations": 0,
+    "qk256_i8s_scaled_scalar_invocations": 3150,
+    "requested_kernel": "scalar",
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": true,
+    "explicit_bos_requested": false,
+    "greedy": true,
+    "max_new_tokens": 8,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
+    "seed": 0,
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": false,
+    "family": "i2_s",
+    "hot_path_kernel_id": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "implementation": "scalar",
+    "kernel_id": "i2_s-scalar-reference",
+    "layout": "gguf_packed_i2_s"
+  },
+  "latency": {
+    "cmd_to_first_ms": 134813,
+    "decode_first_ms": 134813,
+    "total_ms": 143255
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "explicit"
+  },
+  "logits_dump": [
+    {
+      "chosen_id": 1171,
+      "logits_vector_length": 128256,
+      "step": 0,
+      "top_logits": [
+        {
+          "logit": 19.561992645263672,
+          "token_id": 1171
+        },
+        {
+          "logit": 15.037888526916504,
+          "token_id": 40
+        },
+        {
+          "logit": 14.507055282592773,
+          "token_id": 6161
+        },
+        {
+          "logit": 14.40894603729248,
+          "token_id": 40914
+        },
+        {
+          "logit": 13.846427917480469,
+          "token_id": 12481
+        }
+      ]
+    }
+  ],
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 128256,
+    "expected_logits_vector_length_source": "tokenizer_vocab_size",
+    "first_step_logits_vector_length": 128256,
+    "observed_logits_vector_length": 128256,
+    "observed_logits_vector_length_source": "run_receipt_logits_dump"
+  },
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "tied_token_embeddings",
+    "path": "C:\\Code\\Models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tie_word_embeddings": true,
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "not_claims": [
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion"
+  ],
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "cpu",
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 4,
+        "max_ms": 0.017,
+        "mean_ms": 0.014,
+        "min_ms": 0.013,
+        "p50_ms": 0.013,
+        "p95_ms": 0.017,
+        "total_ms": 0.057
+      },
+      "first_token_decode_ms": 14296.045,
+      "forward_ms": {
+        "count": 4,
+        "max_ms": 14084.286,
+        "mean_ms": 5565.39,
+        "min_ms": 2158.357,
+        "p50_ms": 2370.89,
+        "p95_ms": 14084.286,
+        "total_ms": 22261.561
+      },
+      "generated_tokens": 4,
+      "logits_ms": {
+        "count": 4,
+        "max_ms": 175.81,
+        "mean_ms": 109.039,
+        "min_ms": 80.293,
+        "p50_ms": 84.773,
+        "p95_ms": 175.81,
+        "total_ms": 436.155
+      },
+      "per_token_ms": {
+        "count": 4,
+        "max_ms": 14296.045,
+        "mean_ms": 5683.978,
+        "min_ms": 2254.323,
+        "p50_ms": 2456.524,
+        "p95_ms": 14296.045,
+        "total_ms": 22735.913
+      },
+      "sample_ms": {
+        "count": 4,
+        "max_ms": 0.364,
+        "mean_ms": 0.268,
+        "min_ms": 0.211,
+        "p50_ms": 0.224,
+        "p95_ms": 0.364,
+        "total_ms": 1.073
+      },
+      "steady_per_token_ms": {
+        "count": 3,
+        "max_ms": 3729.021,
+        "mean_ms": 2813.289,
+        "min_ms": 2254.323,
+        "p50_ms": 2456.524,
+        "p95_ms": 3729.021,
+        "total_ms": 8439.868
+      },
+      "steady_state_tok_s": 0.355,
+      "steady_state_tokens": 3,
+      "token_decode_ms": {
+        "count": 4,
+        "max_ms": 0.07,
+        "mean_ms": 0.024,
+        "min_ms": 0.007,
+        "p50_ms": 0.008,
+        "p95_ms": 0.07,
+        "total_ms": 0.095
+      },
+      "warmup_tokens": 1
+    },
+    "id": "default",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 3246.244,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 120517.188,
+      "per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "tokens": 11
+    },
+    "prompt_tokenize_ms": 1.423,
+    "requested": false,
+    "tokenizer_load_ms": 859.999
+  },
+  "prompt": "Repeat exactly: red blue green",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 8,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "3e323f0d547b84415ad67df1f3c39717f1ed531fa05107348e67411eb45c2eaf",
+    "identity_sha256": "eafbef9f981f744bdc8867df7ef35d577419fafabe11b5f0038320252b1849e0",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        128009,
+        128001
+      ]
+    },
+    "stop_criteria_sha256": "e1342df3623e7e44cd79854888c249063c066138b7fa463d8b371e8bb3b4ef7e",
+    "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+    "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+    "template": {
+      "family": "bitnetcpp-answer",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "bitnetcpp-answer",
+    "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+    "tokenizer_authority": {
+      "authority": "llama-bpe",
+      "sha256": null,
+      "source": "explicit",
+      "strict": true
+    }
+  },
+  "prompt_identity": {
+    "bos_policy": false,
+    "parse_special": true,
+    "prompt_token_count": 12,
+    "prompt_token_ids_sha256": "26698b5e5b38c72ec9ab49b82802ee8276d4412b62a91a4f7d7c5e92b45dd4ee",
+    "rendered_prompt_sha256": "7230179ec229a86a78adbf43a41ffd6815f75251ccbe24765468119275597598",
+    "template": "bitnetcpp-answer"
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "rendered_sha256": "7230179ec229a86a78adbf43a41ffd6815f75251ccbe24765468119275597598",
+    "rendered_text": "User: Repeat exactly: red blue green<|eot_id|>Assistant: ",
+    "stop_sequences": [
+      "<|eot_id|>",
+      "<|end_of_text|>"
+    ],
+    "stop_token_ids": [
+      128009,
+      128001
+    ],
+    "template_family": "bitnetcpp-answer"
+  },
+  "proof_summary": {
+    "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
+    "claim_level": "diagnostic_cli_run",
+    "execution_backend": "cpu-rust",
+    "execution_backend_matched": false,
+    "fallback_used": false,
+    "kernel_route": {
+      "claimable": false,
+      "diagnostic_only": true,
+      "route_declared": false,
+      "route_id": null
+    },
+    "loader_fallback_used": false,
+    "model_contract": null,
+    "model_contract_declared": false,
+    "not_claims": [
+      "selected_attention_residency",
+      "resident_kv_decode",
+      "attention_scores_residency",
+      "softmax_residency",
+      "attention_value_mix_residency",
+      "full_support_op_residency",
+      "full_device_residency",
+      "completion"
+    ],
+    "requested_backend": "cpu",
+    "requested_device": "cpu",
+    "route_declared": false,
+    "selected_backend": "cpu-rust",
+    "strict_backend": true,
+    "tokenizer_fallback_used": false
+  },
+  "qk256_hot_path": {
+    "audited_tensor_materialization_count": 9450,
+    "counter_source": "bitnet_qk256_dispatch::qk256_cpu_hot_path_counters",
+    "input_rows_materialized_count": 3150,
+    "math_changed": false,
+    "no_scale_f32_gemv_invocations": 0,
+    "output_rows_allocated_count": 3150,
+    "qk256_execution_path": "scaled_i2s_i8s",
+    "qk256_f32_avx2_gemv_invocations": 0,
+    "qk256_f32_scalar_gemv_invocations": 0,
+    "qk256_flat_bytes_extracted_count": 3150,
+    "qk256_i8s_scaled_avx2_invocations": 0,
+    "qk256_i8s_scaled_scalar_invocations": 3150,
+    "requested_kernel": "scalar",
+    "scaled_i2s_i8s_gemv_invocations": 3150,
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "speedup_claim": false
+  },
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "cpu-rust",
+  "strict_provenance": {
+    "cpu_features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+    "decode_tokens": 4,
+    "decode_tps": 0.02792223657114935,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "bitnet",
+    "phase": "decode",
+    "prompt_tokens": 12,
+    "quant_format": "I2_S",
+    "requested_backend": "cpu",
+    "requested_kernel": "scalar",
+    "selected_backend": "cpu-rust",
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "thread_count": 1,
+    "tokenizer_source": "explicit",
+    "tokenizer_strict": true
+  },
+  "text": "red blue green",
+  "throughput": {
+    "decoded_tokens": 4,
+    "tokens_per_second": 0.02792223657114935
+  },
+  "timestamp": "2026-05-20T16:04:52.306196600+00:00",
+  "timing": {
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 0.355,
+    "decode_total_ms": 22735.913,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 14296.045,
+    "first_token_ms": 134813,
+    "host_to_device_bytes": null,
+    "model_load_ms": 3246.244,
+    "prefill_ms": 120517.188,
+    "sampling_ms_per_token": 0.268,
+    "tokenize_ms": 1.423,
+    "tokenizer_load_ms": 859.999
+  },
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "model_family": "llama3",
+    "origin": "external",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "tokens": {
+    "generated": 4,
+    "generated_ids": [
+      1171,
+      6437,
+      6307,
+      128009
+    ],
+    "ids": [
+      1171,
+      6437,
+      6307,
+      128009
+    ],
+    "prompt": 12,
+    "prompt_ids": [
+      1502,
+      25,
+      45901,
+      7041,
+      25,
+      2579,
+      6437,
+      6307,
+      128009,
+      72803,
+      25,
+      220
+    ],
+    "total": 16
+  }
+}

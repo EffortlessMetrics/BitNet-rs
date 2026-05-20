@@ -8280,6 +8280,85 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SWARM-LNL258V-BITNET-INTAKE-008"
+status = "pr_open"
+pr = 61
+head_sha = "d2a2e3a8eb46bc17f1b17a1b29628d66c6988ce0"
+branch = "codex/swarm-lnl258v-bitnet-intake-008-rerun-a770-43"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SWARM-LNL258V-BITNET-INTAKE-007"]
+acceptance = "Rerun the Lunar Lake BitNet CPU semantic-intake evidence after swarm A770 PR #43 merged to main, refresh scalar and AVX2 answer-corpus receipts, answer parity, first-token divergence classification, CPU phase warm-session receipts, the CPU reference bundle, semantic intake, strict regression-v2, and operator comparison so stale_after_merged_count returns to zero and strict surfaces are ready. Fix only the strict recovery bugs needed to make that refresh valid, record the after-A770-43 prompt-token-policy mismatch against the direct external BitNet.cpp reference as an open gap, and preserve no route promotion, speedup, power-advantage, measured-temperature, battery-mode evidence, native accelerator, acceleration, external first-token parity, broad quality, or BitNet QK256/I2_S behavior-change claims."
+commands = [
+  "cargo test -p bitnet-cli --no-default-features --features cpu,full-cli commands::lunar_lake::tests::bitnet_semantic_intake_can_recover_before_operator_comparison_refresh -- --exact --nocapture",
+  "cargo test -p bitnet-cli --no-default-features --features cpu,full-cli commands::lunar_lake::tests::bitnet_semantic_intake_requires_rerun_for_newer_merged_shared_fix -- --exact --nocapture",
+  "cargo test -p bitnet-cli --no-default-features --features cpu,full-cli commands::answer_parity::tests::legacy_parity_accepts_cpu_rust_selected_backend -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet --release",
+  "target/release/bitnet.exe answer-corpus --device cpu --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --threads 8 --cpu-kernel scalar --dump-logit-steps 1 --logits-topk 5 --per-prompt-timeout-seconds 240 --fail-on-quality --json-out ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-a770-43.json",
+  "target/release/bitnet.exe answer-corpus --device cpu --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --threads 8 --cpu-kernel avx2 --dump-logit-steps 1 --logits-topk 5 --per-prompt-timeout-seconds 240 --fail-on-quality --json-out ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-a770-43.json",
+  "target/release/bitnet.exe answer-parity --device cpu --scalar ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-a770-43.json --avx2 ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-a770-43.json --platform-artifact ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json --machine intel-258v --json-out ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-a770-43.json",
+  "target/release/bitnet.exe first-token-divergence --external-reference ci/hardware/intel-258v/2026-05-08/external-first-token-reference-direct.json --prompt-audit ci/hardware/intel-258v/2026-05-08/prompt-authority-audit-math.json --scalar-answer-corpus ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-a770-43.json --avx2-answer-corpus ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-a770-43.json --answer-parity ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-a770-43.json --json-out ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-after-a770-43.json",
+  "target/release/bitnet.exe cpu-phase-warm-session --device cpu --model C:/Code/Models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer C:/Code/Models/BitNet-b1.58-2B-4T/tokenizer.json --strict-loader --strict-tokenizer --threads 8 --prefill-prompt-file ci/hardware/intel-258v/2026-05-08/prefill-512-prompt.txt --decode-tokens 128 --cpu-kernel avx2 --prompt-template bitnetcpp-answer --platform-artifact ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json --json-out ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-a770-43.json",
+  "target/release/bitnet.exe lunar-lake bitnet-intake --artifact-root ci/hardware/intel-258v/2026-05-08 --source-changes lunar-lake-bitnet-semantic-source-changes.json --cpu-reference-bundle cpu-reference-bundle-after-semantic-fix.json --operator-comparison lunar-lake-operator-comparison.json --json-out lunar-lake-bitnet-semantic-intake.json --created-utc 2026-05-20T17:17:30Z --strict",
+  "target/release/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-20T17:18:00Z --strict",
+  "target/release/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-20T17:18:30Z --strict",
+  "python -m json.tool each changed JSON artifact",
+  "target/debug/xtask.exe campaign check intel-258v-platform",
+  "target/debug/xtask.exe campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-a770-43.json",
+  "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-a770-43-runs/**",
+  "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-a770-43.json",
+  "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-a770-43-runs/**",
+  "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-a770-43.json",
+  "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-after-a770-43.json",
+  "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-a770-43.json",
+  "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-a770-43-profiles/**",
+  "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/hardware/a770/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "models/**",
+]
+may_claim = [
+  "Lunar Lake BitNet CPU evidence was rerun after swarm A770 PR #43 merged to main.",
+  "The refreshed scalar and AVX2 answer-corpus receipts pass the fixed tiny corpus with fallback_used=false.",
+  "The refreshed answer-parity receipt passes scalar/AVX2 parity with selected_backend=cpu-rust accepted as a strict CPU backend.",
+  "The refreshed semantic-intake receipt reports no stale merged shared BitNet change requiring a Lunar Lake rerun, and strict regression-v2 and operator comparison are ready.",
+  "The after-A770-43 first-token divergence classifier records a prompt-token-policy mismatch against the direct external BitNet.cpp reference.",
+]
+must_not_claim = [
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "A measured thermal temperature is available.",
+  "Battery-mode low_power evidence is available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "External first-token parity with BitNet.cpp is proven.",
+  "Broad BitNet quality is proven.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "SWARM-LNL258V-BITNET-INTAKE-007"
 status = "merged"
 pr = 51

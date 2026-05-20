@@ -2,12 +2,12 @@
   "schema": 3,
   "artifact_kind": "intel_258v_cpu_reference_bundle",
   "machine_id": "intel-258v",
-  "captured_at_utc": "2026-05-12T18:43:14Z",
-  "proof_stage": "corrected_cpu_reference_bundled",
-  "reference_scope": "same_machine_cpu_reference_after_prompt_policy_fix",
+  "captured_at_utc": "2026-05-20T17:12:19Z",
+  "proof_stage": "corrected_cpu_reference_bundled_after_a770_43_intake_rerun",
+  "reference_scope": "same_machine_cpu_reference_after_a770_43_semantic_intake_rerun",
   "supersedes": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle.json",
   "source_artifacts": {
-    "platform_probe": "ci/hardware/intel-258v/2026-05-06/platform-probe.json",
+    "platform_probe": "ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json",
     "strict_decode_smoke": "ci/hardware/intel-258v/2026-05-06/strict-bitnet-cpu-proof.json",
     "phase_warm_session": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session.json",
     "phase_prefill_512": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-profiles/prefill_512.json",
@@ -35,7 +35,16 @@
     "answer_parity_after_prompt_fix": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-prompt-fix.json",
     "phase_warm_session_after_prompt_fix": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix.json",
     "phase_prefill_512_after_prompt_fix": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/prefill_512.json",
-    "phase_decode_128_after_prompt_fix": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/decode_128.json"
+    "phase_decode_128_after_prompt_fix": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-prompt-fix-profiles/decode_128.json",
+    "platform_probe_cli": "ci/hardware/intel-258v/2026-05-08/platform-probe-cli.json",
+    "answer_corpus_scalar_after_a770_43": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-a770-43.json",
+    "answer_corpus_avx2_after_a770_43": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-a770-43.json",
+    "answer_parity_after_a770_43": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-a770-43.json",
+    "phase_warm_session_after_a770_43": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-a770-43.json",
+    "phase_prefill_512_after_a770_43": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-a770-43-profiles/prefill_512.json",
+    "phase_decode_128_after_a770_43": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-a770-43-profiles/decode_128.json",
+    "external_first_token_reference_direct": "ci/hardware/intel-258v/2026-05-08/external-first-token-reference-direct.json",
+    "first_token_divergence_classifier_after_a770_43": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-after-a770-43.json"
   },
   "model": {
     "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
@@ -130,9 +139,9 @@
       "logits_available": false
     },
     "first_token_divergence_classifier": {
-      "artifact": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification.json",
+      "artifact": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-after-a770-43.json",
       "proof_stage": "first_token_divergence_classified",
-      "classification": "reference_generated_token_ids_and_logits_unavailable"
+      "classification": "prompt_token_policy_mismatch"
     },
     "external_reference_instrumentation": {
       "artifact": "ci/hardware/intel-258v/2026-05-08/external-reference-instrumentation.json",
@@ -158,6 +167,21 @@
       "comparison_boundaries_matched": 13,
       "comparison_boundaries_mismatched": 0,
       "first_divergence_stage": "none"
+    },
+    "external_first_token_reference_direct": {
+      "artifact": "ci/hardware/intel-258v/2026-05-08/external-first-token-reference-direct.json",
+      "proof_stage": "external_reference_direct_tokens_recorded",
+      "generated_token_ids_available": true,
+      "logits_available": true
+    },
+    "first_token_divergence_classifier_after_a770_43": {
+      "artifact": "ci/hardware/intel-258v/2026-05-08/first-token-divergence-classification-after-a770-43.json",
+      "proof_stage": "first_token_divergence_classified",
+      "classification": "prompt_token_policy_mismatch",
+      "reference_generated_token_ids_available": true,
+      "reference_logits_available": true,
+      "scalar_avx2_parity_passed": true,
+      "next_required_evidence": "fix the classified earlier divergence before deeper token or logits evidence"
     }
   },
   "phase_evidence_after_prompt_fix": {
@@ -207,17 +231,21 @@
     "cpu_fallback_can_satisfy_accelerator_proof": false
   },
   "remaining_gaps": [
-    "External reference generated-token IDs and first-token logits/top-k are still not proven by this bundle.",
+    "After-A770-43 first-token divergence rerun classifies a prompt-token policy mismatch against the direct external BitNet.cpp reference; this refresh records the gap and does not claim external first-token parity.",
+    "Direct external reference generated-token IDs and first-token logits/top-k are available, but the after-A770-43 classifier records a prompt-token policy mismatch before external first-token parity can be claimed.",
     "Phase receipts are timing evidence only and do not claim speedup or sustained throughput.",
     "The fixed tiny corpus passing does not claim broad chat quality or full model correctness.",
     "Arc 140V and Intel NPU must cite independent receipts for their own execution/parity claims."
   ],
   "may_claim": [
+    "The after-A770-43 rerun refreshed 258V BitNet CPU scalar and AVX2 answer corpus receipts, scalar-vs-AVX2 parity, first-token divergence classification, and CPU phase receipts with fallback_used=false.",
     "The corrected 258V CPU reference bundle links the prompt-policy fix, post-fix prompt/token parity, post-fix scalar and AVX2 answer corpus, scalar-vs-AVX2 answer parity, and corrected warm-session phase receipts.",
     "The referenced CPU receipts used real GGUF loading, explicit strict tokenizer resolution, selected i2_s scalar/AVX2 CPU kernels, corrected BitNet prompt policy, and fallback_used=false.",
     "Later Arc 140V and Intel NPU parity comparisons can cite this bundle as the corrected same-machine CPU reference index after merge."
   ],
   "must_not_claim": [
+    "The after-A770-43 rerun changes BitNet QK256/I2_S behavior.",
+    "The after-A770-43 rerun proves external first-token parity.",
     "New runtime behavior is added by this bundle refresh.",
     "General BitNet answer quality is proven beyond the fixed tiny corpus.",
     "External first-token logits parity is proven.",
@@ -228,5 +256,87 @@
     "QK256 semantics or transformer math changed.",
     "Full model correctness is proven."
   ],
-  "fallback_used": false
+  "fallback_used": false,
+  "answer_corpus_after_a770_43": {
+    "scalar_artifact": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-scalar-after-a770-43.json",
+    "avx2_artifact": "ci/hardware/intel-258v/2026-05-08/cpu-answer-corpus-avx2-after-a770-43.json",
+    "corpus": "strict-bitnet-answer-corpus-v1",
+    "scalar_quality_summary": {
+      "failed": 0,
+      "failure_categories": {},
+      "not_run": 0,
+      "passed": 5,
+      "timeout": 0,
+      "total": 5
+    },
+    "avx2_quality_summary": {
+      "failed": 0,
+      "failure_categories": {},
+      "not_run": 0,
+      "passed": 5,
+      "timeout": 0,
+      "total": 5
+    },
+    "quality_scope": "fixed_tiny_corpus_only",
+    "broad_answer_quality_claim": false,
+    "rerun_reason": "A770 #43 merged after the previous Lunar Lake BitNet semantic evidence cutoff; this rerun refreshes same-machine CPU evidence only.",
+    "captured_at_utc": "2026-05-20T16:10:52Z"
+  },
+  "answer_parity_after_a770_43": {
+    "artifact": "ci/hardware/intel-258v/2026-05-08/cpu-answer-parity-after-a770-43.json",
+    "proof_stage": "full_decode_parity_compared",
+    "summary": {
+      "failed": 0,
+      "first_divergence": null,
+      "passed": 5,
+      "total": 5
+    },
+    "same_real_gguf": true,
+    "same_tokenizer": true,
+    "same_prompt_template": true,
+    "same_greedy_settings": true,
+    "scalar_and_avx2_match": true,
+    "captured_at_utc": "2026-05-20T16:47:31Z"
+  },
+  "phase_evidence_after_a770_43": {
+    "session_artifact": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-a770-43.json",
+    "model_loaded_once": true,
+    "tokenizer_loaded_once": true,
+    "selected_kernel": "i2_s-avx2-reference",
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "fallback_used": false,
+    "speedup_claim": false,
+    "total_session_ms": 1472668.63,
+    "profiles": [
+      {
+        "profile": "prefill_512",
+        "phase": "prefill",
+        "prompt_tokens": 519,
+        "prefill_tokens": 518,
+        "generated_tokens": 1,
+        "prefill_ms": 1164997.752,
+        "first_token_decode_ms": 2428.986,
+        "fallback_used": false,
+        "receipt_path": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-a770-43-profiles/prefill_512.json",
+        "decode_total_ms": 2428.986
+      },
+      {
+        "profile": "decode_128",
+        "phase": "decode",
+        "prompt_tokens": 15,
+        "prefill_tokens": 14,
+        "generated_tokens": 128,
+        "prefill_ms": 27986.008,
+        "first_token_decode_ms": 2067.798,
+        "fallback_used": false,
+        "receipt_path": "ci/hardware/intel-258v/2026-05-08/cpu-phase-warm-session-after-a770-43-profiles/decode_128.json",
+        "decode_total_ms": 271356.736,
+        "steady_state_tok_s": 0.472
+      }
+    ],
+    "claim_scope": "phase_timing_evidence_only",
+    "captured_at_utc": "2026-05-20T17:12:19Z"
+  }
 }

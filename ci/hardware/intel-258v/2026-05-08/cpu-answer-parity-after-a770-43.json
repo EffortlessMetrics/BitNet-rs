@@ -1,0 +1,397 @@
+{
+  "artifact_kind": "bitnet_cpu_answer_parity",
+  "backend": {
+    "fallback_used": false,
+    "lanes": {
+      "avx2": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "scalar": {
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      }
+    },
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust"
+  },
+  "cases": [
+    {
+      "avx2": {
+        "answer": "Paris",
+        "generated_token_ids": [
+          60704,
+          128009
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "failed_rules": [],
+      "id": "capital_france",
+      "passed": true,
+      "scalar": {
+        "answer": "Paris",
+        "generated_token_ids": [
+          60704,
+          128009
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      }
+    },
+    {
+      "avx2": {
+        "answer": "4",
+        "generated_token_ids": [
+          19,
+          128009
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "failed_rules": [],
+      "id": "math_2_plus_2",
+      "passed": true,
+      "scalar": {
+        "answer": "4",
+        "generated_token_ids": [
+          19,
+          128009
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      }
+    },
+    {
+      "avx2": {
+        "answer": "red blue green",
+        "generated_token_ids": [
+          1171,
+          6437,
+          6307,
+          128009
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "failed_rules": [],
+      "id": "repeat_colors",
+      "passed": true,
+      "scalar": {
+        "answer": "red blue green",
+        "generated_token_ids": [
+          1171,
+          6437,
+          6307,
+          128009
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      }
+    },
+    {
+      "avx2": {
+        "answer": "OK",
+        "generated_token_ids": [
+          4012,
+          128009
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "failed_rules": [],
+      "id": "say_ok",
+      "passed": true,
+      "scalar": {
+        "answer": "OK",
+        "generated_token_ids": [
+          4012,
+          128009
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      }
+    },
+    {
+      "avx2": {
+        "answer": "No. N/A",
+        "generated_token_ids": [
+          2822,
+          13,
+          452,
+          10576
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "failed_rules": [],
+      "id": "yes_no_water",
+      "passed": true,
+      "scalar": {
+        "answer": "No. N/A",
+        "generated_token_ids": [
+          2822,
+          13,
+          452,
+          10576
+        ],
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-scalar-reference",
+        "status": "passed"
+      }
+    }
+  ],
+  "claim": "scalar_avx2_full_decode_answer_parity",
+  "fallback_used": false,
+  "inputs": {
+    "avx2_receipt_path": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-corpus-avx2-after-a770-43.json",
+    "scalar_receipt_path": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-corpus-scalar-after-a770-43.json"
+  },
+  "kernel": {
+    "avx2_selected_kernels": [
+      "i2_s-avx2-reference"
+    ],
+    "scalar_selected_kernels": [
+      "i2_s-scalar-reference"
+    ]
+  },
+  "machine": {
+    "cpu": null,
+    "machine_id": "intel-258v",
+    "memory": null,
+    "platform_artifact": "ci\\hardware\\intel-258v\\2026-05-08\\platform-probe-cli.json",
+    "power": null
+  },
+  "may_claim": [
+    "Scalar versus AVX2 full-decode answer parity can be audited for the compared receipts.",
+    "First divergence evidence can separate AVX2 kernel issues from shared prompt, tokenizer, logits, sampler, or text decoding issues."
+  ],
+  "must_not_claim": [
+    "General chat quality is proven.",
+    "Sustained CPU throughput is proven.",
+    "Server inference is complete.",
+    "GPU or NPU execution is involved."
+  ],
+  "proof_stage": "full_decode_parity_compared",
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "cpu-rust",
+  "shared_contract": {
+    "failed_rules": [],
+    "same_greedy_settings": true,
+    "same_prompt_template": true,
+    "same_real_gguf": true,
+    "same_tokenizer": true
+  },
+  "speedup_claim": false,
+  "summary": {
+    "failed": 0,
+    "first_divergence": null,
+    "passed": 5,
+    "total": 5
+  },
+  "timestamp": "2026-05-20T16:47:31.355355700+00:00"
+}

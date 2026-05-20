@@ -9811,9 +9811,7 @@ pub fn build_bitnet_semantic_intake_with_created_utc(
     if bool_at_any(&cpu_reference_bundle_json, &["cpu_reference.fallback_used"]) != Some(false) {
         gaps.push("CPU reference bundle must record cpu_reference.fallback_used=false".to_string());
     }
-    if bool_at_any(&operator_comparison_json, &["comparison_ready"]) != Some(true) {
-        gaps.push("operator comparison must be ready before semantic intake".to_string());
-    }
+    let operator_comparison_ready = bool_at_any(&operator_comparison_json, &["comparison_ready"]);
     if bool_at_any(&operator_comparison_json, &["claim_boundary.hidden_fallback_allowed"])
         == Some(true)
     {
@@ -9832,12 +9830,7 @@ pub fn build_bitnet_semantic_intake_with_created_utc(
         "operator comparison timestamp",
         &mut gaps,
     );
-    let evidence_cutoff = match (cpu_created, operator_created) {
-        (Some(cpu), Some(operator)) => Some(cpu.min(operator)),
-        (Some(cpu), None) => Some(cpu),
-        (None, Some(operator)) => Some(operator),
-        (None, None) => None,
-    };
+    let evidence_cutoff = cpu_created.or(operator_created);
 
     let mut source_lanes = BTreeSet::new();
     let mut pending_changes = Vec::new();
@@ -9891,12 +9884,20 @@ pub fn build_bitnet_semantic_intake_with_created_utc(
             .is_some_and(|(merged_at, operator_created)| merged_at > operator_created);
         let lunar_lake_rerun_required = merged_to_main
             && change.requires_lunar_lake_rerun_when_merged_to_main
-            && (stale_after_cpu_reference || stale_after_operator_comparison);
+            && stale_after_cpu_reference;
 
         if lunar_lake_rerun_required {
             stale_after_merged_count += 1;
             notes.push(
                 "merged shared semantic change is newer than Lunar Lake BitNet evidence"
+                    .to_string(),
+            );
+        } else if merged_to_main
+            && change.requires_lunar_lake_rerun_when_merged_to_main
+            && stale_after_operator_comparison
+        {
+            notes.push(
+                "merged shared semantic change is covered by refreshed Lunar Lake BitNet CPU evidence; operator comparison should refresh downstream"
                     .to_string(),
             );
         } else if merged_to_main && change.requires_lunar_lake_rerun_when_merged_to_main {
@@ -9979,6 +9980,12 @@ pub fn build_bitnet_semantic_intake_with_created_utc(
     if stale_after_merged_count == 0 {
         notes.push(
             "no merged-to-main shared semantic change currently stales Lunar Lake evidence"
+                .to_string(),
+        );
+    }
+    if operator_comparison_ready != Some(true) {
+        notes.push(
+            "operator comparison is allowed to be not-ready while semantic intake refreshes; compare must be regenerated after intake clears"
                 .to_string(),
         );
     }
@@ -15947,6 +15954,54 @@ mod tests {
         assert_eq!(receipt.source_change_summary.stale_after_merged_count, 1);
         assert!(receipt.required_reruns.iter().any(|rerun| rerun.contains("answer corpus")));
         assert!(receipt.gaps.iter().any(|gap| gap.contains("refreshed Lunar Lake BitNet")));
+        Ok(())
+    }
+
+    #[test]
+    fn bitnet_semantic_intake_can_recover_before_operator_comparison_refresh() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_bitnet_semantic_intake_inputs_with_operator_ready(
+            temp.path(),
+            "merged_to_main",
+            Some("2026-05-19T06:00:00Z"),
+            "2026-05-19T06:30:00Z",
+            "2026-05-19T05:30:00Z",
+            false,
+        )?;
+
+        let receipt = build_bitnet_semantic_intake_with_created_utc(
+            temp.path(),
+            Path::new(BITNET_SEMANTIC_SOURCE_CHANGES),
+            Path::new(BITNET_CPU_BUNDLE),
+            Path::new(OPERATOR_COMPARISON),
+            "2026-05-19T06:35:00Z".to_string(),
+        )?;
+
+        assert!(receipt.intake_ready, "{:?}", receipt.gaps);
+        assert!(!receipt.rerun_required);
+        assert_eq!(receipt.source_change_summary.stale_after_merged_count, 0);
+        assert!(receipt.required_reruns.is_empty());
+        assert!(receipt.gaps.is_empty(), "{:?}", receipt.gaps);
+        assert_eq!(
+            receipt.lunar_lake_evidence.evidence_cutoff_utc.as_deref(),
+            Some("2026-05-19T06:30:00Z")
+        );
+        assert!(!receipt.changes[0].stale_after_cpu_reference);
+        assert!(receipt.changes[0].stale_after_operator_comparison);
+        assert!(!receipt.changes[0].lunar_lake_rerun_required);
+        assert!(
+            receipt.changes[0]
+                .notes
+                .iter()
+                .any(|note| note.contains("operator comparison should refresh downstream"))
+        );
+        assert!(
+            receipt
+                .source_change_summary
+                .notes
+                .iter()
+                .any(|note| note.contains("compare must be regenerated after intake clears"))
+        );
         Ok(())
     }
 
@@ -22303,6 +22358,24 @@ mod tests {
         cpu_captured_at_utc: &str,
         operator_created_utc: &str,
     ) -> Result<()> {
+        write_bitnet_semantic_intake_inputs_with_operator_ready(
+            root,
+            status,
+            merged_at_utc,
+            cpu_captured_at_utc,
+            operator_created_utc,
+            true,
+        )
+    }
+
+    fn write_bitnet_semantic_intake_inputs_with_operator_ready(
+        root: &Path,
+        status: &str,
+        merged_at_utc: Option<&str>,
+        cpu_captured_at_utc: &str,
+        operator_created_utc: &str,
+        operator_comparison_ready: bool,
+    ) -> Result<()> {
         write_json(
             root,
             BITNET_SEMANTIC_SOURCE_CHANGES,
@@ -22346,7 +22419,7 @@ mod tests {
                 "artifact_kind": "lunar_lake_operator_comparison",
                 "created_utc": operator_created_utc,
                 "machine_id": "intel-258v",
-                "comparison_ready": true,
+                "comparison_ready": operator_comparison_ready,
                 "claim_boundary": {
                     "hidden_fallback_allowed": false
                 }

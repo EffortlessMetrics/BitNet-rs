@@ -1,0 +1,848 @@
+{
+  "artifact_kind": "bitnet_first_token_divergence_classification",
+  "cases": [
+    {
+      "avx2": {
+        "answer": "4",
+        "fallback_used": false,
+        "first_generated_token_id": 19,
+        "generated_token_ids": [
+          19,
+          128009
+        ],
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "selected_kernel": "i2_s-avx2-reference",
+        "topk_step0": [
+          {
+            "logit": 20.312944412231445,
+            "token_id": 19
+          },
+          {
+            "logit": 12.546256065368652,
+            "token_id": 791
+          },
+          {
+            "logit": 12.267425537109377,
+            "token_id": 17
+          },
+          {
+            "logit": 12.19237995147705,
+            "token_id": 16275
+          },
+          {
+            "logit": 10.826605796813965,
+            "token_id": 53233
+          }
+        ]
+      },
+      "case_id": "math_2_plus_2",
+      "classification": {
+        "case_id": "math_2_plus_2",
+        "classification": "prompt_token_policy_mismatch",
+        "evidence_boundary": "external_reference_prompt_ids_do_not_match_local_ids_or_single_local_bos_prefix",
+        "first_divergence_stage": "prompt_token_ids"
+      },
+      "comparisons": {
+        "reference_avx2_generated_text_trimmed_match": true,
+        "reference_scalar_generated_text_trimmed_match": true,
+        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_local_bos_prefix_match": false,
+        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_local_bos_prefix_match": false,
+        "scalar_avx2_generated_match": true,
+        "scalar_avx2_prompt_match": true
+      },
+      "question": "What is 2+2? Answer with only the number.",
+      "reference": {
+        "decoded_first_token": "4",
+        "derived_first_generated_token_id": 19,
+        "first_generated_token_id": 19,
+        "first_token_top_k_logits": [
+          {
+            "logit": 20.782499313354492,
+            "probability": 0.9983421564102172,
+            "token_id": 19,
+            "token_text": "4"
+          },
+          {
+            "logit": 13.656194686889648,
+            "probability": 0.0008023514528758824,
+            "token_id": 17,
+            "token_text": "2"
+          },
+          {
+            "logit": 12.657991409301758,
+            "probability": 0.00029569939943030477,
+            "token_id": 2983,
+            "token_text": "42"
+          },
+          {
+            "logit": 12.637462615966797,
+            "probability": 0.00028969094273634255,
+            "token_id": 791,
+            "token_text": "The"
+          },
+          {
+            "logit": 12.567102432250977,
+            "probability": 0.0002700087788980454,
+            "token_id": 16275,
+            "token_text": "�"
+          }
+        ],
+        "generated_text": "4",
+        "generated_token_ids": [
+          19,
+          128009
+        ],
+        "generated_token_ids_available": true,
+        "logits_available": true,
+        "missing_reference_fields": [],
+        "prompt": "User: What is 2+2? Answer with only the number.<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "scalar": {
+        "answer": "4",
+        "fallback_used": false,
+        "first_generated_token_id": 19,
+        "generated_token_ids": [
+          19,
+          128009
+        ],
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          220,
+          17,
+          10,
+          17,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "selected_kernel": "i2_s-scalar-reference",
+        "topk_step0": [
+          {
+            "logit": 20.312944412231445,
+            "token_id": 19
+          },
+          {
+            "logit": 12.546256065368652,
+            "token_id": 791
+          },
+          {
+            "logit": 12.267425537109377,
+            "token_id": 17
+          },
+          {
+            "logit": 12.19237995147705,
+            "token_id": 16275
+          },
+          {
+            "logit": 10.826605796813965,
+            "token_id": 53233
+          }
+        ]
+      }
+    },
+    {
+      "avx2": {
+        "answer": "OK",
+        "fallback_used": false,
+        "first_generated_token_id": 4012,
+        "generated_token_ids": [
+          4012,
+          128009
+        ],
+        "prompt_token_ids": [
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "selected_kernel": "i2_s-avx2-reference",
+        "topk_step0": [
+          {
+            "logit": 25.75336647033691,
+            "token_id": 4012
+          },
+          {
+            "logit": 18.88967514038086,
+            "token_id": 33413
+          },
+          {
+            "logit": 16.47184944152832,
+            "token_id": 40
+          },
+          {
+            "logit": 16.021512985229492,
+            "token_id": 72586
+          },
+          {
+            "logit": 15.69745635986328,
+            "token_id": 40914
+          }
+        ]
+      },
+      "case_id": "say_ok",
+      "classification": {
+        "case_id": "say_ok",
+        "classification": "prompt_token_policy_mismatch",
+        "evidence_boundary": "external_reference_prompt_ids_do_not_match_local_ids_or_single_local_bos_prefix",
+        "first_divergence_stage": "prompt_token_ids"
+      },
+      "comparisons": {
+        "reference_avx2_generated_text_trimmed_match": true,
+        "reference_scalar_generated_text_trimmed_match": true,
+        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_local_bos_prefix_match": false,
+        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_local_bos_prefix_match": false,
+        "scalar_avx2_generated_match": true,
+        "scalar_avx2_prompt_match": true
+      },
+      "question": "Say exactly: OK",
+      "reference": {
+        "decoded_first_token": "OK",
+        "derived_first_generated_token_id": 4012,
+        "first_generated_token_id": 4012,
+        "first_token_top_k_logits": [
+          {
+            "logit": 26.66142463684082,
+            "probability": 0.998878300189972,
+            "token_id": 4012,
+            "token_text": "OK"
+          },
+          {
+            "logit": 19.29623794555664,
+            "probability": 0.0006321973633021116,
+            "token_id": 33413,
+            "token_text": "Okay"
+          },
+          {
+            "logit": 18.592960357666016,
+            "probability": 0.0003129125980194658,
+            "token_id": 40,
+            "token_text": "I"
+          },
+          {
+            "logit": 17.43975067138672,
+            "probability": 0.00009876213152892888,
+            "token_id": 40914,
+            "token_text": "Sure"
+          },
+          {
+            "logit": 17.20183563232422,
+            "probability": 0.00007785119669279084,
+            "token_id": 564,
+            "token_text": "ok"
+          }
+        ],
+        "generated_text": "OK",
+        "generated_token_ids": [
+          4012,
+          128009
+        ],
+        "generated_token_ids_available": true,
+        "logits_available": true,
+        "missing_reference_fields": [],
+        "prompt": "User: Say exactly: OK<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "scalar": {
+        "answer": "OK",
+        "fallback_used": false,
+        "first_generated_token_id": 4012,
+        "generated_token_ids": [
+          4012,
+          128009
+        ],
+        "prompt_token_ids": [
+          1502,
+          25,
+          25961,
+          7041,
+          25,
+          10619,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "selected_kernel": "i2_s-scalar-reference",
+        "topk_step0": [
+          {
+            "logit": 25.75336647033691,
+            "token_id": 4012
+          },
+          {
+            "logit": 18.88967514038086,
+            "token_id": 33413
+          },
+          {
+            "logit": 16.47184944152832,
+            "token_id": 40
+          },
+          {
+            "logit": 16.021512985229492,
+            "token_id": 72586
+          },
+          {
+            "logit": 15.69745635986328,
+            "token_id": 40914
+          }
+        ]
+      }
+    },
+    {
+      "avx2": {
+        "answer": "Paris",
+        "fallback_used": false,
+        "first_generated_token_id": 60704,
+        "generated_token_ids": [
+          60704,
+          128009
+        ],
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "selected_kernel": "i2_s-avx2-reference",
+        "topk_step0": [
+          {
+            "logit": 22.793651580810547,
+            "token_id": 60704
+          },
+          {
+            "logit": 16.774520874023438,
+            "token_id": 95509
+          },
+          {
+            "logit": 16.745994567871094,
+            "token_id": 49
+          },
+          {
+            "logit": 16.176963806152344,
+            "token_id": 6971
+          },
+          {
+            "logit": 13.39425277709961,
+            "token_id": 40672
+          }
+        ]
+      },
+      "case_id": "capital_france",
+      "classification": {
+        "case_id": "capital_france",
+        "classification": "prompt_token_policy_mismatch",
+        "evidence_boundary": "external_reference_prompt_ids_do_not_match_local_ids_or_single_local_bos_prefix",
+        "first_divergence_stage": "prompt_token_ids"
+      },
+      "comparisons": {
+        "reference_avx2_generated_text_trimmed_match": true,
+        "reference_scalar_generated_text_trimmed_match": true,
+        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_local_bos_prefix_match": false,
+        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_local_bos_prefix_match": false,
+        "scalar_avx2_generated_match": true,
+        "scalar_avx2_prompt_match": true
+      },
+      "question": "What is the capital of France? Answer with one word.",
+      "reference": {
+        "decoded_first_token": "Paris",
+        "derived_first_generated_token_id": 60704,
+        "first_generated_token_id": 60704,
+        "first_token_top_k_logits": [
+          {
+            "logit": 22.813045501708984,
+            "probability": 0.9960508942604064,
+            "token_id": 60704,
+            "token_text": "Paris"
+          },
+          {
+            "logit": 16.82805633544922,
+            "probability": 0.0025063040666282177,
+            "token_id": 49,
+            "token_text": "R"
+          },
+          {
+            "logit": 15.849761009216309,
+            "probability": 0.0009422485600225629,
+            "token_id": 95509,
+            "token_text": "Berlin"
+          },
+          {
+            "logit": 15.073748588562012,
+            "probability": 0.0004336582205723971,
+            "token_id": 6971,
+            "token_text": "Br"
+          },
+          {
+            "logit": 13.20547580718994,
+            "probability": 0.00006695253978250548,
+            "token_id": 50100,
+            "token_text": "France"
+          }
+        ],
+        "generated_text": "Paris",
+        "generated_token_ids": [
+          60704,
+          128009
+        ],
+        "generated_token_ids_available": true,
+        "logits_available": true,
+        "missing_reference_fields": [],
+        "prompt": "User: What is the capital of France? Answer with one word.<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "scalar": {
+        "answer": "Paris",
+        "fallback_used": false,
+        "first_generated_token_id": 60704,
+        "generated_token_ids": [
+          60704,
+          128009
+        ],
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "selected_kernel": "i2_s-scalar-reference",
+        "topk_step0": [
+          {
+            "logit": 22.793651580810547,
+            "token_id": 60704
+          },
+          {
+            "logit": 16.774520874023438,
+            "token_id": 95509
+          },
+          {
+            "logit": 16.745994567871094,
+            "token_id": 49
+          },
+          {
+            "logit": 16.176963806152344,
+            "token_id": 6971
+          },
+          {
+            "logit": 13.39425277709961,
+            "token_id": 40672
+          }
+        ]
+      }
+    },
+    {
+      "avx2": {
+        "answer": "No. N/A",
+        "fallback_used": false,
+        "first_generated_token_id": 2822,
+        "generated_token_ids": [
+          2822,
+          13,
+          452,
+          10576
+        ],
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "selected_kernel": "i2_s-avx2-reference",
+        "topk_step0": [
+          {
+            "logit": 23.477493286132812,
+            "token_id": 2822
+          },
+          {
+            "logit": 22.39447021484375,
+            "token_id": 9642
+          },
+          {
+            "logit": 12.760448455810549,
+            "token_id": 29353
+          },
+          {
+            "logit": 11.707757949829102,
+            "token_id": 39522
+          },
+          {
+            "logit": 11.62424373626709,
+            "token_id": 16533
+          }
+        ]
+      },
+      "case_id": "yes_no_water",
+      "classification": {
+        "case_id": "yes_no_water",
+        "classification": "prompt_token_policy_mismatch",
+        "evidence_boundary": "external_reference_prompt_ids_do_not_match_local_ids_or_single_local_bos_prefix",
+        "first_divergence_stage": "prompt_token_ids"
+      },
+      "comparisons": {
+        "reference_avx2_generated_text_trimmed_match": false,
+        "reference_scalar_generated_text_trimmed_match": false,
+        "reference_vs_avx2_prompt_exact_match": false,
+        "reference_vs_avx2_prompt_local_bos_prefix_match": false,
+        "reference_vs_scalar_prompt_exact_match": false,
+        "reference_vs_scalar_prompt_local_bos_prefix_match": false,
+        "scalar_avx2_generated_match": true,
+        "scalar_avx2_prompt_match": true
+      },
+      "question": "Answer yes or no: is water wet?",
+      "reference": {
+        "decoded_first_token": "No",
+        "derived_first_generated_token_id": 2822,
+        "first_generated_token_id": 2822,
+        "first_token_top_k_logits": [
+          {
+            "logit": 23.598541259765625,
+            "probability": 0.5999794602394104,
+            "token_id": 2822,
+            "token_text": "No"
+          },
+          {
+            "logit": 23.192663192749023,
+            "probability": 0.3998211622238159,
+            "token_id": 9642,
+            "token_text": "Yes"
+          },
+          {
+            "logit": 14.97898006439209,
+            "probability": 0.0001083199676941149,
+            "token_id": 29353,
+            "token_text": "Water"
+          },
+          {
+            "logit": 14.124247550964355,
+            "probability": 0.0000460789815406315,
+            "token_id": 644,
+            "token_text": "In"
+          },
+          {
+            "logit": 14.10216999053955,
+            "probability": 0.00004507282210397534,
+            "token_id": 16533,
+            "token_text": "Answer"
+          }
+        ],
+        "generated_text": "No. Water is",
+        "generated_token_ids": [
+          2822,
+          13,
+          10164,
+          374
+        ],
+        "generated_token_ids_available": true,
+        "logits_available": true,
+        "missing_reference_fields": [],
+        "prompt": "User: Answer yes or no: is water wet?<|eot_id|>Assistant: ",
+        "prompt_token_ids": [
+          128000,
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "scalar": {
+        "answer": "No. N/A",
+        "fallback_used": false,
+        "first_generated_token_id": 2822,
+        "generated_token_ids": [
+          2822,
+          13,
+          452,
+          10576
+        ],
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "selected_kernel": "i2_s-scalar-reference",
+        "topk_step0": [
+          {
+            "logit": 23.477493286132812,
+            "token_id": 2822
+          },
+          {
+            "logit": 22.39447021484375,
+            "token_id": 9642
+          },
+          {
+            "logit": 12.760448455810549,
+            "token_id": 29353
+          },
+          {
+            "logit": 11.707757949829102,
+            "token_id": 39522
+          },
+          {
+            "logit": 11.62424373626709,
+            "token_id": 16533
+          }
+        ]
+      }
+    }
+  ],
+  "claim": "cpu258v_external_reference_divergence_classifier",
+  "claim_boundary": {
+    "may_claim": [
+      "The receipt classifies the first available evidence boundary between external BitNet reference text and 258V scalar/AVX2 CPU receipts.",
+      "When the external reference supplies direct generated-token IDs, the receipt classifies first-generated-token matches or mismatches against the local CPU receipts.",
+      "Scalar-vs-AVX2 agreement can be kept separate from missing external generated-token/logit evidence.",
+      "Prompt-token comparisons distinguish exact matches from local BOS-prefix policy deltas."
+    ],
+    "must_not_claim": [
+      "first-token logits parity",
+      "full generated-token sequence parity beyond the recorded first-token boundary",
+      "general answer quality",
+      "CPU speed or sustained throughput",
+      "Arc 140V execution or acceleration",
+      "Intel NPU execution or acceleration",
+      "QK256 decode correctness"
+    ]
+  },
+  "external_reference": {
+    "command_shape": "llama-server.exe -m <ggml-model-i2_s.gguf> --override-kv tokenizer.ggml.pre=str:llama-bpe --no-mmap -ngl 0 -t 8 -c 4096 --host 127.0.0.1 --port <port>",
+    "generated_token_ids_available": true,
+    "logits_available": true,
+    "missing_logits_status": null,
+    "runner": "Microsoft BitNet.cpp / llama-server"
+  },
+  "fallback_used": false,
+  "inputs": {
+    "answer_parity": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-parity-after-a770-43.json",
+    "avx2_answer_corpus": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-corpus-avx2-after-a770-43.json",
+    "external_reference": "ci\\hardware\\intel-258v\\2026-05-08\\external-first-token-reference-direct.json",
+    "prompt_audit": "ci\\hardware\\intel-258v\\2026-05-08\\prompt-authority-audit-math.json",
+    "scalar_answer_corpus": "ci\\hardware\\intel-258v\\2026-05-08\\cpu-answer-corpus-scalar-after-a770-43.json"
+  },
+  "machine_id": "intel-258v",
+  "model": {
+    "file": "ggml-model-i2_s.gguf",
+    "local_path": "C:\\Code\\Models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf",
+    "local_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162"
+  },
+  "prompt_authority_audit": {
+    "first_divergence_stage": "unknown",
+    "first_mismatch_index": null,
+    "notes": [
+      "current_default_and_metadata_authority_prompt_tokens_match",
+      "model_inference_not_run; first-token logits remain unclassified"
+    ]
+  },
+  "proof_stage": "first_token_divergence_classified",
+  "scalar_avx2_parity": {
+    "passed": true,
+    "summary": {
+      "failed": 0,
+      "first_divergence": null,
+      "passed": 5,
+      "total": 5
+    }
+  },
+  "schema_version": "1.0.0",
+  "summary": {
+    "cases_inconclusive": 0,
+    "cases_total": 4,
+    "cases_with_reference_first_token_topk_logits": 4,
+    "cases_with_reference_generated_token_ids": 4,
+    "classification": "prompt_token_policy_mismatch",
+    "first_divergence": {
+      "case_id": "math_2_plus_2",
+      "classification": "prompt_token_policy_mismatch",
+      "evidence_boundary": "external_reference_prompt_ids_do_not_match_local_ids_or_single_local_bos_prefix",
+      "first_divergence_stage": "prompt_token_ids"
+    },
+    "generated_text_trimmed_avx2_matches": 3,
+    "generated_text_trimmed_scalar_avx2_matches": 3,
+    "generated_text_trimmed_scalar_matches": 3,
+    "next_required_evidence": "fix the classified earlier divergence before deeper token or logits evidence",
+    "prompt_token_exact_matches": 0,
+    "prompt_token_local_bos_prefix_matches": 0,
+    "reference_generated_token_ids_available": true,
+    "reference_logits_available": true,
+    "scalar_avx2_parity_passed": true
+  },
+  "timestamp": "2026-05-20T16:47:38.667460200+00:00",
+  "tokenizer": {
+    "bos_token": "<|begin_of_text|>",
+    "bos_token_id": 128000,
+    "eos_token": "<|eot_id|>",
+    "eos_token_id": 128009,
+    "hf_base_vocab_size": 128000,
+    "hf_tokenizers_version": "0.22.2",
+    "hf_total_token_count": 128256,
+    "hf_transformers_version": "5.8.0",
+    "local_sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "override_kv": "tokenizer.ggml.pre=str:llama-bpe",
+    "pretokenizer_authority": "externally_supplied_llama_bpe",
+    "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+    "source_repo": "microsoft/bitnet-b1.58-2B-4T",
+    "source_revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127"
+  },
+  "validation": {
+    "failed_rules": [],
+    "passed": true
+  }
+}

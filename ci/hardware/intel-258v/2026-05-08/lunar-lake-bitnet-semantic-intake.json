@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_bitnet_semantic_intake",
   "proof_stage": "shared_bitnet_semantic_intake_no_new_inference",
-  "created_utc": "2026-05-20T14:20:00Z",
+  "created_utc": "2026-05-20T17:17:30Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "source_changes_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
@@ -13,7 +13,7 @@
     "pending_shared_change_count": 0,
     "closed_shared_change_count": 6,
     "merged_to_main_count": 1,
-    "stale_after_merged_count": 1,
+    "stale_after_merged_count": 0,
     "source_lanes": [
       "a770"
     ],
@@ -30,13 +30,14 @@
       "a770#43 fix(a770): align matmul_i2s operand contract"
     ],
     "notes": [
-      "closed or superseded shared changes are indexed for audit but do not require Lunar Lake reruns"
+      "closed or superseded shared changes are indexed for audit but do not require Lunar Lake reruns",
+      "no merged-to-main shared semantic change currently stales Lunar Lake evidence"
     ]
   },
   "lunar_lake_evidence": {
-    "cpu_reference_bundle_created_utc": "2026-05-12T18:43:14Z",
-    "operator_comparison_created_utc": "2026-05-20T12:55:00Z",
-    "evidence_cutoff_utc": "2026-05-12T18:43:14Z",
+    "cpu_reference_bundle_created_utc": "2026-05-20T17:12:19Z",
+    "operator_comparison_created_utc": "2026-05-20T17:17:00Z",
+    "evidence_cutoff_utc": "2026-05-20T17:12:19Z",
     "cpu_reference_bundle_path": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
     "operator_comparison_path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
     "evidence_paths": [
@@ -174,27 +175,18 @@
       ],
       "requires_lunar_lake_rerun_when_merged_to_main": true,
       "merged_at_utc": "2026-05-20T13:21:51Z",
-      "stale_after_cpu_reference": true,
-      "stale_after_operator_comparison": true,
-      "lunar_lake_rerun_required": true,
+      "stale_after_cpu_reference": false,
+      "stale_after_operator_comparison": false,
+      "lunar_lake_rerun_required": false,
       "notes": [
-        "merged shared semantic change is newer than Lunar Lake BitNet evidence"
+        "merged shared semantic change is covered by current Lunar Lake evidence timestamps"
       ]
     }
   ],
-  "rerun_required": true,
-  "required_reruns": [
-    "rerun Lunar Lake BitNet CPU answer corpus",
-    "rerun scalar-vs-AVX2 BitNet answer parity",
-    "rerun first-token divergence classifier",
-    "rerun BitNet CPU phase receipts if kernel-affecting",
-    "refresh Lunar Lake operator readiness",
-    "refresh route comparison and regression surfaces"
-  ],
-  "intake_ready": false,
-  "gaps": [
-    "merged shared BitNet semantic changes require refreshed Lunar Lake BitNet evidence"
-  ],
+  "rerun_required": false,
+  "required_reruns": [],
+  "intake_ready": true,
+  "gaps": [],
   "claim_boundary": {
     "new_inference_executed": false,
     "route_promotion_changed": false,
