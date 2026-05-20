@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T12:44:52Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-001-mixed-model-soak"
+pr = 6134
+head_sha = "297402fac5ed70056ee5000feb2940fccf446b10"
+
+notes = [
+  "Opened PR #6134 to publish the live M4 mixed dense-model switch soak evidence for M4-STABILITY-001.",
+  "The PR records `ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch.json`, child resident_25 summaries, and per-prompt receipts for the three supported dense Qwen M4 identities.",
+  "The aggregate receipt validates with `apple-m4-cpu-neon`, `runtime_api=cpu`, `fallback_used=false`, 75 prompts, 607 generated tokens, release-mode build identity, and bounded memory drift fields.",
+  "No BitNet behavior, BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup, broad model quality, broad performance, or broad Apple Silicon performance claim is in scope.",
+]

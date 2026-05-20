@@ -132,7 +132,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-REPRO-003 | proposed | Record prompt-template, stop-sequence, and generation-parameter identity. |
 | M4-RECEIPT-001 | merged | Add receipt-schema compatibility and negative fixtures for M4 evidence families. |
 | M4-STABILITY-HARNESS-001 | merged | Implement the mixed dense-model switch benchmark harness before recording soak evidence. |
-| M4-STABILITY-001 | in_progress | Run a mixed dense-model switch soak with cache reuse and memory-drift evidence. |
+| M4-STABILITY-001 | pr_open | Run a mixed dense-model switch soak with cache reuse and memory-drift evidence. |
 | M4-STABILITY-002 | proposed | Add cache and disk-pressure repair receipts for operator flows. |
 | M4-STABILITY-003 | proposed | Define scheduled M4 trend-retention and stale-identity policy. |
 | M4-RELIABILITY-001 | proposed | Add recovery drills for cancellation, interruption, low disk, cache corruption, and restart. |
