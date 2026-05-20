@@ -37,7 +37,7 @@ jobs:
       matrix:
         include:
           - label: cpu
-            flags: "--workspace --no-default-features --features cpu"
+            flags: "-p bitnet-kernels -p bitnet-common -p bitnet-device-probe --no-default-features --features cpu"
             test_filter: "opencl"
           - label: cpu+oneapi
             # oneapi is a crate-level feature, not workspace-level
