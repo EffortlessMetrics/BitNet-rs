@@ -10148,6 +10148,11 @@ async fn run_validate(request: MacValidateRun<'_>) -> Result<()> {
             "mac validate --profile-set accuracy is currently scoped to --device {APPLE_M3_AIR_CPU_NEON}"
         );
     }
+    if profile_set == MacValidateProfileSet::Accuracy && metal_prefill_qkv_phase {
+        anyhow::bail!(
+            "mac validate --metal-prefill-qkv-phase is scoped to the smoke quality corpus; accuracy comparison profile remains CPU/NEON until a separate M3 Metal comparison profile exists"
+        );
+    }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     let accuracy_profile = profile_set == MacValidateProfileSet::Accuracy;
     if profile_set == MacValidateProfileSet::Operator {
@@ -23635,6 +23640,33 @@ mod tests {
         assert_eq!(summary.selected_backend, APPLE_M3_AIR_CPU_NEON);
         assert_eq!(summary.prompt_count, Some(2));
         assert_eq!(summary.generated_tokens, Some(4));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn mac_validate_accuracy_rejects_metal_prefill_qkv_phase_before_model_lookup()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let err = run_validate(MacValidateRun {
+            model_id: "missing-model-id",
+            cache_dir: None,
+            requested_backend: APPLE_M3_AIR_CPU_NEON,
+            corpus: PathBuf::from("ci/quality/apple-m4-slm-quality-corpus.yaml"),
+            corpus_repeat_runs: 2,
+            profile_set: MacValidateProfileSet::Accuracy,
+            max_new_tokens: 32,
+            threads: 0,
+            allocation_audit: false,
+            metal_prefill_qkv_phase: true,
+            progress: false,
+            quiet: true,
+            json_out: PathBuf::from("unused-m3-accuracy.json"),
+        })
+        .await
+        .expect_err("accuracy profile must reject Metal prefill before model lookup")
+        .to_string();
+
+        assert!(err.contains("--metal-prefill-qkv-phase"), "got: {err}");
+        assert!(err.contains("accuracy comparison profile remains CPU/NEON"), "got: {err}");
         Ok(())
     }
 
