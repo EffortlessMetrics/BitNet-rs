@@ -112,7 +112,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-059 | merged | #6078 recorded the packed Q8_0 compute-kernel proof gate and blocker artifact: production transformer dense-linear hooks still receive metadata-only sidecar descriptors, so payload-bearing packed Q8_0 sidecar compute remains disabled pending before/after behavior receipts. |
 | SLM-CPU-060 | merged | #6085 added the payload-bearing packed Q8_0 sidecar hook contract for one Qwen3 Q8_0 dense-linear tensor path without enabling packed runtime compute by default. |
 | SLM-CPU-061 | merged | #6111 wired one exact Qwen3 Q8_0 dense-linear tensor from real GGUF sidecar bytes into the payload-bearing hook contract behind explicit opt-in gates while preserving the eager F32 behavior oracle. |
-| SLM-CPU-062 | ready | Export the first Qwen3 Q8_0 packed-sidecar candidate package from swarm to the BitNet-rs release surface for artifact-intake review. |
+| SLM-CPU-062 | merged | #31 exported the first Qwen3 Q8_0 packed-sidecar candidate package from bitnet-rs-swarm to the BitNet-rs release surface for artifact-intake review. Runtime promotion remains a BitNet-rs release-surface gate; further swarm candidates must return as audited evidence packages. |
 
 ## Review Policy
 
