@@ -107,7 +107,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-BENCH-010 | merged | Make benchmark variance aggregation timeout-aware before live dense envelopes. |
 | M4-BENCH-005 | merged | Publish repeatability and variance envelopes for supported dense Qwen timing families. |
 | M4-BENCH-006 | merged | Publish explicit BitNet one-shot and warm variance receipts. |
-| M4-BENCH-003 | proposed | Wire benchmark summaries into matching-identity regression comparisons. |
+| M4-BENCH-003 | merged | Wire benchmark summaries into matching-identity regression comparisons. |
 | M4-BITNET-REG-001 | merged | Add direct BitNet warm-session regression support. |
 | M4-BITNET-EX-001 | merged | Add a BitNet-specific 100-case deterministic corpus. |
 | M4-BITNET-EX-002 | merged | Compare reference-runner and Rust M4 BitNet answers under the accepted identity. |
