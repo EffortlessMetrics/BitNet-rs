@@ -1,5 +1,11 @@
 # Systematic Debugging Plan for BitNet-rs Garbling Issue
 
+> Claim boundary: this is a historical diagnostic plan. Production-ready,
+> trace, cross-validation, corruption, performance, and debugging-status wording
+> records that dated diagnostic context only. Current support, speed, backend
+> execution, quality, and product-readiness claims must come from active
+> receipts, model coverage, status docs, specs, and claim gates.
+
 **Date**: 2025-10-24
 **Analysis Session**: Agent-based systematic exploration
 **Status**: Partial diagnosis complete, C++ comparison required for definitive answer

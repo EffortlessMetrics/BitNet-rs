@@ -1,5 +1,11 @@
 # Phase 2 FMA Tiling - Implementation Completion Report
 
+> Claim boundary: this is a historical implementation report from an older
+> optimization branch. Complete, performance, AVX2, speedup, and benchmark
+> wording records that dated context only. Current support, speed, backend
+> execution, quality, and product-readiness claims must come from active
+> receipts, model coverage, status docs, specs, and claim gates.
+
 **Implementation Date:** 2025-10-24
 **Phase:** 2 of 4 (QK256 AVX2 Optimization Roadmap)
 **Status:** ✅ **COMPLETE** (Foundation Ready)

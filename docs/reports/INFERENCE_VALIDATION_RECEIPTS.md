@@ -1,5 +1,11 @@
 # Inference Validation Receipts
 
+> Claim boundary: this is a historical receipt summary from an older branch.
+> Real-inference, deterministic, performance, AVX2, and protected wording
+> records that dated context only. Current support, speed, backend execution,
+> quality, and product-readiness claims must come from active receipts, model
+> coverage, status docs, specs, and claim gates.
+
 **Date:** 2025-10-24
 **Branch:** `feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2`
 **Commit:** Latest
