@@ -4088,7 +4088,7 @@ where
 #[derive(Debug, Clone, Copy)]
 enum CudaBitnetPerf005ProfileKind {
     SingleDecode { max_new_tokens: usize },
-    WarmSession3Turns,
+    WarmSession { turns: usize, max_new_tokens: usize },
 }
 
 #[cfg(feature = "cli-bench")]
@@ -4133,9 +4133,17 @@ async fn run_cuda_bitnet_perf005_benchmark_profile(
             .join(format!("{}.json", plan.profile_id))
     });
 
+    let dispatch_detail = match plan.kind {
+        CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens } => {
+            format!("profile_kind=single_decode, max_new_tokens={max_new_tokens}")
+        }
+        CudaBitnetPerf005ProfileKind::WarmSession { turns, max_new_tokens } => {
+            format!("profile_kind=warm_session, turns={turns}, max_new_tokens={max_new_tokens}")
+        }
+    };
     eprintln!(
-        "PERF-005 profile `{}` dispatches through strict RTX 5070 Ti CUDA generation; speedup_claim=false, full_residency_claim=false, server_ready=false",
-        plan.profile_id
+        "PERF-005 profile `{}` dispatches through strict RTX 5070 Ti CUDA generation; {}; speedup_claim=false, full_residency_claim=false, server_ready=false",
+        plan.profile_id, dispatch_detail
     );
 
     match plan.kind {
@@ -4184,18 +4192,18 @@ async fn run_cuda_bitnet_perf005_benchmark_profile(
             )
             .await
         }
-        CudaBitnetPerf005ProfileKind::WarmSession3Turns => {
+        CudaBitnetPerf005ProfileKind::WarmSession { turns, max_new_tokens } => {
+            let prompts = perf005_warm_session_prompts(plan.profile_id, turns)?
+                .iter()
+                .map(|prompt| (*prompt).to_string())
+                .collect();
             run_cuda_warm_session(
                 requested_backend_label,
                 model_path,
                 "auto".to_string(),
                 None,
-                vec![
-                    "Define entropy in one sentence.".to_string(),
-                    "Name one use for quantization.".to_string(),
-                    "Summarize why fallback rejection matters.".to_string(),
-                ],
-                16,
+                prompts,
+                max_new_tokens,
                 0.0,
                 0,
                 1.0,
@@ -4241,19 +4249,57 @@ fn cuda_bitnet_perf005_profile_plan(profile: &str) -> Result<CudaBitnetPerf005Pr
         }),
         "warm_session_3_turns" => Ok(CudaBitnetPerf005ProfilePlan {
             profile_id: "warm_session_3_turns",
-            kind: CudaBitnetPerf005ProfileKind::WarmSession3Turns,
+            kind: CudaBitnetPerf005ProfileKind::WarmSession { turns: 3, max_new_tokens: 16 },
         }),
-        "prefill_512_decode_32" | "warm_session_10_turns" | "decode_128_from_warm_context" => {
+        "warm_session_10_turns" => Ok(CudaBitnetPerf005ProfilePlan {
+            profile_id: "warm_session_10_turns",
+            kind: CudaBitnetPerf005ProfileKind::WarmSession { turns: 10, max_new_tokens: 16 },
+        }),
+        "prefill_512_decode_32" | "decode_128_from_warm_context" => {
             anyhow::bail!(
-                "PERF-005 profile `{profile}` is defined but does not yet have a live dispatcher; next proof requires a dedicated long-prefill, ten-turn, or warm-context runner receipt. speedup_claim=false, full_residency_claim=false"
+                "PERF-005 profile `{profile}` is defined but does not yet have a live dispatcher; next proof requires a dedicated long-prefill or warm-context runner receipt. speedup_claim=false, full_residency_claim=false"
             );
         }
         _ => {
             anyhow::bail!(
-                "unknown CUDA-BITNET-PERF-005 profile `{profile}`; live profiles: one_token, short_decode_8, short_decode_32, prefill_128_decode_16, warm_session_3_turns; blocked profiles: prefill_512_decode_32, warm_session_10_turns, decode_128_from_warm_context"
+                "unknown CUDA-BITNET-PERF-005 profile `{profile}`; live profiles: one_token, short_decode_8, short_decode_32, prefill_128_decode_16, warm_session_3_turns, warm_session_10_turns; blocked profiles: prefill_512_decode_32, decode_128_from_warm_context"
             );
         }
     }
+}
+
+#[cfg(feature = "cli-bench")]
+fn perf005_warm_session_prompts(profile_id: &str, turns: usize) -> Result<&'static [&'static str]> {
+    const WARM_SESSION_3_TURNS: &[&str] = &[
+        "Define entropy in one sentence.",
+        "Name one use for quantization.",
+        "Summarize why fallback rejection matters.",
+    ];
+    const WARM_SESSION_10_TURNS: &[&str] = &[
+        "Define entropy in one sentence.",
+        "Name one use for quantization.",
+        "Summarize why fallback rejection matters.",
+        "Explain what selected backend means.",
+        "State why CPU fallback cannot prove CUDA execution.",
+        "Name the BitNet CUDA route used for QK256 proof.",
+        "Say whether dense CUDA proof proves BitNet QK256.",
+        "Explain why speedup remains profile scoped.",
+        "Name one receipt field that shows transfer volume.",
+        "Summarize the next proof after this warm session.",
+    ];
+
+    let prompts = match profile_id {
+        "warm_session_3_turns" => WARM_SESSION_3_TURNS,
+        "warm_session_10_turns" => WARM_SESSION_10_TURNS,
+        _ => anyhow::bail!("PERF-005 profile `{profile_id}` is not a warm-session profile"),
+    };
+    if prompts.len() != turns {
+        anyhow::bail!(
+            "PERF-005 profile `{profile_id}` expected {turns} warm-session prompts but has {}",
+            prompts.len()
+        );
+    }
+    Ok(prompts)
 }
 
 #[cfg(feature = "cli-bench")]
