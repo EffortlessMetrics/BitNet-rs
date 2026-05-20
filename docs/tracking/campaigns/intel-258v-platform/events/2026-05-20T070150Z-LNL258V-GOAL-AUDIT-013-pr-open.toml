@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T07:01:50Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-013"
+pr = 6116
+head_sha = "aac8521c933f1be4ddaa0db3d3d1a13c7085d680"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-013-post-a770006"
+actor = "codex"
+summary = "Opened PR #6116 for the no-inference Lunar Lake completion-audit refresh after A770-006 closeout."
+
+notes = [
+  "The PR records A770-006/#6110 and closeout #6112 as adjacent selected-device OpenCL matmul_i2s CPU parity evidence.",
+  "A770-006 remains non-semantic adjacent accelerator proof and does not stale Lunar Lake BitNet CPU reference receipts.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, stale BitNet claim, A770 semantic PR merged-to-main claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]
