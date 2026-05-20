@@ -2156,7 +2156,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-061"
-status = "ready"
+status = "pr_open"
+pr = 6111
+head_sha = "c3de3f88b2398731068f0500491cf0bfb9c89aa5"
 branch = "codex/slm-cpu-061-real-q8-sidecar-payload-candidate"
 stackable = false
 review_mode = "codex_premerge"
