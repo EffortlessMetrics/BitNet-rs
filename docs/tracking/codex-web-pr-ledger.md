@@ -1,6 +1,6 @@
 # Codex Web PR Ledger
 
-Status: active queue-recovery ledger
+Status: refreshed queue-recovery summary; historical snapshot retained below
 Owner: Codex
 Created: 2026-05-18
 Linked proposal: n/a
@@ -12,10 +12,54 @@ Linked PRs: open GitHub PR queue snapshot
 Support-tier impact: no support-tier promotion
 Policy impact: no policy exception
 
-This ledger is the working source for the Codex/web PR recovery lane. It is a
-review and disposition aid, not proof that a PR is mergeable. Every merge still
-needs a narrow diff review, the PR's stated proof commands, and `git diff
---check`.
+This ledger is the durable tracked summary for the Codex/web PR recovery lane.
+It is a review and disposition aid, not proof that a PR is mergeable. Every
+merge still needs a narrow diff review, the PR's stated proof commands, and
+`git diff --check`.
+
+The live queue is generated locally under `target/pr-ledger/` because it is a
+throwaway refresh surface. This tracked file records the current durable
+disposition and retains the original large snapshot below for provenance.
+
+## Current Queue State
+
+- Date: 2026-05-20
+- Command: `rtk gh pr list --state open --json number,title,isDraft,mergeable,mergeStateStatus,updatedAt,headRefName,labels,author,url --limit 100`
+- Open PR count: 1
+- Duplicate open PR clusters: none
+- Direct `main` PRs: #5092 only
+- Worktree audit: clean on `main` when this refresh was recorded
+
+| PR | Lane | Current signal | Disposition |
+|---:|---|---|---|
+| #5092 | CPU AVX2 / perf | Draft, mergeable, GitHub check rollup green, one changed file: `crates/bitnet-quantization/src/i2s_qk256_avx2.rs`. Labels: `blocked`, `disp:draft-hold`, `claim:perf-evidence-required`, `proof:partial`, `lane:cpu-avx2`, `lane:perf`, `prio:p2`. | Keep blocked as draft. Direct `bitnet-quantization --features cpu,avx2` proof is not product-route proof. Undraft or merge only after accepted selected-route/counter proof, exact-profile benchmark evidence, and claim review. |
+
+Current #5092 claim boundary:
+
+- local F32/no-scale AVX2 QK256 kernel candidate only;
+- no scaled BitNet I2_S x I8_S AVX2 execution claim;
+- no generated-token parity, model answer, server-readiness, residency, or
+  accepted speedup claim;
+- `speedup_claim` remains false until an exact-profile performance review
+  accepts a narrow claim.
+
+Durable value already salvaged from #5092:
+
+- #6136 merged the test-only subset at commit
+  `34a4aaaf0239513f0b4f603ff1c822325d1940d0`.
+- #6136 landed QK256 byte-packing fixture cleanup, strict AVX2 full-block
+  position identity coverage, and selected-kernel/fallback assertions without
+  changing the AVX2 runtime kernel.
+
+Recent closed-unmerged items from the recovery wave include duplicate or
+superseded PRs such as #6121, #6080, #6002, #5984, #5980, #5978, #5977, #5965,
+and #5960, #5950, and #5944. Closed PRs must still name their successor or
+content reason in the PR discussion; this file does not by itself authorize
+closure.
+
+The historical sections below are not a live open-queue statement. They remain
+as lineage/provenance for how earlier Codex, A770, SRP, and diagnostics waves
+were classified before the queue was reduced.
 
 ## Non-Closure Rule
 
@@ -36,7 +80,7 @@ Every close comment must name the disposition, successor when applicable,
 remaining unique content, and claim boundary. "Stale", "behind", and "old" are
 not valid closure reasons.
 
-Snapshot source:
+Historical snapshot source:
 
 - Date: 2026-05-18
 - Command: `rtk proxy gh pr list --state open --limit 200 --json number,title,headRefName,baseRefName,isDraft,mergeable,mergeStateStatus,updatedAt,body,changedFiles,files,url`
@@ -92,7 +136,7 @@ queue pass.
 | #5733 | Unique BitNet 3B TL candidate docs/specs/campaign lane. | Merged after rebase/review; this is docs/source-map state only, not runtime/model proof. |
 | #5746, #5747, #5748 | New direct-to-main model-family docs/source-map lanes opened after the #5730 merge. | Classify as docs/spec source-of-truth waves; compare overlap before merging independently. |
 | #5724, #5740 | Both touched `xtask/src/ci/plan.rs` dead `changed_count` cleanup; #5724 also carried SLM tracker updates. | #5724 merged after green CI and #5740 was closed as superseded. |
-| #5092 | Draft AVX2 QK256 performance branch with a speedup claim. | Keep draft/proof-gated until parity, benchmark context, CPU flags, samples, and receipts are current. |
+| #5092 | Draft AVX2 QK256 runtime/perf candidate; no accepted speedup claim may land from it. | Keep draft/proof-gated until product-route execution proof, benchmark context, CPU flags, samples, and receipts are current. |
 | #4774-#5131 | Reopened A770 diagnostic chain contains content-bearing trace, score, probability, value-mix, cache, layer, and reference tooling evidence. | Keep open by default. Port or merge useful reports; close only after exact successor, duplicate, or historical-only evidence is recorded. |
 
 Runtime/proof PRs in the old loader, tokenizer, QK256, embedding, attention,
@@ -111,7 +155,7 @@ or commit.
 | Lunar Lake timing applicability receipts | #5537 | Record LNL258V route profile timing applicability and refreshed hardware receipts. | `main` <- `codex/lunar-lake/LNL258V-ROUTE-009-profile-timing-applicability` | Mergeable | PR body lists targeted `bitnet-cli` route-profile tests, `cargo build`, JSON validation, `campaign check intel-258v-platform`, `campaign generate --check`. | Yes: campaign/generated status and global generated dashboards. | None detected. | CPU/platform timing applicability only; no accelerator promotion. | Review after #5536 or as a separate generated-tracker lane; require generator proof. |
 | Fast tests | #5488 | Add unit coverage for startup diagnostics. | `main` <- `codex/add-unit-testing-kmbnst` | Merged | PR body lists `cargo test --locked -p bitnet-startup-contract-diagnostics-core --no-default-features`, `cargo fmt --all -- --check`, and package clippy. | No. | None detected. | Test-only; no behavior or public API claim. | Landed after replacing test `.expect(...)` calls with `Result<()>`/`?`, rerunning targeted proof, and confirming green CI. |
 | SRP refactor wave | #5461, #5464, #5465, #5466, #5467, #5468, #5469, #5470, #5471, #5472, #5473, #5474 | Split existing modules without intended behavior change. | All `main` <- `codex/refactor-codebase-into-srp-submodules*` heads. | All mergeable. | PR bodies list crate-scoped fmt/test/clippy or `git diff --check`; exact command differs per crate. | No. | None detected. | Behavior-preserving only; no public API drift unless already exported through same facade. | Review and merge one crate/module at a time after proving no behavior drift. Do not batch the wave. |
-| Draft perf PR | #5092 | AVX2 QK256 optimization claim. | `main` <- `claude/improve-avx2-performance-fdrIb` | Mergeable, draft. | Not sufficient for merge until repeatable benchmark and parity proof are current. | No. | None detected. | No speedup claim may land without CPU/flags/sample context and parity tests. | Leave draft/proof-gated; do not close or merge from this lane without content audit and current receipts. |
+| Draft perf PR | #5092 | AVX2 QK256 runtime/perf candidate. | `main` <- `claude/improve-avx2-performance-fdrIb` | Mergeable, draft. | Not sufficient for merge until product-route execution, repeatable benchmark, and parity proof are current. | No. | None detected. | No speedup claim may land without CPU/flags/sample context, route/counter proof, and parity tests. | Leave draft/proof-gated; do not close or merge from this lane without content audit and current receipts. |
 | A770 root experience/history chain | #4738 | Bench/experience history rails. | `main` <- `a770/llm-experience-history` | Conflicting. | PR body lists xtask `llm_experience`, help, docs, and bench receipt tests. | `Cargo.lock`. | `xtask/Cargo.toml`. | History rails cannot promote A770 quality, performance, full residency, or completion. | Do not merge as a giant root. Reconstruct useful receipt/history parts into smaller replacement PRs if needed. |
 | A770 claim gates and runbooks | #4739, #4740 | Gate A770 promotion on experience receipts and document clean rerun flow. | Stacked on A770 branches, not `main`. | Mergeable. | #4739 lists `claims verify` and docs checks; #4740 lists diff check only. | No. | None detected. | Claim gate may only prevent promotion; it must not imply support. | Keep as durable candidates if they can be rebased onto `main` and proven independently. |
 | A770 backend/CLI route identity tools | #4741, #4742, #4743, #4744, #5697, #5717 | Preserve route identity, backend fallback classification, strict backend proof guard, and non-claiming OpenCL dispatch status. | Stacked A770 chain plus main-based replacements. | #4741 through #4744 closed/superseded; #5697 and #5717 merged to `main`. | Replacement PRs ran local formatting, metadata, and `git diff --check` proof; long local cargo checks timed out without diagnostics and hosted PR Gate/CI supplied the merge proof. | No. | #5717 intentionally propagated OpenCL/oneAPI feature flags through the status path; no lockfile landed. | May preserve identity/fallback receipts; must not claim A770 OpenCL execution or BitNet inference works. | Done for fallback/status pieces. Remaining identity/strict-backend ideas are replacement-only A770-003/A770-004 source material. |
@@ -129,7 +173,7 @@ or commit.
 | #4750 | Conflicting plus `Cargo.lock` and CLI manifest. | Do not merge as-is. |
 | #4776 | Generated tracker/dashboard edits, `Cargo.lock`, dependency files, and timed-out proof note in body. | Do not merge as standalone diagnostic. |
 | #4815 | Conflicting diagnostic PR. | Keep open or port until content audit proves exact successor, duplicate, or historical-only disposition. |
-| #5092 | Draft perf PR with a strong speedup claim. | Requires parity plus repeatable benchmark context before any merge. |
+| #5092 | Draft perf/runtime candidate with no accepted speedup claim. | Requires route/counter proof, parity, and repeatable benchmark context before any merge. |
 | #5536 | Generated dashboards. | Merged by the refresh checkpoint; keep generator proof as the rule for similar PRs. |
 | #5537 | Generated dashboards and hardware receipt JSON. | Merged by the refresh checkpoint; keep JSON and generator proof as the rule for similar PRs. |
 
@@ -190,4 +234,4 @@ or commit.
 |---:|---|---|---|
 | #5131 | A770 layer0 FFN diagnostic | Latest open A770 PR by the post-refresh list; stacked on `a770/diag-rmsnorm-f64-trace-effect`, not `main`. | Do not merge as-is. Salvage only through a durable trace/compare replacement PR after lineage flattening. |
 | #4745-#5131 plus merged branch-chain evidence through #5725 | A770 diagnostic branch chain | 152 open `a770/*` PRs remain, mostly one-PR-per-probe branch-chain diagnostics. #4741 through #4744 are closed/superseded; #5722 and #5725 merged only into the A770 branch chain. | Use `docs/reports/2026-05-18-a770-diagnostic-lineage-map.md`; no probe-by-probe merges and no closure by age/range. |
-| #5092 | Draft AVX2 QK256 perf | Only direct `main` PR in the scoped queue; still draft with a speedup claim. | Leave draft until parity proof, repeatable benchmark context, CPU flags, samples, and claim boundary are current. |
+| #5092 | Draft AVX2 QK256 perf | Only direct `main` PR in the scoped queue; still draft and proof-gated with no accepted speedup claim. | Leave draft until product-route execution proof, parity proof, repeatable benchmark context, CPU flags, samples, and claim boundary are current. |
