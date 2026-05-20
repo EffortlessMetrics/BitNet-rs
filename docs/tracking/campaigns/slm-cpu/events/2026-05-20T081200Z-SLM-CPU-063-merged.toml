@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T08:12:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-063"
+event = "merged"
+previous_status = "in_progress"
+new_status = "merged"
+actor = "codex"
+pr = 6127
+head_sha = "94b9d4835"
+merge_sha = "f09d559c8ad575e80b6c1f2e706b4f49e419e7f4"
+summary = "Merge the BitNet-rs release-surface intake gate for audited Kaby SLM artifacts produced by bitnet-rs-swarm."
+notes = [
+  "The merged gate defines required candidate summaries, before/after receipts, equivalence reports, bounded timing evidence, validation checks, promotion paths, and rejection conditions.",
+  "BitNet-rs remains the audited release/evidence surface while future packed Q8_0 compute-candidate development continues in bitnet-rs-swarm.",
+  "No runtime compute, receipt schema, model artifact, speedup, sustained throughput, broad answer-quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim was made.",
+]
