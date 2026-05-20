@@ -470,6 +470,58 @@ fn test_avx2_parity_requested_shape_pattern_matrix_1e4() {
 // ── Test 1: single row, all codes=2 (+1), uniform x=1.0 ──
 
 #[test]
+fn test_strict_avx2_full_block_position_identity() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        eprintln!("Skipping AVX2 position identity test - not x86_64");
+        return Ok(());
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    {
+        if !avx2_selection_available() {
+            eprintln!("Skipping AVX2 position identity test - AVX2/FMA unavailable");
+            return Ok(());
+        }
+
+        let rows = 1;
+        let cols = QK256_BLOCK;
+        let x: Vec<f32> = (0..cols).map(|idx| (idx as f32 + 0.25) / 17.0).collect();
+
+        for target_col in 0..cols {
+            for (code, expected_sign) in [(2u8, 1.0f32), (0u8, -1.0f32)] {
+                let mut codes = vec![1u8; cols];
+                codes[target_col] = code;
+                let (qs, stride) = build_qs_data(&[codes], cols);
+                let mut y = vec![0.0f32; rows];
+
+                let selection = gemv_qk256_with_kernel_selection(
+                    &qs,
+                    &x,
+                    &mut y,
+                    rows,
+                    cols,
+                    stride,
+                    Some(QK256_AVX2_GEMV_KERNEL_ID),
+                    true,
+                )?;
+
+                assert_eq!(selection.selected_kernel, QK256_AVX2_GEMV_KERNEL_ID);
+                assert!(!selection.fallback_used);
+                let expected = expected_sign * x[target_col];
+                assert!(
+                    (y[0] - expected).abs() <= 1e-6,
+                    "target_col={target_col} code={code}: expected={expected} actual={}",
+                    y[0]
+                );
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[test]
 fn test_gemv_single_row_all_ones() {
     let cols = 256;
     let codes = vec![2u8; cols]; // code 2 → +1.0
