@@ -249,8 +249,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-006R"
-status = "in_progress"
+status = "merged"
 branch = "codex/intel-a770/A770-006R-matmul-i2s-operand-contract"
+pr = 43
+head_sha = "332ba423c87305c36c303c6a14097078125cce3d"
+merge_sha = "655a9af009cb1ededadf2befca232942c6234eea"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

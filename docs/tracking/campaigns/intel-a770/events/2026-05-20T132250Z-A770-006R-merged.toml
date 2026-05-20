@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T13:22:50Z"
+campaign = "intel-a770"
+item = "A770-006R"
+event = "merged"
+pr = 43
+head_sha = "332ba423c87305c36c303c6a14097078125cce3d"
+merge_sha = "655a9af009cb1ededadf2befca232942c6234eea"
+branch = "codex/intel-a770/A770-006R-matmul-i2s-operand-contract"
+actor = "codex"
+
+notes = [
+  "Merged PR #43, aligning the selected-device A770 OpenCL matmul_i2s parity harness around explicit int8 activation and packed I2_S weight operands.",
+  "The update kept the fixture and receipt boundary diagnostic and did not promote benchmark, QK256, BitNet inference, full residency, route promotion, or performance claims.",
+  "CI passed on the rebased head before merge, including campaign tracker, policy, feature matrix, docs automation, public API, and CI core checks.",
+]
