@@ -109,7 +109,8 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-056 | merged | #6018 implemented the first production dense-linear hook boundary from SLM-CPU-055 without enabling packed Q8_0 sidecar compute by default or weakening the Qwen3 Q8_0 Kaby behavior oracle. |
 | SLM-CPU-057 | merged | #6045 added the next Qwen3 Q8_0 dense hook-selection receipt gate before any packed Q8_0 sidecar compute can be enabled. |
 | SLM-CPU-058 | merged | #6070 queued the dense-hook before/after receipt gate and preserved the current safe state: packed Q8_0 sidecar compute remains disabled until behavior-preserving before/after receipts and a narrow compute proof exist. |
-| SLM-CPU-059 | ready | Next packed Q8_0 compute proof gate: add or prove the first narrow sidecar compute-kernel boundary with before/after behavior receipts, preserving generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, model SHA, dense hook-selection identity, and fallback=false before any bounded timing claim. |
+| SLM-CPU-059 | merged | #6078 recorded the packed Q8_0 compute-kernel proof gate and blocker artifact: production transformer dense-linear hooks still receive metadata-only sidecar descriptors, so payload-bearing packed Q8_0 sidecar compute remains disabled pending before/after behavior receipts. |
+| SLM-CPU-060 | ready | Next evidence-scoped hook-contract slice: add a payload-bearing packed Q8_0 sidecar hook contract for one Qwen3 Q8_0 dense-linear tensor path, or record a concrete blocker if the current API cannot safely carry packed payload bytes to the dense-linear callsite. |
 
 ## Review Policy
 
