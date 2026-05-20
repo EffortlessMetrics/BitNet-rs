@@ -8280,6 +8280,72 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SWARM-LNL258V-BITNET-INTAKE-007"
+status = "pr_open"
+pr = 51
+head_sha = "8ee4be190b6a7f3af18882db7eddd9ade5616183"
+branch = "codex/swarm-lnl258v-bitnet-intake-007-a770-43-merged-stale"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SWARM-LNL258V-BITNET-INTAKE-006"]
+acceptance = "After live GitHub verification shows swarm A770 PR #43 merged to main after the prior Lunar Lake BitNet semantic-intake cutoff, record #43 as merged_to_main, regenerate semantic-intake, regression-v2, operator-comparison, excellence-audit, and goal-checklist artifacts so strict surfaces fail closed with rerun_required=true and stale_after_merged_count=1 until Lunar Lake BitNet reruns refresh evidence. Preserve no inference, route promotion, speedup, power-advantage, measured-temperature, battery-mode evidence, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims."
+commands = [
+  "gh pr view 43 --repo EffortlessMetrics/bitnet-rs-swarm --json state,mergedAt,mergeCommit,headRefOid,title,url,files",
+  "target/debug/bitnet.exe lunar-lake bitnet-intake --artifact-root ci/hardware/intel-258v/2026-05-08 --source-changes lunar-lake-bitnet-semantic-source-changes.json --cpu-reference-bundle cpu-reference-bundle-after-semantic-fix.json --operator-comparison lunar-lake-operator-comparison.json --json-out lunar-lake-bitnet-semantic-intake.json --created-utc 2026-05-20T14:20:00Z",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-20T14:20:00Z",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-20T14:20:00Z",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "python -m json.tool ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "target/debug/xtask.exe campaign check intel-258v-platform",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+]
+may_claim = [
+  "Live GitHub verification shows swarm A770 PR #43 merged to main at 2026-05-20T13:21:51Z with merge SHA 655a9af009cb1ededadf2befca232942c6234eea.",
+  "Lunar Lake BitNet semantic intake now records zero pending shared changes, six closed shared changes, one merged-to-main shared/adjacent watchpoint, stale_after_merged_count=1, rerun_required=true, and intake_ready=false.",
+  "Regression v2 and operator comparison intentionally fail closed until Lunar Lake BitNet reruns refresh the stale evidence.",
+  "POWER-006 remains blocked until real battery-mode low_power telemetry and energy-proxy evidence exist.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "A measured thermal temperature is available.",
+  "Battery-mode low_power evidence is available while the 258V remains on AC power.",
+  "Current Lunar Lake BitNet evidence is ready after A770 #43 merged.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "SWARM-LNL258V-BITNET-INTAKE-006"
 status = "merged"
 pr = 45

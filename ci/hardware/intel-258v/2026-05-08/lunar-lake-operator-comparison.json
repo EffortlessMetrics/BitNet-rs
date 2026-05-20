@@ -2,14 +2,14 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-20T12:55:00Z",
+  "created_utc": "2026-05-20T14:20:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
   "regression_bundle": "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
-  "comparison_ready": true,
+  "comparison_ready": false,
   "operator_ready": true,
-  "regression_passed": true,
+  "regression_passed": false,
   "regression_surface": {
     "surface_id": "lunar_lake_regression_v2",
     "strict_default": true,
@@ -115,8 +115,11 @@
     },
     "low_power_promotion_ready": false,
     "power_advantage_proven": false,
-    "strict_ready": true,
-    "gaps": []
+    "strict_ready": false,
+    "gaps": [
+      "BitNet semantic intake is not regression-ready: BitNet semantic intake is not ready: merged shared BitNet semantic changes require refreshed Lunar Lake BitNet evidence; shared BitNet semantic fixes require Lunar Lake reruns: rerun Lunar Lake BitNet CPU answer corpus; rerun scalar-vs-AVX2 BitNet answer parity; rerun first-token divergence classifier; rerun BitNet CPU phase receipts if kernel-affecting; refresh Lunar Lake operator readiness; refresh route comparison and regression surfaces; 1 merged shared BitNet semantic changes are newer than Lunar Lake evidence",
+      "BitNet semantic intake requires Lunar Lake reruns: rerun Lunar Lake BitNet CPU answer corpus; rerun scalar-vs-AVX2 BitNet answer parity; rerun first-token divergence classifier; rerun BitNet CPU phase receipts if kernel-affecting; refresh Lunar Lake operator readiness; refresh route comparison and regression surfaces"
+    ]
   },
   "ask_short_ask_receipt": {
     "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json",
@@ -908,19 +911,22 @@
     },
     {
       "check_id": "bitnet_semantic_intake_regression_ready",
-      "status": "passed",
+      "status": "failed",
       "evidence": [
         "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json"
       ],
       "notes": [
-        "intake_ready=true",
-        "rerun_required=false",
-        "pending_shared_change_count=1",
+        "intake_ready=false",
+        "rerun_required=true",
+        "pending_shared_change_count=0",
         "closed_shared_change_count=6",
-        "merged_to_main_count=0",
-        "stale_after_merged_count=0",
+        "merged_to_main_count=1",
+        "stale_after_merged_count=1",
         "source_lanes=a770",
-        "claim_boundary_preserved=true"
+        "claim_boundary_preserved=true",
+        "BitNet semantic intake is not ready: merged shared BitNet semantic changes require refreshed Lunar Lake BitNet evidence",
+        "shared BitNet semantic fixes require Lunar Lake reruns: rerun Lunar Lake BitNet CPU answer corpus; rerun scalar-vs-AVX2 BitNet answer parity; rerun first-token divergence classifier; rerun BitNet CPU phase receipts if kernel-affecting; refresh Lunar Lake operator readiness; refresh route comparison and regression surfaces",
+        "1 merged shared BitNet semantic changes are newer than Lunar Lake evidence"
       ]
     },
     {
@@ -1057,7 +1063,9 @@
       ]
     }
   ],
-  "gaps": [],
+  "gaps": [
+    "regression bundle failed: bitnet_semantic_intake_regression_ready: intake_ready=false, rerun_required=true, pending_shared_change_count=0, closed_shared_change_count=6, merged_to_main_count=1, stale_after_merged_count=1, source_lanes=a770, claim_boundary_preserved=true, BitNet semantic intake is not ready: merged shared BitNet semantic changes require refreshed Lunar Lake BitNet evidence, shared BitNet semantic fixes require Lunar Lake reruns: rerun Lunar Lake BitNet CPU answer corpus; rerun scalar-vs-AVX2 BitNet answer parity; rerun first-token divergence classifier; rerun BitNet CPU phase receipts if kernel-affecting; refresh Lunar Lake operator readiness; refresh route comparison and regression surfaces, 1 merged shared BitNet semantic changes are newer than Lunar Lake evidence"
+  ],
   "claim_boundary": {
     "cpu_is_truth_path": true,
     "dense_slm_default_is_cpu_until_speedup_qualified": true,

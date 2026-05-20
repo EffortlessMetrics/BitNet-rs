@@ -1,0 +1,18 @@
+timestamp = "2026-05-20T14:25:56Z"
+campaign = "intel-258v-platform"
+item = "SWARM-LNL258V-BITNET-INTAKE-007"
+event = "pr_open"
+from = "in_progress"
+to = "pr_open"
+actor = "codex"
+branch = "codex/swarm-lnl258v-bitnet-intake-007-a770-43-merged-stale"
+pr = 51
+head_sha = "8ee4be190b6a7f3af18882db7eddd9ade5616183"
+summary = "Opened PR #51 to record swarm A770 #43 as merged-to-main and stale Lunar Lake BitNet intake."
+
+notes = [
+  "PR #51 records A770 #43 as merged_to_main after the prior Lunar Lake semantic-intake cutoff.",
+  "The refreshed semantic-intake receipt reports pending_shared_change_count=0, closed_shared_change_count=6, merged_to_main_count=1, stale_after_merged_count=1, rerun_required=true, and intake_ready=false.",
+  "Regression v2 and operator comparison intentionally fail closed until Lunar Lake BitNet reruns refresh the stale evidence.",
+  "The PR preserves no inference, route promotion, speedup, power-advantage, measured-temperature, battery-mode evidence, stale-readiness, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim.",
+]
