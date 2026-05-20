@@ -5510,12 +5510,12 @@ fn validate_dense_qwen_logits_transfer_reduction(
                 "logits_transfer_reduction.device_to_host_bytes_reduced requires sampling_location=cuda_device"
             ));
         }
-        if let Some(blocker) = reduction.get("reduction_blocker") {
-            if !blocker.is_null() {
-                return Err(anyhow!(
-                    "logits_transfer_reduction.reduction_blocker must be omitted or null when device_to_host_bytes_reduced is true"
-                ));
-            }
+        if let Some(blocker) = reduction.get("reduction_blocker")
+            && !blocker.is_null()
+        {
+            return Err(anyhow!(
+                "logits_transfer_reduction.reduction_blocker must be omitted or null when device_to_host_bytes_reduced is true"
+            ));
         }
         if actual_device_to_host_bytes >= full_logits_download_bytes {
             return Err(anyhow!(
