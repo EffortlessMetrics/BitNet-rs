@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T06:45:00Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-013"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-013-post-a770006"
+actor = "codex"
+summary = "Started the no-inference Lunar Lake completion-audit refresh after A770-006 closeout."
+
+notes = [
+  "The audit refresh records A770-006/#6110 and closeout #6112 as adjacent selected-device OpenCL matmul_i2s CPU parity evidence.",
+  "A770-006 is not an indexed shared BitNet semantic merge trigger and does not stale Lunar Lake BitNet CPU reference receipts.",
+  "POWER-006 remains blocked because the current machine is on AC/charging and no real battery-mode low_power evidence exists.",
+  "No inference, model load, fallback change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, stale BitNet claim, A770 semantic PR merged-to-main claim, or BitNet QK256/I2_S behavior-change claim is made.",
+]
