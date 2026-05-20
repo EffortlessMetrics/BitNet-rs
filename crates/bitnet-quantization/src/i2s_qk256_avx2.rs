@@ -714,9 +714,9 @@ mod tests {
 
         println!("   Timing probe is diagnostic only; it does not promote a speedup claim.");
         if timing_ratio >= 1.0 {
-            println!("   AVX2 was faster in this local timing probe.");
+            println!("   Local probe ratio was >= 1.0; this is diagnostic evidence only.");
         } else {
-            println!("   AVX2 was slower in this local timing probe.");
+            println!("   Local probe ratio was < 1.0; this is diagnostic evidence only.");
         }
     }
 }
