@@ -4,7 +4,7 @@ event = "pr_open"
 item = "LNL258V-GOAL-AUDIT-004"
 pr = 6049
 branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-004-post-bitnet-intake"
-head_sha = "bd01e804461eb187c1c8c12bd8c40fd5ca068277"
+head_sha = "aa2a375eff5bcf20191ac3599d82406f73307753"
 actor = "codex"
 summary = "Opened LNL258V-GOAL-AUDIT-004 to refresh the no-inference Lunar Lake goal audit after appliance ask and BitNet intake updates."
 
