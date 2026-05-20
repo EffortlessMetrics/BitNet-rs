@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-20T09:00:00Z",
+  "created_utc": "2026-05-20T11:30:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "7b7425f52ad78ff866024a80ac3a6bc71d1e213f",
+  "source_revision": "9e1326cf7b8ad0c420fa8f12cb2925e7fe7993e4",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
   "excellent_support_ready": false,
-  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness, REG-011 gates route/profile and cold/warm evidence on route/model identity, OP-013 makes blocked auto routes fail closed before model resolution, ASK-006/ASK-007 index appliance-level auto ask receipts for ask_normal and ask_short, and BITNET-INTAKE-003 indexes pending A770 #5064 as a shared BitNet semantic rerun trigger. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
+  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness, REG-011 gates route/profile and cold/warm evidence on route/model identity, OP-013 makes blocked auto routes fail closed before model resolution, ASK-006/ASK-007 index appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-003 indexes pending A770 #5064 as a shared BitNet semantic rerun trigger, and POWER-007/POWER-008 make the physical battery-mode low_power runbook discoverable. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
   "tracker_state": {
     "active_item": "LNL258V-POWER-006",
     "active_item_status": "blocked",
@@ -34,9 +34,15 @@
     "last_merged_bitnet_intake_item": "LNL258V-BITNET-INTAKE-003",
     "last_merged_bitnet_intake_pr": 6046,
     "last_merged_bitnet_intake_merge_sha": "d5f77955b61d26692c2a155dce4992d2c3001aa1",
-    "last_closeout_pr": 6048,
-    "last_closeout_merge_sha": "7b7425f52ad78ff866024a80ac3a6bc71d1e213f",
-    "audit_refresh_scope": "no_inference_post_op013_ask006_ask007_bitnet_intake003_refresh"
+    "last_merged_power_runbook_item": "LNL258V-POWER-007",
+    "last_merged_power_runbook_pr": 6055,
+    "last_merged_power_runbook_merge_sha": "91979d3e27fc95e1e2bd8dde4384b4ef017e9bf4",
+    "last_merged_power_runbook_links_item": "LNL258V-POWER-008",
+    "last_merged_power_runbook_links_pr": 6057,
+    "last_merged_power_runbook_links_merge_sha": "43db1ed843b2d6635c6f9cbb101691f38b02b9ae",
+    "last_closeout_pr": 6058,
+    "last_closeout_merge_sha": "9e1326cf7b8ad0c420fa8f12cb2925e7fe7993e4",
+    "audit_refresh_scope": "no_inference_post_power007_power008_runbook_discoverability_refresh"
   },
   "command_surface": {
     "ask": {
@@ -362,7 +368,7 @@
     "BitNet accelerator inference and packed QK256 accelerator decode remain unclaimed."
   ],
   "next_recommended_work": [
-    "Rerun lunar-lake telemetry-context --require-battery while on battery power, then rebuild low_power power-profile evidence.",
+    "Follow docs/hardware/intel-258v-low-power-battery-runbook.md, rerun lunar-lake telemetry-context --require-battery while on battery power, then rebuild low_power power-profile evidence.",
     "LNL258V-POWER follow-up for benchmark-qualified low_power power advantage.",
     "Continue NPU low-power follow-up before any low_power NPU promotion.",
     "Monitor A770 #5064; if it merges to main, rerun Lunar Lake BitNet CPU answer, parity, phase, operator readiness, regression, and comparison evidence before route decisions change.",
@@ -380,6 +386,11 @@
     "reg_010_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T005500Z-LNL258V-REG-010-merged.toml",
     "validate_002_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T012000Z-LNL258V-VALIDATE-002-merged.toml",
     "reg_011_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T040000Z-LNL258V-REG-011-merged.toml",
+    "power_007_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
+    "power_007_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T103000Z-LNL258V-POWER-007-merged.toml",
+    "power_008_validation_link": "docs/hardware/intel-258v-validation.md",
+    "power_008_campaign_link": "docs/tracking/campaigns/intel-258v-platform/CAMPAIGN.md",
+    "power_008_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T110000Z-LNL258V-POWER-008-merged.toml",
     "power_006_blocked_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-19T230000Z-LNL258V-POWER-006-blocked.toml",
     "route_profile_comparison": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-route-profile-comparison.json",
     "route_promotion_ledger": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-route-promotion.json",
@@ -416,6 +427,6 @@
     "measured_temperature_claim": false,
     "full_bitnet_accelerator_inference_claim": false,
     "bitnet_qk256_i2s_behavior_change": false,
-    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, BitNet semantic-intake, and tracker evidence"
+    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, BitNet semantic-intake, POWER-007/POWER-008 runbook discoverability, and tracker evidence"
   }
 }
