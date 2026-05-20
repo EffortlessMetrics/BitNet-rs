@@ -1913,8 +1913,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CONTEXT-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-001-long-context-guardrails"
+pr = 6130
+head_sha = "67e31a2ab752ef8c65f23db4be92acd6c7e7685f"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
