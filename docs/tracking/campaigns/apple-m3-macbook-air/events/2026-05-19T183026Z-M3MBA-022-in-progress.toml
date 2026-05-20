@@ -1,0 +1,12 @@
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-022"
+event = "in_progress"
+timestamp = "2026-05-19T18:30:26Z"
+actor = "codex"
+branch = "codex/apple-m3-macbook-air/M3MBA-022-accuracy-comparison-profile"
+summary = "Started the M3 Air dense SLM accuracy comparison profile item."
+notes = [
+  "Scope is wiring and receipt-check contract for an M3 Air dense SLM accuracy comparison profile.",
+  "The item reuses the established dense SLM quality corpus and records prompt IDs, scoring policy, generated token IDs, decoded text, and non-comparable M3/M4/SLM-CPU boundaries before any comparison-grade claim.",
+  "No live M3 run, BitNet quality proof, M4 performance claim, Metal/MPSGraph/Neural Engine execution claim, QK256 claim, broad quality claim, or broad Apple Silicon performance claim is added.",
+]

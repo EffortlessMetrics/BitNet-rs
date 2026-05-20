@@ -1090,7 +1090,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-022"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m3-macbook-air/M3MBA-022-accuracy-comparison-profile"
 stackable = false
 review_mode = "codex_premerge"

@@ -15,6 +15,7 @@ on:
         default: "smoke"
         options:
           - smoke
+          - accuracy
           - operator
       model_id:
         description: "Supported dense SLM model cache id."
