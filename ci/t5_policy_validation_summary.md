@@ -1,4 +1,12 @@
+<!-- markdownlint-disable -->
+<!-- Historical artifact formatting intentionally preserved. -->
+
 # T5 Policy Validation - Gate Summary
+
+> Historical validation artifact only. This summary records the 2025 PR #473
+> policy-gate decision and must not be read as a current speedup, CUDA/GPU,
+> server-readiness, residency, or product-readiness claim. Current claims must
+> come from active receipts and claim gates.
 
 **Date**: 2025-10-22T02:00:00Z
 **PR**: #473 (feat/mvp-finalization)
@@ -12,7 +20,7 @@
 | **License Compliance** | ✅ PASS | cargo deny: licenses ok; all MIT OR Apache-2.0; 0 copyleft violations; 745 deps compliant |
 | **Dependency Security** | ✅ PASS | cargo audit: 1 medium CVE (RUSTSEC-2023-0071 in RSA via JWT, mitigated); 745 safe deps; crates.io only |
 | **Quantization Accuracy** | ✅ PASS | I2S 99.8%, TL1 99.6%, TL2 99.7% maintained; cross-validation ≤1e-5 parity |
-| **Performance SLO** | ✅ PASS | Inference 2.8s vs 10s threshold; 45.2 tok/s maintained; AVX2 ~1.2× speedup |
+| **Performance SLO** | ✅ PASS | Historical gate recorded inference 2.8s vs 10s threshold and 45.2 tok/s; any AVX2 speedup is not a current accepted claim. |
 | **API Compatibility** | ✅ PASS | Additive-only changes (GenerationConfig builders); 0 breaking changes; feature matrix validated |
 | **Documentation Alignment** | ✅ PASS | CLAUDE.md updated (Issue #260 resolved); docs/explanation/ + docs/reference/ aligned |
 | **GPU Resource Policy** | ✅ PASS | CUDA context managed; 14 GPU unsafe blocks audited; 0 memory leaks detected |

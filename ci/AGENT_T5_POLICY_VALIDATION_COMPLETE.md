@@ -1,4 +1,13 @@
+<!-- markdownlint-disable -->
+<!-- Historical artifact formatting intentionally preserved. -->
+
 # T5 Policy Validation Complete - PR #473
+
+> Historical validation artifact only. This report records the 2025 PR #473
+> gate decision and must not be read as a current BitNet-rs support, speedup,
+> CUDA/GPU, server-readiness, residency, or product-readiness claim. Current
+> product claims must come from the model coverage matrix, active receipts, and
+> claim gates.
 
 **Date**: 2025-10-22T02:00:00Z
 **Validator**: policy-gatekeeper (Integrative Flow T5)
@@ -105,7 +114,8 @@ cargo deny check sources
 - Inference throughput: 45.2 tokens/sec
 - SLO: ≤10s for 128 tokens (satisfied: 2.8s)
 - Memory overhead: <10% (security compatible)
-- AVX2 optimization: ~1.2× speedup
+- AVX2 optimization: historically reported ~1.2x speedup in this gate; not a
+  current accepted speedup claim
 
 **GPU Resource Policy** (from T4 validation):
 - CUDA context: Managed correctly ✓
@@ -232,7 +242,8 @@ policy: cargo deny check (licenses ok, sources ok, bans ok);
 
 **Benchmark Focus Areas**:
 - Token throughput (baseline: 45.2 tok/s)
-- AVX2 optimization impact (QK256 dequantization ~1.2×)
+- AVX2 optimization impact (historical QK256 dequantization measurement; not a
+  current accepted speedup claim)
 - Memory usage (<10% overhead from safety validation)
 - Latency distribution (SLO: ≤10s for 128 tokens)
 
