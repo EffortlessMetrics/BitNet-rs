@@ -215,4 +215,8 @@ selected CPU backend/kernel identity, dense hook-selection identity, and
 `fallback_used=false`; it also keeps packed Q8_0 runtime compute disabled and
 records `speedup_claim=false`.
 
-Runtime promotion remains a separate follow-up item.
+Runtime promotion remains a separate follow-up item. `SLM-CPU-065` is the
+first queued promotion gate, limited to the exact single-tensor packed Q8_0
+sidecar candidate accepted through this review. It must keep runtime promotion
+disabled by default unless before/after strict CPU receipts prove identical
+behavior.

@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T14:41:20Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-064"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 6138
+head_sha = "43f8484698877813297ecb3d406c9efec005f8bc"
+merge_sha = "189dd6ceee45f6a41328000edc5ebe5f1fa5fe8a"
+summary = "Merge the BitNet-rs release-surface review of the first Kaby SLM package returned from bitnet-rs-swarm."
+notes = [
+  "PR #6138 committed the SLM-CPU-062 package and accepted it as release-surface evidence only.",
+  "The review preserves model SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false.",
+  "No runtime compute, speedup, sustained throughput, broad answer-quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim was made.",
+]
