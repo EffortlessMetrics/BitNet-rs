@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T19:59:45Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-RELIABILITY-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-RELIABILITY-001-recovery-drills"
+
+notes = [
+  "Started M4-RELIABILITY-001 after M4-STABILITY-003 closeout advanced the M4 excellence campaign to recovery-drill receipts.",
+  "Scope is bounded to model-free recovery-drill receipt coverage for interrupted generation, cancellation, timeout, interrupted receipt write, missing or corrupt cache, low disk, process restart, and retry guidance across dense SLM, BitNet one-shot ask, and BitNet warm routes.",
+  "No fresh live model interruption, runtime quality proof, BitNet chat/serve enablement, service production readiness, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]
