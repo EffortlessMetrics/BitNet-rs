@@ -68,7 +68,7 @@ bitnet receipts explain --latest
 | Row | Next proof |
 | --- | --- |
 | `bitnet_official_2b_i2s_qk256` | Profile-specific speedup qualification and deeper residency/transfer timing. |
-| `dense_qwen25_05b_q8_cuda` | Post-OPS requalification keeps speedup, benchmark-qualified speed, and full residency false. Next proof is a refreshed exact-profile comparator with reduced D2H or device top-k sampling, pure H2D timing, and phase residency; exact-profile server readiness remains limited to `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json`. |
+| `dense_qwen25_05b_q8_cuda` | Post-OPS requalification keeps speedup, benchmark-qualified speed, and full residency false. The next reduced-D2H proof must use a CUDA device top-k or greedy sampler receipt, then a refreshed exact-profile comparator with pure H2D timing and phase residency; exact-profile server readiness remains limited to `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-17/server-strict-dense-qwen25-q8-smoke.json`. |
 | `dense_qwen3_06b_q8_candidate` | Exact-profile server readiness is promoted by `ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json`; the `qwen3_cuda_repeated_comparator` contract and generator exist, but hardware aggregate comparator evidence and a separate review remain required before speed or benchmark-qualified claims. |
 | `dense_smollm2_360m_candidate` | Same-prompt SmolLM2 first-token/top-k or checkpoint comparator capture using the SLM-CPU-022 contract. |
 | Later dense SLM / small-LLM candidates | Artifact contract, tokenizer/prompt authority, CPU answer sanity, all-layer plan, boundary fixtures, strict CUDA proof, warm session, and benchmark review. |

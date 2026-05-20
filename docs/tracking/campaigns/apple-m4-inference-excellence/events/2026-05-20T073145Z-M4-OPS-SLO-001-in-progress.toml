@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T07:31:45Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OPS-SLO-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-OPS-SLO-001-envelope-classes"
+
+notes = [
+  "Started the operator envelope class mapping after M4-BITNET-EX-015 merged and campaign next selected M4-OPS-SLO-001.",
+  "Scope is docs/tracker-only classification of existing M4 dense SLM, BitNet ask/warm, gated BitNet chat/serve, dense serve, and unsupported backend routes.",
+  "The class map preserves exact evidence identity, timing, memory/disk guidance, backend, fallback, and claim boundaries from committed receipts.",
+  "No runtime, model, BitNet chat/serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

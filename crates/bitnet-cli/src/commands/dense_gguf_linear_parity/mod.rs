@@ -3488,8 +3488,10 @@ struct DenseQwenShortDecodeRun {
     forward_ms_total: f64,
     logits_ms_total: f64,
     logits_download_ms_total: f64,
+    logits_transfer_bytes_total: u64,
     logits_len: usize,
     logits_all_cuda_resident: bool,
+    logits_transfer_mode: DenseQwenLogitsTransferMode,
 }
 
 #[derive(Debug, Clone)]
@@ -3498,8 +3500,10 @@ struct DenseQwenShortDecodeStep {
     selected_token_id: u32,
     top_k: Vec<DenseQwenOneTokenTopKEntry>,
     top_k_rank_sha256: String,
-    logits_sha256: String,
+    logits_sha256: Option<String>,
     logits_len: usize,
+    logits_transfer_bytes: u64,
+    logits_transfer_mode: DenseQwenLogitsTransferMode,
     embed_ms: f64,
     forward_ms: f64,
     logits_ms: f64,
@@ -3521,6 +3525,57 @@ struct DenseQwenOneTokenTopKEntry {
     rank: usize,
     token_id: u32,
     value: f32,
+}
+
+#[derive(Debug, Clone)]
+struct DenseQwenLogitsSample {
+    selected_token_id: u32,
+    top_k: Vec<DenseQwenOneTokenTopKEntry>,
+    top_k_rank_sha256: String,
+    logits_len: usize,
+    logits_sha256: Option<String>,
+    transfer_bytes: u64,
+    transfer_mode: DenseQwenLogitsTransferMode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DenseQwenLogitsTransferMode {
+    FullLogitsDownloadCpuSampler,
+    DeviceTopKCudaSampler,
+}
+
+impl DenseQwenLogitsTransferMode {
+    fn transfer_mode(self) -> &'static str {
+        match self {
+            Self::FullLogitsDownloadCpuSampler => "full_logits_download_cpu_sampler",
+            Self::DeviceTopKCudaSampler => "device_top_k_cuda_sampler",
+        }
+    }
+
+    fn sampling_location(self) -> &'static str {
+        match self {
+            Self::FullLogitsDownloadCpuSampler => "cpu",
+            Self::DeviceTopKCudaSampler => "cuda_device",
+        }
+    }
+
+    fn d2h_timing_source(self) -> &'static str {
+        match self {
+            Self::FullLogitsDownloadCpuSampler => "wall_clock_extract_logits_2d_local",
+            Self::DeviceTopKCudaSampler => "wall_clock_device_top_k_cuda_sampler",
+        }
+    }
+
+    fn full_logits_sha256_available(self) -> bool {
+        matches!(self, Self::FullLogitsDownloadCpuSampler)
+    }
+
+    fn full_logits_sha256_source(self) -> &'static str {
+        match self {
+            Self::FullLogitsDownloadCpuSampler => "full_logits_download",
+            Self::DeviceTopKCudaSampler => "not_recorded_reduced_device_top_k_sampler",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -3977,8 +4032,14 @@ fn run_qwen_short_decode_with_loaded_model(
     let mut forward_ms_total = 0.0;
     let mut logits_ms_total = 0.0;
     let mut logits_download_ms_total = 0.0;
+    let mut logits_transfer_bytes_total = 0_u64;
     let mut logits_all_cuda_resident = true;
     let mut logits_len = 0_usize;
+    let logits_transfer_mode = if require_cuda {
+        DenseQwenLogitsTransferMode::DeviceTopKCudaSampler
+    } else {
+        DenseQwenLogitsTransferMode::FullLogitsDownloadCpuSampler
+    };
 
     for index in 0..max_new_tokens {
         let step_start = std::time::Instant::now();
@@ -4016,26 +4077,25 @@ fn run_qwen_short_decode_with_loaded_model(
         }
 
         let logits_download_start = std::time::Instant::now();
-        let logits_vec = extract_logits_2d_local(&logits)?;
+        let logits_sample = sample_dense_qwen_logits_local(&logits, top_k, logits_transfer_mode)?;
         let logits_download_ms = elapsed_ms_f64(logits_download_start);
         logits_download_ms_total += logits_download_ms;
-        logits_len = logits_vec.len();
-        let top_k_entries = dense_qwen_top_k(&logits_vec, top_k);
-        let Some(selected) = top_k_entries.first().map(|entry| entry.token_id) else {
-            bail!("short-decode proof could not select a greedy token from logits at step {index}");
-        };
-        let top_k_rank_sha256 = dense_qwen_top_k_rank_sha256(&top_k_entries)?;
-        let logits_sha256 = sha256_f32(&logits_vec);
+        logits_transfer_bytes_total = logits_transfer_bytes_total
+            .checked_add(logits_sample.transfer_bytes)
+            .ok_or_else(|| anyhow!("dense Qwen logits transfer byte count overflowed"))?;
+        logits_len = logits_sample.logits_len;
         let decode_ms = elapsed_ms_f64(step_start);
 
-        generated_token_ids.push(selected);
+        generated_token_ids.push(logits_sample.selected_token_id);
         steps.push(DenseQwenShortDecodeStep {
             index,
-            selected_token_id: selected,
-            top_k: top_k_entries,
-            top_k_rank_sha256,
-            logits_sha256,
+            selected_token_id: logits_sample.selected_token_id,
+            top_k: logits_sample.top_k,
+            top_k_rank_sha256: logits_sample.top_k_rank_sha256,
+            logits_sha256: logits_sample.logits_sha256,
             logits_len,
+            logits_transfer_bytes: logits_sample.transfer_bytes,
+            logits_transfer_mode: logits_sample.transfer_mode,
             embed_ms,
             forward_ms,
             logits_ms,
@@ -4043,7 +4103,7 @@ fn run_qwen_short_decode_with_loaded_model(
             decode_ms,
             logits_device_is_cuda,
         });
-        current_token = selected;
+        current_token = logits_sample.selected_token_id;
     }
 
     let generated_token_ids_sha256 = sha256_u32(&generated_token_ids);
@@ -4064,8 +4124,10 @@ fn run_qwen_short_decode_with_loaded_model(
         forward_ms_total,
         logits_ms_total,
         logits_download_ms_total,
+        logits_transfer_bytes_total,
         logits_len,
         logits_all_cuda_resident,
+        logits_transfer_mode,
     })
 }
 
@@ -4120,6 +4182,100 @@ fn extract_logits_2d_local(tensor: &ConcreteTensor) -> Result<Vec<f32>> {
             Ok(batch_0.to_vec1::<f32>()?)
         }
         ConcreteTensor::Mock(_) => bail!("dense Qwen proof refuses mock logits"),
+    }
+}
+
+fn sample_dense_qwen_logits_local(
+    tensor: &ConcreteTensor,
+    top_k: usize,
+    transfer_mode: DenseQwenLogitsTransferMode,
+) -> Result<DenseQwenLogitsSample> {
+    if top_k == 0 {
+        bail!("dense Qwen logits sampling requires top_k > 0");
+    }
+
+    match transfer_mode {
+        DenseQwenLogitsTransferMode::FullLogitsDownloadCpuSampler => {
+            let logits_vec = extract_logits_2d_local(tensor)?;
+            let logits_len = logits_vec.len();
+            let top_k_entries = dense_qwen_top_k(&logits_vec, top_k);
+            let Some(selected_token_id) = top_k_entries.first().map(|entry| entry.token_id) else {
+                bail!("dense Qwen logits sampling could not select a greedy token");
+            };
+            let top_k_rank_sha256 = dense_qwen_top_k_rank_sha256(&top_k_entries)?;
+            let logits_sha256 = sha256_f32(&logits_vec);
+            let transfer_bytes =
+                checked_u64_mul(logits_len as u64, 4, "full logits transfer bytes")?;
+
+            Ok(DenseQwenLogitsSample {
+                selected_token_id,
+                top_k: top_k_entries,
+                top_k_rank_sha256,
+                logits_len,
+                logits_sha256: Some(logits_sha256),
+                transfer_bytes,
+                transfer_mode,
+            })
+        }
+        DenseQwenLogitsTransferMode::DeviceTopKCudaSampler => {
+            let shape = tensor.shape();
+            if shape.len() != 2 {
+                bail!("expected 2D logits tensor [B,V], got shape {shape:?}");
+            }
+            let logits_len = *shape
+                .get(1)
+                .ok_or_else(|| anyhow!("dense Qwen logits tensor is missing vocab dimension"))?;
+            let observed_top_k = top_k.min(logits_len);
+            if observed_top_k == 0 {
+                bail!("dense Qwen device top-k sampling requires a non-empty logits vector");
+            }
+
+            let (top_values, top_ids) = match tensor {
+                ConcreteTensor::BitNet(tensor) => {
+                    let batch_0 = tensor.as_candle().i(0)?;
+                    let batch_0 = if batch_0.dtype() == DType::F32 {
+                        batch_0
+                    } else {
+                        batch_0.to_dtype(DType::F32)?
+                    };
+                    let (sorted_values, sorted_ids) = batch_0.sort_last_dim(false)?;
+                    let top_values =
+                        sorted_values.narrow(0, 0, observed_top_k)?.to_vec1::<f32>()?;
+                    let top_ids = sorted_ids.narrow(0, 0, observed_top_k)?.to_vec1::<u32>()?;
+                    (top_values, top_ids)
+                }
+                ConcreteTensor::Mock(_) => bail!("dense Qwen proof refuses mock logits"),
+            };
+            if top_values.len() != observed_top_k || top_ids.len() != observed_top_k {
+                bail!("dense Qwen device top-k sampler returned inconsistent top-k lengths");
+            }
+
+            let mut top_k_entries = Vec::with_capacity(observed_top_k);
+            for (rank, (token_id, value)) in
+                top_ids.into_iter().zip(top_values.into_iter()).enumerate()
+            {
+                if !value.is_finite() {
+                    bail!("dense Qwen device top-k sampler returned a non-finite logit");
+                }
+                top_k_entries.push(DenseQwenOneTokenTopKEntry { rank: rank + 1, token_id, value });
+            }
+            let Some(selected_token_id) = top_k_entries.first().map(|entry| entry.token_id) else {
+                bail!("dense Qwen device top-k sampler could not select a greedy token");
+            };
+            let top_k_rank_sha256 = dense_qwen_top_k_rank_sha256(&top_k_entries)?;
+            let transfer_bytes =
+                checked_u64_mul(observed_top_k as u64, 12, "device top-k transfer bytes per step")?;
+
+            Ok(DenseQwenLogitsSample {
+                selected_token_id,
+                top_k: top_k_entries,
+                top_k_rank_sha256,
+                logits_len,
+                logits_sha256: None,
+                transfer_bytes,
+                transfer_mode,
+            })
+        }
     }
 }
 
@@ -4245,6 +4401,16 @@ fn dense_qwen_short_decode_steps_json(
                     .iter()
                     .zip(cuda_step.top_k.iter())
                     .all(|(left, right)| left.token_id == right.token_id);
+            let cpu_logits_sha256 = cpu_step
+                .logits_sha256
+                .as_ref()
+                .map(|value| Value::String(value.clone()))
+                .unwrap_or(Value::Null);
+            let cuda_logits_sha256 = cuda_step
+                .logits_sha256
+                .as_ref()
+                .map(|value| Value::String(value.clone()))
+                .unwrap_or(Value::Null);
             json!({
                 "index": cpu_step.index as u64,
                 "cpu_selected_token_id": cpu_step.selected_token_id as u64,
@@ -4252,8 +4418,12 @@ fn dense_qwen_short_decode_steps_json(
                 "selected_token_match": cpu_step.selected_token_id == cuda_step.selected_token_id,
                 "cpu_logits_top_k_sha256": cpu_step.top_k_rank_sha256,
                 "cuda_logits_top_k_sha256": cuda_step.top_k_rank_sha256,
-                "cpu_logits_sha256": cpu_step.logits_sha256,
-                "cuda_logits_sha256": cuda_step.logits_sha256,
+                "cpu_logits_sha256": cpu_logits_sha256,
+                "cuda_logits_sha256": cuda_logits_sha256,
+                "cpu_logits_sha256_available": cpu_step.logits_transfer_mode.full_logits_sha256_available(),
+                "cuda_logits_sha256_available": cuda_step.logits_transfer_mode.full_logits_sha256_available(),
+                "cpu_logits_sha256_source": cpu_step.logits_transfer_mode.full_logits_sha256_source(),
+                "cuda_logits_sha256_source": cuda_step.logits_transfer_mode.full_logits_sha256_source(),
                 "logits_vector_length": cuda_step.logits_len as u64,
                 "cpu_top_k": dense_qwen_top_k_json(&cpu_step.top_k),
                 "cuda_top_k": dense_qwen_top_k_json(&cuda_step.top_k),
@@ -4266,7 +4436,10 @@ fn dense_qwen_short_decode_steps_json(
                     "logits_ms": cuda_step.logits_ms,
                     "logits_download_ms": cuda_step.logits_download_ms,
                     "decode_ms": cuda_step.decode_ms,
-                    "logits_device_is_cuda": cuda_step.logits_device_is_cuda
+                    "logits_device_is_cuda": cuda_step.logits_device_is_cuda,
+                    "logits_transfer_bytes": cuda_step.logits_transfer_bytes as u64,
+                    "logits_transfer_mode": cuda_step.logits_transfer_mode.transfer_mode(),
+                    "sampling_location": cuda_step.logits_transfer_mode.sampling_location()
                 }
             })
         })
@@ -6426,6 +6599,7 @@ fn dense_qwen_logits_transfer_reduction_json(
     generated_tokens: u64,
     observed_top_k: usize,
     actual_device_to_host_bytes: u64,
+    transfer_mode: DenseQwenLogitsTransferMode,
 ) -> Result<Value> {
     if logits_len == 0 {
         bail!("dense Qwen logits transfer reduction requires a non-empty logits vector");
@@ -6444,12 +6618,6 @@ fn dense_qwen_logits_transfer_reduction_json(
         generated_tokens,
         "full logits download bytes",
     )?;
-    if actual_device_to_host_bytes != full_logits_download_bytes {
-        bail!(
-            "dense Qwen current transfer accounting must match full logits download bytes until device top-k transfer lands"
-        );
-    }
-
     let top_k_result_bytes_per_step_floor =
         checked_u64_mul(observed_top_k as u64, 12, "top-k result bytes per step floor")?;
     let top_k_result_bytes_total_floor = checked_u64_mul(
@@ -6459,12 +6627,38 @@ fn dense_qwen_logits_transfer_reduction_json(
     )?;
     let selected_token_bytes_total_floor =
         checked_u64_mul(4, generated_tokens, "selected-token bytes total floor")?;
+    let device_to_host_bytes_reduced = match transfer_mode {
+        DenseQwenLogitsTransferMode::FullLogitsDownloadCpuSampler => {
+            if actual_device_to_host_bytes != full_logits_download_bytes {
+                bail!(
+                    "dense Qwen full-logits transfer accounting must match full logits download bytes"
+                );
+            }
+            false
+        }
+        DenseQwenLogitsTransferMode::DeviceTopKCudaSampler => {
+            if actual_device_to_host_bytes >= full_logits_download_bytes {
+                bail!("dense Qwen device top-k transfer accounting must be lower than full logits");
+            }
+            true
+        }
+    };
+    let bytes_saved_vs_full_logits = if device_to_host_bytes_reduced {
+        full_logits_download_bytes - actual_device_to_host_bytes
+    } else {
+        0
+    };
+    let reduction_blocker = if device_to_host_bytes_reduced {
+        Value::Null
+    } else {
+        json!("cpu_sampler_requires_full_logits_until_device_top_k_sampler")
+    };
 
     Ok(json!({
         "schema": 1,
         "scope": "dense_qwen_logits_top_k_transfer",
-        "transfer_mode": "full_logits_download_cpu_sampler",
-        "sampling_location": "cpu",
+        "transfer_mode": transfer_mode.transfer_mode(),
+        "sampling_location": transfer_mode.sampling_location(),
         "requested_top_k": observed_top_k as u64,
         "generated_tokens_count": generated_tokens,
         "logits_vector_length": logits_len as u64,
@@ -6475,12 +6669,12 @@ fn dense_qwen_logits_transfer_reduction_json(
         "top_k_result_bytes_per_step_floor": top_k_result_bytes_per_step_floor,
         "top_k_result_bytes_total_floor": top_k_result_bytes_total_floor,
         "selected_token_bytes_total_floor": selected_token_bytes_total_floor,
-        "device_to_host_bytes_reduced": false,
-        "bytes_saved_vs_full_logits": 0_u64,
+        "device_to_host_bytes_reduced": device_to_host_bytes_reduced,
+        "bytes_saved_vs_full_logits": bytes_saved_vs_full_logits,
         "selected_token_equality_preserved": true,
         "top_k_evidence_preserved": true,
         "quality_receipts_unchanged": true,
-        "reduction_blocker": "cpu_sampler_requires_full_logits_until_device_top_k_sampler"
+        "reduction_blocker": reduction_blocker
     }))
 }
 
@@ -11234,11 +11428,10 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     let model_bytes = std::fs::metadata(model_path)
         .with_context(|| format!("failed to stat {}", model_path.display()))?
         .len();
-    let logits_transfer_bytes = checked_u64_mul(
-        checked_u64_mul(cuda.logits_len as u64, 4, "single logits transfer bytes")?,
-        generated_count_u64,
-        "short-decode logits transfer bytes",
-    )?;
+    let logits_transfer_bytes = cuda.logits_transfer_bytes_total;
+    if logits_transfer_bytes == 0 {
+        bail!("dense Qwen short-decode receipt requires measured logits transfer bytes");
+    }
     let kernel_time_ms = cuda.prefill_ms + cuda.forward_ms_total + cuda.logits_ms_total;
     let kernel_stats = json!([
         {
@@ -11291,6 +11484,7 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
         generated_count_u64,
         observed_top_k,
         stats_d2h,
+        cuda.logits_transfer_mode,
     )?;
     let top_k_all_match = cpu.top_k_steps_sha256 == cuda.top_k_steps_sha256;
     let first_top_k_divergence = first_top_k_divergence_index(&cpu.steps, &cuda.steps);
@@ -11472,7 +11666,7 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
             "host_to_device_ms_scope": dense_qwen_h2d_timing_scope(),
             "host_to_device_ms_includes_non_transfer_overhead": true,
             "device_to_host_ms": cuda.logits_download_ms_total,
-            "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
+            "device_to_host_ms_source": cuda.logits_transfer_mode.d2h_timing_source(),
             "transfer_timing_status": dense_qwen_transfer_timing_status(),
             "kernel_invocations": runtime_invocations,
             "kernel_launches": stats_launches,
@@ -11502,7 +11696,7 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
                 "host_to_device_ms_scope": dense_qwen_h2d_timing_scope(),
                 "host_to_device_ms_includes_non_transfer_overhead": true,
                 "device_to_host_ms": cuda.logits_download_ms_total,
-                "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
+                "device_to_host_ms_source": cuda.logits_transfer_mode.d2h_timing_source(),
                 "transfer_timing_status": dense_qwen_transfer_timing_status(),
                 "kernel_invocations": runtime_invocations,
                 "kernel_launches": stats_launches
@@ -11685,11 +11879,21 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
         .with_context(|| format!("failed to stat {}", model_path.display()))?
         .len();
     let logits_len = cuda.turns.iter().map(|turn| turn.logits_len).max().unwrap_or(0);
-    let logits_transfer_bytes = checked_u64_mul(
-        checked_u64_mul(logits_len as u64, 4, "single logits transfer bytes")?,
-        generated_tokens_total,
-        "warm-session logits transfer bytes",
-    )?;
+    let logits_transfer_mode = cuda
+        .turns
+        .first()
+        .map(|turn| turn.logits_transfer_mode)
+        .ok_or_else(|| anyhow!("dense Qwen warm-session receipt requires turns"))?;
+    if cuda.turns.iter().any(|turn| turn.logits_transfer_mode != logits_transfer_mode) {
+        bail!("dense Qwen warm-session receipt requires uniform logits transfer mode");
+    }
+    let logits_transfer_bytes = cuda.turns.iter().try_fold(0_u64, |acc, turn| {
+        acc.checked_add(turn.logits_transfer_bytes_total)
+            .ok_or_else(|| anyhow!("dense Qwen warm-session logits transfer bytes overflowed"))
+    })?;
+    if logits_transfer_bytes == 0 {
+        bail!("dense Qwen warm-session receipt requires measured logits transfer bytes");
+    }
     let kernel_time_ms = cuda
         .turns
         .iter()
@@ -11719,6 +11923,7 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
         generated_tokens_total,
         observed_top_k,
         stats_d2h,
+        logits_transfer_mode,
     )?;
 
     let cpu_generated_all = cpu
@@ -12047,7 +12252,7 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             "host_to_device_ms_scope": dense_qwen_h2d_timing_scope(),
             "host_to_device_ms_includes_non_transfer_overhead": true,
             "device_to_host_ms": cuda.turns.iter().map(|turn| turn.logits_download_ms_total).sum::<f64>(),
-            "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
+            "device_to_host_ms_source": logits_transfer_mode.d2h_timing_source(),
             "transfer_timing_status": dense_qwen_transfer_timing_status(),
             "kernel_invocations": runtime_invocations,
             "kernel_launches": stats_launches,
@@ -12088,7 +12293,7 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
                 "host_to_device_ms_scope": dense_qwen_h2d_timing_scope(),
                 "host_to_device_ms_includes_non_transfer_overhead": true,
                 "device_to_host_ms": cuda.turns.iter().map(|turn| turn.logits_download_ms_total).sum::<f64>(),
-                "device_to_host_ms_source": dense_qwen_d2h_timing_source(),
+                "device_to_host_ms_source": logits_transfer_mode.d2h_timing_source(),
                 "transfer_timing_status": dense_qwen_transfer_timing_status(),
                 "kernel_invocations": runtime_invocations,
                 "kernel_launches": stats_launches

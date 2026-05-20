@@ -22,6 +22,14 @@ model readiness, receipt explanation, or support bundles:
 4. [CUDA Support Issue](BITNET-SPEC-CUDA-SUPPORT-ISSUE.md)
    - Defines the receipt-backed CUDA issue template contract, required support
      bundle field, JSON rendering, and claim-boundary checklist.
+5. [Claim-Boundary Review](BITNET-SPEC-CLAIM-BOUNDARY-REVIEW.md)
+   - Defines the cross-cutting PR review rule that diagnostics, route
+     visibility, one-profile receipts, support bundles, and microbench evidence
+     do not promote support claims without exact receipts.
+6. [Proof-Family Non-Inheritance](BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE.md)
+   - Defines the common rule that proof does not transfer across model family,
+     artifact, tokenizer/prompt authority, backend, route, hardware profile,
+     server profile, benchmark profile, or residency class.
 
 Do not remove or repurpose support JSON fields without a schema-version bump.
 Do not let status, receipt explanation, or support bundles infer speedup,

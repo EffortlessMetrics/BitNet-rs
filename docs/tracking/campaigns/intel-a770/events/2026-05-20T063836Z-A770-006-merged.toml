@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T06:38:36Z"
+campaign = "intel-a770"
+item = "A770-006"
+event = "merged"
+pr = 6110
+head_sha = "65aeb1a7dda1a18d7fad3e09b644c31321749c78"
+merge_sha = "e98d4fb6574087a83ed47e6dae7316d9dc12f40d"
+branch = "codex/intel-a770/A770-006-opencl-parity"
+actor = "codex"
+
+notes = [
+  "Merged PR #6110, adding the selected-device A770 OpenCL matmul_i2s CPU parity receipt.",
+  "The committed receipt records fallback_used=false and exact CPU/OpenCL parity for the diagnostic matmul_i2s kernel path.",
+  "No official BitNet QK256 production semantics, BitNet inference, trusted-partial acceleration, full residency, route promotion, or performance speedup claim is made.",
+  "A770-007 is now unblocked as the next proposed selected-device receipt identity item.",
+]

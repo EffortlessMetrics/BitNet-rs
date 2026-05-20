@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-20T12:15:00Z",
+  "created_utc": "2026-05-20T06:20:10Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -18,10 +18,14 @@
     "cold_warm_benchmark_indexed": true,
     "durability_bundle_indexed": true,
     "bitnet_semantic_intake_indexed": true,
+    "bitnet_cpu_reference_evidence_indexed": true,
+    "bitnet_cpu_reference_evidence_ready": true,
     "power_profile_evidence_indexed": true,
     "thermal_temperature_availability_indexed": true,
     "thermal_temperature_available": false,
     "thermal_usable_temperature_reading_count": 0,
+    "arc_npu_bounded_evidence_indexed": true,
+    "arc_npu_bounded_evidence_ready": true,
     "ask_short_ask_receipt_indexed": true,
     "ask_short_auto_ask_ready": true,
     "ask_normal_ask_receipt_indexed": true,
@@ -216,6 +220,12 @@
       "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
       "route is not promoted for profile `low_power`"
     ],
+    "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
+    "next_required_evidence": [
+      "rerun telemetry-context --require-battery on battery power before collecting low_power route samples",
+      "collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix",
+      "rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision"
+    ],
     "new_inference_executed": false,
     "fallback_used": false,
     "route_promotion_changed": false,
@@ -223,7 +233,7 @@
     "power_advantage_claim": false,
     "acceleration_claim": false,
     "bitnet_qk256_i2s_claim": false,
-    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile) | route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`",
+    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile) | route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`; next_required_evidence=rerun telemetry-context --require-battery on battery power before collecting low_power route samples | collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix | rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision; operator_runbook=docs/hardware/intel-258v-low-power-battery-runbook.md",
     "regression_ready": true,
     "gaps": []
   },
@@ -931,6 +941,8 @@
         "energy_proxy_recorded=true",
         "energy_proxy_source=energy_proxy_receipt",
         "thermal_context_recorded=true",
+        "operator_runbook=docs/hardware/intel-258v-low-power-battery-runbook.md",
+        "next_required_evidence=rerun telemetry-context --require-battery on battery power before collecting low_power route samples | collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix | rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision | record thermal temperatures if available; current thermal evidence is zone visibility only | only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass",
         "claim_boundary_preserved=true",
         "blocker_count=7"
       ]
@@ -1037,6 +1049,8 @@
         "why_not_cpu=route is not promoted for profile `low_power`",
         "why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`",
         "why_not_npu=route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile) | route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`",
+        "operator_runbook=docs/hardware/intel-258v-low-power-battery-runbook.md",
+        "next_required_evidence=rerun telemetry-context --require-battery on battery power before collecting low_power route samples | collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix | rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision",
         "new_inference_executed=false",
         "fallback_used=false",
         "blocked_receipt_ready=true"

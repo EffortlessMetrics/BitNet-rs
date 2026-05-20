@@ -29,15 +29,56 @@ use std::collections::HashMap;
 
 pub type DenseLinearRuntimeHookRegistry = HashMap<String, DenseLinearRuntimeHookDescriptor>;
 
+/// Evidence-scoped packed Q8_0 payload for a dense-linear runtime hook.
+///
+/// This carries bytes only when a caller intentionally wires one tensor path
+/// for before/after proof. Runtime compute stays disabled until receipts prove
+/// generated-ID/text preservation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DenseLinearPackedQ8Payload {
+    pub tensor_name: String,
+    pub packed_q8_bytes: std::sync::Arc<[u8]>,
+    pub q8_block_size: usize,
+    pub q8_block_count: usize,
+    pub matrix_rows: usize,
+    pub matrix_cols: usize,
+}
+
+impl DenseLinearPackedQ8Payload {
+    pub fn payload_len(&self) -> usize {
+        self.packed_q8_bytes.len()
+    }
+
+    pub fn expected_q8_payload_len(&self) -> Option<usize> {
+        self.q8_block_count.checked_mul(2 + self.q8_block_size)
+    }
+
+    pub fn shape_matches_matvec_contract(&self) -> bool {
+        self.matrix_rows > 0
+            && self.matrix_cols > 0
+            && self.q8_block_size == 32
+            && self
+                .matrix_rows
+                .checked_mul(self.matrix_cols)
+                .is_some_and(|values| self.q8_block_count == values.div_ceil(self.q8_block_size))
+    }
+
+    pub fn payload_len_matches_contract(&self) -> bool {
+        self.expected_q8_payload_len().is_some_and(|expected| expected == self.payload_len())
+    }
+}
+
 /// Descriptor passed from model loading into transformer dense-linear calls.
 ///
-/// This is intentionally metadata-only. It lets production transformer code
-/// observe the selected Q8_0 sidecar candidate without enabling packed compute.
+/// Production loading may still pass metadata-only descriptors. A later
+/// evidence-scoped slice can attach `packed_q8_payload` for exactly one tensor
+/// path, but this descriptor still does not enable packed compute by itself.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DenseLinearRuntimeHookDescriptor {
     pub tensor_name: String,
     pub role: String,
     pub sidecar_payload_sha256: Option<String>,
+    pub packed_q8_payload: Option<DenseLinearPackedQ8Payload>,
     pub runtime_compute_enabled: bool,
 }
 
@@ -49,6 +90,12 @@ pub struct DenseLinearRuntimeHookBoundary {
     pub sidecar_descriptor_present: bool,
     pub sidecar_role: Option<String>,
     pub sidecar_payload_sha256: Option<String>,
+    pub sidecar_payload_bytes_available: bool,
+    pub sidecar_payload_bytes: Option<usize>,
+    pub sidecar_q8_block_count: Option<usize>,
+    pub sidecar_matrix_rows: Option<usize>,
+    pub sidecar_matrix_cols: Option<usize>,
+    pub sidecar_payload_contract_valid: bool,
     pub runtime_compute_enabled: bool,
     pub eager_f32_runtime_preserved: bool,
     pub dense_runtime_replaced: bool,
@@ -66,6 +113,12 @@ impl DenseLinearRuntimeHookBoundary {
             sidecar_descriptor_present: false,
             sidecar_role: None,
             sidecar_payload_sha256: None,
+            sidecar_payload_bytes_available: false,
+            sidecar_payload_bytes: None,
+            sidecar_q8_block_count: None,
+            sidecar_matrix_rows: None,
+            sidecar_matrix_cols: None,
+            sidecar_payload_contract_valid: false,
             runtime_compute_enabled: false,
             eager_f32_runtime_preserved: true,
             dense_runtime_replaced: false,
@@ -79,6 +132,7 @@ impl DenseLinearRuntimeHookBoundary {
         tensor_name: impl Into<String>,
         descriptor: &DenseLinearRuntimeHookDescriptor,
     ) -> Self {
+        let payload = descriptor.packed_q8_payload.as_ref();
         Self {
             tensor_name: tensor_name.into(),
             selected_path: "eager_f32_candle",
@@ -86,6 +140,16 @@ impl DenseLinearRuntimeHookBoundary {
             sidecar_descriptor_present: true,
             sidecar_role: Some(descriptor.role.clone()),
             sidecar_payload_sha256: descriptor.sidecar_payload_sha256.clone(),
+            sidecar_payload_bytes_available: payload.is_some(),
+            sidecar_payload_bytes: payload.map(DenseLinearPackedQ8Payload::payload_len),
+            sidecar_q8_block_count: payload.map(|payload| payload.q8_block_count),
+            sidecar_matrix_rows: payload.map(|payload| payload.matrix_rows),
+            sidecar_matrix_cols: payload.map(|payload| payload.matrix_cols),
+            sidecar_payload_contract_valid: payload.is_some_and(|payload| {
+                payload.tensor_name == descriptor.tensor_name
+                    && payload.shape_matches_matvec_contract()
+                    && payload.payload_len_matches_contract()
+            }),
             runtime_compute_enabled: false,
             eager_f32_runtime_preserved: true,
             dense_runtime_replaced: false,

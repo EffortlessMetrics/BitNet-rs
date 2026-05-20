@@ -853,6 +853,50 @@ the first repaired 250-case baseline until a second repaired receipt exists.
 whether the next honest step is 500-case expansion, continued repair, or
 freezing the current BitNet quality envelope.
 
+`M4-BITNET-EX-015` now adds the second repaired 250-case BitNet CPU/NEON
+receipt:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T0133Z/bitnet-eval-250-repaired/answer-corpus.json
+```
+
+The run used the same accepted Microsoft I2_S GGUF SHA
+`4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162`,
+external tokenizer SHA
+`e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7`,
+`bitnetcpp-answer` prompt template, strict tokenizer, greedy deterministic
+generation, and `apple-m4-cpu-neon` backend with `fallback_used=false`.
+`mac receipts-check` passed for both the aggregate receipt and receipt
+directory. The aggregate records 250/250 child receipts, 2,043 generated
+tokens, and zero timeouts.
+
+Matched-context regression against
+`2026-05-18T1806Z/bitnet-eval-250-repaired/answer-corpus.json` is advisory and
+`matched_context=true`, but it reports quality regressions: quality summary
+199/250 versus 205/250 baseline, scoring summary 202/250 versus 210/250
+baseline, and 26 quality/task-family warnings. The next decision is therefore
+**keep repairing**, not 500-case expansion and not freezing a stronger BitNet
+quality envelope.
+
+| Family | Current Passed / Total | Baseline Passed / Total | Delta |
+| --- | ---: | ---: | ---: |
+| arithmetic_exact | 14 / 15 | 14 / 15 | 0 |
+| numeric_tolerance | 21 / 35 | 24 / 35 | -3 |
+| fixed_table_qa | 30 / 35 | 30 / 35 | 0 |
+| format_constrained_json | 19 / 20 | 20 / 20 | -1 |
+| closed_label_classification | 17 / 20 | 18 / 20 | -1 |
+| synthetic_extraction | 19 / 25 | 19 / 25 | 0 |
+| ordering_sorting | 16 / 20 | 17 / 20 | -1 |
+| rewrite_normalized | 15 / 20 | 15 / 20 | 0 |
+| constrained_summary | 27 / 30 | 26 / 30 | +1 |
+| required_forbidden_tokens | 21 / 30 | 22 / 30 | -1 |
+
+The observed wall run lasted about 5h08m from harness start to aggregate
+timestamp. Case latency distribution was p50 20.2s, p90 58.2s, p99 105.2s, and
+max 117.7s; the slowest cases were constrained-summary and
+required/forbidden-token prompts. This is timing evidence for this repaired
+BitNet eval run only, not a broad BitNet performance claim.
+
 `M4-BITNET-EX-013` now stages the repair as a dry-run-only corpus/scorer
 contract update. The repaired 250-case corpus is version `2.1.0` and keeps the
 same accepted Microsoft I2_S GGUF identity, external tokenizer authority, and
@@ -1081,6 +1125,48 @@ scheduled trend retention
 stale-identity aging
 ```
 
+`M4-STABILITY-001` records the first live mixed dense-model switch soak:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch.json
+```
+
+The release-mode run exercises the three supported dense Qwen M4 identities in
+sequence with `resident_25` child summaries per model:
+
+| Model | Prompts | Generated tokens | Peak memory |
+|---|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 25 | 195 | 3756.375 MB |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 25 | 217 | 3615.313 MB |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 25 | 195 | 6416.563 MB |
+
+The aggregate receipt validates with `bitnet mac receipts-check`, records
+`prompt_count=75`, `generated_tokens=607`,
+`requested_backend=selected_backend=apple-m4-cpu-neon`, `runtime_api=cpu`,
+`fallback_used=false`, child receipt separation for each model identity, and
+parent process peak drift of `1.922 MB`. This is bounded dense SLM stability
+evidence for the recorded identities only. It is not BitNet evidence, not a
+broad benchmark, and not a Metal, QK256, Neural Engine, MPSGraph, MacBook,
+speedup, broad quality, or broad performance claim.
+
+`M4-CONTEXT-001` implements long-context guardrails for the M4 operator routes.
+Dense SLM `mac ask`, dense `mac chat`, dense `mac chat-smoke`, and dense
+`mac serve` classify requests against the recorded short, `context_1k`, and
+`context_4k` evidence envelopes. Requests beyond the recorded dense
+`context_4k` envelope fail closed with an `apple_m4_context_guardrail` receipt
+instead of falling through to cache lookup or generation. BitNet `mac ask`,
+`mac bitnet-warm`, and gated BitNet chat/serve routes classify requests against
+the bounded accepted-artifact ask/warm prompt evidence and fail closed beyond
+that boundary.
+
+The guardrail receipt records `context_envelope` fields for route, model family,
+model id, operator class, status, prompt-token count, exact-vs-estimated token
+authority, max-new-token budget, recorded evidence profile, and claim boundary.
+This is a routing and overclaim-prevention contract only; it does not prove new
+long-context quality, enable unsupported contexts, enable BitNet chat or serve,
+or widen Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality,
+or broad performance claims.
+
 CLI proof is route-specific. Dense SLM ask/chat conformance needs bounded
 multi-turn history, timeout/cancel behavior, per-turn receipts, generated text,
 token IDs, backend, fallback state, and model/tokenizer identity before the CLI
@@ -1178,6 +1264,15 @@ batch
 disabled
 unsupported
 ```
+
+`M4-OPS-SLO-001` publishes those classes in
+`docs/slm/apple-m4-operator-envelope-v3.md`. The class map ties each dense Qwen
+ask/chat route, dense local-server route, BitNet one-shot/warm route, gated
+BitNet chat/serve route, and unsupported Apple backend route to the exact
+committed evidence identity, max context or profile guidance, timing
+expectation, and memory/disk posture. The map is an operator expectation layer
+only; it does not enable a disabled route or turn bounded receipts into broad
+quality or performance claims.
 
 ## Release Gates
 

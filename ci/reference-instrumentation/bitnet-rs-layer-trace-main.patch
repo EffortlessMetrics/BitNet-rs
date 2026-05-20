@@ -1,0 +1,1748 @@
+# Upstream-Issue: not-applicable; BitNet-rs target-local diagnostic instrumentation only
+# Reason: Emit first-output BitNet graph stage trace stats from llama-cli generation for Rust/reference divergence localization
+# Status: under-review
+# Created: 2026-05-15
+# Review-By: 2026-06-15
+# Author: BitNet-rs maintainers
+
+diff --git a/src/llama.cpp b/src/llama.cpp
+index 666fcc4d..23ee29ff 100644
+--- a/src/llama.cpp
++++ b/src/llama.cpp
+@@ -74,9 +74,11 @@
+ #include <cstddef>
+ #include <cstdint>
+ #include <cstdio>
++#include <cstdlib>
+ #include <cstring>
+ #include <ctime>
+ #include <fstream>
++#include <iomanip>
+ #include <functional>
+ #include <future>
+ #include <initializer_list>
+@@ -84,6 +86,7 @@
+ #include <map>
+ #include <memory>
+ #include <mutex>
++#include <limits>
+ #include <numeric>
+ #include <set>
+ #include <sstream>
+@@ -3441,6 +3444,1655 @@ struct llama_context {
+     struct ggml_tensor * inp_KQ_mask_cross; // F32 [n_outputs_enc, n_batch]
+ };
+
++static bool bitnet_rs_reference_layer_trace_parse_layer_suffix(const char * name, size_t * base_len, int * layer) {
++    if (name == nullptr || name[0] == '\0') {
++        return false;
++    }
++    const char * dash = strrchr(name, '-');
++    if (dash == nullptr || dash == name || dash[1] == '\0') {
++        return false;
++    }
++    int parsed = 0;
++    for (const char * p = dash + 1; *p != '\0'; ++p) {
++        if (*p < '0' || *p > '9') {
++            return false;
++        }
++        parsed = parsed * 10 + (*p - '0');
++    }
++    if (base_len != nullptr) {
++        *base_len = (size_t) (dash - name);
++    }
++    if (layer != nullptr) {
++        *layer = parsed;
++    }
++    return true;
++}
++
++static int bitnet_rs_reference_layer_trace_requested_layer() {
++    const char * env = std::getenv("BITNET_RS_REFERENCE_LAYER_TRACE_LAYER");
++    if (env == nullptr || env[0] == '\0') {
++        return 0;
++    }
++    int parsed = 0;
++    for (const char * p = env; *p != '\0'; ++p) {
++        if (*p < '0' || *p > '9') {
++            return 0;
++        }
++        parsed = parsed * 10 + (*p - '0');
++    }
++    return parsed;
++}
++
++static const char * bitnet_rs_reference_layer_trace_layer_stage(const char * name, int * layer) {
++    size_t base_len = 0;
++    int parsed_layer = -1;
++    if (!bitnet_rs_reference_layer_trace_parse_layer_suffix(name, &base_len, &parsed_layer)) {
++        return nullptr;
++    }
++    static const std::pair<const char *, const char *> stages[] = {
++        {"attn_norm", "attn_norm"},
++        {"Qcur", "Qcur"},
++        {"Kcur", "Kcur"},
++        {"Vcur", "Vcur"},
++        {"q", "q"},
++        {"kq", "kq"},
++        {"kq_soft_max_ext", "kq_soft_max_ext"},
++        {"k", "k"},
++        {"v", "v"},
++        {"kqv", "kqv"},
++        {"kqv_merged", "kqv_merged"},
++        {"kqv_merged_cont", "kqv_merged_cont"},
++        {"attn_value_mix", "attn_value_mix"},
++        {"attn_sub_norm", "attn_sub_norm"},
++        {"attn_o_out", "attn_o_out"},
++        {"ffn_inp", "ffn_inp"},
++        {"ffn_norm_core", "ffn_norm_core"},
++        {"ffn_norm", "ffn_norm"},
++        {"ffn_up", "ffn_up"},
++        {"ffn_gate", "ffn_gate"},
++        {"ffn_relu", "ffn_relu"},
++        {"ffn_sqr(relu)", "ffn_relu_sqr"},
++        {"ffn_gate_par", "ffn_gate_par"},
++        {"ffn_out", "ffn_out"},
++        {"ffn_sub_norm", "ffn_sub_norm"},
++        {"ffn_down", "ffn_down"},
++        {"l_out", "l_out"},
++    };
++    for (const auto & stage : stages) {
++        if (strlen(stage.first) == base_len && strncmp(name, stage.first, base_len) == 0) {
++            if (layer != nullptr) {
++                *layer = parsed_layer;
++            }
++            return stage.second;
++        }
++    }
++    return nullptr;
++}
++
++static bool bitnet_rs_reference_layer_trace_target(const char * name) {
++    if (name == nullptr || name[0] == '\0') {
++        return false;
++    }
++
++    int layer = -1;
++    const char * stage = bitnet_rs_reference_layer_trace_layer_stage(name, &layer);
++    if (stage != nullptr) {
++        return strcmp(stage, "l_out") == 0 || layer == bitnet_rs_reference_layer_trace_requested_layer();
++    }
++
++    if (strcmp(name, "inp_embd") == 0 || strcmp(name, "result_norm") == 0 || strcmp(name, "result_output") == 0) {
++        return true;
++    }
++
++    if (bitnet_rs_reference_layer_trace_requested_layer() != 0) {
++        return false;
++    }
++
++    if (strncmp(name, "l_out-", 6) == 0) {
++        for (const char * p = name + 6; *p != '\0'; ++p) {
++            if (*p < '0' || *p > '9') {
++                return false;
++            }
++        }
++        return true;
++    }
++
++    static const char * names[] = {
++        "inp_embd",
++        "attn_norm-0",
++        "Qcur-0",
++        "Kcur-0",
++        "Vcur-0",
++        "q-0",
++        "kq-0",
++        "kq_soft_max_ext-0",
++        "k-0",
++        "v-0",
++        "kqv-0",
++        "kqv_merged-0",
++        "kqv_merged_cont-0",
++        "attn_value_mix-0",
++        "attn_sub_norm-0",
++        "attn_o_out-0",
++        "ffn_inp-0",
++        "ffn_norm_core-0",
++        "ffn_norm-0",
++        "ffn_up-0",
++        "ffn_gate-0",
++        "ffn_relu-0",
++        "ffn_sqr(relu)-0",
++        "ffn_gate_par-0",
++        "ffn_out-0",
++        "ffn_sub_norm-0",
++        "ffn_down-0",
++        "l_out-0",
++        "result_norm",
++        "result_output",
++    };
++
++    for (const char * target : names) {
++        if (strcmp(name, target) == 0) {
++            return true;
++        }
++    }
++    return false;
++}
++
++static const char * bitnet_rs_reference_layer_trace_stage(const char * name) {
++    const char * layer_stage = bitnet_rs_reference_layer_trace_layer_stage(name, nullptr);
++    if (layer_stage != nullptr) {
++        return layer_stage;
++    }
++    if (strcmp(name, "inp_embd") == 0) {
++        return "inp_embd";
++    }
++    if (strcmp(name, "attn_norm-0") == 0) {
++        return "attn_norm";
++    }
++    if (strcmp(name, "Qcur-0") == 0) {
++        return "Qcur";
++    }
++    if (strcmp(name, "Kcur-0") == 0) {
++        return "Kcur";
++    }
++    if (strcmp(name, "Vcur-0") == 0) {
++        return "Vcur";
++    }
++    if (strcmp(name, "q-0") == 0) {
++        return "q";
++    }
++    if (strcmp(name, "kq-0") == 0) {
++        return "kq";
++    }
++    if (strcmp(name, "kq_soft_max_ext-0") == 0) {
++        return "kq_soft_max_ext";
++    }
++    if (strcmp(name, "k-0") == 0) {
++        return "k";
++    }
++    if (strcmp(name, "v-0") == 0) {
++        return "v";
++    }
++    if (strcmp(name, "kqv-0") == 0) {
++        return "kqv";
++    }
++    if (strcmp(name, "kqv_merged-0") == 0) {
++        return "kqv_merged";
++    }
++    if (strcmp(name, "kqv_merged_cont-0") == 0) {
++        return "kqv_merged_cont";
++    }
++    if (strcmp(name, "attn_value_mix-0") == 0) {
++        return "attn_value_mix";
++    }
++    if (strcmp(name, "attn_sub_norm-0") == 0) {
++        return "attn_sub_norm";
++    }
++    if (strcmp(name, "attn_o_out-0") == 0) {
++        return "attn_o_out";
++    }
++    if (strcmp(name, "ffn_inp-0") == 0) {
++        return "ffn_inp";
++    }
++    if (strcmp(name, "ffn_norm-0") == 0) {
++        return "ffn_norm";
++    }
++    if (strcmp(name, "ffn_up-0") == 0) {
++        return "ffn_up";
++    }
++    if (strcmp(name, "ffn_gate-0") == 0) {
++        return "ffn_gate";
++    }
++    if (strcmp(name, "ffn_relu-0") == 0) {
++        return "ffn_relu";
++    }
++    if (strcmp(name, "ffn_sqr(relu)-0") == 0) {
++        return "ffn_relu_sqr";
++    }
++    if (strcmp(name, "ffn_gate_par-0") == 0) {
++        return "ffn_gate_par";
++    }
++    if (strcmp(name, "ffn_out-0") == 0) {
++        return "ffn_out";
++    }
++    if (strcmp(name, "ffn_sub_norm-0") == 0) {
++        return "ffn_sub_norm";
++    }
++    if (strcmp(name, "ffn_down-0") == 0) {
++        return "ffn_down";
++    }
++    if (strncmp(name, "l_out-", 6) == 0) {
++        return "l_out";
++    }
++    if (strcmp(name, "result_norm") == 0) {
++        return "result_norm";
++    }
++    if (strcmp(name, "result_output") == 0) {
++        return "result_output";
++    }
++    return name;
++}
++
++static int bitnet_rs_reference_layer_trace_layer(const char * name) {
++    const char * dash = strrchr(name, '-');
++    if (dash != nullptr && dash[1] != '\0') {
++        int layer = 0;
++        for (const char * p = dash + 1; *p != '\0'; ++p) {
++            if (*p < '0' || *p > '9') {
++                return -1;
++            }
++            layer = layer * 10 + (*p - '0');
++        }
++        return layer;
++    }
++    return -1;
++}
++
++static void bitnet_rs_reference_layer_trace_json_string(std::ostream & out, const char * value) {
++    out << '"';
++    if (value != nullptr) {
++        for (const char * p = value; *p != '\0'; ++p) {
++            switch (*p) {
++                case '\\': out << "\\\\"; break;
++                case '"': out << "\\\""; break;
++                case '\n': out << "\\n"; break;
++                case '\r': out << "\\r"; break;
++                case '\t': out << "\\t"; break;
++                default: out << *p; break;
++            }
++        }
++    }
++    out << '"';
++}
++
++static void bitnet_rs_reference_layer_trace_json_number(std::ostream & out, double value) {
++    if (std::isfinite(value)) {
++        out << std::setprecision(9) << value;
++    } else {
++        out << "null";
++    }
++}
++
++static uint64_t bitnet_rs_reference_layer_trace_hash(const std::vector<float> & values) {
++    uint64_t hash = 1469598103934665603ULL;
++    const unsigned char * bytes = reinterpret_cast<const unsigned char *>(values.data());
++    const size_t n_bytes = values.size() * sizeof(float);
++    for (size_t i = 0; i < n_bytes; ++i) {
++        hash ^= (uint64_t) bytes[i];
++        hash *= 1099511628211ULL;
++    }
++    return hash;
++}
++
++static size_t bitnet_rs_reference_layer_trace_first_values_limit(size_t sample_nelements) {
++    size_t limit = 16;
++    const char * env_limit = std::getenv("BITNET_RS_REFERENCE_LAYER_TRACE_FIRST_VALUES_LIMIT");
++    if (env_limit != nullptr && env_limit[0] != '\0') {
++        char * end = nullptr;
++        const unsigned long long parsed = std::strtoull(env_limit, &end, 10);
++        if (end != env_limit && end != nullptr && *end == '\0') {
++            limit = (size_t) parsed;
++        }
++    }
++    const size_t max_limit = 262144;
++    if (limit > max_limit) {
++        limit = max_limit;
++    }
++    if (limit > sample_nelements) {
++        limit = sample_nelements;
++    }
++    return limit;
++}
++
++static void bitnet_rs_reference_layer_trace_write_tensor_provenance(
++    std::ostream & out,
++    struct ggml_tensor * tensor
++) {
++    if (tensor == nullptr) {
++        out << "null";
++        return;
++    }
++    const char * name = ggml_get_name(tensor);
++    out << "{";
++    out << "\"name\":";
++    bitnet_rs_reference_layer_trace_json_string(out, name);
++    out << ",\"op\":";
++    bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++    out << ",\"dtype\":";
++    bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
++    out << ",\"shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++    out << ",\"nelements\":" << ggml_nelements(tensor);
++    out << "}";
++}
++
++static void bitnet_rs_reference_layer_trace_write_token_array(
++    std::ostream & out,
++    const llama_token * values,
++    uint32_t len
++) {
++    if (values == nullptr) {
++        out << "null";
++        return;
++    }
++    out << "[";
++    for (uint32_t i = 0; i < len; ++i) {
++        if (i > 0) {
++            out << ",";
++        }
++        out << values[i];
++    }
++    out << "]";
++}
++
++static void bitnet_rs_reference_layer_trace_write_output_array(
++    std::ostream & out,
++    const int8_t * values,
++    uint32_t len
++) {
++    if (values == nullptr) {
++        out << "null";
++        return;
++    }
++    out << "[";
++    for (uint32_t i = 0; i < len; ++i) {
++        if (i > 0) {
++            out << ",";
++        }
++        out << (int) values[i];
++    }
++    out << "]";
++}
++
++static bool bitnet_rs_reference_layer_trace_read_f32_values(
++    llama_context & lctx,
++    struct ggml_tensor * tensor,
++    std::vector<float> & values
++) {
++    if (tensor == nullptr || ggml_nelements(tensor) <= 0) {
++        return false;
++    }
++    if (tensor->type != GGML_TYPE_F32 && tensor->type != GGML_TYPE_F16) {
++        return false;
++    }
++    struct ggml_tensor * storage = tensor->view_src != nullptr ? tensor->view_src : tensor;
++    const size_t storage_nbytes = ggml_nbytes(storage);
++    if (storage_nbytes > 64ULL * 1024ULL * 1024ULL) {
++        return false;
++    }
++    ggml_backend_t backend = ggml_backend_sched_get_tensor_backend(lctx.sched, storage);
++    if (backend == nullptr) {
++        backend = ggml_backend_sched_get_tensor_backend(lctx.sched, tensor);
++    }
++    if (backend == nullptr) {
++        return false;
++    }
++    std::vector<uint8_t> bytes(storage_nbytes);
++    ggml_backend_tensor_get(storage, bytes.data(), 0, storage_nbytes);
++    values.clear();
++    values.reserve((size_t) ggml_nelements(tensor));
++    const size_t base = tensor->view_src != nullptr ? tensor->view_offs : 0;
++    const size_t type_size = tensor->type == GGML_TYPE_F32 ? sizeof(float) : sizeof(ggml_fp16_t);
++    for (int64_t i3 = 0; i3 < tensor->ne[3]; ++i3) {
++        for (int64_t i2 = 0; i2 < tensor->ne[2]; ++i2) {
++            for (int64_t i1 = 0; i1 < tensor->ne[1]; ++i1) {
++                for (int64_t i0 = 0; i0 < tensor->ne[0]; ++i0) {
++                    const size_t offset = base
++                        + (size_t) i0 * tensor->nb[0]
++                        + (size_t) i1 * tensor->nb[1]
++                        + (size_t) i2 * tensor->nb[2]
++                        + (size_t) i3 * tensor->nb[3];
++                    if (offset + type_size > bytes.size()) {
++                        return false;
++                    }
++                    if (tensor->type == GGML_TYPE_F32) {
++                        float value = 0.0f;
++                        memcpy(&value, bytes.data() + offset, sizeof(float));
++                        values.push_back(value);
++                    } else {
++                        ggml_fp16_t value = 0;
++                        memcpy(&value, bytes.data() + offset, sizeof(ggml_fp16_t));
++                        values.push_back(ggml_fp16_to_fp32(value));
++                    }
++                }
++            }
++        }
++    }
++    return true;
++}
++
++static void bitnet_rs_reference_layer_trace_write_score_input_history_records(
++    std::ostream & out,
++    llama_context & lctx,
++    struct ggml_tensor * source,
++    const char * stage_prefix,
++    int graph_index,
++    int layer,
++    uint32_t n_tokens
++) {
++    if (source == nullptr || stage_prefix == nullptr || n_tokens == 0) {
++        return;
++    }
++    std::vector<float> source_values;
++    if (!bitnet_rs_reference_layer_trace_read_f32_values(lctx, source, source_values)) {
++        return;
++    }
++    const int64_t head_dim = source->ne[0];
++    const int64_t token_capacity = source->ne[1];
++    const int64_t head_count = source->ne[2];
++    const int64_t token_count = token_capacity < (int64_t) n_tokens ? token_capacity : (int64_t) n_tokens;
++    if (head_dim <= 0 || token_count <= 0 || head_count <= 0) {
++        return;
++    }
++    const int64_t source_nelements = ggml_nelements(source);
++    const size_t source_nbytes = ggml_nbytes(source);
++    const char * source_name = ggml_get_name(source);
++    for (int64_t head = 0; head < head_count; ++head) {
++        const int64_t head_nelements = head_dim * token_count;
++        double head_sum = 0.0;
++        double head_sq_sum = 0.0;
++        double head_min = std::numeric_limits<double>::infinity();
++        double head_max = -std::numeric_limits<double>::infinity();
++        std::vector<float> head_values;
++        head_values.reserve((size_t) head_nelements);
++        bool complete = true;
++        for (int64_t dim = 0; dim < head_dim; ++dim) {
++            for (int64_t token = 0; token < token_count; ++token) {
++                const int64_t source_index = dim + head_dim * token + head_dim * token_capacity * head;
++                if (source_index < 0 || source_index >= source_nelements || (size_t) source_index >= source_values.size()) {
++                    complete = false;
++                    break;
++                }
++                const float value_f32 = source_values[(size_t) source_index];
++                const double value = value_f32;
++                head_values.push_back(value_f32);
++                head_sum += value;
++                head_sq_sum += value * value;
++                head_min = value < head_min ? value : head_min;
++                head_max = value > head_max ? value : head_max;
++            }
++            if (!complete) {
++                break;
++            }
++        }
++        if (!complete || (int64_t) head_values.size() != head_nelements) {
++            continue;
++        }
++        const uint64_t head_hash = bitnet_rs_reference_layer_trace_hash(head_values);
++        const double head_mean = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : head_sum / (double) head_nelements;
++        const double head_rms = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(head_sq_sum / (double) head_nelements);
++        std::ostringstream head_name;
++        head_name << stage_prefix << head << "_history_ref_layout-" << layer;
++        std::ostringstream head_stage;
++        head_stage << stage_prefix << head << "_history_ref_layout";
++        out << ",{";
++        out << "\"graph_index\":" << graph_index;
++        out << ",\"name\":";
++        bitnet_rs_reference_layer_trace_json_string(out, head_name.str().c_str());
++        out << ",\"stage\":";
++        bitnet_rs_reference_layer_trace_json_string(out, head_stage.str().c_str());
++        out << ",\"layer\":" << layer;
++        out << ",\"graph_op\":";
++        bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(source->op));
++        out << ",\"graph_sources\":[";
++        bool first_source = true;
++        for (int src_i = 0; src_i < GGML_MAX_SRC; ++src_i) {
++            struct ggml_tensor * graph_source = source->src[src_i];
++            if (graph_source == nullptr) {
++                continue;
++            }
++            if (!first_source) {
++                out << ",";
++            }
++            bitnet_rs_reference_layer_trace_write_tensor_provenance(out, graph_source);
++            first_source = false;
++        }
++        out << "]";
++        out << ",\"view_source\":";
++        bitnet_rs_reference_layer_trace_write_tensor_provenance(out, source->view_src);
++        out << ",\"view_offset\":" << source->view_offs;
++        out << ",\"dtype\":";
++        bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(source->type));
++        out << ",\"shape\":[" << head_dim << "," << token_count << ",1,1]";
++        out << ",\"nelements\":" << head_nelements;
++        out << ",\"full_shape\":[" << source->ne[0] << "," << source->ne[1] << "," << source->ne[2] << "," << source->ne[3] << "]";
++        out << ",\"full_nelements\":" << source_nelements;
++        out << ",\"token_axis\":-1";
++        out << ",\"sample_offset\":0";
++        out << ",\"head_index\":" << head;
++        out << ",\"source_tensor_name\":";
++        bitnet_rs_reference_layer_trace_json_string(out, source_name);
++        out << ",\"layout\":\"dim_major_token_minor\"";
++        out << ",\"nbytes\":" << source_nbytes;
++        out << ",\"contiguous\":" << (ggml_is_contiguous(source) ? "true" : "false");
++        out << ",\"values_available\":true";
++        out << ",\"values_unavailable_reason\":null";
++        out << ",\"stats\":{\"mean\":";
++        bitnet_rs_reference_layer_trace_json_number(out, head_mean);
++        out << ",\"rms\":";
++        bitnet_rs_reference_layer_trace_json_number(out, head_rms);
++        out << ",\"min\":";
++        bitnet_rs_reference_layer_trace_json_number(out, head_min);
++        out << ",\"max\":";
++        bitnet_rs_reference_layer_trace_json_number(out, head_max);
++        out << ",\"fnv1a64\":\"" << std::hex << head_hash << std::dec << "\"}";
++        out << ",\"first_values\":[";
++        const size_t head_sample_count = bitnet_rs_reference_layer_trace_first_values_limit((size_t) head_nelements);
++        for (size_t i = 0; i < head_sample_count; ++i) {
++            if (i > 0) {
++                out << ",";
++            }
++            bitnet_rs_reference_layer_trace_json_number(out, head_values[i]);
++        }
++        out << "]}";
++    }
++}
++
++static void bitnet_rs_reference_layer_trace_write_key_projection_history_records(
++    std::ostream & out,
++    struct ggml_tensor * tensor,
++    const std::vector<float> & values,
++    int graph_index,
++    int layer,
++    uint32_t n_tokens,
++    int64_t head_dim,
++    int64_t kv_head_count,
++    int64_t kv_dim
++) {
++    if (tensor == nullptr || n_tokens == 0 || head_dim <= 0 || kv_head_count <= 0 || kv_dim <= 0) {
++        return;
++    }
++    const int64_t token_capacity = tensor->ne[1];
++    const int64_t token_count = token_capacity < (int64_t) n_tokens ? token_capacity : (int64_t) n_tokens;
++    const int64_t source_nelements = ggml_nelements(tensor);
++    if (tensor->ne[0] != kv_dim || token_count <= 0 || head_dim * kv_head_count > kv_dim || (size_t) source_nelements > values.size()) {
++        return;
++    }
++    const size_t source_nbytes = ggml_nbytes(tensor);
++    const char * source_name = ggml_get_name(tensor);
++    for (int64_t head = 0; head < kv_head_count; ++head) {
++        const int64_t head_nelements = head_dim * token_count;
++        double head_sum = 0.0;
++        double head_sq_sum = 0.0;
++        double head_min = std::numeric_limits<double>::infinity();
++        double head_max = -std::numeric_limits<double>::infinity();
++        std::vector<float> head_values;
++        head_values.reserve((size_t) head_nelements);
++        bool complete = true;
++        for (int64_t dim = 0; dim < head_dim; ++dim) {
++            for (int64_t token = 0; token < token_count; ++token) {
++                const int64_t source_index = head * head_dim + dim + kv_dim * token;
++                if (source_index < 0 || source_index >= source_nelements || (size_t) source_index >= values.size()) {
++                    complete = false;
++                    break;
++                }
++                const float value_f32 = values[(size_t) source_index];
++                const double value = value_f32;
++                head_values.push_back(value_f32);
++                head_sum += value;
++                head_sq_sum += value * value;
++                head_min = value < head_min ? value : head_min;
++                head_max = value > head_max ? value : head_max;
++            }
++            if (!complete) {
++                break;
++            }
++        }
++        if (!complete || (int64_t) head_values.size() != head_nelements) {
++            continue;
++        }
++        const uint64_t head_hash = bitnet_rs_reference_layer_trace_hash(head_values);
++        const double head_mean = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : head_sum / (double) head_nelements;
++        const double head_rms = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(head_sq_sum / (double) head_nelements);
++        std::ostringstream head_name;
++        head_name << "k_projection_history_kv_head" << head << "_ref_layout-" << layer;
++        std::ostringstream head_stage;
++        head_stage << "k_projection_history_kv_head" << head << "_ref_layout";
++        out << ",{";
++        out << "\"graph_index\":" << graph_index;
++        out << ",\"name\":";
++        bitnet_rs_reference_layer_trace_json_string(out, head_name.str().c_str());
++        out << ",\"stage\":";
++        bitnet_rs_reference_layer_trace_json_string(out, head_stage.str().c_str());
++        out << ",\"layer\":" << layer;
++        out << ",\"graph_op\":";
++        bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++        out << ",\"graph_sources\":[";
++        bool first_source = true;
++        for (int src_i = 0; src_i < GGML_MAX_SRC; ++src_i) {
++            struct ggml_tensor * graph_source = tensor->src[src_i];
++            if (graph_source == nullptr) {
++                continue;
++            }
++            if (!first_source) {
++                out << ",";
++            }
++            bitnet_rs_reference_layer_trace_write_tensor_provenance(out, graph_source);
++            first_source = false;
++        }
++        out << "]";
++        out << ",\"view_source\":";
++        bitnet_rs_reference_layer_trace_write_tensor_provenance(out, tensor->view_src);
++        out << ",\"view_offset\":" << tensor->view_offs;
++        out << ",\"dtype\":";
++        bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
++        out << ",\"shape\":[" << head_dim << "," << token_count << ",1,1]";
++        out << ",\"nelements\":" << head_nelements;
++        out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++        out << ",\"full_nelements\":" << source_nelements;
++        out << ",\"token_axis\":-1";
++        out << ",\"sample_offset\":0";
++        out << ",\"head_index\":" << head;
++        out << ",\"source_tensor_name\":";
++        bitnet_rs_reference_layer_trace_json_string(out, source_name);
++        out << ",\"layout\":\"dim_major_token_minor\"";
++        out << ",\"nbytes\":" << source_nbytes;
++        out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
++        out << ",\"values_available\":true";
++        out << ",\"values_unavailable_reason\":null";
++        out << ",\"stats\":{\"mean\":";
++        bitnet_rs_reference_layer_trace_json_number(out, head_mean);
++        out << ",\"rms\":";
++        bitnet_rs_reference_layer_trace_json_number(out, head_rms);
++        out << ",\"min\":";
++        bitnet_rs_reference_layer_trace_json_number(out, head_min);
++        out << ",\"max\":";
++        bitnet_rs_reference_layer_trace_json_number(out, head_max);
++        out << ",\"fnv1a64\":\"" << std::hex << head_hash << std::dec << "\"}";
++        out << ",\"first_values\":[";
++        const size_t head_sample_count = bitnet_rs_reference_layer_trace_first_values_limit((size_t) head_nelements);
++        for (size_t i = 0; i < head_sample_count; ++i) {
++            if (i > 0) {
++                out << ",";
++            }
++            bitnet_rs_reference_layer_trace_json_number(out, head_values[i]);
++        }
++        out << "]}";
++    }
++}
++
++static bool bitnet_rs_reference_layer_trace_is_warmup(
++    llama_context & lctx,
++    const llama_ubatch & ubatch,
++    uint32_t n_tokens,
++    int32_t n_outputs
++) {
++    if (n_tokens != 2 || n_outputs != 1 || ubatch.token == nullptr || ubatch.output == nullptr) {
++        return false;
++    }
++    return ubatch.output[0] == 0
++        && ubatch.output[1] != 0
++        && ubatch.token[0] == llama_token_bos(&lctx.model)
++        && ubatch.token[1] == llama_token_eos(&lctx.model);
++}
++
++static void bitnet_rs_reference_layer_trace_write_record(
++    std::ostream & out,
++    llama_context & lctx,
++    struct ggml_tensor * tensor,
++    int graph_index,
++    uint32_t n_tokens,
++    int32_t n_outputs,
++    bool first
++) {
++    const char * name = ggml_get_name(tensor);
++    const int64_t nelements = ggml_nelements(tensor);
++    const size_t nbytes = ggml_nbytes(tensor);
++    struct ggml_tensor * storage = tensor->view_src != nullptr ? tensor->view_src : tensor;
++    const size_t storage_nbytes = ggml_nbytes(storage);
++    bool values_available = false;
++    std::vector<float> values;
++    int token_axis = -1;
++    int64_t sample_offset = 0;
++    int64_t sample_nelements = nelements;
++    int64_t sample_shape[4] = { tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3] };
++    double sum = 0.0;
++    double sq_sum = 0.0;
++    double min_value = std::numeric_limits<double>::infinity();
++    double max_value = -std::numeric_limits<double>::infinity();
++    uint64_t value_hash = 0;
++
++    if (bitnet_rs_reference_layer_trace_read_f32_values(lctx, tensor, values)) {
++            if (n_outputs == 1 && n_tokens > 1) {
++                if (tensor->ne[1] == (int64_t) n_tokens) {
++                    token_axis = 1;
++                    sample_offset = tensor->ne[0] * (tensor->ne[1] - 1);
++                    sample_nelements = tensor->ne[0];
++                    sample_shape[1] = 1;
++                } else if (tensor->ne[2] == (int64_t) n_tokens) {
++                    token_axis = 2;
++                    sample_offset = tensor->ne[0] * tensor->ne[1] * (tensor->ne[2] - 1);
++                    sample_nelements = tensor->ne[0] * tensor->ne[1];
++                    sample_shape[2] = 1;
++                }
++                if (sample_offset < 0 || sample_nelements <= 0 || sample_offset + sample_nelements > nelements) {
++                    token_axis = -1;
++                    sample_offset = 0;
++                    sample_nelements = nelements;
++                    sample_shape[0] = tensor->ne[0];
++                    sample_shape[1] = tensor->ne[1];
++                    sample_shape[2] = tensor->ne[2];
++                    sample_shape[3] = tensor->ne[3];
++                }
++            }
++            values_available = true;
++            for (int64_t i = 0; i < sample_nelements; ++i) {
++                const float value_f32 = values[(size_t) (sample_offset + i)];
++                const double value = value_f32;
++                sum += value;
++                sq_sum += value * value;
++                min_value = value < min_value ? value : min_value;
++                max_value = value > max_value ? value : max_value;
++            }
++            std::vector<float> sample_values;
++            sample_values.reserve((size_t) sample_nelements);
++            for (int64_t i = 0; i < sample_nelements; ++i) {
++                sample_values.push_back(values[(size_t) (sample_offset + i)]);
++            }
++            value_hash = bitnet_rs_reference_layer_trace_hash(sample_values);
++    }
++
++    if (!first) {
++        out << ",";
++    }
++    out << "{";
++    out << "\"graph_index\":" << graph_index;
++    out << ",\"name\":";
++    bitnet_rs_reference_layer_trace_json_string(out, name);
++    out << ",\"stage\":";
++    bitnet_rs_reference_layer_trace_json_string(
++        out,
++        bitnet_rs_reference_layer_trace_stage(name)
++    );
++    out << ",\"layer\":" << bitnet_rs_reference_layer_trace_layer(name);
++    out << ",\"graph_op\":";
++    bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++    out << ",\"graph_sources\":[";
++    bool first_source = true;
++    for (int src_i = 0; src_i < GGML_MAX_SRC; ++src_i) {
++        struct ggml_tensor * source = tensor->src[src_i];
++        if (source == nullptr) {
++            continue;
++        }
++        if (!first_source) {
++            out << ",";
++        }
++        bitnet_rs_reference_layer_trace_write_tensor_provenance(out, source);
++        first_source = false;
++    }
++    out << "]";
++    out << ",\"view_source\":";
++    bitnet_rs_reference_layer_trace_write_tensor_provenance(out, tensor->view_src);
++    out << ",\"view_offset\":" << tensor->view_offs;
++    out << ",\"dtype\":";
++    bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
++    out << ",\"shape\":[" << sample_shape[0] << "," << sample_shape[1] << "," << sample_shape[2] << "," << sample_shape[3] << "]";
++    out << ",\"nelements\":" << sample_nelements;
++    out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++    out << ",\"full_nelements\":" << nelements;
++    out << ",\"token_axis\":" << token_axis;
++    out << ",\"sample_offset\":" << sample_offset;
++    out << ",\"nbytes\":" << nbytes;
++    out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
++    out << ",\"values_available\":" << (values_available ? "true" : "false");
++    out << ",\"values_unavailable_reason\":";
++    if (values_available) {
++        out << "null";
++    } else if (tensor->type != GGML_TYPE_F32 && tensor->type != GGML_TYPE_F16) {
++        bitnet_rs_reference_layer_trace_json_string(out, "non_f32_or_f16_tensor");
++    } else if (storage_nbytes > 64ULL * 1024ULL * 1024ULL) {
++        bitnet_rs_reference_layer_trace_json_string(out, "tensor_too_large_for_diagnostic_copy");
++    } else {
++        bitnet_rs_reference_layer_trace_json_string(out, "backend_or_view_copy_unavailable");
++    }
++
++    out << ",\"stats\":";
++    if (values_available) {
++        const double mean = sample_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : sum / (double) sample_nelements;
++        const double rms = sample_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(sq_sum / (double) sample_nelements);
++        out << "{\"mean\":";
++        bitnet_rs_reference_layer_trace_json_number(out, mean);
++        out << ",\"rms\":";
++        bitnet_rs_reference_layer_trace_json_number(out, rms);
++        out << ",\"min\":";
++        bitnet_rs_reference_layer_trace_json_number(out, min_value);
++        out << ",\"max\":";
++        bitnet_rs_reference_layer_trace_json_number(out, max_value);
++        out << ",\"fnv1a64\":\"" << std::hex << value_hash << std::dec << "\"}";
++    } else {
++        out << "null";
++    }
++
++    out << ",\"first_values\":[";
++    const size_t sample_count = values_available
++        ? bitnet_rs_reference_layer_trace_first_values_limit((size_t) sample_nelements)
++        : 0;
++    for (size_t i = 0; i < sample_count; ++i) {
++        if (i > 0) {
++            out << ",";
++        }
++        bitnet_rs_reference_layer_trace_json_number(out, values[(size_t) sample_offset + i]);
++    }
++    out << "]}";
++    int bitnet_rs_history_layer = -1;
++    const int bitnet_rs_requested_history_layer = bitnet_rs_reference_layer_trace_requested_layer();
++    const char * bitnet_rs_history_stage = bitnet_rs_reference_layer_trace_layer_stage(name, &bitnet_rs_history_layer);
++    const bool bitnet_rs_history_is_requested_layer = bitnet_rs_history_layer == bitnet_rs_requested_history_layer;
++    const bool bitnet_rs_history_is_attn_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_norm") == 0;
++    const bool bitnet_rs_history_is_layer0_attn_norm_input = strcmp(name, "inp_embd") == 0 && bitnet_rs_requested_history_layer == 0;
++    const bool bitnet_rs_history_is_attn_norm_input = bitnet_rs_history_is_layer0_attn_norm_input || (bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "l_out") == 0 && bitnet_rs_history_layer + 1 == bitnet_rs_requested_history_layer);
++    const bool bitnet_rs_history_is_vcur = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "Vcur") == 0;
++    const bool bitnet_rs_history_is_attn_value_mix = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_value_mix") == 0;
++    const bool bitnet_rs_history_is_attn_sub_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_sub_norm") == 0;
++    const bool bitnet_rs_history_is_attn_o_out = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "attn_o_out") == 0;
++    const bool bitnet_rs_history_is_ffn_inp = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_inp") == 0;
++    const bool bitnet_rs_history_is_ffn_norm_core = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_norm_core") == 0;
++    const bool bitnet_rs_history_is_ffn_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_norm") == 0;
++    const bool bitnet_rs_history_is_ffn_up = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_up") == 0;
++    const bool bitnet_rs_history_is_ffn_gate = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_gate") == 0;
++    const bool bitnet_rs_history_is_ffn_relu = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_relu") == 0;
++    const bool bitnet_rs_history_is_ffn_relu_sqr = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_relu_sqr") == 0;
++    const bool bitnet_rs_history_is_ffn_gate_par = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_gate_par") == 0;
++    const bool bitnet_rs_history_is_ffn_out = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_out") == 0;
++    const bool bitnet_rs_history_is_ffn_sub_norm = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_sub_norm") == 0;
++    const bool bitnet_rs_history_is_ffn_down = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "ffn_down") == 0;
++    const bool bitnet_rs_history_is_l_out = bitnet_rs_history_stage != nullptr && strcmp(bitnet_rs_history_stage, "l_out") == 0 && bitnet_rs_history_is_requested_layer;
++    const bool bitnet_rs_history_is_layer_boundary =
++        bitnet_rs_history_is_attn_norm
++        || bitnet_rs_history_is_vcur
++        || bitnet_rs_history_is_attn_value_mix
++        || bitnet_rs_history_is_attn_sub_norm
++        || bitnet_rs_history_is_attn_o_out
++        || bitnet_rs_history_is_ffn_inp
++        || bitnet_rs_history_is_ffn_norm_core
++        || bitnet_rs_history_is_ffn_norm
++        || bitnet_rs_history_is_ffn_up
++        || bitnet_rs_history_is_ffn_gate
++        || bitnet_rs_history_is_ffn_relu
++        || bitnet_rs_history_is_ffn_relu_sqr
++        || bitnet_rs_history_is_ffn_gate_par
++        || bitnet_rs_history_is_ffn_out
++        || bitnet_rs_history_is_ffn_sub_norm
++        || bitnet_rs_history_is_ffn_down
++        || bitnet_rs_history_is_l_out;
++    if ((bitnet_rs_history_is_attn_norm_input || (bitnet_rs_history_is_requested_layer && bitnet_rs_history_is_layer_boundary)) && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens) {
++        const int bitnet_rs_effective_history_layer = bitnet_rs_history_is_attn_norm_input ? bitnet_rs_requested_history_layer : bitnet_rs_history_layer;
++        std::ostringstream history_record_name;
++        const char * history_stage_name =
++            bitnet_rs_history_is_attn_norm ? "attn_norm_history_ref_layout" :
++            (bitnet_rs_history_is_attn_norm_input ? "attn_norm_input_history_ref_layout" :
++            (bitnet_rs_history_is_vcur ? "vcur_history_ref_layout" :
++            (bitnet_rs_history_is_attn_value_mix ? "attn_value_mix_history_ref_layout" :
++            (bitnet_rs_history_is_attn_sub_norm ? "attn_sub_norm_history_ref_layout" :
++            (bitnet_rs_history_is_attn_o_out ? "attn_o_out_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_inp ? "ffn_inp_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_norm_core ? "ffn_norm_core_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_norm ? "ffn_norm_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_up ? "ffn_up_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_gate ? "ffn_gate_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_relu ? "ffn_relu_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_relu_sqr ? "ffn_relu_sqr_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_gate_par ? "ffn_gate_par_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_out ? "ffn_out_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_sub_norm ? "ffn_sub_norm_history_ref_layout" :
++            (bitnet_rs_history_is_ffn_down ? "ffn_down_history_ref_layout" :
++            "l_out_history_ref_layout"))))))))))))))));
++        history_record_name << history_stage_name << "-" << bitnet_rs_effective_history_layer;
++        const int64_t hidden = tensor->ne[0];
++        const int64_t token_count = (int64_t) n_tokens;
++        const int64_t history_nelements = hidden * token_count;
++        std::vector<float> history_values;
++        history_values.reserve((size_t) history_nelements);
++        double history_sum = 0.0;
++        double history_sq_sum = 0.0;
++        double history_min = std::numeric_limits<double>::infinity();
++        double history_max = -std::numeric_limits<double>::infinity();
++        for (int64_t dim = 0; dim < hidden; ++dim) {
++            for (int64_t token = 0; token < token_count; ++token) {
++                const float value_f32 = values[(size_t) (hidden * token + dim)];
++                const double value = value_f32;
++                history_values.push_back(value_f32);
++                history_sum += value;
++                history_sq_sum += value * value;
++                history_min = value < history_min ? value : history_min;
++                history_max = value > history_max ? value : history_max;
++            }
++        }
++        const uint64_t history_hash = bitnet_rs_reference_layer_trace_hash(history_values);
++        const double history_mean = history_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : history_sum / (double) history_nelements;
++        const double history_rms = history_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(history_sq_sum / (double) history_nelements);
++        out << ",{";
++        out << "\"graph_index\":" << graph_index;
++        out << ",\"name\":";
++        bitnet_rs_reference_layer_trace_json_string(out, history_record_name.str().c_str());
++        out << ",\"stage\":";
++        bitnet_rs_reference_layer_trace_json_string(out, history_stage_name);
++        out << ",\"layer\":" << bitnet_rs_effective_history_layer;
++        out << ",\"graph_op\":";
++        bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++        out << ",\"graph_sources\":[]";
++        out << ",\"view_source\":null";
++        out << ",\"view_offset\":0";
++        out << ",\"dtype\":";
++        bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
++        out << ",\"shape\":[" << hidden << "," << token_count << ",1,1]";
++        out << ",\"nelements\":" << history_nelements;
++        out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++        out << ",\"full_nelements\":" << nelements;
++        out << ",\"token_axis\":-1";
++        out << ",\"sample_offset\":0";
++        out << ",\"layout\":\"dim_major_token_minor\"";
++        out << ",\"nbytes\":" << nbytes;
++        out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
++        out << ",\"values_available\":true";
++        out << ",\"values_unavailable_reason\":null";
++        out << ",\"stats\":{\"mean\":";
++        bitnet_rs_reference_layer_trace_json_number(out, history_mean);
++        out << ",\"rms\":";
++        bitnet_rs_reference_layer_trace_json_number(out, history_rms);
++        out << ",\"min\":";
++        bitnet_rs_reference_layer_trace_json_number(out, history_min);
++        out << ",\"max\":";
++        bitnet_rs_reference_layer_trace_json_number(out, history_max);
++        out << ",\"fnv1a64\":\"" << std::hex << history_hash << std::dec << "\"}";
++        out << ",\"first_values\":[";
++        const size_t history_sample_count = bitnet_rs_reference_layer_trace_first_values_limit((size_t) history_nelements);
++        for (size_t i = 0; i < history_sample_count; ++i) {
++            if (i > 0) {
++                out << ",";
++            }
++            bitnet_rs_reference_layer_trace_json_number(out, history_values[i]);
++        }
++        out << "]}";
++    }
++    int bitnet_rs_qcur_history_layer = -1;
++    const char * bitnet_rs_qcur_history_stage = bitnet_rs_reference_layer_trace_layer_stage(name, &bitnet_rs_qcur_history_layer);
++    const bool bitnet_rs_is_requested_qcur_history =
++        bitnet_rs_qcur_history_stage != nullptr
++        && strcmp(bitnet_rs_qcur_history_stage, "Qcur") == 0
++        && bitnet_rs_qcur_history_layer == bitnet_rs_requested_history_layer;
++    if (bitnet_rs_is_requested_qcur_history && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] > 0 && tensor->ne[2] >= (int64_t) n_tokens) {
++        const int64_t head_dim = tensor->ne[0];
++        const int64_t head_count = tensor->ne[1];
++        const int64_t token_count = (int64_t) n_tokens;
++        for (int64_t head = 0; head < head_count; ++head) {
++            const int64_t head_nelements = head_dim * token_count;
++            double head_sum = 0.0;
++            double head_sq_sum = 0.0;
++            double head_min = std::numeric_limits<double>::infinity();
++            double head_max = -std::numeric_limits<double>::infinity();
++            std::vector<float> head_values;
++            head_values.reserve((size_t) head_nelements);
++            for (int64_t dim = 0; dim < head_dim; ++dim) {
++                for (int64_t token = 0; token < token_count; ++token) {
++                    const int64_t index = dim + head_dim * head + head_dim * head_count * token;
++                    if (index < 0 || index >= nelements) {
++                        continue;
++                    }
++                    const float value_f32 = values[(size_t) index];
++                    const double value = value_f32;
++                    head_values.push_back(value_f32);
++                    head_sum += value;
++                    head_sq_sum += value * value;
++                    head_min = value < head_min ? value : head_min;
++                    head_max = value > head_max ? value : head_max;
++                }
++            }
++            if ((int64_t) head_values.size() != head_nelements) {
++                continue;
++            }
++            const uint64_t head_hash = bitnet_rs_reference_layer_trace_hash(head_values);
++            const double head_mean = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : head_sum / (double) head_nelements;
++            const double head_rms = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(head_sq_sum / (double) head_nelements);
++            std::ostringstream head_name;
++            head_name << "qcur_history_head" << head << "_ref_layout-" << bitnet_rs_qcur_history_layer;
++            std::ostringstream head_stage;
++            head_stage << "qcur_history_head" << head << "_ref_layout";
++            out << ",{";
++            out << "\"graph_index\":" << graph_index;
++            out << ",\"name\":";
++            bitnet_rs_reference_layer_trace_json_string(out, head_name.str().c_str());
++            out << ",\"stage\":";
++            bitnet_rs_reference_layer_trace_json_string(out, head_stage.str().c_str());
++            out << ",\"layer\":" << bitnet_rs_qcur_history_layer;
++            out << ",\"graph_op\":";
++            bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++            out << ",\"graph_sources\":[]";
++            out << ",\"view_source\":null";
++            out << ",\"view_offset\":0";
++            out << ",\"dtype\":";
++            bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
++            out << ",\"shape\":[" << head_dim << "," << token_count << ",1,1]";
++            out << ",\"nelements\":" << head_nelements;
++            out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++            out << ",\"full_nelements\":" << nelements;
++            out << ",\"token_axis\":-1";
++            out << ",\"sample_offset\":0";
++            out << ",\"head_index\":" << head;
++            out << ",\"layout\":\"dim_major_token_minor\"";
++            out << ",\"nbytes\":" << nbytes;
++            out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
++            out << ",\"values_available\":true";
++            out << ",\"values_unavailable_reason\":null";
++            out << ",\"stats\":{\"mean\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_mean);
++            out << ",\"rms\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_rms);
++            out << ",\"min\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_min);
++            out << ",\"max\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_max);
++            out << ",\"fnv1a64\":\"" << std::hex << head_hash << std::dec << "\"}";
++            out << ",\"first_values\":[";
++            const size_t head_sample_count = bitnet_rs_reference_layer_trace_first_values_limit((size_t) head_nelements);
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                bitnet_rs_reference_layer_trace_json_number(out, head_values[i]);
++            }
++            out << "]}";
++        }
++    }
++    int bitnet_rs_kcur_history_layer = -1;
++    const char * bitnet_rs_kcur_history_stage = bitnet_rs_reference_layer_trace_layer_stage(name, &bitnet_rs_kcur_history_layer);
++    const bool bitnet_rs_is_requested_kcur_history =
++        bitnet_rs_kcur_history_stage != nullptr
++        && strcmp(bitnet_rs_kcur_history_stage, "Kcur") == 0
++        && bitnet_rs_kcur_history_layer == bitnet_rs_requested_history_layer;
++    if (bitnet_rs_is_requested_kcur_history && values_available && n_tokens > 0 && strcmp(ggml_op_name(tensor->op), "MUL_MAT") == 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens && tensor->ne[2] <= 1) {
++        const auto & hparams = lctx.model.hparams;
++        const int64_t head_dim = hparams.n_embd_head_k;
++        const int64_t kv_head_count = hparams.n_head_kv((uint32_t) bitnet_rs_kcur_history_layer);
++        const int64_t kv_dim = hparams.n_embd_k_gqa((uint32_t) bitnet_rs_kcur_history_layer);
++        bitnet_rs_reference_layer_trace_write_key_projection_history_records(
++            out,
++            tensor,
++            values,
++            graph_index,
++            bitnet_rs_kcur_history_layer,
++            n_tokens,
++            head_dim,
++            kv_head_count,
++            kv_dim);
++    }
++    if (bitnet_rs_is_requested_kcur_history && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] > 0 && tensor->ne[2] >= (int64_t) n_tokens) {
++        const int64_t head_dim = tensor->ne[0];
++        const int64_t kv_head_count = tensor->ne[1];
++        const int64_t token_count = (int64_t) n_tokens;
++        for (int64_t head = 0; head < kv_head_count; ++head) {
++            const int64_t head_nelements = head_dim * token_count;
++            double head_sum = 0.0;
++            double head_sq_sum = 0.0;
++            double head_min = std::numeric_limits<double>::infinity();
++            double head_max = -std::numeric_limits<double>::infinity();
++            std::vector<float> head_values;
++            head_values.reserve((size_t) head_nelements);
++            for (int64_t dim = 0; dim < head_dim; ++dim) {
++                for (int64_t token = 0; token < token_count; ++token) {
++                    const int64_t index = dim + head_dim * head + head_dim * kv_head_count * token;
++                    if (index < 0 || index >= nelements) {
++                        continue;
++                    }
++                    const float value_f32 = values[(size_t) index];
++                    const double value = value_f32;
++                    head_values.push_back(value_f32);
++                    head_sum += value;
++                    head_sq_sum += value * value;
++                    head_min = value < head_min ? value : head_min;
++                    head_max = value > head_max ? value : head_max;
++                }
++            }
++            if ((int64_t) head_values.size() != head_nelements) {
++                continue;
++            }
++            const uint64_t head_hash = bitnet_rs_reference_layer_trace_hash(head_values);
++            const double head_mean = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : head_sum / (double) head_nelements;
++            const double head_rms = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(head_sq_sum / (double) head_nelements);
++            std::ostringstream head_name;
++            head_name << "kcur_history_kv_head" << head << "_ref_layout-" << bitnet_rs_kcur_history_layer;
++            std::ostringstream head_stage;
++            head_stage << "kcur_history_kv_head" << head << "_ref_layout";
++            out << ",{";
++            out << "\"graph_index\":" << graph_index;
++            out << ",\"name\":";
++            bitnet_rs_reference_layer_trace_json_string(out, head_name.str().c_str());
++            out << ",\"stage\":";
++            bitnet_rs_reference_layer_trace_json_string(out, head_stage.str().c_str());
++            out << ",\"layer\":" << bitnet_rs_kcur_history_layer;
++            out << ",\"graph_op\":";
++            bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++            out << ",\"graph_sources\":[]";
++            out << ",\"view_source\":null";
++            out << ",\"view_offset\":0";
++            out << ",\"dtype\":";
++            bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
++            out << ",\"shape\":[" << head_dim << "," << token_count << ",1,1]";
++            out << ",\"nelements\":" << head_nelements;
++            out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++            out << ",\"full_nelements\":" << nelements;
++            out << ",\"token_axis\":-1";
++            out << ",\"sample_offset\":0";
++            out << ",\"head_index\":" << head;
++            out << ",\"layout\":\"dim_major_token_minor\"";
++            out << ",\"nbytes\":" << nbytes;
++            out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
++            out << ",\"values_available\":true";
++            out << ",\"values_unavailable_reason\":null";
++            out << ",\"stats\":{\"mean\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_mean);
++            out << ",\"rms\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_rms);
++            out << ",\"min\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_min);
++            out << ",\"max\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_max);
++            out << ",\"fnv1a64\":\"" << std::hex << head_hash << std::dec << "\"}";
++            out << ",\"first_values\":[";
++            const size_t head_sample_count = bitnet_rs_reference_layer_trace_first_values_limit((size_t) head_nelements);
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                bitnet_rs_reference_layer_trace_json_number(out, head_values[i]);
++            }
++            out << "]}";
++        }
++    }
++    const char * value_mix_stage = bitnet_rs_reference_layer_trace_stage(name);
++    if ((strcmp(value_mix_stage, "kq") == 0 || strcmp(value_mix_stage, "kq_soft_max_ext") == 0 || strcmp(value_mix_stage, "kqv") == 0)
++            && values_available && token_axis == 1 && tensor->ne[0] > 0 && tensor->ne[1] > 0 && tensor->ne[2] > 1) {
++        const char * head_stage_prefix = strcmp(value_mix_stage, "kq") == 0
++            ? "kq_head"
++            : (strcmp(value_mix_stage, "kq_soft_max_ext") == 0 ? "kq_soft_max_ext_head" : "kqv_head");
++        if (strcmp(value_mix_stage, "kq") == 0) {
++            for (int src_i = 0; src_i < GGML_MAX_SRC; ++src_i) {
++                struct ggml_tensor * source = tensor->src[src_i];
++                if (source == nullptr) {
++                    continue;
++                }
++                int source_layer = -1;
++                const char * source_stage = bitnet_rs_reference_layer_trace_layer_stage(ggml_get_name(source), &source_layer);
++                if (source_stage == nullptr || source_layer != bitnet_rs_reference_layer_trace_layer(name)) {
++                    continue;
++                }
++                if (strcmp(source_stage, "q") == 0) {
++                    bitnet_rs_reference_layer_trace_write_score_input_history_records(out, lctx, source, "q_score_input_head", graph_index, source_layer, n_tokens);
++                } else if (strcmp(source_stage, "k") == 0) {
++                    bitnet_rs_reference_layer_trace_write_score_input_history_records(out, lctx, source, "k_score_input_head", graph_index, source_layer, n_tokens);
++                }
++            }
++        }
++        const int64_t sampled_token = tensor->ne[1] - 1;
++        for (int64_t head = 0; head < tensor->ne[2]; ++head) {
++            const int64_t head_offset = tensor->ne[0] * sampled_token + tensor->ne[0] * tensor->ne[1] * head;
++            const int64_t head_nelements = tensor->ne[0];
++            if (head_offset < 0 || head_nelements <= 0 || head_offset + head_nelements > nelements) {
++                continue;
++            }
++            double head_sum = 0.0;
++            double head_sq_sum = 0.0;
++            double head_min = std::numeric_limits<double>::infinity();
++            double head_max = -std::numeric_limits<double>::infinity();
++            std::vector<float> head_values;
++            head_values.reserve((size_t) head_nelements);
++            for (int64_t i = 0; i < head_nelements; ++i) {
++                const float value_f32 = values[(size_t) (head_offset + i)];
++                const double value = value_f32;
++                head_sum += value;
++                head_sq_sum += value * value;
++                head_min = value < head_min ? value : head_min;
++                head_max = value > head_max ? value : head_max;
++                head_values.push_back(value_f32);
++            }
++            const uint64_t head_hash = bitnet_rs_reference_layer_trace_hash(head_values);
++            const double head_mean = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : head_sum / (double) head_nelements;
++            const double head_rms = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(head_sq_sum / (double) head_nelements);
++            std::ostringstream head_name;
++            head_name << head_stage_prefix << head << "-" << bitnet_rs_reference_layer_trace_layer(name);
++            std::ostringstream head_stage;
++            head_stage << head_stage_prefix << head;
++            out << ",{";
++            out << "\"graph_index\":" << graph_index;
++            out << ",\"name\":";
++            bitnet_rs_reference_layer_trace_json_string(out, head_name.str().c_str());
++            out << ",\"stage\":";
++            bitnet_rs_reference_layer_trace_json_string(out, head_stage.str().c_str());
++            out << ",\"layer\":" << bitnet_rs_reference_layer_trace_layer(name);
++            out << ",\"graph_op\":";
++            bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++            out << ",\"graph_sources\":[]";
++            out << ",\"view_source\":null";
++            out << ",\"view_offset\":0";
++            out << ",\"dtype\":";
++            bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
++            out << ",\"shape\":[" << tensor->ne[0] << ",1,1,1]";
++            out << ",\"nelements\":" << head_nelements;
++            out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++            out << ",\"full_nelements\":" << nelements;
++            out << ",\"token_axis\":1";
++            out << ",\"sample_offset\":" << head_offset;
++            out << ",\"head_index\":" << head;
++            out << ",\"nbytes\":" << nbytes;
++            out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
++            out << ",\"values_available\":true";
++            out << ",\"values_unavailable_reason\":null";
++            out << ",\"stats\":{\"mean\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_mean);
++            out << ",\"rms\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_rms);
++            out << ",\"min\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_min);
++            out << ",\"max\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_max);
++            out << ",\"fnv1a64\":\"" << std::hex << head_hash << std::dec << "\"}";
++            out << ",\"first_values\":[";
++            const size_t head_sample_count = bitnet_rs_reference_layer_trace_first_values_limit((size_t) head_nelements);
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                bitnet_rs_reference_layer_trace_json_number(out, values[(size_t) head_offset + i]);
++            }
++            out << "]}";
++            if (strcmp(value_mix_stage, "kq") == 0 || strcmp(value_mix_stage, "kq_soft_max_ext") == 0 || strcmp(value_mix_stage, "kqv") == 0) {
++                const int64_t token_count = std::min<int64_t>((int64_t) n_tokens, tensor->ne[1]);
++                const int64_t history_nelements = tensor->ne[0] * token_count;
++                std::vector<float> history_values;
++                history_values.reserve((size_t) history_nelements);
++                double history_sum = 0.0;
++                double history_sq_sum = 0.0;
++                double history_min = std::numeric_limits<double>::infinity();
++                double history_max = -std::numeric_limits<double>::infinity();
++                for (int64_t dim = 0; dim < tensor->ne[0]; ++dim) {
++                    for (int64_t token = 0; token < token_count; ++token) {
++                        const int64_t history_index = dim + tensor->ne[0] * token + tensor->ne[0] * tensor->ne[1] * head;
++                        if (history_index < 0 || history_index >= nelements) {
++                            continue;
++                        }
++                        const float value_f32 = values[(size_t) history_index];
++                        const double value = value_f32;
++                        history_values.push_back(value_f32);
++                        history_sum += value;
++                        history_sq_sum += value * value;
++                        history_min = value < history_min ? value : history_min;
++                        history_max = value > history_max ? value : history_max;
++                    }
++                }
++                if ((int64_t) history_values.size() == history_nelements) {
++                    const uint64_t history_hash = bitnet_rs_reference_layer_trace_hash(history_values);
++                    const double history_mean = history_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : history_sum / (double) history_nelements;
++                    const double history_rms = history_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(history_sq_sum / (double) history_nelements);
++                    const char * history_head_stage_prefix = strcmp(value_mix_stage, "kq") == 0
++                        ? "kq_head"
++                        : (strcmp(value_mix_stage, "kq_soft_max_ext") == 0
++                            ? "kq_soft_max_ext_head"
++                            : "kqv_head");
++                    std::ostringstream history_name;
++                    history_name << history_head_stage_prefix << head << "_history_ref_layout-" << bitnet_rs_reference_layer_trace_layer(name);
++                    std::ostringstream history_stage;
++                    history_stage << history_head_stage_prefix << head << "_history_ref_layout";
++                    out << ",{";
++                    out << "\"graph_index\":" << graph_index;
++                    out << ",\"name\":";
++                    bitnet_rs_reference_layer_trace_json_string(out, history_name.str().c_str());
++                    out << ",\"stage\":";
++                    bitnet_rs_reference_layer_trace_json_string(out, history_stage.str().c_str());
++                    out << ",\"layer\":" << bitnet_rs_reference_layer_trace_layer(name);
++                    out << ",\"graph_op\":";
++                    bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++                    out << ",\"graph_sources\":[";
++                    bool first_history_source = true;
++                    for (int src_i = 0; src_i < GGML_MAX_SRC; ++src_i) {
++                        struct ggml_tensor * source = tensor->src[src_i];
++                        if (source == nullptr) {
++                            continue;
++                        }
++                        if (!first_history_source) {
++                            out << ",";
++                        }
++                        bitnet_rs_reference_layer_trace_write_tensor_provenance(out, source);
++                        first_history_source = false;
++                    }
++                    out << "]";
++                    out << ",\"view_source\":null";
++                    out << ",\"view_offset\":0";
++                    out << ",\"dtype\":";
++                    bitnet_rs_reference_layer_trace_json_string(out, ggml_type_name(tensor->type));
++                    out << ",\"shape\":[" << tensor->ne[0] << "," << token_count << ",1,1]";
++                    out << ",\"nelements\":" << history_nelements;
++                    out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++                    out << ",\"full_nelements\":" << nelements;
++                    out << ",\"token_axis\":-1";
++                    out << ",\"sample_offset\":0";
++                    out << ",\"head_index\":" << head;
++                    out << ",\"layout\":\"dim_major_token_minor\"";
++                    out << ",\"nbytes\":" << nbytes;
++                    out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
++                    out << ",\"values_available\":true";
++                    out << ",\"values_unavailable_reason\":null";
++                    out << ",\"stats\":{\"mean\":";
++                    bitnet_rs_reference_layer_trace_json_number(out, history_mean);
++                    out << ",\"rms\":";
++                    bitnet_rs_reference_layer_trace_json_number(out, history_rms);
++                    out << ",\"min\":";
++                    bitnet_rs_reference_layer_trace_json_number(out, history_min);
++                    out << ",\"max\":";
++                    bitnet_rs_reference_layer_trace_json_number(out, history_max);
++                    out << ",\"fnv1a64\":\"" << std::hex << history_hash << std::dec << "\"}";
++                    out << ",\"first_values\":[";
++                    const size_t history_sample_count = bitnet_rs_reference_layer_trace_first_values_limit((size_t) history_nelements);
++                    for (size_t i = 0; i < history_sample_count; ++i) {
++                        if (i > 0) {
++                            out << ",";
++                        }
++                        bitnet_rs_reference_layer_trace_json_number(out, history_values[i]);
++                    }
++                    out << "]}";
++                }
++            }
++        }
++    }
++    const char * kv_cache_stage = bitnet_rs_reference_layer_trace_stage(name);
++    if ((strcmp(kv_cache_stage, "k") == 0 || strcmp(kv_cache_stage, "v") == 0) && values_available && n_tokens > 0 && tensor->ne[0] > 0 && tensor->ne[1] >= (int64_t) n_tokens && tensor->ne[2] > 0) {
++        const bool is_key_cache = strcmp(kv_cache_stage, "k") == 0;
++        for (int64_t head = 0; head < tensor->ne[2]; ++head) {
++            const int64_t head_offset = tensor->ne[0] * tensor->ne[1] * head;
++            const int64_t head_nelements = tensor->ne[0] * (int64_t) n_tokens;
++            if (head_offset < 0 || head_nelements <= 0 || head_offset + tensor->ne[0] * ((int64_t) n_tokens - 1) + tensor->ne[0] > nelements) {
++                continue;
++            }
++            double head_sum = 0.0;
++            double head_sq_sum = 0.0;
++            double head_min = std::numeric_limits<double>::infinity();
++            double head_max = -std::numeric_limits<double>::infinity();
++            std::vector<float> head_values;
++            head_values.reserve((size_t) head_nelements);
++            for (int64_t token = 0; token < (int64_t) n_tokens; ++token) {
++                for (int64_t dim = 0; dim < tensor->ne[0]; ++dim) {
++                    const float value_f32 = values[(size_t) (head_offset + tensor->ne[0] * token + dim)];
++                    const double value = value_f32;
++                    head_sum += value;
++                    head_sq_sum += value * value;
++                    head_min = value < head_min ? value : head_min;
++                    head_max = value > head_max ? value : head_max;
++                    head_values.push_back(value_f32);
++                }
++            }
++            const uint64_t head_hash = bitnet_rs_reference_layer_trace_hash(head_values);
++            const double head_mean = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : head_sum / (double) head_nelements;
++            const double head_rms = head_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(head_sq_sum / (double) head_nelements);
++            std::ostringstream head_name;
++            head_name << (is_key_cache ? "k_kv_head" : "v_kv_head") << head << "_live-" << bitnet_rs_reference_layer_trace_layer(name);
++            std::ostringstream head_stage;
++            head_stage << (is_key_cache ? "k_kv_head" : "v_kv_head") << head << "_live";
++            out << ",{";
++            out << "\"graph_index\":" << graph_index;
++            out << ",\"name\":";
++            bitnet_rs_reference_layer_trace_json_string(out, head_name.str().c_str());
++            out << ",\"stage\":";
++            bitnet_rs_reference_layer_trace_json_string(out, head_stage.str().c_str());
++            out << ",\"layer\":" << bitnet_rs_reference_layer_trace_layer(name);
++            out << ",\"graph_op\":";
++            bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++            out << ",\"graph_sources\":[]";
++            out << ",\"view_source\":null";
++            out << ",\"view_offset\":0";
++            out << ",\"dtype\":\"f32_from_f16\"";
++            out << ",\"shape\":[" << tensor->ne[0] << "," << n_tokens << ",1,1]";
++            out << ",\"nelements\":" << head_nelements;
++            out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++            out << ",\"full_nelements\":" << nelements;
++            out << ",\"token_axis\":-1";
++            out << ",\"sample_offset\":" << head_offset;
++            out << ",\"head_index\":" << head;
++            out << ",\"nbytes\":" << nbytes;
++            out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
++            out << ",\"values_available\":true";
++            out << ",\"values_unavailable_reason\":null";
++            out << ",\"stats\":{\"mean\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_mean);
++            out << ",\"rms\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_rms);
++            out << ",\"min\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_min);
++            out << ",\"max\":";
++            bitnet_rs_reference_layer_trace_json_number(out, head_max);
++            out << ",\"fnv1a64\":\"" << std::hex << head_hash << std::dec << "\"}";
++            out << ",\"first_values\":[";
++            const size_t head_sample_count = bitnet_rs_reference_layer_trace_first_values_limit((size_t) head_nelements);
++            for (size_t i = 0; i < head_sample_count; ++i) {
++                if (i > 0) {
++                    out << ",";
++                }
++                bitnet_rs_reference_layer_trace_json_number(out, head_values[i]);
++            }
++            out << "]}";
++            if (!is_key_cache && tensor->ne[0] >= (int64_t) n_tokens && tensor->ne[1] > 0) {
++                const int64_t rust_layout_nelements = tensor->ne[1] * (int64_t) n_tokens;
++                double rust_layout_sum = 0.0;
++                double rust_layout_sq_sum = 0.0;
++                double rust_layout_min = std::numeric_limits<double>::infinity();
++                double rust_layout_max = -std::numeric_limits<double>::infinity();
++                std::vector<float> rust_layout_values;
++                rust_layout_values.reserve((size_t) rust_layout_nelements);
++                for (int64_t dim = 0; dim < tensor->ne[1]; ++dim) {
++                    for (int64_t token = 0; token < (int64_t) n_tokens; ++token) {
++                        const float value_f32 = values[(size_t) (head_offset + tensor->ne[0] * dim + token)];
++                        const double value = value_f32;
++                        rust_layout_sum += value;
++                        rust_layout_sq_sum += value * value;
++                        rust_layout_min = value < rust_layout_min ? value : rust_layout_min;
++                        rust_layout_max = value > rust_layout_max ? value : rust_layout_max;
++                        rust_layout_values.push_back(value_f32);
++                    }
++                }
++                const uint64_t rust_layout_hash = bitnet_rs_reference_layer_trace_hash(rust_layout_values);
++                const double rust_layout_mean = rust_layout_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : rust_layout_sum / (double) rust_layout_nelements;
++                const double rust_layout_rms = rust_layout_nelements <= 0 ? std::numeric_limits<double>::quiet_NaN() : std::sqrt(rust_layout_sq_sum / (double) rust_layout_nelements);
++                std::ostringstream rust_layout_name;
++                rust_layout_name << "v_cache_rust_layout_head" << head << "_live-0";
++                std::ostringstream rust_layout_stage;
++                rust_layout_stage << "v_cache_rust_layout_head" << head << "_live";
++                out << ",{";
++                out << "\"graph_index\":" << graph_index;
++                out << ",\"name\":";
++                bitnet_rs_reference_layer_trace_json_string(out, rust_layout_name.str().c_str());
++                out << ",\"stage\":";
++                bitnet_rs_reference_layer_trace_json_string(out, rust_layout_stage.str().c_str());
++                out << ",\"layer\":" << bitnet_rs_reference_layer_trace_layer(name);
++                out << ",\"graph_op\":";
++                bitnet_rs_reference_layer_trace_json_string(out, ggml_op_name(tensor->op));
++                out << ",\"graph_sources\":[]";
++                out << ",\"view_source\":null";
++                out << ",\"view_offset\":0";
++                out << ",\"dtype\":\"f32_from_f16\"";
++                out << ",\"shape\":[" << tensor->ne[1] << "," << n_tokens << ",1,1]";
++                out << ",\"nelements\":" << rust_layout_nelements;
++                out << ",\"full_shape\":[" << tensor->ne[0] << "," << tensor->ne[1] << "," << tensor->ne[2] << "," << tensor->ne[3] << "]";
++                out << ",\"full_nelements\":" << nelements;
++                out << ",\"token_axis\":-1";
++                out << ",\"sample_offset\":" << head_offset;
++                out << ",\"head_index\":" << head;
++                out << ",\"nbytes\":" << nbytes;
++                out << ",\"contiguous\":" << (ggml_is_contiguous(tensor) ? "true" : "false");
++                out << ",\"values_available\":true";
++                out << ",\"values_unavailable_reason\":null";
++                out << ",\"stats\":{\"mean\":";
++                bitnet_rs_reference_layer_trace_json_number(out, rust_layout_mean);
++                out << ",\"rms\":";
++                bitnet_rs_reference_layer_trace_json_number(out, rust_layout_rms);
++                out << ",\"min\":";
++                bitnet_rs_reference_layer_trace_json_number(out, rust_layout_min);
++                out << ",\"max\":";
++                bitnet_rs_reference_layer_trace_json_number(out, rust_layout_max);
++                out << ",\"fnv1a64\":\"" << std::hex << rust_layout_hash << std::dec << "\"}";
++                out << ",\"first_values\":[";
++                const size_t rust_layout_sample_count = bitnet_rs_reference_layer_trace_first_values_limit((size_t) rust_layout_nelements);
++                for (size_t i = 0; i < rust_layout_sample_count; ++i) {
++                    if (i > 0) {
++                        out << ",";
++                    }
++                    bitnet_rs_reference_layer_trace_json_number(out, rust_layout_values[i]);
++                }
++                out << "]}";
++            }
++        }
++    }
++}
++
++struct bitnet_rs_reference_layer_trace_callback_context {
++    llama_context * lctx = nullptr;
++    uint32_t n_tokens = 0;
++    int32_t n_outputs = 0;
++    std::map<struct ggml_tensor *, int> graph_indices;
++    std::vector<std::string> * records = nullptr;
++    ggml_backend_sched_eval_callback prior_cb_eval = nullptr;
++    void * prior_cb_eval_user_data = nullptr;
++};
++
++static bool bitnet_rs_reference_layer_trace_eval_callback(
++    struct ggml_tensor * tensor,
++    bool ask,
++    void * user_data
++) {
++    auto * ctx = (bitnet_rs_reference_layer_trace_callback_context *) user_data;
++    const bool trace_target = bitnet_rs_reference_layer_trace_target(ggml_get_name(tensor));
++    bool prior_need = false;
++    if (ctx != nullptr && ctx->prior_cb_eval != nullptr) {
++        prior_need = ctx->prior_cb_eval(tensor, ask, ctx->prior_cb_eval_user_data);
++    }
++    if (ask) {
++        return trace_target || prior_need;
++    }
++    if (trace_target && ctx != nullptr && ctx->lctx != nullptr && ctx->records != nullptr) {
++        auto index_it = ctx->graph_indices.find(tensor);
++        const int graph_index = index_it == ctx->graph_indices.end() ? -1 : index_it->second;
++        std::ostringstream record;
++        bitnet_rs_reference_layer_trace_write_record(
++            record,
++            *ctx->lctx,
++            tensor,
++            graph_index,
++            ctx->n_tokens,
++            ctx->n_outputs,
++            true
++        );
++        ctx->records->push_back(record.str());
++    }
++    return true;
++}
++
++static void bitnet_rs_reference_layer_trace_dump(
++    llama_context & lctx,
++    struct ggml_cgraph * gf,
++    const llama_ubatch & ubatch,
++    uint32_t n_tokens,
++    int32_t n_outputs,
++    const char * path,
++    const std::vector<std::string> * callback_records
++) {
++    if (path == nullptr || path[0] == '\0' || n_outputs <= 0) {
++        return;
++    }
++
++    std::ofstream out(path, std::ios::out | std::ios::trunc);
++    if (!out.is_open()) {
++        return;
++    }
++
++    out << "{"
++        << "\"receipt_type\":\"bitnet_reference_layer_trace\","
++        << "\"diagnostic_only\":true,"
++        << "\"claim_allowed\":false,"
++        << "\"source\":\"BITNET_RS_REFERENCE_LAYER_TRACE\","
++        << "\"capture_scope\":\"first_non_warmup_decode_last_output_token_slice\","
++        << "\"warmup_skip_policy\":\"skip_bos_eos_warmup_decode\","
++        << "\"capture_synchronization_policy\":\"scheduler_eval_callback_after_each_target_node\","
++        << "\"n_tokens\":" << n_tokens << ","
++        << "\"n_outputs\":" << n_outputs << ",";
++
++    int32_t sampled_output_token_index = -1;
++    if (ubatch.output != nullptr) {
++        for (uint32_t i = 0; i < n_tokens; ++i) {
++            if (ubatch.output[i] != 0) {
++                sampled_output_token_index = (int32_t) i;
++            }
++        }
++    }
++    if (sampled_output_token_index < 0 && n_tokens > 0) {
++        sampled_output_token_index = (int32_t) n_tokens - 1;
++    }
++
++    out << "\"ubatch_tokens\":";
++    bitnet_rs_reference_layer_trace_write_token_array(out, ubatch.token, n_tokens);
++    out << ",\"ubatch_outputs\":";
++    bitnet_rs_reference_layer_trace_write_output_array(out, ubatch.output, n_tokens);
++    out << ",\"sampled_output_token_index\":" << sampled_output_token_index;
++    out << ",\"sampled_output_token_id\":";
++    if (ubatch.token != nullptr && sampled_output_token_index >= 0) {
++        out << ubatch.token[(uint32_t) sampled_output_token_index];
++    } else {
++        out << "null";
++    }
++    out << ","
++        << "\"records\":[";
++
++    if (callback_records != nullptr) {
++        for (size_t i = 0; i < callback_records->size(); ++i) {
++            if (i > 0) {
++                out << ",";
++            }
++            out << (*callback_records)[i];
++        }
++    } else {
++        bool first = true;
++        for (int i = 0; i < ggml_graph_n_nodes(gf); ++i) {
++            struct ggml_tensor * tensor = ggml_graph_node(gf, i);
++            const char * name = ggml_get_name(tensor);
++            if (!bitnet_rs_reference_layer_trace_target(name)) {
++                continue;
++            }
++            bitnet_rs_reference_layer_trace_write_record(out, lctx, tensor, i, n_tokens, n_outputs, first);
++            first = false;
++        }
++    }
++
++    out << "],\"not_claims\":["
++        << "\"reference_trace_match_rust_cpu\","
++        << "\"reference_trace_match_strict_a770\","
++        << "\"reference_parity_promotion\","
++        << "\"a770_semantic_quality_proven\","
++        << "\"selected_attention_residency\","
++        << "\"resident_kv_decode\","
++        << "\"attention_scores_residency\","
++        << "\"softmax_residency\","
++        << "\"attention_value_mix_residency\","
++        << "\"full_support_op_residency\","
++        << "\"full_device_residency\","
++        << "\"completion\""
++        << "]}";
++}
++
+ struct llama_lora_weight {
+     struct ggml_tensor * a = nullptr;
+     struct ggml_tensor * b = nullptr;
+@@ -9505,6 +10858,14 @@ static struct ggml_tensor * llm_build_norm(
+     }
+
+     if (mw || mb) {
++        const bool bitnet_rs_reference_layer_trace_is_requested_ffn_norm =
++                mw != nullptr
++                && il == bitnet_rs_reference_layer_trace_requested_layer()
++                && strstr(ggml_get_name(mw), ".ffn_norm.weight") != nullptr;
++        if (bitnet_rs_reference_layer_trace_is_requested_ffn_norm) {
++            cb(cur, "ffn_norm_core", il);
++        } else {
+         cb(cur, "norm", il);
++        }
+     }
+
+@@ -15460,6 +16816,7 @@ struct ggml_cgraph * build_bitnet_158() {
+                 cur = llm_build_kv(ctx0, lctx, kv_self, gf,
+                         NULL, NULL,
+                         Kcur, Vcur, Qcur, KQ_mask, n_tokens, kv_head, n_kv, 1.0f/sqrtf(float(n_embd_head)), cb, il);
++                cb(cur, "attn_value_mix", il);
+
+                 cur = llm_build_norm(ctx0, cur, hparams,
+                         model.layers[il].attn_sub_norm, NULL,
+@@ -17655,8 +18881,37 @@ static int llama_decode_internal(
+
+         llama_set_inputs(lctx, ubatch);
+
++        static bool bitnet_rs_reference_layer_trace_dumped = false;
++        const char * bitnet_rs_reference_layer_trace_path = std::getenv("BITNET_RS_REFERENCE_LAYER_TRACE");
++        std::vector<std::string> bitnet_rs_reference_layer_trace_records;
++        bitnet_rs_reference_layer_trace_callback_context bitnet_rs_reference_layer_trace_ctx;
++        const bool bitnet_rs_reference_layer_trace_active =
++            !bitnet_rs_reference_layer_trace_dumped
++            && bitnet_rs_reference_layer_trace_path != nullptr
++            && bitnet_rs_reference_layer_trace_path[0] != '\0'
++            && lctx.n_outputs > 0
++            && !bitnet_rs_reference_layer_trace_is_warmup(lctx, ubatch, n_tokens, lctx.n_outputs);
++        if (bitnet_rs_reference_layer_trace_active) {
++            bitnet_rs_reference_layer_trace_ctx.lctx = &lctx;
++            bitnet_rs_reference_layer_trace_ctx.n_tokens = n_tokens;
++            bitnet_rs_reference_layer_trace_ctx.n_outputs = lctx.n_outputs;
++            bitnet_rs_reference_layer_trace_ctx.records = &bitnet_rs_reference_layer_trace_records;
++            bitnet_rs_reference_layer_trace_ctx.prior_cb_eval = lctx.cparams.cb_eval;
++            bitnet_rs_reference_layer_trace_ctx.prior_cb_eval_user_data = lctx.cparams.cb_eval_user_data;
++            for (int i = 0; i < ggml_graph_n_nodes(gf); ++i) {
++                bitnet_rs_reference_layer_trace_ctx.graph_indices[ggml_graph_node(gf, i)] = i;
++            }
++            ggml_backend_sched_set_eval_callback(lctx.sched, bitnet_rs_reference_layer_trace_eval_callback, &bitnet_rs_reference_layer_trace_ctx);
++        }
++
+         llama_graph_compute(lctx, gf, n_threads, threadpool);
+
++        if (bitnet_rs_reference_layer_trace_active) {
++            ggml_backend_sched_set_eval_callback(lctx.sched, lctx.cparams.cb_eval, lctx.cparams.cb_eval_user_data);
++            bitnet_rs_reference_layer_trace_dump(lctx, gf, ubatch, n_tokens, lctx.n_outputs, bitnet_rs_reference_layer_trace_path, &bitnet_rs_reference_layer_trace_records);
++            bitnet_rs_reference_layer_trace_dumped = true;
++        }
++
+         // update the kv ring buffer
+         {
+             kv_self.head += n_tokens;

@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T07:43:52Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-062"
+event = "merged"
+previous_status = "ready"
+new_status = "merged"
+pr = 6122
+head_sha = "42e5ed1a9dc88b1d29f210432589e09011bc7e30"
+merge_sha = "06b82a17e8ee2dda2dd926bd5affc9d692c2cafd"
+actor = "codex"
+summary = "Merged #6122 and closed SLM-CPU-062 as the BitNet-rs release-surface handoff checkpoint for Kaby SLM packed-Q8 compute-candidate work moving to bitnet-rs-swarm."
+notes = [
+  "BitNet-rs remains the audited release/evidence surface for the Kaby Qwen3 Q8_0 and Qwen2.5 Q8_0 strict CPU receipt oracle.",
+  "Further packed Q8_0 compute-candidate development belongs in bitnet-rs-swarm and should return here only as audited release/evidence artifacts.",
+  "No runtime, receipt schema, model artifact, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, Q4/Q5, throughput, or BitNet QK256 claim was made.",
+]

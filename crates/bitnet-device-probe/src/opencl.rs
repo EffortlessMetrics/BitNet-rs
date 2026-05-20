@@ -176,6 +176,8 @@ pub struct ProbeResult {
 pub struct OpenClTinyVectorAddExecution {
     pub passed: bool,
     pub proof_stage: String,
+    pub platform_index: Option<usize>,
+    pub device_index: Option<usize>,
     pub platform_name: Option<String>,
     pub device_name: Option<String>,
     pub vendor: Option<String>,
@@ -686,6 +688,24 @@ pub fn is_intel_arc_available() -> bool {
 
 /// Compile and run a tiny vector-add kernel on the Arc 140V OpenCL device.
 pub fn run_intel_arc_140v_tiny_vector_add_smoke() -> OpenClTinyVectorAddExecution {
+    run_intel_arc_tiny_vector_add_smoke(
+        name_matches_arc_140v,
+        "Arc 140V OpenCL device was not visible",
+    )
+}
+
+/// Compile and run a tiny vector-add kernel on the Arc A770 OpenCL device.
+pub fn run_intel_arc_a770_tiny_vector_add_smoke() -> OpenClTinyVectorAddExecution {
+    run_intel_arc_tiny_vector_add_smoke(
+        name_matches_arc_a770,
+        "Intel Arc A770 OpenCL device was not visible",
+    )
+}
+
+fn run_intel_arc_tiny_vector_add_smoke(
+    device_name_matches: fn(&str) -> bool,
+    missing_device_error: &str,
+) -> OpenClTinyVectorAddExecution {
     const KERNEL_NAME: &str = "tiny_vector_add";
     const INPUT_LEN: usize = 16;
     const TOLERANCE: f32 = 1.0e-6;
@@ -693,6 +713,8 @@ pub fn run_intel_arc_140v_tiny_vector_add_smoke() -> OpenClTinyVectorAddExecutio
     let mut result = OpenClTinyVectorAddExecution {
         passed: false,
         proof_stage: "runtime_detected".to_owned(),
+        platform_index: None,
+        device_index: None,
         platform_name: None,
         device_name: None,
         vendor: None,
@@ -717,19 +739,26 @@ pub fn run_intel_arc_140v_tiny_vector_add_smoke() -> OpenClTinyVectorAddExecutio
         }
     };
 
-    let Some((platform_id, device_id, platform_name, device_name, vendor, driver_version)) =
-        find_arc_140v_device(&funcs)
+    let Some(selected_device) = find_matching_intel_arc_gpu_device(&funcs, device_name_matches)
     else {
-        result.error = Some("Arc 140V OpenCL device was not visible".to_owned());
+        result.error = Some(missing_device_error.to_owned());
         return result;
     };
 
-    result.platform_name = Some(platform_name);
-    result.device_name = Some(device_name);
-    result.vendor = Some(vendor);
-    result.driver_version = Some(driver_version);
+    result.platform_index = Some(selected_device.platform_index);
+    result.device_index = Some(selected_device.device_index);
+    result.platform_name = Some(selected_device.platform_name.clone());
+    result.device_name = Some(selected_device.device_name.clone());
+    result.vendor = Some(selected_device.vendor.clone());
+    result.driver_version = Some(selected_device.driver_version.clone());
 
-    match run_vector_add_on_device(&funcs, platform_id, device_id, INPUT_LEN, TOLERANCE) {
+    match run_vector_add_on_device(
+        &funcs,
+        selected_device.platform_id,
+        selected_device.device_id,
+        INPUT_LEN,
+        TOLERANCE,
+    ) {
         Ok(metrics) => {
             result.proof_stage = "kernel_smoke_tested".to_owned();
             result.passed = metrics.passed;
@@ -761,9 +790,21 @@ struct VectorAddMetrics {
     readback_ms: f64,
 }
 
-fn find_arc_140v_device(
+struct MatchedIntelArcGpuDevice {
+    platform_id: usize,
+    device_id: usize,
+    platform_index: usize,
+    device_index: usize,
+    platform_name: String,
+    device_name: String,
+    vendor: String,
+    driver_version: String,
+}
+
+fn find_matching_intel_arc_gpu_device(
     funcs: &OpenClExecutionFunctions,
-) -> Option<(usize, usize, String, String, String, String)> {
+    device_name_matches: fn(&str) -> bool,
+) -> Option<MatchedIntelArcGpuDevice> {
     let mut num_platforms: u32 = 0;
     let rc = unsafe { (funcs.get_platform_ids)(0, ptr::null_mut(), &mut num_platforms) };
     if rc != CL_SUCCESS || num_platforms == 0 {
@@ -778,7 +819,7 @@ fn find_arc_140v_device(
         return None;
     }
 
-    for &platform_id in &platform_ids {
+    for (platform_index, &platform_id) in platform_ids.iter().enumerate() {
         let platform_name = query_string(funcs.get_platform_info, platform_id, CL_PLATFORM_NAME);
         let mut num_devices: u32 = 0;
         let rc = unsafe {
@@ -808,22 +849,24 @@ fn find_arc_140v_device(
             continue;
         }
 
-        for &device_id in &device_ids {
+        for (device_index, &device_id) in device_ids.iter().enumerate() {
             let device_name = query_device_string(funcs.get_device_info, device_id, CL_DEVICE_NAME);
             let vendor = query_device_string(funcs.get_device_info, device_id, CL_DEVICE_VENDOR);
-            if !name_matches_arc_140v(&device_name) || !shared_is_intel_vendor(&vendor) {
+            if !device_name_matches(&device_name) || !shared_is_intel_vendor(&vendor) {
                 continue;
             }
             let driver_version =
                 query_device_string(funcs.get_device_info, device_id, CL_DRIVER_VERSION);
-            return Some((
+            return Some(MatchedIntelArcGpuDevice {
                 platform_id,
                 device_id,
+                platform_index,
+                device_index,
                 platform_name,
                 device_name,
                 vendor,
                 driver_version,
-            ));
+            });
         }
     }
 
@@ -833,6 +876,11 @@ fn find_arc_140v_device(
 fn name_matches_arc_140v(value: &str) -> bool {
     let lower = value.to_ascii_lowercase();
     (lower.contains("arc") && lower.contains("140v")) || lower.contains("64a0")
+}
+
+fn name_matches_arc_a770(value: &str) -> bool {
+    let lower = value.to_ascii_lowercase();
+    (lower.contains("arc") && lower.contains("a770")) || lower.contains("56a0")
 }
 
 fn run_vector_add_on_device(
@@ -1292,6 +1340,22 @@ mod tests {
     #[test]
     fn arc_detector_a770() {
         assert!(IntelArcDetector::is_arc("Intel(R) Corporation", "Intel(R) Arc(TM) A770 Graphics"));
+    }
+
+    #[test]
+    fn selected_a770_smoke_matcher_accepts_only_a770_identity() {
+        assert!(name_matches_arc_a770("Intel(R) Arc(TM) A770 Graphics"));
+        assert!(name_matches_arc_a770("Intel Arc 0x56A0"));
+        assert!(!name_matches_arc_a770("Intel(R) Arc(TM) 140V Graphics"));
+        assert!(!name_matches_arc_a770("Intel(R) Arc(TM) A750 Graphics"));
+        assert!(!name_matches_arc_a770("Intel(R) UHD Graphics 770"));
+    }
+
+    #[test]
+    fn selected_arc140v_smoke_matcher_rejects_a770_identity() {
+        assert!(name_matches_arc_140v("Intel(R) Arc(TM) 140V Graphics"));
+        assert!(name_matches_arc_140v("Intel Arc 0x64A0"));
+        assert!(!name_matches_arc_140v("Intel(R) Arc(TM) A770 Graphics"));
     }
 
     #[test]

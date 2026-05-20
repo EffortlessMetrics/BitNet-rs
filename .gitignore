@@ -94,6 +94,10 @@ coverage/
 # External dependency cache
 .cache/
 **/bitnet_cpp/
+!patches/bitnet_cpp/
+!patches/bitnet_cpp/.gitkeep
+!patches/bitnet_cpp/*.patch
+!patches/bitnet_cpp/*.diff
 
 # Cross-validation builds
 crossval/target/

@@ -124,14 +124,15 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-OPS-UX-001 | merged | Add an operator-facing M4 evidence summary. |
 | M4-OPS-UX-002 | merged | Add explain/open affordances for report-refresh and regression-dashboard outputs. |
 | M4-OPS-UX-003 | merged | Extend doctor/status UX to report dense SLM and BitNet readiness separately. |
-| M4-OPS-SLO-001 | proposed | Translate receipts into local operator envelope classes. |
-| M4-CONTEXT-001 | proposed | Add long-context guardrails against recorded dense SLM and BitNet evidence envelopes. |
+| M4-OPS-SLO-001 | merged | Translate receipts into local operator envelope classes. |
+| M4-CONTEXT-001 | merged | Add long-context guardrails against recorded dense SLM and BitNet evidence envelopes. |
 | M4-CONTEXT-002 | proposed | Publish long-context quality and timing receipts where supported. |
 | M4-REPRO-001 | merged | Define the reusable M4 run-identity contract for all evidence families. |
 | M4-REPRO-002 | merged | Publish supported-model artifact provenance and cache verification manifests. |
 | M4-REPRO-003 | proposed | Record prompt-template, stop-sequence, and generation-parameter identity. |
 | M4-RECEIPT-001 | merged | Add receipt-schema compatibility and negative fixtures for M4 evidence families. |
-| M4-STABILITY-001 | proposed | Run a mixed dense-model switch soak with cache reuse and memory-drift evidence. |
+| M4-STABILITY-HARNESS-001 | merged | Implement the mixed dense-model switch benchmark harness before recording soak evidence. |
+| M4-STABILITY-001 | merged | Run a mixed dense-model switch soak with cache reuse and memory-drift evidence. |
 | M4-STABILITY-002 | proposed | Add cache and disk-pressure repair receipts for operator flows. |
 | M4-STABILITY-003 | proposed | Define scheduled M4 trend-retention and stale-identity policy. |
 | M4-RELIABILITY-001 | proposed | Add recovery drills for cancellation, interruption, low disk, cache corruption, and restart. |

@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T05:50:00Z"
+event = "in_progress"
+item = "LNL258V-REG-012"
+branch = "codex/lunar-lake/LNL258V-REG-012-arc-npu-bounded-surface"
+actor = "codex"
+summary = "Started strict regression surface hardening so Arc OpenCL parity and NPU bounded static subgraph evidence are explicit top-level regression-surface gates."
+
+notes = [
+  "The work exposes Arc/NPU bounded proof coverage in the strict regression surface using existing operator-readiness evidence.",
+  "POWER-006 remains blocked because the current machine is on AC/charging and no real battery-mode low_power evidence exists.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, native accelerator claim, acceleration claim, broad quality claim, A770 shared BitNet semantic merged-to-main claim, stale BitNet claim, or BitNet QK256/I2_S behavior-change claim is made.",
+]

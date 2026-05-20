@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T13:48:37Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CONTEXT-HARNESS-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-HARNESS-001-long-context-command-contract"
+
+notes = [
+  "Started a harness prerequisite for M4-CONTEXT-002 after local inspection found the tracker-facing commands were not yet registered: `bitnet mac eval --suite m4-long-context` was missing and `bitnet mac benchmark --profile context` was not a valid profile alias.",
+  "The item is scoped to command contract alignment, dry-run corpus receipt validation, and context benchmark alias expansion only.",
+  "No live M4 long-context quality receipt, timing receipt, BitNet long-context proof, full Metal, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup, broad model quality, broad performance, or broad Apple Silicon performance claim is in scope.",
+]

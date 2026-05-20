@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T12:40:10Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-001-mixed-model-soak"
+
+notes = [
+  "Started the live mixed dense-model switch soak after M4-STABILITY-HARNESS-001 landed the `bitnet mac benchmark --profile mixed_model_switch` harness.",
+  "Recorded `ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch.json` with three supported dense Qwen identities, 75 prompts, 607 generated tokens, `apple-m4-cpu-neon`, `runtime_api=cpu`, `fallback_used=false`, and release-mode build identity.",
+  "`target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch.json --json` passed.",
+  "No BitNet behavior, BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup, broad model quality, broad performance, or broad Apple Silicon performance claim is in scope.",
+]

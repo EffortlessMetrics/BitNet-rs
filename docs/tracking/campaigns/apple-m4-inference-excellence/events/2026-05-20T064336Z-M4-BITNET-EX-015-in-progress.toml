@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T06:43:36Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-015"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-015-bitnet-250-repaired-history"
+
+notes = [
+  "Started the repaired BitNet 250-case matching-history refresh after M4-BENCH-003 merged and campaign next selected M4-BITNET-EX-015.",
+  "Scope is a second repaired 250-case apple-m4-cpu-neon BitNet run under the accepted Microsoft I2_S GGUF, external tokenizer, and bitnetcpp-answer identity.",
+  "The run output path is ci/hardware/apple-m4-mac-mini/2026-05-20T0133Z/bitnet-eval-250-repaired/answer-corpus.json.",
+  "No BitNet chat/serve enablement, dense SLM behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

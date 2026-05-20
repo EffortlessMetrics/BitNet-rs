@@ -452,7 +452,7 @@ forbidden_claims = [
   "global_dense_gguf_inference",
   "global_speedup",
 ]
-next_proof = "Post-OPS-003 requalification review keeps benchmark_qualified=false, speedup_claim=false, and full_residency_claim=false because reviewed CUDA profiles remain slower than same-artifact CPU means, H2D remains a model-load wall-clock envelope, and logits-transfer accounting still records full-logits D2H until device top-k sampling exists. Next proof is a refreshed exact-profile comparator with reduced D2H or device top-k sampling, pure H2D timing, and phase residency."
+  next_proof = "Post-OPS-003 requalification review keeps benchmark_qualified=false, speedup_claim=false, and full_residency_claim=false because reviewed CUDA profiles remain slower than same-artifact CPU means, H2D remains a model-load wall-clock envelope, and logits-transfer accounting still records full-logits D2H until device top-k sampling exists. Next proof is a device-side top-k or greedy sampler receipt with reduced D2H, then a refreshed exact-profile comparator with pure H2D timing and phase residency."
 claim_boundary = "Qwen2.5 0.5B Q8_0 is the first dense CUDA SLM answer lane and has exact-profile RTX 5070 Ti server readiness for the refreshed non-streaming shared-engine chat-completions receipt only. Its post-OPS requalification review does not promote benchmark-qualified speed, speedup, full residency, broad dense GGUF readiness, or BitNet packed I2_S/QK256 proof."
 
   [entry.claims]

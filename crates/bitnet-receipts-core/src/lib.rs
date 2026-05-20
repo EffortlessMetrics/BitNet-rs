@@ -5372,9 +5372,17 @@ fn validate_dense_qwen_transfer_timing(timing: &Value, transfer: &Value) -> Resu
     }
 
     require_non_negative_number(timing, "device_to_host_ms")?;
-    require_string_eq(timing, "device_to_host_ms_source", "wall_clock_extract_logits_2d_local")?;
+    let d2h_source = required_string(timing, "device_to_host_ms_source")?;
+    if !matches!(
+        d2h_source,
+        "wall_clock_extract_logits_2d_local" | "wall_clock_device_top_k_cuda_sampler"
+    ) {
+        return Err(anyhow!(
+            "field `device_to_host_ms_source` must be a supported dense Qwen D2H timing source, got `{d2h_source}`"
+        ));
+    }
     require_non_negative_number(transfer, "device_to_host_ms")?;
-    require_string_eq(transfer, "device_to_host_ms_source", "wall_clock_extract_logits_2d_local")?;
+    require_string_eq(transfer, "device_to_host_ms_source", d2h_source)?;
 
     let timing_d2h = timing
         .get("device_to_host_ms")
@@ -5388,6 +5396,50 @@ fn validate_dense_qwen_transfer_timing(timing: &Value, transfer: &Value) -> Resu
         return Err(anyhow!(
             "timing.device_to_host_ms must match tensor_residency.transfer_accounting.device_to_host_ms"
         ));
+    }
+
+    Ok(())
+}
+
+fn dense_qwen_reduced_logits_transfer_requested(receipt: &Value) -> bool {
+    receipt
+        .get("logits_transfer_reduction")
+        .and_then(|reduction| reduction.get("device_to_host_bytes_reduced"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+}
+
+fn validate_dense_qwen_step_logits_sha256(step: &Value, reduced_cuda_transfer: bool) -> Result<()> {
+    require_sha256(step, "cpu_logits_sha256")?;
+    if step.get("cpu_logits_sha256_available").is_some() {
+        require_bool_eq(step, "cpu_logits_sha256_available", true)?;
+    }
+    if step.get("cpu_logits_sha256_source").is_some() {
+        require_string_eq(step, "cpu_logits_sha256_source", "full_logits_download")?;
+    }
+
+    if reduced_cuda_transfer {
+        if let Some(value) = step.get("cuda_logits_sha256")
+            && !value.is_null()
+        {
+            return Err(anyhow!(
+                "cuda_logits_sha256 must be null or omitted when reduced device top-k transfer is claimed"
+            ));
+        }
+        require_bool_eq(step, "cuda_logits_sha256_available", false)?;
+        require_string_eq(
+            step,
+            "cuda_logits_sha256_source",
+            "not_recorded_reduced_device_top_k_sampler",
+        )?;
+    } else {
+        require_sha256(step, "cuda_logits_sha256")?;
+        if step.get("cuda_logits_sha256_available").is_some() {
+            require_bool_eq(step, "cuda_logits_sha256_available", true)?;
+        }
+        if step.get("cuda_logits_sha256_source").is_some() {
+            require_string_eq(step, "cuda_logits_sha256_source", "full_logits_download")?;
+        }
     }
 
     Ok(())
@@ -5407,8 +5459,14 @@ fn validate_dense_qwen_logits_transfer_reduction(
 
     require_u64_eq(reduction, "schema", 1)?;
     require_string_eq(reduction, "scope", "dense_qwen_logits_top_k_transfer")?;
-    require_string_non_empty(reduction, "transfer_mode")?;
-    require_string_non_empty(reduction, "sampling_location")?;
+    let transfer_mode = required_string(reduction, "transfer_mode")?;
+    if transfer_mode.trim().is_empty() {
+        return Err(anyhow!("field `transfer_mode` must not be empty"));
+    }
+    let sampling_location = required_string(reduction, "sampling_location")?;
+    if sampling_location.trim().is_empty() {
+        return Err(anyhow!("field `sampling_location` must not be empty"));
+    }
     let requested_top_k = required_u64(reduction, "requested_top_k")?;
     if requested_top_k == 0 {
         return Err(anyhow!("logits_transfer_reduction.requested_top_k must be positive"));
@@ -5494,6 +5552,23 @@ fn validate_dense_qwen_logits_transfer_reduction(
         .ok_or_else(|| anyhow!("field `device_to_host_bytes_reduced` must be a bool"))?;
     let bytes_saved = required_u64(reduction, "bytes_saved_vs_full_logits")?;
     if reduced {
+        if !matches!(transfer_mode, "device_top_k_cuda_sampler" | "device_greedy_cuda_sampler") {
+            return Err(anyhow!(
+                "logits_transfer_reduction.device_to_host_bytes_reduced requires a device_top_k_cuda_sampler or device_greedy_cuda_sampler transfer_mode"
+            ));
+        }
+        if sampling_location != "cuda_device" {
+            return Err(anyhow!(
+                "logits_transfer_reduction.device_to_host_bytes_reduced requires sampling_location=cuda_device"
+            ));
+        }
+        if let Some(blocker) = reduction.get("reduction_blocker")
+            && !blocker.is_null()
+        {
+            return Err(anyhow!(
+                "logits_transfer_reduction.reduction_blocker must be omitted or null when device_to_host_bytes_reduced is true"
+            ));
+        }
         if actual_device_to_host_bytes >= full_logits_download_bytes {
             return Err(anyhow!(
                 "logits_transfer_reduction.device_to_host_bytes_reduced requires actual_device_to_host_bytes < full_logits_download_bytes"
@@ -5504,8 +5579,22 @@ fn validate_dense_qwen_logits_transfer_reduction(
                 "logits_transfer_reduction.bytes_saved_vs_full_logits must equal the measured D2H reduction"
             ));
         }
+        let timing = object_field(receipt, "timing")?;
+        let residency = object_field(receipt, "tensor_residency")?;
+        let transfer = object_field(residency, "transfer_accounting")?;
+        require_string_eq(
+            timing,
+            "device_to_host_ms_source",
+            "wall_clock_device_top_k_cuda_sampler",
+        )?;
+        require_string_eq(
+            transfer,
+            "device_to_host_ms_source",
+            "wall_clock_device_top_k_cuda_sampler",
+        )?;
     } else {
         require_string_eq(reduction, "transfer_mode", "full_logits_download_cpu_sampler")?;
+        require_string_eq(reduction, "sampling_location", "cpu")?;
         require_string_non_empty(reduction, "reduction_blocker")?;
         if actual_device_to_host_bytes != full_logits_download_bytes {
             return Err(anyhow!(
@@ -5517,6 +5606,19 @@ fn validate_dense_qwen_logits_transfer_reduction(
                 "logits_transfer_reduction.bytes_saved_vs_full_logits must be 0 when device_to_host_bytes_reduced is false"
             ));
         }
+        let timing = object_field(receipt, "timing")?;
+        let residency = object_field(receipt, "tensor_residency")?;
+        let transfer = object_field(residency, "transfer_accounting")?;
+        require_string_eq(
+            timing,
+            "device_to_host_ms_source",
+            "wall_clock_extract_logits_2d_local",
+        )?;
+        require_string_eq(
+            transfer,
+            "device_to_host_ms_source",
+            "wall_clock_extract_logits_2d_local",
+        )?;
     }
 
     Ok(())
@@ -5962,6 +6064,7 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     if steps.len() != requested as usize {
         return Err(anyhow!("short_decode_proof.steps length must match generated_tokens_count"));
     }
+    let reduced_cuda_transfer = dense_qwen_reduced_logits_transfer_requested(receipt);
     for (idx, step) in steps.iter().enumerate() {
         require_u64_eq(step, "index", idx as u64)?;
         let cpu_token = required_u64(step, "cpu_selected_token_id")?;
@@ -5972,8 +6075,7 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
         require_bool_eq(step, "selected_token_match", true)?;
         require_sha256(step, "cpu_logits_top_k_sha256")?;
         require_sha256(step, "cuda_logits_top_k_sha256")?;
-        require_sha256(step, "cpu_logits_sha256")?;
-        require_sha256(step, "cuda_logits_sha256")?;
+        validate_dense_qwen_step_logits_sha256(step, reduced_cuda_transfer)?;
         object_field(step, "top_k_match")?
             .as_bool()
             .ok_or_else(|| anyhow!("field `top_k_match` must be a bool"))?;
@@ -6308,6 +6410,7 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     if turns.len() != turns_count as usize {
         return Err(anyhow!("warm_session_proof.turns length must match turns_count"));
     }
+    let reduced_cuda_transfer = dense_qwen_reduced_logits_transfer_requested(receipt);
     for (turn_idx, turn) in turns.iter().enumerate() {
         require_u64_eq(turn, "index", turn_idx as u64)?;
         require_positive_u64(turn, "prompt_token_count")?;
@@ -6356,8 +6459,7 @@ pub fn validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             require_bool_eq(step, "selected_token_match", true)?;
             require_sha256(step, "cpu_logits_top_k_sha256")?;
             require_sha256(step, "cuda_logits_top_k_sha256")?;
-            require_sha256(step, "cpu_logits_sha256")?;
-            require_sha256(step, "cuda_logits_sha256")?;
+            validate_dense_qwen_step_logits_sha256(step, reduced_cuda_transfer)?;
             let step_timing = object_field(step, "cuda_step_timing")?;
             require_non_negative_number(step_timing, "logits_download_ms")?;
             require_non_negative_number(step, "top_k_max_abs_error")?;

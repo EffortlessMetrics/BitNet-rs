@@ -108,7 +108,14 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-055 | merged | #6008 added the first production dense-linear hook contract gate so transformer dense linear calls can receive an explicit eager-F32 selection or selected Q8_0 sidecar descriptor while keeping packed compute disabled until before/after behavior receipts exist. |
 | SLM-CPU-056 | merged | #6018 implemented the first production dense-linear hook boundary from SLM-CPU-055 without enabling packed Q8_0 sidecar compute by default or weakening the Qwen3 Q8_0 Kaby behavior oracle. |
 | SLM-CPU-057 | merged | #6045 added the next Qwen3 Q8_0 dense hook-selection receipt gate before any packed Q8_0 sidecar compute can be enabled. |
-| SLM-CPU-058 | ready | Next receipt-equivalence gate: capture or ingest Qwen3 Q8_0 before/after warm-session receipts proving identical generated output and dense hook-selection identity before any packed sidecar compute can be enabled. |
+| SLM-CPU-058 | merged | #6070 queued the dense-hook before/after receipt gate and preserved the current safe state: packed Q8_0 sidecar compute remains disabled until behavior-preserving before/after receipts and a narrow compute proof exist. |
+| SLM-CPU-059 | merged | #6078 recorded the packed Q8_0 compute-kernel proof gate and blocker artifact: production transformer dense-linear hooks still receive metadata-only sidecar descriptors, so payload-bearing packed Q8_0 sidecar compute remains disabled pending before/after behavior receipts. |
+| SLM-CPU-060 | merged | #6085 added the payload-bearing packed Q8_0 sidecar hook contract while keeping runtime compute gated by before/after behavior receipts. |
+| SLM-CPU-061 | merged | #6111 wired one exact real Qwen3 Q8_0 dense-linear tensor payload candidate behind an explicit opt-in gate while preserving the eager F32 behavior oracle. |
+| SLM-CPU-062 | merged | #6122 added the release-surface checkpoint for moving further Kaby SLM packed-Q8 compute-candidate development to bitnet-rs-swarm while BitNet-rs remains the audited release/evidence surface. |
+| SLM-CPU-063 | merged | #6127 defined the BitNet-rs release-surface intake gate for audited Kaby SLM artifacts produced by bitnet-rs-swarm. |
+| SLM-CPU-064 | merged | #6138 accepted the first audited Kaby SLM package returned from bitnet-rs-swarm as release-surface evidence only; runtime promotion remains separate. |
+| SLM-CPU-065 | ready | Open the first release-surface runtime-promotion gate for the accepted single-tensor packed Q8_0 sidecar candidate, preserving the strict Qwen3 Q8_0 oracle and keeping runtime promotion disabled by default unless before/after receipts prove identical behavior. |
 
 ## Review Policy
 

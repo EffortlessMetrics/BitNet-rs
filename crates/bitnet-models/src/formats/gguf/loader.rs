@@ -4,7 +4,9 @@ mod tensor_loading;
 
 use super::{GgufReader, GgufTensorType, GgufTensors};
 use crate::architecture::{DenseQwenArchitecture, classify_dense_qwen_architecture};
-use crate::dense_gguf_q8_sidecar::DenseGgufQ8SidecarRegistry;
+use crate::dense_gguf_q8_sidecar::{
+    DenseGgufQ8SidecarRegistry, dense_q8_payload_candidate_tensor_from_env,
+};
 use crate::loader::{FormatLoader, LoadConfig, MmapFile};
 use crate::names::{is_layernorm_weight, is_projection_weight};
 use crate::{BitNetModel, Model};
@@ -2099,6 +2101,7 @@ impl GgufLoader {
         let mut raw_tensors: std::collections::HashMap<String, Tensor> =
             std::collections::HashMap::new();
         let mut dense_q8_sidecars = DenseGgufQ8SidecarRegistry::default();
+        let dense_q8_payload_candidate_tensor = dense_q8_payload_candidate_tensor_from_env();
 
         info!("Loading {} tensors", tensor_count);
 
@@ -2155,7 +2158,11 @@ impl GgufLoader {
                     norm_validation_policy,
                 )?;
             tensors.insert(tensor_info.name.clone(), candle_tensor);
-            dense_q8_sidecars.try_push_tensor(tensor_info, tensor_data)?;
+            dense_q8_sidecars.try_push_tensor_with_payload_candidate(
+                tensor_info,
+                tensor_data,
+                dense_q8_payload_candidate_tensor.as_deref(),
+            )?;
 
             // Store raw QK256 tensors if present.
             for (key, raw_tensor) in raw_qk256_entries {

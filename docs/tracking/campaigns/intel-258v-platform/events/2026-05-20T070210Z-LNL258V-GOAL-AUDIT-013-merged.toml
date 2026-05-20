@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T07:02:10Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-013"
+pr = 6116
+head_sha = "aac8521c933f1be4ddaa0db3d3d1a13c7085d680"
+merge_sha = "32f82e16889f20f264e69cfb90866bbb98c0ea74"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-013-post-a770006"
+actor = "codex"
+summary = "Merged the no-inference Lunar Lake completion-audit refresh after A770-006 closeout."
+
+notes = [
+  "The audit now records A770-006/#6110 and closeout #6112 as adjacent selected-device OpenCL matmul_i2s CPU parity evidence.",
+  "The goal checklist still marks excellent support not complete because POWER-006 lacks battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, stale BitNet claim, A770 semantic PR merged-to-main claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]

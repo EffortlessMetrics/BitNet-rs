@@ -1,0 +1,13 @@
+timestamp = "2026-05-20T04:45:00Z"
+campaign = "intel-258v-platform"
+item = "LNL258V-OP-014"
+event = "in_progress"
+branch = "codex/lunar-lake/LNL258V-OP-014-low-power-blocked-guidance"
+actor = "codex"
+summary = "Started low_power blocked-auto-route operator guidance hardening."
+
+notes = [
+  "POWER-006 remains blocked while the current machine reports AC/charging instead of battery mode.",
+  "This slice only improves the fail-closed blocked ask path so the error, receipt, and strict regression surface point at the battery runbook and required next evidence.",
+  "No inference, model load, route promotion, speedup, power-advantage, native accelerator, acceleration, or BitNet QK256/I2_S behavior-change claim is allowed.",
+]

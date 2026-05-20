@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T03:55:54Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-059"
+event = "pr_open"
+actor = "codex"
+previous_status = "ready"
+new_status = "pr_open"
+pr = 6078
+head_sha = "223f87e471f43911bb5757f934c0a3151352eb7f"
+summary = "Opened PR #6078 for the packed Q8_0 compute-kernel proof gate."
+notes = [
+  "PR #6078 emits a concrete blocker artifact for SLM-CPU-059 instead of enabling packed Q8_0 sidecar runtime compute.",
+  "The artifact records that production transformer dense-linear hooks still receive metadata-only sidecar descriptors, so payload-bearing packed Q8_0 blocks are not available at the production dense-linear callsite.",
+  "The next safe runtime slice is an evidence-scoped payload-bearing sidecar candidate proved against the eager F32 Candle behavior oracle with before/after Qwen3 Q8_0 warm-session receipts.",
+  "No runtime compute, speedup, sustained throughput, broad answer quality, Q4/Q5 runtime, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

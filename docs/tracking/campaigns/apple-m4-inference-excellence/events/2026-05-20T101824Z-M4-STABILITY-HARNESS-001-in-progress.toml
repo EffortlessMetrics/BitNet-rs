@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T10:18:24Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-HARNESS-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-HARNESS-001-mixed-model-profile"
+
+notes = [
+  "Started a harness prerequisite for M4-STABILITY-001 after confirming the tracker command referenced `bitnet mac benchmark --profile mixed_model_switch` but the CLI did not expose or validate that profile.",
+  "Scope is the mixed dense-model switch benchmark route, aggregate receipt schema, receipt validation, focused tests, and tracker metadata.",
+  "The future live soak remains M4-STABILITY-001; this item does not publish ci/hardware mixed-model soak evidence.",
+  "No BitNet behavior, BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup, broad quality, or broad Apple Silicon performance claim is in scope.",
+]

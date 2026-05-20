@@ -1,0 +1,13 @@
+timestamp = "2026-05-20T06:30:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-061"
+event = "pr_open"
+pr = 6111
+head_sha = "d304e5fe1cee6bc92d4008f84e904ec924a8f826"
+actor = "codex"
+notes = [
+  "Opened #6111 to wire one exact Qwen3 Q8_0 dense-linear sidecar payload candidate behind the explicit BITNET_DENSE_Q8_PAYLOAD_ENABLE / BITNET_DENSE_Q8_PAYLOAD_TENSOR gate.",
+  "The slice keeps selected_path=eager_f32_candle, selected_kernel=dense-f32-candle-linear, runtime_compute_enabled=false, dense_runtime_replaced=false, and speedup_claim=false.",
+  "Before/after i5-8250U warm-session receipts show unchanged prompt IDs, generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel identity, and fallback=false.",
+  "Updated the PR head after replacing test-only expect calls with explicit Result errors to satisfy the no-panic policy.",
+]

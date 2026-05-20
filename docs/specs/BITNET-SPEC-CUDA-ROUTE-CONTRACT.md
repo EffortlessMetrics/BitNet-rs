@@ -7,7 +7,8 @@ Linked proposal: [BITNET-PROP-0002](../proposals/BITNET-PROP-0002-9950x3d-5070ti
   [BITNET-PROP-0003](../proposals/BITNET-PROP-0003-native-rust-inference-product.md)
 Linked specs: [BITNET-SPEC-0007](BITNET-SPEC-0007-9950x3d-5070ti-cuda-product-contract.md),
   [BITNET-SPEC-0013](BITNET-SPEC-0013-model-onboarding-proof-ladder.md),
-  [BITNET-SPEC-0014](BITNET-SPEC-0014-runtime-performance-contract.md)
+  [BITNET-SPEC-0014](BITNET-SPEC-0014-runtime-performance-contract.md),
+  [BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE](BITNET-SPEC-PROOF-FAMILY-NON-INHERITANCE.md)
 Linked ADRs: [BITNET-ADR-0004](../adr/BITNET-ADR-0004-9950x3d-5070ti-cuda-product-bench.md)
 Linked plan: [CUDA 5070 Ti productization](../../plans/cuda-5070ti-productization/README.md)
 Linked issues: n/a

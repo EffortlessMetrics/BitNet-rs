@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_profile_evidence",
   "proof_stage": "low_power_evidence_indexed_no_promotion_change",
-  "created_utc": "2026-05-20T03:30:00Z",
+  "created_utc": "2026-05-20T05:30:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -108,8 +108,11 @@
     "battery-mode sample is missing for low_power promotion",
     "no low_power route has benchmark-qualified power evidence"
   ],
+  "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
   "next_required_evidence": [
-    "collect AC and battery samples for the same route/profile matrix",
+    "rerun telemetry-context --require-battery on battery power before collecting low_power route samples",
+    "collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix",
+    "rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision",
     "record thermal temperatures if available; current thermal evidence is zone visibility only",
     "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
   ],

@@ -35,6 +35,34 @@ fn forward_qk256_supports_rank3_input() -> Result<()> {
 }
 
 #[test]
+fn forward_qk256_rank3_preserves_varied_token_rows() -> Result<()> {
+    let device = Device::Cpu;
+    let mut input_rows = Vec::with_capacity(2 * 2 * 256);
+    for value in [1.0f32, 2.0, -1.0, 0.5] {
+        input_rows.extend(std::iter::repeat(value).take(256));
+    }
+    let input = Tensor::from_vec(input_rows, (2, 2, 256), &device)?;
+    let qk = Tensor::from_vec(vec![0xAAu8; 64], (1, 64), &device)?;
+
+    let out = forward_qk256(&input, &qk, "layers.0.feed_forward.up_proj.weight.qk256_qs")?;
+    assert_eq!(out.dims(), &[2, 2, 1]);
+
+    let out_vals = out.to_vec3::<f32>()?;
+    let expected = [[[256.0f32], [512.0]], [[-256.0], [128.0]]];
+    for (batch_idx, batch) in out_vals.iter().enumerate() {
+        for (token_idx, token) in batch.iter().enumerate() {
+            assert!(
+                (token[0] - expected[batch_idx][token_idx][0]).abs() < 1e-4,
+                "rank3 QK256 row mismatch at batch {batch_idx}, token {token_idx}: expected {}, actual {}",
+                expected[batch_idx][token_idx][0],
+                token[0]
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn forward_qk256_with_scale_uses_bitnet_i8s_activation_path() -> Result<()> {
     let device = Device::Cpu;
     let input = Tensor::from_vec(vec![1.0f32; 256], (1, 256), &device)?;

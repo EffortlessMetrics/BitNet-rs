@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T14:37:26Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-064"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+summary = "Start the BitNet-rs release-surface review of the first Kaby SLM package returned from bitnet-rs-swarm."
+notes = [
+  "The returned package is the SLM-CPU-062 swarm export from source commit 4b91a9d17977317aa8b320610cecc58e2195f08b.",
+  "The review checks candidate_summary.json, before_receipt.json, after_receipt.json, equivalence_report.json, timing_not_claimed.json, and source_commit.txt against the SLM-CPU-063 intake gate.",
+  "The package preserves model SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false.",
+  "The review is evidence intake only and does not promote runtime code, enable packed Q8_0 compute, claim speedup, claim sustained throughput, add Q4/Q5 support, or touch server/GPU/NPU/OpenVINO/UHD 620/Qwen3.5/BitNet QK256 paths.",
+]

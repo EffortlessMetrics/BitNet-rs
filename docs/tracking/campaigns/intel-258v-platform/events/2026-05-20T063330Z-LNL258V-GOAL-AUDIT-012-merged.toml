@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T06:33:30Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-012"
+pr = 6108
+head_sha = "75afe58bd07224933db194073d54357a37ea9302"
+merge_sha = "9c2cb3db9f2cebf7021be39e51890e87b323923e"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-012-post-reg013-closeout"
+actor = "codex"
+summary = "Merged the no-inference Lunar Lake completion-audit refresh after REG-013 closeout."
+
+notes = [
+  "The audit now records REG-013/#6106 and closeout #6107 as merged strict-regression BitNet CPU reference surface hardening.",
+  "The goal checklist still marks excellent support not complete because POWER-006 lacks battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, stale BitNet claim, A770 semantic PR merged-to-main claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]

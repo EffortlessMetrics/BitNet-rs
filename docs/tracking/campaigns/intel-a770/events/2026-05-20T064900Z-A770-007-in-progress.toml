@@ -1,0 +1,12 @@
+timestamp = "2026-05-20T06:49:00Z"
+campaign = "intel-a770"
+item = "A770-007"
+event = "in_progress"
+branch = "codex/intel-a770/A770-007-receipt-identity"
+actor = "codex"
+
+notes = [
+  "Started A770-007 after A770-006 landed selected-device OpenCL matmul_i2s CPU parity evidence.",
+  "This slice records selected-device receipt identity across the committed A770-005 smoke and A770-006 parity receipts.",
+  "The report remains diagnostic-only and does not promote trusted-partial acceleration, BitNet inference, official QK256 production semantics, residency, performance, or completion.",
+]

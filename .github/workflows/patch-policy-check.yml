@@ -5,10 +5,12 @@ on:
     branches: [ main, develop ]
     paths:
       - 'patches/**'
+      - '.github/workflows/patch-policy-check.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'patches/**'
+      - '.github/workflows/patch-policy-check.yml'
   schedule:
     # Weekly patch lifecycle review
     - cron: '0 9 * * 1'  # Monday 9 AM UTC
@@ -20,6 +22,7 @@ concurrency:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  PATCH_POLICY_DIR: patches/bitnet_cpp
 
 jobs:
   check-patch-policy:
@@ -40,8 +43,8 @@ jobs:
 
         # Count patch files
         patch_count=0
-        if [[ -d "patches" ]]; then
-          patch_count=$(find patches -name "*.patch" -o -name "*.diff" | wc -l)
+        if [[ -d "$PATCH_POLICY_DIR" ]]; then
+          patch_count=$(find "$PATCH_POLICY_DIR" -type f \( -name "*.patch" -o -name "*.diff" \) | wc -l)
         fi
 
         echo "patch_count=$patch_count" >> $GITHUB_OUTPUT
@@ -50,7 +53,7 @@ jobs:
         # List patch files
         if [[ $patch_count -gt 0 ]]; then
           echo "Patch files found:"
-          find patches -name "*.patch" -o -name "*.diff" | while read -r patch_file; do
+          find "$PATCH_POLICY_DIR" -type f \( -name "*.patch" -o -name "*.diff" \) | while read -r patch_file; do
             echo "  - $patch_file"
           done
         fi
@@ -64,7 +67,7 @@ jobs:
         missing_metadata=()
         invalid_patches=()
 
-        find patches -name "*.patch" -o -name "*.diff" | while read -r patch_file; do
+        find "$PATCH_POLICY_DIR" -type f \( -name "*.patch" -o -name "*.diff" \) | while read -r patch_file; do
           echo "Checking $patch_file..."
 
           # Check for required metadata in patch header
@@ -113,7 +116,7 @@ jobs:
 
         broken_links=()
 
-        find patches -name "*.patch" -o -name "*.diff" | while read -r patch_file; do
+        find "$PATCH_POLICY_DIR" -type f \( -name "*.patch" -o -name "*.diff" \) | while read -r patch_file; do
           # Extract upstream issue URL
           upstream_issue=$(grep "^# Upstream-Issue:" "$patch_file" 2>/dev/null | sed 's/^# Upstream-Issue: *//')
 
@@ -327,7 +330,7 @@ jobs:
       run: |
         echo "✅ No patches found - policy compliance perfect!"
         echo ""
-        echo "The patches/ directory is empty, which aligns with our policy"
+        echo "The external patch directory is empty, which aligns with our policy"
         echo "of preferring upstream fixes over local patches."
 
   # Weekly patch lifecycle review
@@ -344,7 +347,7 @@ jobs:
       run: |
         echo "Analyzing patch lifecycle..."
 
-        if [[ ! -d "patches" ]] || [[ -z "$(find patches -name "*.patch" -o -name "*.diff")" ]]; then
+        if [[ ! -d "$PATCH_POLICY_DIR" ]] || [[ -z "$(find "$PATCH_POLICY_DIR" -type f \( -name "*.patch" -o -name "*.diff" \))" ]]; then
           echo "✅ No patches to review - excellent!"
           exit 0
         fi
@@ -353,7 +356,7 @@ jobs:
         old_patches=()
         review_needed=()
 
-        find patches -name "*.patch" -o -name "*.diff" | while read -r patch_file; do
+        find "$PATCH_POLICY_DIR" -type f \( -name "*.patch" -o -name "*.diff" \) | while read -r patch_file; do
           echo "Reviewing $patch_file..."
 
           # Extract creation date

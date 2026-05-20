@@ -1,0 +1,12 @@
+timestamp = "2026-05-20T00:27:21Z"
+campaign = "intel-a770"
+item = "A770-005"
+event = "in_progress"
+branch = "codex/intel-a770/A770-005-opencl-smoke"
+actor = "codex"
+
+notes = [
+  "Started A770-005 on a host exposing Intel(R) Arc(TM) A770 Graphics with PCI DEV_56A0 status OK.",
+  "This slice adds an opt-in selected-device native OpenCL tiny vector-add smoke for A770 and preserves fallback_used=false.",
+  "The smoke is not BitNet inference, not packed QK256, not CPU/OpenCL parity for a BitNet subgraph, not a speedup claim, and not trusted-partial acceleration.",
+]

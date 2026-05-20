@@ -51,6 +51,7 @@ const OPERATOR_COMPARISON: &str = "lunar-lake-operator-comparison.json";
 const ROUTE_PROMOTION_LEDGER: &str = "lunar-lake-route-promotion.json";
 const ROUTE_PROFILE_COMPARISON: &str = "lunar-lake-route-profile-comparison.json";
 const REGRESSION_BUNDLE_V2: &str = "lunar-lake-regression-bundle-v2.json";
+pub const LOW_POWER_BATTERY_RUNBOOK: &str = "docs/hardware/intel-258v-low-power-battery-runbook.md";
 const COLD_WARM_PROFILE_BENCHMARK: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json";
 const COLD_WARM_PROFILE_BENCHMARK_FILE: &str = "lunar-lake-cold-warm-profile-benchmark.json";
@@ -160,6 +161,11 @@ pub enum LunarLakeAction {
         /// Relative paths are resolved under artifact-root unless they exist from the current dir.
         #[arg(long, default_value = THERMAL_TEMPERATURE_AVAILABILITY_FILE)]
         thermal_temperature_availability: Option<PathBuf>,
+
+        /// Blocked low_power auto ask receipt to index in readiness.
+        /// Relative paths are resolved under artifact-root unless they exist from the current dir.
+        #[arg(long, default_value = BLOCKED_AUTO_ASK_RECEIPT)]
+        blocked_ask_receipt: Option<PathBuf>,
 
         /// Output JSON readiness receipt to file.
         #[arg(long)]
@@ -899,6 +905,8 @@ pub struct LunarLakeOperatorReceipt {
     pub power_profile_evidence: Option<PowerProfileRegressionSummary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub thermal_temperature_availability: Option<ThermalTemperatureAvailabilityRegressionSummary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked_ask_receipt: Option<BlockedAskRegressionSummary>,
     pub evidence: Vec<EvidenceStatus>,
     pub gaps: Vec<String>,
     pub claim_boundary: ClaimBoundary,
@@ -1028,6 +1036,10 @@ pub struct RegressionSurfaceSummary {
     #[serde(default)]
     pub bitnet_semantic_intake_indexed: bool,
     #[serde(default)]
+    pub bitnet_cpu_reference_evidence_indexed: bool,
+    #[serde(default)]
+    pub bitnet_cpu_reference_evidence_ready: bool,
+    #[serde(default)]
     pub power_profile_evidence_indexed: bool,
     #[serde(default)]
     pub thermal_temperature_availability_indexed: bool,
@@ -1035,6 +1047,10 @@ pub struct RegressionSurfaceSummary {
     pub thermal_temperature_available: bool,
     #[serde(default)]
     pub thermal_usable_temperature_reading_count: usize,
+    #[serde(default)]
+    pub arc_npu_bounded_evidence_indexed: bool,
+    #[serde(default)]
+    pub arc_npu_bounded_evidence_ready: bool,
     #[serde(default)]
     pub ask_short_ask_receipt_indexed: bool,
     #[serde(default)]
@@ -1086,10 +1102,14 @@ impl Default for RegressionSurfaceSummary {
             cold_warm_benchmark_indexed: false,
             durability_bundle_indexed: false,
             bitnet_semantic_intake_indexed: false,
+            bitnet_cpu_reference_evidence_indexed: false,
+            bitnet_cpu_reference_evidence_ready: false,
             power_profile_evidence_indexed: false,
             thermal_temperature_availability_indexed: false,
             thermal_temperature_available: false,
             thermal_usable_temperature_reading_count: 0,
+            arc_npu_bounded_evidence_indexed: false,
+            arc_npu_bounded_evidence_ready: false,
             ask_short_ask_receipt_indexed: false,
             ask_short_auto_ask_ready: false,
             ask_normal_ask_receipt_indexed: false,
@@ -1270,6 +1290,10 @@ pub struct PowerProfileRegressionSummary {
     pub energy_proxy_recorded: bool,
     pub energy_proxy_source: Option<String>,
     pub thermal_context_recorded: bool,
+    #[serde(default)]
+    pub operator_runbook: Option<String>,
+    #[serde(default)]
+    pub next_required_evidence: Vec<String>,
     pub claim_boundary_preserved: bool,
     pub regression_ready: bool,
     pub gaps: Vec<String>,
@@ -1331,6 +1355,10 @@ pub struct BlockedAskRegressionSummary {
     pub why_not_cpu: Vec<String>,
     pub why_not_gpu: Vec<String>,
     pub why_not_npu: Vec<String>,
+    #[serde(default)]
+    pub operator_runbook: Option<String>,
+    #[serde(default)]
+    pub next_required_evidence: Vec<String>,
     pub new_inference_executed: bool,
     pub fallback_used: bool,
     pub route_promotion_changed: bool,
@@ -2375,6 +2403,8 @@ pub struct LunarLakePowerProfileEvidence {
     pub low_power_promotion_ready: bool,
     pub power_advantage_proven: bool,
     pub gaps: Vec<String>,
+    #[serde(default)]
+    pub operator_runbook: Option<String>,
     pub next_required_evidence: Vec<String>,
     pub claim_boundary: PowerProfileClaimBoundary,
 }
@@ -2619,6 +2649,7 @@ impl LunarLakeCommand {
                 route_profile_comparison,
                 power_profile_evidence,
                 thermal_temperature_availability,
+                blocked_ask_receipt,
                 json_out,
                 created_utc,
                 strict,
@@ -2633,6 +2664,7 @@ impl LunarLakeCommand {
                             route_profile_comparison.as_deref(),
                             power_profile_evidence.as_deref(),
                             thermal_temperature_availability.as_deref(),
+                            blocked_ask_receipt.as_deref(),
                         )?
                     }
                     None => build_operator_readiness_receipt_with_route_policy(
@@ -2641,6 +2673,7 @@ impl LunarLakeCommand {
                         route_profile_comparison.as_deref(),
                         power_profile_evidence.as_deref(),
                         thermal_temperature_availability.as_deref(),
+                        blocked_ask_receipt.as_deref(),
                     )?,
                 };
                 write_or_print_receipt(&receipt, json_out.as_deref())?;
@@ -3185,6 +3218,7 @@ pub fn build_operator_readiness_receipt_with_route_policy(
     route_profile_comparison: Option<&Path>,
     power_profile_evidence: Option<&Path>,
     thermal_temperature_availability: Option<&Path>,
+    blocked_ask_receipt: Option<&Path>,
 ) -> Result<LunarLakeOperatorReceipt> {
     build_operator_readiness_receipt_with_created_utc_and_route_policy(
         root,
@@ -3193,6 +3227,7 @@ pub fn build_operator_readiness_receipt_with_route_policy(
         route_profile_comparison,
         power_profile_evidence,
         thermal_temperature_availability,
+        blocked_ask_receipt,
     )
 }
 
@@ -3208,6 +3243,7 @@ pub fn build_operator_readiness_receipt_with_created_utc(
         None,
         None,
         None,
+        None,
     )
 }
 
@@ -3218,6 +3254,7 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
     route_profile_comparison: Option<&Path>,
     power_profile_evidence: Option<&Path>,
     thermal_temperature_availability: Option<&Path>,
+    blocked_ask_receipt: Option<&Path>,
 ) -> Result<LunarLakeOperatorReceipt> {
     let evidence = vec![
         inspect_receipt(
@@ -3432,6 +3469,24 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
     } else {
         None
     };
+    let blocked_ask_receipt = if let Some(path) = blocked_ask_receipt {
+        let path = resolve_receipt_path(root, path);
+        if path.exists() {
+            let summary = inspect_blocked_ask_regression(&path)?;
+            if !summary.regression_ready {
+                gaps.push(format!(
+                    "blocked low_power ask receipt is not readiness-ready: {}",
+                    summary.gaps.join(", ")
+                ));
+            }
+            Some(summary)
+        } else {
+            gaps.push(format!("missing blocked low_power ask receipt: {}", path.display()));
+            None
+        }
+    } else {
+        None
+    };
 
     let default_route = dense_slm_cpu_route();
     let routes = vec![
@@ -3454,6 +3509,7 @@ pub fn build_operator_readiness_receipt_with_created_utc_and_route_policy(
         route_policy,
         power_profile_evidence,
         thermal_temperature_availability,
+        blocked_ask_receipt,
         evidence,
         gaps,
         claim_boundary: ClaimBoundary {
@@ -4099,6 +4155,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         ask_normal_ask_receipt.as_ref(),
         warm_resident_ask_receipt.as_ref(),
         blocked_ask_receipt.as_ref(),
+        &operator,
     );
 
     Ok(LunarLakeRegressionBundle {
@@ -4140,13 +4197,45 @@ fn build_regression_surface_summary(
     ask_normal_ask_receipt: Option<&OperatorAskRegressionSummary>,
     warm_resident_ask_receipt: Option<&OperatorAskRegressionSummary>,
     blocked_ask_receipt: Option<&BlockedAskRegressionSummary>,
+    operator: &LunarLakeOperatorReceipt,
 ) -> RegressionSurfaceSummary {
+    let bitnet_cpu_reference_evidence_ids = [
+        "bitnet_cpu_reference_bundle",
+        "bitnet_external_reference_boundary",
+        "bitnet_external_direct_token_boundary",
+        "bitnet_first_token_direct_classifier",
+        "bitnet_i2s_gemv_gemm_microbench",
+        "bitnet_i2s_tiling_thread_matrix",
+        "bitnet_i2s_applied_thread_matrix",
+        "bitnet_embedding_quantization_evidence",
+    ];
+    let bitnet_cpu_reference_route_indexed =
+        operator.routes.iter().any(|route| route.route_id == "bitnet_reference_cpu");
+    let bitnet_cpu_reference_evidence_indexed = bitnet_cpu_reference_route_indexed
+        && bitnet_cpu_reference_evidence_ids
+            .iter()
+            .all(|id| operator.evidence.iter().any(|item| item.evidence_id == *id && item.present));
+    let bitnet_cpu_reference_evidence_ready = route_ok(operator, "bitnet_reference_cpu")
+        && bitnet_cpu_reference_evidence_ids.iter().all(|id| evidence_ok(&operator.evidence, id));
+    let arc_npu_bounded_evidence_ids = [
+        "arc140v_native_opencl_parity",
+        "npu_rmsnorm_static_subgraph",
+        "npu_linear_static_subgraph",
+        "npu_ffn_static_subgraph",
+    ];
+    let arc_npu_bounded_evidence_indexed = arc_npu_bounded_evidence_ids
+        .iter()
+        .all(|id| operator.evidence.iter().any(|item| item.evidence_id == *id && item.present));
+    let arc_npu_bounded_evidence_ready =
+        arc_npu_bounded_evidence_ids.iter().all(|id| evidence_ok(&operator.evidence, id));
     let mut summary = RegressionSurfaceSummary {
         answer_corpus_v2_indexed: answer_corpus_v2.is_some(),
         route_profile_comparison_indexed: route_profile_comparison.is_some(),
         cold_warm_benchmark_indexed: cold_warm_benchmark.is_some(),
         durability_bundle_indexed: durability_bundle.is_some(),
         bitnet_semantic_intake_indexed: bitnet_semantic_intake.is_some(),
+        bitnet_cpu_reference_evidence_indexed,
+        bitnet_cpu_reference_evidence_ready,
         power_profile_evidence_indexed: power_profile_evidence.is_some(),
         thermal_temperature_availability_indexed: thermal_temperature_availability.is_some(),
         thermal_temperature_available: thermal_temperature_availability
@@ -4155,6 +4244,8 @@ fn build_regression_surface_summary(
         thermal_usable_temperature_reading_count: thermal_temperature_availability
             .map(|summary| summary.usable_temperature_reading_count)
             .unwrap_or(0),
+        arc_npu_bounded_evidence_indexed,
+        arc_npu_bounded_evidence_ready,
         ask_short_ask_receipt_indexed: ask_short_ask_receipt.is_some(),
         ask_short_auto_ask_ready: ask_short_ask_receipt
             .map(|summary| summary.regression_ready)
@@ -4360,6 +4451,16 @@ fn build_regression_surface_summary(
         summary.gaps.push("BitNet semantic intake is not indexed".to_string());
     }
 
+    if !summary.bitnet_cpu_reference_evidence_indexed {
+        summary.gaps.push(
+            "BitNet CPU reference route evidence is not indexed in operator readiness".to_string(),
+        );
+    } else if !summary.bitnet_cpu_reference_evidence_ready {
+        summary
+            .gaps
+            .push("BitNet CPU reference route evidence is not regression-ready".to_string());
+    }
+
     if let Some(power) = power_profile_evidence {
         if !power.regression_ready {
             summary.gaps.push(format!(
@@ -4398,6 +4499,14 @@ fn build_regression_surface_summary(
                     .to_string(),
             );
         }
+    }
+
+    if !summary.arc_npu_bounded_evidence_indexed {
+        summary.gaps.push(
+            "Arc/NPU bounded proof evidence is not indexed in operator readiness".to_string(),
+        );
+    } else if !summary.arc_npu_bounded_evidence_ready {
+        summary.gaps.push("Arc/NPU bounded proof evidence is not regression-ready".to_string());
     }
 
     let npu_warm_resident_promoted = summary
@@ -5143,6 +5252,22 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
                 .to_string(),
         );
     }
+    if !power.telemetry.battery_mode_sample_recorded {
+        if power.operator_runbook.as_deref() != Some(LOW_POWER_BATTERY_RUNBOOK) {
+            gaps.push(format!(
+                "low_power power-profile evidence must point to {LOW_POWER_BATTERY_RUNBOOK}"
+            ));
+        }
+        if !power
+            .next_required_evidence
+            .iter()
+            .any(|item| item.contains("telemetry-context --require-battery"))
+        {
+            gaps.push(
+                "low_power power-profile evidence must name telemetry-context --require-battery as next evidence".to_string(),
+            );
+        }
+    }
 
     let mut blockers = power.gaps.clone();
     for route in &power.low_power_routes {
@@ -5164,6 +5289,8 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
         energy_proxy_recorded: power.telemetry.energy_proxy_recorded,
         energy_proxy_source: power.telemetry.energy_proxy_source,
         thermal_context_recorded: power.telemetry.thermal_context_recorded,
+        operator_runbook: power.operator_runbook,
+        next_required_evidence: power.next_required_evidence,
         claim_boundary_preserved,
         regression_ready: gaps.is_empty(),
         gaps,
@@ -5519,6 +5646,12 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
         non_empty_string_array_at_any(&receipt, &["why_not_gpu", "route_selection.why_not_gpu"]);
     let why_not_npu =
         non_empty_string_array_at_any(&receipt, &["why_not_npu", "route_selection.why_not_npu"]);
+    let operator_runbook =
+        string_at_any(&receipt, &["operator_runbook", "route_selection.operator_runbook"]);
+    let next_required_evidence = non_empty_string_array_at_any(
+        &receipt,
+        &["next_required_evidence", "route_selection.next_required_evidence"],
+    );
     let new_inference_executed =
         bool_at_any(&receipt, &["new_inference_executed", "claim_boundary.new_inference_executed"])
             .unwrap_or(true);
@@ -5580,6 +5713,27 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
             gaps.push(format!("route_selection_error is missing `{required}`"));
         }
     }
+    if profile_id == "low_power" {
+        if operator_runbook.as_deref() != Some(LOW_POWER_BATTERY_RUNBOOK) {
+            gaps.push(format!(
+                "low_power blocked ask receipt must point to {LOW_POWER_BATTERY_RUNBOOK}"
+            ));
+        }
+        if !next_required_evidence
+            .iter()
+            .any(|item| item.contains("telemetry-context --require-battery"))
+        {
+            gaps.push(
+                "low_power blocked ask receipt must name telemetry-context --require-battery as next evidence".to_string(),
+            );
+        }
+        if !route_selection_error.contains(LOW_POWER_BATTERY_RUNBOOK) {
+            gaps.push(
+                "low_power blocked ask route_selection_error must include the battery runbook path"
+                    .to_string(),
+            );
+        }
+    }
     if candidate_routes.is_empty() {
         gaps.push("blocked ask receipt is missing structured candidate_routes".to_string());
     }
@@ -5609,6 +5763,8 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
         why_not_cpu,
         why_not_gpu,
         why_not_npu,
+        operator_runbook,
+        next_required_evidence,
         new_inference_executed,
         fallback_used,
         route_promotion_changed,
@@ -5793,6 +5949,8 @@ fn power_profile_regression_notes(summary: &PowerProfileRegressionSummary) -> Ve
         format!("energy_proxy_recorded={}", summary.energy_proxy_recorded),
         format!("energy_proxy_source={}", summary.energy_proxy_source.as_deref().unwrap_or("none")),
         format!("thermal_context_recorded={}", summary.thermal_context_recorded),
+        format!("operator_runbook={}", summary.operator_runbook.as_deref().unwrap_or("none")),
+        format!("next_required_evidence={}", join_or_none(&summary.next_required_evidence)),
         format!("claim_boundary_preserved={}", summary.claim_boundary_preserved),
         format!("blocker_count={}", summary.blockers.len()),
     ];
@@ -5852,6 +6010,8 @@ fn blocked_ask_regression_notes(summary: &BlockedAskRegressionSummary) -> Vec<St
         format!("why_not_cpu={}", join_or_none(&summary.why_not_cpu)),
         format!("why_not_gpu={}", join_or_none(&summary.why_not_gpu)),
         format!("why_not_npu={}", join_or_none(&summary.why_not_npu)),
+        format!("operator_runbook={}", summary.operator_runbook.as_deref().unwrap_or("none")),
+        format!("next_required_evidence={}", join_or_none(&summary.next_required_evidence)),
         format!("new_inference_executed={}", summary.new_inference_executed),
         format!("fallback_used={}", summary.fallback_used),
         format!("blocked_receipt_ready={}", summary.blocked_receipt_ready),
@@ -8470,10 +8630,10 @@ pub fn build_power_profile_evidence_with_created_utc(
         && input_claim_boundary_preserved
         && !low_power_routes.is_empty();
 
+    let operator_runbook = Some(LOW_POWER_BATTERY_RUNBOOK.to_string());
     let mut next_required_evidence = Vec::new();
     if !telemetry.battery_mode_sample_recorded {
-        next_required_evidence
-            .push("collect AC and battery samples for the same route/profile matrix".to_string());
+        next_required_evidence.extend(blocked_operator_ask_next_required_evidence("low_power"));
     }
     if !telemetry.energy_proxy_recorded {
         next_required_evidence.push(
@@ -8495,6 +8655,13 @@ pub fn build_power_profile_evidence_with_created_utc(
         "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
             .to_string(),
     );
+    let mut deduped_next_required_evidence = Vec::new();
+    for item in next_required_evidence {
+        if !deduped_next_required_evidence.contains(&item) {
+            deduped_next_required_evidence.push(item);
+        }
+    }
+    let next_required_evidence = deduped_next_required_evidence;
 
     Ok(LunarLakePowerProfileEvidence {
         schema_version: "1.0.0".to_string(),
@@ -8516,6 +8683,7 @@ pub fn build_power_profile_evidence_with_created_utc(
         low_power_promotion_ready,
         power_advantage_proven,
         gaps,
+        operator_runbook,
         next_required_evidence,
         claim_boundary: PowerProfileClaimBoundary {
             new_inference_executed: false,
@@ -10407,6 +10575,8 @@ pub struct BlockedOperatorAskRouteSelection {
     pub why_not_cpu: Vec<String>,
     pub why_not_gpu: Vec<String>,
     pub why_not_npu: Vec<String>,
+    pub operator_runbook: Option<String>,
+    pub next_required_evidence: Vec<String>,
     pub promotion_ledger: Option<String>,
     pub route_profile_comparison: Option<String>,
 }
@@ -10485,12 +10655,14 @@ pub fn resolve_operator_ask_route_selection(
     let Some(selected_route_id) = profile.promoted_route.as_deref() else {
         let (why_not_cpu, why_not_gpu, why_not_npu) =
             route_selection_explanations(&ledger, profile, "");
+        let guidance = blocked_operator_ask_error_guidance(&profile.profile_id);
         bail!(
-            "no promoted Lunar Lake auto route for profile `{profile_id}`; candidates={}; why_not_cpu={}; why_not_gpu={}; why_not_npu={}",
+            "no promoted Lunar Lake auto route for profile `{profile_id}`; candidates={}; why_not_cpu={}; why_not_gpu={}; why_not_npu={}{}",
             join_or_none(&profile.candidate_routes),
             join_or_none(&why_not_cpu),
             join_or_none(&why_not_gpu),
-            join_or_none(&why_not_npu)
+            join_or_none(&why_not_npu),
+            guidance
         );
     };
     let promotion = route_promotion(&ledger, selected_route_id)?;
@@ -10581,9 +10753,45 @@ pub fn explain_blocked_operator_ask_route_selection(
         why_not_cpu,
         why_not_gpu,
         why_not_npu,
+        operator_runbook: blocked_operator_ask_runbook(&profile.profile_id).map(str::to_string),
+        next_required_evidence: blocked_operator_ask_next_required_evidence(&profile.profile_id),
         promotion_ledger: Some(path_string(&ledger_path)),
         route_profile_comparison,
     }))
+}
+
+pub fn blocked_operator_ask_runbook(profile_id: &str) -> Option<&'static str> {
+    match profile_id {
+        "low_power" => Some(LOW_POWER_BATTERY_RUNBOOK),
+        _ => None,
+    }
+}
+
+pub fn blocked_operator_ask_next_required_evidence(profile_id: &str) -> Vec<String> {
+    match profile_id {
+        "low_power" => vec![
+            "rerun telemetry-context --require-battery on battery power before collecting low_power route samples".to_string(),
+            "collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix".to_string(),
+            "rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision".to_string(),
+        ],
+        _ => Vec::new(),
+    }
+}
+
+fn blocked_operator_ask_error_guidance(profile_id: &str) -> String {
+    let next_required_evidence = blocked_operator_ask_next_required_evidence(profile_id);
+    let operator_runbook = blocked_operator_ask_runbook(profile_id);
+    if next_required_evidence.is_empty() && operator_runbook.is_none() {
+        return String::new();
+    }
+    let mut parts = Vec::new();
+    if !next_required_evidence.is_empty() {
+        parts.push(format!("next_required_evidence={}", join_or_none(&next_required_evidence)));
+    }
+    if let Some(runbook) = operator_runbook {
+        parts.push(format!("operator_runbook={runbook}"));
+    }
+    format!("; {}", parts.join("; "))
 }
 
 fn normalize_auto_selector(value: &str, default_value: &str) -> String {
@@ -15884,6 +16092,7 @@ mod tests {
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             None,
             None,
+            None,
         )?;
 
         assert!(receipt.operator_ready, "{:?}", receipt.gaps);
@@ -16014,6 +16223,7 @@ mod tests {
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
             Some(Path::new(POWER_PROFILE_EVIDENCE_FILE)),
             Some(Path::new(THERMAL_TEMPERATURE_AVAILABILITY_FILE)),
+            None,
         )?;
 
         assert!(receipt.operator_ready, "{:?}", receipt.gaps);
@@ -16031,6 +16241,97 @@ mod tests {
         assert_eq!(thermal.usable_temperature_reading_count, 0);
         assert!(!thermal.measured_temperature_claim);
         assert!(thermal.claim_boundary_preserved);
+        Ok(())
+    }
+
+    #[test]
+    fn operator_readiness_indexes_blocked_ask_guidance() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        write_minimal_route_policy(temp.path())?;
+        write_json(
+            temp.path(),
+            BLOCKED_AUTO_ASK_RECEIPT,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_operator_ask_blocked",
+                "proof_stage": "operator_route_selection_blocked_no_inference",
+                "machine_id": "intel-258v",
+                "requested_device": "auto",
+                "requested_route": "auto",
+                "profile_id": "low_power",
+                "selected_route": null,
+                "selected_backend": null,
+                "runtime_api": null,
+                "model_path_required": false,
+                "model_loaded": false,
+                "model_resolution": "not_required_for_blocked_auto_route_before_execution",
+                "promotion_status": "no_promoted_route",
+                "route_selection_status": "blocked",
+                "route_selection_blocked": true,
+                "route_selection_error": format!(
+                    "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage; operator_runbook={LOW_POWER_BATTERY_RUNBOOK}"
+                ),
+                "candidate_routes": [
+                    "dense_slm_default_cpu",
+                    "dense_slm_openvino_gpu_candidate",
+                    "dense_slm_openvino_npu_candidate"
+                ],
+                "why_not_cpu": ["route is not promoted for profile `low_power`"],
+                "why_not_gpu": [
+                    "route blocker for profile `low_power`: low_power_power_advantage_unproven"
+                ],
+                "why_not_npu": [
+                    "missing evidence: benchmark_qualified_speedup_or_power_advantage"
+                ],
+                "operator_runbook": LOW_POWER_BATTERY_RUNBOOK,
+                "next_required_evidence": blocked_operator_ask_next_required_evidence("low_power"),
+                "fallback_used": false,
+                "new_inference_executed": false,
+                "speedup_claim": false,
+                "acceleration_claim": false,
+                "power_advantage_claim": false,
+                "bitnet_qk256_i2s_claim": false,
+                "claim_boundary": {
+                    "route_selection_blocked": true,
+                    "new_inference_executed": false,
+                    "fallback_used": false,
+                    "model_loaded": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_accelerator_claim": false,
+                    "bitnet_qk256_i2s_claim": false
+                }
+            }),
+        )?;
+
+        let receipt = build_operator_readiness_receipt_with_created_utc_and_route_policy(
+            temp.path(),
+            "2026-05-20T05:10:00Z".to_string(),
+            Some(Path::new(ROUTE_PROMOTION_LEDGER)),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            None,
+            None,
+            Some(Path::new(BLOCKED_AUTO_ASK_RECEIPT)),
+        )?;
+
+        assert!(receipt.operator_ready, "{:?}", receipt.gaps);
+        let blocked =
+            receipt.blocked_ask_receipt.as_ref().context("missing blocked ask summary")?;
+        assert!(blocked.regression_ready, "{:?}", blocked.gaps);
+        assert_eq!(blocked.profile_id, "low_power");
+        assert!(blocked.route_selection_blocked);
+        assert!(!blocked.model_path_required);
+        assert!(!blocked.model_loaded);
+        assert_eq!(blocked.operator_runbook.as_deref(), Some(LOW_POWER_BATTERY_RUNBOOK));
+        assert!(
+            blocked
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("telemetry-context --require-battery"))
+        );
         Ok(())
     }
 
@@ -16144,11 +16445,15 @@ mod tests {
         regression.regression_surface.durability_bundle_indexed = true;
         regression.regression_surface.cold_warm_benchmark_ready = true;
         regression.regression_surface.durability_stability_proven = true;
+        regression.regression_surface.bitnet_cpu_reference_evidence_indexed = true;
+        regression.regression_surface.bitnet_cpu_reference_evidence_ready = true;
         regression.regression_surface.ask_short_ask_receipt_indexed = true;
         regression.regression_surface.ask_short_auto_ask_ready = true;
         regression.regression_surface.warm_resident_ask_receipt_indexed = true;
         regression.regression_surface.warm_resident_auto_ask_ready = true;
         regression.regression_surface.blocked_ask_receipt_indexed = true;
+        regression.regression_surface.arc_npu_bounded_evidence_indexed = true;
+        regression.regression_surface.arc_npu_bounded_evidence_ready = true;
         regression.regression_surface.candidate_routes_remain_unpromoted = true;
         regression.regression_surface.strict_ready = true;
         regression.regression_surface.gaps.clear();
@@ -16178,6 +16483,8 @@ mod tests {
             why_not_npu: vec![
                 "missing evidence: benchmark_qualified_speedup_or_power_advantage".to_string(),
             ],
+            operator_runbook: Some(LOW_POWER_BATTERY_RUNBOOK.to_string()),
+            next_required_evidence: blocked_operator_ask_next_required_evidence("low_power"),
             new_inference_executed: false,
             fallback_used: false,
             route_promotion_changed: false,
@@ -16185,7 +16492,9 @@ mod tests {
             power_advantage_claim: false,
             acceleration_claim: false,
             bitnet_qk256_i2s_claim: false,
-            route_selection_error: "no promoted Lunar Lake auto route for profile `low_power`; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage".to_string(),
+            route_selection_error: format!(
+                "no promoted Lunar Lake auto route for profile `low_power`; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage; operator_runbook={LOW_POWER_BATTERY_RUNBOOK}"
+            ),
             regression_ready: true,
             gaps: Vec::new(),
         });
@@ -16206,11 +16515,15 @@ mod tests {
         assert!(comparison.regression_surface.cold_warm_benchmark_indexed);
         assert!(comparison.regression_surface.durability_bundle_indexed);
         assert!(comparison.regression_surface.durability_stability_proven);
+        assert!(comparison.regression_surface.bitnet_cpu_reference_evidence_indexed);
+        assert!(comparison.regression_surface.bitnet_cpu_reference_evidence_ready);
         assert!(comparison.regression_surface.ask_short_ask_receipt_indexed);
         assert!(comparison.regression_surface.ask_short_auto_ask_ready);
         assert!(comparison.regression_surface.warm_resident_ask_receipt_indexed);
         assert!(comparison.regression_surface.warm_resident_auto_ask_ready);
         assert!(comparison.regression_surface.blocked_ask_receipt_indexed);
+        assert!(comparison.regression_surface.arc_npu_bounded_evidence_indexed);
+        assert!(comparison.regression_surface.arc_npu_bounded_evidence_ready);
         let Some(ask_short) = comparison.ask_short_ask_receipt.as_ref() else {
             bail!("comparison did not carry ask_short ask receipt summary");
         };
@@ -16249,6 +16562,7 @@ mod tests {
             "2026-05-19T14:30:00Z".to_string(),
             Some(Path::new(ROUTE_PROMOTION_LEDGER)),
             Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            None,
             None,
             None,
         )?;
@@ -19068,6 +19382,24 @@ mod tests {
                 .any(|gap| gap.contains("AC-only; battery comparison evidence is missing"))
         );
         assert!(receipt.gaps.iter().any(|gap| gap.contains("energy proxy evidence is missing")));
+        assert_eq!(receipt.operator_runbook.as_deref(), Some(LOW_POWER_BATTERY_RUNBOOK));
+        assert!(
+            receipt
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("telemetry-context --require-battery"))
+        );
+        let power_profile_path = temp.path().join("power-profile.json");
+        fs::write(&power_profile_path, serde_json::to_vec_pretty(&receipt)?)?;
+        let summary = inspect_power_profile_regression(&power_profile_path)?;
+        assert!(summary.regression_ready, "{:?}", summary.gaps);
+        assert_eq!(summary.operator_runbook.as_deref(), Some(LOW_POWER_BATTERY_RUNBOOK));
+        assert!(
+            summary
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("telemetry-context --require-battery"))
+        );
         let npu = receipt
             .low_power_routes
             .iter()
@@ -19718,7 +20050,9 @@ mod tests {
                 "promotion_status": "no_promoted_route",
                 "route_selection_status": "blocked",
                 "route_selection_blocked": true,
-                "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage",
+                "route_selection_error": format!(
+                    "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage; operator_runbook={LOW_POWER_BATTERY_RUNBOOK}"
+                ),
                 "candidate_routes": [
                     "dense_slm_default_cpu",
                     "dense_slm_openvino_gpu_candidate",
@@ -19731,6 +20065,8 @@ mod tests {
                 "why_not_npu": [
                     "missing evidence: benchmark_qualified_speedup_or_power_advantage"
                 ],
+                "operator_runbook": LOW_POWER_BATTERY_RUNBOOK,
+                "next_required_evidence": blocked_operator_ask_next_required_evidence("low_power"),
                 "route_selection": {
                     "requested_device": "auto",
                     "requested_route": "auto",
@@ -19744,7 +20080,9 @@ mod tests {
                     "selection_source": "promotion_ledger_auto_blocked",
                     "route_selection_status": "blocked",
                     "route_selection_blocked": true,
-                    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage",
+                    "route_selection_error": format!(
+                        "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage; operator_runbook={LOW_POWER_BATTERY_RUNBOOK}"
+                    ),
                     "candidate_routes": [
                         "dense_slm_default_cpu",
                         "dense_slm_openvino_gpu_candidate",
@@ -19756,7 +20094,9 @@ mod tests {
                     ],
                     "why_not_npu": [
                         "missing evidence: benchmark_qualified_speedup_or_power_advantage"
-                    ]
+                    ],
+                    "operator_runbook": LOW_POWER_BATTERY_RUNBOOK,
+                    "next_required_evidence": blocked_operator_ask_next_required_evidence("low_power")
                 },
                 "fallback_used": false,
                 "new_inference_executed": false,
@@ -19840,7 +20180,11 @@ mod tests {
         assert!(bundle.regression_surface.durability_bundle_indexed);
         assert!(bundle.regression_surface.durability_stability_proven);
         assert!(bundle.regression_surface.bitnet_semantic_intake_indexed);
+        assert!(bundle.regression_surface.bitnet_cpu_reference_evidence_indexed);
+        assert!(bundle.regression_surface.bitnet_cpu_reference_evidence_ready);
         assert!(bundle.regression_surface.power_profile_evidence_indexed);
+        assert!(bundle.regression_surface.arc_npu_bounded_evidence_indexed);
+        assert!(bundle.regression_surface.arc_npu_bounded_evidence_ready);
         assert!(bundle.regression_surface.blocked_ask_receipt_indexed);
         assert!(!bundle.regression_surface.low_power_promotion_ready);
         assert!(!bundle.regression_surface.power_advantage_proven);
@@ -20086,6 +20430,7 @@ mod tests {
         let durability = ready_durability_summary();
         let intake = ready_bitnet_semantic_intake_summary();
         let power = ready_power_profile_summary();
+        let operator = ready_operator_receipt_with_arc_npu_bounded_evidence();
 
         let missing = build_regression_surface_summary(
             Some(&corpus),
@@ -20099,6 +20444,7 @@ mod tests {
             None,
             None,
             None,
+            &operator,
         );
         assert!(!missing.strict_ready);
         assert!(missing.gaps.iter().any(|gap| {
@@ -20119,6 +20465,7 @@ mod tests {
             None,
             None,
             None,
+            &operator,
         );
         assert!(ready.ask_short_ask_receipt_indexed);
         assert!(ready.ask_short_auto_ask_ready);
@@ -20134,6 +20481,7 @@ mod tests {
         let durability = ready_durability_summary();
         let intake = ready_bitnet_semantic_intake_summary();
         let power = ready_power_profile_summary();
+        let operator = ready_operator_receipt_with_arc_npu_bounded_evidence();
 
         let missing = build_regression_surface_summary(
             Some(&corpus),
@@ -20147,6 +20495,7 @@ mod tests {
             None,
             None,
             None,
+            &operator,
         );
         assert!(!missing.strict_ready);
         assert!(missing.gaps.iter().any(|gap| {
@@ -20167,10 +20516,69 @@ mod tests {
             None,
             Some(&ask),
             None,
+            &operator,
         );
         assert!(ready.warm_resident_ask_receipt_indexed);
         assert!(ready.warm_resident_auto_ask_ready);
         assert!(ready.strict_ready, "{:?}", ready.gaps);
+        Ok(())
+    }
+
+    #[test]
+    fn regression_surface_requires_bitnet_cpu_reference_evidence() -> Result<()> {
+        let route_profiles = ready_route_profile_regression_with_npu_warm_resident();
+        let cold_warm = ready_cold_warm_regression_with_npu_warm_resident();
+        let corpus = ready_answer_corpus_v2_summary();
+        let durability = ready_durability_summary();
+        let intake = ready_bitnet_semantic_intake_summary();
+        let power = ready_power_profile_summary();
+        let ask = ready_operator_ask_summary();
+        let mut missing_operator = ready_operator_receipt_with_arc_npu_bounded_evidence();
+        missing_operator.routes.retain(|route| route.route_id != "bitnet_reference_cpu");
+        missing_operator.evidence.retain(|item| !item.evidence_id.starts_with("bitnet_"));
+
+        let missing = build_regression_surface_summary(
+            Some(&corpus),
+            Some(&route_profiles),
+            Some(&cold_warm),
+            Some(&durability),
+            Some(&intake),
+            Some(&power),
+            None,
+            None,
+            None,
+            Some(&ask),
+            None,
+            &missing_operator,
+        );
+        assert!(!missing.strict_ready);
+        assert!(!missing.bitnet_cpu_reference_evidence_indexed);
+        assert!(!missing.bitnet_cpu_reference_evidence_ready);
+        assert!(
+            missing
+                .gaps
+                .iter()
+                .any(|gap| { gap.contains("BitNet CPU reference route evidence is not indexed") })
+        );
+
+        let operator = ready_operator_receipt_with_arc_npu_bounded_evidence();
+        let ready = build_regression_surface_summary(
+            Some(&corpus),
+            Some(&route_profiles),
+            Some(&cold_warm),
+            Some(&durability),
+            Some(&intake),
+            Some(&power),
+            None,
+            None,
+            None,
+            Some(&ask),
+            None,
+            &operator,
+        );
+        assert!(ready.strict_ready, "{:?}", ready.gaps);
+        assert!(ready.bitnet_cpu_reference_evidence_indexed);
+        assert!(ready.bitnet_cpu_reference_evidence_ready);
         Ok(())
     }
 
@@ -20735,6 +21143,8 @@ mod tests {
         assert!(err.contains("auto routing only selects routes explicitly promoted"), "got: {err}");
         assert!(err.contains("benchmark_qualified_speedup_or_power_advantage"), "got: {err}");
         assert!(err.contains("benchmark-qualified latency or power advantage"), "got: {err}");
+        assert!(err.contains("telemetry-context --require-battery"), "got: {err}");
+        assert!(err.contains(LOW_POWER_BATTERY_RUNBOOK), "got: {err}");
 
         let blocked = explain_blocked_operator_ask_route_selection(
             temp.path(),
@@ -20769,6 +21179,13 @@ mod tests {
             reason.contains("auto_default")
                 && reason.contains("auto routing only selects routes explicitly promoted")
         }));
+        assert_eq!(blocked.operator_runbook.as_deref(), Some(LOW_POWER_BATTERY_RUNBOOK));
+        assert!(
+            blocked
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("telemetry-context --require-battery"))
+        );
         Ok(())
     }
 
@@ -21463,10 +21880,88 @@ mod tests {
             energy_proxy_recorded: false,
             energy_proxy_source: None,
             thermal_context_recorded: false,
+            operator_runbook: Some(LOW_POWER_BATTERY_RUNBOOK.to_string()),
+            next_required_evidence: blocked_operator_ask_next_required_evidence("low_power"),
             claim_boundary_preserved: true,
             regression_ready: true,
             gaps: vec![],
             blockers: vec!["battery comparison evidence is missing".to_string()],
+        }
+    }
+
+    fn ready_operator_receipt_with_arc_npu_bounded_evidence() -> LunarLakeOperatorReceipt {
+        LunarLakeOperatorReceipt {
+            schema_version: "1.0.0".to_string(),
+            artifact_kind: "lunar_lake_operator_readiness".to_string(),
+            proof_stage: "test_ready".to_string(),
+            created_utc: "2026-05-20T00:00:00Z".to_string(),
+            machine_id: "intel-258v".to_string(),
+            artifact_root: DEFAULT_ARTIFACT_ROOT.to_string(),
+            operator_ready: true,
+            default_route: dense_slm_cpu_route(),
+            routes: vec![dense_slm_cpu_route(), bitnet_cpu_route()],
+            route_policy: None,
+            power_profile_evidence: None,
+            thermal_temperature_availability: None,
+            blocked_ask_receipt: None,
+            evidence: vec![
+                ready_bitnet_cpu_reference_evidence("bitnet_cpu_reference_bundle"),
+                ready_bitnet_cpu_reference_evidence("bitnet_external_reference_boundary"),
+                ready_bitnet_cpu_reference_evidence("bitnet_external_direct_token_boundary"),
+                ready_bitnet_cpu_reference_evidence("bitnet_first_token_direct_classifier"),
+                ready_bitnet_cpu_reference_evidence("bitnet_i2s_gemv_gemm_microbench"),
+                ready_bitnet_cpu_reference_evidence("bitnet_i2s_tiling_thread_matrix"),
+                ready_bitnet_cpu_reference_evidence("bitnet_i2s_applied_thread_matrix"),
+                ready_bitnet_cpu_reference_evidence("bitnet_embedding_quantization_evidence"),
+                ready_arc_npu_bounded_evidence("arc140v_native_opencl_parity"),
+                ready_arc_npu_bounded_evidence("npu_rmsnorm_static_subgraph"),
+                ready_arc_npu_bounded_evidence("npu_linear_static_subgraph"),
+                ready_arc_npu_bounded_evidence("npu_ffn_static_subgraph"),
+            ],
+            gaps: Vec::new(),
+            claim_boundary: ClaimBoundary {
+                cpu_is_truth_path: true,
+                dense_slm_default_is_cpu_until_speedup_qualified: true,
+                openvino_gpu_npu_are_candidates_not_speedup_claims: true,
+                arc_bitnet_full_inference_claimed: false,
+                npu_bitnet_full_inference_claimed: false,
+                qk256_accelerator_decode_claimed: false,
+                hidden_fallback_allowed: false,
+            },
+        }
+    }
+
+    fn ready_bitnet_cpu_reference_evidence(evidence_id: &str) -> EvidenceStatus {
+        EvidenceStatus {
+            evidence_id: evidence_id.to_string(),
+            path: format!("{evidence_id}.json"),
+            present: true,
+            artifact_kind: Some("bitnet_cpu_reference_receipt".to_string()),
+            requested_backend: None,
+            selected_backend: Some("intel-258v-cpu-avx2".to_string()),
+            runtime_api: Some("cpu".to_string()),
+            fallback_used: Some(false),
+            answer_gate_passed: Some(true),
+            phase_timing_present: Some(true),
+            speedup_claim: Some(false),
+            issues: Vec::new(),
+        }
+    }
+
+    fn ready_arc_npu_bounded_evidence(evidence_id: &str) -> EvidenceStatus {
+        EvidenceStatus {
+            evidence_id: evidence_id.to_string(),
+            path: format!("{evidence_id}.json"),
+            present: true,
+            artifact_kind: Some("bounded_parity_receipt".to_string()),
+            requested_backend: None,
+            selected_backend: None,
+            runtime_api: None,
+            fallback_used: Some(false),
+            answer_gate_passed: None,
+            phase_timing_present: None,
+            speedup_claim: Some(false),
+            issues: Vec::new(),
         }
     }
 

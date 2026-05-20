@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T06:20:00Z"
+event = "in_progress"
+item = "LNL258V-REG-013"
+branch = "codex/lunar-lake/LNL258V-REG-013-bitnet-cpu-reference-surface"
+actor = "codex"
+summary = "Started strict regression surface hardening for BitNet CPU reference route evidence."
+
+notes = [
+  "The work exposes BitNet CPU reference route evidence as strict regression-surface indexed/ready fields using existing operator-readiness evidence.",
+  "Dense Qwen SLM success remains separate from BitNet CPU reference proof.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, stale BitNet claim, A770 semantic PR merged-to-main claim, or BitNet QK256/I2_S behavior-change claim is made.",
+]

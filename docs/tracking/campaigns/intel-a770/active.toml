@@ -142,7 +142,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-005"
-status = "blocked"
+status = "merged"
+pr = 6072
 branch = "codex/intel-a770/A770-005-opencl-smoke"
 stackable = false
 review_mode = "codex_premerge"
@@ -178,7 +179,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-006"
-status = "proposed"
+status = "merged"
+pr = 6110
+head_sha = "65aeb1a7dda1a18d7fad3e09b644c31321749c78"
+merge_sha = "e98d4fb6574087a83ed47e6dae7316d9dc12f40d"
 branch = "codex/intel-a770/A770-006-opencl-parity"
 stackable = false
 review_mode = "codex_premerge"
@@ -187,7 +191,7 @@ human_gate = "on_blocker_only"
 blocked_by = ["A770-005"]
 acceptance = "Add CPU/OpenCL parity for a minimal kernel or subgraph without promoting official BitNet QK256 inference."
 commands = [
-  "cargo test --locked -p bitnet-kernels --no-default-features --features opencl",
+  "cargo run --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity -- --receipt ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-parity.json",
   "git diff --check",
 ]
 allowed_paths = [
@@ -210,7 +214,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-007"
-status = "proposed"
+status = "merged"
+pr = 6113
+head_sha = "bb695ecd9819c4269fb19eeed84d064fef5171c5"
+merge_sha = "d248ffd3077da72eb1be665f281aa1cd2a4a4f14"
 branch = "codex/intel-a770/A770-007-receipt-identity"
 stackable = false
 review_mode = "codex_premerge"

@@ -10771,6 +10771,18 @@ fn build_lunar_lake_operator_ask_blocked_receipt(
         .route_selection
         .and_then(|selection| selection.route_profile_comparison.clone())
         .unwrap_or_else(|| ctx.route_profile_comparison.display().to_string());
+    let operator_runbook = ctx
+        .route_selection
+        .and_then(|selection| selection.operator_runbook.clone())
+        .or_else(|| {
+            commands::lunar_lake::blocked_operator_ask_runbook(ctx.profile_id).map(str::to_string)
+        });
+    let next_required_evidence = ctx
+        .route_selection
+        .map(|selection| selection.next_required_evidence.clone())
+        .unwrap_or_else(|| {
+            commands::lunar_lake::blocked_operator_ask_next_required_evidence(ctx.profile_id)
+        });
 
     serde_json::json!({
         "schema_version": "1.0.0",
@@ -10796,6 +10808,8 @@ fn build_lunar_lake_operator_ask_blocked_receipt(
         "why_not_cpu": why_not_cpu,
         "why_not_gpu": why_not_gpu,
         "why_not_npu": why_not_npu,
+        "operator_runbook": operator_runbook,
+        "next_required_evidence": next_required_evidence,
         "candidate_routes": candidate_routes,
         "question": ctx.question,
         "max_new_tokens": ctx.max_new_tokens,
@@ -10824,6 +10838,8 @@ fn build_lunar_lake_operator_ask_blocked_receipt(
             "why_not_cpu": why_not_cpu,
             "why_not_gpu": why_not_gpu,
             "why_not_npu": why_not_npu,
+            "operator_runbook": operator_runbook,
+            "next_required_evidence": next_required_evidence,
             "candidate_routes": candidate_routes,
             "promotion_ledger": promotion_ledger,
             "route_profile_comparison": route_profile_comparison,
@@ -13844,6 +13860,13 @@ mod tests {
                         "missing evidence: benchmark_qualified_speedup_or_power_advantage"
                             .to_string(),
                     ],
+                    operator_runbook: Some(
+                        commands::lunar_lake::LOW_POWER_BATTERY_RUNBOOK.to_string(),
+                    ),
+                    next_required_evidence:
+                        commands::lunar_lake::blocked_operator_ask_next_required_evidence(
+                            "low_power",
+                        ),
                     promotion_ledger: Some("lunar-lake-route-promotion.json".to_string()),
                     route_profile_comparison: Some(
                         "lunar-lake-route-profile-comparison.json".to_string(),
@@ -13873,6 +13896,25 @@ mod tests {
         assert!(receipt["why_not_cpu"].as_array().is_some_and(|items| !items.is_empty()));
         assert!(receipt["why_not_gpu"].as_array().is_some_and(|items| !items.is_empty()));
         assert!(receipt["why_not_npu"].as_array().is_some_and(|items| !items.is_empty()));
+        assert_eq!(receipt["operator_runbook"], commands::lunar_lake::LOW_POWER_BATTERY_RUNBOOK);
+        assert!(receipt["next_required_evidence"].as_array().is_some_and(|items| {
+            items.iter().any(|item| {
+                item.as_str()
+                    .is_some_and(|value| value.contains("telemetry-context --require-battery"))
+            })
+        }));
+        assert_eq!(
+            receipt["route_selection"]["operator_runbook"],
+            commands::lunar_lake::LOW_POWER_BATTERY_RUNBOOK
+        );
+        assert!(receipt["route_selection"]["next_required_evidence"].as_array().is_some_and(
+            |items| {
+                items.iter().any(|item| {
+                    item.as_str()
+                        .is_some_and(|value| value.contains("telemetry-context --require-battery"))
+                })
+            }
+        ));
         assert!(receipt["route_selection"]["why_not_npu"].as_array().is_some_and(|items| {
             items.iter().any(|item| item.as_str().is_some_and(|value| value.contains("benchmark")))
         }));
