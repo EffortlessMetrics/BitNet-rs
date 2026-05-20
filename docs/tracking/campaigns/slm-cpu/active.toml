@@ -2099,7 +2099,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-060"
-status = "ready"
+status = "pr_open"
+pr = 6085
+head_sha = "cca8b5385672f8150021a88ab9ffca078fe5e561"
 branch = "codex/slm-cpu-060-payload-bearing-q8-sidecar-hook"
 stackable = false
 review_mode = "codex_premerge"

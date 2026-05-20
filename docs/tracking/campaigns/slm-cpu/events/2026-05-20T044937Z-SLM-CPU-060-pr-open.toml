@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T04:49:37Z"
+campaign = "slm-cpu"
+event = "pr_open"
+item = "SLM-CPU-060"
+previous_status = "ready"
+new_status = "pr_open"
+pr = 6085
+head_sha = "cca8b5385672f8150021a88ab9ffca078fe5e561"
+branch = "codex/slm-cpu-060-payload-bearing-q8-sidecar-hook"
+actor = "codex"
+summary = "Opened the payload-bearing packed Q8_0 sidecar hook contract PR."
+notes = [
+  "The PR adds an evidence-scoped DenseLinearPackedQ8Payload contract and hook-boundary receipt fields while keeping packed Q8 runtime compute disabled by default.",
+  "The artifact records that generated-ID/text preservation and before/after Qwen3 Q8_0 warm-session receipts remain required before any broader runtime selection or speedup claim.",
+]
