@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T07:06:16Z"
+campaign = "intel-a770"
+item = "A770-007"
+event = "merged"
+pr = 6113
+head_sha = "bb695ecd9819c4269fb19eeed84d064fef5171c5"
+merge_sha = "d248ffd3077da72eb1be665f281aa1cd2a4a4f14"
+branch = "codex/intel-a770/A770-007-receipt-identity"
+actor = "codex"
+
+notes = [
+  "Merged PR #6113, adding selected-device receipt identity for the validated A770 smoke/parity path.",
+  "The identity receipt keeps fallback_used=false and records the same selected A770 OpenCL route for the smoke and matmul_i2s parity receipts.",
+  "No trusted-partial acceleration, BitNet inference, official QK256 production semantics, selected attention residency, resident KV decode, full residency, route promotion, performance speedup, or completion claim is made.",
+]
