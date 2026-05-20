@@ -3428,6 +3428,55 @@ fn mac_serve_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_serve_smoke_help_documents_dense_conformance_receipt() {
+    bitnet()
+        .args(["mac", "serve-smoke", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("dense M4 local-server conformance smoke"))
+        .stdout(predicate::str::contains("--model-id <MODEL_ID>"))
+        .stdout(predicate::str::contains("--receipt-dir <PATH>"))
+        .stdout(predicate::str::contains("--json-out <PATH>"));
+}
+
+#[test]
+fn mac_serve_smoke_missing_cache_fails_before_generation() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let receipt_dir = dir.path().join("receipts");
+    let json_out = dir.path().join("serve-smoke.json");
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt_dir.to_string_lossy().into_owned();
+    let json_out_str = json_out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "serve-smoke",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--receipt-dir",
+            receipt_str.as_str(),
+            "--json-out",
+            json_out_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac serve-smoke cannot start"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_serve_smoke_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "serve-smoke"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac serve routes the supported Mac local service path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
 fn mac_chat_help_documents_resident_prompts() {
     bitnet()
         .args(["mac", "chat", "--help"])
