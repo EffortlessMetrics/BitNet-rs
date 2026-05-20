@@ -1,0 +1,15 @@
+schema = 1
+campaign = "slm-cpu"
+item = "SLM-CPU-057"
+event = "merged"
+actor = "codex"
+timestamp = "2026-05-20T01:10:00Z"
+pr = 6045
+head_sha = "80d707d65973a884066d607fd04f07cc18dbd0c2"
+merge_sha = "c19c7a51d4edf11d6a459df6ccda8efcab081ca2"
+summary = "Merged SLM-CPU-057 dense hook receipt gate."
+notes = [
+  "PR #6045 added dense_q8_hook_selection identity to Qwen3 Q8_0 warm-session receipts while preserving eager_f32_candle as the selected runtime path.",
+  "The machine-checkable blocker artifact records that packed Q8_0 sidecar compute remains disabled until a packed compute kernel and before/after generated-ID receipts exist.",
+  "No speedup, sustained throughput, broad answer quality, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, Q4/Q5 runtime, or BitNet QK256 claim was promoted.",
+]
