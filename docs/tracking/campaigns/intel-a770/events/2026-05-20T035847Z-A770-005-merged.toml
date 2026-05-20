@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T03:58:47Z"
+campaign = "intel-a770"
+item = "A770-005"
+event = "merged"
+pr = 6072
+head_sha = "f2e137d17ae9a52bb761c336e254b0e4bf8a63db"
+merge_sha = "b995c5110866d1920538fff2d9019fcd3803e3c5"
+branch = "codex/intel-a770/A770-005-opencl-smoke"
+actor = "codex"
+
+notes = [
+  "Merged PR #6072, adding the selected-device A770 OpenCL tiny vector-add smoke.",
+  "The committed receipt records selected_backend=intel-arc-a770-opencl, fallback_used=false, and CPU parity for the tiny smoke path.",
+  "No BitNet inference, packed QK256 dispatch, trusted-partial acceleration, route promotion, residency, or performance claim is made.",
+  "A770-006 is now unblocked as the next proposed CPU/OpenCL parity item.",
+]
