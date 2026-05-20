@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T07:09:46Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BITNET-EX-015"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6115
+merge_sha = "9ceb75a6b0d4244e096006e402f0f13c85ddc03f"
+branch = "codex/apple-m4-inference-excellence/M4-BITNET-EX-015-bitnet-250-repaired-history"
+
+notes = [
+  "Merged PR #6115, publishing the second repaired BitNet 250-case M4 CPU/NEON matching-history run.",
+  "The merged evidence records accepted Microsoft I2_S GGUF, external tokenizer, bitnetcpp-answer prompt identity, fallback_used=false, zero timeouts, and matched_context=true regression comparison against the 2026-05-18T1806Z repaired baseline.",
+  "The repeat run records 199/250 quality pass and 202/250 scoring pass versus 205/250 and 210/250 baseline, so the decision remains keep repairing rather than expand to 500 cases.",
+  "No BitNet chat/serve enablement, dense SLM behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]
