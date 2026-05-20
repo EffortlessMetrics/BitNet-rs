@@ -5407,8 +5407,14 @@ fn validate_dense_qwen_logits_transfer_reduction(
 
     require_u64_eq(reduction, "schema", 1)?;
     require_string_eq(reduction, "scope", "dense_qwen_logits_top_k_transfer")?;
-    require_string_non_empty(reduction, "transfer_mode")?;
-    require_string_non_empty(reduction, "sampling_location")?;
+    let transfer_mode = required_string(reduction, "transfer_mode")?;
+    if transfer_mode.trim().is_empty() {
+        return Err(anyhow!("field `transfer_mode` must not be empty"));
+    }
+    let sampling_location = required_string(reduction, "sampling_location")?;
+    if sampling_location.trim().is_empty() {
+        return Err(anyhow!("field `sampling_location` must not be empty"));
+    }
     let requested_top_k = required_u64(reduction, "requested_top_k")?;
     if requested_top_k == 0 {
         return Err(anyhow!("logits_transfer_reduction.requested_top_k must be positive"));
@@ -5494,6 +5500,23 @@ fn validate_dense_qwen_logits_transfer_reduction(
         .ok_or_else(|| anyhow!("field `device_to_host_bytes_reduced` must be a bool"))?;
     let bytes_saved = required_u64(reduction, "bytes_saved_vs_full_logits")?;
     if reduced {
+        if !matches!(transfer_mode, "device_top_k_cuda_sampler" | "device_greedy_cuda_sampler") {
+            return Err(anyhow!(
+                "logits_transfer_reduction.device_to_host_bytes_reduced requires a device_top_k_cuda_sampler or device_greedy_cuda_sampler transfer_mode"
+            ));
+        }
+        if sampling_location != "cuda_device" {
+            return Err(anyhow!(
+                "logits_transfer_reduction.device_to_host_bytes_reduced requires sampling_location=cuda_device"
+            ));
+        }
+        if let Some(blocker) = reduction.get("reduction_blocker") {
+            if !blocker.is_null() {
+                return Err(anyhow!(
+                    "logits_transfer_reduction.reduction_blocker must be omitted or null when device_to_host_bytes_reduced is true"
+                ));
+            }
+        }
         if actual_device_to_host_bytes >= full_logits_download_bytes {
             return Err(anyhow!(
                 "logits_transfer_reduction.device_to_host_bytes_reduced requires actual_device_to_host_bytes < full_logits_download_bytes"
@@ -5506,6 +5529,7 @@ fn validate_dense_qwen_logits_transfer_reduction(
         }
     } else {
         require_string_eq(reduction, "transfer_mode", "full_logits_download_cpu_sampler")?;
+        require_string_eq(reduction, "sampling_location", "cpu")?;
         require_string_non_empty(reduction, "reduction_blocker")?;
         if actual_device_to_host_bytes != full_logits_download_bytes {
             return Err(anyhow!(
