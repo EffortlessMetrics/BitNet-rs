@@ -20,7 +20,7 @@ view is the whitelist itself, validated by `xtask ci-lane-whitelist check`.
 
 | Workflow                          | Whitelist lane(s)                                  | Trigger model                       |
 | --------------------------------- | -------------------------------------------------- | ----------------------------------- |
-| `gpu-ci-matrix.yml`               | `gpu-native`, `gpu-docker`                          | Path-gated + labels                 |
+| `gpu-ci-matrix.yml`               | `gpu-native`, `gpu-docker`                          | Path-gated on `main`; PR lanes emit by labels |
 | `apple-silicon.yml`, `macos-arm64.yml` | `macos-arm64-clippy`                            | Labels + scheduled                  |
 | `coverage.yml`                    | (deep, not yet whitelisted)                         | Main / nightly                      |
 | `crossval.yml`                    | (deep, not yet whitelisted)                         | Labels                              |

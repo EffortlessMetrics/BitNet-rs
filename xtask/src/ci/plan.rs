@@ -178,7 +178,7 @@ fn area_patterns() -> Vec<(&'static str, Vec<&'static str>)> {
         (
             "gpu",
             vec![
-                r"^crates/bitnet-kernels/src/(cuda/|gpu/|metal/|opencl/|opencl_|bin/a770_|lib\.rs$)",
+                r"^crates/bitnet-kernels/src/(cuda/|gpu/|metal/|opencl/|rocm/|bin/a770_|(?:a770_|cuda_|gpu_|metal_|opencl_|rocm_)[^/]*|lib\.rs$)",
                 r"^crates/bitnet-gpu-hal/",
                 r"^crates/bitnet-device-probe/",
                 r"^crates/bitnet-device-config-core/",
@@ -372,12 +372,12 @@ fn pick_lanes(
             true,
         ));
     }
-    if touched_get("gpu") {
+    if touched_get("gpu") && (has("gpu-ci") || has("gpu") || has("full-ci")) {
         lanes.push(lane(
             "gpu-native",
             "GPU CI Matrix (native compile)",
             18,
-            "GPU paths changed",
+            "GPU paths changed and GPU CI label present",
             true,
         ));
         if has("gpu-ci") || has("docker") || has("full-ci") {
@@ -1370,6 +1370,35 @@ mod tests {
     }
 
     #[test]
+    fn gpu_kernel_backend_files_are_classified_without_requiring_unemitted_gpu_ci() {
+        for path in [
+            "crates/bitnet-kernels/src/cuda_memory_pool.rs",
+            "crates/bitnet-kernels/src/gpu_utils.rs",
+            "crates/bitnet-kernels/src/metal_compute.rs",
+            "crates/bitnet-kernels/src/opencl_context.rs",
+            "crates/bitnet-kernels/src/a770_opencl_fixture.rs",
+            "crates/bitnet-kernels/src/gpu/opencl.rs",
+            "crates/bitnet-kernels/src/cuda/qk256_gemv.rs",
+            "crates/bitnet-kernels/src/rocm/qk256_gemv.rs",
+            "crates/bitnet-kernels/src/lib.rs",
+        ] {
+            let plan = build_plan(&s(&[path]), &[]);
+
+            assert!(plan.classification.gpu_changed, "{path} should be classified as GPU");
+            assert!(
+                !plan.selected_lanes.iter().any(|lane| lane.id == "gpu-native"),
+                "{path} should not require native GPU jobs unless a label makes the workflow emit them"
+            );
+
+            let labeled_plan = build_plan(&s(&[path]), &s(&["gpu"]));
+            assert!(
+                labeled_plan.selected_lanes.iter().any(|lane| lane.id == "gpu-native"),
+                "{path} should select GPU native CI when the GPU label emits it"
+            );
+        }
+    }
+
+    #[test]
     fn empty_change_set_yields_empty_posture() {
         let plan = build_plan(&[], &[]);
         assert_eq!(plan.posture, "empty");
@@ -1590,12 +1619,22 @@ mod tests {
 
     #[test]
     fn ci_plan_fixture_gpu_and_macos() -> Result<()> {
-        let plan = build_plan(&fixture_lines("macos.txt")?, &[]);
+        let changed = fixture_lines("macos.txt")?;
+        let plan = build_plan(&changed, &[]);
         let value = serde_json::to_value(&plan)?;
         assert_eq!(value.pointer("/classification/gpu_changed"), Some(&json!(true)));
         assert_eq!(value.pointer("/classification/macos_changed"), Some(&json!(true)));
-        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "gpu-native"));
+        assert!(
+            !plan.selected_lanes.iter().any(|lane| lane.id == "gpu-native"),
+            "unlabeled PR fixture should not require GPU native jobs that the workflow will not emit"
+        );
         assert!(plan.selected_lanes.iter().any(|lane| lane.id == "macos-arm64-clippy"));
+
+        let labeled_plan = build_plan(&changed, &s(&["gpu"]));
+        assert!(
+            labeled_plan.selected_lanes.iter().any(|lane| lane.id == "gpu-native"),
+            "GPU label should opt the fixture into emitted GPU native jobs"
+        );
         Ok(())
     }
 
