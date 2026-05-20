@@ -9802,7 +9802,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-OP-014"
-status = "in_progress"
+status = "merged"
+pr = 6087
+head_sha = "292cc9bcd789e77c3fed51dc105f74ba2ed0dfba"
+merge_sha = "050d1403e626b7c4cd91abd18ffa8054eb085c5a"
 branch = "codex/lunar-lake/LNL258V-OP-014-low-power-blocked-guidance"
 stackable = false
 review_mode = "codex_premerge"
