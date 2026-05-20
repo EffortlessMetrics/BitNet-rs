@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-19T18:24:00Z"
+event = "pr_open"
+item = "LNL258V-OP-012"
+pr = 5990
+branch = "codex/lunar-lake/LNL258V-OP-012-readiness-route-reasons"
+head_sha = "dfb376c49781df2f7206c4edee26726bdfdf8f81"
+actor = "codex"
+summary = "Opened LNL258V-OP-012 to align Lunar Lake operator-readiness route reasons with profile-scoped policy."
+
+notes = [
+  "PR #5990 updates readiness route reasons so CPU is described as the default route id and regression baseline while OpenVINO GPU/NPU selection is profile-scoped through the ledger.",
+  "The refreshed operator-readiness and comparison receipts now state that warm_resident NPU is distinct from cold one-off and low_power, and low_power remains blocked on benchmark-qualified battery-mode or energy-proxy power evidence.",
+  "No inference, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim is added.",
+]

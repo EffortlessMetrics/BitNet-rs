@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T03:20:00Z"
+event = "in_progress"
+item = "LNL258V-REG-011"
+branch = "codex/lunar-lake/LNL258V-REG-011-route-model-identity-gate"
+actor = "codex"
+summary = "Started strict Lunar Lake route/model identity regression gating for route-profile and cold/warm benchmark evidence."
+
+notes = [
+  "The item makes strict regression and operator readiness fail closed when route-profile or cold/warm benchmark rows lose model identity, tokenizer/template identity, or model-hash-or-explicit-gap coverage.",
+  "OpenVINO IR rows keep the no-local-model-binary-SHA256 limitation as an explicit manifest-backed gap instead of inventing a hash.",
+  "The scope refreshes derived route-profile, benchmark, power-profile, readiness, regression, comparison, and generated tracking artifacts without new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]

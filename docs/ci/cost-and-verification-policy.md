@@ -32,6 +32,27 @@ Rollout PRs must use the PR body sections from the rollout document so every
 change records default LEM before/after, lanes removed from default, preserved
 verification, boundaries, and validation.
 
+## PR burn-down write-action law
+
+Queue burn-down has its own CI economics rule:
+[PR Write-Action CI Economics](../specs/BITNET-SPEC-PR-CI-ECONOMICS.md).
+The machine-readable policy is `policy/pr-ci-actions.toml`.
+
+Closing, reopening, rebasing, pushing, retargeting, labeling, recreating, and
+rerunning workflows are write actions. They can trigger CI, status churn, review
+churn, or branch-protection recomputation. During PR queue recovery, do
+read-only archaeology first and write only when the current disposition, merge,
+or proof decision requires it.
+
+The default rules are:
+
+- no bulk write without explicit approval;
+- no CI for archaeology;
+- CI only for approved merge candidates, approved clean ports, branch refreshes
+  needed for current proof, failed required-check reruns with evidence, or other
+  required proof;
+- close/reopen/recreate actions must satisfy the PR queue disposition law.
+
 ## Cost target
 
 For ordinary PRs, our operating target is:

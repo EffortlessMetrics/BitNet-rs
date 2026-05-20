@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-20T02:05:00Z"
+event = "in_progress"
+item = "LNL258V-ROUTE-025"
+branch = "codex/lunar-lake/LNL258V-ROUTE-025-route-model-identity"
+actor = "codex"
+summary = "Started a no-inference Lunar Lake route/model identity refresh for route-profile and cold/warm benchmark receipts."
+
+notes = [
+  "The item adds selected_model plus manifest-backed model, tokenizer/template, quantization, backend/runtime identity coverage to route-profile and cold/warm benchmark route rows.",
+  "Dense GGUF CPU identity comes from slm-artifact-manifest.json; OpenVINO GPU/NPU identity comes from the OpenVINO IR manifest and keeps the missing local model-binary SHA256 gap explicit; BitNet CPU identity comes from the CPU reference bundle.",
+  "The scope refreshes derived route-profile, benchmark, power-profile, readiness, regression, comparison, and generated tracking artifacts without new inference, route promotion, speedup, power-advantage, measured-temperature, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]

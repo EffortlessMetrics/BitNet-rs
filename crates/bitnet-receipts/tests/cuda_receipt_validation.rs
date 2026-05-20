@@ -1979,6 +1979,83 @@ fn dense_gguf_qwen_short_decode_rejects_missing_transfer_timing_source_fields() 
 }
 
 #[test]
+fn dense_gguf_qwen_short_decode_accepts_legacy_receipt_without_transfer_reduction_section()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    let receipt_object = receipt.as_object_mut().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "receipt must be an object")
+    })?;
+    receipt_object.remove("logits_transfer_reduction");
+
+    validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)?;
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_rejects_unearned_transfer_reduction_claim()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["device_to_host_bytes_reduced"] = json!(true);
+
+    let err = match validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted an unearned transfer-reduction claim",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
+
+    assert!(err.contains("device_to_host_bytes_reduced"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_requires_reduction_blocker_when_full_logits_download_remains()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["reduction_blocker"] = Value::Null;
+
+    let err = match validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted a full-logits receipt without a reduction blocker",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
+
+    assert!(err.contains("reduction_blocker"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_rejects_malformed_full_logits_byte_accounting()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["full_logits_bytes_per_step"] = json!(64);
+    receipt["logits_transfer_reduction"]["full_logits_download_bytes"] = json!(512);
+
+    let err = match validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted inconsistent full-logits byte accounting",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
+
+    assert!(err.contains("full_logits_bytes_per_step"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
 fn dense_gguf_qwen_short_decode_rejects_chat_speedup_full_residency_and_bitnet_claims() {
     let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
     receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(true);
@@ -2006,6 +2083,15 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_validates() {
     validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt).unwrap();
     validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
     reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+
+    assert_eq!(receipt["session_lifecycle"]["model_loaded_once"], true);
+    assert_eq!(receipt["session_lifecycle"]["cuda_context_once"], true);
+    assert_eq!(receipt["session_lifecycle"]["weights_uploaded_once"], true);
+    assert_eq!(receipt["session_lifecycle"]["per_request_model_load"], false);
+    assert_eq!(receipt["session_lifecycle"]["workspace_reused"], true);
+    assert_eq!(receipt["session_lifecycle"]["fallback_used"], false);
+    assert_eq!(receipt["tensor_residency"]["per_request_model_load"], false);
+    assert_eq!(receipt["tensor_residency"]["workspace_reused"], true);
 }
 
 #[test]
@@ -2071,6 +2157,82 @@ fn dense_gguf_qwen_warm_session_rejects_missing_transfer_timing_source_fields() 
 }
 
 #[test]
+fn dense_gguf_qwen_warm_session_accepts_legacy_receipt_without_transfer_reduction_section()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    let receipt_object = receipt.as_object_mut().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidData, "receipt must be an object")
+    })?;
+    receipt_object.remove("logits_transfer_reduction");
+
+    validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt)?;
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_warm_session_rejects_transfer_reduction_byte_mismatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["actual_device_to_host_bytes"] = json!(128);
+
+    let err = match validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted mismatched transfer byte accounting",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
+
+    assert!(err.contains("actual_device_to_host_bytes"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_warm_session_rejects_transfer_reduction_without_top_k_evidence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["top_k_evidence_preserved"] = json!(false);
+
+    let err = match validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted transfer reduction without top-k evidence",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
+
+    assert!(err.contains("top_k_evidence_preserved"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_warm_session_rejects_malformed_top_k_floor_accounting()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt["logits_transfer_reduction"]["top_k_result_bytes_total_floor"] = json!(24);
+
+    let err = match validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt) {
+        Ok(()) => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "validator accepted inconsistent top-k floor accounting",
+            )
+            .into());
+        }
+        Err(err) => err.to_string(),
+    };
+
+    assert!(err.contains("top_k_result_bytes_total_floor"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
 fn dense_gguf_qwen_warm_session_rejects_chat_speedup_full_residency_and_bitnet_claims() {
     let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
     receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(true);
@@ -2101,6 +2263,18 @@ fn dense_gguf_qwen_warm_session_rejects_broad_persistent_residency_claim() {
         .to_string();
 
     assert!(err.contains("persistent_session_residency_claimed"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_warm_session_rejects_incorrect_persistent_handle_aliases() {
+    let mut receipt = valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt();
+    receipt["session_lifecycle"]["per_request_model_load"] = json!(true);
+
+    let err = validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("per_request_model_load"), "unexpected error: {err}");
 }
 
 #[test]
@@ -4161,7 +4335,7 @@ fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
                 "cuda_logits_top_k_sha256": format!("{:064x}", 50 + index),
                 "cpu_logits_sha256": format!("{:064x}", 70 + index),
                 "cuda_logits_sha256": format!("{:064x}", 80 + index),
-                "logits_vector_length": 151936,
+                "logits_vector_length": 32,
                 "cpu_top_k": [
                     {"rank": 1, "token_id": *token, "value": 1.0},
                     {"rank": 2, "token_id": 3, "value": 0.5}
@@ -4265,6 +4439,28 @@ fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
             "kernel_time_ms": 0.0
         }
     ]);
+    receipt["logits_transfer_reduction"] = json!({
+        "schema": 1,
+        "scope": "dense_qwen_logits_top_k_transfer",
+        "transfer_mode": "full_logits_download_cpu_sampler",
+        "sampling_location": "cpu",
+        "requested_top_k": 2,
+        "generated_tokens_count": 8,
+        "logits_vector_length": 32,
+        "logits_element_bytes": 4,
+        "full_logits_bytes_per_step": 128,
+        "full_logits_download_bytes": 1024,
+        "actual_device_to_host_bytes": 1024,
+        "top_k_result_bytes_per_step_floor": 24,
+        "top_k_result_bytes_total_floor": 192,
+        "selected_token_bytes_total_floor": 32,
+        "device_to_host_bytes_reduced": false,
+        "bytes_saved_vs_full_logits": 0,
+        "selected_token_equality_preserved": true,
+        "top_k_evidence_preserved": true,
+        "quality_receipts_unchanged": true,
+        "reduction_blocker": "cpu_sampler_requires_full_logits_until_device_top_k_sampler"
+    });
     receipt["kernel_coverage"] = json!({
         "schema": 1,
         "route": "dense_regular_llm_cuda",
@@ -4382,9 +4578,12 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
         "model_loaded_once": true,
         "tokenizer_loaded_once": true,
         "cuda_context_initialized_once": true,
+        "cuda_context_once": true,
         "weights_uploaded_once": true,
+        "per_request_model_load": false,
         "per_turn_weight_upload": false,
         "runtime_buffers_reused": true,
+        "workspace_reused": true,
         "kv_cache_policy_recorded": true,
         "kv_cache_reinitialized_per_turn": true,
         "sampling_policy_recorded": true,
@@ -4416,7 +4615,7 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
                         "cuda_logits_top_k_sha256": format!("{:064x}", 130 + turn_index * 10 + index),
                         "cpu_logits_sha256": format!("{:064x}", 170 + turn_index * 10 + index),
                         "cuda_logits_sha256": format!("{:064x}", 200 + turn_index * 10 + index),
-                        "logits_vector_length": 151936,
+                        "logits_vector_length": 32,
                         "cpu_top_k": [
                             {"rank": 1, "token_id": *token, "value": 1.0},
                             {"rank": 2, "token_id": 3, "value": 0.5}
@@ -4550,6 +4749,28 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
             "kernel_time_ms": 0.0
         }
     ]);
+    receipt["logits_transfer_reduction"] = json!({
+        "schema": 1,
+        "scope": "dense_qwen_logits_top_k_transfer",
+        "transfer_mode": "full_logits_download_cpu_sampler",
+        "sampling_location": "cpu",
+        "requested_top_k": 2,
+        "generated_tokens_count": 24,
+        "logits_vector_length": 32,
+        "logits_element_bytes": 4,
+        "full_logits_bytes_per_step": 128,
+        "full_logits_download_bytes": 3072,
+        "actual_device_to_host_bytes": 3072,
+        "top_k_result_bytes_per_step_floor": 24,
+        "top_k_result_bytes_total_floor": 576,
+        "selected_token_bytes_total_floor": 96,
+        "device_to_host_bytes_reduced": false,
+        "bytes_saved_vs_full_logits": 0,
+        "selected_token_equality_preserved": true,
+        "top_k_evidence_preserved": true,
+        "quality_receipts_unchanged": true,
+        "reduction_blocker": "cpu_sampler_requires_full_logits_until_device_top_k_sampler"
+    });
     receipt["kernel_coverage"] = json!({
         "schema": 1,
         "route": "dense_regular_llm_cuda",
@@ -4599,11 +4820,14 @@ fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {
         "model_loaded_once": true,
         "tokenizer_loaded_once": true,
         "cuda_context_initialized_once": true,
+        "cuda_context_once": true,
         "weights_uploaded_once": true,
         "weights_resident_on_cuda": true,
+        "per_request_model_load": false,
         "per_turn_weight_upload": false,
         "per_token_weight_upload": false,
         "runtime_buffers_reused": true,
+        "workspace_reused": true,
         "kv_cache_policy_recorded": true,
         "kv_cache_reinitialized_per_turn": true,
         "sampling_policy_recorded": true,

@@ -6421,6 +6421,69 @@ fn dense_logits_top_k(logits: &[f32], top_k: usize) -> Result<Vec<DenseGgufLogit
         .collect())
 }
 
+fn dense_qwen_logits_transfer_reduction_json(
+    logits_len: usize,
+    generated_tokens: u64,
+    observed_top_k: usize,
+    actual_device_to_host_bytes: u64,
+) -> Result<Value> {
+    if logits_len == 0 {
+        bail!("dense Qwen logits transfer reduction requires a non-empty logits vector");
+    }
+    if generated_tokens == 0 {
+        bail!("dense Qwen logits transfer reduction requires generated tokens");
+    }
+    if observed_top_k == 0 {
+        bail!("dense Qwen logits transfer reduction requires top-k evidence");
+    }
+
+    let full_logits_bytes_per_step =
+        checked_u64_mul(logits_len as u64, 4, "full logits bytes per step")?;
+    let full_logits_download_bytes = checked_u64_mul(
+        full_logits_bytes_per_step,
+        generated_tokens,
+        "full logits download bytes",
+    )?;
+    if actual_device_to_host_bytes != full_logits_download_bytes {
+        bail!(
+            "dense Qwen current transfer accounting must match full logits download bytes until device top-k transfer lands"
+        );
+    }
+
+    let top_k_result_bytes_per_step_floor =
+        checked_u64_mul(observed_top_k as u64, 12, "top-k result bytes per step floor")?;
+    let top_k_result_bytes_total_floor = checked_u64_mul(
+        top_k_result_bytes_per_step_floor,
+        generated_tokens,
+        "top-k result bytes total floor",
+    )?;
+    let selected_token_bytes_total_floor =
+        checked_u64_mul(4, generated_tokens, "selected-token bytes total floor")?;
+
+    Ok(json!({
+        "schema": 1,
+        "scope": "dense_qwen_logits_top_k_transfer",
+        "transfer_mode": "full_logits_download_cpu_sampler",
+        "sampling_location": "cpu",
+        "requested_top_k": observed_top_k as u64,
+        "generated_tokens_count": generated_tokens,
+        "logits_vector_length": logits_len as u64,
+        "logits_element_bytes": 4_u64,
+        "full_logits_bytes_per_step": full_logits_bytes_per_step,
+        "full_logits_download_bytes": full_logits_download_bytes,
+        "actual_device_to_host_bytes": actual_device_to_host_bytes,
+        "top_k_result_bytes_per_step_floor": top_k_result_bytes_per_step_floor,
+        "top_k_result_bytes_total_floor": top_k_result_bytes_total_floor,
+        "selected_token_bytes_total_floor": selected_token_bytes_total_floor,
+        "device_to_host_bytes_reduced": false,
+        "bytes_saved_vs_full_logits": 0_u64,
+        "selected_token_equality_preserved": true,
+        "top_k_evidence_preserved": true,
+        "quality_receipts_unchanged": true,
+        "reduction_blocker": "cpu_sampler_requires_full_logits_until_device_top_k_sampler"
+    }))
+}
+
 fn dense_final_norm_descriptor(
     inspection: &DenseGgufDescriptorInspection,
 ) -> Result<&DenseGgufTensorDescriptor> {
@@ -11215,6 +11278,20 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     let stats_h2d = model_bytes;
     let stats_d2h = logits_transfer_bytes;
     let stats_launches = runtime_invocations;
+    let observed_top_k = cuda
+        .steps
+        .first()
+        .map(|step| step.top_k.len())
+        .ok_or_else(|| anyhow!("dense Qwen short-decode receipt requires top-k steps"))?;
+    if observed_top_k == 0 || cuda.steps.iter().any(|step| step.top_k.len() != observed_top_k) {
+        bail!("dense Qwen short-decode receipt requires uniform non-empty top-k evidence");
+    }
+    let logits_transfer_reduction = dense_qwen_logits_transfer_reduction_json(
+        cuda.logits_len,
+        generated_count_u64,
+        observed_top_k,
+        stats_d2h,
+    )?;
     let top_k_all_match = cpu.top_k_steps_sha256 == cuda.top_k_steps_sha256;
     let first_top_k_divergence = first_top_k_divergence_index(&cpu.steps, &cuda.steps);
     let step_json = dense_qwen_short_decode_steps_json(cpu, cuda);
@@ -11359,6 +11436,7 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
             "chat_claimed": false
         },
         "kernel_stats": kernel_stats,
+        "logits_transfer_reduction": logits_transfer_reduction,
         "kernel_coverage": {
             "schema": 1,
             "route": DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
@@ -11620,6 +11698,28 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
     let stats_h2d = model_bytes;
     let stats_d2h = logits_transfer_bytes;
     let stats_launches = runtime_invocations;
+    let observed_top_k = cuda
+        .turns
+        .iter()
+        .flat_map(|turn| turn.steps.iter())
+        .next()
+        .map(|step| step.top_k.len())
+        .ok_or_else(|| anyhow!("dense Qwen warm-session receipt requires top-k steps"))?;
+    if observed_top_k == 0
+        || cuda
+            .turns
+            .iter()
+            .flat_map(|turn| turn.steps.iter())
+            .any(|step| step.top_k.len() != observed_top_k)
+    {
+        bail!("dense Qwen warm-session receipt requires uniform non-empty top-k evidence");
+    }
+    let logits_transfer_reduction = dense_qwen_logits_transfer_reduction_json(
+        logits_len,
+        generated_tokens_total,
+        observed_top_k,
+        stats_d2h,
+    )?;
 
     let cpu_generated_all = cpu
         .turns
@@ -11851,9 +11951,12 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             "model_loaded_once": true,
             "tokenizer_loaded_once": true,
             "cuda_context_initialized_once": true,
+            "cuda_context_once": true,
             "weights_uploaded_once": true,
+            "per_request_model_load": false,
             "per_turn_weight_upload": false,
             "runtime_buffers_reused": true,
+            "workspace_reused": true,
             "kv_cache_policy_recorded": true,
             "kv_cache_reinitialized_per_turn": true,
             "sampling_policy_recorded": true,
@@ -11906,6 +12009,7 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             "chat_claimed": false
         },
         "kernel_stats": kernel_stats,
+        "logits_transfer_reduction": logits_transfer_reduction,
         "kernel_coverage": {
             "schema": 1,
             "route": DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
@@ -11958,11 +12062,14 @@ fn dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json(
             "model_loaded_once": true,
             "tokenizer_loaded_once": true,
             "cuda_context_initialized_once": true,
+            "cuda_context_once": true,
             "weights_uploaded_once": true,
             "weights_resident_on_cuda": true,
+            "per_request_model_load": false,
             "per_turn_weight_upload": false,
             "per_token_weight_upload": false,
             "runtime_buffers_reused": true,
+            "workspace_reused": true,
             "kv_cache_policy_recorded": true,
             "kv_cache_reinitialized_per_turn": true,
             "sampling_policy_recorded": true,

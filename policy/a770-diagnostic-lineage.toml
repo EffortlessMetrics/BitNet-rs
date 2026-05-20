@@ -1,0 +1,73 @@
+schema_version = "1.0"
+policy = "a770-diagnostic-lineage"
+owner = "release/runtime"
+status = "active"
+updated = "2026-05-19"
+
+# A770 diagnostics are lineage records. Diagnostic evidence must be classified
+# before closure and must not promote product claims by itself.
+
+[classification]
+durable_content = [
+  "trace_instrumentation",
+  "reference_runner_tooling",
+  "comparator_logic",
+  "receipt_schema_fields",
+  "focused_regression_tests",
+  "final_synthesis_reports",
+  "runtime_correctness_signals",
+  "model_correctness_signals",
+]
+transient_content = [
+  "one_off_target_local_observation",
+  "intermediate_mismatch_location",
+  "contradicted_hypothesis_captured_later",
+  "manual_receipt_without_reusable_artifact",
+]
+
+[durable_disposition]
+merge_as_is_when_valid = true
+rebase_or_restack_same_pr_when_feasible = true
+clean_port_when_original_unusable = true
+close_only_after_landed_successor_or_valid_disposition = true
+
+[transient_disposition]
+requires_committed_report_or_ledger = true
+requires_newer_landed_synthesis_or_audit_record = true
+must_explain_no_durable_value = true
+
+[invalid_inferences]
+diagnostic_only_means_disposable = true
+root_closed_means_descendants_close = true
+closed_ancestor_means_source_material = true
+open_descendant_means_replacement = true
+stale_stack_means_close = true
+needs_restack_means_close = true
+wrong_base_means_close = true
+diagnostic_evidence_means_support_claim = true
+
+[frontier_model]
+closed_ancestor = "audit_content_before_disposition"
+open_descendant = "compare_exact_content_before_successor_claim"
+stale_base = "rebase_or_restack_same_pr_where_feasible"
+successor_candidate = "keep_source_open_until_successor_lands"
+historical_evidence = "link_committed_report_or_ledger_before_close"
+
+[bulk_actions]
+bulk_close_allowed = false
+bulk_reopen_allowed = false
+bulk_recreate_allowed = false
+bulk_restack_allowed_without_approval = false
+one_for_one_replacement_wave_allowed = false
+ci_for_archaeology_allowed = false
+
+[claim_boundaries]
+diagnostic_trace_claim = "diagnostic_evidence"
+forbidden_promotions = [
+  "support",
+  "quality",
+  "speed",
+  "residency",
+  "selected_execution",
+  "broad_a770_readiness",
+]

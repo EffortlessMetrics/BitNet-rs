@@ -1,11 +1,12 @@
 //! BitNet model implementation
 
 use crate::dense_gguf_q8_dispatch::{DenseQ8DispatchSelection, select_dense_q8_runtime};
-use crate::dense_gguf_q8_sidecar::DenseGgufQ8SidecarRegistry;
+use crate::dense_gguf_q8_sidecar::{DenseGgufQ8SidecarDescriptor, DenseGgufQ8SidecarRegistry};
 use crate::transformer::{KVCache, TransformerModel};
 use bitnet_common::{
     BitNetConfig, BitNetError, BitNetTensor, ConcreteTensor, Device, Result, Tensor,
 };
+use bitnet_transformer::{DenseLinearRuntimeHookDescriptor, DenseLinearRuntimeHookRegistry};
 use candle_core::{DType, Tensor as CandleTensor};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -109,7 +110,8 @@ impl BitNetModel {
         }
 
         // Try to build transformer model; propagate errors so missing weights fail fast
-        let transformer = Self::build_transformer(&config, &tensors, &raw_tensors, &device)?;
+        let transformer =
+            Self::build_transformer(&config, &tensors, &raw_tensors, &dense_q8_sidecars, &device)?;
 
         Ok(Self { config, device, tensors, transformer: Some(transformer), dense_q8_sidecars })
     }
@@ -119,6 +121,7 @@ impl BitNetModel {
         config: &BitNetConfig,
         tensors: &HashMap<String, CandleTensor>,
         raw_tensors: &HashMap<String, CandleTensor>,
+        dense_q8_sidecars: &DenseGgufQ8SidecarRegistry,
         device: &Device,
     ) -> Result<Arc<TransformerModel>> {
         use crate::weight_mapper::{
@@ -161,9 +164,15 @@ impl BitNetModel {
         // Keys like "blk.0.attn_q.weight.qk256_qs" -> "layers.0.attention.q_proj.weight.qk256_qs"
         // The remapper now handles .qk256_qs suffix (strips, remaps, re-appends)
         let raw_mapped = remap_gguf_weights(raw_tensors)?;
+        let dense_linear_hooks = dense_q8_runtime_hooks_from_sidecars(dense_q8_sidecars);
 
         let vb = create_var_builder(mapped.clone(), DType::F32, &device)?;
-        let model = TransformerModel::new_with_tensors(updated_config, vb, raw_mapped)?;
+        let model = TransformerModel::new_with_tensors_and_dense_linear_hooks(
+            updated_config,
+            vb,
+            raw_mapped,
+            dense_linear_hooks,
+        )?;
         Ok(Arc::new(model))
     }
 
@@ -208,6 +217,79 @@ impl BitNetModel {
     /// Convert Candle tensor to ConcreteTensor
     fn candle_to_concrete(&self, tensor: CandleTensor) -> ConcreteTensor {
         ConcreteTensor::BitNet(BitNetTensor::new(tensor))
+    }
+}
+
+fn dense_q8_runtime_hooks_from_sidecars(
+    registry: &DenseGgufQ8SidecarRegistry,
+) -> DenseLinearRuntimeHookRegistry {
+    let mut hooks = DenseLinearRuntimeHookRegistry::default();
+    for descriptor in &registry.descriptors {
+        let Some(canonical_name) = dense_q8_transformer_hook_name(descriptor) else {
+            continue;
+        };
+        hooks.insert(
+            canonical_name,
+            DenseLinearRuntimeHookDescriptor {
+                tensor_name: descriptor.tensor_name.clone(),
+                role: format!("{:?}", descriptor.role),
+                sidecar_payload_sha256: Some(descriptor.packed_q8_bytes_sha256.clone()),
+                runtime_compute_enabled: descriptor.runtime_compute_enabled,
+            },
+        );
+    }
+    hooks
+}
+
+fn dense_q8_transformer_hook_name(descriptor: &DenseGgufQ8SidecarDescriptor) -> Option<String> {
+    bitnet_weight_name_core::normalize_vendor_key(&descriptor.tensor_name).or_else(|| {
+        match descriptor.tensor_name.as_str() {
+            "output.weight" | "lm_head.weight" => Some("lm_head.weight".to_string()),
+            "token_embd.weight" | "model.embed_tokens.weight" => {
+                Some("embed_tokens.weight".to_string())
+            }
+            _ => None,
+        }
+    })
+}
+
+#[cfg(test)]
+mod dense_q8_runtime_hook_tests {
+    use super::*;
+    use crate::formats::gguf::{GgufTensorType, TensorInfo};
+
+    fn q8_tensor_info(name: &str, shape: Vec<usize>) -> TensorInfo {
+        let value_count = shape.iter().copied().product::<usize>();
+        let block_count = value_count.div_ceil(GgufTensorType::Q8_0.block_size());
+        let size = block_count * GgufTensorType::Q8_0.element_size();
+        TensorInfo {
+            name: name.to_string(),
+            shape,
+            tensor_type: GgufTensorType::Q8_0,
+            offset: 0,
+            size: size as u64,
+        }
+    }
+
+    #[test]
+    fn dense_gguf_q8_sidecar_hooks_map_vendor_tensor_names() -> Result<()> {
+        let mut registry = DenseGgufQ8SidecarRegistry::default();
+        let tensor_info = q8_tensor_info("blk.0.attn_q.weight", vec![64, 32]);
+        let data = vec![0_u8; tensor_info.size as usize];
+        registry.try_push_tensor(&tensor_info, &data)?;
+
+        let hooks = dense_q8_runtime_hooks_from_sidecars(&registry);
+        let Some(hook) = hooks.get("layers.0.attention.q_proj.weight") else {
+            return Err(BitNetError::Validation(
+                "expected canonical attention q_proj hook".to_string(),
+            ));
+        };
+
+        assert_eq!(hook.tensor_name, "blk.0.attn_q.weight");
+        assert_eq!(hook.role, "AttentionQ");
+        assert_eq!(hook.runtime_compute_enabled, false);
+        assert!(hook.sidecar_payload_sha256.is_some());
+        Ok(())
     }
 }
 

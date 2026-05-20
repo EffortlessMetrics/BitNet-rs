@@ -331,6 +331,59 @@ This closes only the runtime proof gate for the current state: packed Q8_0
 sidecar compute is still disabled until a later PR adds the production forward
 hook and after-execution receipts for the same Qwen3 Q8_0 behavior oracle.
 
+SLM-CPU-054 makes that remaining hook/API gap machine-checkable instead of
+treating it as an implicit prose blocker. It consumes the SLM-CPU-053 runtime
+proof shape and records the exact production gaps that still prevent packed
+Q8_0 sidecar compute from being selected:
+
+```text
+artifact_kind = dense_gguf_q8_runtime_hook_gap
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+production_runtime_hook_invoked = false
+runtime_compute_enabled = false
+sidecar_runtime_compute_allowed = false
+api_gaps =
+  production_dispatch_still_eager_f32
+  packed_runtime_compute_still_disabled
+  transformer_dense_linear_hook_missing
+  before_after_receipt_capture_missing
+fallback_used = false
+speedup_claim = false
+```
+
+The next safe step remains a production dense-linear hook that receives the
+selected Q8_0 sidecar descriptor and emits before/after Qwen3 Q8_0 behavior
+receipts before enabling packed sidecar compute. SLM-CPU-054 does not replace
+the eager F32 Candle runtime path and does not claim speedup.
+
+SLM-CPU-055 is the next contract gate for that step. It should add the first
+production dense-linear hook boundary so transformer dense linear calls can
+receive either an explicit eager-F32 selection or a selected Q8_0 sidecar
+descriptor. The default runtime must remain eager F32 Candle unless before/after
+receipts prove identical model SHA, tokenizer authority, prompt IDs, generated
+IDs, decoded text, selected CPU backend/kernel identity, and `fallback=false`.
+If packed compute remains disabled, the slice must emit a machine-checkable
+hook-contract or blocker artifact instead of making a speedup claim.
+
+SLM-CPU-056 implements that hook boundary in the production transformer path.
+Dense Q8_0 sidecar descriptors can now reach transformer attention and MLP
+dense-linear calls as an explicit hook registry, and each call records whether
+the selected descriptor is present. The runtime selection still remains:
+
+```text
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+runtime_compute_enabled = false
+dense_runtime_replaced = false
+speedup_claim = false
+```
+
+The machine-checkable artifact
+`ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-production-dense-linear-hook-boundary.json`
+records the remaining packed-compute and receipt gaps. The slice does not
+enable packed Q8_0 sidecar execution or claim any performance improvement.
+
 ## Greedy Sampler Fast Path
 
 SLM-CPU-024 adds a guarded sampler fast path for `temperature = 0.0` when

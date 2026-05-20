@@ -5,13 +5,13 @@ server-ready. Speedup, full residency, and BitNet proof remain false.
 
 ## Work item: CUDA-DENSE-QWEN25-OPS-001
 
-Status: ready
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
 Blocks: CUDA-DENSE-QWEN25-OPS-002
-Blocked by: native inference plan
+Blocked by: none
 
 ### Goal
 
@@ -20,7 +20,7 @@ Produce `docs/reports/CUDA_DENSE_QWEN25_RESIDENCY_BOTTLENECKS.md`.
 ### Production delta
 
 Report ranks model load, H2D upload, D2H logits, launch count, KV movement,
-workspace reuse, and per-token wall-time blockers.
+workspace reuse, and per-token wall-time blockers. Landed in PR #5985.
 
 ### Non-goals
 
@@ -43,13 +43,13 @@ Revert the report.
 
 ## Work item: CUDA-DENSE-QWEN25-OPS-002
 
-Status: blocked
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
 Blocks: CUDA-DENSE-QWEN25-OPS-003
-Blocked by: CUDA-DENSE-QWEN25-OPS-001
+Blocked by: none
 
 ### Goal
 
@@ -57,8 +57,9 @@ Add persistent handles for dense Qwen2.5.
 
 ### Production delta
 
-Avoid per-request model/context/weight setup where the route can safely reuse
-state.
+Dense Qwen warm-session receipts now expose and validate stable persistent-handle
+aliases for one model load, one CUDA context, upload-once weights, no
+per-request model load, workspace reuse, and fallback false. Landed in PR #5995.
 
 ### Non-goals
 
@@ -73,22 +74,24 @@ Receipt shows `model_loaded_once=true`, `cuda_context_once=true`,
 ### Proof commands
 
 ```bash
-cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- chat --device cuda --model <qwen25>
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation dense_gguf_qwen_warm_session
+cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli receipts_explain
 ```
 
 ### Rollback
 
-Return to previous lifecycle and keep existing exact-profile server readiness.
+Revert PR #5995 receipt aliases and validators while keeping existing
+exact-profile server readiness.
 
 ## Work item: CUDA-DENSE-QWEN25-OPS-003
 
-Status: blocked
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
 Blocks: CUDA-DENSE-QWEN25-PERF-007
-Blocked by: CUDA-DENSE-QWEN25-OPS-002
+Blocked by: none
 
 ### Goal
 
@@ -96,8 +99,11 @@ Reduce logits/top-k transfer when greedy or top-k proof is sufficient.
 
 ### Production delta
 
-Reduce D2H bytes or explain why reduction is not possible while preserving
-selected-token equality and top-k evidence.
+Dense Qwen short-decode and warm-session receipts now expose and validate
+logits-transfer accounting. PR #6010 records that D2H bytes are not reduced
+yet because the CPU sampler still requires full logits until a device top-k
+sampler exists, while preserving selected-token equality, top-k evidence, and
+quality evidence.
 
 ### Non-goals
 
@@ -105,27 +111,33 @@ No quality regression and no speedup claim.
 
 ### Acceptance
 
-Quality receipts remain unchanged and D2H byte change is recorded.
+Quality receipts remain unchanged, D2H byte accounting is recorded, and any
+future `device_to_host_bytes_reduced=true` claim must prove actual D2H bytes
+fell below the full-logits envelope.
 
 ### Proof commands
 
 ```bash
-cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- ask --device cuda --model <qwen25> "..."
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation dense_gguf_qwen_short_decode
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation dense_gguf_qwen_warm_session
+cargo test --locked -p bitnet-receipts --test cuda_receipt_validation
+git diff --check
 ```
 
 ### Rollback
 
-Restore full logits transfer.
+Revert PR #6010 receipt aliases and validators. Existing Qwen2.5 product CLI
+and exact-profile server readiness evidence remains unchanged.
 
 ## Work item: CUDA-DENSE-QWEN25-PERF-007
 
-Status: blocked
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
 Blocks: exact-profile status updates
-Blocked by: CUDA-DENSE-QWEN25-OPS-002, CUDA-DENSE-QWEN25-OPS-003
+Blocked by: none
 
 ### Goal
 
@@ -133,7 +145,11 @@ Review Qwen2.5 speed/residency requalification after optimization.
 
 ### Production delta
 
-Accept or reject exact profiles; keep BitNet proof false.
+This slice records the post-OPS-002/OPS-003 requalification review. No speed,
+benchmark-qualified, full-residency, broad dense GGUF, or BitNet proof claim is
+promoted because the reviewed CUDA profiles remain slower than same-artifact CPU
+means, pure H2D timing is still unavailable, and logits-transfer accounting
+still records full-logits D2H until a device top-k sampler exists.
 
 ### Non-goals
 
@@ -141,7 +157,10 @@ No broad speedup or full residency without proof.
 
 ### Acceptance
 
-Model coverage and status docs agree with governed review decisions.
+Model coverage and status docs agree with the governed review decision:
+`benchmark_qualified=false`, `speedup_claim=false`,
+`full_residency_claim=false`, exact-profile `server_ready=true`, and
+`bitnet_packed_i2s_qk256_proof=false`.
 
 ### Proof commands
 
@@ -152,4 +171,5 @@ git diff --check
 
 ### Rollback
 
-Demote any accepted claims whose receipts do not satisfy the spec.
+Revert the review report and restore the previous next-proof text. No claim
+booleans were promoted by this work item.

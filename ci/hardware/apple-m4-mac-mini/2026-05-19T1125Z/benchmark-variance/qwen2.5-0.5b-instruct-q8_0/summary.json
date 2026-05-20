@@ -1,0 +1,541 @@
+{
+  "artifact_kind": "apple_m4_benchmark_variance_v1",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary.json",
+  "build": {
+    "profile": "release",
+    "release_mode": true
+  },
+  "comparison_readiness": {
+    "can_compare_timing": false,
+    "invalid_comparison_reasons": [
+      "profile_timeout_exceeded:context_4k:720s"
+    ],
+    "status": "invalid_for_comparison"
+  },
+  "evidence": {
+    "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+    "child_summary_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary-runs/run-01.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary-runs/run-02.json"
+    ],
+    "generated_text_recorded": true,
+    "generated_token_ids_recorded": true,
+    "operator_command": "mac benchmark --repeat"
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generated_tokens": 4300,
+  "invalid_comparison_reasons": [
+    "profile_timeout_exceeded:context_4k:720s"
+  ],
+  "mac_claim_boundary": {
+    "bitnet_performance_claimed": false,
+    "bitnet_quality_claimed": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dense_slm_only": true,
+    "final_variance_envelope": false,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false,
+    "variance_harness_only": true
+  },
+  "metrics": {
+    "memory": {
+      "memory_drift_mb_p50": {
+        "count": 2,
+        "max": 0.0,
+        "min": 0.0,
+        "p50": 0.0,
+        "p90": 0.0,
+        "p99": 0.0,
+        "samples": [
+          0.0,
+          0.0
+        ]
+      },
+      "memory_drift_mb_p90": {
+        "count": 2,
+        "max": 0.0,
+        "min": 0.0,
+        "p50": 0.0,
+        "p90": 0.0,
+        "p99": 0.0,
+        "samples": [
+          0.0,
+          0.0
+        ]
+      },
+      "memory_drift_mb_p99": {
+        "count": 2,
+        "max": 0.0,
+        "min": 0.0,
+        "p50": 0.0,
+        "p90": 0.0,
+        "p99": 0.0,
+        "samples": [
+          0.0,
+          0.0
+        ]
+      },
+      "peak_memory_mb_p50": {
+        "count": 2,
+        "max": 3753.938,
+        "min": 3655.094,
+        "p50": 3655.094,
+        "p90": 3753.938,
+        "p99": 3753.938,
+        "samples": [
+          3753.938,
+          3655.094
+        ]
+      },
+      "peak_memory_mb_p90": {
+        "count": 2,
+        "max": 3830.156,
+        "min": 3794.578,
+        "p50": 3794.578,
+        "p90": 3830.156,
+        "p99": 3830.156,
+        "samples": [
+          3830.156,
+          3794.578
+        ]
+      },
+      "peak_memory_mb_p99": {
+        "count": 2,
+        "max": 3830.156,
+        "min": 3794.578,
+        "p50": 3794.578,
+        "p90": 3830.156,
+        "p99": 3830.156,
+        "samples": [
+          3830.156,
+          3794.578
+        ]
+      }
+    },
+    "speed": {
+      "cold_load_ms_p50": {
+        "count": 2,
+        "max": 4456.092,
+        "min": 4254.003,
+        "p50": 4254.003,
+        "p90": 4456.092,
+        "p99": 4456.092,
+        "samples": [
+          4254.003,
+          4456.092
+        ]
+      },
+      "cold_load_ms_p90": {
+        "count": 2,
+        "max": 21294.56,
+        "min": 20179.807,
+        "p50": 20179.807,
+        "p90": 21294.56,
+        "p99": 21294.56,
+        "samples": [
+          21294.56,
+          20179.807
+        ]
+      },
+      "cold_load_ms_p99": {
+        "count": 2,
+        "max": 21294.56,
+        "min": 20179.807,
+        "p50": 20179.807,
+        "p90": 21294.56,
+        "p99": 21294.56,
+        "samples": [
+          21294.56,
+          20179.807
+        ]
+      },
+      "decode_tok_s_p50": {
+        "count": 2,
+        "max": 12.93,
+        "min": 9.102,
+        "p50": 9.102,
+        "p90": 12.93,
+        "p99": 12.93,
+        "samples": [
+          12.93,
+          9.102
+        ]
+      },
+      "decode_tok_s_p90": {
+        "count": 2,
+        "max": 15.614,
+        "min": 15.439,
+        "p50": 15.439,
+        "p90": 15.614,
+        "p99": 15.614,
+        "samples": [
+          15.614,
+          15.439
+        ]
+      },
+      "decode_tok_s_p99": {
+        "count": 2,
+        "max": 16.146,
+        "min": 15.819,
+        "p50": 15.819,
+        "p90": 16.146,
+        "p99": 16.146,
+        "samples": [
+          16.146,
+          15.819
+        ]
+      },
+      "input_tok_s_p50": {
+        "count": 2,
+        "max": 18.273,
+        "min": 12.738,
+        "p50": 12.738,
+        "p90": 18.273,
+        "p99": 18.273,
+        "samples": [
+          18.273,
+          12.738
+        ]
+      },
+      "input_tok_s_p90": {
+        "count": 2,
+        "max": 21.777,
+        "min": 21.577,
+        "p50": 21.577,
+        "p90": 21.777,
+        "p99": 21.777,
+        "samples": [
+          21.777,
+          21.577
+        ]
+      },
+      "input_tok_s_p99": {
+        "count": 2,
+        "max": 22.539,
+        "min": 22.267,
+        "p50": 22.267,
+        "p90": 22.539,
+        "p99": 22.539,
+        "samples": [
+          22.539,
+          22.267
+        ]
+      },
+      "output_tok_s_p50": {
+        "count": 2,
+        "max": 1.104,
+        "min": 0.906,
+        "p50": 0.906,
+        "p90": 1.104,
+        "p99": 1.104,
+        "samples": [
+          1.104,
+          0.906
+        ]
+      },
+      "output_tok_s_p90": {
+        "count": 2,
+        "max": 5.286,
+        "min": 4.772,
+        "p50": 4.772,
+        "p90": 5.286,
+        "p99": 5.286,
+        "samples": [
+          5.286,
+          4.772
+        ]
+      },
+      "output_tok_s_p99": {
+        "count": 2,
+        "max": 8.334,
+        "min": 7.243,
+        "p50": 7.243,
+        "p90": 8.334,
+        "p99": 8.334,
+        "samples": [
+          8.334,
+          7.243
+        ]
+      },
+      "prefill_ms_p50": {
+        "count": 2,
+        "max": 3474.118,
+        "min": 2458.283,
+        "p50": 2458.283,
+        "p90": 3474.118,
+        "p99": 3474.118,
+        "samples": [
+          2458.283,
+          3474.118
+        ]
+      },
+      "prefill_ms_p90": {
+        "count": 2,
+        "max": 9985.282,
+        "min": 9982.751,
+        "p50": 9982.751,
+        "p90": 9985.282,
+        "p99": 9985.282,
+        "samples": [
+          9982.751,
+          9985.282
+        ]
+      },
+      "prefill_ms_p99": {
+        "count": 2,
+        "max": 100309.31,
+        "min": 81296.823,
+        "p50": 81296.823,
+        "p90": 100309.31,
+        "p99": 100309.31,
+        "samples": [
+          100309.31,
+          81296.823
+        ]
+      },
+      "prompt_tokenize_ms_p50": {
+        "count": 2,
+        "max": 56.26,
+        "min": 42.194,
+        "p50": 42.194,
+        "p90": 56.26,
+        "p99": 56.26,
+        "samples": [
+          42.194,
+          56.26
+        ]
+      },
+      "prompt_tokenize_ms_p90": {
+        "count": 2,
+        "max": 168.469,
+        "min": 168.313,
+        "p50": 168.313,
+        "p90": 168.469,
+        "p99": 168.469,
+        "samples": [
+          168.469,
+          168.313
+        ]
+      },
+      "prompt_tokenize_ms_p99": {
+        "count": 2,
+        "max": 171.314,
+        "min": 170.849,
+        "p50": 170.849,
+        "p90": 171.314,
+        "p99": 171.314,
+        "samples": [
+          171.314,
+          170.849
+        ]
+      },
+      "sampling_ms_per_token_p50": {
+        "count": 2,
+        "max": 0.566,
+        "min": 0.45,
+        "p50": 0.45,
+        "p90": 0.566,
+        "p99": 0.566,
+        "samples": [
+          0.45,
+          0.566
+        ]
+      },
+      "sampling_ms_per_token_p90": {
+        "count": 2,
+        "max": 2.187,
+        "min": 1.607,
+        "p50": 1.607,
+        "p90": 2.187,
+        "p99": 2.187,
+        "samples": [
+          1.607,
+          2.187
+        ]
+      },
+      "sampling_ms_per_token_p99": {
+        "count": 2,
+        "max": 2.209,
+        "min": 2.203,
+        "p50": 2.203,
+        "p90": 2.209,
+        "p99": 2.209,
+        "samples": [
+          2.209,
+          2.203
+        ]
+      },
+      "tokenizer_load_ms_p50": {
+        "count": 2,
+        "max": 55.707,
+        "min": 49.841,
+        "p50": 49.841,
+        "p90": 55.707,
+        "p99": 55.707,
+        "samples": [
+          49.841,
+          55.707
+        ]
+      },
+      "tokenizer_load_ms_p90": {
+        "count": 2,
+        "max": 219.017,
+        "min": 213.798,
+        "p50": 213.798,
+        "p90": 219.017,
+        "p99": 219.017,
+        "samples": [
+          219.017,
+          213.798
+        ]
+      },
+      "tokenizer_load_ms_p99": {
+        "count": 2,
+        "max": 219.017,
+        "min": 213.798,
+        "p50": 213.798,
+        "p90": 219.017,
+        "p99": 219.017,
+        "samples": [
+          219.017,
+          213.798
+        ]
+      },
+      "total_wall_ms_p50": {
+        "count": 2,
+        "max": 4032.82,
+        "min": 3030.237,
+        "p50": 3030.237,
+        "p90": 4032.82,
+        "p99": 4032.82,
+        "samples": [
+          3030.237,
+          4032.82
+        ]
+      },
+      "total_wall_ms_p90": {
+        "count": 2,
+        "max": 14415.968,
+        "min": 14258.061,
+        "p50": 14258.061,
+        "p90": 14415.968,
+        "p99": 14415.968,
+        "samples": [
+          14258.061,
+          14415.968
+        ]
+      },
+      "total_wall_ms_p99": {
+        "count": 2,
+        "max": 102731.617,
+        "min": 83183.608,
+        "p50": 83183.608,
+        "p90": 102731.617,
+        "p99": 102731.617,
+        "samples": [
+          102731.617,
+          83183.608
+        ]
+      },
+      "ttft_ms_p50": {
+        "count": 2,
+        "max": 3641.0,
+        "min": 2586.0,
+        "p50": 2586.0,
+        "p90": 3641.0,
+        "p99": 3641.0,
+        "samples": [
+          2586.0,
+          3641.0
+        ]
+      },
+      "ttft_ms_p90": {
+        "count": 2,
+        "max": 10459.0,
+        "min": 10457.0,
+        "p50": 10457.0,
+        "p90": 10459.0,
+        "p99": 10459.0,
+        "samples": [
+          10457.0,
+          10459.0
+        ]
+      },
+      "ttft_ms_p99": {
+        "count": 2,
+        "max": 100508.0,
+        "min": 81464.0,
+        "p50": 81464.0,
+        "p90": 100508.0,
+        "p99": 100508.0,
+        "samples": [
+          100508.0,
+          81464.0
+        ]
+      }
+    }
+  },
+  "model_cache": {
+    "architecture": "qwen2",
+    "bytes": 675710816,
+    "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+    "chat_template": true,
+    "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quantization": "Q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "support_note": "Rust-native Apple M4 CPU/NEON SLM baseline artifact; RTX 5070 Ti dense CUDA ask is bounded to the CUDA-UX-003 receipt gate.",
+    "tokenizer_model": "gpt2",
+    "tokenizer_pre": "qwen2"
+  },
+  "outlier_handling": {
+    "method": "none",
+    "reason": "raw repeat samples are preserved; M4-BENCH-005 may define filtering policy for published envelopes"
+  },
+  "profile_set": "slm-benchmark-v2",
+  "profiles_required": [
+    "short_prompt_16_out",
+    "short_prompt_64_out",
+    "long_prompt_16_out",
+    "long_prompt_128_out",
+    "context_1k",
+    "context_4k",
+    "resident_25",
+    "resident_50",
+    "resident_100"
+  ],
+  "prompt_count": 402,
+  "repeat": {
+    "completed": 2,
+    "profile_count": 9,
+    "requested": 2,
+    "sample_count": 18
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "speedup_claim": false,
+  "timestamp": "2026-05-19T13:31:43.280971+00:00",
+  "variance_band": {
+    "advisory_vs_failure": "timing and memory drift are advisory unless a later lane opts into fail-on-drift",
+    "method": "min/max and p50/p90/p99 over repeated child benchmark summary aggregate metrics",
+    "reported_stats": [
+      "count",
+      "p50",
+      "p90",
+      "p99",
+      "min",
+      "max",
+      "samples"
+    ],
+    "threshold_derivation": "uses the M4 operator envelope drift thresholds; this harness records variance and does not decide final release failure"
+  }
+}

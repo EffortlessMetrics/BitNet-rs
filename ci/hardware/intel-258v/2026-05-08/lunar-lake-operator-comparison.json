@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-19T14:18:50Z",
+  "created_utc": "2026-05-20T07:10:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -19,9 +19,18 @@
     "durability_bundle_indexed": true,
     "bitnet_semantic_intake_indexed": true,
     "power_profile_evidence_indexed": true,
+    "thermal_temperature_availability_indexed": true,
+    "thermal_temperature_available": false,
+    "thermal_usable_temperature_reading_count": 0,
+    "ask_short_ask_receipt_indexed": true,
+    "ask_short_auto_ask_ready": true,
+    "ask_normal_ask_receipt_indexed": true,
+    "ask_normal_auto_ask_ready": true,
     "warm_resident_ask_receipt_indexed": true,
     "warm_resident_auto_ask_ready": true,
     "blocked_ask_receipt_indexed": true,
+    "route_profile_model_identity_ready": true,
+    "cold_warm_model_identity_ready": true,
     "required_answer_profiles": [
       "regression_tiny",
       "ask_short",
@@ -68,18 +77,15 @@
     "cold_warm_benchmark_ready": true,
     "timing_coverage": {
       "route_count": 23,
-      "profile_specific_route_count": 21,
-      "proxy_or_missing_route_count": 2,
+      "profile_specific_route_count": 23,
+      "proxy_or_missing_route_count": 0,
       "promotion_eligible_route_count": 8,
       "promotion_eligible_profile_specific_route_count": 8,
       "candidate_route_count": 14,
       "candidate_proxy_or_missing_route_count": 0,
       "promotion_eligible_routes_have_profile_specific_timing": true,
       "proxy_or_missing_timing_routes_blocked": true,
-      "proxy_or_missing_routes": [
-        "decode_heavy:dense_slm_default_cpu",
-        "prefill_heavy:dense_slm_default_cpu"
-      ],
+      "proxy_or_missing_routes": [],
       "promotion_eligible_proxy_or_missing_routes": [],
       "unblocked_proxy_or_missing_routes": []
     },
@@ -106,6 +112,56 @@
     "low_power_promotion_ready": false,
     "power_advantage_proven": false,
     "strict_ready": true,
+    "gaps": []
+  },
+  "ask_short_ask_receipt": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json",
+    "ask_receipt_ready": true,
+    "profile_id": "ask_short",
+    "requested_device": "auto",
+    "requested_route": "auto",
+    "selected_route": "dense_slm_openvino_gpu_candidate",
+    "selected_backend": "openvino-gpu",
+    "runtime_api": "openvino_genai",
+    "promotion_status": "promoted",
+    "route_profile_status": "promoted_route_ready",
+    "route_profile_blockers": [],
+    "fallback_used": false,
+    "answer_gate_passed": true,
+    "openvino_candidate_route_executed": true,
+    "new_inference_executed": true,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "bitnet_qk256_i2s_claim": false,
+    "generated_token_ids_available": true,
+    "source_run_receipt": "ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-auto-gpu-ask-short-math-brief-source-run.json",
+    "regression_ready": true,
+    "gaps": []
+  },
+  "ask_normal_ask_receipt": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json",
+    "ask_receipt_ready": true,
+    "profile_id": "ask_normal",
+    "requested_device": "auto",
+    "requested_route": "auto",
+    "selected_route": "dense_slm_openvino_gpu_candidate",
+    "selected_backend": "openvino-gpu",
+    "runtime_api": "openvino_genai",
+    "promotion_status": "promoted",
+    "route_profile_status": "promoted_route_ready",
+    "route_profile_blockers": [],
+    "fallback_used": false,
+    "answer_gate_passed": true,
+    "openvino_candidate_route_executed": true,
+    "new_inference_executed": true,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "bitnet_qk256_i2s_claim": false,
+    "generated_token_ids_available": true,
+    "source_run_receipt": "ci/hardware/intel-258v/2026-05-08\\lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief-source-run.json",
+    "regression_ready": true,
     "gaps": []
   },
   "warm_resident_ask_receipt": {
@@ -140,6 +196,9 @@
     "requested_device": "auto",
     "requested_route": "auto",
     "route_selection_blocked": true,
+    "model_path_required": false,
+    "model_loaded": false,
+    "model_resolution": "not_required_for_blocked_auto_route_before_execution",
     "candidate_routes": [
       "dense_slm_default_cpu",
       "dense_slm_openvino_npu_candidate",
@@ -149,12 +208,12 @@
       "route is not promoted for profile `low_power`"
     ],
     "why_not_gpu": [
-      "route blocker for profile `low_power`: low_power_power_advantage_unproven",
+      "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
       "route is not promoted for profile `low_power`"
     ],
     "why_not_npu": [
-      "route blocker for profile `low_power`: auto_default",
-      "route blocker for profile `low_power`: low_power_power_advantage_unproven",
+      "route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile)",
+      "route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified)",
       "route is not promoted for profile `low_power`"
     ],
     "new_inference_executed": false,
@@ -164,7 +223,7 @@
     "power_advantage_claim": false,
     "acceleration_claim": false,
     "bitnet_qk256_i2s_claim": false,
-    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default | route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`",
+    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; candidates=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`; why_not_npu=route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile) | route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`",
     "regression_ready": true,
     "gaps": []
   },
@@ -174,6 +233,35 @@
     "policy_ready": true,
     "promotion_ready": true,
     "profile_comparison_ready": true,
+    "route_model_identity_ready": true,
+    "route_model_identity_coverage": {
+      "route_row_count": 23,
+      "route_rows_with_identity": 23,
+      "route_rows_with_model_hash": 9,
+      "route_rows_with_tokenizer_template": 23,
+      "route_rows_without_model_hash_with_known_gap": 14,
+      "all_route_rows_have_identity": true,
+      "all_route_rows_have_tokenizer_template": true,
+      "model_hash_or_explicit_gap_for_all_route_rows": true,
+      "routes_without_model_hash": [
+        "ask_normal:dense_slm_openvino_gpu_candidate",
+        "ask_normal:dense_slm_openvino_npu_candidate",
+        "ask_short:dense_slm_openvino_gpu_candidate",
+        "ask_short:dense_slm_openvino_npu_candidate",
+        "decode_heavy:dense_slm_openvino_gpu_candidate",
+        "decode_heavy:dense_slm_openvino_npu_candidate",
+        "low_power:dense_slm_openvino_gpu_candidate",
+        "low_power:dense_slm_openvino_npu_candidate",
+        "prefill_heavy:dense_slm_openvino_gpu_candidate",
+        "prefill_heavy:dense_slm_openvino_npu_candidate",
+        "regression_tiny:dense_slm_openvino_gpu_candidate",
+        "regression_tiny:dense_slm_openvino_npu_candidate",
+        "warm_resident:dense_slm_openvino_gpu_candidate",
+        "warm_resident:dense_slm_openvino_npu_candidate"
+      ],
+      "routes_without_model_hash_missing_known_gap": [],
+      "routes_without_tokenizer_template": []
+    },
     "default_route_id": "dense_slm_default_cpu",
     "auto_route_policy_stage": "ledger_driven_auto_route_enabled",
     "hidden_fallback_allowed": false,
@@ -228,7 +316,6 @@
         "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for prefill_heavy",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile prefill_heavy",
-          "dense_slm_default_cpu: timing evidence is not profile-specific for profile prefill_heavy",
           "dense_slm_openvino_npu_candidate: NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "dense_slm_openvino_npu_candidate: route not promoted for profile prefill_heavy"
         ]
@@ -240,7 +327,6 @@
         "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for decode_heavy",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile decode_heavy",
-          "dense_slm_default_cpu: timing evidence is not profile-specific for profile decode_heavy",
           "dense_slm_openvino_npu_candidate: NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "dense_slm_openvino_npu_candidate: route not promoted for profile decode_heavy"
         ]
@@ -305,7 +391,7 @@
       "phase_evidence": "slm-phase-warm-session-qwen25-cpu.json",
       "evidence_ready": true,
       "acceleration_claim": false,
-      "route_reason": "Default user-facing route because the dense Qwen CPU path has strict answer gates, generated-token evidence, phase receipts, and fallback_used=false; accelerator paths are candidates until speedup is benchmark-qualified.",
+      "route_reason": "Default route id and dense Qwen CPU regression baseline because strict answer gates, generated-token evidence, phase receipts, and fallback_used=false are present; profile-scoped auto routing may select promoted OpenVINO GPU/NPU routes for specific workload profiles, while low_power remains blocked until battery-mode or energy-proxy power evidence is benchmark-qualified.",
       "notes": [
         "role=default_cpu_answer_path",
         "dense_slm_cpu_answer present=true fallback_used=Some(false) answer_gate=Some(true) phase_timing=None",
@@ -345,7 +431,7 @@
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "evidence_ready": true,
       "acceleration_claim": false,
-      "route_reason": "Candidate route because Arc 140V OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false, but no benchmark-qualified speedup claim is recorded.",
+      "route_reason": "OpenVINO GPU dense Qwen route is profile-scoped: it may be selected only for workload profiles promoted by the route ledger from fallback-free answer, token-visibility, profile timing, and benchmark-qualified latency evidence; low_power, structured, BitNet, and any unqualified profile remain blocked without separate evidence, and this receipt makes no native OpenCL or acceleration claim.",
       "notes": [
         "role=dense_slm_gpu_candidate",
         "dense_slm_openvino_gpu_operator_ask present=true fallback_used=Some(false) answer_gate=Some(true) phase_timing=None",
@@ -365,7 +451,7 @@
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "evidence_ready": true,
       "acceleration_claim": false,
-      "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.",
+      "route_reason": "OpenVINO NPU dense Qwen route is profile-scoped: warm_resident may be selected only when the route ledger promotes the resident-session path from fallback-free quality and timing evidence; cold one-off and low_power profiles remain blocked until separately qualified, with INT4 symmetric greedy constraints and no dynamic decode, beam, parallel sampling, packed QK256, native NPU, or acceleration claim.",
       "notes": [
         "role=dense_slm_npu_candidate",
         "dense_slm_openvino_npu_operator_ask present=true fallback_used=Some(false) answer_gate=Some(true) phase_timing=None",
@@ -757,8 +843,11 @@
         "candidate_routes_remain_unpromoted=true",
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
-        "profile_specific_timing=21/23",
+        "profile_specific_timing=23/23",
         "proxy_or_missing_timing_routes_blocked=true",
+        "route_model_identity_ready=true",
+        "route_model_identity_rows=23/23",
+        "route_model_tokenizer_template_rows=23/23",
         "promotion_blocker_summary_count=9",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short,decode_heavy,prefill_heavy",
         "openvino_npu_promoted_profiles=warm_resident",
@@ -779,8 +868,11 @@
         "benchmark_qualified_advantage_claimed=true",
         "fallback_observed=false",
         "telemetry_gap_count=46",
-        "profile_specific_timing=21/23",
+        "profile_specific_timing=23/23",
         "proxy_or_missing_timing_routes_blocked=true",
+        "route_model_identity_ready=true",
+        "route_model_identity_rows=23/23",
+        "route_model_tokenizer_template_rows=23/23",
         "openvino_gpu_promoted_profiles=ask_normal,ask_short,decode_heavy,prefill_heavy",
         "openvino_npu_promoted_profiles=warm_resident",
         "profile_scoped_promotion_only=true"
@@ -844,6 +936,67 @@
       ]
     },
     {
+      "check_id": "thermal_temperature_availability_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-thermal-temperature-availability.json"
+      ],
+      "notes": [
+        "thermal_zone_visibility_available=true",
+        "thermal_temperature_available=false",
+        "usable_temperature_reading_count=0",
+        "measured_temperature_claim=false",
+        "telemetry_probe_executed=true",
+        "claim_boundary_preserved=true"
+      ]
+    },
+    {
+      "check_id": "ask_short_auto_ask_receipt_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json"
+      ],
+      "notes": [
+        "profile_id=ask_short",
+        "requested_device=auto",
+        "requested_route=auto",
+        "selected_route=dense_slm_openvino_gpu_candidate",
+        "selected_backend=openvino-gpu",
+        "runtime_api=openvino_genai",
+        "promotion_status=promoted",
+        "route_profile_status=promoted_route_ready",
+        "fallback_used=false",
+        "answer_gate_passed=true",
+        "openvino_candidate_route_executed=true",
+        "new_inference_executed=true",
+        "generated_token_ids_available=true",
+        "ask_receipt_ready=true"
+      ]
+    },
+    {
+      "check_id": "ask_normal_auto_ask_receipt_regression_ready",
+      "status": "passed",
+      "evidence": [
+        "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json"
+      ],
+      "notes": [
+        "profile_id=ask_normal",
+        "requested_device=auto",
+        "requested_route=auto",
+        "selected_route=dense_slm_openvino_gpu_candidate",
+        "selected_backend=openvino-gpu",
+        "runtime_api=openvino_genai",
+        "promotion_status=promoted",
+        "route_profile_status=promoted_route_ready",
+        "fallback_used=false",
+        "answer_gate_passed=true",
+        "openvino_candidate_route_executed=true",
+        "new_inference_executed=true",
+        "generated_token_ids_available=true",
+        "ask_receipt_ready=true"
+      ]
+    },
+    {
       "check_id": "warm_resident_auto_ask_receipt_regression_ready",
       "status": "passed",
       "evidence": [
@@ -877,10 +1030,13 @@
         "requested_device=auto",
         "requested_route=auto",
         "route_selection_blocked=true",
+        "model_path_required=false",
+        "model_loaded=false",
+        "model_resolution=not_required_for_blocked_auto_route_before_execution",
         "candidate_routes=dense_slm_default_cpu | dense_slm_openvino_npu_candidate | dense_slm_openvino_gpu_candidate",
         "why_not_cpu=route is not promoted for profile `low_power`",
-        "why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`",
-        "why_not_npu=route blocker for profile `low_power`: auto_default | route blocker for profile `low_power`: low_power_power_advantage_unproven | route is not promoted for profile `low_power`",
+        "why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`",
+        "why_not_npu=route blocker for profile `low_power`: auto_default (auto routing only selects routes explicitly promoted for this profile) | route blocker for profile `low_power`: low_power_power_advantage_unproven (battery-mode or energy-proxy power advantage has not been benchmark-qualified) | route is not promoted for profile `low_power`",
         "new_inference_executed=false",
         "fallback_used=false",
         "blocked_receipt_ready=true"

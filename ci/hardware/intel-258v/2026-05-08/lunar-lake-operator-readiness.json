@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_readiness",
   "proof_stage": "operator_routes_indexed",
-  "created_utc": "2026-05-19T21:05:00Z",
+  "created_utc": "2026-05-20T03:35:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_ready": true,
@@ -14,7 +14,7 @@
     "runtime_api": "cpu",
     "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
     "fallback_policy": "strict_no_fallback",
-    "route_reason": "Default user-facing route because the dense Qwen CPU path has strict answer gates, generated-token evidence, phase receipts, and fallback_used=false; accelerator paths are candidates until speedup is benchmark-qualified.",
+    "route_reason": "Default route id and dense Qwen CPU regression baseline because strict answer gates, generated-token evidence, phase receipts, and fallback_used=false are present; profile-scoped auto routing may select promoted OpenVINO GPU/NPU routes for specific workload profiles, while low_power remains blocked until battery-mode or energy-proxy power evidence is benchmark-qualified.",
     "answer_gate_evidence": "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
     "phase_evidence": "slm-phase-warm-session-qwen25-cpu.json",
     "acceleration_claim": false
@@ -28,7 +28,7 @@
       "runtime_api": "cpu",
       "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
       "fallback_policy": "strict_no_fallback",
-      "route_reason": "Default user-facing route because the dense Qwen CPU path has strict answer gates, generated-token evidence, phase receipts, and fallback_used=false; accelerator paths are candidates until speedup is benchmark-qualified.",
+      "route_reason": "Default route id and dense Qwen CPU regression baseline because strict answer gates, generated-token evidence, phase receipts, and fallback_used=false are present; profile-scoped auto routing may select promoted OpenVINO GPU/NPU routes for specific workload profiles, while low_power remains blocked until battery-mode or energy-proxy power evidence is benchmark-qualified.",
       "answer_gate_evidence": "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
       "phase_evidence": "slm-phase-warm-session-qwen25-cpu.json",
       "acceleration_claim": false
@@ -54,7 +54,7 @@
       "runtime_api": "openvino_genai",
       "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu",
       "fallback_policy": "strict_no_fallback",
-      "route_reason": "Candidate route because Arc 140V OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false, but no benchmark-qualified speedup claim is recorded.",
+      "route_reason": "OpenVINO GPU dense Qwen route is profile-scoped: it may be selected only for workload profiles promoted by the route ledger from fallback-free answer, token-visibility, profile timing, and benchmark-qualified latency evidence; low_power, structured, BitNet, and any unqualified profile remain blocked without separate evidence, and this receipt makes no native OpenCL or acceleration claim.",
       "answer_gate_evidence": "lunar-lake-openvino-operator-ask-gpu-math-brief.json",
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "acceleration_claim": false
@@ -67,7 +67,7 @@
       "runtime_api": "openvino_genai",
       "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
       "fallback_policy": "strict_no_fallback",
-      "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.",
+      "route_reason": "OpenVINO NPU dense Qwen route is profile-scoped: warm_resident may be selected only when the route ledger promotes the resident-session path from fallback-free quality and timing evidence; cold one-off and low_power profiles remain blocked until separately qualified, with INT4 symmetric greedy constraints and no dynamic decode, beam, parallel sampling, packed QK256, native NPU, or acceleration claim.",
       "answer_gate_evidence": "lunar-lake-openvino-operator-ask-npu-math-brief.json",
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "acceleration_claim": false
@@ -79,6 +79,35 @@
     "policy_ready": true,
     "promotion_ready": true,
     "profile_comparison_ready": true,
+    "route_model_identity_ready": true,
+    "route_model_identity_coverage": {
+      "route_row_count": 23,
+      "route_rows_with_identity": 23,
+      "route_rows_with_model_hash": 9,
+      "route_rows_with_tokenizer_template": 23,
+      "route_rows_without_model_hash_with_known_gap": 14,
+      "all_route_rows_have_identity": true,
+      "all_route_rows_have_tokenizer_template": true,
+      "model_hash_or_explicit_gap_for_all_route_rows": true,
+      "routes_without_model_hash": [
+        "ask_normal:dense_slm_openvino_gpu_candidate",
+        "ask_normal:dense_slm_openvino_npu_candidate",
+        "ask_short:dense_slm_openvino_gpu_candidate",
+        "ask_short:dense_slm_openvino_npu_candidate",
+        "decode_heavy:dense_slm_openvino_gpu_candidate",
+        "decode_heavy:dense_slm_openvino_npu_candidate",
+        "low_power:dense_slm_openvino_gpu_candidate",
+        "low_power:dense_slm_openvino_npu_candidate",
+        "prefill_heavy:dense_slm_openvino_gpu_candidate",
+        "prefill_heavy:dense_slm_openvino_npu_candidate",
+        "regression_tiny:dense_slm_openvino_gpu_candidate",
+        "regression_tiny:dense_slm_openvino_npu_candidate",
+        "warm_resident:dense_slm_openvino_gpu_candidate",
+        "warm_resident:dense_slm_openvino_npu_candidate"
+      ],
+      "routes_without_model_hash_missing_known_gap": [],
+      "routes_without_tokenizer_template": []
+    },
     "default_route_id": "dense_slm_default_cpu",
     "auto_route_policy_stage": "ledger_driven_auto_route_enabled",
     "hidden_fallback_allowed": false,
@@ -133,7 +162,6 @@
         "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for prefill_heavy",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile prefill_heavy",
-          "dense_slm_default_cpu: timing evidence is not profile-specific for profile prefill_heavy",
           "dense_slm_openvino_npu_candidate: NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "dense_slm_openvino_npu_candidate: route not promoted for profile prefill_heavy"
         ]
@@ -145,7 +173,6 @@
         "promotion_decision": "dense_slm_openvino_gpu_candidate remains promoted for decode_heavy",
         "route_blockers": [
           "dense_slm_default_cpu: route not promoted for profile decode_heavy",
-          "dense_slm_default_cpu: timing evidence is not profile-specific for profile decode_heavy",
           "dense_slm_openvino_npu_candidate: NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
           "dense_slm_openvino_npu_candidate: route not promoted for profile decode_heavy"
         ]
@@ -193,6 +220,43 @@
     "blocked_profiles": [
       "low_power"
     ],
+    "gaps": []
+  },
+  "power_profile_evidence": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json",
+    "power_profile_index_ready": true,
+    "low_power_promotion_ready": false,
+    "power_advantage_proven": false,
+    "low_power_route_count": 3,
+    "low_power_routes_remain_unpromoted": true,
+    "current_context_is_ac_only": true,
+    "battery_mode_sample_recorded": false,
+    "battery_sample_source": null,
+    "energy_proxy_recorded": true,
+    "energy_proxy_source": "energy_proxy_receipt",
+    "thermal_context_recorded": true,
+    "claim_boundary_preserved": true,
+    "regression_ready": true,
+    "gaps": [],
+    "blockers": [
+      "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile low_power",
+      "battery-mode sample is missing for low_power promotion",
+      "benchmark-qualified speedup or power advantage missing",
+      "current telemetry is AC-only; battery comparison evidence is missing",
+      "no low_power route has benchmark-qualified power evidence",
+      "power advantage evidence missing for low_power promotion",
+      "route not promoted for profile low_power"
+    ]
+  },
+  "thermal_temperature_availability": {
+    "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-thermal-temperature-availability.json",
+    "thermal_zone_visibility_available": true,
+    "thermal_temperature_available": false,
+    "usable_temperature_reading_count": 0,
+    "measured_temperature_claim": false,
+    "telemetry_probe_executed": true,
+    "claim_boundary_preserved": true,
+    "regression_ready": true,
     "gaps": []
   },
   "evidence": [

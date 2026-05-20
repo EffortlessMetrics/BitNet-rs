@@ -1,0 +1,18 @@
+timestamp = "2026-05-19T23:43:36Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-006"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6033
+merge_sha = "3863f3f8e8d8e4ccba998f1ea78709647f9204c3"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-006-bitnet-variance"
+
+notes = [
+  "Merged PR #6033, publishing explicit M4 BitNet one-shot and fixed warm-session repeatability and variance receipts.",
+  "The merged evidence records release-mode repeat=2 aggregate and child receipts under ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/.",
+  "The aggregate validates with repeat requested/completed=2, path sample count=4, prompt_count=8, generated_tokens=16, fallback_used=false, and timeouts=0.",
+  "The evidence preserves accepted Microsoft I2_S GGUF and external tokenizer identity and remains scoped to apple-m4-cpu-neon BitNet one-shot plus fixed warm sessions.",
+  "No BitNet chat/serve enablement, dense SLM behavior, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim was made.",
+]

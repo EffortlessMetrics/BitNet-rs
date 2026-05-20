@@ -1,0 +1,17 @@
+timestamp = "2026-05-19T20:22:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-055"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6008
+head_sha = "b8823a533829db1f199a02ebe9c70201fa87463d"
+merge_sha = "d6a99278d8a931a3e0ba1d38acf4a541a97b3705"
+
+notes = [
+  "Merged PR #6008 as d6a99278d8a931a3e0ba1d38acf4a541a97b3705.",
+  "SLM-CPU-055 adds the production dense-linear hook contract gate but does not enable packed Q8_0 sidecar runtime compute.",
+  "The merged tracker keeps eager_f32_candle as the Qwen3 Q8_0 Kaby behavior oracle until before/after receipts prove identical generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, and fallback=false.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

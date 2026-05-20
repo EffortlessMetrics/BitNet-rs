@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "artifact_kind": "dense_gguf_q8_runtime_hook_gap",
+  "work_item": "SLM-CPU-054",
+  "source_artifact": "ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-proof.json",
+  "tensor_name": "blk.0.attn_q.weight",
+  "selected_path": "eager_f32_candle",
+  "selected_kernel": "dense-f32-candle-linear",
+  "production_runtime_hook_invoked": false,
+  "runtime_compute_enabled": false,
+  "sidecar_runtime_compute_allowed": false,
+  "runtime_blockers": [
+    "production_dispatch_still_eager_f32",
+    "packed_runtime_compute_disabled",
+    "production_runtime_hook_missing",
+    "before_after_receipts_missing"
+  ],
+  "api_gaps": [
+    "production_dispatch_still_eager_f32",
+    "packed_runtime_compute_still_disabled",
+    "transformer_dense_linear_hook_missing",
+    "before_after_receipt_capture_missing"
+  ],
+  "next_safe_step": "add a production dense-linear hook that receives the selected Q8_0 sidecar descriptor and emits before/after Qwen3 Q8_0 behavior receipts before enabling packed sidecar compute",
+  "eager_f32_runtime_preserved": true,
+  "dense_runtime_replaced": false,
+  "fallback_used": false,
+  "speedup_claim": false,
+  "claim_boundary": {
+    "no_runtime_speedup_claim": true,
+    "no_sustained_throughput_claim": true,
+    "no_broad_answer_quality_claim": true,
+    "no_q4_q5_runtime_support": true,
+    "no_server_gpu_npu_openvino_uhd620_claim": true,
+    "no_qwen35_or_hybrid_claim": true,
+    "no_bitnet_qk256_claim": true
+  }
+}
