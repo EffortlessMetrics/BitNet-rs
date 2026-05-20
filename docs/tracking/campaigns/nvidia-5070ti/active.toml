@@ -2092,6 +2092,60 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-BITNET-PERF-005"
+status = "ready"
+branch = "codex/cuda-bitnet-perf-005-receipt-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add the current-source official BitNet I2_S/QK256 PERF-005 eight-profile benchmark receipt contract for one-token, short-decode, prefill, warm-session, and warm-context decode profiles, and queue the repeated RTX 5070 Ti CUDA versus 9950X3D CPU comparator work without changing runtime math, kernels, tokenizer, loader, server behavior, model coverage claims, speedup, full residency, or broad server readiness."
+commands = [
+  "cargo fmt -p bitnet-bench-receipts -- --check",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features strict_cuda_benchmark_qualification -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --release --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-bench-receipts/**",
+  "ci/hardware/windows-9950x3d-rtx5070ti/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-server/**",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "docs/tracking/generated/**",
+  "BitNet QK256 CUDA math changes",
+  "dense CUDA math implementation",
+  "runtime tokenizer behavior",
+  "prompt-template behavior",
+  "loader behavior",
+  "server runtime behavior",
+]
+may_claim = [
+  "The official BitNet I2_S/QK256 CUDA PERF-005 benchmark receipt contract now names the eight required repeated-profile slots.",
+  "CUDA-BITNET-PERF-005 is queued as the next governed current-source performance receipt lane for official BitNet on RTX 5070 Ti.",
+]
+must_not_claim = [
+  "CUDA-BITNET-PERF-005 benchmark receipts have been collected.",
+  "Official BitNet CUDA speedup is accepted.",
+  "Official BitNet benchmark_qualified is true.",
+  "Official BitNet full residency is proven.",
+  "Official BitNet broad server readiness is true.",
+  "Dense regular LLM CUDA proves BitNet packed I2S inference.",
+  "Dense regular LLM CUDA proves QK256 inference.",
+  "Runtime tokenizer behavior, prompt-template behavior, transformer behavior, loader behavior, QK256 math, or server behavior changed.",
+]
+
+[[work_item]]
 id = "CUDA-DENSE-051"
 status = "merged"
 branch = "cuda/dense-qwen25-one-token-proof"

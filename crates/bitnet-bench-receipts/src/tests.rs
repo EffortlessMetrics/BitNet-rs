@@ -637,6 +637,18 @@ fn strict_cuda_benchmark_qualification_rejects_missing_target_profile() -> Resul
 }
 
 #[test]
+fn strict_cuda_benchmark_qualification_rejects_unknown_profile_matrix() -> Result<(), String> {
+    let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
+    receipt["profile_matrix_id"] = json!("dense-qwen-matrix");
+
+    let err = expect_validation_error(validate_strict_cuda_benchmark_qualification_receipt_json(
+        &receipt,
+    ))?;
+    assert!(err.contains("profile_matrix_id"), "unexpected error: {err}");
+    Ok(())
+}
+
+#[test]
 fn strict_cuda_benchmark_qualification_rejects_extra_blocked_profile() -> Result<(), String> {
     let mut receipt = sample_strict_cuda_product_benchmark_qualification_receipt();
     json_array_mut(&mut receipt, "/qualification_decision/blocked_profiles")?
@@ -2125,12 +2137,16 @@ fn sample_strict_cuda_product_benchmark_qualification_receipt() -> serde_json::V
     let strict_ask_evidence = receipt["evidence_summary"]["strict_ask_math_8"].clone();
     let warm_session_evidence =
         receipt["evidence_summary"]["strict_cuda_warm_session_2_turns"].clone();
+    receipt["profile_matrix_id"] = json!("cuda-bitnet-perf-005");
     receipt["target_profiles"] = json!([
         "one_token",
         "short_decode_8",
         "short_decode_32",
+        "prefill_128_decode_16",
+        "prefill_512_decode_32",
         "warm_session_3_turns",
-        "warm_session_10_turns"
+        "warm_session_10_turns",
+        "decode_128_from_warm_context"
     ]);
     receipt["benchmark_policy"] = json!({
         "profile_specific_decisions_only": true,
@@ -2142,15 +2158,21 @@ fn sample_strict_cuda_product_benchmark_qualification_receipt() -> serde_json::V
         "one_token",
         "short_decode_8",
         "short_decode_32",
+        "prefill_128_decode_16",
+        "prefill_512_decode_32",
         "warm_session_3_turns",
-        "warm_session_10_turns"
+        "warm_session_10_turns",
+        "decode_128_from_warm_context"
     ]);
     receipt["profile_reviews"] = json!([
         strict_cuda_product_profile_review("one_token", "missing"),
         strict_cuda_product_profile_review("short_decode_8", "single_run_baseline"),
         strict_cuda_product_profile_review("short_decode_32", "missing"),
+        strict_cuda_product_profile_review("prefill_128_decode_16", "missing"),
+        strict_cuda_product_profile_review("prefill_512_decode_32", "missing"),
         strict_cuda_product_profile_review("warm_session_3_turns", "missing"),
-        strict_cuda_product_profile_review("warm_session_10_turns", "missing")
+        strict_cuda_product_profile_review("warm_session_10_turns", "missing"),
+        strict_cuda_product_profile_review("decode_128_from_warm_context", "missing")
     ]);
     receipt["evidence_summary"] = json!({
         "strict_ask_math_8": strict_ask_evidence,
@@ -2176,8 +2198,11 @@ fn sample_strict_cuda_product_benchmark_qualification_receipt() -> serde_json::V
             ]
         },
         "short_decode_32": strict_cuda_product_missing_evidence("short_decode_32"),
+        "prefill_128_decode_16": strict_cuda_product_missing_evidence("prefill_128_decode_16"),
+        "prefill_512_decode_32": strict_cuda_product_missing_evidence("prefill_512_decode_32"),
         "warm_session_3_turns": strict_cuda_product_missing_evidence("warm_session_3_turns"),
-        "warm_session_10_turns": strict_cuda_product_missing_evidence("warm_session_10_turns")
+        "warm_session_10_turns": strict_cuda_product_missing_evidence("warm_session_10_turns"),
+        "decode_128_from_warm_context": strict_cuda_product_missing_evidence("decode_128_from_warm_context")
     });
     receipt
 }
