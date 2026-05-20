@@ -1,4 +1,13 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
 # T4 Safety Validation - Gate Summary
+
+> Historical CI artifact only. This summary records a 2025 PR/gate decision and
+> must not be read as a current BitNet-rs support, speedup, CUDA/GPU,
+> server-readiness, residency, reference-parity, quality, or product-readiness
+> claim. Current claims must come from active model coverage, receipts, specs,
+> status docs, and claim gates.
 
 **Date**: 2025-10-21T23:45:00Z
 **PR**: #473 (feat/mvp-finalization)
@@ -60,4 +69,3 @@
 - Full report: `/home/steven/code/Rust/BitNet-rs/ci/t4_safety_validation_pr473.md`
 - Mutation tests: `/home/steven/code/Rust/BitNet-rs/ci/t3.5_mutation_testing_summary.md`
 - Evidence: cargo audit, cargo deny, clippy, test results
-

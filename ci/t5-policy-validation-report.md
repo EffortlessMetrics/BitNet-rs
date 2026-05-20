@@ -1,4 +1,13 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
 # T5 Policy Validation Report: PR #452
+
+> Historical CI artifact only. This report records a 2025 PR/gate decision and
+> must not be read as a current BitNet-rs support, speedup, CUDA/GPU,
+> server-readiness, residency, reference-parity, quality, or product-readiness
+> claim. Current claims must come from active model coverage, receipts, specs,
+> status docs, and claim gates.
 
 **PR**: #452 "feat(xtask): add verify-receipt gate (schema v1.0, strict checks)"
 **Branch**: `feat/xtask-verify-receipt`
