@@ -1,0 +1,18 @@
+timestamp = "2026-05-20T20:25:28Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-BENCH-003"
+event = "merged"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-BENCH-003-regression-refresh"
+pr = 6047
+merge_sha = "6d214ade1868cceb89d0c186d53259e89b0135b0"
+
+notes = [
+  "PR #6047 merged direct M4 benchmark regression comparison support.",
+  "`bitnet mac regression <current.json> --baseline <matching-baseline.json>` accepts matching dense benchmark variance, dense SLM benchmark v2, and BitNet benchmark receipts with identity checks before reporting timing or memory drift.",
+  "The merged implementation separates identity blockers from timing, memory, and quality drift warnings and keeps drift advisory unless `--fail-on-drift` is requested.",
+  "Closeout is tracker-only and records the already-merged implementation PR; it does not add runtime evidence or enable routes.",
+  "No BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, broad performance, or broad Apple Silicon claim is in scope.",
+]
