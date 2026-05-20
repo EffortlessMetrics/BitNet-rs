@@ -179,7 +179,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-006"
-status = "proposed"
+status = "in_progress"
 branch = "codex/intel-a770/A770-006-opencl-parity"
 stackable = false
 review_mode = "codex_premerge"
@@ -188,7 +188,7 @@ human_gate = "on_blocker_only"
 blocked_by = ["A770-005"]
 acceptance = "Add CPU/OpenCL parity for a minimal kernel or subgraph without promoting official BitNet QK256 inference."
 commands = [
-  "cargo test --locked -p bitnet-kernels --no-default-features --features opencl",
+  "cargo run --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity -- --receipt ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-parity.json",
   "git diff --check",
 ]
 allowed_paths = [

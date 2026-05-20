@@ -148,6 +148,11 @@ name = "opencl_fuzz_targets"
 path = "tests/opencl_fuzz_targets.rs"
 required-features = ["opencl"]
 
+[[bin]]
+name = "a770-opencl-parity"
+path = "src/bin/a770_opencl_parity.rs"
+required-features = ["opencl"]
+
 [[test]]
 name = "cpu_scalar_parity"
 path = "tests/cpu_scalar_parity.rs"
