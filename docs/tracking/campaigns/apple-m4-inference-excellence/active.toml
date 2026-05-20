@@ -2281,8 +2281,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-STABILITY-001"
-status = "pr_open"
+status = "merged"
 pr = 6134
+merge_sha = "7832622eb2d10921f549d677ad594db88caeb1cc"
 branch = "codex/apple-m4-inference-excellence/M4-STABILITY-001-mixed-model-soak"
 stackable = false
 review_mode = "codex_premerge"
