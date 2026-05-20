@@ -1044,6 +1044,10 @@ pub struct RegressionSurfaceSummary {
     #[serde(default)]
     pub thermal_usable_temperature_reading_count: usize,
     #[serde(default)]
+    pub arc_npu_bounded_evidence_indexed: bool,
+    #[serde(default)]
+    pub arc_npu_bounded_evidence_ready: bool,
+    #[serde(default)]
     pub ask_short_ask_receipt_indexed: bool,
     #[serde(default)]
     pub ask_short_auto_ask_ready: bool,
@@ -1098,6 +1102,8 @@ impl Default for RegressionSurfaceSummary {
             thermal_temperature_availability_indexed: false,
             thermal_temperature_available: false,
             thermal_usable_temperature_reading_count: 0,
+            arc_npu_bounded_evidence_indexed: false,
+            arc_npu_bounded_evidence_ready: false,
             ask_short_ask_receipt_indexed: false,
             ask_short_auto_ask_ready: false,
             ask_normal_ask_receipt_indexed: false,
@@ -4143,6 +4149,7 @@ pub fn build_regression_bundle_with_created_utc_and_inputs_and_power_profile_and
         ask_normal_ask_receipt.as_ref(),
         warm_resident_ask_receipt.as_ref(),
         blocked_ask_receipt.as_ref(),
+        &operator,
     );
 
     Ok(LunarLakeRegressionBundle {
@@ -4184,7 +4191,19 @@ fn build_regression_surface_summary(
     ask_normal_ask_receipt: Option<&OperatorAskRegressionSummary>,
     warm_resident_ask_receipt: Option<&OperatorAskRegressionSummary>,
     blocked_ask_receipt: Option<&BlockedAskRegressionSummary>,
+    operator: &LunarLakeOperatorReceipt,
 ) -> RegressionSurfaceSummary {
+    let arc_npu_bounded_evidence_ids = [
+        "arc140v_native_opencl_parity",
+        "npu_rmsnorm_static_subgraph",
+        "npu_linear_static_subgraph",
+        "npu_ffn_static_subgraph",
+    ];
+    let arc_npu_bounded_evidence_indexed = arc_npu_bounded_evidence_ids
+        .iter()
+        .all(|id| operator.evidence.iter().any(|item| item.evidence_id == *id && item.present));
+    let arc_npu_bounded_evidence_ready =
+        arc_npu_bounded_evidence_ids.iter().all(|id| evidence_ok(&operator.evidence, id));
     let mut summary = RegressionSurfaceSummary {
         answer_corpus_v2_indexed: answer_corpus_v2.is_some(),
         route_profile_comparison_indexed: route_profile_comparison.is_some(),
@@ -4199,6 +4218,8 @@ fn build_regression_surface_summary(
         thermal_usable_temperature_reading_count: thermal_temperature_availability
             .map(|summary| summary.usable_temperature_reading_count)
             .unwrap_or(0),
+        arc_npu_bounded_evidence_indexed,
+        arc_npu_bounded_evidence_ready,
         ask_short_ask_receipt_indexed: ask_short_ask_receipt.is_some(),
         ask_short_auto_ask_ready: ask_short_ask_receipt
             .map(|summary| summary.regression_ready)
@@ -4442,6 +4463,14 @@ fn build_regression_surface_summary(
                     .to_string(),
             );
         }
+    }
+
+    if !summary.arc_npu_bounded_evidence_indexed {
+        summary.gaps.push(
+            "Arc/NPU bounded proof evidence is not indexed in operator readiness".to_string(),
+        );
+    } else if !summary.arc_npu_bounded_evidence_ready {
+        summary.gaps.push("Arc/NPU bounded proof evidence is not regression-ready".to_string());
     }
 
     let npu_warm_resident_promoted = summary
@@ -16385,6 +16414,8 @@ mod tests {
         regression.regression_surface.warm_resident_ask_receipt_indexed = true;
         regression.regression_surface.warm_resident_auto_ask_ready = true;
         regression.regression_surface.blocked_ask_receipt_indexed = true;
+        regression.regression_surface.arc_npu_bounded_evidence_indexed = true;
+        regression.regression_surface.arc_npu_bounded_evidence_ready = true;
         regression.regression_surface.candidate_routes_remain_unpromoted = true;
         regression.regression_surface.strict_ready = true;
         regression.regression_surface.gaps.clear();
@@ -16451,6 +16482,8 @@ mod tests {
         assert!(comparison.regression_surface.warm_resident_ask_receipt_indexed);
         assert!(comparison.regression_surface.warm_resident_auto_ask_ready);
         assert!(comparison.regression_surface.blocked_ask_receipt_indexed);
+        assert!(comparison.regression_surface.arc_npu_bounded_evidence_indexed);
+        assert!(comparison.regression_surface.arc_npu_bounded_evidence_ready);
         let Some(ask_short) = comparison.ask_short_ask_receipt.as_ref() else {
             bail!("comparison did not carry ask_short ask receipt summary");
         };
@@ -19977,7 +20010,9 @@ mod tests {
                 "promotion_status": "no_promoted_route",
                 "route_selection_status": "blocked",
                 "route_selection_blocked": true,
-                "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage",
+                "route_selection_error": format!(
+                    "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage; operator_runbook={LOW_POWER_BATTERY_RUNBOOK}"
+                ),
                 "candidate_routes": [
                     "dense_slm_default_cpu",
                     "dense_slm_openvino_gpu_candidate",
@@ -19990,6 +20025,8 @@ mod tests {
                 "why_not_npu": [
                     "missing evidence: benchmark_qualified_speedup_or_power_advantage"
                 ],
+                "operator_runbook": LOW_POWER_BATTERY_RUNBOOK,
+                "next_required_evidence": blocked_operator_ask_next_required_evidence("low_power"),
                 "route_selection": {
                     "requested_device": "auto",
                     "requested_route": "auto",
@@ -20003,7 +20040,9 @@ mod tests {
                     "selection_source": "promotion_ledger_auto_blocked",
                     "route_selection_status": "blocked",
                     "route_selection_blocked": true,
-                    "route_selection_error": "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage",
+                    "route_selection_error": format!(
+                        "no promoted Lunar Lake auto route for profile `low_power`; why_not_cpu=route is not promoted for profile `low_power`; why_not_gpu=route blocker for profile `low_power`: low_power_power_advantage_unproven; why_not_npu=missing evidence: benchmark_qualified_speedup_or_power_advantage; operator_runbook={LOW_POWER_BATTERY_RUNBOOK}"
+                    ),
                     "candidate_routes": [
                         "dense_slm_default_cpu",
                         "dense_slm_openvino_gpu_candidate",
@@ -20015,7 +20054,9 @@ mod tests {
                     ],
                     "why_not_npu": [
                         "missing evidence: benchmark_qualified_speedup_or_power_advantage"
-                    ]
+                    ],
+                    "operator_runbook": LOW_POWER_BATTERY_RUNBOOK,
+                    "next_required_evidence": blocked_operator_ask_next_required_evidence("low_power")
                 },
                 "fallback_used": false,
                 "new_inference_executed": false,
@@ -20100,6 +20141,8 @@ mod tests {
         assert!(bundle.regression_surface.durability_stability_proven);
         assert!(bundle.regression_surface.bitnet_semantic_intake_indexed);
         assert!(bundle.regression_surface.power_profile_evidence_indexed);
+        assert!(bundle.regression_surface.arc_npu_bounded_evidence_indexed);
+        assert!(bundle.regression_surface.arc_npu_bounded_evidence_ready);
         assert!(bundle.regression_surface.blocked_ask_receipt_indexed);
         assert!(!bundle.regression_surface.low_power_promotion_ready);
         assert!(!bundle.regression_surface.power_advantage_proven);
@@ -20345,6 +20388,7 @@ mod tests {
         let durability = ready_durability_summary();
         let intake = ready_bitnet_semantic_intake_summary();
         let power = ready_power_profile_summary();
+        let operator = ready_operator_receipt_with_arc_npu_bounded_evidence();
 
         let missing = build_regression_surface_summary(
             Some(&corpus),
@@ -20358,6 +20402,7 @@ mod tests {
             None,
             None,
             None,
+            &operator,
         );
         assert!(!missing.strict_ready);
         assert!(missing.gaps.iter().any(|gap| {
@@ -20378,6 +20423,7 @@ mod tests {
             None,
             None,
             None,
+            &operator,
         );
         assert!(ready.ask_short_ask_receipt_indexed);
         assert!(ready.ask_short_auto_ask_ready);
@@ -20393,6 +20439,7 @@ mod tests {
         let durability = ready_durability_summary();
         let intake = ready_bitnet_semantic_intake_summary();
         let power = ready_power_profile_summary();
+        let operator = ready_operator_receipt_with_arc_npu_bounded_evidence();
 
         let missing = build_regression_surface_summary(
             Some(&corpus),
@@ -20406,6 +20453,7 @@ mod tests {
             None,
             None,
             None,
+            &operator,
         );
         assert!(!missing.strict_ready);
         assert!(missing.gaps.iter().any(|gap| {
@@ -20426,6 +20474,7 @@ mod tests {
             None,
             Some(&ask),
             None,
+            &operator,
         );
         assert!(ready.warm_resident_ask_receipt_indexed);
         assert!(ready.warm_resident_auto_ask_ready);
@@ -21737,6 +21786,57 @@ mod tests {
             regression_ready: true,
             gaps: vec![],
             blockers: vec!["battery comparison evidence is missing".to_string()],
+        }
+    }
+
+    fn ready_operator_receipt_with_arc_npu_bounded_evidence() -> LunarLakeOperatorReceipt {
+        LunarLakeOperatorReceipt {
+            schema_version: "1.0.0".to_string(),
+            artifact_kind: "lunar_lake_operator_readiness".to_string(),
+            proof_stage: "test_ready".to_string(),
+            created_utc: "2026-05-20T00:00:00Z".to_string(),
+            machine_id: "intel-258v".to_string(),
+            artifact_root: DEFAULT_ARTIFACT_ROOT.to_string(),
+            operator_ready: true,
+            default_route: dense_slm_cpu_route(),
+            routes: vec![dense_slm_cpu_route()],
+            route_policy: None,
+            power_profile_evidence: None,
+            thermal_temperature_availability: None,
+            blocked_ask_receipt: None,
+            evidence: vec![
+                ready_arc_npu_bounded_evidence("arc140v_native_opencl_parity"),
+                ready_arc_npu_bounded_evidence("npu_rmsnorm_static_subgraph"),
+                ready_arc_npu_bounded_evidence("npu_linear_static_subgraph"),
+                ready_arc_npu_bounded_evidence("npu_ffn_static_subgraph"),
+            ],
+            gaps: Vec::new(),
+            claim_boundary: ClaimBoundary {
+                cpu_is_truth_path: true,
+                dense_slm_default_is_cpu_until_speedup_qualified: true,
+                openvino_gpu_npu_are_candidates_not_speedup_claims: true,
+                arc_bitnet_full_inference_claimed: false,
+                npu_bitnet_full_inference_claimed: false,
+                qk256_accelerator_decode_claimed: false,
+                hidden_fallback_allowed: false,
+            },
+        }
+    }
+
+    fn ready_arc_npu_bounded_evidence(evidence_id: &str) -> EvidenceStatus {
+        EvidenceStatus {
+            evidence_id: evidence_id.to_string(),
+            path: format!("{evidence_id}.json"),
+            present: true,
+            artifact_kind: Some("bounded_parity_receipt".to_string()),
+            requested_backend: None,
+            selected_backend: None,
+            runtime_api: None,
+            fallback_used: Some(false),
+            answer_gate_passed: None,
+            phase_timing_present: None,
+            speedup_claim: Some(false),
+            issues: Vec::new(),
         }
     }
 
