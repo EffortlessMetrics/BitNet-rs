@@ -2093,7 +2093,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-BITNET-PERF-005"
-status = "ready"
+status = "merged"
 branch = "codex/cuda-bitnet-perf-005-receipt-contract"
 stackable = false
 review_mode = "codex_premerge"

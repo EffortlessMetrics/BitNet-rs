@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T12:19:16Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-BITNET-PERF-005"
+event = "merged"
+from = "ready"
+to = "merged"
+actor = "codex"
+branch = "codex/cuda-bitnet-perf-005-receipt-contract"
+pr = 41
+head_sha = "5853c4800336d00fe79558da72fd791ed14117a9"
+merge_sha = "548c8ceef64dc217e8a27e37b817873aca318f2c"
+summary = "Merged PR #41 queueing the official BitNet PERF-005 receipt contract."
+notes = [
+  "PR #41 added the cuda-bitnet-perf-005 profile matrix selector for strict CUDA benchmark qualification receipts.",
+  "The PERF-005 contract names all eight required official BitNet I2_S/QK256 repeated-profile slots: one_token, short_decode_8, short_decode_32, prefill_128_decode_16, prefill_512_decode_32, warm_session_3_turns, warm_session_10_turns, and decode_128_from_warm_context.",
+  "No PERF-005 benchmark receipts were collected, and speedup, benchmark-qualified, full residency, broad server readiness, runtime math, kernels, tokenizer, loader, model coverage, and server behavior remain unchanged.",
+]
