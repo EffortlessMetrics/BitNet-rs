@@ -1,0 +1,88 @@
+schema = 1
+artifact_kind = "apple_m3_secondary_bitnet_unblock_preflight"
+updated = "2026-05-20"
+work_item = "M3MBA-024"
+machine_lane = "apple-m3-macbook-air"
+source_probe_method = "Hugging Face model API plus HEAD probes for current official repository files; no model files downloaded."
+local_cache_root = "/Users/sarahisaacs/Library/Caches/bitnet-rs/models"
+local_available_kib = 24468056
+hard_free_space_floor_kib = 8388608
+preferred_free_space_floor_kib = 26214400
+storage_decision = "Current free space is above the hard floor but below the preferred floor. Do not start a new large secondary download until either an official GGUF exists within the approved envelope or cleanup restores the preferred floor."
+claim_boundary = "Preflight and unblock requirements only. No secondary BitNet artifact is accepted, downloaded, retained, answer-ready, Apple-backend-ready, M4-proof-ready, or performance-qualified by this ledger."
+
+[[candidate]]
+id = "m3mba_006_1bitllm_large_official"
+work_item = "M3MBA-006"
+repo = "1bitLLM/bitnet_b1_58-large"
+repo_revision = "85d047191dcb224f0e04f20d26110caaf8dc1a47"
+repo_api = "https://huggingface.co/api/models/1bitLLM/bitnet_b1_58-large"
+intended_m3_route = "BitNet.cpp GGUF diagnostic/control candidate"
+official_artifact_status = "blocked_no_official_gguf"
+official_files = [
+  "model.safetensors",
+  "tokenizer.json",
+  "tokenizer.model",
+  "tokenizer_config.json",
+  "special_tokens_map.json",
+  "added_tokens.json",
+]
+official_model_bytes = 2915408840
+official_gguf_files = []
+tokenizer_authority_status = "official_tokenizer_files_visible_but_no_runner_gguf_authority"
+conversion_or_approval_needed = "A reproducible official-safetensors-to-GGUF conversion contract, or an explicit third-party GGUF approval with source revision, SHA-256, tokenizer/pre-tokenizer authority, runner command, prompt output, and cleanup status."
+storage_preflight_status = "not_started"
+cleanup_plan = "Do not download. If a future approved artifact is fetched, record free space before/after, hash it outside the repo, retain only while needed for the next decision, and delete it before dropping below the preferred free-space floor."
+decision = "remain_blocked"
+may_unblock_when = [
+  "An official GGUF appears in the official repository.",
+  "A reproducible conversion path from official safetensors to a runner-supported GGUF is reviewed.",
+  "A third-party artifact is explicitly approved despite prior rejected large-family GGUF evidence.",
+]
+must_not_claim = [
+  "0.7B answer readiness",
+  "BitNet-rs Apple backend support",
+  "M4 Mac mini proof",
+  "Apple Metal BitNet inference",
+  "QK256 on Apple Silicon",
+]
+
+[[candidate]]
+id = "m3mba_007_1bitllm_3b_tl_official"
+work_item = "M3MBA-007"
+repo = "1bitLLM/bitnet_b1_58-3B"
+repo_revision = "af89e318d78a70802061246bf037199d2fb97020"
+repo_api = "https://huggingface.co/api/models/1bitLLM/bitnet_b1_58-3B"
+intended_m3_route = "BitNet.cpp TL1/TL2 diagnostic candidate"
+official_artifact_status = "blocked_no_official_tl_gguf"
+official_files = [
+  "model-00001-of-00003.safetensors",
+  "model-00002-of-00003.safetensors",
+  "model-00003-of-00003.safetensors",
+  "model.safetensors.index.json",
+  "tokenizer.json",
+  "tokenizer.model",
+  "tokenizer_config.json",
+  "special_tokens_map.json",
+  "added_tokens.json",
+  "tokenization_bitnet.py",
+]
+official_model_bytes = 13297592664
+official_gguf_files = []
+tokenizer_authority_status = "official_tokenizer_files_visible_but_no_tl_runner_gguf_authority"
+conversion_or_approval_needed = "A reviewed TL1/TL2 GGUF conversion contract, or an explicit third-party TL diagnostic artifact approval with source revision, SHA-256, tokenizer/pre-tokenizer authority, runner command, prompt output, and cleanup status."
+storage_preflight_status = "blocked_below_preferred_floor_for_new_3b_download"
+cleanup_plan = "Do not download shards. A future approved 3B artifact must leave at least the hard free-space floor after download and should start only after cleanup restores the preferred free-space floor."
+decision = "remain_blocked"
+may_unblock_when = [
+  "An official TL1 or TL2 GGUF appears in the official repository.",
+  "A reproducible conversion path from official safetensors to a runner-supported TL GGUF is reviewed.",
+  "A third-party TL diagnostic artifact is explicitly approved and local storage is restored above the preferred floor.",
+]
+must_not_claim = [
+  "3B TL diagnostic output",
+  "3B I2_S support",
+  "BitNet-rs Apple backend support",
+  "Apple local-answer quality",
+  "QK256 on Apple Silicon",
+]
