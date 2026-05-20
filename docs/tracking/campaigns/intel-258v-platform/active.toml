@@ -8280,6 +8280,179 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SWARM-LNL258V-MIGRATE-001"
+status = "merged"
+branch = "codex/swarm-lnl258v-migrate-001-inventory"
+pr = 18
+head_sha = "unknown"
+merge_sha = "9d5a3dd15116e3fa531b0afbef60de904a322e6f"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = []
+acceptance = "Add the Lunar Lake migration inventory in swarm, naming the BitNet-rs source cutoff, moved and unmoved state, claim boundaries, and next swarm items without moving artifacts, running inference, changing route promotion, claiming speedup or acceleration, or changing BitNet QK256/I2_S behavior."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/MIGRATION_MANIFEST.json",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/migrations/lunar-lake-from-bitnet-rs.md",
+  "ci/hardware/intel-258v/MIGRATION_MANIFEST.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "models/**",
+  "ci/model-artifacts/**",
+]
+may_claim = [
+  "The swarm migration inventory records the old BitNet-rs Lunar Lake source cutoff and claim boundaries.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route promotion changed.",
+  "A speedup, power advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]
+
+[[work_item]]
+id = "SWARM-LNL258V-MIGRATE-002"
+status = "merged"
+branch = "codex/swarm-lnl258v-migrate-002-artifacts"
+pr = 20
+head_sha = "unknown"
+merge_sha = "b0886a86c95f9d524221a209e39ed35452333b2e"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SWARM-LNL258V-MIGRATE-001"]
+acceptance = "Carry the latest accepted Lunar Lake artifacts and corpus-v2 fixture from BitNet-rs into swarm, update the migration manifest artifact inventory, and preserve the no-new-inference, no-route-promotion, no-speedup, no-power-advantage, no-acceleration, no-broad-quality, and no-BitNet-QK256/I2_S-change boundaries."
+commands = [
+  "python -m json.tool each moved JSON artifact",
+  "compare moved artifact hashes against the BitNet-rs source checkout",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/**",
+  "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+  "docs/migrations/lunar-lake-from-bitnet-rs.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "models/**",
+  "ci/model-artifacts/**",
+]
+may_claim = [
+  "The latest accepted Lunar Lake artifact set was copied from BitNet-rs into swarm with matching hashes.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route promotion changed.",
+  "A speedup, power advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]
+
+[[work_item]]
+id = "SWARM-LNL258V-MIGRATE-003"
+status = "merged"
+branch = "codex/swarm-lnl258v-migrate-003-cli"
+pr = 22
+head_sha = "unknown"
+merge_sha = "d442eeb2f85a8d450d4f1982a9a5ab4e71d47c7b"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SWARM-LNL258V-MIGRATE-002"]
+acceptance = "Port only the missing Lunar Lake CLI strict-regression, BitNet semantic-intake, route-profile, warm-resident, and ask dispatch surfaces needed to understand the migrated receipts in swarm. Do not port unrelated A770 diagnostic runtime machinery or change route, inference, acceleration, or BitNet kernel behavior."
+commands = [
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "scripts/**",
+  "models/**",
+  "ci/model-artifacts/**",
+]
+may_claim = [
+  "Swarm's Lunar Lake CLI can parse and validate the migrated strict-regression and semantic-intake surfaces.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any route promotion changed.",
+  "A speedup, power advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]
+
+[[work_item]]
+id = "SWARM-LNL258V-BITNET-RS-CUTOFF"
+status = "merged"
+branch = "codex/swarm-lnl258v-migrate-004-tracker"
+migration_status = "merged_from_bitnet_rs"
+source_repo = "EffortlessMetrics/BitNet-rs"
+source_cutoff_item = "LNL258V-GOAL-AUDIT-013"
+source_cutoff_pr = 6116
+source_cutoff_merge_sha = "32f82e16889f20f264e69cfb90866bbb98c0ea74"
+source_cutoff_closeout_pr = 6117
+source_cutoff_closeout_merge_sha = "c2b0c6a55e3e643234d5b5b87132bd9558a1dcd6"
+target_repo = "EffortlessMetrics/bitnet-rs-swarm"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-013", "SWARM-LNL258V-MIGRATE-003"]
+acceptance = "Record the swarm tracker provenance for the migrated BitNet-rs Lunar Lake operating state after the source sync: telemetry context, profile-scoped GPU promotion, BitNet semantic-intake strict regression, A770 adjacent selected-device evidence status, and the active LNL258V-POWER-006 low_power blocker. This row is migration provenance only and does not represent a native swarm merge of the old BitNet-rs work items."
+commands = [
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+  "xtask/src/campaign.rs",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "scripts/**",
+  "models/**",
+  "ci/model-artifacts/**",
+]
+may_claim = [
+  "Swarm tracker state now has a migrated-from-BitNet-rs provenance row for the accepted Lunar Lake operating state.",
+  "A770-006 and A770-007 are carried only as adjacent selected-device status, not Lunar Lake route, speedup, acceleration, or semantic-rerun triggers.",
+  "LNL258V-POWER-006 remains the active low_power evidence blocker after migration.",
+]
+must_not_claim = [
+  "New inference was run by this tracker reconciliation.",
+  "Old BitNet-rs work items merged natively in swarm.",
+  "A770 selected-device evidence proves Lunar Lake acceleration or route promotion.",
+  "Any route promotion changed.",
+  "A speedup, power advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]
+
+[[work_item]]
 id = "LNL258V-BITNET-INTAKE-002"
 status = "merged"
 pr = 5947

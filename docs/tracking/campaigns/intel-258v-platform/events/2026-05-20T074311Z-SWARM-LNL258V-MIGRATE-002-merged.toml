@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T07:43:11Z"
+campaign = "intel-258v-platform"
+item = "SWARM-LNL258V-MIGRATE-002"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 20
+merge_sha = "b0886a86c95f9d524221a209e39ed35452333b2e"
+branch = "codex/swarm-lnl258v-migrate-002-artifacts"
+summary = "Merged the Lunar Lake artifact and corpus-v2 carry-forward into swarm."
+
+notes = [
+  "The carried JSON artifacts parsed and matched the BitNet-rs source hashes for the migration set.",
+  "The local xtask campaign check timed out in the fresh swarm checkout before xtask was built; CI completed the merge path.",
+  "No inference, route promotion, speedup, power-advantage, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]

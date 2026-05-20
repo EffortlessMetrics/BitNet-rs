@@ -166,7 +166,7 @@ fn run_a770_matmul_i2s_parity() -> Result<A770OpenClParityReceipt, Box<dyn Error
         13, 17, 19, //
         23, 29, 31,
     ];
-    let packed_weights = pack_i2s_weights(&weights);
+    let packed_weights = pack_i2s_weights(&weights)?;
     let expected = cpu_matmul_i2s_reference(&weights, &activations, M, N, K);
     let mut actual = vec![0.0f32; expected.len()];
 
@@ -246,25 +246,25 @@ fn run_a770_matmul_i2s_parity() -> Result<A770OpenClParityReceipt, Box<dyn Error
     })
 }
 
-fn pack_i2s_weights(weights: &[i8]) -> Vec<i8> {
+fn pack_i2s_weights(weights: &[i8]) -> Result<Vec<i8>, Box<dyn Error>> {
     weights
         .chunks(4)
-        .map(|chunk| {
+        .map(|chunk| -> Result<i8, Box<dyn Error>> {
             let mut packed = 0u8;
             for (sub, value) in chunk.iter().enumerate() {
-                packed |= encode_i2s_weight(*value) << (sub * 2);
+                packed |= encode_i2s_weight(*value)? << (sub * 2);
             }
-            packed as i8
+            Ok(packed as i8)
         })
         .collect()
 }
 
-fn encode_i2s_weight(value: i8) -> u8 {
+fn encode_i2s_weight(value: i8) -> Result<u8, Box<dyn Error>> {
     match value {
-        1 => 0x01,
-        -1 => 0x03,
-        0 => 0x00,
-        other => panic!("unsupported i2s fixture weight {other}"),
+        1 => Ok(0x01),
+        -1 => Ok(0x03),
+        0 => Ok(0x00),
+        other => Err(io_error(format!("unsupported i2s fixture weight {other}"))),
     }
 }
 

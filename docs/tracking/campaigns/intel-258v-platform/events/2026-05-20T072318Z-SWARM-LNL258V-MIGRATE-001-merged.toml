@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T07:23:18Z"
+campaign = "intel-258v-platform"
+item = "SWARM-LNL258V-MIGRATE-001"
+event = "merged"
+from = "pr_open"
+to = "merged"
+actor = "codex"
+pr = 18
+merge_sha = "9d5a3dd15116e3fa531b0afbef60de904a322e6f"
+branch = "codex/swarm-lnl258v-migrate-001-inventory"
+summary = "Merged the Lunar Lake BitNet-rs to swarm migration inventory."
+
+notes = [
+  "This established the swarm migration manifest and no-claims handoff document.",
+  "No inference, route promotion, speedup, power-advantage, acceleration, broad quality, or BitNet QK256/I2_S behavior-change claim was added.",
+]
