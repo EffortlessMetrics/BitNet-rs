@@ -2760,6 +2760,143 @@ mod tests {
     }
 
     #[test]
+    fn explain_receipt_extracts_bitnet_perf005_profile_matrix() -> Result<()> {
+        let perf005_profiles = vec![
+            "one_token",
+            "short_decode_8",
+            "short_decode_32",
+            "prefill_128_decode_16",
+            "prefill_512_decode_32",
+            "warm_session_3_turns",
+            "warm_session_10_turns",
+            "decode_128_from_warm_context",
+        ];
+        let profile_reviews: Vec<Value> = perf005_profiles
+            .iter()
+            .map(|profile| {
+                if *profile == "short_decode_8" {
+                    json!({
+                        "benchmark_qualified_speedup": false,
+                        "blockers": [
+                            "profile is not repeated",
+                            "transfer timing is incomplete",
+                            "no profile-specific speedup threshold has been accepted"
+                        ],
+                        "cpu_total_ms_mean": 147593.0,
+                        "cuda_total_ms_mean": 1866.0,
+                        "decision": "not_accepted",
+                        "fallback_free": true,
+                        "host_to_device_ms": 0.0,
+                        "device_to_host_ms": 0.0,
+                        "profile": profile,
+                        "quality_passed": true,
+                        "speedup_claim_allowed": false
+                    })
+                } else {
+                    json!({
+                        "benchmark_qualified_speedup": false,
+                        "blockers": ["profile receipt missing"],
+                        "decision": "not_accepted",
+                        "fallback_free": false,
+                        "profile": profile,
+                        "quality_passed": false,
+                        "speedup_claim_allowed": false
+                    })
+                }
+            })
+            .collect();
+        let receipt = json!({
+            "artifact_kind": "strict_cuda_benchmark_qualification_review",
+            "claim": "strict_cuda_benchmark_qualification_review",
+            "benchmark_qualified_speedup": false,
+            "speedup_claim": false,
+            "full_cuda_residency_claimed": false,
+            "selected_backend": "nvidia-rtx-5070-ti-cuda",
+            "selected_route": "bitnet_qk256_cuda",
+            "runtime_api": "cuda",
+            "fallback_used": false,
+            "model": {
+                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                "file": "ggml-model-i2_s.gguf",
+                "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "loader_mode": "strict_real_gguf",
+                "fallback_loader_used": false
+            },
+            "qualification_decision": {
+                "accepted_profiles": [],
+                "benchmark_qualified_speedup": false,
+                "blocked_profiles": perf005_profiles,
+                "speedup_claim_allowed": false,
+                "status": "not_accepted"
+            },
+            "profile_matrix_id": "cuda-bitnet-perf-005",
+            "target_profiles": [
+                "one_token",
+                "short_decode_8",
+                "short_decode_32",
+                "prefill_128_decode_16",
+                "prefill_512_decode_32",
+                "warm_session_3_turns",
+                "warm_session_10_turns",
+                "decode_128_from_warm_context"
+            ],
+            "profile_reviews": profile_reviews,
+            "claim_boundary": {
+                "benchmark_qualified_speedup": false,
+                "full_cuda_residency_claimed": false,
+                "bitnet_packed_i2s_qk256_proof": true,
+                "dense_regular_llm_cuda_proof": false
+            }
+        });
+
+        let explanation = explain_receipt(Path::new("cuda-bitnet-perf-005.json"), &receipt);
+
+        assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
+        assert_eq!(explanation.selected_route.as_deref(), Some("bitnet_qk256_cuda"));
+        assert_eq!(explanation.fallback_used, Some(false));
+        assert_eq!(explanation.speedup_claim, Some(false));
+        assert_eq!(explanation.full_residency_claim, Some(false));
+        assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(true));
+        assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(false));
+
+        let qualification = &explanation.benchmark_qualification;
+        assert_eq!(qualification.status.as_deref(), Some("not_accepted"));
+        assert_eq!(qualification.benchmark_qualified_speedup, Some(false));
+        assert_eq!(qualification.speedup_claim_allowed, Some(false));
+        assert!(qualification.accepted_profiles.is_empty());
+        assert_eq!(qualification.blocked_profiles, perf005_profiles);
+        assert_eq!(qualification.profile_reviews.len(), 8);
+        let profile_names: Vec<&str> =
+            qualification.profile_reviews.iter().map(|profile| profile.profile.as_str()).collect();
+        assert_eq!(profile_names, perf005_profiles);
+
+        let short_decode = qualification
+            .profile_reviews
+            .iter()
+            .find(|profile| profile.profile == "short_decode_8")
+            .ok_or_else(|| anyhow!("short_decode_8 profile missing"))?;
+        assert_eq!(short_decode.decision.as_deref(), Some("not_accepted"));
+        assert_eq!(short_decode.benchmark_qualified_speedup, Some(false));
+        assert_eq!(short_decode.speedup_claim_allowed, Some(false));
+        assert_eq!(short_decode.fallback_free, Some(true));
+        assert_eq!(short_decode.quality_passed, Some(true));
+        assert_eq!(short_decode.cpu_total_ms_mean, Some(147593.0));
+        assert_eq!(short_decode.cuda_total_ms_mean, Some(1866.0));
+
+        let warm_context = qualification
+            .profile_reviews
+            .iter()
+            .find(|profile| profile.profile == "decode_128_from_warm_context")
+            .ok_or_else(|| anyhow!("decode_128_from_warm_context profile missing"))?;
+        assert_eq!(warm_context.decision.as_deref(), Some("not_accepted"));
+        assert_eq!(warm_context.benchmark_qualified_speedup, Some(false));
+        assert_eq!(warm_context.fallback_free, Some(false));
+        assert_eq!(warm_context.quality_passed, Some(false));
+        assert_eq!(warm_context.blockers, vec!["profile receipt missing"]);
+        Ok(())
+    }
+
+    #[test]
     fn latest_receipt_prefers_newest_json_recursively() {
         let temp = tempfile::tempdir().unwrap();
         let old = temp.path().join("old.json");
