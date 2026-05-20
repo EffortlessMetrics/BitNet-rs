@@ -3383,9 +3383,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-057"
-status = "pr_open"
+status = "merged"
 pr = 6045
-head_sha = "5e8e0940937bd868073bc49f3abe3e0c96b6beb8"
+head_sha = "80d707d65973a884066d607fd04f07cc18dbd0c2"
+merge_sha = "c19c7a51d4edf11d6a459df6ccda8efcab081ca2"
 branch = "codex/slm-cpu-057-dense-hook-receipt-gate"
 stackable = false
 review_mode = "codex_premerge"
