@@ -37,7 +37,8 @@ fn a770_selected_opencl_tiny_vector_add_smoke_runs_when_enabled() -> Result<(), 
     assert!(smoke.max_abs_error.is_some_and(|value| value <= smoke.tolerance));
 
     let mut receipt = serde_json::to_value(&smoke)?;
-    let object = receipt.as_object_mut().expect("OpenCL smoke receipt is an object");
+    let object =
+        receipt.as_object_mut().ok_or_else(|| io_error("OpenCL smoke receipt is not an object"))?;
     object.insert("campaign".to_owned(), json!("intel-a770"));
     object.insert("work_item".to_owned(), json!("A770-005"));
     object.insert("proof_family".to_owned(), json!("a770_opencl_tiny_vector_add_smoke"));
