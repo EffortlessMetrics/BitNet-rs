@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_swarm_artifact_intake_review",
+  "work_item": "SLM-CPU-064",
+  "created_utc": "2026-05-20T14:37:26Z",
+  "release_surface": "EffortlessMetrics/BitNet-rs",
+  "source_repository": "EffortlessMetrics/bitnet-rs-swarm",
+  "source_commit": "4b91a9d17977317aa8b320610cecc58e2195f08b",
+  "source_work_item": "SLM-CPU-062",
+  "intake_gate": "SLM-CPU-063",
+  "package_path": "ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-062-swarm-export",
+  "required_package_files": {
+    "candidate_summary.json": true,
+    "before_receipt.json": true,
+    "after_receipt.json": true,
+    "equivalence_report.json": true,
+    "timing_report.json": false,
+    "timing_not_claimed.json": true,
+    "source_commit.txt": true
+  },
+  "candidate": {
+    "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "model_family": "qwen",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0",
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true,
+    "selected_backend": "cpu-rust",
+    "selected_kernel": "dense-f32-candle-linear",
+    "selected_path": "eager_f32_candle",
+    "dense_hook_selection": "payload candidate descriptor present for layers.0.attention.q_proj.weight",
+    "packed_q8_tensor_scope": "layers.0.attention.q_proj.weight only",
+    "fallback_used": false
+  },
+  "equivalence_checks": {
+    "model_sha256_unchanged": true,
+    "tokenizer_source_unchanged": true,
+    "tokenizer_strict_unchanged": true,
+    "selected_backend_unchanged": true,
+    "selected_path_unchanged": true,
+    "selected_kernel_unchanged": true,
+    "runtime_compute_enabled_unchanged": true,
+    "dense_runtime_replaced_unchanged": true,
+    "prompt_ids_match": true,
+    "generated_ids_match": true,
+    "decoded_text_match": true,
+    "fallback_used_unchanged": true,
+    "equivalence_report_passed": true
+  },
+  "timing_review": {
+    "timing_report_present": false,
+    "timing_not_claimed_present": true,
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "timing_acceptance": "not_applicable"
+  },
+  "release_surface_decision": {
+    "package_accepted_as_evidence": true,
+    "runtime_promotion_approved": false,
+    "runtime_promotion_requires_follow_up_item": true,
+    "reason": "The package satisfies the SLM-CPU-063 intake evidence contract and preserves behavior, but it keeps packed Q8_0 runtime compute disabled and does not make a timing or speedup claim."
+  },
+  "claim_boundary": {
+    "runtime_code_changed": false,
+    "packed_q8_runtime_compute_enabled": false,
+    "dense_runtime_replaced": false,
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "q4_q5_runtime_support_claim": false,
+    "server_claim": false,
+    "gpu_npu_openvino_uhd620_claim": false,
+    "qwen35_claim": false,
+    "bitnet_qk256_changed": false
+  },
+  "next_step": "Open a separate runtime promotion item only if BitNet-rs is ready to consume the accepted single-tensor packed Q8_0 sidecar candidate under the same before/after receipt discipline."
+}

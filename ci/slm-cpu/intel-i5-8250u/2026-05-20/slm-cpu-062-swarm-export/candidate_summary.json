@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_swarm_candidate_summary",
+  "work_item": "SLM-CPU-062",
+  "source_repository": "EffortlessMetrics/bitnet-rs-swarm",
+  "source_commit": "4b91a9d17977317aa8b320610cecc58e2195f08b",
+  "source_artifact": "ci/slm-cpu/intel-i5-8250u/2026-05-20/qwen3-real-q8-sidecar-payload-candidate.json",
+  "release_surface": "EffortlessMetrics/BitNet-rs",
+  "release_surface_status": "not_accepted_by_release_surface",
+  "candidate": {
+    "upstream_work_item": "SLM-CPU-061",
+    "model": {
+      "repo": "Qwen/Qwen3-0.6B-GGUF",
+      "file": "Qwen3-0.6B-Q8_0.gguf",
+      "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+      "architecture": "qwen3",
+      "family": "qwen",
+      "format": "gguf",
+      "loader_mode": "real_gguf",
+      "tokenizer": "gguf_metadata"
+    },
+    "tokenizer": {
+      "source": "gguf_metadata",
+      "strict": true,
+      "type": "gguf_metadata"
+    },
+    "opt_in_gate": {
+      "env": {
+        "BITNET_DENSE_Q8_PAYLOAD_ENABLE": "1",
+        "BITNET_DENSE_Q8_PAYLOAD_TENSOR": "blk.0.attn_q.weight"
+      },
+      "disabled_by_default": true,
+      "candidate_tensor_exact_match_required": true
+    },
+    "payload_candidate": {
+      "dense_runtime_replaced": false,
+      "eager_f32_runtime_preserved": true,
+      "generated_id_preservation_required_before_runtime_use": true,
+      "next_receipt_gate": "before_after_qwen3_q8_generated_id_text_receipts",
+      "runtime_compute_enabled": false,
+      "selected_kernel": "dense-f32-candle-linear",
+      "selected_path": "eager_f32_candle",
+      "sidecar_descriptor_present": true,
+      "sidecar_matrix_cols": 1024,
+      "sidecar_matrix_rows": 2048,
+      "sidecar_payload_bytes": 2228224,
+      "sidecar_payload_bytes_available": true,
+      "sidecar_payload_contract_valid": true,
+      "sidecar_payload_sha256": "a8e16a232ea8c19a5c5d2eb5f21bfdf5c297eba0ac90e74b0afc052577179c24",
+      "sidecar_q8_block_count": 65536,
+      "sidecar_role": "AttentionQ",
+      "speedup_claim": false,
+      "tensor_name": "layers.0.attention.q_proj.weight"
+    }
+  },
+  "receipts": {
+    "before": "before_receipt.json",
+    "after": "after_receipt.json",
+    "equivalence": "equivalence_report.json",
+    "timing": "timing_not_claimed.json"
+  },
+  "claim_boundary": {
+    "packed_q8_runtime_compute_enabled": false,
+    "dense_runtime_replaced": false,
+    "selected_path": "eager_f32_candle",
+    "selected_kernel": "dense-f32-candle-linear",
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "server_claim": false,
+    "gpu_npu_openvino_uhd620_claim": false,
+    "qwen35_claim": false,
+    "bitnet_qk256_changed": false
+  },
+  "must_not_claim": [
+    "release_surface_acceptance",
+    "speedup",
+    "sustained_throughput",
+    "broad_answer_quality",
+    "Q4_Q5_runtime_support",
+    "server_inference",
+    "GPU_NPU_OpenVINO_UHD620_execution",
+    "Qwen3_5_or_hybrid_architecture_support",
+    "BitNet_QK256_I2S_changes"
+  ]
+}
