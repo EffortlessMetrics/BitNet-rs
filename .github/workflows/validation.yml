@@ -20,14 +20,7 @@ on:
       - ".github/workflows/validation.yml"
   pull_request:
     branches: [main, develop]
-    paths:
-      - "crates/bitnet-cli/**"
-      - "crates/bitnet-st-tools/**"
-      - "crates/bitnet-st2gguf/**"
-      - "crates/bitnet-models/**"
-      - "scripts/validate_gguf.sh"
-      - "scripts/export_clean_gguf.sh"
-      - ".github/workflows/validation.yml"
+    types: [labeled]
   workflow_dispatch:
     inputs:
       skip_model_validation:
@@ -61,6 +54,12 @@ jobs:
   # Security gate: Block correction flags in CI
   security-guard:
     name: Security Guard (Block Correction Flags)
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'validation') ||
+      contains(github.event.pull_request.labels.*.name, 'model-validation') ||
+      contains(github.event.pull_request.labels.*.name, 'receipts') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     continue-on-error: true  # Informational while stabilizing baselines
@@ -426,7 +425,13 @@ jobs:
   validation-summary:
     name: Validation Summary
     needs: [security-guard, build-tools, validation-tests, validate-models]
-    if: always()
+    if: >-
+      always() &&
+      (github.event_name != 'pull_request' ||
+       contains(github.event.pull_request.labels.*.name, 'validation') ||
+       contains(github.event.pull_request.labels.*.name, 'model-validation') ||
+       contains(github.event.pull_request.labels.*.name, 'receipts') ||
+       contains(github.event.pull_request.labels.*.name, 'full-ci'))
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     continue-on-error: true
@@ -522,7 +527,13 @@ jobs:
   quality-gate:
     name: Quality Gate
     needs: validation-summary
-    if: always()
+    if: >-
+      always() &&
+      (github.event_name != 'pull_request' ||
+       contains(github.event.pull_request.labels.*.name, 'validation') ||
+       contains(github.event.pull_request.labels.*.name, 'model-validation') ||
+       contains(github.event.pull_request.labels.*.name, 'receipts') ||
+       contains(github.event.pull_request.labels.*.name, 'full-ci'))
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     continue-on-error: true

@@ -149,6 +149,10 @@ jobs:
 
   check-no-ffi:
     name: Check No-FFI Compilation
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'crossval') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     # Always run this check (required status check)
@@ -203,6 +207,10 @@ jobs:
 
   check-llama-stub:
     name: Check STUB Mode (FFI Without Libs)
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'crossval') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     # Always run this check (required status check)
@@ -517,7 +525,11 @@ jobs:
   crossval-summary:
     name: Cross-Validation Summary
     needs: [check-trigger, check-no-ffi, check-llama-stub, lane-b-llama, lane-a-bitnet]
-    if: always()
+    if: >-
+      always() &&
+      (github.event_name != 'pull_request' ||
+       contains(github.event.pull_request.labels.*.name, 'crossval') ||
+       contains(github.event.pull_request.labels.*.name, 'full-ci'))
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     permissions:

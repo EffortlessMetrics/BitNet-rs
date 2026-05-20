@@ -11,13 +11,7 @@ on:
       - 'crates/bitnet-common/src/types.rs'
       - '.github/workflows/intel-gpu-ci.yml'
   pull_request:
-    paths:
-      - 'crates/bitnet-kernels/src/gpu/opencl.rs'
-      - 'crates/bitnet-kernels/src/gpu/kernels/**'
-      - 'crates/bitnet-device-probe/src/**'
-      - 'crates/bitnet-common/src/kernel_registry.rs'
-      - 'crates/bitnet-common/src/types.rs'
-      - '.github/workflows/intel-gpu-ci.yml'
+    types: [labeled]
   workflow_dispatch:
 
 concurrency:
@@ -34,6 +28,12 @@ env:
 jobs:
   compile-check:
     name: OneAPI Compile Check
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'intel-gpu') ||
+      contains(github.event.pull_request.labels.*.name, 'opencl') ||
+      contains(github.event.pull_request.labels.*.name, 'oneapi') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
@@ -70,6 +70,12 @@ jobs:
 
   unit-tests:
     name: OneAPI Unit Tests (no GPU)
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'intel-gpu') ||
+      contains(github.event.pull_request.labels.*.name, 'opencl') ||
+      contains(github.event.pull_request.labels.*.name, 'oneapi') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:

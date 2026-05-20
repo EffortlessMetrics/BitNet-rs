@@ -4,10 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    paths:
-      - "crates/bitnet-kernels/src/cpu/**"
-      - "crates/bitnet-kernels/tests/**"
-      - ".github/workflows/apple-silicon.yml"
+    types: [labeled]
 
 concurrency:
   group: apple-silicon-${{ github.event.pull_request.number || github.ref }}
@@ -23,6 +20,12 @@ env:
 jobs:
   build-test-macos:
     name: Build & Test (macOS ARM64)
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'macos') ||
+      contains(github.event.pull_request.labels.*.name, 'apple-silicon') ||
+      contains(github.event.pull_request.labels.*.name, 'metal') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: macos-14
     timeout-minutes: 30
     steps:

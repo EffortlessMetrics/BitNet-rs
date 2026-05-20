@@ -9,10 +9,7 @@ on:
       - '.github/workflows/gpu.yml'
   pull_request:
     branches: [main]
-    paths:
-      - 'crates/bitnet-kernels/**'
-      - 'crates/bitnet-inference/**'
-      - '.github/workflows/gpu.yml'
+    types: [labeled]
   workflow_dispatch:
 
 concurrency:

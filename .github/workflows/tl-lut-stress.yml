@@ -2,11 +2,8 @@ name: TL LUT Stress (deterministic)
 
 on:
   pull_request:
-    types: [labeled, synchronize, reopened]
-    paths:
-      - "crates/bitnet-kernels/**"
-      - "crates/bitnet-quantization/**"
-      - ".github/workflows/tl-lut-stress.yml"
+    types: [labeled]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

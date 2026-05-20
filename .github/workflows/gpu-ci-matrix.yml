@@ -28,29 +28,7 @@ on:
       - ".github/workflows/gpu-ci-matrix.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "crates/bitnet-kernels/**"
-      - "crates/bitnet-gpu-hal/**"
-      - "crates/bitnet-device-probe/**"
-      - "crates/bitnet-device-config-core/**"
-      - "crates/bitnet-inference/**"
-      - "crates/bitnet-metal/**"
-      - "crates/bitnet-opencl/**"
-      - "crates/bitnet-vulkan/**"
-      - "crates/bitnet-vulkan-shaders/**"
-      - "crates/bitnet-wgpu/**"
-      - "crates/bitnet-wgpu-bench/**"
-      - "crates/bitnet-wgpu-runner/**"
-      - "crates/bitnet-wgpu-shaders/**"
-      - "crates/bitnet-wgpu-shaders-i2s/**"
-      - "crates/bitnet-webgpu/**"
-      - "crates/bitnet-rocm/**"
-      - "crates/bitnet-intel-gpu-id/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "docker/**"
-      - ".github/workflows/gpu-ci-matrix.yml"
+    types: [labeled]
   workflow_dispatch:
 
 concurrency:
@@ -117,6 +95,12 @@ jobs:
     name: "native-check (${{ matrix.label }})"
     runs-on: ubuntu-22.04
     timeout-minutes: 20
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.pull_request.labels.*.name, 'gpu-ci') ||
+      contains(github.event.pull_request.labels.*.name, 'gpu') ||
+      contains(github.event.pull_request.labels.*.name, 'full-ci')
     strategy:
       fail-fast: false
       matrix:

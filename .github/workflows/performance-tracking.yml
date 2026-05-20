@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+    types: [labeled]
   schedule:
     # Run performance tracking daily at 4 AM UTC
     - cron: '0 4 * * *'
