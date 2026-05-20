@@ -1256,9 +1256,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M3MBA-026"
-status = "pr_open"
+status = "merged"
 pr = 30
-head_sha = "5373abbfacf1a90501e5570f554839f5dad7fd71"
+head_sha = "d81ec9c855554cdfd0a2cfe34cb36836dcf5a621"
+merge_sha = "b1ab60d30e607dce0b3031eace73aab88330dc9b"
 branch = "codex/apple-m3-macbook-air/M3MBA-020-server-device-labels"
 stackable = true
 review_mode = "codex_premerge"

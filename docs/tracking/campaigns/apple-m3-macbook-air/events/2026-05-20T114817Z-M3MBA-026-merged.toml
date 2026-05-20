@@ -1,0 +1,36 @@
+schema_version = "1.0"
+campaign = "apple-m3-macbook-air"
+item = "M3MBA-026"
+event = "merged"
+timestamp = "2026-05-20T11:48:17Z"
+actor = "codex"
+pr = 30
+head_sha = "d81ec9c855554cdfd0a2cfe34cb36836dcf5a621"
+merge_sha = "b1ab60d30e607dce0b3031eace73aab88330dc9b"
+branch = "codex/apple-m3-macbook-air/M3MBA-020-server-device-labels"
+
+summary = "Merged #30 for M3 Air server device-label CUDA-active receipt hardening."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/30",
+  "crates/bitnet-server/src/lib.rs",
+  "docs/apple-silicon/m3-macbook-air-roadmap.md",
+  "docs/tracking/campaigns/apple-m3-macbook-air/active.toml",
+  "docs/tracking/campaigns/apple-m3-macbook-air/CAMPAIGN.md",
+]
+
+notes = [
+  "The merged server test covers configured M3 Air Metal, MPSGraph, and CPU/NEON labels when active-model metadata reports a CUDA device.",
+  "The receipt assertions preserve M3 Air configured backend labels without CUDA smoke, dense CUDA inference, BitNet QK256 proof, M4 proof, or live M3 inference claims.",
+  "CI was green before merge.",
+]
+
+validation = [
+  "cargo fmt --all -- --check",
+  "cargo test --locked -p bitnet-server --no-default-features server_shared_engine_receipt_preserves_m3_air_configured_backend_labels",
+  "cargo run --locked -p xtask --no-default-features -- campaign check apple-m3-macbook-air",
+  "cargo run --locked -p xtask --no-default-features -- campaign doctor",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+  "gh pr checks 30 --watch --interval 15",
+]
