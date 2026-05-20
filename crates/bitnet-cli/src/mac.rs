@@ -117,6 +117,7 @@ const M4_SLM_BENCHMARK_V2_PROFILES: &[&str] = &[
     "resident_50",
     "resident_100",
 ];
+const M4_SLM_MIXED_MODEL_SWITCH_PROFILE: &str = "mixed_model_switch";
 const M4_SLM_BENCHMARK_V2_TIMING_METRICS: &[&str] = &[
     "cold_load_ms",
     "tokenizer_load_ms",
@@ -317,6 +318,9 @@ enum MacBenchmarkProfile {
     /// Resident 100-prompt warm-session profile.
     #[value(name = "resident_100")]
     Resident100,
+    /// Mixed supported dense-model switch soak.
+    #[value(name = "mixed_model_switch")]
+    MixedModelSwitch,
 }
 
 impl MacBenchmarkProfile {
@@ -331,6 +335,7 @@ impl MacBenchmarkProfile {
             Self::Resident25 => "resident_25",
             Self::Resident50 => "resident_50",
             Self::Resident100 => "resident_100",
+            Self::MixedModelSwitch => M4_SLM_MIXED_MODEL_SWITCH_PROFILE,
         }
     }
 }
@@ -11001,6 +11006,16 @@ struct MacBenchmarkSummaryRun<'a> {
     operator_command: &'static str,
 }
 
+struct MixedModelSwitchRun {
+    cache_dir: Option<PathBuf>,
+    requested_backend: &'static str,
+    threads: usize,
+    allocation_audit: bool,
+    progress: bool,
+    quiet: bool,
+    json_out: PathBuf,
+}
+
 struct BenchmarkProfileSpec {
     profile: MacBenchmarkProfile,
     max_new_tokens: usize,
@@ -11113,6 +11128,33 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
         );
     }
     let profiles = dedupe_benchmark_profiles(profiles)?;
+    if profiles.contains(&MacBenchmarkProfile::MixedModelSwitch) {
+        if model_id != model_cache::M4_SLM_RUNTIME_MODEL_ID {
+            anyhow::bail!(
+                "mac benchmark --profile mixed_model_switch runs every supported dense M4 model and cannot be combined with --model-id"
+            );
+        }
+        if profiles.len() != 1 {
+            anyhow::bail!(
+                "mac benchmark --profile mixed_model_switch cannot be combined with other --profile values"
+            );
+        }
+        if repeat != 1 {
+            anyhow::bail!(
+                "mac benchmark --profile mixed_model_switch cannot be combined with --repeat"
+            );
+        }
+        return run_mixed_model_switch_soak(MixedModelSwitchRun {
+            cache_dir,
+            requested_backend,
+            threads,
+            allocation_audit,
+            progress,
+            quiet,
+            json_out,
+        })
+        .await;
+    }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     if repeat > 1 {
         return run_benchmark_variance(
@@ -11336,6 +11378,199 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
         profile_ids_display
     );
     Ok(aggregate)
+}
+
+async fn run_mixed_model_switch_soak(request: MixedModelSwitchRun) -> Result<()> {
+    let MixedModelSwitchRun {
+        cache_dir,
+        requested_backend,
+        threads,
+        allocation_audit,
+        progress,
+        quiet,
+        json_out,
+    } = request;
+    let receipt_dir =
+        json_out.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from(".")).join(
+            format!(
+                "{}-runs",
+                json_out.file_stem().and_then(|stem| stem.to_str()).unwrap_or("mixed-model-switch")
+            ),
+        );
+    std::fs::create_dir_all(&receipt_dir)
+        .with_context(|| format!("failed to create {}", receipt_dir.display()))?;
+
+    let mut models = Vec::with_capacity(APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.len());
+    for model_id in APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS {
+        models.push(model_cache::verified_apple_m4_slm_model(model_id, cache_dir.clone())?);
+    }
+
+    let switch_start_peak_mb = peak_memory_mb();
+    let mut switches = Vec::with_capacity(models.len());
+    let mut invalid_comparison_reasons = Vec::new();
+    let mut child_summary_receipts = Vec::with_capacity(models.len());
+    let mut prompt_count_total = 0u64;
+    let mut generated_tokens_total = 0u64;
+    let mut child_peak_memory_samples = Vec::new();
+    let sequence_model_ids = models.iter().map(|model| model.id.clone()).collect::<Vec<_>>();
+
+    for (index, model) in models.iter().enumerate() {
+        let run_number = index + 1;
+        let model_dir = receipt_dir.join(format!("{run_number:02}-{}", model.id));
+        std::fs::create_dir_all(&model_dir)
+            .with_context(|| format!("failed to create {}", model_dir.display()))?;
+        let child_summary_path = model_dir.join("summary.json");
+        if progress && !quiet {
+            eprintln!(
+                "mac benchmark: mixed_model_switch {run_number}/{} {}",
+                models.len(),
+                model.id
+            );
+        }
+        let child_summary = run_benchmark_once(MacBenchmarkSummaryRun {
+            model,
+            requested_backend,
+            profiles: vec![MacBenchmarkProfile::Resident25],
+            threads,
+            allocation_audit,
+            progress,
+            quiet,
+            json_out: child_summary_path.clone(),
+            operator_command: "mac benchmark",
+        })
+        .await?;
+        child_summary_receipts.push(child_summary_path.display().to_string());
+        prompt_count_total += child_summary["prompt_count"].as_u64().unwrap_or_default();
+        generated_tokens_total += child_summary["generated_tokens"].as_u64().unwrap_or_default();
+        if let Some(peak) = child_summary["memory"]["peak_memory_mb_p50"].as_f64() {
+            child_peak_memory_samples.push(peak);
+        }
+        let child_invalid = child_summary["invalid_comparison_reasons"]
+            .as_array()
+            .map(|reasons| {
+                reasons
+                    .iter()
+                    .filter_map(|reason| reason.as_str())
+                    .map(|reason| format!("{}:{reason}", model.id))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        invalid_comparison_reasons.extend(child_invalid.clone());
+        switches.push(serde_json::json!({
+            "sequence_index": run_number,
+            "model_cache": benchmark_model_cache_json(model),
+            "profile_id": "resident_25",
+            "child_summary_receipt": child_summary_path.display().to_string(),
+            "child_profile_receipts": child_summary["evidence"]["profile_receipts"].clone(),
+            "prompt_count": child_summary["prompt_count"].clone(),
+            "generated_tokens": child_summary["generated_tokens"].clone(),
+            "fallback_used": child_summary["fallback_used"].clone(),
+            "status": if child_invalid.is_empty() { "completed" } else { "invalid_for_comparison" },
+            "comparison_readiness": child_summary["comparison_readiness"].clone(),
+            "invalid_comparison_reasons": child_invalid,
+            "memory": child_summary["memory"].clone(),
+        }));
+    }
+
+    let switch_end_peak_mb = peak_memory_mb();
+    let comparison_status =
+        if invalid_comparison_reasons.is_empty() { "comparable" } else { "invalid_for_comparison" };
+    let aggregate = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_slm_mixed_model_switch_soak_v1",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": requested_backend,
+        "selected_backend": requested_backend,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "profile_set": "slm-mixed-model-switch-v1",
+        "profile_id": M4_SLM_MIXED_MODEL_SWITCH_PROFILE,
+        "child_profile_id": "resident_25",
+        "supported_model_ids": APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+        "sequence_model_ids": sequence_model_ids,
+        "switches": switches,
+        "prompt_count": prompt_count_total,
+        "generated_tokens": generated_tokens_total,
+        "build": {
+            "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
+            "release_mode": !cfg!(debug_assertions),
+        },
+        "model_cache_set": models.iter().map(benchmark_model_cache_json).collect::<Vec<_>>(),
+        "memory": {
+            "start_peak_memory_mb": optional_f64_json(switch_start_peak_mb),
+            "end_peak_memory_mb": optional_f64_json(switch_end_peak_mb),
+            "process_peak_drift_mb": optional_f64_json(memory_delta_mb(switch_start_peak_mb, switch_end_peak_mb)),
+            "child_peak_memory_mb": benchmark_stat_json(&child_peak_memory_samples),
+            "source": "parent getrusage plus child apple_m4_slm_benchmark_v2 summaries",
+        },
+        "comparison_readiness": {
+            "status": comparison_status,
+            "can_compare_timing": invalid_comparison_reasons.is_empty(),
+            "invalid_comparison_reasons": invalid_comparison_reasons.clone(),
+        },
+        "invalid_comparison_reasons": invalid_comparison_reasons,
+        "switch_contract": {
+            "contract_version": "1.0.0",
+            "scope": "Apple M4 Mac mini mixed dense SLM model switch soak",
+            "profile_execution_model": "one resident_25 benchmark summary per supported dense model identity",
+            "model_cache_reuse": "verified cached GGUF identities are reused from the local filesystem cache before each child run",
+            "model_unload_reload_boundary": "each model identity is run through an isolated benchmark summary; child warm-session processes exit between profile/model identities",
+            "receipt_separation_per_model_identity": true,
+            "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+            "child_profile_id": "resident_25",
+            "dense_slm_only": true,
+        },
+        "evidence": {
+            "child_summary_receipts": child_summary_receipts,
+            "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "operator_command": "mac benchmark",
+        },
+        "mac_claim_boundary": {
+            "dense_slm_only": true,
+            "mixed_model_switch_soak": true,
+            "bounded_benchmark_profiles_only": true,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "bitnet_quality_claimed": false,
+            "bitnet_performance_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false
+        },
+        "speedup_claim": false,
+    });
+    write_json_receipt(&json_out, &aggregate)?;
+    validate_mac_receipt_value(&json_out, &aggregate)?;
+    println!(
+        "Mac mixed-model switch soak written to {} (models: {})",
+        json_out.display(),
+        models.iter().map(|model| model.id.as_str()).collect::<Vec<_>>().join(", ")
+    );
+    Ok(())
+}
+
+fn benchmark_model_cache_json(model: &VerifiedCachedModel) -> serde_json::Value {
+    serde_json::json!({
+        "id": &model.id,
+        "display_name": &model.display_name,
+        "cache_root": &model.cache_root,
+        "path": &model.path,
+        "sha256": &model.sha256,
+        "bytes": model.bytes,
+        "architecture": &model.architecture,
+        "quantization": &model.quantization,
+        "tokenizer_model": &model.tokenizer_model,
+        "tokenizer_pre": &model.tokenizer_pre,
+        "chat_template": model.chat_template,
+        "support_note": &model.support_note,
+    })
 }
 
 struct BenchmarkProfileRun<'a> {
@@ -12488,6 +12723,13 @@ fn benchmark_profile_spec(profile: MacBenchmarkProfile) -> BenchmarkProfileSpec 
             prompts: resident_benchmark_prompts(100),
             target_context_tokens: None,
             scenario: "resident_session",
+        },
+        MacBenchmarkProfile::MixedModelSwitch => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 16,
+            prompts: resident_benchmark_prompts(25),
+            target_context_tokens: None,
+            scenario: "mixed_model_switch",
         },
     }
 }
@@ -17667,6 +17909,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_larger_corpus_decision_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
         validate_slm_benchmark_v2_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_slm_mixed_model_switch_soak_v1" {
+        validate_slm_mixed_model_switch_soak_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_profile_timeout" {
         validate_slm_benchmark_profile_timeout_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_benchmark_variance_v1" {
@@ -21215,6 +21459,314 @@ fn validate_slm_benchmark_v2_receipt(
     Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
 }
 
+fn validate_slm_mixed_model_switch_soak_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "apple_m4_slm_mixed_model_switch_soak_v1",
+    )?;
+    require_exact_string_at(path, receipt, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    require_exact_string_at(path, receipt, &["profile_set"], "slm-mixed-model-switch-v1")?;
+    require_exact_string_at(path, receipt, &["profile_id"], M4_SLM_MIXED_MODEL_SWITCH_PROFILE)?;
+    require_exact_string_at(path, receipt, &["child_profile_id"], "resident_25")?;
+    require_bool_at(path, receipt, &["build", "release_mode"], true)?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["supported_model_ids"],
+        APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+    )?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["sequence_model_ids"],
+        APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+    )?;
+
+    let cache_set = json_value_at(receipt, &["model_cache_set"]).as_array().ok_or_else(|| {
+        anyhow!("{} mixed-model switch receipt is missing model_cache_set", path.display())
+    })?;
+    if cache_set.len() != APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.len() {
+        anyhow::bail!(
+            "{} mixed-model switch model_cache_set must contain every supported dense M4 model",
+            path.display()
+        );
+    }
+    for (model_cache, expected_id) in
+        cache_set.iter().zip(APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.iter())
+    {
+        require_exact_string_at(path, model_cache, &["id"], expected_id)?;
+        require_non_empty_string_at(path, model_cache, &["sha256"])?;
+        require_non_empty_string_at(path, model_cache, &["architecture"])?;
+        require_non_empty_string_at(path, model_cache, &["quantization"])?;
+        require_non_empty_string_at(path, model_cache, &["tokenizer_pre"])?;
+    }
+
+    require_exact_string_at(path, receipt, &["switch_contract", "contract_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["switch_contract", "child_artifact_kind"],
+        "apple_m4_slm_benchmark_v2",
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["switch_contract", "child_profile_id"],
+        "resident_25",
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["switch_contract", "receipt_separation_per_model_identity"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["switch_contract", "dense_slm_only"], true)?;
+    require_non_empty_string_at(path, receipt, &["switch_contract", "model_cache_reuse"])?;
+    require_non_empty_string_at(
+        path,
+        receipt,
+        &["switch_contract", "model_unload_reload_boundary"],
+    )?;
+
+    require_exact_string_at(
+        path,
+        receipt,
+        &["evidence", "child_artifact_kind"],
+        "apple_m4_slm_benchmark_v2",
+    )?;
+    require_exact_string_at(path, receipt, &["evidence", "operator_command"], "mac benchmark")?;
+    require_bool_at(path, receipt, &["evidence", "generated_text_recorded"], true)?;
+    require_bool_at(path, receipt, &["evidence", "generated_token_ids_recorded"], true)?;
+    require_non_empty_string_array_at(path, receipt, &["evidence", "child_summary_receipts"])?;
+    let child_receipts = json_value_at(receipt, &["evidence", "child_summary_receipts"])
+        .as_array()
+        .ok_or_else(|| {
+            anyhow!("{} mixed-model switch child_summary_receipts must be an array", path.display())
+        })?;
+
+    let switches = json_value_at(receipt, &["switches"]).as_array().ok_or_else(|| {
+        anyhow!("{} mixed-model switch receipt is missing switches", path.display())
+    })?;
+    if switches.len() != APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.len()
+        || child_receipts.len() != switches.len()
+    {
+        anyhow::bail!(
+            "{} mixed-model switch receipt must include one switch and child summary per supported dense model",
+            path.display()
+        );
+    }
+
+    let mut prompt_count_total = 0u64;
+    let mut generated_tokens_total = 0u64;
+    let mut invalid_comparison_reasons = Vec::new();
+    for (index, (switch, expected_id)) in
+        switches.iter().zip(APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.iter()).enumerate()
+    {
+        require_u64_exact(path, switch, &["sequence_index"], (index + 1) as u64)?;
+        require_exact_string_at(path, switch, &["model_cache", "id"], expected_id)?;
+        let switch_sha = require_non_empty_string_at(path, switch, &["model_cache", "sha256"])?;
+        let switch_architecture =
+            require_non_empty_string_at(path, switch, &["model_cache", "architecture"])?;
+        let switch_quantization =
+            require_non_empty_string_at(path, switch, &["model_cache", "quantization"])?;
+        let switch_tokenizer_pre =
+            require_non_empty_string_at(path, switch, &["model_cache", "tokenizer_pre"])?;
+        require_exact_string_at(path, switch, &["profile_id"], "resident_25")?;
+        require_bool_at(path, switch, &["fallback_used"], false)?;
+        require_non_empty_string_array_at(path, switch, &["child_profile_receipts"])?;
+
+        let child_reference =
+            require_non_empty_string_at(path, switch, &["child_summary_receipt"])?;
+        let evidence_reference = child_receipts[index].as_str().ok_or_else(|| {
+            anyhow!(
+                "{} mixed-model switch child_summary_receipts must contain strings",
+                path.display()
+            )
+        })?;
+        if evidence_reference != child_reference {
+            anyhow::bail!(
+                "{} mixed-model switch child_summary_receipts[{index}] must match switch child_summary_receipt",
+                path.display()
+            );
+        }
+
+        let child_path = resolve_child_receipt_path(path, child_reference);
+        let child_receipt = read_json_receipt(&child_path).with_context(|| {
+            format!("failed to read mixed-model switch child benchmark receipt {child_reference}")
+        })?;
+        let (child_prompt_count, child_generated_tokens) =
+            validate_slm_benchmark_v2_receipt(&child_path, &child_receipt)?;
+        require_string_array_equals(
+            &child_path,
+            &child_receipt,
+            &["profiles_required"],
+            &["resident_25"],
+        )?;
+        require_exact_string_at(&child_path, &child_receipt, &["model_cache", "id"], expected_id)?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "sha256"],
+            switch_sha,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "architecture"],
+            switch_architecture,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "quantization"],
+            switch_quantization,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "tokenizer_pre"],
+            switch_tokenizer_pre,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["requested_backend"],
+            APPLE_M4_CPU_NEON,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["selected_backend"],
+            APPLE_M4_CPU_NEON,
+        )?;
+        require_exact_string_at(&child_path, &child_receipt, &["runtime_api"], "cpu")?;
+        require_bool_at(&child_path, &child_receipt, &["fallback_used"], false)?;
+
+        let switch_prompt_count = require_u64_at(path, switch, &["prompt_count"], true)?;
+        let switch_generated_tokens = require_u64_at(path, switch, &["generated_tokens"], false)?;
+        if child_prompt_count != Some(switch_prompt_count as usize)
+            || child_generated_tokens != Some(switch_generated_tokens as usize)
+        {
+            anyhow::bail!(
+                "{} mixed-model switch child counts must match switch summary for {}",
+                path.display(),
+                expected_id
+            );
+        }
+        prompt_count_total += switch_prompt_count;
+        generated_tokens_total += switch_generated_tokens;
+
+        let switch_reasons =
+            json_value_at(switch, &["invalid_comparison_reasons"]).as_array().ok_or_else(|| {
+                anyhow!(
+                    "{} mixed-model switch invalid_comparison_reasons must be an array",
+                    path.display()
+                )
+            })?;
+        let switch_status = require_non_empty_string_at(path, switch, &["status"])?;
+        if switch_reasons.is_empty() {
+            if switch_status != "completed" {
+                anyhow::bail!(
+                    "{} mixed-model switch status for {} must be completed",
+                    path.display(),
+                    expected_id
+                );
+            }
+        } else {
+            if switch_status != "invalid_for_comparison" {
+                anyhow::bail!(
+                    "{} mixed-model switch status for {} must be invalid_for_comparison",
+                    path.display(),
+                    expected_id
+                );
+            }
+            invalid_comparison_reasons.extend(
+                switch_reasons.iter().filter_map(|reason| reason.as_str().map(str::to_string)),
+            );
+        }
+    }
+
+    if receipt["prompt_count"].as_u64() != Some(prompt_count_total) {
+        anyhow::bail!(
+            "{} mixed-model switch prompt_count must equal the sum of switch prompt counts",
+            path.display()
+        );
+    }
+    if receipt["generated_tokens"].as_u64() != Some(generated_tokens_total) {
+        anyhow::bail!(
+            "{} mixed-model switch generated_tokens must equal the sum of switch generated tokens",
+            path.display()
+        );
+    }
+    let receipt_invalid =
+        json_value_at(receipt, &["invalid_comparison_reasons"]).as_array().ok_or_else(|| {
+            anyhow!(
+                "{} mixed-model switch invalid_comparison_reasons must be an array",
+                path.display()
+            )
+        })?;
+    if receipt_invalid.len() != invalid_comparison_reasons.len() {
+        anyhow::bail!(
+            "{} mixed-model switch invalid_comparison_reasons must match switch reasons",
+            path.display()
+        );
+    }
+    if invalid_comparison_reasons.is_empty() {
+        require_exact_string_at(path, receipt, &["comparison_readiness", "status"], "comparable")?;
+        require_bool_at(path, receipt, &["comparison_readiness", "can_compare_timing"], true)?;
+    } else {
+        require_exact_string_at(
+            path,
+            receipt,
+            &["comparison_readiness", "status"],
+            "invalid_for_comparison",
+        )?;
+        require_bool_at(path, receipt, &["comparison_readiness", "can_compare_timing"], false)?;
+        require_non_empty_string_array_at(
+            path,
+            receipt,
+            &["comparison_readiness", "invalid_comparison_reasons"],
+        )?;
+    }
+
+    validate_benchmark_stat_object(path, receipt, &["memory", "child_peak_memory_mb"], true)?;
+    require_non_empty_string_at(path, receipt, &["memory", "source"])?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "mixed_model_switch_soak"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "bounded_benchmark_profiles_only"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "speedup_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_performance_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "neural_engine_execution_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "macbook_evidence"], false)?;
+
+    Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
+}
+
 fn validate_slm_benchmark_profile_timeout_receipt(
     path: &Path,
     receipt: &serde_json::Value,
@@ -23723,6 +24275,49 @@ mod tests {
         }
     }
 
+    fn test_verified_model_for(cache_root: &Path, model_id: &str) -> VerifiedCachedModel {
+        let (display_name, sha256, bytes, quantization) = match model_id {
+            "qwen2.5-0.5b-instruct-q8_0" => (
+                "Qwen2.5 0.5B Instruct Q8_0",
+                "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                675_710_816,
+                "Q8_0",
+            ),
+            "qwen2.5-0.5b-instruct-q4_k_m" => (
+                "Qwen2.5 0.5B Instruct Q4_K_M",
+                "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+                491_400_032,
+                "Q4_K_M",
+            ),
+            "qwen2.5-1.5b-instruct-q4_k_m" => (
+                "Qwen2.5 1.5B Instruct Q4_K_M",
+                "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+                1_117_320_736,
+                "Q4_K_M",
+            ),
+            _ => (
+                "Qwen2.5 0.5B Instruct Q8_0",
+                "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                675_710_816,
+                "Q8_0",
+            ),
+        };
+        VerifiedCachedModel {
+            id: model_id.to_string(),
+            display_name: display_name.to_string(),
+            path: cache_root.join(format!("{model_id}.gguf")),
+            cache_root: cache_root.to_path_buf(),
+            sha256: sha256.to_string(),
+            bytes,
+            architecture: "qwen2".to_string(),
+            quantization: quantization.to_string(),
+            tokenizer_model: "gpt2".to_string(),
+            tokenizer_pre: "qwen2".to_string(),
+            chat_template: true,
+            support_note: "test model".to_string(),
+        }
+    }
+
     fn test_valid_benchmark_profile_summary(profile_id: &str) -> serde_json::Value {
         serde_json::json!({
             "profile_id": profile_id,
@@ -24181,6 +24776,125 @@ mod tests {
         assert_eq!(summary.generated_tokens, Some(0));
         assert_eq!(receipt["status"].as_str(), Some("invalid_for_comparison"));
         assert_eq!(receipt["timeout_boundary"]["enforced"].as_bool(), Some(true));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_accepts_mixed_model_switch_soak() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let temp = tempfile::tempdir()?;
+        let mut models = Vec::new();
+        let mut switches = Vec::new();
+        let mut child_summary_receipts = Vec::new();
+        let mut prompt_count_total = 0u64;
+        let mut generated_tokens_total = 0u64;
+        for (index, model_id) in APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.iter().enumerate() {
+            let model = test_verified_model_for(temp.path(), model_id);
+            let child_path = temp.path().join(format!("child-{index}.json"));
+            let child_summary = test_benchmark_v2_receipt(
+                &model,
+                child_path.clone(),
+                vec![test_valid_benchmark_profile_summary("resident_25")],
+            );
+            std::fs::write(&child_path, serde_json::to_vec_pretty(&child_summary)?)?;
+            let child_path_text = child_path.display().to_string();
+            prompt_count_total += child_summary["prompt_count"].as_u64().unwrap_or_default();
+            generated_tokens_total +=
+                child_summary["generated_tokens"].as_u64().unwrap_or_default();
+            child_summary_receipts.push(child_path_text.clone());
+            switches.push(serde_json::json!({
+                "sequence_index": index + 1,
+                "model_cache": benchmark_model_cache_json(&model),
+                "profile_id": "resident_25",
+                "child_summary_receipt": child_path_text,
+                "child_profile_receipts": child_summary["evidence"]["profile_receipts"].clone(),
+                "prompt_count": child_summary["prompt_count"].clone(),
+                "generated_tokens": child_summary["generated_tokens"].clone(),
+                "fallback_used": false,
+                "status": "completed",
+                "comparison_readiness": child_summary["comparison_readiness"].clone(),
+                "invalid_comparison_reasons": [],
+                "memory": child_summary["memory"].clone(),
+            }));
+            models.push(model);
+        }
+        let receipt_path = temp.path().join("mixed-model-switch.json");
+        let receipt = serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "apple_m4_slm_mixed_model_switch_soak_v1",
+            "timestamp": "2026-05-20T10:00:00Z",
+            "artifact_path": receipt_path.display().to_string(),
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "fallback_reason": serde_json::Value::Null,
+            "profile_set": "slm-mixed-model-switch-v1",
+            "profile_id": M4_SLM_MIXED_MODEL_SWITCH_PROFILE,
+            "child_profile_id": "resident_25",
+            "supported_model_ids": APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+            "sequence_model_ids": APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+            "switches": switches,
+            "prompt_count": prompt_count_total,
+            "generated_tokens": generated_tokens_total,
+            "build": {
+                "profile": "release",
+                "release_mode": true,
+            },
+            "model_cache_set": models.iter().map(benchmark_model_cache_json).collect::<Vec<_>>(),
+            "memory": {
+                "start_peak_memory_mb": 128.0,
+                "end_peak_memory_mb": 160.0,
+                "process_peak_drift_mb": 32.0,
+                "child_peak_memory_mb": benchmark_stat_json(&[3900.0, 3950.0, 4200.0]),
+                "source": "test fixture",
+            },
+            "comparison_readiness": {
+                "status": "comparable",
+                "can_compare_timing": true,
+                "invalid_comparison_reasons": [],
+            },
+            "invalid_comparison_reasons": [],
+            "switch_contract": {
+                "contract_version": "1.0.0",
+                "scope": "Apple M4 Mac mini mixed dense SLM model switch soak",
+                "profile_execution_model": "one resident_25 benchmark summary per supported dense model identity",
+                "model_cache_reuse": "verified cached GGUF identities are reused from the local filesystem cache before each child run",
+                "model_unload_reload_boundary": "each model identity is run through an isolated benchmark summary; child warm-session processes exit between profile/model identities",
+                "receipt_separation_per_model_identity": true,
+                "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+                "child_profile_id": "resident_25",
+                "dense_slm_only": true,
+            },
+            "evidence": {
+                "child_summary_receipts": child_summary_receipts,
+                "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+                "generated_text_recorded": true,
+                "generated_token_ids_recorded": true,
+                "operator_command": "mac benchmark",
+            },
+            "mac_claim_boundary": {
+                "dense_slm_only": true,
+                "mixed_model_switch_soak": true,
+                "bounded_benchmark_profiles_only": true,
+                "broad_model_quality_claim": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+                "bitnet_quality_claimed": false,
+                "bitnet_performance_claimed": false,
+                "full_metal_inference_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "macbook_evidence": false,
+            },
+            "speedup_claim": false,
+        });
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_slm_mixed_model_switch_soak_v1");
+        assert_eq!(summary.prompt_count, Some(prompt_count_total as usize));
+        assert_eq!(summary.generated_tokens, Some(generated_tokens_total as usize));
         Ok(())
     }
 
