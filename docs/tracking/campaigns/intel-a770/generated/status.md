@@ -14,7 +14,7 @@
 | A770-004 | merged | #5971 | `codex/intel-a770/A770-004-runtime-probe` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add A770 runtime probe evidence without promoting OpenCL execution or BitNet inference claims. |
 | A770-005 | merged | #6072 | `codex/intel-a770/A770-005-opencl-smoke` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Run a tiny selected-device OpenCL smoke with fallback_used=false and CPU parity, without BitNet inference claims. |
 | A770-006 | merged | #6110 | `codex/intel-a770/A770-006-opencl-parity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add CPU/OpenCL parity for a minimal kernel or subgraph without promoting official BitNet QK256 inference. |
-| A770-007 | proposed | TBD | `codex/intel-a770/A770-007-receipt-identity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record selected-device receipt identity for the validated smoke/parity path before any performance or trusted-partial claim. |
+| A770-007 | in_progress | TBD | `codex/intel-a770/A770-007-receipt-identity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Record selected-device receipt identity for the validated smoke/parity path before any performance or trusted-partial claim. |
 
 ## Hard Constraints
 
