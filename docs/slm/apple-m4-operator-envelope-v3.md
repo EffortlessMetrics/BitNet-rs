@@ -102,6 +102,17 @@ classified `batch`. BitNet requests inside the bounded envelope remain `batch`.
 BitNet chat and serve still require their existing gate receipts; the context
 guardrail does not enable those routes by itself.
 
+The first `M4-CONTEXT-002` live proof receipt is recorded at
+`ci/hardware/apple-m4-mac-mini/2026-05-20T1611Z/context/answer-corpus.json`.
+It validates the release `bitnet mac eval --suite m4-long-context` route for
+the tested default dense identity only: `qwen2.5-0.5b-instruct-q8_0`,
+`apple-m4-cpu-neon`, `fallback_used=false`, 4/4 mechanical long-context cases
+passed. The matching `context` benchmark receipt records `context_1k` as a
+completed warm-session profile and `context_4k` as an enforced 720 second
+timeout, making the aggregate invalid for timing comparison. Treat this as
+bounded dense long-context evidence with an explicit timeout boundary, not as
+BitNet, broad quality, or broad performance proof.
+
 Every generated guardrail or successful route receipt records
 `context_envelope` with:
 

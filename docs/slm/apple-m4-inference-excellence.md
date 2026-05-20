@@ -1167,6 +1167,39 @@ long-context quality, enable unsupported contexts, enable BitNet chat or serve,
 or widen Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality,
 or broad performance claims.
 
+`M4-CONTEXT-002` publishes the first live long-context proof receipt through the
+release `bitnet mac eval --suite m4-long-context` route:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T1611Z/context/answer-corpus.json
+```
+
+The receipt validates as `apple_m4_long_context_answer_corpus` and covers the
+default dense SLM identity `qwen2.5-0.5b-instruct-q8_0` on
+`apple-m4-cpu-neon` with `fallback_used=false`. The four mechanical cases pass:
+retrieval/copy, table extraction, late-context instruction following, and the
+explicit unsupported-context boundary. The same evidence records Qwen prompt
+template identity, stop/generation identity, generated token counts, model SHA,
+and the claim boundary that dense SLM long-context evidence does not prove
+BitNet long-context behavior.
+
+The matching release `bitnet mac benchmark --profile context` receipt is:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T1611Z/context/benchmark.json
+```
+
+It validates as `apple_m4_slm_benchmark_v2` with `fallback_used=false`.
+`context_1k` completes as a warm-session profile with 3 prompts and 48
+generated tokens. `context_4k` reaches the calibrated 720 second timeout and is
+recorded as `apple_m4_slm_benchmark_profile_timeout` with
+`status=invalid_for_comparison`, so the aggregate is timing evidence with an
+explicit timeout boundary, not a comparable performance envelope. This proof is
+for the tested dense identity only. It does not claim non-default dense SLM
+long-context quality, BitNet long-context behavior, BitNet chat or serve, full
+Metal inference, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup,
+broad quality, or broad performance.
+
 CLI proof is route-specific. Dense SLM ask/chat conformance needs bounded
 multi-turn history, timeout/cancel behavior, per-turn receipts, generated text,
 token IDs, backend, fallback state, and model/tokenizer identity before the CLI

@@ -16,6 +16,7 @@ use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
+use crate::commands::AnswerCorpusCommand;
 use crate::model_cache::{self, VerifiedCachedModel};
 
 const APPLE_M4_CPU_NEON: &str = "apple-m4-cpu-neon";
@@ -63,6 +64,7 @@ const MAC_ROBUSTNESS_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-robustness-corp
 const MAC_ROBUSTNESS_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-excellence/robustness/summary.json";
 const MAC_LONG_CONTEXT_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-long-context-corpus.yaml";
+const MAC_LONG_CONTEXT_ANSWER_CORPUS: &str = "ci/quality/apple-m4-long-context-answer-corpus.yaml";
 const MAC_LONG_CONTEXT_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-excellence/context/answer-corpus.json";
 const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
@@ -1188,9 +1190,9 @@ enum MacAction {
         json_out: PathBuf,
     },
 
-    /// Dry-run supported Apple M4 eval suites and write receipt-backed summaries.
+    /// Run supported Apple M4 eval suites and write receipt-backed summaries.
     Eval {
-        /// Eval suite to dry-run.
+        /// Eval suite to run.
         #[arg(long, value_enum)]
         suite: MacEvalSuite,
 
@@ -1198,9 +1200,25 @@ enum MacAction {
         #[arg(long, value_name = "PATH")]
         corpus: Option<PathBuf>,
 
+        /// Supported dense SLM model id for live long-context runs.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Model cache root for live long-context runs.
+        #[arg(long, value_name = "DIR")]
+        cache_dir: Option<PathBuf>,
+
         /// Do not invoke model generation; validate suite shape and emit not-run rows.
         #[arg(long, default_value_t = false)]
         dry_run: bool,
+
+        /// Per-prompt timeout for live long-context answer-corpus child runs.
+        #[arg(long, value_name = "SECONDS")]
+        per_prompt_timeout_seconds: Option<u64>,
+
+        /// Fail the command if a live long-context answer fails its quality gate.
+        #[arg(long, default_value_t = false)]
+        fail_on_quality: bool,
 
         /// Output eval summary receipt.
         #[arg(long, value_name = "PATH")]
@@ -1866,15 +1884,30 @@ impl MacCommand {
                 })
                 .await
             }
-            MacAction::Eval { suite, corpus, dry_run, json_out, json } => {
+            MacAction::Eval {
+                suite,
+                corpus,
+                model_id,
+                cache_dir,
+                dry_run,
+                per_prompt_timeout_seconds,
+                fail_on_quality,
+                json_out,
+                json,
+            } => {
                 ensure_supported_mac_device(explicit_device_label, "mac eval")?;
-                run_mac_eval(
+                run_mac_eval(MacEvalRun {
                     suite,
-                    corpus.unwrap_or_else(|| PathBuf::from(suite.default_corpus())),
+                    corpus,
+                    model_id,
+                    cache_dir,
                     dry_run,
-                    json_out.unwrap_or_else(|| PathBuf::from(suite.default_receipt())),
+                    per_prompt_timeout_seconds,
+                    fail_on_quality,
+                    json_out: json_out.unwrap_or_else(|| PathBuf::from(suite.default_receipt())),
                     json,
-                )
+                })
+                .await
             }
             MacAction::Benchmark {
                 calibrate,
@@ -1961,34 +1994,43 @@ fn resolve_mac_question(positional: Option<String>, flag: Option<String>) -> Res
     }
 }
 
-fn run_mac_eval(
+struct MacEvalRun {
     suite: MacEvalSuite,
-    corpus_path: PathBuf,
+    corpus: Option<PathBuf>,
+    model_id: String,
+    cache_dir: Option<PathBuf>,
     dry_run: bool,
+    per_prompt_timeout_seconds: Option<u64>,
+    fail_on_quality: bool,
     json_out: PathBuf,
     json: bool,
-) -> Result<()> {
-    if suite == MacEvalSuite::M4LongContext {
-        return run_mac_long_context_eval(corpus_path, dry_run, json_out, json);
+}
+
+async fn run_mac_eval(request: MacEvalRun) -> Result<()> {
+    if request.suite == MacEvalSuite::M4LongContext {
+        return run_mac_long_context_eval(request).await;
     }
-    if !dry_run {
+    if !request.dry_run {
         anyhow::bail!(
             "mac eval --suite {} currently supports only --dry-run; live robustness execution needs a separate receipt-gated item",
-            suite.id()
+            request.suite.id()
         );
     }
+    let corpus_path =
+        request.corpus.unwrap_or_else(|| PathBuf::from(request.suite.default_corpus()));
     let (corpus, corpus_sha256) = load_mac_robustness_corpus(&corpus_path)?;
-    let receipt = mac_robustness_eval_summary_receipt(suite, &corpus_path, corpus_sha256, &corpus);
-    validate_mac_receipt_value(&json_out, &receipt)?;
-    write_json_receipt(&json_out, &receipt)?;
-    if json {
+    let receipt =
+        mac_robustness_eval_summary_receipt(request.suite, &corpus_path, corpus_sha256, &corpus);
+    validate_mac_receipt_value(&request.json_out, &receipt)?;
+    write_json_receipt(&request.json_out, &receipt)?;
+    if request.json {
         println!("{}", serde_json::to_string_pretty(&receipt)?);
     } else {
         println!(
             "Apple M4 eval suite: {} (dry-run, cases={}, receipt={})",
-            suite.id(),
+            request.suite.id(),
             receipt["expanded_case_count"].as_u64().unwrap_or(0),
-            json_out.display()
+            request.json_out.display()
         );
         println!(
             "Claim boundary: robustness cases are mechanically scored and separated by dense SLM vs BitNet; no broad safety, alignment, factuality, Metal, QK256, Neural Engine, MPSGraph, or speedup claim."
@@ -1997,34 +2039,156 @@ fn run_mac_eval(
     Ok(())
 }
 
-fn run_mac_long_context_eval(
-    corpus_path: PathBuf,
-    dry_run: bool,
-    json_out: PathBuf,
-    json: bool,
-) -> Result<()> {
-    if !dry_run {
-        anyhow::bail!(
-            "mac eval --suite m4-long-context currently supports only --dry-run contract receipts; live M4-CONTEXT-002 evidence must be produced by the release answer-corpus and benchmark routes before any long-context proof claim"
-        );
+async fn run_mac_long_context_eval(request: MacEvalRun) -> Result<()> {
+    let corpus_path = request.corpus.unwrap_or_else(|| {
+        PathBuf::from(if request.dry_run {
+            MAC_LONG_CONTEXT_DEFAULT_CORPUS
+        } else {
+            MAC_LONG_CONTEXT_ANSWER_CORPUS
+        })
+    });
+    if !request.dry_run {
+        let model = model_cache::verified_apple_m4_slm_model(&request.model_id, request.cache_dir)?;
+        let command = AnswerCorpusCommand {
+            corpus: corpus_path.clone(),
+            model: model.path.clone(),
+            model_id: Some(model.id.clone()),
+            tokenizer: None,
+            device: Some(APPLE_M4_CPU_NEON.to_string()),
+            json_out: request.json_out.clone(),
+            dry_run: false,
+            per_prompt_timeout_seconds: request.per_prompt_timeout_seconds,
+            fail_on_quality: false,
+            dump_logit_steps: None,
+            logits_topk: 10,
+            cpu_kernel: None,
+            case_ids: Vec::new(),
+        };
+        command.execute(APPLE_M4_CPU_NEON).await?;
+        let receipt =
+            annotate_mac_long_context_live_receipt(&request.json_out, &corpus_path, &model)?;
+        if request.fail_on_quality
+            && receipt["m4_context_proof"]["quality_gate_passed"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "M4 long-context quality failed: {} failed, {} timed out; annotated receipt written to {}",
+                receipt["quality_summary"]["failed"].as_u64().unwrap_or(0),
+                receipt["quality_summary"]["timeout"].as_u64().unwrap_or(0),
+                request.json_out.display()
+            );
+        }
+        if request.json {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        } else {
+            println!(
+                "Apple M4 eval suite: m4-long-context (live dense SLM cases={}, receipt={})",
+                receipt["quality_summary"]["total"].as_u64().unwrap_or(0),
+                request.json_out.display()
+            );
+            println!(
+                "Claim boundary: this is dense SLM long-context evidence for the tested model identity only; BitNet long-context remains unsupported until separate BitNet receipts exist."
+            );
+        }
+        return Ok(());
     }
     let (corpus, corpus_sha256) = load_mac_long_context_corpus(&corpus_path)?;
     let receipt = mac_long_context_eval_summary_receipt(&corpus_path, corpus_sha256, &corpus);
-    validate_mac_receipt_value(&json_out, &receipt)?;
-    write_json_receipt(&json_out, &receipt)?;
-    if json {
+    validate_mac_receipt_value(&request.json_out, &receipt)?;
+    write_json_receipt(&request.json_out, &receipt)?;
+    if request.json {
         println!("{}", serde_json::to_string_pretty(&receipt)?);
     } else {
         println!(
             "Apple M4 eval suite: m4-long-context (dry-run, cases={}, receipt={})",
             receipt["expanded_case_count"].as_u64().unwrap_or(0),
-            json_out.display()
+            request.json_out.display()
         );
         println!(
             "Claim boundary: long-context cases are a mechanical contract only until live answer-corpus and benchmark receipts are published; dense SLM rows and BitNet unsupported boundaries remain separate."
         );
     }
     Ok(())
+}
+
+fn annotate_mac_long_context_live_receipt(
+    json_out: &Path,
+    corpus_path: &Path,
+    model: &VerifiedCachedModel,
+) -> Result<serde_json::Value> {
+    let bytes = std::fs::read(json_out)
+        .with_context(|| format!("failed to read {}", json_out.display()))?;
+    let mut receipt: serde_json::Value = serde_json::from_slice(&bytes)
+        .with_context(|| format!("invalid JSON receipt {}", json_out.display()))?;
+    let quality = &receipt["quality_summary"];
+    let total = quality["total"].as_u64().unwrap_or(0);
+    let passed = quality["passed"].as_u64().unwrap_or(0);
+    let failed = quality["failed"].as_u64().unwrap_or(0);
+    let timed_out = quality["timeout"].as_u64().unwrap_or(0);
+    let not_run = quality["not_run"].as_u64().unwrap_or(0);
+    let quality_gate_passed =
+        total > 0 && passed == total && failed == 0 && timed_out == 0 && not_run == 0;
+
+    let object = receipt.as_object_mut().ok_or_else(|| {
+        anyhow!("{} long-context answer-corpus receipt must be a JSON object", json_out.display())
+    })?;
+    object.insert(
+        "artifact_kind".to_string(),
+        serde_json::json!("apple_m4_long_context_answer_corpus"),
+    );
+    object.insert("suite".to_string(), serde_json::json!("m4-long-context"));
+    object.insert("work_item".to_string(), serde_json::json!("M4-CONTEXT-002"));
+    object.insert("model_id".to_string(), serde_json::json!(model.id));
+    object.insert("model_sha256".to_string(), serde_json::json!(model.sha256));
+    object.insert(
+        "m4_context_proof".to_string(),
+        serde_json::json!({
+            "suite": "m4-long-context",
+            "work_item": "M4-CONTEXT-002",
+            "source_answer_corpus": corpus_path.display().to_string(),
+            "tested_model_id": model.id,
+            "tested_model_sha256": model.sha256,
+            "tested_backend": APPLE_M4_CPU_NEON,
+            "quality_gate_passed": quality_gate_passed,
+            "live_quality_receipt_published": true,
+            "benchmark_receipt_required": true,
+            "benchmark_command": "target/release/bitnet mac benchmark --profile context --json-out ci/hardware/apple-m4-mac-mini/<date>/context/benchmark.json",
+            "profiles_required": ["context_1k", "context_4k", "unsupported_boundary"],
+            "bitnet_long_context": {
+                "status": "unsupported_until_bitnet_long_context_receipts_exist",
+                "dense_slm_evidence_proves_bitnet": false
+            },
+            "claim_boundary": {
+                "tested_identities_only": true,
+                "long_context_proof_applies_to_untested_context_lengths": false,
+                "long_context_proof_applies_to_untested_model_identities": false,
+                "dense_slm_evidence_proves_bitnet": false,
+                "full_metal_inference_claimed": false,
+                "qk256_apple_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "macbook_evidence": false,
+                "broad_model_quality_claim": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
+        }),
+    );
+    if let Some(claim_boundary) =
+        receipt.get_mut("claim_boundary").and_then(serde_json::Value::as_object_mut)
+    {
+        claim_boundary.insert("long_context_quality_receipt".to_string(), serde_json::json!(true));
+        claim_boundary.insert(
+            "long_context_quality_gate_passed".to_string(),
+            serde_json::json!(quality_gate_passed),
+        );
+        claim_boundary
+            .insert("dense_slm_evidence_proves_bitnet".to_string(), serde_json::json!(false));
+        claim_boundary.insert("bitnet_long_context_proven".to_string(), serde_json::json!(false));
+        claim_boundary.insert("macbook_evidence".to_string(), serde_json::json!(false));
+    }
+    validate_mac_receipt_value(json_out, &receipt)?;
+    write_json_receipt(json_out, &receipt)?;
+    Ok(receipt)
 }
 
 fn load_mac_robustness_corpus(path: &Path) -> Result<(MacRobustnessCorpus, String)> {
@@ -18297,6 +18461,8 @@ fn validate_mac_receipt_value(
         validate_m4_robustness_eval_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_long_context_eval_summary" {
         validate_m4_long_context_eval_summary_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_long_context_answer_corpus" {
+        validate_m4_long_context_answer_corpus_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_chat_smoke" {
         validate_dense_slm_chat_smoke_receipt(path, receipt, requested_backend.as_str())?
     } else if artifact_kind == "bitnet_apple_m4_local_answer_corpus" {
@@ -18821,6 +18987,141 @@ fn validate_m4_long_context_eval_summary_receipt(
         );
     }
     Ok((Some(expanded_case_count as usize), Some(0)))
+}
+
+fn validate_m4_long_context_answer_corpus_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "apple_m4_long_context_answer_corpus",
+    )?;
+    require_exact_string_at(path, receipt, &["suite"], "m4-long-context")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-CONTEXT-002")?;
+    require_exact_string_at(path, receipt, &["prompt_template"], QWEN_PROMPT_TEMPLATE)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["corpus", "name"],
+        "apple-m4-long-context-answer-corpus-v1",
+    )?;
+    require_exact_string_at(path, receipt, &["corpus", "metadata", "work_item"], "M4-CONTEXT-002")?;
+    require_exact_string_at(path, receipt, &["model", "family"], "qwen")?;
+    let model_id = require_non_empty_string_at(path, receipt, &["model_id"])?;
+    let model_sha256 = require_non_empty_string_at(path, receipt, &["model_sha256"])?;
+    if !is_sha256_hex(model_sha256) {
+        anyhow::bail!(
+            "{} long-context answer-corpus model_sha256 must be a SHA256 hex digest",
+            path.display()
+        );
+    }
+    require_exact_string_at(path, receipt, &["m4_context_proof", "tested_model_id"], model_id)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["m4_context_proof", "tested_model_sha256"],
+        model_sha256,
+    )?;
+    require_exact_string_at(path, receipt, &["m4_context_proof", "suite"], "m4-long-context")?;
+    require_exact_string_at(path, receipt, &["m4_context_proof", "work_item"], "M4-CONTEXT-002")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["m4_context_proof", "bitnet_long_context", "status"],
+        "unsupported_until_bitnet_long_context_receipts_exist",
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["m4_context_proof", "bitnet_long_context", "dense_slm_evidence_proves_bitnet"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_evidence_proves_bitnet"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_long_context_proven"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claimed"], false)?;
+
+    let corpus_case_count = require_u64_at(path, receipt, &["corpus", "case_count"], true)?;
+    let quality_total = require_u64_at(path, receipt, &["quality_summary", "total"], true)?;
+    let quality_passed = require_u64_at(path, receipt, &["quality_summary", "passed"], false)?;
+    let quality_failed = require_u64_at(path, receipt, &["quality_summary", "failed"], false)?;
+    let quality_timeout = require_u64_at(path, receipt, &["quality_summary", "timeout"], false)?;
+    let quality_not_run = require_u64_at(path, receipt, &["quality_summary", "not_run"], false)?;
+    if quality_total != corpus_case_count {
+        anyhow::bail!(
+            "{} long-context answer-corpus quality_summary.total must match corpus.case_count",
+            path.display()
+        );
+    }
+    if quality_passed + quality_failed + quality_timeout + quality_not_run != quality_total {
+        anyhow::bail!(
+            "{} long-context answer-corpus quality_summary counts must sum to total",
+            path.display()
+        );
+    }
+    if quality_not_run != 0 {
+        anyhow::bail!(
+            "{} long-context answer-corpus receipt must execute every selected case",
+            path.display()
+        );
+    }
+    require_bool_at(
+        path,
+        receipt,
+        &["m4_context_proof", "quality_gate_passed"],
+        quality_total > 0
+            && quality_passed == quality_total
+            && quality_failed == 0
+            && quality_timeout == 0,
+    )?;
+
+    let scoring_total = require_u64_at(path, receipt, &["scoring_summary", "total"], true)?;
+    if scoring_total != quality_total {
+        anyhow::bail!(
+            "{} long-context answer-corpus scoring_summary.total must match quality_summary.total",
+            path.display()
+        );
+    }
+    for profile in ["context_1k", "context_4k", "unsupported_boundary"] {
+        let total = require_u64_at(path, receipt, &["profile_summary", profile, "total"], true)?;
+        if total == 0 {
+            anyhow::bail!(
+                "{} long-context answer-corpus profile_summary.{profile}.total must be non-zero",
+                path.display()
+            );
+        }
+    }
+    let cases = receipt["cases"].as_array().ok_or_else(|| {
+        anyhow!("{} long-context answer-corpus receipt must include cases", path.display())
+    })?;
+    if cases.len() as u64 != quality_total {
+        anyhow::bail!(
+            "{} long-context answer-corpus cases length must match quality_summary.total",
+            path.display()
+        );
+    }
+    for case in cases {
+        require_non_empty_string_at(path, case, &["id"])?;
+        require_non_empty_string_at(path, case, &["task_family"])?;
+        require_non_empty_string_at(path, case, &["profile"])?;
+        if case["status"].as_str() == Some("not_run") {
+            anyhow::bail!(
+                "{} long-context answer-corpus case {} was not run",
+                path.display(),
+                case["id"].as_str().unwrap_or("<missing>")
+            );
+        }
+        require_u64_at(path, case, &["quality", "generated_tokens"], false)?;
+    }
+    let generated_tokens =
+        cases.iter().filter_map(|case| case["quality"]["generated_tokens"].as_u64()).sum::<u64>();
+    Ok((Some(quality_total as usize), Some(generated_tokens as usize)))
 }
 
 fn prompt_generation_identity_sha256_field<'a>(
