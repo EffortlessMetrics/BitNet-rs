@@ -2783,7 +2783,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-073"
-status = "ready"
+status = "pr_open"
+pr = 195
 branch = "codex/slm-cpu-073-packed-q8-regression-root-cause"
 stackable = false
 review_mode = "codex_premerge"
