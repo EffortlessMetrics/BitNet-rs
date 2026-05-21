@@ -3090,8 +3090,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-017A"
-status = "in_progress"
+status = "merged"
+pr = 228
 branch = "codex/nvidia-5070ti/CUDA-MODEL-017A-qwen3-capture-tooling"
+head_sha = "a84fc6825c16acbbfeaaa452b8108f9aba66736b"
+merge_sha = "e41917185cda8d524065c6566a174dc5f02c16e0"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
@@ -3144,7 +3147,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-017"
-status = "blocked"
+status = "ready"
 branch = "codex/nvidia-5070ti/CUDA-MODEL-017-qwen3-repeated-comparator"
 stackable = false
 review_mode = "codex_premerge"

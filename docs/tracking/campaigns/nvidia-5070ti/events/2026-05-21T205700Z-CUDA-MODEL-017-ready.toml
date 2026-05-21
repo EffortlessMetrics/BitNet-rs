@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T20:57:00Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-017"
+event = "in_progress"
+previous_status = "blocked"
+new_status = "ready"
+actor = "codex"
+summary = "Queued Qwen3 repeated same-artifact CPU/CUDA hardware comparator receipt collection after CUDA-MODEL-017A."
+
+notes = [
+  "CUDA-MODEL-017 should collect at least three CPU and CUDA source receipts for each Qwen3 repeated comparator profile and generate the qwen3_cuda_repeated_comparator aggregate.",
+  "The aggregate must preserve speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, broad dense GGUF readiness=false, Qwen2.5 inheritance=false, and BitNet packed I2_S/QK256 proof=false.",
+  "CUDA-MODEL-017 remains a hardware receipt collection item; the manifest preflight or source-capture tooling alone does not prove hardware execution.",
+]
