@@ -102,19 +102,25 @@ impl ModelMetadata {
 
     /// Compute head dimension.
     pub fn head_dim(&self) -> Option<usize> {
-        match (self.hidden_size, self.num_heads) {
-            (Some(h), Some(n)) if n > 0 => Some(h / n),
-            _ => None,
-        }
+        exact_division(self.hidden_size, self.num_heads)
     }
 
     /// GQA group count (num_heads / num_kv_heads).
     pub fn gqa_groups(&self) -> Option<usize> {
-        match (self.num_heads, self.num_kv_heads) {
-            (Some(h), Some(kv)) if kv > 0 => Some(h / kv),
-            _ => None,
-        }
+        exact_division(self.num_heads, self.num_kv_heads)
     }
+}
+
+fn exact_division(dividend: Option<usize>, divisor: Option<usize>) -> Option<usize> {
+    let (Some(dividend), Some(divisor)) = (dividend, divisor) else {
+        return None;
+    };
+
+    if divisor == 0 || dividend % divisor != 0 {
+        return None;
+    }
+
+    Some(dividend / divisor)
 }
 
 /// Extract metadata from a key-value map (GGUF-style).
@@ -200,6 +206,24 @@ mod tests {
     fn test_gqa_groups() {
         let m = ModelMetadata { num_heads: Some(40), num_kv_heads: Some(10), ..Default::default() };
         assert_eq!(m.gqa_groups(), Some(4));
+    }
+
+    #[test]
+    fn test_head_dim_non_divisible_returns_none() {
+        let m =
+            ModelMetadata { hidden_size: Some(4097), num_heads: Some(32), ..Default::default() };
+        assert_eq!(m.head_dim(), None);
+    }
+
+    #[test]
+    fn test_gqa_groups_non_divisible_returns_none() {
+        let m = ModelMetadata { num_heads: Some(41), num_kv_heads: Some(10), ..Default::default() };
+        assert_eq!(m.gqa_groups(), None);
+    }
+
+    #[test]
+    fn test_exact_division_zero_divisor_returns_none() {
+        assert_eq!(exact_division(Some(10), Some(0)), None);
     }
 
     #[test]
