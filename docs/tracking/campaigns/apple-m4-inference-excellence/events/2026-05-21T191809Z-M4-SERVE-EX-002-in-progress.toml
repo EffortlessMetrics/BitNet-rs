@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T19:18:09Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-002-streaming-failure-semantics"
+
+notes = [
+  "Started M4-SERVE-EX-002 after M4-SERVE-EX-001 merged and campaign next advanced to local-server streaming and failure semantics.",
+  "Scope is bounded to the `mac serve-failure-smoke` receipt contract for dense SLM and gated BitNet serve routes: partial token streaming, client cancellation, timeout stage, invalid request, missing cache, per-request receipt export, and no-response failure receipts.",
+  "No production hosting, full OpenAI compatibility, fresh broad model quality proof, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad performance, or broad Apple Silicon claim is in scope.",
+]

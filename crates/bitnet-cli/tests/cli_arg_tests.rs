@@ -3477,6 +3477,72 @@ fn mac_serve_smoke_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_serve_failure_smoke_help_documents_bounded_semantics_receipt() {
+    bitnet()
+        .args(["mac", "serve-failure-smoke", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("streaming/failure semantics"))
+        .stdout(predicate::str::contains("--json-out <PATH>"));
+}
+
+#[test]
+fn mac_serve_failure_smoke_writes_receipts_checkable_summary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let summary = dir.path().join("summary.json");
+    let summary_str = summary.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "serve-failure-smoke", "--json-out", summary_str.as_str()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Mac serve failure semantics recorded"));
+
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&summary)?)?;
+    assert_eq!(receipt["artifact_kind"], "apple_m4_serve_failure_semantics");
+    assert_eq!(receipt["work_item"], "M4-SERVE-EX-002");
+    assert_eq!(receipt["route_family_count"], 2);
+    assert_eq!(receipt["case_count"], 14);
+    assert_eq!(receipt["summary"]["partial_token_streaming_passed"], true);
+    assert_eq!(receipt["summary"]["no_response_failure_receipt_passed"], true);
+    assert_eq!(receipt["claim_boundary"]["production_hosting_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["openai_compatibility_claimed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", summary_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_serve_failure_semantics"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_receipts_check_rejects_serve_failure_semantics_production_claim()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let summary = dir.path().join("summary.json");
+    let summary_str = summary.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "serve-failure-smoke", "--json-out", summary_str.as_str()])
+        .assert()
+        .success();
+
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&summary)?)?;
+    receipt["claim_boundary"]["production_hosting_claimed"] = serde_json::json!(true);
+    std::fs::write(&summary, serde_json::to_vec_pretty(&receipt)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", summary_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("production_hosting_claimed"));
+    Ok(())
+}
+
+#[test]
 fn mac_chat_help_documents_resident_prompts() {
     bitnet()
         .args(["mac", "chat", "--help"])
