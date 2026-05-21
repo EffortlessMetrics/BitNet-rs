@@ -2,27 +2,23 @@
 
 <!-- Brief description of what this PR accomplishes -->
 
-## Release-repo intake boundary
+## Lane ownership
 
-<!--
-Active feature, hardware, performance, diagnostic, and refactor development has
-moved to EffortlessMetrics/bitnet-rs-swarm.
+Lane:
+Campaign:
+Work item:
+Orchestrator:
+Branch:
+Base main SHA:
+Allowed paths:
 
-PRs in this repository are accepted only for:
-- release promotion from bitnet-rs-swarm;
-- versioning, changelog, packaging, signing, or publish changes;
-- emergency security or release-blocking hotfixes;
-- documentation corrections needed for released artifacts.
--->
+- <!-- path or none -->
 
-- [ ] This PR is a release promotion from `bitnet-rs-swarm`
-- [ ] This PR is versioning / changelog / packaging / signing / publish work
-- [ ] This PR is an emergency security or release-blocking hotfix
-- [ ] This PR is a documentation correction for released artifacts
+Shared surfaces touched:
 
-If none of these boxes applies, open the work in
-[`bitnet-rs-swarm`](https://github.com/EffortlessMetrics/bitnet-rs-swarm)
-instead.
+- <!-- shared surface or none -->
+
+Closeout required:
 
 ## Source-of-truth links
 

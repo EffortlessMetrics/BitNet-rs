@@ -32,16 +32,20 @@
 > answer quality is still under validation, so generated BitNet text should be
 > treated as diagnostic output until a strict proof lane accepts it.
 
-## Development Intake Has Moved
+## Active Development Repository
 
-Active feature, hardware, performance, diagnostic, and refactor work now happens
-in
-[`EffortlessMetrics/bitnet-rs-swarm`](https://github.com/EffortlessMetrics/bitnet-rs-swarm).
-This repository is the release and publish repository for BitNet-rs. Open normal
-development PRs in `bitnet-rs-swarm`; PRs here are limited to release promotion,
-versioning, changelog, packaging, signing, publish, emergency security or
-release-blocking hotfixes, and documentation corrections needed for released
-artifacts.
+This repository is the high-throughput same-repo development and proof
+execution repository for BitNet-rs. Feature, hardware, diagnostic,
+performance, refactor, campaign, and agent-swarm PRs land here first.
+
+[`EffortlessMetrics/BitNet-rs`](https://github.com/EffortlessMetrics/BitNet-rs)
+remains the public source-of-truth until an explicit sync/cutover says
+otherwise.
+
+Public release and publish work is promoted to
+[`EffortlessMetrics/BitNet-rs`](https://github.com/EffortlessMetrics/BitNet-rs)
+through release-promotion PRs. Tags, crates.io publication, release notes, and
+stable release branches belong to `BitNet-rs`, not this swarm repository.
 
 ## What This Repo Is For
 
