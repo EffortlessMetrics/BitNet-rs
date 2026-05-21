@@ -1,0 +1,13 @@
+timestamp = "2026-05-21T23:13:30Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-004-queue-backpressure"
+
+notes = [
+  "Started the bounded M4 local-server queue and backpressure slice for concurrent local requests, queue limits, busy and timeout responses, resident model reuse, per-request receipts, and failure receipts.",
+  "The implementation scope is model-free local-appliance receipt coverage across dense SLM and gated BitNet serve routes; it does not claim production hosting, full OpenAI compatibility, broad backend support, broad quality, or broad performance.",
+]

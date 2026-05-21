@@ -2651,7 +2651,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-EX-004"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-004-queue-backpressure"
 stackable = false
 review_mode = "codex_premerge"
