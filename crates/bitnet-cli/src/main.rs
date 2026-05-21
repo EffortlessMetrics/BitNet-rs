@@ -66,6 +66,10 @@ const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
 const INTEL_A770_OPENCL: &str = "intel-a770-opencl";
 const A770_OPENCL_QK256_KERNEL_ID: &str = "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate";
 const BITNET_CPP_ANSWER_TEMPLATE: &str = "bitnetcpp-answer";
+#[cfg(feature = "full-cli")]
+const LUNAR_LAKE_OPENVINO_MODEL_DIR_ENV: &str = "BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR";
+#[cfg(feature = "full-cli")]
+const LUNAR_LAKE_OPENVINO_PYTHON_ENV: &str = "BITNET_LUNAR_LAKE_OPENVINO_PYTHON";
 
 fn bitnet_version() -> &'static str {
     use std::sync::OnceLock;
@@ -10807,10 +10811,17 @@ fn resolve_lunar_lake_ask_model_path(
     } else {
         candidates.iter().map(|path| path.display().to_string()).collect::<Vec<_>>().join(", ")
     };
+    let override_hint = match route.runtime_api.as_str() {
+        "openvino_genai" => {
+            format!("; set --model or {LUNAR_LAKE_OPENVINO_MODEL_DIR_ENV}=<OpenVINO IR directory>")
+        }
+        _ => "; set --model".to_string(),
+    };
     anyhow::bail!(
-        "lunar-lake ask requires --model for executable route `{}` because no committed local default model path exists; checked: {}",
+        "lunar-lake ask requires --model for executable route `{}` because no committed local default model path exists; checked: {}{}",
         route.route_id,
-        candidate_list
+        candidate_list,
+        override_hint
     )
 }
 
@@ -10834,8 +10845,22 @@ fn default_lunar_lake_ask_model_path_candidates(
 fn default_lunar_lake_openvino_model_candidates(
     artifact_root: &std::path::Path,
 ) -> Vec<std::path::PathBuf> {
+    default_lunar_lake_openvino_model_candidates_with_override(
+        artifact_root,
+        std::env::var_os(LUNAR_LAKE_OPENVINO_MODEL_DIR_ENV),
+    )
+}
+
+#[cfg(feature = "full-cli")]
+fn default_lunar_lake_openvino_model_candidates_with_override(
+    artifact_root: &std::path::Path,
+    model_dir_override: Option<std::ffi::OsString>,
+) -> Vec<std::path::PathBuf> {
     let manifest_path = artifact_root.join("slm-openvino-ir-qwen25-int4-sym-manifest.json");
     let mut candidates = Vec::new();
+    if let Some(path) = non_empty_env_path(model_dir_override) {
+        candidates.push(path);
+    }
     if let Some(manifest) = read_optional_json(&manifest_path)
         && let Some(path) = json_pointer_string(&manifest, "/export_contract/expected_output_dir")
     {
@@ -10954,8 +10979,9 @@ fn run_openvino_lunar_lake_operator_ask(ctx: OpenVINOOperatorAskContext<'_>) -> 
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!(
-            "OpenVINO operator ask helper failed with status {}.\nstdout:\n{}\nstderr:\n{}",
+            "OpenVINO operator ask helper failed with status {} using Python {}. Set {LUNAR_LAKE_OPENVINO_PYTHON_ENV}=<python.exe with openvino_genai> when the checkout-local .venv is not prepared.\nstdout:\n{}\nstderr:\n{}",
             output.status,
+            python.display(),
             stdout.trim(),
             stderr.trim()
         );
@@ -10976,8 +11002,24 @@ fn openvino_operator_device_for_route(
 
 #[cfg(feature = "full-cli")]
 fn openvino_operator_python() -> std::path::PathBuf {
+    openvino_operator_python_with_override(std::env::var_os(LUNAR_LAKE_OPENVINO_PYTHON_ENV))
+}
+
+#[cfg(feature = "full-cli")]
+fn openvino_operator_python_with_override(
+    python_override: Option<std::ffi::OsString>,
+) -> std::path::PathBuf {
+    if let Some(path) = non_empty_env_path(python_override) {
+        return path;
+    }
     let venv_python = std::path::PathBuf::from(".venv").join("Scripts").join("python.exe");
     if venv_python.exists() { venv_python } else { std::path::PathBuf::from("python") }
+}
+
+#[cfg(feature = "full-cli")]
+fn non_empty_env_path(value: Option<std::ffi::OsString>) -> Option<std::path::PathBuf> {
+    let path = std::path::PathBuf::from(value?);
+    if path.as_os_str().is_empty() { None } else { Some(path) }
 }
 
 #[cfg(feature = "full-cli")]
@@ -14427,6 +14469,36 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
+    fn lunar_lake_ask_default_openvino_model_path_prefers_env_override() -> Result<()> {
+        let temp_dir = tempfile::tempdir().context("temp dir")?;
+        let artifact_root = temp_dir.path().join("artifacts");
+        std::fs::create_dir_all(&artifact_root).context("artifact root")?;
+        let override_dir = temp_dir.path().join("operator-openvino-model");
+        let manifest_dir = temp_dir.path().join("manifest-openvino-model");
+        std::fs::create_dir_all(&override_dir).context("override model dir")?;
+        std::fs::create_dir_all(&manifest_dir).context("manifest model dir")?;
+        std::fs::write(
+            artifact_root.join("slm-openvino-ir-qwen25-int4-sym-manifest.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_ir_manifest",
+                "export_contract": {"expected_output_dir": manifest_dir}
+            }))
+            .context("manifest json")?,
+        )
+        .context("manifest receipt")?;
+
+        let candidates = default_lunar_lake_openvino_model_candidates_with_override(
+            &artifact_root,
+            Some(override_dir.clone().into_os_string()),
+        );
+
+        assert_eq!(candidates.first(), Some(&override_dir));
+        assert!(candidates.contains(&manifest_dir));
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
     fn lunar_lake_ask_default_model_path_prefers_explicit_model() -> Result<()> {
         let temp_dir = tempfile::tempdir().context("temp dir")?;
         let artifact_root = temp_dir.path().join("artifacts");
@@ -14449,6 +14521,17 @@ mod tests {
             .context("explicit model is accepted")?;
         assert_eq!(resolved, explicit);
         Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_openvino_operator_python_prefers_env_override() {
+        let override_python = std::path::PathBuf::from("C:/tools/openvino/python.exe");
+
+        let resolved =
+            openvino_operator_python_with_override(Some(override_python.clone().into_os_string()));
+
+        assert_eq!(resolved, override_python);
     }
 
     #[cfg(feature = "full-cli")]
