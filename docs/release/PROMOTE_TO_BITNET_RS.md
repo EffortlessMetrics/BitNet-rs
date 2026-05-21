@@ -28,6 +28,22 @@ Swarm-only commits do not become public-release authority until a promotion or
 sync PR names the included work, proof inputs, claim boundaries, and excluded
 work.
 
+## History Repair Baseline
+
+The one-time swarm history repair is recorded in:
+
+```text
+docs/development/SWARM_HISTORY_REPAIR.md
+```
+
+That closeout records the real import merge, imported source SHA, old swarm
+ancestor, current source reachability proof, release-workflow guard boundary,
+and open swarm PR snapshot at repair closeout.
+
+Future promotions and syncs must preserve that repaired graph. Do not reset
+swarm main, squash history imports, or copy source files as a single content
+commit to make the repositories appear fresh.
+
 ## Merge Method
 
 Promotion is a repository-boundary operation. It must preserve swarm ancestry in

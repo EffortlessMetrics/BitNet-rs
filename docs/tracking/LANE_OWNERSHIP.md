@@ -148,6 +148,19 @@ xtask/**
 ci/hardware/device-kernel-routing.toml
 ```
 
+Repository-boundary docs are also shared surfaces:
+
+```text
+docs/development/SWARM_DEVELOPMENT_AUTHORITY.md
+docs/development/SWARM_HISTORY_REPAIR.md
+docs/release/PROMOTE_TO_BITNET_RS.md
+docs/tracking/LANE_OWNERSHIP.md
+```
+
+Changes to those files should use `lane:repo-boundary` and must preserve the
+source/swarm split, the no-hard-reset/no-squash-import rule, and the
+release/publish/signing boundary.
+
 A lane may edit its campaign-local `active.toml` and event files directly.
 Generated dashboards must be produced by the generator, not hand-edited as the
 source of truth.
