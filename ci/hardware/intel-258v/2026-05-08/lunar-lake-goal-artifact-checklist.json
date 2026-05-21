@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-21T02:45:00Z",
+  "created_utc": "2026-05-21T04:46:33Z",
   "machine_id": "intel-258v",
-  "source_revision": "99f5fc47d0aed614ca0fd15a93379ed0995e4610",
+  "source_revision": "97a7fcb90722a4b4a66bc26ccf20f096cd0d1bf6",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
-  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013/#6106 strict-regression-surface fields for BitNet CPU reference route evidence with closeout #6107 merged, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, merged BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run, A770-005/#6072 selected-device OpenCL smoke closeout #6079, and A770-006/#6110 selected-device OpenCL matmul_i2s CPU parity closeout #6112 as non-semantic adjacent accelerator evidence. The current swarm main also includes main-history import #104, CLI model-cache module-path fix #100, and Qwen3 comparator support-bundle lock #99 as repo/support-gate updates that do not change Lunar Lake route evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable. POWER-010/#116 plus closeout #117 now add and close out the no-inference low_power battery-plan command and committed lunar-lake-low-power-battery-plan.json receipt. That plan makes the eventual POWER-006 physical battery run machine-readable, but it records can_collect_battery_evidence_now=false from the current AC-blocked telemetry context and does not clear low_power promotion, battery-mode, thermal, speedup, power-advantage, native accelerator, Qwen3 Lunar Lake, or BitNet behavior gaps. The current swarm main also includes SLM-CPU-067/#109 as an adjacent SLM CPU runtime-support update, not Lunar Lake route evidence, route promotion, speedup, broad quality, Qwen3 Lunar Lake promotion, or BitNet behavior proof.",
+  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013/#6106 strict-regression-surface fields for BitNet CPU reference route evidence with closeout #6107 merged, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, merged BITNET-INTAKE-004 indexing of pending A770 shared BitNet semantic PRs #4756/#4757/#4767/#4853/#5064, POWER-007/POWER-008 runbook discoverability for the physical battery-mode low_power run, A770-005/#6072 selected-device OpenCL smoke closeout #6079, and A770-006/#6110 selected-device OpenCL matmul_i2s CPU parity closeout #6112 as non-semantic adjacent accelerator evidence. The current swarm main also includes main-history import #104, CLI model-cache module-path fix #100, and Qwen3 comparator support-bundle lock #99 as repo/support-gate updates that do not change Lunar Lake route evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable. POWER-010/#116 plus closeout #117 now add and close out the no-inference low_power battery-plan command and committed lunar-lake-low-power-battery-plan.json receipt. That plan makes the eventual POWER-006 physical battery run machine-readable, but it records can_collect_battery_evidence_now=false from the current AC-blocked telemetry context and does not clear low_power promotion, battery-mode, thermal, speedup, power-advantage, native accelerator, Qwen3 Lunar Lake, or BitNet behavior gaps. The current swarm main also includes SLM-CPU-067/#109 as an adjacent SLM CPU runtime-support update, not Lunar Lake route evidence, route promotion, speedup, broad quality, Qwen3 Lunar Lake promotion, or BitNet behavior proof. A770-011/#115 is now merged on swarm main and is recorded here as adjacent selected-device inline-scaled QK256 OpenCL candidate evidence, not Lunar Lake inference, semantic-intake stale evidence, route promotion, speedup, power advantage, native OpenCL/NPU proof, full BitNet accelerator inference, packed QK256 accelerator decode, or BitNet QK256/I2_S behavior proof.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-006",
     "status": "blocked",
@@ -348,12 +348,14 @@
         "https://github.com/EffortlessMetrics/BitNet-rs/pull/6079",
         "ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-parity.json",
         "docs/tracking/campaigns/intel-a770/events/2026-05-20T063836Z-A770-006-merged.toml",
-        "https://github.com/EffortlessMetrics/BitNet-rs/pull/6112"
+        "https://github.com/EffortlessMetrics/BitNet-rs/pull/6112",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/115"
       ],
       "notes": [
         "A770-005 adds selected-device OpenCL smoke evidence and its tracker closeout, which is adjacent accelerator proof.",
         "A770-006 adds selected-device OpenCL matmul_i2s CPU parity evidence and its tracker closeout, which is adjacent accelerator proof.",
-        "A770-005 and A770-006 are not indexed shared BitNet semantic watchpoints and do not require Lunar Lake BitNet reruns.",
+        "A770-011/#115 adds selected-device inline-scaled QK256 OpenCL candidate dispatch evidence on swarm main, which is adjacent A770 candidate proof.",
+        "A770-005, A770-006, and A770-011 are not indexed shared BitNet semantic watchpoints and do not require Lunar Lake BitNet reruns.",
         "The indexed shared BitNet semantic watchpoints remain #4756, #4757, #4767, #4853, and #5064."
       ]
     },
@@ -411,7 +413,8 @@
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/112",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/122",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/123",
-        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/121"
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/121",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/115"
       ],
       "notes": [
         "The platform is well instrumented and profile-aware, but not yet excellent across all requested profiles.",
@@ -425,7 +428,8 @@
         "M4-SERVE-EX-002/#112 is recorded only as adjacent Apple M4 local-server failure-semantics work on current swarm main; it does not change Lunar Lake route evidence or completion status.",
         "SLM-CPU-067/#122 is recorded only as adjacent SLM CPU tracker event cleanup on current swarm main; it does not change Lunar Lake route evidence or completion status.",
         "QWEN3 repeated-comparator plan #123 is recorded only as adjacent Qwen3 planning work on current swarm main; it does not change Lunar Lake route evidence or completion status.",
-        "SLM-CPU-069/#121 is recorded only as adjacent SLM CPU packed-Q8 locality follow-up planning on current swarm main; it does not change Lunar Lake route evidence or completion status."
+        "SLM-CPU-069/#121 is recorded only as adjacent SLM CPU packed-Q8 locality follow-up planning on current swarm main; it does not change Lunar Lake route evidence or completion status.",
+        "A770-011/#115 is recorded only as adjacent selected-device inline-scaled QK256 OpenCL candidate evidence on current swarm main; it does not change Lunar Lake route evidence, semantic-intake freshness, route promotion, speedup, power advantage, native accelerator proof, full BitNet accelerator inference, packed QK256 accelerator decode, or completion status."
       ]
     }
   ],
@@ -448,7 +452,7 @@
     {
       "id": "pending_a770_semantic_stack",
       "status": "pending_watchpoint",
-      "reason": "A770 #4756, #4757, #4767, #4853, and #5064 are indexed as pending shared BitNet semantic work; Lunar Lake reruns become required only when one reaches main. A770-005/#6072 and A770-006/#6110 are selected-device OpenCL smoke/parity evidence, not shared BitNet semantic triggers."
+      "reason": "A770 #4756, #4757, #4767, #4853, and #5064 are indexed as pending shared BitNet semantic work; Lunar Lake reruns become required only when one reaches main. A770-005/#6072, A770-006/#6110, and A770-011/#115 are selected-device OpenCL smoke/parity/candidate evidence, not shared BitNet semantic triggers."
     },
     {
       "id": "bitnet_accelerator_inference",
@@ -523,6 +527,13 @@
       "merge_sha": "99f5fc47d0aed614ca0fd15a93379ed0995e4610",
       "status": "adjacent_slm_cpu_packed_q8_locality_plan_not_lunar_lake_route_evidence",
       "claim_boundary": "no Lunar Lake inference, route promotion, speedup, power advantage, broad quality, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior claim"
+    },
+    {
+      "id": "A770-011",
+      "pr": 115,
+      "merge_sha": "40b2ef2f857ab477fdbfd1f9aef33f368b2cfb7a",
+      "status": "adjacent_a770_selected_device_inline_scaled_qk256_opencl_candidate_not_lunar_lake_route_evidence",
+      "claim_boundary": "no Lunar Lake inference, route promotion, speedup, power advantage, native OpenCL/NPU proof, full BitNet accelerator inference, packed QK256 accelerator decode, stale semantic-intake claim, or BitNet QK256/I2_S behavior claim"
     }
   ]
 }
