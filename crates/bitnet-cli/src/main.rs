@@ -12180,11 +12180,11 @@ fn windows_cuda_toolkit_search_roots() -> Vec<std::path::PathBuf> {
     }
     roots.push(std::path::PathBuf::from(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"));
 
-    dedupe_paths(roots)
+    dedupe_process_paths(roots)
 }
 
 #[cfg(all(feature = "cuda", target_os = "windows"))]
-fn dedupe_paths(paths: Vec<std::path::PathBuf>) -> Vec<std::path::PathBuf> {
+fn dedupe_process_paths(paths: Vec<std::path::PathBuf>) -> Vec<std::path::PathBuf> {
     let mut deduped = Vec::<std::path::PathBuf>::new();
     for path in paths {
         if !deduped.iter().any(|existing| paths_equal_for_process_path(existing, &path)) {
