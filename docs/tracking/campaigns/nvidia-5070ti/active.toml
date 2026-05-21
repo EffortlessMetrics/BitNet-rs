@@ -3140,6 +3140,56 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "CUDA-MODEL-018"
+status = "blocked"
+branch = "codex/nvidia-5070ti/CUDA-MODEL-018-qwen3-benchmark-review"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-MODEL-017"]
+acceptance = "Review the validated qwen3_cuda_repeated_comparator aggregate from CUDA-MODEL-017 and accept or reject exact-profile Qwen3 benchmark-qualified speed, speedup, and residency claims. The review must name each profile, source aggregate receipt, CPU comparator profile, CUDA profile, sample count, route/backend identity, fallback status, and claim decision. Broad dense GGUF readiness, Qwen2.5 proof inheritance, and BitNet QK256 proof must remain false unless separately proven by their own receipts."
+commands = [
+  "python -m json.tool ci\\hardware\\windows-9950x3d-rtx5070ti\\<run-date>\\qwen3-0_6b-repeated-comparator.json",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features qwen3",
+  "cargo run --locked -p xtask --no-default-features -- check-model-coverage",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/reports/**",
+  "docs/status/**",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+  "ci/model-artifacts/model-coverage-matrix.toml",
+]
+forbidden_paths = [
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  ".github/workflows/**",
+]
+may_claim = [
+  "CUDA-MODEL-018 is the blocked Qwen3 benchmark qualification review item after CUDA-MODEL-017.",
+  "CUDA-MODEL-018 cannot start until the qwen3_cuda_repeated_comparator aggregate exists and validates.",
+  "Any future Qwen3 benchmark or speed decision is exact-profile only and must cite the aggregate receipt.",
+]
+must_not_claim = [
+  "Qwen3 speedup exists.",
+  "Qwen3 benchmark-qualified speed exists.",
+  "Qwen3 full CUDA residency exists.",
+  "Qwen3 broad dense GGUF readiness exists.",
+  "Qwen3 proof inherits Qwen2.5 evidence.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+  "Runtime math, tokenizer, loader, kernel, or server behavior changed.",
+  "A blocked review item proves hardware execution.",
+]
+
+[[work_item]]
 id = "CUDA-MODEL-SMOLLM2-001"
 status = "merged"
 branch = "model/cuda-smollm2-360m-artifact-contract"

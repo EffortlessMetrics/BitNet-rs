@@ -41,7 +41,7 @@
 | intel-npu | NPU-013 | #5903 | merged | none | Device-node detection is not inference. |
 | llama3-8b-158 | LLAMA3-158-000 | TBD | ready | LLAMA3-158-001 | Do not commit model binaries. |
 | model-artifacts | MODEL-ARTIFACT-002 | #3928 | blocked | none | Do not weaken CPU, CUDA, Apple, NPU, SLM, server, or quality gates. |
-| nvidia-5070ti | CUDA-MODEL-017 | TBD | ready | none | CUDA visibility is not kernel execution. |
+| nvidia-5070ti | CUDA-MODEL-017 | TBD | ready | CUDA-MODEL-018 | CUDA visibility is not kernel execution. |
 | official-bitnet-2b | OFFICIAL-2B-000 | TBD | ready | OFFICIAL-2B-001 | Do not commit model binaries. |
 | qwen36 | QWEN36-DOCS-000 | #5892 | merged | none | Qwen3.6 registration is not native BitNet-rs inference support. |
 | server-real-inference | SERVER-005 | #4490 | merged | none | Do not reintroduce simulated inference. |

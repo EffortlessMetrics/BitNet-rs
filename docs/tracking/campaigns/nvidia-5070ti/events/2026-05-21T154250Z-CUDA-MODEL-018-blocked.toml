@@ -1,0 +1,19 @@
+timestamp = "2026-05-21T15:42:50Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-018"
+event = "blocked"
+actor = "codex"
+from = "missing"
+to = "blocked"
+branch = "codex/nvidia-5070ti/CUDA-MODEL-018-qwen3-benchmark-review"
+summary = "Added the blocked Qwen3 benchmark qualification review item after CUDA-MODEL-017."
+
+artifacts = [
+  "docs/tracking/campaigns/nvidia-5070ti/active.toml",
+]
+
+notes = [
+  "CUDA-MODEL-018 cannot start until CUDA-MODEL-017 commits and validates the qwen3_cuda_repeated_comparator aggregate receipt.",
+  "The future review must accept or reject benchmark-qualified speed, speedup, and residency by exact profile only.",
+  "Qwen3 broad dense GGUF readiness, Qwen2.5 proof inheritance, BitNet packed I2_S/QK256 proof, runtime math, tokenizer, loader, kernel, and server behavior changes remain forbidden.",
+]
