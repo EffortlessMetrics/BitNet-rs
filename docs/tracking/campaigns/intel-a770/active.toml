@@ -527,7 +527,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-013"
-status = "pr_open"
+status = "merged"
 pr = 176
 branch = "codex/intel-a770/A770-013-cli-opencl-route-receipts"
 stackable = false
