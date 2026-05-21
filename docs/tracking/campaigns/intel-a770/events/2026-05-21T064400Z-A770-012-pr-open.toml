@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T06:44:00Z"
+campaign = "intel-a770"
+item = "A770-012"
+event = "pr_open"
+pr = 158
+head_sha = "72328619a84fb45f8e0e78be37a0946c87bf0a09"
+branch = "codex/intel-a770/A770-012-strict-qk256-dispatch-receipt"
+actor = "codex"
+
+notes = [
+  "Opened PR #158 for A770-012 strict selected-device QK256 dispatch receipt.",
+  "The PR commits a diagnostic strict A770 OpenCL QK256 dispatch receipt with fallback_used=false, one kernel invocation, and exact CPU parity for the scoped inline-scaled candidate path.",
+  "No BitNet inference, answer quality, activation quantization residency, selected attention residency, resident KV, full residency, performance speedup, trusted-partial acceleration, or completion claim is promoted.",
+]

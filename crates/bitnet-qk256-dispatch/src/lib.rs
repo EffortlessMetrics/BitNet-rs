@@ -22,7 +22,10 @@ use bitnet_quantization::i2s_qk256::quantize_row_i8_s_activation;
 use candle_core::Tensor;
 #[cfg(feature = "cuda")]
 use std::cell::RefCell;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{
+    Mutex,
+    atomic::{AtomicU64, Ordering},
+};
 
 mod cpu_hot_path;
 
@@ -50,6 +53,7 @@ static BITNET_LINEAR_A770_OPENCL_UNSUPPORTED: AtomicU64 = AtomicU64::new(0);
 static A770_OPENCL_HOST_TO_DEVICE_BYTES: AtomicU64 = AtomicU64::new(0);
 static A770_OPENCL_DEVICE_TO_HOST_BYTES: AtomicU64 = AtomicU64::new(0);
 static A770_OPENCL_KERNEL_INVOCATIONS: AtomicU64 = AtomicU64::new(0);
+static A770_OPENCL_LAST_DEVICE: Mutex<Option<A770OpenClRuntimeDevice>> = Mutex::new(None);
 static CUDA_QK256_HOST_TO_DEVICE_BYTES: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_DEVICE_TO_HOST_BYTES: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_KERNEL_TIME_MICROS: AtomicU64 = AtomicU64::new(0);
@@ -93,6 +97,25 @@ pub struct Qk256A770OpenClRuntimeStats {
     pub device_to_host_bytes: u64,
     /// Number of selected-device A770 OpenCL QK256 kernel invocations.
     pub kernel_invocations: u64,
+    /// Last selected OpenCL device observed by this process.
+    pub last_device: Option<A770OpenClRuntimeDevice>,
+}
+
+/// Selected OpenCL device identity observed by A770 QK256 dispatch.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct A770OpenClRuntimeDevice {
+    /// OpenCL platform index selected for execution.
+    pub platform_index: usize,
+    /// OpenCL device index selected for execution.
+    pub device_index: usize,
+    /// OpenCL platform name.
+    pub platform_name: String,
+    /// Selected OpenCL device name.
+    pub runtime_device: String,
+    /// Selected OpenCL device vendor.
+    pub vendor: String,
+    /// Selected OpenCL driver version.
+    pub driver_version: String,
 }
 
 /// Diagnostic counters for CPU QK256 hot-path reality audits.
@@ -235,6 +258,7 @@ pub fn qk256_a770_opencl_runtime_stats() -> Qk256A770OpenClRuntimeStats {
         host_to_device_bytes: A770_OPENCL_HOST_TO_DEVICE_BYTES.load(Ordering::Relaxed),
         device_to_host_bytes: A770_OPENCL_DEVICE_TO_HOST_BYTES.load(Ordering::Relaxed),
         kernel_invocations: A770_OPENCL_KERNEL_INVOCATIONS.load(Ordering::Relaxed),
+        last_device: A770_OPENCL_LAST_DEVICE.lock().ok().and_then(|device| device.clone()),
     }
 }
 
@@ -284,6 +308,9 @@ pub fn reset_qk256_dispatch_coverage() {
     A770_OPENCL_HOST_TO_DEVICE_BYTES.store(0, Ordering::Relaxed);
     A770_OPENCL_DEVICE_TO_HOST_BYTES.store(0, Ordering::Relaxed);
     A770_OPENCL_KERNEL_INVOCATIONS.store(0, Ordering::Relaxed);
+    if let Ok(mut device) = A770_OPENCL_LAST_DEVICE.lock() {
+        *device = None;
+    }
     CUDA_QK256_HOST_TO_DEVICE_BYTES.store(0, Ordering::Relaxed);
     CUDA_QK256_DEVICE_TO_HOST_BYTES.store(0, Ordering::Relaxed);
     CUDA_QK256_KERNEL_TIME_MICROS.store(0, Ordering::Relaxed);
@@ -512,10 +539,39 @@ fn forward_qk256_a770_opencl(
             .fetch_add(result.device_to_host_bytes as u64, Ordering::Relaxed);
         A770_OPENCL_KERNEL_INVOCATIONS
             .fetch_add(result.kernel_invocations as u64, Ordering::Relaxed);
+        record_a770_opencl_runtime_device(
+            result.platform_index,
+            result.device_index,
+            &result.platform_name,
+            &result.runtime_device,
+            &result.vendor,
+            &result.driver_version,
+        );
         output_rows.extend_from_slice(&result.output);
     }
 
     tensor_from_flat_output(output_rows, &prepared.shape, &prepared.layout, input)
+}
+
+#[cfg(feature = "opencl")]
+fn record_a770_opencl_runtime_device(
+    platform_index: usize,
+    device_index: usize,
+    platform_name: &str,
+    runtime_device: &str,
+    vendor: &str,
+    driver_version: &str,
+) {
+    if let Ok(mut device) = A770_OPENCL_LAST_DEVICE.lock() {
+        *device = Some(A770OpenClRuntimeDevice {
+            platform_index,
+            device_index,
+            platform_name: platform_name.to_string(),
+            runtime_device: runtime_device.to_string(),
+            vendor: vendor.to_string(),
+            driver_version: driver_version.to_string(),
+        });
+    }
 }
 
 fn forward_qk256_cpu(

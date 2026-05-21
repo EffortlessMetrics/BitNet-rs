@@ -1,0 +1,12 @@
+timestamp = "2026-05-21T06:18:07Z"
+campaign = "intel-a770"
+item = "A770-012"
+event = "in_progress"
+branch = "codex/intel-a770/A770-012-strict-qk256-dispatch-receipt"
+actor = "codex"
+
+notes = [
+  "Started A770-012 after A770-011 landed the first selected-device OpenCL QK256 dispatch candidate.",
+  "This slice records a strict selected-device QK256 dispatch receipt and wires that receipt into diagnostic route/kernel matrices.",
+  "No BitNet inference, answer quality, activation quantization residency, selected attention residency, resident KV, full residency, performance speedup, trusted-partial acceleration, or completion claim is promoted.",
+]

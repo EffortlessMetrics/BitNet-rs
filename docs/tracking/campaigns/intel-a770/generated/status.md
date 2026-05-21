@@ -20,6 +20,7 @@
 | A770-009 | merged | #62 | `codex/intel-a770/A770-009-qk256-scaled-opencl-fixture` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add selected-device A770 OpenCL parity for a grouped QK256 I2_S x prequantized I8_S scaled fixture, without promoting official BitNet QK256 dispatch, inference, activation-quantization residency, speed, or residency claims. |
 | A770-010 | merged | #80 | `codex/intel-a770/A770-010-strict-qk256-fallback-guard` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Make strict Intel Arc A770 OpenCL QK256 requests fail closed while the OpenCL QK256 runtime is not wired, and record non-strict A770 requests as CPU fallback/not-routed evidence without promoting inference or performance claims. |
 | A770-011 | merged | #115 | `codex/intel-a770/A770-011-qk256-opencl-dispatch-candidate` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Wire a first selected-device A770 OpenCL QK256 dispatch candidate for inline-scaled BitNet I2_S x I8_S GEMV, preserving CPU activation quantization and closing quality, residency, speed, and full-inference claims. |
+| A770-012 | pr_open | #158 | `codex/intel-a770/A770-012-strict-qk256-dispatch-receipt` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Commit a strict selected-device A770 OpenCL QK256 dispatch receipt and wire it into the diagnostic route/kernel matrices without promoting BitNet inference, quality, residency, speed, or trusted-partial acceleration. |
 
 ## Hard Constraints
 
