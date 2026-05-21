@@ -7,6 +7,89 @@ use crate::{
     utils::{compare_tokens, logging, perf},
 };
 
+mod prompt_compare_steps {
+    use super::{ComparisonResult, CppModel, CrossValidator, compare_tokens, logging, perf};
+
+    pub(super) fn empty_result(test_name: &str, prompt: &str) -> ComparisonResult {
+        ComparisonResult {
+            test_name: test_name.to_string(),
+            prompt: prompt.to_string(),
+            rust_tokens: Vec::new(),
+            cpp_tokens: Vec::new(),
+            tokens_match: false,
+            rust_performance: None,
+            cpp_performance: None,
+            error: None,
+        }
+    }
+
+    pub(super) fn run_rust_generation(
+        validator: &CrossValidator,
+        prompt: &str,
+    ) -> std::result::Result<(Option<f64>, Vec<u32>), String> {
+        validator
+            .generate_rust(prompt)
+            .map(|tokens| {
+                let (perf, _) = perf::measure(|| tokens.len());
+                (Some(perf.tokens_per_second), tokens)
+            })
+            .map_err(|e| format!("Rust generation failed: {}", e))
+    }
+
+    pub(super) fn run_cpp_generation(
+        cpp_model: &CppModel,
+        prompt: &str,
+        max_tokens: usize,
+    ) -> std::result::Result<(Option<f64>, Vec<u32>), String> {
+        cpp_model
+            .generate(prompt, max_tokens)
+            .map(|tokens| {
+                let (perf, _) = perf::measure(|| tokens.len());
+                (Some(perf.tokens_per_second), tokens)
+            })
+            .map_err(|e| format!("C++ generation failed: {}", e))
+    }
+
+    pub(super) fn compare_generated_tokens(
+        validator: &CrossValidator,
+        rust_tokens: &[u32],
+        cpp_tokens: &[u32],
+    ) -> std::result::Result<bool, String> {
+        compare_tokens(rust_tokens, cpp_tokens, &validator.config)
+            .map_err(|e| format!("Token comparison failed: {}", e))
+    }
+
+    pub(super) fn log_success(
+        test_name: &str,
+        rust_len: usize,
+        cpp_len: usize,
+        tokens_match: bool,
+        rust_perf: Option<f64>,
+        cpp_perf: Option<f64>,
+    ) {
+        logging::log_comparison(test_name, rust_len, cpp_len, tokens_match);
+        if let (Some(rust_tps), Some(cpp_tps)) = (rust_perf, cpp_perf) {
+            logging::log_performance(test_name, rust_tps, cpp_tps);
+        }
+    }
+
+    pub(super) fn finalize_result(
+        mut result: ComparisonResult,
+        rust_tokens: Vec<u32>,
+        cpp_tokens: Vec<u32>,
+        tokens_match: bool,
+        rust_perf: Option<f64>,
+        cpp_perf: Option<f64>,
+    ) -> ComparisonResult {
+        result.rust_tokens = rust_tokens;
+        result.cpp_tokens = cpp_tokens;
+        result.tokens_match = tokens_match;
+        result.rust_performance = rust_perf;
+        result.cpp_performance = cpp_perf;
+        result
+    }
+}
+
 /// Result of a cross-validation comparison
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ComparisonResult {
@@ -54,64 +137,55 @@ impl CrossValidator {
         prompt: &str,
         cpp_model: &CppModel,
     ) -> ComparisonResult {
-        let mut result = ComparisonResult {
-            test_name: test_name.to_string(),
-            prompt: prompt.to_string(),
-            rust_tokens: Vec::new(),
-            cpp_tokens: Vec::new(),
-            tokens_match: false,
-            rust_performance: None,
-            cpp_performance: None,
-            error: None,
-        };
+        let mut result = prompt_compare_steps::empty_result(test_name, prompt);
 
-        // Generate with Rust implementation
-        let (rust_perf, rust_tokens) = match self.generate_rust(prompt) {
-            Ok(tokens) => {
-                let (perf, _) = perf::measure(|| tokens.len());
-                (Some(perf.tokens_per_second), tokens)
-            }
-            Err(e) => {
-                result.error = Some(format!("Rust generation failed: {}", e));
+        let (rust_perf, rust_tokens) = match prompt_compare_steps::run_rust_generation(self, prompt)
+        {
+            Ok(payload) => payload,
+            Err(err) => {
+                result.error = Some(err);
                 return result;
             }
         };
 
-        // Generate with C++ implementation
-        let (cpp_perf, cpp_tokens) = match cpp_model.generate(prompt, self.config.max_tokens) {
-            Ok(tokens) => {
-                let (perf, _) = perf::measure(|| tokens.len());
-                (Some(perf.tokens_per_second), tokens)
-            }
-            Err(e) => {
-                result.error = Some(format!("C++ generation failed: {}", e));
+        let (cpp_perf, cpp_tokens) = match prompt_compare_steps::run_cpp_generation(
+            cpp_model,
+            prompt,
+            self.config.max_tokens,
+        ) {
+            Ok(payload) => payload,
+            Err(err) => {
+                result.error = Some(err);
                 return result;
             }
         };
 
-        // Compare tokens
-        let tokens_match = match compare_tokens(&rust_tokens, &cpp_tokens, &self.config) {
-            Ok(matches) => matches,
-            Err(e) => {
-                result.error = Some(format!("Token comparison failed: {}", e));
-                false
-            }
-        };
+        let tokens_match =
+            match prompt_compare_steps::compare_generated_tokens(self, &rust_tokens, &cpp_tokens) {
+                Ok(matches) => matches,
+                Err(err) => {
+                    result.error = Some(err);
+                    false
+                }
+            };
 
-        // Log results
-        logging::log_comparison(test_name, rust_tokens.len(), cpp_tokens.len(), tokens_match);
+        prompt_compare_steps::log_success(
+            test_name,
+            rust_tokens.len(),
+            cpp_tokens.len(),
+            tokens_match,
+            rust_perf,
+            cpp_perf,
+        );
 
-        if let (Some(rust_tps), Some(cpp_tps)) = (rust_perf, cpp_perf) {
-            logging::log_performance(test_name, rust_tps, cpp_tps);
-        }
-
-        result.rust_tokens = rust_tokens;
-        result.cpp_tokens = cpp_tokens;
-        result.tokens_match = tokens_match;
-        result.rust_performance = rust_perf;
-        result.cpp_performance = cpp_perf;
-
-        result
+        prompt_compare_steps::finalize_result(
+            result,
+            rust_tokens,
+            cpp_tokens,
+            tokens_match,
+            rust_perf,
+            cpp_perf,
+        )
     }
 
     /// Generate tokens using the Rust implementation
