@@ -277,6 +277,57 @@ fn merge_paths_preserve_order(paths: Vec<PathBuf>) -> Vec<PathBuf> {
     merged
 }
 
+mod rpath_merge {
+    use std::collections::HashSet;
+    use std::path::{Path, PathBuf};
+
+    pub(super) const MAX_RPATH_LENGTH: usize = 4096;
+
+    pub(super) fn merge_paths(paths: &[&str]) -> Vec<PathBuf> {
+        let mut seen = HashSet::new();
+        let mut merged = Vec::new();
+
+        for path_str in paths {
+            if let Some(canonical) = canonicalize_or_warn(Path::new(path_str)) {
+                if seen.insert(canonical.clone()) {
+                    merged.push(canonical);
+                }
+            }
+        }
+
+        merged
+    }
+
+    fn canonicalize_or_warn(path: &Path) -> Option<PathBuf> {
+        match path.canonicalize() {
+            Ok(canonical) => Some(canonical),
+            Err(_) => {
+                #[cfg(not(test))]
+                println!(
+                    "cargo:warning=xtask: Failed to canonicalize path {}. Skipping.",
+                    path.display()
+                );
+                None
+            }
+        }
+    }
+
+    pub(super) fn serialize_paths(paths: &[PathBuf]) -> String {
+        paths.iter().map(|path| path.display().to_string()).collect::<Vec<_>>().join(":")
+    }
+
+    pub(super) fn validate_rpath_length(rpath: &str) {
+        assert!(
+            rpath.len() <= MAX_RPATH_LENGTH,
+            "Merged RPATH exceeds maximum length ({} > {}). \
+             Please use BITNET_CROSSVAL_LIBDIR to specify a single directory, \
+             or reduce the number of library paths.",
+            rpath.len(),
+            MAX_RPATH_LENGTH
+        );
+    }
+}
+
 /// Merge and deduplicate library paths for RPATH embedding
 ///
 /// This function takes a vector of library paths and:
@@ -315,49 +366,9 @@ fn merge_paths_preserve_order(paths: Vec<PathBuf>) -> Vec<PathBuf> {
 /// - **macOS**: Case-insensitive comparison via canonicalize()
 /// - **Windows**: N/A (RPATH not applicable, but function works for testing)
 pub fn merge_and_deduplicate(paths: &[&str]) -> String {
-    const MAX_RPATH_LENGTH: usize = 4096; // Conservative limit for linker
-
-    let mut seen = HashSet::new();
-    let mut merged = Vec::new();
-
-    for path_str in paths {
-        let path = PathBuf::from(path_str);
-
-        // Canonicalize to resolve symlinks and normalize paths
-        let canonical = match path.canonicalize() {
-            Ok(p) => p,
-            Err(_) => {
-                // In build.rs context, emit cargo:warning
-                // In test context, skip silently
-                #[cfg(not(test))]
-                println!(
-                    "cargo:warning=xtask: Failed to canonicalize path {}. Skipping.",
-                    path.display()
-                );
-                continue; // Skip invalid paths
-            }
-        };
-
-        // Deduplicate using canonical path
-        if seen.insert(canonical.clone()) {
-            merged.push(canonical);
-        }
-    }
-
-    // Join with colon separator (POSIX RPATH syntax)
-    let result = merged.iter().map(|p| p.display().to_string()).collect::<Vec<_>>().join(":");
-
-    // Sanity check: RPATH length limit
-    if result.len() > MAX_RPATH_LENGTH {
-        panic!(
-            "Merged RPATH exceeds maximum length ({} > {}). \
-             Please use BITNET_CROSSVAL_LIBDIR to specify a single directory, \
-             or reduce the number of library paths.",
-            result.len(),
-            MAX_RPATH_LENGTH
-        );
-    }
-
+    let merged = rpath_merge::merge_paths(paths);
+    let result = rpath_merge::serialize_paths(&merged);
+    rpath_merge::validate_rpath_length(&result);
     result
 }
 
