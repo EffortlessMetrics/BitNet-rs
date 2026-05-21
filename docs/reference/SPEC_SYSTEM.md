@@ -56,6 +56,21 @@ Roadmap
   `docs/specs/BITNET-SPEC-GENERATED-TRACKING.md` and
   `policy/generated-tracking.toml`.
 
+## Tool and session namespaces
+
+Agent and tool directories are awareness-only unless this file or a linked ADR
+explicitly grants them source-of-truth authority. Do not treat these paths as
+durable homes for proposals, specs, ADRs, implementation plans, policy ledgers,
+or closeouts:
+
+- `.codex/`
+- `.spec/`
+- `.claude/`
+- `.jules/`
+
+They may contain task-local state, external tool inputs, or session artifacts,
+but durable BitNet-rs rails stay in the authority mapping above.
+
 ## Rules
 
 1. Keep one kind of truth per artifact.
