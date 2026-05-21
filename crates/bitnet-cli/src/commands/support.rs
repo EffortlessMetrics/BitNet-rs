@@ -340,6 +340,75 @@ mod tests {
             .join("model-coverage-matrix.toml")
     }
 
+    fn support_bundle_value_for_receipt(receipt_name: &str, receipt: Value) -> Result<Value> {
+        let dir = tempfile::tempdir()?;
+        let receipt_path = dir.path().join(receipt_name);
+        fs::write(&receipt_path, serde_json::to_vec_pretty(&receipt)?)?;
+
+        let bundle = support_bundle(
+            Some(&receipt_path),
+            false,
+            "nvidia-rtx-5070-ti-cuda",
+            Some(model_matrix_path()),
+            "2026-05-20T00:00:00Z".to_string(),
+        )?;
+        serde_json::to_value(&bundle).context("support bundle must serialize to JSON")
+    }
+
+    fn support_qwen3_repeated_comparator_profile(
+        profile: &str,
+        cpu_total_ms_mean: f64,
+        cuda_total_ms_mean: f64,
+    ) -> Value {
+        json!({
+            "profile": profile,
+            "status": "repeated_same_artifact_cpu_cuda_comparator",
+            "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
+            "cuda_backend": "nvidia-rtx-5070-ti-cuda",
+            "runtime_api": "cuda",
+            "selected_route": "dense_regular_llm_cuda",
+            "run_count": 3,
+            "cpu_runs": 3,
+            "cuda_runs": 3,
+            "min_runs_per_backend": 3,
+            "fallback_free": true,
+            "same_artifact_sha": true,
+            "same_tokenizer_prompt_policy": true,
+            "deterministic_generation_policy": true,
+            "generated_token_ids_match": true,
+            "speedup_claim": false,
+            "benchmark_qualified_speedup": false,
+            "bitnet_packed_i2s_qk256_proof": false,
+            "full_cuda_residency_claimed": false,
+            "server_ready_claimed": false,
+            "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured",
+            "cpu_total_ms": {
+                "count": 3,
+                "min": cpu_total_ms_mean,
+                "mean": cpu_total_ms_mean,
+                "max": cpu_total_ms_mean
+            },
+            "cuda_total_ms": {
+                "count": 3,
+                "min": cuda_total_ms_mean,
+                "mean": cuda_total_ms_mean,
+                "max": cuda_total_ms_mean
+            },
+            "host_to_device_ms": {
+                "count": 3,
+                "min": 8.0,
+                "mean": 8.0,
+                "max": 8.0
+            },
+            "device_to_host_ms": {
+                "count": 3,
+                "min": 0.5,
+                "mean": 0.5,
+                "max": 0.5
+            }
+        })
+    }
+
     #[test]
     fn support_bundle_accepts_latest_device_and_format_json() -> Result<()> {
         let parsed = SupportActionParser::try_parse_from([
@@ -422,13 +491,13 @@ mod tests {
             value["summary"]["next_proof"]
                 .as_str()
                 .context("support summary next_proof must be a string")?
-                .contains("exact-profile dense Qwen server readiness")
+                .contains("device-side top-k or greedy sampler receipt")
         );
         assert!(
             value["summary"]["claim_boundary"]
                 .as_str()
                 .context("support summary claim_boundary must be a string")?
-                .contains("do not satisfy BitNet packed I2_S/QK256 proof")
+                .contains("BitNet packed I2_S/QK256 proof")
         );
         assert_eq!(value["runtime"]["runtime_api"], "cuda");
         assert_eq!(value["runtime"]["driver_version"], "test-driver");
@@ -450,6 +519,304 @@ mod tests {
                 && model["dense_regular_llm_cuda_proof"] == true
                 && model["bitnet_packed_i2s_qk256_proof"] == false
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn support_bundle_preserves_official_bitnet_qk256_boundaries() -> Result<()> {
+        let value = support_bundle_value_for_receipt(
+            "bitnet-i2s-qk256-receipt.json",
+            json!({
+                "artifact_kind": "bitnet_cuda_answer",
+                "claim": "bitnet_cuda_answer_recorded",
+                "model": {
+                    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                    "file": "ggml-model-i2_s.gguf"
+                },
+                "backend": {
+                    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                    "runtime_api": "cuda",
+                    "fallback_used": false,
+                    "device_name": "NVIDIA GeForce RTX 5070 Ti"
+                },
+                "execution_plan": {
+                    "selected_route": "bitnet_qk256_cuda",
+                    "model_family": "bitnet_b1_58",
+                    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                    "speedup_claim": false
+                },
+                "quality_gate": {
+                    "passed": true
+                },
+                "claim_boundary": {
+                    "bitnet_packed_i2s_qk256_proof": true,
+                    "dense_regular_llm_cuda_claimed": false,
+                    "speedup_claim": false,
+                    "full_cuda_residency_claimed": false
+                }
+            }),
+        )?;
+
+        assert_eq!(value["summary"]["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
+        assert_eq!(value["summary"]["current_tier"], "product_cli_ready");
+        assert_eq!(value["summary"]["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["summary"]["selected_route"], "bitnet_qk256_cuda");
+        assert_eq!(value["summary"]["fallback_used"], false);
+        assert_eq!(value["summary"]["quality_gate"], "passed");
+        assert_eq!(value["summary"]["server_ready"], false);
+        assert!(value["summary"]["server_ready_scope"].is_null());
+        assert_eq!(value["summary"]["speedup_claim"], false);
+        assert_eq!(value["summary"]["full_residency_claim"], false);
+        assert_eq!(value["summary"]["bitnet_packed_i2s_qk256_proof"], true);
+        assert_eq!(value["summary"]["dense_regular_llm_cuda_proof"], false);
+        assert!(
+            value["summary"]["next_proof"]
+                .as_str()
+                .context("BitNet support summary next_proof must be a string")?
+                .contains("profile-specific speedup qualification")
+        );
+        assert!(
+            value["summary"]["claim_boundary"]
+                .as_str()
+                .context("BitNet support summary claim_boundary must be a string")?
+                .contains("does not prove dense regular-LLM CUDA")
+        );
+        assert_eq!(value["runtime"]["runtime_api"], "cuda");
+        assert_eq!(value["runtime"]["device_name"], "NVIDIA GeForce RTX 5070 Ti");
+        assert_eq!(value["latest_receipt"]["model_coverage_row"], "bitnet_official_2b_i2s_qk256");
+        assert_eq!(value["latest_receipt"]["bitnet_packed_i2s_qk256_proof"], true);
+        assert_eq!(value["latest_receipt"]["dense_regular_llm_cuda_proof"], false);
+        Ok(())
+    }
+
+    #[test]
+    fn support_bundle_preserves_qwen3_dense_product_boundaries() -> Result<()> {
+        let value = support_bundle_value_for_receipt(
+            "qwen3-dense-cuda-receipt.json",
+            json!({
+                "artifact_kind": "dense_gguf_qwen_chat_strict_cuda_proof",
+                "claim": "dense_gguf_qwen_chat_strict_cuda_proof_recorded",
+                "model": {
+                    "id": "qwen3-0.6b-instruct-q8_0",
+                    "file": "Qwen3-0.6B-Q8_0.gguf",
+                    "architecture": "qwen3"
+                },
+                "backend": {
+                    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                    "runtime_api": "cuda",
+                    "fallback_used": false,
+                    "device_name": "NVIDIA GeForce RTX 5070 Ti"
+                },
+                "execution_plan": {
+                    "selected_route": "dense_regular_llm_cuda",
+                    "model_family": "qwen",
+                    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                    "speedup_claim": false
+                },
+                "quality_gate": {
+                    "passed": true
+                },
+                "claim_boundary": {
+                    "bitnet_packed_i2s_qk256_proof": false,
+                    "dense_regular_llm_cuda_claimed": true,
+                    "speedup_claim": false,
+                    "full_cuda_residency_claimed": false
+                }
+            }),
+        )?;
+
+        assert_eq!(value["summary"]["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+        assert_eq!(value["summary"]["current_tier"], "product_cli_ready");
+        assert_eq!(value["summary"]["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["summary"]["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(value["summary"]["fallback_used"], false);
+        assert_eq!(value["summary"]["quality_gate"], "passed");
+        assert_eq!(value["summary"]["server_ready"], true);
+        assert_eq!(value["summary"]["server_ready_scope"], "exact_profile");
+        assert_eq!(value["summary"]["speedup_claim"], false);
+        assert_eq!(value["summary"]["full_residency_claim"], false);
+        assert_eq!(value["summary"]["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(value["summary"]["dense_regular_llm_cuda_proof"], true);
+        assert!(
+            value["summary"]["next_proof"]
+                .as_str()
+                .context("Qwen3 support summary next_proof must be a string")?
+                .contains("hardware aggregate receipt")
+        );
+        let claim_boundary = value["summary"]["claim_boundary"]
+            .as_str()
+            .context("Qwen3 support summary claim_boundary must be a string")?;
+        assert!(claim_boundary.contains("does not inherit Qwen2.5 CUDA receipts"));
+        assert!(claim_boundary.contains("BitNet QK256 behavior"));
+        assert_eq!(value["latest_receipt"]["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+        assert_eq!(value["latest_receipt"]["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(value["latest_receipt"]["dense_regular_llm_cuda_proof"], true);
+        Ok(())
+    }
+
+    #[test]
+    fn support_bundle_embeds_qwen3_repeated_comparator_profile_matrix() -> Result<()> {
+        let profiles = vec![
+            support_qwen3_repeated_comparator_profile("one_token", 1200.0, 1800.0),
+            support_qwen3_repeated_comparator_profile("short_decode_8", 8200.0, 9700.0),
+            support_qwen3_repeated_comparator_profile("short_decode_32", 31200.0, 35600.0),
+            support_qwen3_repeated_comparator_profile("warm_session_3_turns", 24500.0, 29200.0),
+            support_qwen3_repeated_comparator_profile(
+                "decode_128_from_warm_context",
+                105000.0,
+                117000.0,
+            ),
+        ];
+        let value = support_bundle_value_for_receipt(
+            "qwen3-repeated-comparator.json",
+            json!({
+                "schema": 1,
+                "artifact_kind": "qwen3_cuda_repeated_comparator",
+                "machine_id": "windows-9950x3d-rtx5070ti",
+                "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+                "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                "reference_backend": "amd-9950x3d-cpu-avx512",
+                "runtime_api": "cuda",
+                "selected_route": "dense_regular_llm_cuda",
+                "claim": "qwen3_cuda_repeated_comparator",
+                "fallback_used": false,
+                "speedup_claim": false,
+                "benchmark_qualified_speedup": false,
+                "full_cuda_residency_claimed": false,
+                "dense_gguf_inference_claimed": false,
+                "broad_dense_gguf_ready_claimed": false,
+                "qwen25_proof_inherited": false,
+                "server_ready_claimed": false,
+                "bitnet_packed_i2s_qk256_proof": false,
+                "claim_boundary": {
+                    "qwen3_cuda_repeated_comparator_claimed": true,
+                    "qwen_one_token_cuda_claimed": true,
+                    "qwen_short_decode_cuda_claimed": true,
+                    "qwen_warm_session_cuda_claimed": true,
+                    "qwen_chat_cuda_claimed": true,
+                    "server_ready_claimed": false,
+                    "speedup_claim": false,
+                    "benchmark_qualified_speedup": false,
+                    "full_cuda_residency_claimed": false,
+                    "broad_dense_gguf_ready_claimed": false,
+                    "qwen25_proof_inherited": false,
+                    "bitnet_packed_i2s_qk256_proof": false
+                },
+                "model": {
+                    "id": "qwen3-0.6b-instruct-q8_0",
+                    "architecture": "qwen3",
+                    "model_family": "qwen",
+                    "artifact_kind": "dense_gguf",
+                    "file": "Qwen3-0.6B-Q8_0.gguf",
+                    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+                },
+                "execution_plan": {
+                    "model_family": "qwen",
+                    "quantization": "dense_gguf_q8_0_qwen3_product_contract",
+                    "selected_route": "dense_regular_llm_cuda",
+                    "requested_backend": "nvidia-rtx-5070-ti-cuda",
+                    "selected_backend": "nvidia-rtx-5070-ti-cuda",
+                    "runtime_api": "cuda",
+                    "strict_fallback_policy": "reject",
+                    "dense_regular_llm_cuda": true,
+                    "bitnet_packed_qk256_cuda": false,
+                    "fallback_used": false,
+                    "strict_cuda_ready": true,
+                    "speedup_claim": false,
+                    "full_cuda_residency_claimed": false,
+                    "cuda_dense_regular_llm_ops": 8112,
+                    "cuda_bitnet_qk256_ops": 0,
+                    "cpu_fallback_ops": 0,
+                    "unsupported_ops": 0
+                },
+                "profiles": profiles,
+                "comparator_summary": {
+                    "status": "repeated_comparator_only",
+                    "profiles_recorded": 5,
+                    "min_runs_per_backend": 3,
+                    "total_cpu_runs": 15,
+                    "total_cuda_runs": 15,
+                    "fallback_free": true,
+                    "same_artifact_sha": true,
+                    "same_tokenizer_prompt_policy": true,
+                    "deterministic_generation_policy": true,
+                    "generated_tokens_compared": true,
+                    "speedup_claim_allowed": false,
+                    "benchmark_qualified_speedup": false,
+                    "accepted_speedup_profiles": [],
+                    "remaining_qualification_blockers": [
+                        "profile-specific speedup thresholds remain unreviewed",
+                        "pure host-to-device timing remains separated from the model-load envelope"
+                    ]
+                },
+                "transfer_timing": {
+                    "status": "host_to_device_model_load_envelope_device_to_host_measured",
+                    "host_to_device_bytes_recorded": true,
+                    "device_to_host_bytes_recorded": true,
+                    "host_to_device_timing_recorded": true,
+                    "device_to_host_timing_recorded": true,
+                    "pure_host_to_device_timing_recorded": false
+                }
+            }),
+        )?;
+
+        assert_eq!(value["summary"]["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
+        assert_eq!(value["summary"]["current_tier"], "product_cli_ready");
+        assert_eq!(value["summary"]["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(value["summary"]["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(value["summary"]["fallback_used"], false);
+        assert_eq!(value["summary"]["server_ready"], true);
+        assert_eq!(value["summary"]["server_ready_scope"], "exact_profile");
+        assert_eq!(value["summary"]["speedup_claim"], false);
+        assert_eq!(value["summary"]["full_residency_claim"], false);
+        assert_eq!(value["summary"]["bitnet_packed_i2s_qk256_proof"], false);
+        assert_eq!(value["summary"]["dense_regular_llm_cuda_proof"], true);
+        assert_eq!(value["latest_receipt"]["artifact_kind"], "qwen3_cuda_repeated_comparator");
+        assert_eq!(
+            value["latest_receipt"]["benchmark_qualification"]["status"],
+            "repeated_comparator_only"
+        );
+        assert_eq!(
+            value["latest_receipt"]["benchmark_qualification"]["benchmark_qualified_speedup"],
+            false
+        );
+        assert_eq!(
+            value["latest_receipt"]["benchmark_qualification"]["speedup_claim_allowed"],
+            false
+        );
+        assert_eq!(
+            value["latest_receipt"]["benchmark_qualification"]["accepted_profiles"]
+                .as_array()
+                .context("Qwen3 support bundle accepted profiles must be an array")?
+                .len(),
+            0
+        );
+        assert_eq!(
+            value["latest_receipt"]["benchmark_qualification"]["blocked_profiles"]
+                .as_array()
+                .context("Qwen3 support bundle blocked profiles must be an array")?
+                .len(),
+            5
+        );
+        let profile_reviews = value["latest_receipt"]["benchmark_qualification"]["profile_reviews"]
+            .as_array()
+            .context("Qwen3 support bundle profile_reviews must be an array")?;
+        assert_eq!(profile_reviews.len(), 5);
+        let short_decode = profile_reviews
+            .iter()
+            .find(|review| review["profile"] == "short_decode_32")
+            .context("Qwen3 support bundle short_decode_32 profile review missing")?;
+        assert_eq!(short_decode["decision"], "repeated_same_artifact_cpu_cuda_comparator");
+        assert_eq!(short_decode["benchmark_qualified_speedup"], false);
+        assert_eq!(short_decode["speedup_claim_allowed"], false);
+        assert_eq!(short_decode["fallback_free"], true);
+        assert_eq!(short_decode["quality_passed"], true);
+        assert_eq!(short_decode["generated_token_ids_match"], true);
+        assert_eq!(short_decode["cpu_total_ms_mean"], 31200.0);
+        assert_eq!(short_decode["cuda_total_ms_mean"], 35600.0);
+        assert_eq!(short_decode["host_to_device_ms"], 8.0);
+        assert_eq!(short_decode["device_to_host_ms"], 0.5);
         Ok(())
     }
 
