@@ -58,6 +58,8 @@ const MAC_SERVE_FAILURE_SMOKE_DEFAULT_RECEIPT: &str =
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
+const MAC_SERVE_MAX_REQUEST_BYTES: usize = 1_048_576;
+const MAC_SERVE_MAX_HTTP_REQUEST_BYTES: usize = MAC_SERVE_MAX_REQUEST_BYTES + 16_384;
 const MAC_SERVE_CONTEXT_GUARDRAIL_ERROR_PREFIX: &str =
     "mac serve context guardrail blocked request:";
 const MAC_SERVE_CONTEXT_GUARDRAIL_RECEIPT_MARKER: &str = "; receipt written to ";
@@ -986,6 +988,10 @@ enum MacAction {
         #[arg(long, default_value = MAC_SERVE_DEFAULT_HOST)]
         host: String,
 
+        /// Allow binding outside loopback. This explicitly exposes local server metadata.
+        #[arg(long, default_value_t = false)]
+        allow_network_bind: bool,
+
         /// Port to bind.
         #[arg(long, default_value_t = MAC_SERVE_DEFAULT_PORT)]
         port: u16,
@@ -1735,6 +1741,7 @@ impl MacCommand {
                 cache_dir,
                 device,
                 host,
+                allow_network_bind,
                 port,
                 strict,
                 stream,
@@ -1773,6 +1780,7 @@ impl MacCommand {
                     bitnet_serve_gate_receipt,
                     device,
                     endpoint,
+                    allow_network_bind,
                     strict,
                     stream,
                     defaults,
@@ -9601,6 +9609,7 @@ async fn run_mac_serve(
     bitnet_serve_gate_receipt: Option<PathBuf>,
     device: String,
     endpoint: MacServeEndpoint,
+    allow_network_bind: bool,
     strict: bool,
     stream: bool,
     defaults: MacServeGenerationDefaults,
@@ -9614,6 +9623,11 @@ async fn run_mac_serve(
     if device != APPLE_M4_CPU_NEON {
         anyhow::bail!(
             "mac serve routes the supported Mac local service path through --device {APPLE_M4_CPU_NEON}; requested --device {device}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+        );
+    }
+    if !mac_serve_host_is_loopback(&host) && !allow_network_bind {
+        anyhow::bail!(
+            "mac serve defaults to loopback for local appliance use. Refusing non-loopback host {host}; pass --allow-network-bind to explicitly expose local server metadata outside this machine."
         );
     }
     let effective_model_family = if model_family == MacServeModelFamily::Bitnet
@@ -10290,7 +10304,6 @@ impl MacServeGenerator {
                 .to_string(),
             stream,
             trace_id,
-            receipt_path,
             receipt,
         })
     }
@@ -10306,7 +10319,6 @@ struct MacServeCompletion {
     finish_reason: String,
     stream: bool,
     trace_id: Option<String>,
-    receipt_path: PathBuf,
     receipt: serde_json::Value,
 }
 
@@ -10431,7 +10443,7 @@ async fn read_mac_serve_http_request(stream: &mut TcpStream) -> Result<String> {
             break;
         }
         buffer.extend_from_slice(&chunk[..read]);
-        if buffer.len() > 1_048_576 {
+        if buffer.len() > MAC_SERVE_MAX_HTTP_REQUEST_BYTES {
             anyhow::bail!("M4 local server request exceeded 1 MiB limit");
         }
         if mac_serve_http_request_complete(&buffer) {
@@ -10447,15 +10459,10 @@ fn mac_serve_http_request_complete(buffer: &[u8]) -> bool {
     };
     let header_len = header_end + 4;
     let headers = String::from_utf8_lossy(&buffer[..header_end]);
-    let content_length = headers
-        .lines()
-        .find_map(|line| {
-            let (name, value) = line.split_once(':')?;
-            name.eq_ignore_ascii_case("content-length")
-                .then(|| value.trim().parse::<usize>().ok())
-                .flatten()
-        })
-        .unwrap_or(0);
+    let content_length = mac_serve_parse_http_content_length(&headers).unwrap_or(0);
+    if content_length > MAC_SERVE_MAX_REQUEST_BYTES {
+        return true;
+    }
     buffer.len() >= header_len.saturating_add(content_length)
 }
 
@@ -10541,7 +10548,8 @@ fn mac_serve_receipt_http_reply(path: &str, state: &MacServeState) -> Result<Mac
                 "status": "error",
                 "error": "receipt_not_found",
                 "receipt_id": receipt_stem,
-                "receipt_dir": &state.receipt_dir,
+                "receipt_dir": "redacted",
+                "receipt_dir_redacted": true,
             }),
         );
     }
@@ -10565,7 +10573,7 @@ fn mac_serve_receipt_http_reply(path: &str, state: &MacServeState) -> Result<Mac
         .with_context(|| format!("failed to read receipt {}", canonical_receipt.display()))?;
     let receipt: serde_json::Value = serde_json::from_str(&receipt_text)
         .with_context(|| format!("receipt is not valid JSON: {}", canonical_receipt.display()))?;
-    MacServeHttpReply::json(200, "OK", receipt)
+    MacServeHttpReply::json(200, "OK", mac_serve_redacted_http_receipt(&receipt))
 }
 
 fn mac_serve_normalize_receipt_id(receipt_id: &str) -> Option<String> {
@@ -10634,10 +10642,15 @@ fn run_mac_serve_check(
         } else {
             &completion_json["id"]
         };
-        let receipt_id = completion_json["receipt_path"]
+        let receipt_id = completion_json["receipt_id"]
             .as_str()
-            .and_then(|path| path.rsplit('/').next())
-            .and_then(mac_serve_normalize_receipt_id);
+            .and_then(mac_serve_normalize_receipt_id)
+            .or_else(|| {
+                completion_json["receipt_path"]
+                    .as_str()
+                    .and_then(|path| path.rsplit('/').next())
+                    .and_then(mac_serve_normalize_receipt_id)
+            });
         let completion_pass = completion_response.status == 200
             && completion_json["receipt"]["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
             && completion_json["receipt"]["fallback_used"].as_bool() == Some(false)
@@ -10941,10 +10954,13 @@ async fn mac_serve_smoke_completion(
     };
     let request_id = &body["id"];
     let receipt_path = body["receipt_path"].clone();
-    let receipt_id = receipt_path
-        .as_str()
-        .and_then(|path| path.rsplit('/').next())
-        .and_then(mac_serve_normalize_receipt_id);
+    let receipt_id =
+        body["receipt_id"].as_str().and_then(mac_serve_normalize_receipt_id).or_else(|| {
+            receipt_path
+                .as_str()
+                .and_then(|path| path.rsplit('/').next())
+                .and_then(mac_serve_normalize_receipt_id)
+        });
     let receipt_export = if let Some(receipt_id) = receipt_id.as_deref() {
         mac_serve_smoke_receipt_export(state, receipt_id, request_id.as_str()).await?
     } else {
@@ -10986,6 +11002,7 @@ async fn mac_serve_smoke_completion(
         "content_type": reply.content_type,
         "passed": passed,
         "request_id": request_id,
+        "receipt_id": receipt_id,
         "receipt_path": receipt_path,
         "generated_tokens": generated_tokens,
         "generated_text_non_empty": generated_text_non_empty,
@@ -11253,6 +11270,24 @@ async fn mac_serve_completion_http_reply(
     state: &MacServeState,
 ) -> Result<MacServeHttpReply> {
     let body = mac_serve_http_body(request);
+    let declared_oversized = mac_serve_http_content_length(request)
+        .map(|content_length| content_length > MAC_SERVE_MAX_REQUEST_BYTES)
+        .unwrap_or(false);
+    if declared_oversized || body.as_bytes().len() > MAC_SERVE_MAX_REQUEST_BYTES {
+        let mut body = serde_json::json!({
+            "status": "error",
+            "error": "request_too_large",
+            "message": "M4 local server completion requests are capped at 1 MiB",
+            "limit_bytes": MAC_SERVE_MAX_REQUEST_BYTES,
+            "claim_boundary": {
+                "generation_executed": false,
+                "openai_compatibility_claimed": false,
+                "production_readiness_claimed": false,
+            },
+        });
+        mac_serve_attach_trace_id(&mut body, &state.trace);
+        return MacServeHttpReply::json(413, "Payload Too Large", body);
+    }
     let completion_request: MacServeCompletionRequest = match serde_json::from_str(body) {
         Ok(request) => request,
         Err(error) => {
@@ -11317,7 +11352,9 @@ async fn mac_serve_completion_http_reply(
                 "status": "error",
                 "error": "context_guardrail_blocked",
                 "request_id": request_id,
-                "receipt_path": receipt_path.display().to_string(),
+                "receipt_id": request_id,
+                "receipt_path": "redacted",
+                "receipt_path_redacted": true,
                 "context_envelope": context_envelope,
                 "claim_boundary": {
                     "guardrail_only": true,
@@ -11401,10 +11438,16 @@ fn mac_serve_context_guardrail_error_reply(
     let trace_id =
         receipt.as_ref().and_then(|receipt| receipt["trace_id"].as_str()).map(str::to_string);
 
+    let redacted_message = if let Some(path) = receipt_path {
+        message.replace(path, "redacted")
+    } else {
+        message.clone()
+    };
+
     let mut body = serde_json::json!({
         "status": "error",
         "error": "context_guardrail_blocked",
-        "message": message,
+        "message": redacted_message,
         "claim_boundary": {
             "guardrail_only": true,
             "new_context_quality_claim": false,
@@ -11413,11 +11456,11 @@ fn mac_serve_context_guardrail_error_reply(
             "production_readiness_claimed": false,
         },
     });
-    if let Some(path) = receipt_path {
-        body["receipt_path"] = serde_json::Value::String(path.to_string());
-    }
     if let Some(request_id) = request_id {
-        body["request_id"] = serde_json::Value::String(request_id);
+        body["request_id"] = serde_json::Value::String(request_id.clone());
+        body["receipt_id"] = serde_json::Value::String(request_id);
+        body["receipt_path"] = serde_json::Value::String("redacted".to_string());
+        body["receipt_path_redacted"] = serde_json::Value::Bool(true);
     }
     if let Some(context_envelope) = context_envelope {
         body["context_envelope"] = context_envelope;
@@ -11444,6 +11487,24 @@ fn mac_serve_http_body(request: &str) -> &str {
         .unwrap_or_default()
 }
 
+fn mac_serve_http_content_length(request: &str) -> Option<usize> {
+    let headers = request
+        .split_once("\r\n\r\n")
+        .map(|(headers, _)| headers)
+        .or_else(|| request.split_once("\n\n").map(|(headers, _)| headers))
+        .unwrap_or(request);
+    mac_serve_parse_http_content_length(headers)
+}
+
+fn mac_serve_parse_http_content_length(headers: &str) -> Option<usize> {
+    headers.lines().find_map(|line| {
+        let (name, value) = line.split_once(':')?;
+        name.eq_ignore_ascii_case("content-length")
+            .then(|| value.trim().parse::<usize>().ok())
+            .flatten()
+    })
+}
+
 fn mac_serve_completion_json(completion: &MacServeCompletion) -> serde_json::Value {
     let mut body = serde_json::json!({
         "id": completion.request_id,
@@ -11459,8 +11520,10 @@ fn mac_serve_completion_json(completion: &MacServeCompletion) -> serde_json::Val
                 "finish_reason": completion.finish_reason,
             }
         ],
-        "receipt_path": completion.receipt_path,
-        "receipt": completion.receipt,
+        "receipt_id": completion.request_id,
+        "receipt_path": "redacted",
+        "receipt_path_redacted": true,
+        "receipt": mac_serve_redacted_http_receipt(&completion.receipt),
         "usage": {
             "completion_tokens": completion.generated_token_ids.len(),
         },
@@ -11483,7 +11546,9 @@ fn mac_serve_completion_sse(completion: &MacServeCompletion) -> Result<String> {
         "id": completion.request_id,
         "object": "chat.completion.chunk",
         "model": completion.model_id,
-        "receipt_path": completion.receipt_path,
+        "receipt_id": completion.request_id,
+        "receipt_path": "redacted",
+        "receipt_path_redacted": true,
         "generated_token_ids": completion.generated_token_ids,
         "trace_id": completion.trace_id.as_deref(),
         "claim_boundary": {
@@ -11527,12 +11592,93 @@ fn mac_serve_completion_sse(completion: &MacServeCompletion) -> Result<String> {
     Ok(output)
 }
 
+fn mac_serve_safety_json(state: &MacServeState) -> serde_json::Value {
+    let loopback_bound = mac_serve_host_is_loopback(&state.host);
+    serde_json::json!({
+        "local_appliance_scope": true,
+        "localhost_binding_default": MAC_SERVE_DEFAULT_HOST,
+        "loopback_bound": loopback_bound,
+        "network_bind_opt_in_required": true,
+        "network_bind_explicitly_allowed": !loopback_bound,
+        "telemetry": {
+            "enabled": false,
+            "network_egress": false,
+            "operator_metrics_endpoint": false,
+        },
+        "cors": {
+            "mode": "disabled_by_default",
+            "wildcard_origin_allowed": false,
+            "credentials_allowed": false,
+            "preflight_route_enabled": false,
+        },
+        "request_limits": {
+            "max_request_bytes": MAC_SERVE_MAX_REQUEST_BYTES,
+            "oversize_status": 413,
+        },
+        "cache_path_disclosure": {
+            "operator_http_metadata_redacts_cache_paths": true,
+            "trace_redacts_cache_paths": true,
+            "local_receipt_files_may_record_paths": true,
+        },
+        "receipt_redaction": {
+            "http_export_redacts_cache_paths": true,
+            "safe_receipt_ids_only": true,
+            "prompt_text_is_local_receipt_content": true,
+            "trace_redacts_prompt_text": true,
+        },
+    })
+}
+
+fn mac_serve_redacted_cache_status_json(cache_status: &serde_json::Value) -> serde_json::Value {
+    let mut value = cache_status.clone();
+    mac_serve_redact_cache_path_fields(&mut value);
+    value
+}
+
+fn mac_serve_redacted_http_receipt(receipt: &serde_json::Value) -> serde_json::Value {
+    let mut value = receipt.clone();
+    if value.pointer("/model/path").is_some() {
+        value["model"]["path"] = serde_json::json!("redacted");
+        value["model"]["path_redacted"] = serde_json::json!(true);
+    }
+    if value.pointer("/server/receipt_dir").is_some() {
+        value["server"]["receipt_dir"] = serde_json::json!("redacted");
+        value["server"]["receipt_dir_redacted"] = serde_json::json!(true);
+    }
+    mac_serve_redact_cache_path_fields(&mut value);
+    value
+}
+
+fn mac_serve_redact_cache_path_fields(value: &mut serde_json::Value) {
+    match value {
+        serde_json::Value::Object(map) => {
+            for (key, child) in map.iter_mut() {
+                if matches!(
+                    key.as_str(),
+                    "cache_path" | "cache_root" | "metadata_path" | "symlink_target"
+                ) {
+                    *child = serde_json::json!("redacted");
+                } else {
+                    mac_serve_redact_cache_path_fields(child);
+                }
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                mac_serve_redact_cache_path_fields(item);
+            }
+        }
+        _ => {}
+    }
+}
+
 fn mac_serve_health_json(state: &MacServeState) -> serde_json::Value {
     serde_json::json!({
         "artifact_kind": "bitnet_apple_m4_local_server_health",
         "status": "healthy",
         "model_family": mac_serve_model_family_label(state.model_family),
         "server": mac_serve_server_json(state),
+        "safety": mac_serve_safety_json(state),
         "uptime_seconds": state.uptime_seconds(),
         "generation_executed": false,
         "endpoints": {
@@ -11547,12 +11693,15 @@ fn mac_serve_health_json(state: &MacServeState) -> serde_json::Value {
 }
 
 fn mac_serve_models_json(state: &MacServeState) -> Result<serde_json::Value> {
-    let catalog = model_cache::apple_m4_models_catalog_json(Some(state.model.cache_root.clone()))?;
+    let mut catalog =
+        model_cache::apple_m4_models_catalog_json(Some(state.model.cache_root.clone()))?;
+    mac_serve_redact_cache_path_fields(&mut catalog);
     Ok(serde_json::json!({
         "artifact_kind": "bitnet_apple_m4_local_server_models",
         "status": "ok",
         "model_family": mac_serve_model_family_label(state.model_family),
         "server": mac_serve_server_json(state),
+        "safety": mac_serve_safety_json(state),
         "resident_model_id": &state.model.id,
         "resident_route": {
             "model_family": mac_serve_model_family_label(state.model_family),
@@ -11585,10 +11734,12 @@ fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
         "ready": ready,
         "model_family": mac_serve_model_family_label(state.model_family),
         "server": mac_serve_server_json(state),
+        "safety": mac_serve_safety_json(state),
         "model": {
             "id": &state.model.id,
             "display_name": &state.model.display_name,
-            "path": &state.model.path,
+            "path": "redacted",
+            "path_redacted": true,
             "sha256": &state.model.sha256,
             "bytes": state.model.bytes,
             "architecture": &state.model.architecture,
@@ -11609,7 +11760,7 @@ fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
             "fallback_used": false,
         },
         "checks": {
-            "cache": &state.cache_status,
+            "cache": mac_serve_redacted_cache_status_json(&state.cache_status),
             "disk": &state.disk,
             "tokenizer": {
                 "checked": true,
@@ -11624,7 +11775,8 @@ fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
             "receipts": {
                 "checked": true,
                 "ready": receipt_ready,
-                "dir": &state.receipt_dir,
+                "dir": "redacted",
+                "dir_redacted": true,
                 "mode": "per_request_http_export",
                 "endpoint": "/receipts/{id}",
             },
@@ -11650,7 +11802,8 @@ fn mac_serve_server_json(state: &MacServeState) -> serde_json::Value {
         "port": state.port,
         "started_at": &state.started_at_utc,
         "streaming_default": state.stream,
-        "receipt_dir": &state.receipt_dir,
+        "receipt_dir": "redacted",
+        "receipt_dir_redacted": true,
         "model_family": mac_serve_model_family_label(state.model_family),
         "trace_enabled": state.trace.enabled,
     });
@@ -29780,6 +29933,18 @@ mod tests {
         assert_eq!(ready["backend"]["selected_backend"], APPLE_M4_CPU_NEON);
         assert_eq!(ready["backend"]["fallback_used"], false);
         assert_eq!(ready["checks"]["generation"]["executed"], false);
+        assert_eq!(ready["safety"]["localhost_binding_default"], MAC_SERVE_DEFAULT_HOST);
+        assert_eq!(ready["safety"]["network_bind_opt_in_required"], true);
+        assert_eq!(ready["safety"]["telemetry"]["enabled"], false);
+        assert_eq!(ready["safety"]["cors"]["wildcard_origin_allowed"], false);
+        assert_eq!(
+            ready["safety"]["request_limits"]["max_request_bytes"],
+            MAC_SERVE_MAX_REQUEST_BYTES
+        );
+        assert_eq!(ready["model"]["path"], "redacted");
+        assert_eq!(ready["model"]["path_redacted"], true);
+        assert_eq!(ready["checks"]["cache"]["cache_path"], "redacted");
+        assert_eq!(ready["checks"]["receipts"]["dir"], "redacted");
         assert_eq!(ready["claim_boundary"]["generation_endpoint_implemented"], true);
         assert_eq!(ready["claim_boundary"]["bitnet_quality_claimed"], false);
         assert_eq!(ready["claim_boundary"]["full_metal_inference_claimed"], false);
@@ -29796,6 +29961,9 @@ mod tests {
         assert_eq!((status, reason), (200, "OK"));
         assert_eq!(health["artifact_kind"], "bitnet_apple_m4_local_server_health");
         assert_eq!(health["generation_executed"], false);
+        assert_eq!(health["server"]["receipt_dir"], "redacted");
+        assert_eq!(health["safety"]["telemetry"]["network_egress"], false);
+        assert_eq!(health["safety"]["cors"]["mode"], "disabled_by_default");
 
         let (status, reason, ready) =
             mac_serve_http_response("GET /ready HTTP/1.1\r\n\r\n", &state);
@@ -29819,6 +29987,10 @@ mod tests {
         assert_eq!(models["generation_executed"], false);
         assert_eq!(models["resident_model_id"], "qwen2.5-0.5b-instruct-q8_0");
         assert_eq!(models["catalog"]["default_model_id"], "qwen2.5-0.5b-instruct-q8_0");
+        assert_eq!(
+            models["safety"]["cache_path_disclosure"]["operator_http_metadata_redacts_cache_paths"],
+            true
+        );
         assert!(models["catalog"]["disk"]["default_model_headroom_bytes"].as_u64().is_some());
         let rows = models["catalog"]["rows"]
             .as_array()
@@ -29995,6 +30167,12 @@ mod tests {
                 "request_id": "m4srv-test",
                 "selected_backend": APPLE_M4_CPU_NEON,
                 "fallback_used": false,
+                "server": {
+                    "receipt_dir": state.receipt_dir.display().to_string(),
+                },
+                "model": {
+                    "path": state.model.path.display().to_string(),
+                },
             }))
             .expect("receipt json"),
         )
@@ -30010,6 +30188,10 @@ mod tests {
         assert_eq!(body["request_id"], "m4srv-test");
         assert_eq!(body["selected_backend"], APPLE_M4_CPU_NEON);
         assert_eq!(body["fallback_used"], false);
+        assert_eq!(body["server"]["receipt_dir"], "redacted");
+        assert_eq!(body["server"]["receipt_dir_redacted"], true);
+        assert_eq!(body["model"]["path"], "redacted");
+        assert_eq!(body["model"]["path_redacted"], true);
         Ok(())
     }
 
@@ -30034,6 +30216,8 @@ mod tests {
         let missing_body: serde_json::Value =
             serde_json::from_slice(&missing_reply.body).expect("json body");
         assert_eq!(missing_body["error"], "receipt_not_found");
+        assert_eq!(missing_body["receipt_dir"], "redacted");
+        assert_eq!(missing_body["receipt_dir_redacted"], true);
         Ok(())
     }
 
@@ -30072,6 +30256,46 @@ mod tests {
         assert_eq!(reply.status, 400);
         let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
         assert_eq!(body["error"], "invalid_completion_request");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn mac_serve_completion_endpoint_rejects_oversized_body_before_generation()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
+        let body = "x".repeat(MAC_SERVE_MAX_REQUEST_BYTES + 1);
+        let request = format!(
+            "POST /v1/chat/completions HTTP/1.1\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        );
+
+        let reply = mac_serve_http_reply(&request, &state).await.expect("reply");
+        assert_eq!(reply.status, 413);
+        assert_eq!(reply.reason, "Payload Too Large");
+        let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
+        assert_eq!(body["error"], "request_too_large");
+        assert_eq!(body["limit_bytes"], MAC_SERVE_MAX_REQUEST_BYTES);
+        assert_eq!(body["claim_boundary"]["generation_executed"], false);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn mac_serve_completion_endpoint_rejects_declared_oversized_body_before_generation()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
+        let request = format!(
+            "POST /v1/chat/completions HTTP/1.1\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n",
+            MAC_SERVE_MAX_REQUEST_BYTES + 1
+        );
+
+        let reply = mac_serve_http_reply(&request, &state).await.expect("reply");
+        assert_eq!(reply.status, 413);
+        assert_eq!(reply.reason, "Payload Too Large");
+        let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
+        assert_eq!(body["error"], "request_too_large");
+        assert_eq!(body["limit_bytes"], MAC_SERVE_MAX_REQUEST_BYTES);
+        assert_eq!(body["claim_boundary"]["generation_executed"], false);
         Ok(())
     }
 
@@ -30126,7 +30350,15 @@ mod tests {
         assert_eq!(reply.reason, "Payload Too Large");
         assert_eq!(body["error"], "context_guardrail_blocked");
         assert_eq!(body["request_id"], "m4srv-context-blocked");
-        assert_eq!(body["receipt_path"], receipt_path.display().to_string());
+        assert_eq!(body["receipt_id"], "m4srv-context-blocked");
+        assert_eq!(body["receipt_path"], "redacted");
+        assert_eq!(body["receipt_path_redacted"], true);
+        assert!(
+            !body["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains(&receipt_path.display().to_string())
+        );
         assert_eq!(body["context_envelope"]["allowed"], false);
         assert_eq!(body["claim_boundary"]["unsupported_context_supported"], false);
         Ok(())

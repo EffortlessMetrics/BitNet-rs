@@ -140,7 +140,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-OBS-001 | merged | Correlate progress events, logs, receipts, and failure diagnostics. |
 | M4-SERVE-EX-001 | pr_open | Refresh dense SLM local-server conformance receipts. |
 | M4-SERVE-EX-002 | proposed | Prove dense and BitNet streaming/failure semantics after BitNet serve is gated. |
-| M4-SERVE-EX-003 | proposed | Document and test local-server safety defaults for appliance operation. |
+| M4-SERVE-EX-003 | in_progress | Document and test local-server safety defaults for appliance operation. |
 | M4-SERVE-EX-004 | proposed | Add bounded server queue, backpressure, and resident-state evidence. |
 | M4-CI-001 | proposed | Codify PR, advisory, scheduled, release, and retention evidence lanes. |
 | M4-SETUP-001 | proposed | Prove first-run setup, fetch or repair, cache verification, and smoke receipts. |

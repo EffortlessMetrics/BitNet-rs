@@ -51,6 +51,7 @@ bitnet serve \
 | `model_id` | `qwen2.5-0.5b-instruct-q8_0` | The current M4 dense SLM default. |
 | `device` | `apple-m4-cpu-neon` | The only full dense SLM answer backend claimed by this contract. |
 | `host` | `127.0.0.1` | Loopback by default. Binding to non-loopback must be explicit. |
+| `allow_network_bind` | `false` | Pass `--allow-network-bind` with a non-loopback `--host`; otherwise startup fails before cache lookup or bind. |
 | `port` | `8080` | Matches the existing server crate default unless overridden. |
 | `strict` | `true` | Hidden fallback is not allowed. |
 | `stream` | `true` | Token streaming should be the default user experience. |
@@ -58,6 +59,32 @@ bitnet serve \
 | `receipt_dir` | local user state receipt directory | Override with `--receipt-dir`. |
 | `receipt_mode` | `per_request` | Aggregate session receipts can be added later. |
 | `trace` | `false` | Override with `--trace` to emit an `m4obs-*` correlation ID in redacted diagnostics and receipts. |
+
+## Safety Defaults
+
+`bitnet mac serve` is a local appliance wrapper first. It binds to
+`127.0.0.1` by default and refuses `0.0.0.0`, LAN IPs, or other non-loopback
+hosts unless the operator passes `--allow-network-bind`. That opt-in is still
+not a production-hosting claim; it only acknowledges that local server metadata
+may be reachable outside the machine.
+
+The health, ready, models, completion-response, and receipt-export surfaces
+publish a `safety` or redaction policy with these defaults:
+
+- telemetry is disabled; there is no metrics upload or external operator
+  metrics endpoint;
+- CORS is disabled by default: no wildcard origin, no credentialed browser
+  access, and no preflight route;
+- completion request bodies are capped at 1 MiB and oversized requests return
+  `413 Payload Too Large` before generation;
+- operator HTTP metadata redacts cache roots, cache paths, metadata paths,
+  symlink targets, model paths, and receipt directories;
+- `GET /receipts/{id}` accepts only a single safe receipt file stem and exports
+  a cache-path-redacted view of the local receipt file.
+
+Local receipt files may still contain prompt text, token IDs, generated text,
+and local artifact paths because they are the evidence artifact for the run.
+Trace output remains redacted for prompt text and cache paths.
 
 The supported non-default dense model can be selected explicitly:
 
@@ -228,7 +255,7 @@ Failures must be explicit and operator-actionable:
 | Unsupported model id | Refuse to start and show supported model IDs. |
 | `--device apple-m4-metal` | Refuse full-server mode until full route support is proven. |
 | Hidden fallback would occur | Refuse to start or reject the request with a fallback error. |
-| Non-loopback host | Allow only when explicitly configured; warn that this is local-service scope. |
+| Non-loopback host | Refuse unless `--allow-network-bind` is passed; warn that this is local-service scope. |
 | Receipt directory unwritable | Refuse to start unless `--receipt-mode off` is explicitly supported later. |
 
 ## Endpoint Contract
@@ -261,12 +288,13 @@ including default/supported dense Qwen rows, the BitNet one-shot ask plus fixed
 warm-session row, candidate/rejected rows, cache state, disk-headroom guidance,
 and the receipt-only BitNet proof bridge commands. It does not run generation,
 does not fetch artifacts, and does not expose BitNet as a server completion
-model.
+model. Cache-path fields are redacted in the HTTP view.
 
 `M4-SERVE-002` does not run generation. Readiness reports whether startup
 verified the supported model cache, tokenizer authority, `apple-m4-cpu-neon`
 backend route, no-hidden-fallback policy, disk/cache state, and receipt
-directory. Missing or invalid cache still prevents startup.
+directory. The HTTP readiness view redacts local cache/model/receipt paths.
+Missing or invalid cache still prevents startup.
 
 ## Receipt Requirements
 
@@ -288,6 +316,9 @@ Every completed generation request should be able to export a receipt with:
 - claim-boundary fields stating that dense SLM server success does not prove
   BitNet, QK256, Neural Engine, MPSGraph, full Metal inference, or broad M4
   performance.
+
+HTTP receipt export is a redacted view for operator inspection. The local
+receipt file remains the canonical artifact for full local evidence.
 
 Failed startup and failed request receipts should record the failing gate when a
 receipt directory is available.
