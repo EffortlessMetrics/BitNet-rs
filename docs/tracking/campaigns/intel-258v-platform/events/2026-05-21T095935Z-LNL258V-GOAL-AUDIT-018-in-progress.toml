@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T09:59:35Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-018"
+previous_status = "planned"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-018-post-bitnet-intake005"
+actor = "codex"
+summary = "Started a no-inference Lunar Lake goal audit refresh after BITNET-INTAKE-005 and closeout #179 merged."
+
+notes = [
+  "The current audit text mentions BITNET-INTAKE-005, but structured tracker_state still pointed at BITNET-INTAKE-004.",
+  "This item updates audit/checklist metadata only; POWER-006 remains blocked on real battery-mode low_power evidence.",
+  "No inference, model load, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, or BitNet QK256/I2_S behavior change is in scope.",
+]

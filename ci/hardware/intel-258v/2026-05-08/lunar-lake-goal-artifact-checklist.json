@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-21T06:49:14Z",
+  "created_utc": "2026-05-21T09:59:35Z",
   "machine_id": "intel-258v",
-  "source_revision": "b274d29330813adcc547e8734ac8cd07787d79b8",
+  "source_revision": "eed08101b169a2fcc79c755e5be0dbc8f96b22a8",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
@@ -313,13 +313,16 @@
         "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T062100Z-LNL258V-REG-013-pr-open.toml",
         "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T062601Z-LNL258V-REG-013-merged.toml",
         "https://github.com/EffortlessMetrics/BitNet-rs/pull/6107",
-        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-20T020149Z-LNL258V-BITNET-INTAKE-004-merged.toml"
+        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T094739Z-LNL258V-BITNET-INTAKE-005-merged.toml",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/159",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/179"
       ],
       "notes": [
         "BitNet CPU reference evidence is tracked separately from dense Qwen SLM success.",
         "REG-013/#6106 plus closeout #6107 expose bitnet_cpu_reference_evidence_indexed=true and bitnet_cpu_reference_evidence_ready=true in the strict regression surface.",
         "Strict regression indexes semantic-intake state so shared BitNet fixes can stale Lunar Lake evidence.",
-        "LNL258V-BITNET-INTAKE-005 records former A770 shared BitNet semantic PRs #4756, #4757, #4767, #4853, and #5064 as closed unmerged, with pending_shared_change_count=0 and stale_after_merged_count=0."
+        "LNL258V-BITNET-INTAKE-005 records former A770 shared BitNet semantic PRs #4756, #4757, #4767, #4853, and #5064 as closed unmerged, with pending_shared_change_count=0 and stale_after_merged_count=0.",
+        "BITNET-INTAKE-005 PR #159 and closeout PR #179 are merged in bitnet-rs-swarm; this updates tracker/audit state only and does not require a Lunar Lake rerun."
       ]
     },
     {
