@@ -480,7 +480,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-015"
-status = "in_progress"
+status = "merged"
+pr = 211
+head_sha = "2f3432808bdee40d885fbb2f9f0a9cb9c5c5a9ae"
+merge_sha = "9937635290165206100644ddfde27065efa75c54"
 branch = "codex/intel-a770/A770-015-answer-corpus-route-contract"
 stackable = false
 review_mode = "codex_premerge"
