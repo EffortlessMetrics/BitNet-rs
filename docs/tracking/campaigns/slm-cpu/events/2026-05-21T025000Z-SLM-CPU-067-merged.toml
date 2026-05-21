@@ -16,4 +16,3 @@ notes = [
   "The committed before/after warm-session receipts preserve prompt IDs, generated IDs, decoded text, model SHA, strict GGUF tokenizer authority, selected CPU backend, and fallback_used=false.",
   "No default packed Q8_0 execution, broad speedup, sustained throughput, Q4/Q5 runtime support, server/GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
 ]
-
