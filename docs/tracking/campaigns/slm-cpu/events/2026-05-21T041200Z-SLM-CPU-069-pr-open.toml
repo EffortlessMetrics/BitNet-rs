@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T04:12:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-069"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+pr = 124
+branch = "codex/slm-cpu-069-packed-q8-locality-root-cause"
+head_sha = "9e62be6d0b7b0d4d968944dbc69badefa6317be7"
+summary = "Opened the packed Q8_0 locality root-cause PR."
+notes = [
+  "The PR adds a machine-checkable root-cause artifact for the SLM-CPU-068 timing regression.",
+  "The PR records packed-block decode and matvec locality as the next fix area and queues SLM-CPU-070.",
+  "No runtime default, speedup, sustained-throughput, Q4/Q5, server, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

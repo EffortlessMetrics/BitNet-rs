@@ -883,6 +883,30 @@ still useful as a correctness-preserving implementation boundary for further
 locality and kernel work, but it is not a promotion candidate in its current
 form.
 
+SLM-CPU-069 localizes the next packed-Q8 sidecar work from that regression
+without changing runtime defaults. The machine-checkable root-cause artifact is
+`ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-069-packed-q8-locality-root-cause.json`.
+It records that the regression is concentrated in prefill/forward timing while
+logits and sampling are stable, and classifies the likely root cause as
+`packed_block_decode_and_matvec_locality`.
+
+The current opt-in sidecar kernel is a scalar reference matvec over the packed
+Q8_0 bytes for only `layers.0.attention.q_proj.weight`. It decodes the fp16
+Q8_0 block scale inside the innermost per-weight loop and does not reuse the
+scale across the 32 codes in each block. The next safe target is therefore a
+block-local matvec prototype that decodes each block scale once per block and
+keeps behavior gated against the eager F32 oracle before any timing
+interpretation.
+
+```text
+root_cause.primary = packed_block_decode_and_matvec_locality
+root_cause.secondary = scratch_allocation
+root_cause.unlikely = selector_overhead, receipt_timing_instrumentation
+next_target = SLM-CPU-070 packed Q8 block-local matvec prototype
+default_runtime_changed = false
+speedup_claim = false
+```
+
 ## Claim Boundary
 
 This dashboard may be used to claim:

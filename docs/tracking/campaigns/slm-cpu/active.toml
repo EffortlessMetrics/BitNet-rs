@@ -2583,7 +2583,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-069"
-status = "ready"
+status = "pr_open"
+pr = 124
+head_sha = "9e62be6d0b7b0d4d968944dbc69badefa6317be7"
 branch = "codex/slm-cpu-069-packed-q8-locality-root-cause"
 stackable = false
 review_mode = "codex_premerge"
@@ -2617,6 +2619,51 @@ must_not_claim = [
   "Packed Q8_0 runtime compute is enabled by default.",
   "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
   "A speedup or sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-070"
+status = "ready"
+branch = "codex/slm-cpu-070-packed-q8-block-local-matvec"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-069"]
+acceptance = "Use the SLM-CPU-069 root-cause artifact to prototype or explicitly block a block-local packed Q8_0 matvec path for the exact `layers.0.attention.q_proj.weight` sidecar. The slice must preserve eager_f32_candle as the default runtime, keep packed sidecar execution opt-in and exact-tensor scoped, decode each Q8_0 block scale once per block rather than per weight where a runtime prototype is attempted, and compare against the existing eager F32 behavior oracle with identical prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false before any timing interpretation. It must not claim speedup unless a separate bounded timing artifact supports it, enable packed Q8_0 by default, broaden beyond the exact tensor, start Q4/Q5 runtime support, or touch server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 paths."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_dense_linear_reference",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-transformer/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-069 localized the exact-tensor packed Q8_0 timing regression to packed-block decode and matvec locality.",
+  "A block-local packed Q8_0 matvec prototype is behavior-gated against the eager F32 oracle before any timing interpretation.",
+]
+must_not_claim = [
+  "Packed Q8_0 runtime compute is enabled by default.",
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "A speedup or sustained 8250U throughput claim is proven without a separate bounded timing artifact.",
   "Broad answer quality is proven.",
   "Q4_K_M or Q4_K_S runtime support exists.",
   "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
