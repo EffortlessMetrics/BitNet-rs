@@ -16,7 +16,8 @@ Contract draft for I2_S lane. This spec captures route-specific acceptance, fall
 
 ## Hard rule
 
-Production I2_S claims require explicit selected kernel, , and  for strict accelerated proofs.
+Production I2_S claims require explicit selected kernel identity, route
+identity, and fallback state for strict accelerated proofs.
 
 ## Canonical constants
 
