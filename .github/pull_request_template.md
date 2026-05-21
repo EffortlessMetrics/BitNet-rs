@@ -2,6 +2,23 @@
 
 <!-- Brief description of what this PR accomplishes -->
 
+## Lane ownership
+
+Lane:
+Campaign:
+Work item:
+Orchestrator:
+Branch:
+Base main SHA:
+Allowed paths:
+
+- <!-- path or none -->
+
+Shared surfaces touched:
+
+- <!-- shared surface or none -->
+
+Closeout required:
 
 ## Source-of-truth links
 
