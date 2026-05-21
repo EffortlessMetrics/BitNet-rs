@@ -988,8 +988,9 @@ mod tests {
         assert_eq!(manifest["selected_route"], "dense_regular_llm_cuda");
         assert_eq!(manifest["model"]["id"], "qwen3-0.6b-instruct-q8_0");
 
-        assert_eq!(manifest["profiles"].as_array().map(Vec::len), Some(5));
-        assert!(manifest["profiles"].as_array().is_some_and(|profiles| {
+        let profiles = manifest["profiles"].as_array();
+        assert_eq!(profiles.map(Vec::len), Some(5));
+        assert!(profiles.is_some_and(|profiles| {
             profiles.iter().any(|profile| {
                 profile["profile"] == "decode_128_from_warm_context"
                     && profile["expected_generated_tokens"] == 128

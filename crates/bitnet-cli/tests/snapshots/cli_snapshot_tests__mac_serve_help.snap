@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 164
 expression: help
 ---
 Serve local M4 health and readiness endpoints plus completions
@@ -79,6 +80,21 @@ Options:
           Maximum raw HTTP request size accepted by the local server
 
           [default: 1048576]
+
+      --max-concurrent-requests <MAX_CONCURRENT_REQUESTS>
+          Maximum concurrent generation requests accepted by the local server
+
+          [default: 1]
+
+      --max-queued-requests <MAX_QUEUED_REQUESTS>
+          Maximum completion requests allowed to wait for the resident generator
+
+          [default: 1]
+
+      --queue-timeout-ms <QUEUE_TIMEOUT_MS>
+          Milliseconds a queued completion request may wait before a timeout receipt is emitted
+
+          [default: 30000]
 
       --temperature <TEMPERATURE>
           Default completion temperature

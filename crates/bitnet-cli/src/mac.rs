@@ -12,6 +12,7 @@ use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -52,10 +53,15 @@ const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-
 const MAC_SERVE_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/serve-smoke.json";
 const MAC_SERVE_FAILURE_SMOKE_DEFAULT_RECEIPT: &str =
     "target/apple-m4-local-server/serve-failure-smoke.json";
+const MAC_SERVE_BACKPRESSURE_SMOKE_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-local-server/serve-backpressure/summary.json";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
 const MAC_SERVE_DEFAULT_MAX_REQUEST_BYTES: usize = 1_048_576;
+const MAC_SERVE_DEFAULT_MAX_CONCURRENT_REQUESTS: usize = 1;
+const MAC_SERVE_DEFAULT_MAX_QUEUED_REQUESTS: usize = 1;
+const MAC_SERVE_DEFAULT_QUEUE_TIMEOUT_MS: u64 = 30_000;
 const MAC_SERVE_CONTEXT_GUARDRAIL_ERROR_PREFIX: &str =
     "mac serve context guardrail blocked request:";
 const MAC_SERVE_CONTEXT_GUARDRAIL_RECEIPT_MARKER: &str = "; receipt written to ";
@@ -998,6 +1004,18 @@ enum MacAction {
         #[arg(long, default_value_t = MAC_SERVE_DEFAULT_MAX_REQUEST_BYTES)]
         max_request_bytes: usize,
 
+        /// Maximum concurrent generation requests accepted by the local server.
+        #[arg(long, default_value_t = MAC_SERVE_DEFAULT_MAX_CONCURRENT_REQUESTS)]
+        max_concurrent_requests: usize,
+
+        /// Maximum completion requests allowed to wait for the resident generator.
+        #[arg(long, default_value_t = MAC_SERVE_DEFAULT_MAX_QUEUED_REQUESTS)]
+        max_queued_requests: usize,
+
+        /// Milliseconds a queued completion request may wait before a timeout receipt is emitted.
+        #[arg(long, default_value_t = MAC_SERVE_DEFAULT_QUEUE_TIMEOUT_MS)]
+        queue_timeout_ms: u64,
+
         /// Default completion temperature.
         #[arg(long, default_value_t = 0.0)]
         temperature: f32,
@@ -1117,6 +1135,45 @@ enum MacAction {
 
         /// Output the aggregate failure-semantics smoke receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_SERVE_FAILURE_SMOKE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
+    /// Run an in-process dense M4 local-server queue/backpressure smoke.
+    ServeBackpressureSmoke {
+        /// Supported dense SLM model id. Defaults to the validated Apple M4 SLM runtime artifact.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// M4 server device route. Only apple-m4-cpu-neon is supported for backpressure smoke.
+        #[arg(long, default_value = APPLE_M4_CPU_NEON)]
+        device: String,
+
+        /// Prompt for the resident generation and queue probes.
+        #[arg(long, default_value = "What is 2+2? Answer with one digit.")]
+        prompt: String,
+
+        /// Maximum new tokens for the accepted resident generation probe.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 2)]
+        max_new_tokens: usize,
+
+        /// Maximum completion requests allowed to wait for the resident generator during the smoke.
+        #[arg(long, default_value_t = MAC_SERVE_DEFAULT_MAX_QUEUED_REQUESTS)]
+        max_queued_requests: usize,
+
+        /// Milliseconds a queued completion request may wait before a timeout receipt is emitted.
+        #[arg(long, default_value_t = 250)]
+        queue_timeout_ms: u64,
+
+        /// Directory where child request/failure receipts are exported during the smoke.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_DEFAULT_RECEIPT_DIR)]
+        receipt_dir: PathBuf,
+
+        /// Output the aggregate dense queue/backpressure receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_BACKPRESSURE_SMOKE_DEFAULT_RECEIPT)]
         json_out: PathBuf,
     },
 
@@ -1761,6 +1818,9 @@ impl MacCommand {
                 stream,
                 max_new_tokens,
                 max_request_bytes,
+                max_concurrent_requests,
+                max_queued_requests,
+                queue_timeout_ms,
                 temperature,
                 top_k,
                 top_p,
@@ -1786,6 +1846,11 @@ impl MacCommand {
                     seed,
                 };
                 let safety = MacServeSafetyDefaults { allow_non_loopback, max_request_bytes };
+                let backpressure = MacServeBackpressureDefaults {
+                    max_concurrent_requests,
+                    max_queued_requests,
+                    queue_timeout_ms,
+                };
                 let endpoint = MacServeEndpoint { host, port };
                 run_mac_serve(
                     model_family,
@@ -1800,6 +1865,7 @@ impl MacCommand {
                     stream,
                     defaults,
                     safety,
+                    backpressure,
                     receipt_dir,
                     trace,
                 )
@@ -1849,6 +1915,31 @@ impl MacCommand {
                     &prompt,
                     max_new_tokens,
                     timeout_seconds,
+                    receipt_dir,
+                    json_out,
+                )
+                .await
+            }
+            MacAction::ServeBackpressureSmoke {
+                model_id,
+                cache_dir,
+                device,
+                prompt,
+                max_new_tokens,
+                max_queued_requests,
+                queue_timeout_ms,
+                receipt_dir,
+                json_out,
+            } => {
+                ensure_supported_mac_serve_device(explicit_device_label)?;
+                run_mac_serve_backpressure_smoke(
+                    &model_id,
+                    cache_dir,
+                    &device,
+                    &prompt,
+                    max_new_tokens,
+                    max_queued_requests,
+                    queue_timeout_ms,
                     receipt_dir,
                     json_out,
                 )
@@ -9252,6 +9343,23 @@ impl Default for MacServeSafetyDefaults {
 }
 
 #[derive(Clone, Debug)]
+struct MacServeBackpressureDefaults {
+    max_concurrent_requests: usize,
+    max_queued_requests: usize,
+    queue_timeout_ms: u64,
+}
+
+impl Default for MacServeBackpressureDefaults {
+    fn default() -> Self {
+        Self {
+            max_concurrent_requests: MAC_SERVE_DEFAULT_MAX_CONCURRENT_REQUESTS,
+            max_queued_requests: MAC_SERVE_DEFAULT_MAX_QUEUED_REQUESTS,
+            queue_timeout_ms: MAC_SERVE_DEFAULT_QUEUE_TIMEOUT_MS,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 struct MacObservabilityContext {
     trace_id: String,
     route: &'static str,
@@ -9336,6 +9444,7 @@ async fn run_mac_serve(
     stream: bool,
     defaults: MacServeGenerationDefaults,
     safety: MacServeSafetyDefaults,
+    backpressure: MacServeBackpressureDefaults,
     receipt_dir: PathBuf,
     trace: bool,
 ) -> Result<()> {
@@ -9353,6 +9462,12 @@ async fn run_mac_serve(
             "mac serve --max-request-bytes must be at least 4096 bytes; got {}",
             safety.max_request_bytes
         );
+    }
+    if backpressure.max_concurrent_requests == 0 {
+        anyhow::bail!("mac serve --max-concurrent-requests must be at least 1");
+    }
+    if backpressure.queue_timeout_ms == 0 {
+        anyhow::bail!("mac serve --queue-timeout-ms must be at least 1");
     }
     if !mac_serve_host_is_loopback(&host) && !safety.allow_non_loopback {
         anyhow::bail!(
@@ -9420,7 +9535,7 @@ async fn run_mac_serve(
     mac_trace_log(observability.as_ref(), "serve_start", || {
         format!("host={host} port={port} receipt_dir={}", receipt_dir.display())
     });
-    let state = Arc::new(MacServeState::new_with_route_and_safety(
+    let state = Arc::new(MacServeState::new_with_route_safety_backpressure(
         model,
         effective_model_family,
         cache_status,
@@ -9430,6 +9545,7 @@ async fn run_mac_serve(
         stream,
         defaults,
         safety,
+        backpressure,
         receipt_dir,
         Some(generator),
         observability,
@@ -9480,8 +9596,11 @@ struct MacServeState {
     stream: bool,
     defaults: MacServeGenerationDefaults,
     safety: MacServeSafetyDefaults,
+    backpressure: MacServeBackpressureDefaults,
     receipt_dir: PathBuf,
     generator: Option<tokio::sync::Mutex<MacServeGenerator>>,
+    generation_slots: tokio::sync::Semaphore,
+    queued_generation: AtomicUsize,
     observability: Option<MacObservabilityContext>,
 }
 
@@ -9558,6 +9677,39 @@ impl MacServeState {
         generator: Option<MacServeGenerator>,
         observability: Option<MacObservabilityContext>,
     ) -> Self {
+        Self::new_with_route_safety_backpressure(
+            model,
+            model_family,
+            cache_status,
+            bitnet_gate,
+            host,
+            port,
+            stream,
+            defaults,
+            safety,
+            MacServeBackpressureDefaults::default(),
+            receipt_dir,
+            generator,
+            observability,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn new_with_route_safety_backpressure(
+        model: VerifiedCachedModel,
+        model_family: MacServeModelFamily,
+        cache_status: serde_json::Value,
+        bitnet_gate: Option<(BitnetServeGateEvidence, String)>,
+        host: String,
+        port: u16,
+        stream: bool,
+        defaults: MacServeGenerationDefaults,
+        safety: MacServeSafetyDefaults,
+        backpressure: MacServeBackpressureDefaults,
+        receipt_dir: PathBuf,
+        generator: Option<MacServeGenerator>,
+        observability: Option<MacObservabilityContext>,
+    ) -> Self {
         let disk = disk_health_json(&model.cache_root, model.bytes);
         let (bitnet_serve_gate, bitnet_tokenizer_sha256) = bitnet_gate
             .map(|(gate, tokenizer_sha256)| (Some(gate), Some(tokenizer_sha256)))
@@ -9576,8 +9728,11 @@ impl MacServeState {
             stream,
             defaults,
             safety,
+            backpressure: backpressure.clone(),
             receipt_dir,
             generator: generator.map(tokio::sync::Mutex::new),
+            generation_slots: tokio::sync::Semaphore::new(backpressure.max_concurrent_requests),
+            queued_generation: AtomicUsize::new(0),
             observability,
         }
     }
@@ -9674,6 +9829,8 @@ impl MacServeGenerator {
         &self,
         state: &MacServeState,
         request: MacServeCompletionRequest,
+        queued: bool,
+        queue_wait_ms: f64,
     ) -> Result<MacServeCompletion> {
         use bitnet_models::transformer::KVCache;
         use bitnet_sampling::{SamplingConfig, SamplingStrategy};
@@ -9927,6 +10084,13 @@ impl MacServeGenerator {
             "fallback_reason": serde_json::Value::Null,
             "server": mac_serve_server_json(state),
             "safety_defaults": mac_serve_safety_defaults_json(state),
+            "backpressure": {
+                "policy": mac_serve_backpressure_json(state),
+                "accepted": true,
+                "queued": queued,
+                "queue_wait_ms": crate::rounded_ms(queue_wait_ms),
+                "stop_reason": finish_reason,
+            },
             "context_envelope": context_envelope,
             "model_family": if bitnet_route { "bitnet" } else { "dense-slm" },
             "model": {
@@ -9997,6 +10161,7 @@ impl MacServeGenerator {
                 "reuse_scope": "resident_server",
                 "model_loaded_at_startup": true,
                 "tokenizer_loaded_at_startup": true,
+                "resident_state_reused": true,
                 "request_serialized": true,
                 "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
             },
@@ -10927,6 +11092,208 @@ async fn run_mac_serve_failure_smoke(
     }
 }
 
+async fn run_mac_serve_backpressure_smoke(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    device: &str,
+    prompt: &str,
+    max_new_tokens: usize,
+    max_queued_requests: usize,
+    queue_timeout_ms: u64,
+    receipt_dir: PathBuf,
+    json_out: PathBuf,
+) -> Result<()> {
+    if device != APPLE_M4_CPU_NEON {
+        anyhow::bail!(
+            "mac serve-backpressure-smoke routes the supported dense Mac local service path through --device {APPLE_M4_CPU_NEON}; requested --device {device}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+        );
+    }
+    if max_new_tokens == 0 {
+        anyhow::bail!(
+            "mac serve-backpressure-smoke max_tokens/max_new_tokens must be greater than zero"
+        );
+    }
+    if queue_timeout_ms == 0 {
+        anyhow::bail!("mac serve-backpressure-smoke --queue-timeout-ms must be greater than zero");
+    }
+    std::fs::create_dir_all(&receipt_dir).with_context(|| {
+        format!("failed to create serve-backpressure receipt directory {}", receipt_dir.display())
+    })?;
+    ensure_mac_serve_receipt_dir_ready(&receipt_dir)?;
+
+    let cache_status =
+        model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir.clone(), true)?;
+    if !cache_status["ready"].as_bool().unwrap_or(false) {
+        let next_step = cache_status["next_step"]
+            .as_str()
+            .unwrap_or("run `bitnet model fetch qwen2.5-0.5b-instruct-q8_0`");
+        anyhow::bail!(
+            "mac serve-backpressure-smoke cannot start because the model cache is not ready: {next_step}"
+        );
+    }
+    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    let generator = MacServeGenerator::load_dense(&model)?;
+    let defaults = MacServeGenerationDefaults {
+        max_new_tokens,
+        temperature: 0.0,
+        top_k: 1,
+        top_p: 1.0,
+        repetition_penalty: 1.1,
+        seed: Some(0),
+    };
+    let backpressure = MacServeBackpressureDefaults {
+        max_concurrent_requests: 1,
+        max_queued_requests,
+        queue_timeout_ms,
+    };
+    let state = MacServeState::new_with_route_safety_backpressure(
+        model,
+        MacServeModelFamily::DenseSlm,
+        cache_status,
+        None,
+        MAC_SERVE_DEFAULT_HOST.to_string(),
+        0,
+        true,
+        defaults,
+        MacServeSafetyDefaults::default(),
+        backpressure,
+        receipt_dir.clone(),
+        Some(generator),
+        None,
+    );
+
+    let health_before = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /health HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_health",
+    )
+    .await?;
+    let ready_before = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /ready HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_ready",
+    )
+    .await?;
+    let accepted = mac_serve_smoke_completion(&state, prompt, false, max_new_tokens, None).await?;
+
+    let held = state
+        .generation_slots
+        .acquire()
+        .await
+        .context("failed to hold M4 serve generation slot for backpressure smoke")?;
+    let health_during_busy = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /health HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_health",
+    )
+    .await?;
+    state.queued_generation.store(state.backpressure.max_queued_requests, Ordering::SeqCst);
+    let busy = mac_serve_backpressure_http_check(
+        &state,
+        prompt,
+        max_new_tokens,
+        429,
+        "queue_full",
+        "queue_saturated_by_smoke_harness",
+    )
+    .await?;
+    state.queued_generation.store(0, Ordering::SeqCst);
+    drop(held);
+
+    let held = state
+        .generation_slots
+        .acquire()
+        .await
+        .context("failed to hold M4 serve generation slot for timeout smoke")?;
+    let timeout = mac_serve_backpressure_http_check(
+        &state,
+        prompt,
+        max_new_tokens,
+        503,
+        "queue_timeout",
+        "generation_slot_held_past_queue_timeout",
+    )
+    .await?;
+    drop(held);
+
+    let ready_after = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /ready HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_ready",
+    )
+    .await?;
+
+    let passed = health_before["passed"].as_bool().unwrap_or(false)
+        && ready_before["passed"].as_bool().unwrap_or(false)
+        && accepted["passed"].as_bool().unwrap_or(false)
+        && health_during_busy["passed"].as_bool().unwrap_or(false)
+        && busy["passed"].as_bool().unwrap_or(false)
+        && timeout["passed"].as_bool().unwrap_or(false)
+        && ready_after["passed"].as_bool().unwrap_or(false);
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_serve_backpressure",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "operator_command": "mac serve-backpressure-smoke",
+        "result": if passed { "pass" } else { "fail" },
+        "model_family": "dense-slm",
+        "model_id": &state.model.id,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "receipt_dir": receipt_dir.display().to_string(),
+        "backpressure": mac_serve_backpressure_json(&state),
+        "checks": {
+            "health_before": health_before,
+            "ready_before": ready_before,
+            "accepted_completion": accepted,
+            "health_during_busy": health_during_busy,
+            "busy_response": busy,
+            "timeout_response": timeout,
+            "ready_after": ready_after,
+        },
+        "resident_state": {
+            "reuse_scope": "resident_server",
+            "model_loaded_at_startup": true,
+            "tokenizer_loaded_at_startup": true,
+            "accepted_completion_receipt_path": accepted["receipt_path"],
+            "same_resident_model_id": accepted["model_id"].as_str() == Some(state.model.id.as_str()),
+        },
+        "claim_boundary": {
+            "server_health_checked": true,
+            "server_readiness_checked": true,
+            "accepted_completion_checked": true,
+            "busy_response_checked": true,
+            "timeout_response_checked": true,
+            "resident_state_checked": true,
+            "dense_slm_only": true,
+            "bitnet_serve_claimed": false,
+            "bitnet_chat_claimed": false,
+            "production_readiness_claimed": false,
+            "openai_compatibility_claimed": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    });
+    write_json_receipt(&json_out, &receipt)?;
+    if passed {
+        println!("mac serve-backpressure-smoke passed: {}", json_out.display());
+        Ok(())
+    } else {
+        anyhow::bail!(
+            "mac serve-backpressure-smoke failed; receipt written to {}",
+            json_out.display()
+        )
+    }
+}
+
 async fn mac_serve_failure_http_check(
     state: &MacServeState,
     request: &str,
@@ -10944,6 +11311,58 @@ async fn mac_serve_failure_http_check(
         "status": reply.status,
         "passed": passed,
         "error": body["error"],
+        "elapsed_ms": crate::rounded_ms(crate::elapsed_ms(started)),
+    }))
+}
+
+async fn mac_serve_backpressure_http_check(
+    state: &MacServeState,
+    prompt: &str,
+    max_new_tokens: usize,
+    expected_status: u16,
+    expected_error: &str,
+    saturation_method: &str,
+) -> Result<serde_json::Value> {
+    let body = serde_json::json!({
+        "prompt": prompt,
+        "max_tokens": max_new_tokens,
+        "stream": false,
+    });
+    let body = serde_json::to_string(&body)?;
+    let request = format!(
+        "POST /v1/chat/completions HTTP/1.1\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+        body.len(),
+        body
+    );
+    let started = Instant::now();
+    let reply = mac_serve_http_reply(&request, state).await?;
+    let body = mac_serve_reply_json(&reply)?;
+    let receipt_path = body["receipt_path"].as_str().map(ToOwned::to_owned);
+    let receipt_valid = receipt_path
+        .as_deref()
+        .and_then(|path| read_json_receipt(Path::new(path)).ok())
+        .map(|receipt| {
+            validate_mac_receipt_value(
+                Path::new(receipt_path.as_deref().unwrap_or_default()),
+                &receipt,
+            )
+            .is_ok()
+        })
+        .unwrap_or(false);
+    let passed = reply.status == expected_status
+        && body["status"].as_str() == Some("error")
+        && body["error"].as_str() == Some(expected_error)
+        && receipt_valid;
+    Ok(serde_json::json!({
+        "executed": true,
+        "status": reply.status,
+        "passed": passed,
+        "error": body["error"],
+        "request_id": body["request_id"],
+        "receipt_path": body["receipt_path"],
+        "receipt_valid": receipt_valid,
+        "saturation_method": saturation_method,
+        "backpressure": body["backpressure"],
         "elapsed_ms": crate::rounded_ms(crate::elapsed_ms(started)),
     }))
 }
@@ -11052,6 +11471,70 @@ fn write_mac_serve_failure_event_receipt(
     }))
 }
 
+fn write_mac_serve_backpressure_failure_receipt(
+    state: &MacServeState,
+    stage: &str,
+    stop_reason: &str,
+    queue_wait_ms: f64,
+) -> Result<serde_json::Value> {
+    let request_id = mac_serve_request_id();
+    let receipt_path = state.receipt_dir.join(format!("{request_id}.json"));
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_serve_backpressure_failure",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "request_id": request_id,
+        "artifact_path": receipt_path.display().to_string(),
+        "model_family": mac_serve_model_family_label(state.model_family),
+        "model": {
+            "id": &state.model.id,
+            "sha256": &state.model.sha256,
+        },
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "failure": {
+            "stage": stage,
+            "message": if stage == "queue_full" {
+                "bounded local-server generation queue is full"
+            } else {
+                "bounded local-server generation queue wait timed out"
+            },
+            "stop_reason": stop_reason,
+        },
+        "backpressure": {
+            "policy": mac_serve_backpressure_json(state),
+            "accepted": false,
+            "queue_wait_ms": crate::rounded_ms(queue_wait_ms),
+            "stop_reason": stop_reason,
+        },
+        "partial_generation": {
+            "generated_tokens": 0,
+            "generated_token_ids": Vec::<u32>::new(),
+            "source_receipt_path": serde_json::Value::Null,
+        },
+        "timeout_boundary": {
+            "enforced": true,
+            "reached": stage == "queue_timeout",
+            "stage": stage,
+            "configured_ms": state.backpressure.queue_timeout_ms,
+        },
+        "claim_boundary": {
+            "dense_slm_backpressure": state.model_family == MacServeModelFamily::DenseSlm,
+            "bitnet_serve_claimed": state.model_family == MacServeModelFamily::Bitnet,
+            "production_readiness_claimed": false,
+            "openai_compatibility_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    });
+    write_json_receipt(&receipt_path, &receipt)?;
+    Ok(receipt)
+}
+
 async fn mac_serve_smoke_json_endpoint(
     state: &MacServeState,
     request: &str,
@@ -11140,6 +11623,11 @@ async fn mac_serve_smoke_completion(
     } else {
         body["receipt"]["generation"]["generated_token_ids"].clone()
     };
+    let model_id = if stream {
+        receipt_export["model_id"].clone()
+    } else {
+        body["receipt"]["model"]["id"].clone()
+    };
     let passed = reply.status == 200
         && backend_ok
         && generated_tokens > 0
@@ -11151,6 +11639,7 @@ async fn mac_serve_smoke_completion(
         "status": reply.status,
         "content_type": reply.content_type,
         "passed": passed,
+        "model_id": model_id,
         "request_id": request_id,
         "receipt_path": receipt_path,
         "generated_tokens": generated_tokens,
@@ -11192,6 +11681,7 @@ async fn mac_serve_smoke_receipt_export(
         "passed": passed,
         "request_id": receipt["request_id"],
         "artifact_kind": receipt["artifact_kind"],
+        "model_id": receipt["model"]["id"],
         "selected_backend": receipt["selected_backend"],
         "fallback_used": receipt["fallback_used"],
         "generated_text_non_empty": receipt["generation"]["text"]
@@ -11254,6 +11744,8 @@ struct MacServeCheckHttpResponse {
 }
 
 fn mac_serve_check_models_result(status: u16, body: &serde_json::Value) -> serde_json::Value {
+    let recommended_first_model_id =
+        mac_serve_models_catalog_recommended_model_id(body).map(serde_json::Value::from);
     serde_json::json!({
         "executed": true,
         "status": status,
@@ -11265,7 +11757,7 @@ fn mac_serve_check_models_result(status: u16, body: &serde_json::Value) -> serde
         "bitnet_ask_only": mac_serve_models_catalog_has_bitnet_ask_only(body),
         "bitnet_warm_session": mac_serve_models_catalog_has_bitnet_warm(body),
         "disk_available_bytes": body["catalog"]["disk"]["available_bytes"],
-        "recommended_first_model_id": body["catalog"]["disk"]["recommended_first_model_id"],
+        "recommended_first_model_id": recommended_first_model_id,
         "recommended_fetch_command": mac_serve_models_catalog_recommended_command(body, "fetch_command"),
         "recommended_verify_command": mac_serve_models_catalog_recommended_command(body, "verify_command"),
     })
@@ -11362,7 +11854,7 @@ fn mac_serve_models_catalog_recommended_command(
     body: &serde_json::Value,
     command_key: &str,
 ) -> serde_json::Value {
-    let Some(model_id) = body["catalog"]["disk"]["recommended_first_model_id"].as_str() else {
+    let Some(model_id) = mac_serve_models_catalog_recommended_model_id(body) else {
         return serde_json::Value::Null;
     };
     body["catalog"]["rows"]
@@ -11371,6 +11863,12 @@ fn mac_serve_models_catalog_recommended_command(
         .and_then(|row| row[command_key].as_str())
         .map(serde_json::Value::from)
         .unwrap_or(serde_json::Value::Null)
+}
+
+fn mac_serve_models_catalog_recommended_model_id(body: &serde_json::Value) -> Option<&str> {
+    body["catalog"]["disk"]["recommended_first_model_id"]
+        .as_str()
+        .or_else(|| body["catalog"]["default_model_id"].as_str())
 }
 
 fn mac_serve_check_http_json(
@@ -11503,6 +12001,12 @@ async fn mac_serve_completion_http_reply(
             );
         }
     }
+    let (_permit, queued, queue_wait_ms) = match mac_serve_enter_generation(state).await? {
+        MacServeGenerationAdmission::Accepted { _permit, queued, queue_wait_ms } => {
+            (_permit, queued, queue_wait_ms)
+        }
+        MacServeGenerationAdmission::Rejected(reply) => return Ok(reply),
+    };
     let Some(generator) = state.generator.as_ref() else {
         return MacServeHttpReply::json(
             503,
@@ -11516,7 +12020,7 @@ async fn mac_serve_completion_http_reply(
     };
     let completion = {
         let generator = generator.lock().await;
-        match generator.complete(state, completion_request) {
+        match generator.complete(state, completion_request, queued, queue_wait_ms) {
             Ok(completion) => completion,
             Err(error) => {
                 if let Some(reply) = mac_serve_context_guardrail_error_reply(&error)? {
@@ -11545,6 +12049,93 @@ async fn mac_serve_completion_http_reply(
     } else {
         MacServeHttpReply::json(200, "OK", mac_serve_completion_json(&completion))
     }
+}
+
+enum MacServeGenerationAdmission<'a> {
+    Accepted { _permit: tokio::sync::SemaphorePermit<'a>, queued: bool, queue_wait_ms: f64 },
+    Rejected(MacServeHttpReply),
+}
+
+async fn mac_serve_enter_generation(
+    state: &MacServeState,
+) -> Result<MacServeGenerationAdmission<'_>> {
+    match state.generation_slots.try_acquire() {
+        Ok(permit) => {
+            return Ok(MacServeGenerationAdmission::Accepted {
+                _permit: permit,
+                queued: false,
+                queue_wait_ms: 0.0,
+            });
+        }
+        Err(tokio::sync::TryAcquireError::Closed) => {
+            anyhow::bail!("mac serve generation semaphore is closed");
+        }
+        Err(tokio::sync::TryAcquireError::NoPermits) => {}
+    }
+
+    let queued_before = state.queued_generation.fetch_add(1, Ordering::SeqCst);
+    if queued_before >= state.backpressure.max_queued_requests {
+        state.queued_generation.fetch_sub(1, Ordering::SeqCst);
+        return Ok(MacServeGenerationAdmission::Rejected(mac_serve_backpressure_http_reply(
+            state,
+            "queue_full",
+            "busy",
+            0.0,
+        )?));
+    }
+
+    let wait_started = Instant::now();
+    let acquire = state.generation_slots.acquire();
+    let result =
+        tokio::time::timeout(Duration::from_millis(state.backpressure.queue_timeout_ms), acquire)
+            .await;
+    state.queued_generation.fetch_sub(1, Ordering::SeqCst);
+    match result {
+        Ok(Ok(permit)) => Ok(MacServeGenerationAdmission::Accepted {
+            _permit: permit,
+            queued: true,
+            queue_wait_ms: crate::elapsed_ms(wait_started),
+        }),
+        Ok(Err(_)) => anyhow::bail!("mac serve generation semaphore is closed"),
+        Err(_) => {
+            let wait_ms = crate::elapsed_ms(wait_started);
+            Ok(MacServeGenerationAdmission::Rejected(mac_serve_backpressure_http_reply(
+                state,
+                "queue_timeout",
+                "timeout",
+                wait_ms,
+            )?))
+        }
+    }
+}
+
+fn mac_serve_backpressure_http_reply(
+    state: &MacServeState,
+    stage: &str,
+    stop_reason: &str,
+    queue_wait_ms: f64,
+) -> Result<MacServeHttpReply> {
+    let receipt =
+        write_mac_serve_backpressure_failure_receipt(state, stage, stop_reason, queue_wait_ms)?;
+    let status = if stage == "queue_full" { 429 } else { 503 };
+    let reason = if status == 429 { "Too Many Requests" } else { "Service Unavailable" };
+    MacServeHttpReply::json(
+        status,
+        reason,
+        serde_json::json!({
+            "status": "error",
+            "error": stage,
+            "message": if stage == "queue_full" {
+                "M4 local server generation queue is full"
+            } else {
+                "M4 local server generation queue wait timed out"
+            },
+            "request_id": receipt["request_id"],
+            "receipt_path": receipt["artifact_path"],
+            "backpressure": receipt["backpressure"],
+            "claim_boundary": receipt["claim_boundary"],
+        }),
+    )
 }
 
 fn mac_serve_context_guardrail_error_reply(
@@ -11822,10 +12413,41 @@ fn mac_serve_server_json(state: &MacServeState) -> serde_json::Value {
         "receipt_dir": &state.receipt_dir,
         "model_family": mac_serve_model_family_label(state.model_family),
         "safety_defaults": mac_serve_safety_defaults_json(state),
+        "backpressure": mac_serve_backpressure_json(state),
         "observability": state
             .observability
             .as_ref()
             .map(|context| context.json("serve_session", None, None)),
+    })
+}
+
+fn mac_serve_backpressure_json(state: &MacServeState) -> serde_json::Value {
+    let available = state.generation_slots.available_permits();
+    let active = state.backpressure.max_concurrent_requests.saturating_sub(available);
+    serde_json::json!({
+        "work_item": "M4-SERVE-EX-004",
+        "resident_state": {
+            "reuse_scope": "resident_server",
+            "model_loaded_at_startup": true,
+            "tokenizer_loaded_at_startup": true,
+            "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
+        },
+        "queue": {
+            "max_concurrent_requests": state.backpressure.max_concurrent_requests,
+            "max_queued_requests": state.backpressure.max_queued_requests,
+            "queue_timeout_ms": state.backpressure.queue_timeout_ms,
+            "active_generation_requests": active,
+            "queued_generation_requests": state.queued_generation.load(Ordering::SeqCst),
+            "busy_status": 429,
+            "timeout_status": 503,
+        },
+        "claim_boundary": {
+            "bounded_local_backpressure": true,
+            "production_hosting_claimed": false,
+            "openai_compatibility_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
     })
 }
 
@@ -19967,6 +20589,10 @@ fn validate_mac_receipt_value(
         validate_bitnet_serve_failure_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_serve_failure_semantics" {
         validate_m4_serve_failure_semantics_receipt(path, receipt)?
+    } else if artifact_kind == "bitnet_apple_m4_serve_backpressure" {
+        validate_m4_serve_backpressure_receipt(path, receipt)?
+    } else if artifact_kind == "bitnet_apple_m4_serve_backpressure_failure" {
+        validate_m4_serve_backpressure_failure_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_serve_completion" {
         validate_bitnet_serve_completion_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_dense_local_server_smoke" {
@@ -21538,6 +22164,99 @@ fn validate_m4_serve_failure_semantics_receipt(
     let partial_tokens =
         receipt["checks"]["streaming_partial"]["partial_generated_tokens"].as_u64().unwrap_or(0);
     Ok((Some(0), Some(partial_tokens as usize)))
+}
+
+fn validate_m4_serve_backpressure_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "bitnet_apple_m4_serve_backpressure",
+    )?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac serve-backpressure-smoke")?;
+    require_exact_string_at(path, receipt, &["model_family"], "dense-slm")?;
+    require_exact_string_at(path, receipt, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    let result = require_non_empty_string_at(path, receipt, &["result"])?;
+    if !matches!(result, "pass" | "fail") {
+        anyhow::bail!("{} serve backpressure result must be pass or fail", path.display());
+    }
+    require_exact_string_at(path, receipt, &["backpressure", "work_item"], "M4-SERVE-EX-004")?;
+    for check in [
+        "health_before",
+        "ready_before",
+        "accepted_completion",
+        "health_during_busy",
+        "busy_response",
+        "timeout_response",
+        "ready_after",
+    ] {
+        require_bool_at(path, receipt, &["checks", check, "executed"], true)?;
+        if result == "pass" {
+            require_bool_at(path, receipt, &["checks", check, "passed"], true)?;
+        }
+    }
+    require_bool_at(path, receipt, &["resident_state", "model_loaded_at_startup"], true)?;
+    require_bool_at(path, receipt, &["resident_state", "tokenizer_loaded_at_startup"], true)?;
+    require_bool_at(path, receipt, &["resident_state", "same_resident_model_id"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "server_health_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "server_readiness_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "accepted_completion_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "busy_response_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "timeout_response_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "resident_state_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "production_readiness_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "openai_compatibility_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    let generated_tokens =
+        receipt["checks"]["accepted_completion"]["generated_tokens"].as_u64().unwrap_or(0);
+    Ok((Some(0), Some(generated_tokens as usize)))
+}
+
+fn validate_m4_serve_backpressure_failure_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "bitnet_apple_m4_serve_backpressure_failure",
+    )?;
+    require_non_empty_string_at(path, receipt, &["request_id"])?;
+    let stage = require_non_empty_string_at(path, receipt, &["failure", "stage"])?;
+    if !matches!(stage, "queue_full" | "queue_timeout") {
+        anyhow::bail!(
+            "{} backpressure failure stage must be queue_full or queue_timeout",
+            path.display()
+        );
+    }
+    require_exact_string_at(
+        path,
+        receipt,
+        &["backpressure", "policy", "work_item"],
+        "M4-SERVE-EX-004",
+    )?;
+    require_bool_at(path, receipt, &["backpressure", "accepted"], false)?;
+    require_bool_at(path, receipt, &["timeout_boundary", "enforced"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "production_readiness_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "openai_compatibility_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    Ok((Some(1), Some(0)))
 }
 
 fn validate_bitnet_serve_completion_receipt(
@@ -29820,18 +30539,21 @@ mod tests {
         let result = mac_serve_check_models_result(200, &models);
 
         assert_eq!(result["passed"], true);
-        assert_eq!(result["recommended_first_model_id"], "qwen2.5-0.5b-instruct-q8_0");
+        assert_eq!(result["default_model_id"], model_cache::M4_SLM_RUNTIME_MODEL_ID);
+        let recommended_first_model_id = result["recommended_first_model_id"]
+            .as_str()
+            .ok_or_else(|| std::io::Error::other("recommended model id"))?;
         assert!(
             result["recommended_fetch_command"]
                 .as_str()
                 .ok_or_else(|| std::io::Error::other("fetch command"))?
-                .contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0")
+                .contains(&format!("bitnet model fetch {recommended_first_model_id}"))
         );
         assert!(
             result["recommended_verify_command"]
                 .as_str()
                 .ok_or_else(|| std::io::Error::other("verify command"))?
-                .contains("bitnet model verify qwen2.5-0.5b-instruct-q8_0")
+                .contains(&format!("bitnet model verify {recommended_first_model_id}"))
         );
         Ok(())
     }
@@ -29982,6 +30704,145 @@ mod tests {
         );
         assert_eq!(health["safety_defaults"]["path_disclosure"]["cache_paths_in_trace"], false);
         assert_eq!(health["safety_defaults"]["receipt_redaction"]["raw_prompt_in_trace"], false);
+        Ok(())
+    }
+
+    #[test]
+    fn mac_serve_health_json_documents_backpressure_defaults()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
+
+        let health = mac_serve_health_json(&state);
+
+        assert_eq!(health["server"]["backpressure"]["work_item"], "M4-SERVE-EX-004");
+        assert_eq!(
+            health["server"]["backpressure"]["queue"]["max_concurrent_requests"],
+            MAC_SERVE_DEFAULT_MAX_CONCURRENT_REQUESTS
+        );
+        assert_eq!(
+            health["server"]["backpressure"]["queue"]["max_queued_requests"],
+            MAC_SERVE_DEFAULT_MAX_QUEUED_REQUESTS
+        );
+        assert_eq!(health["server"]["backpressure"]["queue"]["busy_status"], 429);
+        assert_eq!(health["server"]["backpressure"]["queue"]["timeout_status"], 503);
+        assert_eq!(
+            health["server"]["backpressure"]["claim_boundary"]["production_hosting_claimed"],
+            false
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn mac_serve_completion_endpoint_reports_queue_full_with_failure_receipt()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_dir = temp.path().join("receipts");
+        std::fs::create_dir_all(&receipt_dir)?;
+        let state = MacServeState::new_with_route_safety_backpressure(
+            test_verified_model(temp.path()),
+            MacServeModelFamily::DenseSlm,
+            serde_json::json!({"ready": true}),
+            None,
+            "127.0.0.1".to_string(),
+            8080,
+            true,
+            MacServeGenerationDefaults {
+                max_new_tokens: 8,
+                temperature: 0.0,
+                top_k: 1,
+                top_p: 1.0,
+                repetition_penalty: 1.1,
+                seed: None,
+            },
+            MacServeSafetyDefaults::default(),
+            MacServeBackpressureDefaults {
+                max_concurrent_requests: 1,
+                max_queued_requests: 0,
+                queue_timeout_ms: 50,
+            },
+            receipt_dir,
+            None,
+            None,
+        );
+        let _held = state.generation_slots.acquire().await?;
+        let request = concat!(
+            "POST /v1/chat/completions HTTP/1.1\r\n",
+            "content-type: application/json\r\n",
+            "content-length: 39\r\n",
+            "\r\n",
+            "{\"prompt\":\"What is 2+2?\",\"stream\":false}"
+        );
+
+        let reply = mac_serve_http_reply(request, &state).await?;
+        let body: serde_json::Value = serde_json::from_slice(&reply.body)?;
+
+        assert_eq!(reply.status, 429);
+        assert_eq!(body["error"], "queue_full");
+        let receipt_path = body["receipt_path"]
+            .as_str()
+            .ok_or_else(|| std::io::Error::other("missing receipt path"))?;
+        let receipt = read_json_receipt(Path::new(receipt_path))?;
+        let summary = validate_mac_receipt_value(Path::new(receipt_path), &receipt)?;
+        assert_eq!(summary.artifact_kind, "bitnet_apple_m4_serve_backpressure_failure");
+        assert_eq!(receipt["backpressure"]["policy"]["work_item"], "M4-SERVE-EX-004");
+        assert_eq!(receipt["failure"]["stage"], "queue_full");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn mac_serve_completion_endpoint_reports_queue_timeout_with_failure_receipt()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_dir = temp.path().join("receipts");
+        std::fs::create_dir_all(&receipt_dir)?;
+        let state = MacServeState::new_with_route_safety_backpressure(
+            test_verified_model(temp.path()),
+            MacServeModelFamily::DenseSlm,
+            serde_json::json!({"ready": true}),
+            None,
+            "127.0.0.1".to_string(),
+            8080,
+            true,
+            MacServeGenerationDefaults {
+                max_new_tokens: 8,
+                temperature: 0.0,
+                top_k: 1,
+                top_p: 1.0,
+                repetition_penalty: 1.1,
+                seed: None,
+            },
+            MacServeSafetyDefaults::default(),
+            MacServeBackpressureDefaults {
+                max_concurrent_requests: 1,
+                max_queued_requests: 1,
+                queue_timeout_ms: 1,
+            },
+            receipt_dir,
+            None,
+            None,
+        );
+        let _held = state.generation_slots.acquire().await?;
+        let request = concat!(
+            "POST /v1/chat/completions HTTP/1.1\r\n",
+            "content-type: application/json\r\n",
+            "content-length: 39\r\n",
+            "\r\n",
+            "{\"prompt\":\"What is 2+2?\",\"stream\":false}"
+        );
+
+        let reply = mac_serve_http_reply(request, &state).await?;
+        let body: serde_json::Value = serde_json::from_slice(&reply.body)?;
+
+        assert_eq!(reply.status, 503);
+        assert_eq!(body["error"], "queue_timeout");
+        let receipt_path = body["receipt_path"]
+            .as_str()
+            .ok_or_else(|| std::io::Error::other("missing receipt path"))?;
+        let receipt = read_json_receipt(Path::new(receipt_path))?;
+        let summary = validate_mac_receipt_value(Path::new(receipt_path), &receipt)?;
+        assert_eq!(summary.artifact_kind, "bitnet_apple_m4_serve_backpressure_failure");
+        assert_eq!(receipt["failure"]["stage"], "queue_timeout");
+        assert_eq!(receipt["timeout_boundary"]["reached"], true);
         Ok(())
     }
 

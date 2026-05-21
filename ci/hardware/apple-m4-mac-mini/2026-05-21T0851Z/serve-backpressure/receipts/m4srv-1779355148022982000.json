@@ -1,0 +1,443 @@
+{
+  "artifact_kind": "bitnet_apple_m4_local_server_completion",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0851Z/serve-backpressure/receipts/m4srv-1779355148022982000.json",
+  "backpressure": {
+    "accepted": true,
+    "policy": {
+      "claim_boundary": {
+        "bounded_local_backpressure": true,
+        "broad_performance_claim": false,
+        "openai_compatibility_claimed": false,
+        "production_hosting_claimed": false,
+        "speedup_claim": false
+      },
+      "queue": {
+        "active_generation_requests": 1,
+        "busy_status": 429,
+        "max_concurrent_requests": 1,
+        "max_queued_requests": 1,
+        "queue_timeout_ms": 250,
+        "queued_generation_requests": 0,
+        "timeout_status": 503
+      },
+      "resident_state": {
+        "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
+        "model_loaded_at_startup": true,
+        "reuse_scope": "resident_server",
+        "tokenizer_loaded_at_startup": true
+      },
+      "work_item": "M4-SERVE-EX-004"
+    },
+    "queue_wait_ms": 0.0,
+    "queued": false,
+    "stop_reason": "stop"
+  },
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "local_server_completion_endpoint": true,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "openai_compatibility_claimed": false,
+    "production_readiness_claimed": false,
+    "qk256_apple_claimed": false,
+    "streaming_transport": false
+  },
+  "context_envelope": {
+    "allowed": true,
+    "claim_boundary": {
+      "bitnet_chat_enabled": false,
+      "bitnet_serve_enabled": false,
+      "broad_performance_claim": false,
+      "broad_quality_claim": false,
+      "full_metal_inference_claimed": false,
+      "guardrail_only": true,
+      "mpsgraph_inference_claimed": false,
+      "neural_engine_execution_claimed": false,
+      "new_context_quality_claim": false,
+      "qk256_apple_claimed": false,
+      "speedup_claim": false,
+      "unsupported_context_supported": false
+    },
+    "contract_version": "1.0.0",
+    "max_new_tokens": 2,
+    "model_family": "dense-slm",
+    "model_id": "qwen2.5-0.5b-instruct-q8_0",
+    "operator_class": "advisory",
+    "prompt_token_count_exact": true,
+    "prompt_tokens": 41,
+    "reason": "dense local-server requests remain advisory until server conformance refreshes publish request-level SLO evidence",
+    "recorded_envelope": {
+      "evidence_profile": "short_prompt_or_resident",
+      "long_context_proof_item": "M4-CONTEXT-002",
+      "max_prompt_tokens": 4096,
+      "recorded_profiles": [
+        "short_prompt_16_out",
+        "short_prompt_64_out",
+        "long_prompt_16_out",
+        "long_prompt_128_out",
+        "context_1k",
+        "context_4k",
+        "resident_25",
+        "resident_50",
+        "resident_100"
+      ],
+      "source": "docs/slm/apple-m4-operator-envelope-v3.md"
+    },
+    "requested_total_tokens": 43,
+    "route": "mac serve",
+    "status": "recorded_short_context_server_advisory",
+    "work_item": "M4-CONTEXT-001"
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generation": {
+    "finish_reason": "stop",
+    "generated_token_ids": [
+      16,
+      151645
+    ],
+    "generated_tokens": 2,
+    "mode": "greedy",
+    "prompt_token_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      1207,
+      16948,
+      11,
+      3465,
+      553,
+      54364,
+      14817,
+      13,
+      1446,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      3838,
+      374,
+      220,
+      17,
+      10,
+      17,
+      30,
+      21806,
+      448,
+      825,
+      15723,
+      13,
+      151645,
+      198,
+      151644,
+      77091,
+      198
+    ],
+    "prompt_tokens": 41,
+    "text": "1",
+    "token_texts": [
+      "1",
+      ""
+    ]
+  },
+  "mac_bitnet_claim_boundary": null,
+  "model": {
+    "architecture": "qwen2",
+    "bytes": 675710816,
+    "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quantization": "Q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "sha256_source": "verified_cache_metadata_and_startup_check"
+  },
+  "model_family": "dense-slm",
+  "observability": null,
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 2,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": 0,
+      "stream": false,
+      "temperature": 0.0,
+      "threads": null,
+      "top_k": 1,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "37f379f29db74c8f4a8e34c64c4ba7399fb559f73c8d2fd349b3d506c7457913",
+    "identity_sha256": "13dd4a7c0a6403fc9bffb4c5a34c37e64766f94c0f4562093b1c8b828d9896c3",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [
+        "<|im_end|>"
+      ],
+      "manual_stop_token_ids": [],
+      "policy": "server_manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_string_window": null,
+      "stop_token_ids": [
+        151645,
+        151644
+      ]
+    },
+    "stop_criteria_sha256": "de71cc9bc696080e6939a5e4d20cc2e09e6c44d965fb80da25dad5d6762af68a",
+    "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+    "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+    "template": {
+      "family": "qwen2.5",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "qwen2.5",
+    "template_sha256": "772efcb8f053f1eeba1cc758dd6312c8372f39dd226a83fd4415b5154bef34c6",
+    "tokenizer_authority": {
+      "authority": "present",
+      "sha256": null,
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "rendered_sha256": "e2781e4134f76938dbb5a2da85dfdfe6f67e715156ed39bca1ed38a929fd5676",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer with one digit.<|im_end|>\n<|im_start|>assistant\n",
+    "stop_sequences": [
+      "<|im_end|>",
+      "<|im_start|>"
+    ],
+    "stop_token_ids": [
+      151645,
+      151644
+    ],
+    "template_family": "qwen2.5"
+  },
+  "request": {
+    "max_new_tokens": 2,
+    "model": null,
+    "prompt": "What is 2+2? Answer with one digit.",
+    "repetition_penalty": 1.100000023841858,
+    "seed": 0,
+    "stream": false,
+    "system_prompt": null,
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0
+  },
+  "request_id": "m4srv-1779355148022982000",
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "safety_defaults": {
+    "binding": {
+      "allow_non_loopback": false,
+      "configured_host": "127.0.0.1",
+      "default_host": "127.0.0.1",
+      "loopback": true,
+      "loopback_only_by_default": true,
+      "non_loopback_requires_explicit_opt_in": true,
+      "wider_binding_enabled": false
+    },
+    "claim_boundary": {
+      "authentication_claimed": false,
+      "browser_cors_claimed": false,
+      "local_safety_defaults_documented": true,
+      "network_service_hardening_claimed": false,
+      "production_hosting_claimed": false
+    },
+    "cors": {
+      "allow_credentials": false,
+      "allow_origin_header": null,
+      "allowed_origins": [],
+      "mode": "disabled_by_default",
+      "preflight_status": 403,
+      "reason": "local CLI/API clients do not require browser CORS; any browser exposure needs a later explicit CORS-gated item"
+    },
+    "path_disclosure": {
+      "cache_paths_in_trace": false,
+      "health_endpoint_cache_paths": false,
+      "models_endpoint_cache_summary": true,
+      "non_loopback_requires_opt_in_before_paths_are_exposed": true,
+      "ready_endpoint_operator_paths": true,
+      "receipt_export_operator_paths": true
+    },
+    "receipt_redaction": {
+      "cache_path_in_trace": false,
+      "completion_response_embeds_receipt_for_local_conformance": true,
+      "model_path_in_trace": false,
+      "raw_prompt_in_trace": false,
+      "receipt_export_is_local_operator_surface": true,
+      "rendered_prompt_in_trace": false,
+      "system_prompt_in_trace": false,
+      "tokenizer_path_in_trace": false
+    },
+    "request_limits": {
+      "default_max_request_bytes": 1048576,
+      "health_ready_generate": false,
+      "max_completion_tokens": 512,
+      "max_request_bytes": 1048576
+    },
+    "telemetry": {
+      "external_telemetry_enabled": false,
+      "network_telemetry_export_enabled": false,
+      "opentelemetry_enabled": false,
+      "trace_correlation_opt_in": false
+    },
+    "work_item": "M4-SERVE-EX-003"
+  },
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "server": {
+    "backpressure": {
+      "claim_boundary": {
+        "bounded_local_backpressure": true,
+        "broad_performance_claim": false,
+        "openai_compatibility_claimed": false,
+        "production_hosting_claimed": false,
+        "speedup_claim": false
+      },
+      "queue": {
+        "active_generation_requests": 1,
+        "busy_status": 429,
+        "max_concurrent_requests": 1,
+        "max_queued_requests": 1,
+        "queue_timeout_ms": 250,
+        "queued_generation_requests": 0,
+        "timeout_status": 503
+      },
+      "resident_state": {
+        "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
+        "model_loaded_at_startup": true,
+        "reuse_scope": "resident_server",
+        "tokenizer_loaded_at_startup": true
+      },
+      "work_item": "M4-SERVE-EX-004"
+    },
+    "host": "127.0.0.1",
+    "model_family": "dense-slm",
+    "observability": null,
+    "port": 0,
+    "receipt_dir": "ci/hardware/apple-m4-mac-mini/2026-05-21T0851Z/serve-backpressure/receipts",
+    "safety_defaults": {
+      "binding": {
+        "allow_non_loopback": false,
+        "configured_host": "127.0.0.1",
+        "default_host": "127.0.0.1",
+        "loopback": true,
+        "loopback_only_by_default": true,
+        "non_loopback_requires_explicit_opt_in": true,
+        "wider_binding_enabled": false
+      },
+      "claim_boundary": {
+        "authentication_claimed": false,
+        "browser_cors_claimed": false,
+        "local_safety_defaults_documented": true,
+        "network_service_hardening_claimed": false,
+        "production_hosting_claimed": false
+      },
+      "cors": {
+        "allow_credentials": false,
+        "allow_origin_header": null,
+        "allowed_origins": [],
+        "mode": "disabled_by_default",
+        "preflight_status": 403,
+        "reason": "local CLI/API clients do not require browser CORS; any browser exposure needs a later explicit CORS-gated item"
+      },
+      "path_disclosure": {
+        "cache_paths_in_trace": false,
+        "health_endpoint_cache_paths": false,
+        "models_endpoint_cache_summary": true,
+        "non_loopback_requires_opt_in_before_paths_are_exposed": true,
+        "ready_endpoint_operator_paths": true,
+        "receipt_export_operator_paths": true
+      },
+      "receipt_redaction": {
+        "cache_path_in_trace": false,
+        "completion_response_embeds_receipt_for_local_conformance": true,
+        "model_path_in_trace": false,
+        "raw_prompt_in_trace": false,
+        "receipt_export_is_local_operator_surface": true,
+        "rendered_prompt_in_trace": false,
+        "system_prompt_in_trace": false,
+        "tokenizer_path_in_trace": false
+      },
+      "request_limits": {
+        "default_max_request_bytes": 1048576,
+        "health_ready_generate": false,
+        "max_completion_tokens": 512,
+        "max_request_bytes": 1048576
+      },
+      "telemetry": {
+        "external_telemetry_enabled": false,
+        "network_telemetry_export_enabled": false,
+        "opentelemetry_enabled": false,
+        "trace_correlation_opt_in": false
+      },
+      "work_item": "M4-SERVE-EX-003"
+    },
+    "started_at": "2026-05-21T09:19:08.021309+00:00",
+    "streaming_default": true
+  },
+  "session_reuse": {
+    "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
+    "model_loaded_at_startup": true,
+    "request_serialized": true,
+    "resident_state_reused": true,
+    "reuse_scope": "resident_server",
+    "tokenizer_loaded_at_startup": true
+  },
+  "timestamp": "2026-05-21T09:19:17.748100+00:00",
+  "timing": {
+    "decode_ms": 618.153,
+    "decode_step_ms": {
+      "count": 2,
+      "max_ms": 309.128,
+      "mean_ms": 309.077,
+      "min_ms": 309.025,
+      "p50_ms": 309.025,
+      "p95_ms": 309.128,
+      "total_ms": 618.153
+    },
+    "first_token_ms": 9415,
+    "model_load_ms": 0.0,
+    "prefill_ms": 8900.755,
+    "sample_step_ms": {
+      "count": 2,
+      "max_ms": 2.485,
+      "mean_ms": 2.408,
+      "min_ms": 2.332,
+      "p50_ms": 2.332,
+      "p95_ms": 2.485,
+      "total_ms": 4.816
+    },
+    "sampling_ms": 4.816,
+    "time_to_first_token_ms": 9415,
+    "tokenize_ms": 175.312,
+    "tokenizer_load_ms": 0.0,
+    "total_ms": 9725.041
+  },
+  "tokenizer": {
+    "bos": 151643,
+    "eos": 151645,
+    "pretokenizer_authority": "present",
+    "prompt_template": "qwen2.5",
+    "source": "gguf_metadata",
+    "strict": true,
+    "type": "gguf_metadata"
+  }
+}

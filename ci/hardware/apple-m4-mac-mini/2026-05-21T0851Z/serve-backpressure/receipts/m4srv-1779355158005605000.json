@@ -1,0 +1,72 @@
+{
+  "artifact_kind": "bitnet_apple_m4_serve_backpressure_failure",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0851Z/serve-backpressure/receipts/m4srv-1779355158005605000.json",
+  "backpressure": {
+    "accepted": false,
+    "policy": {
+      "claim_boundary": {
+        "bounded_local_backpressure": true,
+        "broad_performance_claim": false,
+        "openai_compatibility_claimed": false,
+        "production_hosting_claimed": false,
+        "speedup_claim": false
+      },
+      "queue": {
+        "active_generation_requests": 1,
+        "busy_status": 429,
+        "max_concurrent_requests": 1,
+        "max_queued_requests": 1,
+        "queue_timeout_ms": 250,
+        "queued_generation_requests": 0,
+        "timeout_status": 503
+      },
+      "resident_state": {
+        "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
+        "model_loaded_at_startup": true,
+        "reuse_scope": "resident_server",
+        "tokenizer_loaded_at_startup": true
+      },
+      "work_item": "M4-SERVE-EX-004"
+    },
+    "queue_wait_ms": 253.161,
+    "stop_reason": "timeout"
+  },
+  "claim_boundary": {
+    "bitnet_serve_claimed": false,
+    "broad_performance_claim": false,
+    "dense_slm_backpressure": true,
+    "full_metal_inference_claimed": false,
+    "openai_compatibility_claimed": false,
+    "production_readiness_claimed": false,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false
+  },
+  "failure": {
+    "message": "bounded local-server generation queue wait timed out",
+    "stage": "queue_timeout",
+    "stop_reason": "timeout"
+  },
+  "fallback_used": false,
+  "model": {
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+  },
+  "model_family": "dense-slm",
+  "partial_generation": {
+    "generated_token_ids": [],
+    "generated_tokens": 0,
+    "source_receipt_path": null
+  },
+  "request_id": "m4srv-1779355158005605000",
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "timeout_boundary": {
+    "configured_ms": 250,
+    "enforced": true,
+    "reached": true,
+    "stage": "queue_timeout"
+  },
+  "timestamp": "2026-05-21T09:19:18.005641+00:00"
+}

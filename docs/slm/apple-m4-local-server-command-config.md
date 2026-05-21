@@ -55,6 +55,9 @@ bitnet serve \
 | `strict` | `true` | Hidden fallback is not allowed. |
 | `stream` | `true` | Token streaming should be the default user experience. |
 | `max_request_bytes` | `1048576` | Raw HTTP request limit before completion parsing. |
+| `max_concurrent_requests` | `1` | One resident generation slot by default; health/ready/models stay cheap. |
+| `max_queued_requests` | `1` | Bounded wait queue for completion requests. |
+| `queue_timeout_ms` | `30000` | Queued completion request timeout before a failure receipt is emitted. |
 | `cors` | disabled | Browser CORS is fail-closed by default; CLI/local HTTP clients remain supported. |
 | `telemetry` | off | No external telemetry or OpenTelemetry export is enabled by `bitnet mac serve`. |
 | `cache_dir` | existing Mac model cache default | Override with `--cache-dir` or config. |
@@ -194,6 +197,38 @@ compatibility, BitNet serve/chat readiness, Metal evidence, QK256 evidence,
 Neural Engine evidence, MPSGraph evidence, speedup, or broad Apple Silicon
 behavior.
 
+## M4-SERVE-EX-004 Queue And Backpressure
+
+`bitnet mac serve` now documents and enforces bounded local admission control
+for completion requests. The default resident generation policy is:
+
+- `max_concurrent_requests = 1`;
+- `max_queued_requests = 1`;
+- `queue_timeout_ms = 30000`.
+
+When the resident generation slot is occupied, one completion request may wait
+for the configured queue timeout. Requests beyond the queue limit receive a
+`429 queue_full` response and a failure receipt. Requests that wait past
+`queue_timeout_ms` receive a `503 queue_timeout` response and a failure
+receipt. Health, ready, models, and receipt-export endpoints do not consume the
+generation slot.
+
+Receipts include a `backpressure` block with the policy, active/queued counts,
+resident-state reuse boundaries, busy/timeout statuses, and claim boundaries.
+The bounded smoke command is:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac serve-backpressure-smoke \
+  --max-new-tokens 2 \
+  --receipt-dir ci/hardware/apple-m4-mac-mini/<date>/serve-backpressure/receipts \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/serve-backpressure/summary.json
+```
+
+This item is dense-local-server queue evidence only. It does not claim
+production hosting, full OpenAI compatibility, BitNet serve/chat readiness,
+Metal evidence, QK256 evidence, Neural Engine evidence, MPSGraph evidence,
+speedup, broad quality, broad performance, or broad Apple Silicon behavior.
+
 ## Config File Shape
 
 The server should accept an optional config file equivalent to the command-line
@@ -204,6 +239,10 @@ contract:
 host = "127.0.0.1"
 port = 8080
 stream = true
+max_request_bytes = 1048576
+max_concurrent_requests = 1
+max_queued_requests = 1
+queue_timeout_ms = 30000
 
 [model]
 model_id = "qwen2.5-0.5b-instruct-q8_0"

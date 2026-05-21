@@ -1,0 +1,221 @@
+{
+  "artifact_kind": "bitnet_apple_m4_serve_backpressure",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0851Z/serve-backpressure/summary.json",
+  "backpressure": {
+    "claim_boundary": {
+      "bounded_local_backpressure": true,
+      "broad_performance_claim": false,
+      "openai_compatibility_claimed": false,
+      "production_hosting_claimed": false,
+      "speedup_claim": false
+    },
+    "queue": {
+      "active_generation_requests": 0,
+      "busy_status": 429,
+      "max_concurrent_requests": 1,
+      "max_queued_requests": 1,
+      "queue_timeout_ms": 250,
+      "queued_generation_requests": 0,
+      "timeout_status": 503
+    },
+    "resident_state": {
+      "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
+      "model_loaded_at_startup": true,
+      "reuse_scope": "resident_server",
+      "tokenizer_loaded_at_startup": true
+    },
+    "work_item": "M4-SERVE-EX-004"
+  },
+  "checks": {
+    "accepted_completion": {
+      "content_type": "application/json",
+      "elapsed_ms": 9728.542,
+      "executed": true,
+      "finish_reason": "stop",
+      "generated_text_non_empty": true,
+      "generated_token_ids": [
+        16,
+        151645
+      ],
+      "generated_tokens": 2,
+      "model_id": "qwen2.5-0.5b-instruct-q8_0",
+      "passed": true,
+      "receipt_export": {
+        "artifact_kind": "bitnet_apple_m4_local_server_completion",
+        "executed": true,
+        "fallback_used": false,
+        "finish_reason": "stop",
+        "generated_text_non_empty": true,
+        "generated_tokens": 2,
+        "model_id": "qwen2.5-0.5b-instruct-q8_0",
+        "passed": true,
+        "request_id": "m4srv-1779355148022982000",
+        "selected_backend": "apple-m4-cpu-neon",
+        "status": 200
+      },
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0851Z/serve-backpressure/receipts/m4srv-1779355148022982000.json",
+      "request_id": "m4srv-1779355148022982000",
+      "status": 200,
+      "stream": false,
+      "timeout_boundary": {
+        "configured_seconds": null,
+        "deferred_to": "M4-SERVE-EX-002",
+        "enforced": false,
+        "reached": false,
+        "status": "not_enforced_in_process_smoke"
+      }
+    },
+    "busy_response": {
+      "backpressure": {
+        "accepted": false,
+        "policy": {
+          "claim_boundary": {
+            "bounded_local_backpressure": true,
+            "broad_performance_claim": false,
+            "openai_compatibility_claimed": false,
+            "production_hosting_claimed": false,
+            "speedup_claim": false
+          },
+          "queue": {
+            "active_generation_requests": 1,
+            "busy_status": 429,
+            "max_concurrent_requests": 1,
+            "max_queued_requests": 1,
+            "queue_timeout_ms": 250,
+            "queued_generation_requests": 1,
+            "timeout_status": 503
+          },
+          "resident_state": {
+            "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
+            "model_loaded_at_startup": true,
+            "reuse_scope": "resident_server",
+            "tokenizer_loaded_at_startup": true
+          },
+          "work_item": "M4-SERVE-EX-004"
+        },
+        "queue_wait_ms": 0.0,
+        "stop_reason": "busy"
+      },
+      "elapsed_ms": 0.78,
+      "error": "queue_full",
+      "executed": true,
+      "passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0851Z/serve-backpressure/receipts/m4srv-1779355157751664000.json",
+      "receipt_valid": true,
+      "request_id": "m4srv-1779355157751664000",
+      "saturation_method": "queue_saturated_by_smoke_harness",
+      "status": 429
+    },
+    "health_before": {
+      "artifact_kind": "bitnet_apple_m4_local_server_health",
+      "elapsed_ms": 0.642,
+      "executed": true,
+      "generation_executed": false,
+      "passed": true,
+      "status": 200
+    },
+    "health_during_busy": {
+      "artifact_kind": "bitnet_apple_m4_local_server_health",
+      "elapsed_ms": 0.177,
+      "executed": true,
+      "generation_executed": false,
+      "passed": true,
+      "status": 200
+    },
+    "ready_after": {
+      "artifact_kind": "bitnet_apple_m4_local_server_ready",
+      "elapsed_ms": 1.113,
+      "executed": true,
+      "generation_executed": null,
+      "passed": true,
+      "status": 200
+    },
+    "ready_before": {
+      "artifact_kind": "bitnet_apple_m4_local_server_ready",
+      "elapsed_ms": 0.764,
+      "executed": true,
+      "generation_executed": null,
+      "passed": true,
+      "status": 200
+    },
+    "timeout_response": {
+      "backpressure": {
+        "accepted": false,
+        "policy": {
+          "claim_boundary": {
+            "bounded_local_backpressure": true,
+            "broad_performance_claim": false,
+            "openai_compatibility_claimed": false,
+            "production_hosting_claimed": false,
+            "speedup_claim": false
+          },
+          "queue": {
+            "active_generation_requests": 1,
+            "busy_status": 429,
+            "max_concurrent_requests": 1,
+            "max_queued_requests": 1,
+            "queue_timeout_ms": 250,
+            "queued_generation_requests": 0,
+            "timeout_status": 503
+          },
+          "resident_state": {
+            "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
+            "model_loaded_at_startup": true,
+            "reuse_scope": "resident_server",
+            "tokenizer_loaded_at_startup": true
+          },
+          "work_item": "M4-SERVE-EX-004"
+        },
+        "queue_wait_ms": 253.161,
+        "stop_reason": "timeout"
+      },
+      "elapsed_ms": 254.507,
+      "error": "queue_timeout",
+      "executed": true,
+      "passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0851Z/serve-backpressure/receipts/m4srv-1779355158005605000.json",
+      "receipt_valid": true,
+      "request_id": "m4srv-1779355158005605000",
+      "saturation_method": "generation_slot_held_past_queue_timeout",
+      "status": 503
+    }
+  },
+  "claim_boundary": {
+    "accepted_completion_checked": true,
+    "bitnet_chat_claimed": false,
+    "bitnet_quality_claimed": false,
+    "bitnet_serve_claimed": false,
+    "broad_performance_claim": false,
+    "busy_response_checked": true,
+    "dense_slm_only": true,
+    "full_metal_inference_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "openai_compatibility_claimed": false,
+    "production_readiness_claimed": false,
+    "qk256_apple_claimed": false,
+    "resident_state_checked": true,
+    "server_health_checked": true,
+    "server_readiness_checked": true,
+    "speedup_claim": false,
+    "timeout_response_checked": true
+  },
+  "fallback_used": false,
+  "model_family": "dense-slm",
+  "model_id": "qwen2.5-0.5b-instruct-q8_0",
+  "operator_command": "mac serve-backpressure-smoke",
+  "receipt_dir": "ci/hardware/apple-m4-mac-mini/2026-05-21T0851Z/serve-backpressure/receipts",
+  "requested_backend": "apple-m4-cpu-neon",
+  "resident_state": {
+    "accepted_completion_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0851Z/serve-backpressure/receipts/m4srv-1779355148022982000.json",
+    "model_loaded_at_startup": true,
+    "reuse_scope": "resident_server",
+    "same_resident_model_id": true,
+    "tokenizer_loaded_at_startup": true
+  },
+  "result": "pass",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "timestamp": "2026-05-21T09:19:18.008098+00:00"
+}

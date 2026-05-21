@@ -3403,6 +3403,9 @@ fn mac_serve_help_documents_health_ready_surface() {
         .stdout(predicate::str::contains("--allow-non-loopback"))
         .stdout(predicate::str::contains("--port <PORT>"))
         .stdout(predicate::str::contains("--max-request-bytes <MAX_REQUEST_BYTES>"))
+        .stdout(predicate::str::contains("--max-concurrent-requests <MAX_CONCURRENT_REQUESTS>"))
+        .stdout(predicate::str::contains("--max-queued-requests <MAX_QUEUED_REQUESTS>"))
+        .stdout(predicate::str::contains("--queue-timeout-ms <QUEUE_TIMEOUT_MS>"))
         .stdout(predicate::str::contains("--trace"))
         .stdout(predicate::str::contains("--receipt-dir <PATH>"));
 }
@@ -3457,6 +3460,24 @@ fn mac_serve_rejects_tiny_request_size_limit_before_cache_lookup() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("--max-request-bytes must be at least 4096"));
+}
+
+#[test]
+fn mac_serve_rejects_zero_concurrency_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "serve", "--max-concurrent-requests", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--max-concurrent-requests must be at least 1"));
+}
+
+#[test]
+fn mac_serve_rejects_zero_queue_timeout_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "serve", "--queue-timeout-ms", "0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--queue-timeout-ms must be at least 1"));
 }
 
 #[test]
@@ -3524,6 +3545,29 @@ fn mac_serve_failure_smoke_help_documents_failure_semantics_receipt() {
 fn mac_serve_failure_smoke_rejects_full_metal_request_before_cache_lookup() {
     bitnet()
         .args(["--device", "apple-m4-metal", "mac", "serve-failure-smoke"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac serve routes the supported Mac local service path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
+fn mac_serve_backpressure_smoke_help_documents_queue_receipt() {
+    bitnet()
+        .args(["mac", "serve-backpressure-smoke", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("queue/backpressure smoke"))
+        .stdout(predicate::str::contains("--max-queued-requests <MAX_QUEUED_REQUESTS>"))
+        .stdout(predicate::str::contains("--queue-timeout-ms <QUEUE_TIMEOUT_MS>"))
+        .stdout(predicate::str::contains("--receipt-dir <PATH>"))
+        .stdout(predicate::str::contains("--json-out <PATH>"));
+}
+
+#[test]
+fn mac_serve_backpressure_smoke_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "serve-backpressure-smoke"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("mac serve routes the supported Mac local service path"))
