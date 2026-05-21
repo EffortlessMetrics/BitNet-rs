@@ -74,7 +74,7 @@ or another quantization variant can answer.
 
 | Contract | Artifact / kernel | Current authority | Required next proof before stronger claims |
 |---|---|---|---|
-| Official Microsoft 2B I2_S | GGUF `I2_S` / QK256 | x86 CPU and RTX 5070 Ti CUDA reference lane with external `llama-bpe` tokenizer authority and `bitnetcpp-answer` prompt authority. | Profile-specific benchmark receipts before any speedup claim; full residency receipts before full CUDA residency claims. |
+| Official Microsoft 2B I2_S | GGUF `I2_S` / QK256 | x86 CPU and RTX 5070 Ti CUDA reference lane with external `llama-bpe` tokenizer authority and `bitnetcpp-answer` prompt authority. The Intel Arc A770 OpenCL QK256 route is diagnostic route-receipt-only until model, quality, residency, and benchmark gates promote a stronger claim. | Profile-specific benchmark receipts before any speedup claim; full residency receipts before full CUDA residency claims; A770 stays diagnostic until its route receipts are paired with model, quality, residency, and benchmark proof. |
 | Official Microsoft 2B TL1 | GGUF / TL1 LUT | Upstream-supported ARM lane, not a BitNet-rs answer authority yet. | TL1 parser, fixture parity, tokenizer/prompt authority, answer corpus, and ARM/NEON or Apple receipts. |
 | Official Microsoft 2B TL2 | GGUF / TL2 LUT | Upstream-supported x86 alternate, not the current I2_S/QK256 CUDA target. | TL2 parser, AVX fixture parity, tokenizer/prompt authority, answer corpus, and benchmark receipts. |
 | `1bitLLM/bitnet_b1_58-3B` x86 I2_S | GGUF / I2_S | Upstream-unsupported. | Diagnostic and unsupported-path receipts only. Must not become answer, reference, parity, or speed authority. |

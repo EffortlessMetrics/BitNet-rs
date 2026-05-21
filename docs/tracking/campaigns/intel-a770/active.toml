@@ -573,3 +573,54 @@ must_not_claim = [
   "Performance speedup is proven.",
   "A770 trusted partial acceleration is claim-grade.",
 ]
+
+[[work_item]]
+id = "A770-014"
+status = "pr_open"
+pr = 198
+branch = "codex/intel-a770/A770-014-model-contract-route-alignment"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-013"]
+acceptance = "Align the official BitNet 2B I2_S model contract registry and model-artifact matrix with the committed diagnostic A770 OpenCL QK256 route, preserving diagnostic-only status and forbidding answer quality, residency, speed, full inference, or trusted-partial claims."
+commands = [
+  "cargo test --locked -p bitnet-models --lib --no-default-features model_contracts -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli verify_model_includes_bitnet_contract_summary -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- model-contract lint --contract-dir docs/model-contracts --format json --allow-missing-assets",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/bitnet-model-contracts.toml",
+  "crates/bitnet-models/src/model_contracts.rs",
+  "crates/bitnet-cli/src/model_cache.rs",
+  "docs/bitnet/BITNET_MODEL_CONTRACT.md",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "ci/hardware/amd-5700x-intel-a770/**",
+]
+may_claim = [
+  "The official BitNet 2B I2_S model contract lists the Intel Arc A770 OpenCL QK256 route as diagnostic route-receipt-only.",
+  "The A770 route matrix, committed diagnostic route receipt scaffold, and model contract now agree that A770 QK256 evidence is still diagnostic.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are fully proven.",
+  "BitNet inference works on A770.",
+  "A770 answer quality is proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]

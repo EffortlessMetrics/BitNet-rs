@@ -6,6 +6,7 @@ claim_boundary = "BitNet-family artifacts must declare model family, artifact fo
 
 claim_rules = [
   "The official Microsoft 2B I2_S GGUF is the current x86 CPU and RTX 5070 Ti CUDA reference lane when paired with external llama-bpe tokenizer authority and bitnetcpp-answer prompt authority.",
+  "The Intel Arc A770 OpenCL QK256 route is listed for diagnostic route receipts only until model, quality, residency, and benchmark gates promote a stronger claim.",
   "Official 2B TL1 and TL2 routes are upstream-supported lanes but need their own parser, fixture, prompt authority, answer corpus, and backend receipts before proof claims.",
   "1bitLLM 3B x86 I2_S is upstream-unsupported and remains diagnostic-only.",
   "1bitLLM 3B x86 TL2 and ARM TL1 are listed upstream but require runner-path verification before proof claims.",
@@ -75,6 +76,11 @@ claim_boundary = "Reference lane for x86 CPU and RTX 5070 Ti CUDA, but speedup a
   backend = "nvidia-rtx-5070-ti-cuda"
   route = "bitnet_qk256_cuda"
   status = "strict_receipt_lane"
+
+  [[contract.accelerator_route]]
+  backend = "intel-arc-a770-opencl"
+  route = "a770.bitnet.i2s.qk256"
+  status = "diagnostic_qk256_route_receipt_only"
 
 [[contract]]
 id = "microsoft_bitnet_b158_2b_4t_tl1"

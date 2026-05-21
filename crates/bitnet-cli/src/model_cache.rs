@@ -3263,6 +3263,11 @@ mod tests {
         assert_eq!(contract.tokenizer_authority, "external_llama_bpe");
         assert_eq!(contract.prompt_authority, "bitnetcpp-answer");
         assert!(contract.accelerator_routes.iter().any(|route| route.route == "bitnet_qk256_cuda"));
+        assert!(contract.accelerator_routes.iter().any(|route| {
+            route.backend == "intel-arc-a770-opencl"
+                && route.route == "a770.bitnet.i2s.qk256"
+                && route.status == "diagnostic_qk256_route_receipt_only"
+        }));
         assert!(contract.permitted_claims.contains(&"answer_ready".to_string()));
         assert!(contract.required_receipts.contains(&"execution_plan".to_string()));
         Ok(())
