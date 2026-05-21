@@ -11295,6 +11295,66 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-POWER-012"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-POWER-012-low-power-sample-guard"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-POWER-011"]
+acceptance = "Allow explicit low_power CPU/GPU/NPU battery-run sample asks to pass route-profile guard as evidence collection while preserving route-profile blockers in receipts, keeping --device auto blocked until a profile route is promoted, and making no inference, route-promotion, speedup, power-advantage, battery-mode evidence, native accelerator, acceleration, broad-quality, model-binary, or BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::direct_low_power_cpu_sample_records_profile_blockers_without_promoting -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::direct_ask_rejects_route_profile_blocked_promoted_route -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::auto_ask_no_promoted_profile_reports_route_blockers -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "docs/hardware/intel-258v-low-power-battery-runbook.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "ci/hardware/intel-258v/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Explicit low_power route samples can retain route-profile candidate/blocker evidence instead of being denied only because the sampled route is not low_power-promoted.",
+  "--device auto remains blocked for low_power until the promotion ledger has a promoted route for the profile.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Battery-mode low_power evidence is available.",
+  "Any route is promoted for low_power.",
+  "OpenVINO GPU or NPU speedup is claimed.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-005"
 status = "merged"
 pr = 5924

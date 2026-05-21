@@ -149,7 +149,10 @@ target/debug/bitnet.exe lunar-lake ask `
 
 The three receipts are still sample evidence. They do not promote `low_power`
 unless the later power-profile, regression, and operator comparison refreshes
-qualify the same decision.
+qualify the same decision. It is valid for these explicit-route receipts to
+record `route_profile_status=candidate_only` and current low_power blockers;
+`--device auto` must remain blocked until the ledger promotes a route for the
+profile.
 
 ## Battery End Receipt
 

@@ -10959,12 +10959,16 @@ pub fn resolve_operator_ask_route_selection(
         let route = load_operator_ask_route(root, operator_receipt, &requested_route)?;
         validate_operator_ask_requested_device(&requested_device, &route)?;
         let profile_guard = if let Some(route_profile_comparison) = route_profile_comparison {
+            // The low_power runbook explicitly samples candidate CPU/GPU/NPU routes before
+            // promotion; keep blockers in the receipt instead of treating them as route denial.
+            let require_promotion_ready =
+                route.route_id == DEFAULT_ASK_ROUTE && profile_id != "low_power";
             Some(validate_ask_route_profile_guard(
                 root,
                 route_profile_comparison,
                 &route.route_id,
                 profile_id,
-                route.route_id == DEFAULT_ASK_ROUTE,
+                require_promotion_ready,
             )?)
         } else {
             None
@@ -21560,6 +21564,43 @@ mod tests {
 
         assert!(err.contains("blocked by route-profile comparison"), "got: {err}");
         assert!(err.contains("profile `regression_tiny`"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn direct_low_power_cpu_sample_records_profile_blockers_without_promoting() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_auto_ask_selection_artifacts(temp.path())?;
+
+        let selection = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            DEFAULT_ASK_ROUTE,
+            "cpu",
+            "low_power",
+        )?;
+
+        assert_eq!(selection.selection_source, "operator_receipt_direct");
+        assert_eq!(selection.requested_device, "cpu");
+        assert_eq!(selection.requested_route, DEFAULT_ASK_ROUTE);
+        assert_eq!(selection.selected_route, DEFAULT_ASK_ROUTE);
+        assert_eq!(selection.selected_backend, "cpu-rust");
+        assert_eq!(selection.runtime_api, "cpu");
+        assert_eq!(selection.promotion_status, "direct_route_validated");
+        assert_eq!(selection.route_profile_status.as_deref(), Some("candidate_only"));
+        assert!(!selection.route_profile_blockers.is_empty());
+        assert!(selection.route_profile_blockers.iter().any(|blocker| {
+            blocker.contains("benchmark_qualified_speedup_or_power_advantage")
+                || blocker.contains("low_power")
+        }));
+        assert!(
+            selection
+                .why_not_cpu
+                .iter()
+                .any(|reason| reason.contains("explicitly requested and validated"))
+        );
         Ok(())
     }
 
