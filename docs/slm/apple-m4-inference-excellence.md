@@ -1436,6 +1436,14 @@ unless the wording is tied to a matching accepted receipt gate.
 and release-gate items are treated as ready. This is gate hygiene only; it does
 not prove runtime quality, speed, BitNet behavior, or any Apple backend support.
 
+`M4-CI-001` codifies the M4 evidence CI lane contract in
+`docs/slm/apple-m4-evidence-ci-lanes.md`. Generic PR Tier 0 remains model-free:
+parser, scorer, receipt-schema, committed-summary, self-baseline regression,
+generated-dashboard, and diff-hygiene checks only. Advisory local, scheduled M4,
+and release-gate lanes are the only lanes that may produce fresh live M4
+evidence, and hardware-only timing jobs are non-blocking for ordinary PRs unless
+a release gate explicitly opts into drift failure.
+
 `M4-STABILITY-002` keeps operator repair flows explicit and non-destructive:
 `bitnet mac doctor --json --include-bitnet` records dense SLM cache state, BitNet
 ask/warm readiness, stale-symlink state, disk pressure, and repair guidance, and

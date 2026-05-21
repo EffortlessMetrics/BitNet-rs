@@ -7,6 +7,7 @@ on:
       - '.github/workflows/apple-m4-inference-ops-tier0.yml'
       - 'ci/hardware/apple-m4-mac-mini/**'
       - 'crates/bitnet-cli/**'
+      - 'docs/slm/apple-m4-evidence-ci-lanes.md'
       - 'docs/slm/apple-m4-inference-ops.md'
       - 'docs/slm/apple-m4-mini-user-expectation-envelope.md'
       - 'docs/tracking/campaigns/apple-m4-inference-ops/**'
@@ -16,6 +17,7 @@ on:
       - '.github/workflows/apple-m4-inference-ops-tier0.yml'
       - 'ci/hardware/apple-m4-mac-mini/**'
       - 'crates/bitnet-cli/**'
+      - 'docs/slm/apple-m4-evidence-ci-lanes.md'
       - 'docs/slm/apple-m4-inference-ops.md'
       - 'docs/slm/apple-m4-mini-user-expectation-envelope.md'
       - 'docs/tracking/campaigns/apple-m4-inference-ops/**'
@@ -99,3 +101,12 @@ jobs:
             echo
             echo "This workflow does not fetch models, run live M4 inference, run BitNet chat or serve, run long resident soaks, publish new timing, or claim broad Apple Silicon performance."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Tier 0 debug artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: apple-m4-inference-ops-tier0-${{ github.run_id }}
+          path: ${{ env.OPS_TIER0_ARTIFACT_ROOT }}
+          if-no-files-found: warn
+          retention-days: 14

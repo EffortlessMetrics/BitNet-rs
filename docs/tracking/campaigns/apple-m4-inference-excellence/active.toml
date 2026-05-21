@@ -2693,8 +2693,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CI-001"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-CI-001-evidence-lanes"
+pr = 190
+head_sha = "89be30f1c95ff28ea4a5b89a2ec42dacb3e270c1"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

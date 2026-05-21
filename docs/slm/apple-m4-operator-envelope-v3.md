@@ -178,6 +178,11 @@ print status meanings, per-family or per-group reasons, and openable receipt,
 Markdown, latest-report, and baseline-report targets without launching live
 inference or downloading models.
 
+The detailed CI and artifact-retention contract is
+`docs/slm/apple-m4-evidence-ci-lanes.md`. Generic PR Tier 0 stays model-free;
+fresh live M4 dense SLM or BitNet evidence belongs only in advisory local,
+scheduled M4, or release-gate lanes.
+
 `bitnet mac status` and `bitnet mac doctor` expose dense SLM and BitNet
 readiness as separate operator states. Dense readiness is tied to supported
 Qwen cache repair and the latest dense receipts. BitNet readiness is tied to

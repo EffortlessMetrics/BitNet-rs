@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T12:21:37Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CI-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-CI-001-evidence-lanes"
+
+notes = [
+  "Started codifying M4 evidence CI lanes and retention contracts.",
+  "Scope is model-free CI lane documentation, Tier 0 artifact retention, and tracker state only.",
+  "No live M4 inference, BitNet chat or serve, production hosting, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

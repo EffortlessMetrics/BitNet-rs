@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T12:26:13Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CI-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 190
+head_sha = "89be30f1c95ff28ea4a5b89a2ec42dacb3e270c1"
+branch = "codex/apple-m4-inference-excellence/M4-CI-001-evidence-lanes"
+
+notes = [
+  "Opened PR #190 to codify M4 evidence CI lanes and retention contracts.",
+  "The PR documents generic PR Tier 0, advisory local, scheduled M4, and release-gate lanes, plus short-lived Tier 0 debug artifact retention and non-blocking hardware timing behavior.",
+  "Scope is documentation, model-free workflow retention, and tracker state only.",
+  "No live M4 inference, model evidence refresh, BitNet chat or serve, production hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]
