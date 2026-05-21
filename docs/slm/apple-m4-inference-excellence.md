@@ -1359,6 +1359,13 @@ queue limits and backpressure
 resident model reuse
 ```
 
+`M4-SERVE-EX-004` records a model-free
+`bitnet mac serve-backpressure-smoke` contract for concurrent local requests,
+queue depth, busy and timeout responses, resident model reuse, per-request
+receipts, and failure receipts across dense SLM and gated BitNet serve routes.
+It is a receipt and protocol contract only; live runtime/model proof remains in
+the dedicated dense and BitNet evidence items.
+
 Local service claims stay bounded: local appliance operation, not production
 hosting and not broad OpenAI compatibility.
 

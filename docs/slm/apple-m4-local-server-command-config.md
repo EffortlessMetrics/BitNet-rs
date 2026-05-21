@@ -162,6 +162,22 @@ comes from `M4-SERVE-EX-001`, while BitNet serve remains tied to the
 `M4-BITNET-EX-007` gate. It does not claim production hosting, full OpenAI
 compatibility, full Metal inference, broad quality, or broad performance.
 
+For the queue and resident-state contract, use the model-free backpressure
+smoke:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac serve-backpressure-smoke \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/serve-backpressure/summary.json
+```
+
+`serve-backpressure-smoke` records the bounded `M4-SERVE-EX-004` contract for
+dense SLM and gated BitNet serve routes: concurrent local requests, queue depth,
+busy responses, timeout responses, resident model reuse, per-request receipts,
+and failure receipts. The receipt is generic PR/CI-safe and does not run or
+download models; it is a queue/backpressure receipt contract, not production
+hosting, full OpenAI compatibility, full Metal inference, broad quality, or
+broad performance evidence.
+
 ## M4-SERVE-EX-001 Dense Server Refresh
 
 The 2026-05-20 M4 dense server refresh ran the in-process `serve-smoke`

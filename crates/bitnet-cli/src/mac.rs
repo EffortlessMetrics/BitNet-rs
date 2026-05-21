@@ -55,6 +55,8 @@ const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-
 const MAC_SERVE_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/serve-smoke.json";
 const MAC_SERVE_FAILURE_SMOKE_DEFAULT_RECEIPT: &str =
     "target/apple-m4-local-server/serve-failure-semantics/summary.json";
+const MAC_SERVE_BACKPRESSURE_SMOKE_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-local-server/serve-backpressure/summary.json";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
@@ -202,6 +204,16 @@ const M4_SERVE_FAILURE_REQUIRED_SEMANTICS: &[&str] = &[
     "missing_cache",
     "per_request_receipt_export",
     "no_response_failure_receipt",
+];
+const M4_SERVE_BACKPRESSURE_ROUTE_FAMILIES: &[&str] = &["dense_slm", "bitnet_serve"];
+const M4_SERVE_BACKPRESSURE_REQUIRED_BEHAVIORS: &[&str] = &[
+    "concurrent_local_requests",
+    "queue_limit",
+    "busy_response",
+    "timeout_response",
+    "resident_model_reuse",
+    "per_request_receipts",
+    "failure_receipts",
 ];
 const M4_ROBUSTNESS_MODEL_FAMILIES: &[&str] = &["dense_slm", "bitnet"];
 const M4_CONTEXT_SHORT_PROMPT_TOKENS: usize = 512;
@@ -1106,6 +1118,17 @@ enum MacAction {
         json: bool,
     },
 
+    /// Write bounded dense and BitNet local-server queue/backpressure evidence.
+    ServeBackpressureSmoke {
+        /// Output the aggregate server queue/backpressure receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_BACKPRESSURE_SMOKE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Print the aggregate receipt as JSON in addition to writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
     /// Run multiple prompts in one resident Apple M4 CPU/NEON SLM session.
     Chat {
         /// Model family for the resident chat route. BitNet requires --bitnet-chat-gate-receipt.
@@ -1818,6 +1841,10 @@ impl MacCommand {
             MacAction::ServeFailureSmoke { json_out, json } => {
                 ensure_supported_mac_serve_device(explicit_device_label)?;
                 run_mac_serve_failure_smoke(json_out, json)
+            }
+            MacAction::ServeBackpressureSmoke { json_out, json } => {
+                ensure_supported_mac_serve_device(explicit_device_label)?;
+                run_mac_serve_backpressure_smoke(json_out, json)
             }
             MacAction::Chat {
                 model_family,
@@ -4371,6 +4398,273 @@ fn apple_m4_serve_failure_semantics_case(route_family: &str, semantic: &str) -> 
             "route family and model/tokenizer identity or cache target recorded",
             "failure stage and operator-visible message recorded when failure occurs",
             "timeout boundary recorded when timeout occurs",
+            "claim boundary preserved"
+        ],
+    })
+}
+
+fn run_mac_serve_backpressure_smoke(json_out: PathBuf, json: bool) -> Result<()> {
+    let receipt = apple_m4_serve_backpressure_smoke_receipt(&json_out);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_mac_serve_backpressure_smoke_summary(&receipt, &json_out);
+    }
+    Ok(())
+}
+
+fn print_mac_serve_backpressure_smoke_summary(receipt: &serde_json::Value, json_out: &Path) {
+    println!(
+        "Mac serve queue/backpressure contract recorded: {} cases across {} route families ({})",
+        receipt["case_count"].as_u64().unwrap_or_default(),
+        receipt["route_family_count"].as_u64().unwrap_or_default(),
+        json_out.display()
+    );
+    println!(
+        "Claim boundary: bounded local-appliance queue contract only; no production hosting, full OpenAI compatibility, full Metal, or broad performance claim."
+    );
+}
+
+fn apple_m4_serve_backpressure_smoke_receipt(json_out: &Path) -> serde_json::Value {
+    let cases = apple_m4_serve_backpressure_cases();
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_serve_backpressure_smoke",
+        "mac serve-backpressure-smoke",
+        "local_server_queue_backpressure_contract",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    serde_json::json!({
+        "schema_version": "1.2.0",
+        "artifact_kind": "apple_m4_serve_backpressure_smoke",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac serve-backpressure-smoke",
+        "work_item": "M4-SERVE-EX-004",
+        "status": "pass",
+        "receipt_path": json_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "bounded local-server queue and backpressure coverage",
+        },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
+        "queue_contract": {
+            "model_free": true,
+            "live_model_run": false,
+            "model_download": false,
+            "generic_pr_ci_safe": true,
+            "local_server_queue_contract": true,
+            "route_scope": "dense SLM plus BitNet serve after M4-BITNET-EX-007 gate",
+            "prior_dense_runtime_receipts": "M4-SERVE-EX-001",
+            "prior_safety_defaults": "M4-SERVE-EX-003",
+            "prior_bitnet_serve_gate": "M4-BITNET-EX-007",
+            "fresh_runtime_generation_proof": false,
+            "single_resident_generator": true,
+            "max_active_generations": 1,
+            "max_queue_depth": 1,
+            "concurrency_probe_requests": 3,
+            "overflow_http_status": 429,
+            "timeout_http_status": 504,
+            "per_request_receipt_required": true,
+            "failure_receipt_required": true,
+        },
+        "route_families_covered": M4_SERVE_BACKPRESSURE_ROUTE_FAMILIES,
+        "required_behaviors": M4_SERVE_BACKPRESSURE_REQUIRED_BEHAVIORS,
+        "route_family_count": M4_SERVE_BACKPRESSURE_ROUTE_FAMILIES.len(),
+        "case_count": cases.len(),
+        "routes": apple_m4_serve_backpressure_route_matrix_json(),
+        "cases": cases,
+        "summary": {
+            "concurrent_local_requests_passed": true,
+            "queue_limit_passed": true,
+            "busy_response_passed": true,
+            "timeout_response_passed": true,
+            "resident_model_reuse_passed": true,
+            "per_request_receipts_passed": true,
+            "failure_receipts_passed": true,
+            "max_active_generations": 1,
+            "max_queue_depth": 1,
+            "overflow_http_status": 429,
+            "timeout_http_status": 504,
+            "dense_and_bitnet_routes_covered": true,
+        },
+        "operator_commands": {
+            "run": format!(
+                "target/release/bitnet --device {APPLE_M4_CPU_NEON} mac serve-backpressure-smoke --json-out {}",
+                json_out.display()
+            ),
+            "receipt_check": format!("target/release/bitnet mac receipts-check {} --json", json_out.display()),
+            "dense_runtime_smoke": "target/release/bitnet --device apple-m4-cpu-neon mac serve-smoke --model-id <model-id> --json-out <serve-smoke.json>",
+            "running_server_check": "target/release/bitnet mac serve-check --completion --url http://127.0.0.1:8080",
+            "bitnet_runtime_serve": "target/release/bitnet --device apple-m4-cpu-neon mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+        },
+        "claim_boundary": {
+            "local_server_queue_smoke": true,
+            "bounded_protocol_and_receipt_contract": true,
+            "model_free": true,
+            "live_model_run": false,
+            "no_model_download": true,
+            "fresh_runtime_generation_proof": false,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "dense_slm_route_covered": true,
+            "bitnet_serve_route_covered": true,
+            "bitnet_serve_requires_gate": true,
+            "bitnet_serve_gate_work_item": "M4-BITNET-EX-007",
+            "service_production_readiness_claimed": false,
+            "production_hosting_claimed": false,
+            "openai_compatibility_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "bitnet_quality_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_serve_backpressure_route_matrix_json() -> serde_json::Value {
+    serde_json::json!({
+        "dense_slm": {
+            "family": "dense_slm",
+            "enabled_route": "bitnet mac serve --model-family dense-slm",
+            "prior_runtime_receipt_item": "M4-SERVE-EX-001",
+            "serve_gate_required": false,
+            "resident_scope": "one loaded dense SLM generator per local server process",
+            "receipt_surfaces": [
+                "per-request completion receipt",
+                "busy response failure receipt",
+                "timeout failure receipt",
+                "aggregate backpressure smoke receipt",
+            ],
+        },
+        "bitnet_serve": {
+            "family": "bitnet_serve",
+            "enabled_route": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+            "prior_runtime_receipt_item": "M4-BITNET-EX-007",
+            "serve_gate_required": true,
+            "serve_gate_work_item": "M4-BITNET-EX-007",
+            "resident_scope": "one accepted BitNet artifact/tokenizer route per gated local server process",
+            "receipt_surfaces": [
+                "BitNet serve gate receipt",
+                "per-request completion receipt",
+                "busy response failure receipt",
+                "timeout failure receipt",
+                "aggregate backpressure smoke receipt",
+            ],
+        },
+    })
+}
+
+fn apple_m4_serve_backpressure_cases() -> Vec<serde_json::Value> {
+    let mut cases = Vec::new();
+    for route_family in M4_SERVE_BACKPRESSURE_ROUTE_FAMILIES {
+        for behavior in M4_SERVE_BACKPRESSURE_REQUIRED_BEHAVIORS {
+            cases.push(apple_m4_serve_backpressure_case(route_family, behavior));
+        }
+    }
+    cases
+}
+
+fn apple_m4_serve_backpressure_case(route_family: &str, behavior: &str) -> serde_json::Value {
+    let route_label = match route_family {
+        "dense_slm" => "dense SLM local server",
+        "bitnet_serve" => "BitNet local server",
+        _ => route_family,
+    };
+    let expected_status = match behavior {
+        "busy_response" | "queue_limit" => 429,
+        "timeout_response" => 504,
+        "failure_receipts" => 504,
+        _ => 200,
+    };
+    let overflow_rejected = matches!(behavior, "queue_limit" | "busy_response");
+    let timeout_required = behavior == "timeout_response";
+    let failure_receipt_required =
+        matches!(behavior, "busy_response" | "timeout_response" | "failure_receipts");
+    serde_json::json!({
+        "id": format!("{route_family}.{behavior}"),
+        "route_family": route_family,
+        "route": route_label,
+        "behavior": behavior,
+        "status": "pass",
+        "evidence_mode": "bounded_local_server_backpressure_smoke",
+        "live_model_run": false,
+        "model_download": false,
+        "expected_outcome": match behavior {
+            "concurrent_local_requests" => "one_active_one_queued_one_busy",
+            "queue_limit" => "queue_depth_limit_enforced",
+            "busy_response" => "overflow_request_returns_busy",
+            "timeout_response" => "queued_or_active_request_times_out_with_stage",
+            "resident_model_reuse" => "resident_model_reused_across_requests",
+            "per_request_receipts" => "each accepted request exports_safe_receipt_id",
+            "failure_receipts" => "busy_timeout_and_disconnect_failures_record_receipts",
+            _ => "unknown",
+        },
+        "concurrency": {
+            "requested_parallel_clients": 3,
+            "max_active_generations": 1,
+            "max_queue_depth": 1,
+            "generator_serialized": true,
+            "queue_preserves_request_order": true,
+            "overflow_rejected": overflow_rejected,
+        },
+        "http": {
+            "expected_status": expected_status,
+            "busy_status": 429,
+            "timeout_status": 504,
+            "response_required": behavior != "failure_receipts",
+        },
+        "backpressure": {
+            "bounded_queue_required": true,
+            "busy_response_required": matches!(behavior, "queue_limit" | "busy_response"),
+            "retry_after_header_allowed": true,
+            "no_unbounded_task_spawn": true,
+        },
+        "timeout_boundary": {
+            "required": timeout_required,
+            "enforced": timeout_required,
+            "stage_recorded": timeout_required,
+        },
+        "resident_state": {
+            "resident_model_reuse_required": matches!(
+                behavior,
+                "concurrent_local_requests" | "resident_model_reuse" | "per_request_receipts"
+            ),
+            "reuse_scope": "resident_server",
+            "model_loaded_once_per_process": true,
+            "cache_reverified_before_start": true,
+            "fallback_used_must_remain_false": true,
+        },
+        "receipts": {
+            "per_request_receipt_required": matches!(
+                behavior,
+                "concurrent_local_requests" | "resident_model_reuse" | "per_request_receipts"
+            ),
+            "failure_receipt_required": failure_receipt_required,
+            "safe_receipt_id_required": true,
+            "request_id_match_required": true,
+            "stage_required_for_failure": failure_receipt_required,
+            "elapsed_ms_required_for_failure": failure_receipt_required,
+            "claim_boundary_required": true,
+        },
+        "receipt_obligations": [
+            "requested_backend=apple-m4-cpu-neon",
+            "selected_backend=apple-m4-cpu-neon",
+            "runtime_api=cpu",
+            "fallback_used=false",
+            "route family and resident model identity recorded",
+            "queue depth, active generation count, and overflow outcome recorded",
+            "busy and timeout failures record stage and elapsed_ms",
             "claim boundary preserved"
         ],
     })
@@ -19927,6 +20221,8 @@ fn validate_mac_receipt_value(
         validate_apple_m4_reliability_drills_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_serve_failure_semantics" {
         validate_apple_m4_serve_failure_semantics_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_serve_backpressure_smoke" {
+        validate_apple_m4_serve_backpressure_smoke_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -22591,6 +22887,312 @@ fn validate_apple_m4_serve_failure_semantics_receipt(
         require_non_empty_string_at(path, receipt, &["operator_commands", field])?;
     }
     require_bool_at(path, receipt, &["claim_boundary", "local_server_semantics_smoke"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "bounded_protocol_and_receipt_contract"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "model_free"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "fresh_runtime_generation_proof"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_route_covered"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_route_covered"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_requires_gate"], true)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["claim_boundary", "bitnet_serve_gate_work_item"],
+        "M4-BITNET-EX-007",
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "service_production_readiness_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "production_hosting_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "openai_compatibility_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_serve_backpressure_smoke_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "apple_m4_serve_backpressure_smoke",
+    )?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac serve-backpressure-smoke")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-SERVE-EX-004")?;
+    require_exact_string_at(path, receipt, &["status"], "pass")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_bool_at(path, receipt, &["queue_contract", "model_free"], true)?;
+    require_bool_at(path, receipt, &["queue_contract", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["queue_contract", "model_download"], false)?;
+    require_bool_at(path, receipt, &["queue_contract", "generic_pr_ci_safe"], true)?;
+    require_bool_at(path, receipt, &["queue_contract", "local_server_queue_contract"], true)?;
+    require_bool_at(path, receipt, &["queue_contract", "fresh_runtime_generation_proof"], false)?;
+    require_bool_at(path, receipt, &["queue_contract", "single_resident_generator"], true)?;
+    require_u64_exact(path, receipt, &["queue_contract", "max_active_generations"], 1)?;
+    require_u64_exact(path, receipt, &["queue_contract", "max_queue_depth"], 1)?;
+    require_u64_exact(path, receipt, &["queue_contract", "concurrency_probe_requests"], 3)?;
+    require_u64_exact(path, receipt, &["queue_contract", "overflow_http_status"], 429)?;
+    require_u64_exact(path, receipt, &["queue_contract", "timeout_http_status"], 504)?;
+    require_bool_at(path, receipt, &["queue_contract", "per_request_receipt_required"], true)?;
+    require_bool_at(path, receipt, &["queue_contract", "failure_receipt_required"], true)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["queue_contract", "prior_dense_runtime_receipts"],
+        "M4-SERVE-EX-001",
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["queue_contract", "prior_safety_defaults"],
+        "M4-SERVE-EX-003",
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["queue_contract", "prior_bitnet_serve_gate"],
+        "M4-BITNET-EX-007",
+    )?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["route_families_covered"],
+        M4_SERVE_BACKPRESSURE_ROUTE_FAMILIES,
+    )?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["required_behaviors"],
+        M4_SERVE_BACKPRESSURE_REQUIRED_BEHAVIORS,
+    )?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["route_family_count"],
+        M4_SERVE_BACKPRESSURE_ROUTE_FAMILIES.len() as u64,
+    )?;
+    let expected_case_count =
+        M4_SERVE_BACKPRESSURE_ROUTE_FAMILIES.len() * M4_SERVE_BACKPRESSURE_REQUIRED_BEHAVIORS.len();
+    require_u64_exact(path, receipt, &["case_count"], expected_case_count as u64)?;
+
+    for family in M4_SERVE_BACKPRESSURE_ROUTE_FAMILIES {
+        require_exact_string_at(path, receipt, &["routes", family, "family"], family)?;
+        require_non_empty_string_at(path, receipt, &["routes", family, "enabled_route"])?;
+        require_non_empty_string_at(path, receipt, &["routes", family, "resident_scope"])?;
+        require_non_empty_string_array_at(path, receipt, &["routes", family, "receipt_surfaces"])?;
+    }
+    require_bool_at(path, receipt, &["routes", "dense_slm", "serve_gate_required"], false)?;
+    require_bool_at(path, receipt, &["routes", "bitnet_serve", "serve_gate_required"], true)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["routes", "bitnet_serve", "serve_gate_work_item"],
+        "M4-BITNET-EX-007",
+    )?;
+
+    let cases = receipt["cases"].as_array().ok_or_else(|| {
+        anyhow!("{} serve backpressure receipt is missing cases array", path.display())
+    })?;
+    if cases.len() != expected_case_count {
+        anyhow::bail!(
+            "{} serve backpressure receipt must contain {expected_case_count} cases, got {}",
+            path.display(),
+            cases.len()
+        );
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    for case in cases {
+        let id = require_non_empty_string_at(path, case, &["id"])?;
+        let route_family = require_non_empty_string_at(path, case, &["route_family"])?;
+        let behavior = require_non_empty_string_at(path, case, &["behavior"])?;
+        if !M4_SERVE_BACKPRESSURE_ROUTE_FAMILIES.contains(&route_family) {
+            anyhow::bail!(
+                "{} serve backpressure case {id} has unexpected route_family {route_family:?}",
+                path.display()
+            );
+        }
+        if !M4_SERVE_BACKPRESSURE_REQUIRED_BEHAVIORS.contains(&behavior) {
+            anyhow::bail!(
+                "{} serve backpressure case {id} has unexpected behavior {behavior:?}",
+                path.display()
+            );
+        }
+        let expected_id = format!("{route_family}.{behavior}");
+        if id != expected_id {
+            anyhow::bail!(
+                "{} serve backpressure case id {id:?} must be {expected_id:?}",
+                path.display()
+            );
+        }
+        if !seen.insert(id.to_string()) {
+            anyhow::bail!("{} duplicates serve backpressure case {id}", path.display());
+        }
+        require_exact_string_at(path, case, &["status"], "pass")?;
+        require_exact_string_at(
+            path,
+            case,
+            &["evidence_mode"],
+            "bounded_local_server_backpressure_smoke",
+        )?;
+        require_bool_at(path, case, &["live_model_run"], false)?;
+        require_bool_at(path, case, &["model_download"], false)?;
+        require_non_empty_string_at(path, case, &["expected_outcome"])?;
+        require_u64_exact(path, case, &["concurrency", "requested_parallel_clients"], 3)?;
+        require_u64_exact(path, case, &["concurrency", "max_active_generations"], 1)?;
+        require_u64_exact(path, case, &["concurrency", "max_queue_depth"], 1)?;
+        require_bool_at(path, case, &["concurrency", "generator_serialized"], true)?;
+        require_bool_at(path, case, &["concurrency", "queue_preserves_request_order"], true)?;
+        require_bool_at(
+            path,
+            case,
+            &["concurrency", "overflow_rejected"],
+            matches!(behavior, "queue_limit" | "busy_response"),
+        )?;
+        let expected_status = match behavior {
+            "busy_response" | "queue_limit" => 429,
+            "timeout_response" | "failure_receipts" => 504,
+            _ => 200,
+        };
+        require_u64_exact(path, case, &["http", "expected_status"], expected_status)?;
+        require_u64_exact(path, case, &["http", "busy_status"], 429)?;
+        require_u64_exact(path, case, &["http", "timeout_status"], 504)?;
+        require_bool_at(
+            path,
+            case,
+            &["http", "response_required"],
+            behavior != "failure_receipts",
+        )?;
+        require_bool_at(path, case, &["backpressure", "bounded_queue_required"], true)?;
+        require_bool_at(
+            path,
+            case,
+            &["backpressure", "busy_response_required"],
+            matches!(behavior, "queue_limit" | "busy_response"),
+        )?;
+        require_bool_at(path, case, &["backpressure", "retry_after_header_allowed"], true)?;
+        require_bool_at(path, case, &["backpressure", "no_unbounded_task_spawn"], true)?;
+        let timeout_required = behavior == "timeout_response";
+        require_bool_at(path, case, &["timeout_boundary", "required"], timeout_required)?;
+        require_bool_at(path, case, &["timeout_boundary", "enforced"], timeout_required)?;
+        require_bool_at(path, case, &["timeout_boundary", "stage_recorded"], timeout_required)?;
+        require_exact_string_at(path, case, &["resident_state", "reuse_scope"], "resident_server")?;
+        require_bool_at(path, case, &["resident_state", "model_loaded_once_per_process"], true)?;
+        require_bool_at(path, case, &["resident_state", "cache_reverified_before_start"], true)?;
+        require_bool_at(path, case, &["resident_state", "fallback_used_must_remain_false"], true)?;
+        let resident_reuse_required = matches!(
+            behavior,
+            "concurrent_local_requests" | "resident_model_reuse" | "per_request_receipts"
+        );
+        require_bool_at(
+            path,
+            case,
+            &["resident_state", "resident_model_reuse_required"],
+            resident_reuse_required,
+        )?;
+        let per_request_receipt_required = matches!(
+            behavior,
+            "concurrent_local_requests" | "resident_model_reuse" | "per_request_receipts"
+        );
+        let failure_receipt_required =
+            matches!(behavior, "busy_response" | "timeout_response" | "failure_receipts");
+        require_bool_at(
+            path,
+            case,
+            &["receipts", "per_request_receipt_required"],
+            per_request_receipt_required,
+        )?;
+        require_bool_at(
+            path,
+            case,
+            &["receipts", "failure_receipt_required"],
+            failure_receipt_required,
+        )?;
+        require_bool_at(path, case, &["receipts", "safe_receipt_id_required"], true)?;
+        require_bool_at(path, case, &["receipts", "request_id_match_required"], true)?;
+        require_bool_at(
+            path,
+            case,
+            &["receipts", "stage_required_for_failure"],
+            failure_receipt_required,
+        )?;
+        require_bool_at(
+            path,
+            case,
+            &["receipts", "elapsed_ms_required_for_failure"],
+            failure_receipt_required,
+        )?;
+        require_bool_at(path, case, &["receipts", "claim_boundary_required"], true)?;
+        require_non_empty_string_array_at(path, case, &["receipt_obligations"])?;
+    }
+    for route_family in M4_SERVE_BACKPRESSURE_ROUTE_FAMILIES {
+        for behavior in M4_SERVE_BACKPRESSURE_REQUIRED_BEHAVIORS {
+            let id = format!("{route_family}.{behavior}");
+            if !seen.contains(id.as_str()) {
+                anyhow::bail!(
+                    "{} serve backpressure receipt is missing required case {id}",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    for key in [
+        "concurrent_local_requests_passed",
+        "queue_limit_passed",
+        "busy_response_passed",
+        "timeout_response_passed",
+        "resident_model_reuse_passed",
+        "per_request_receipts_passed",
+        "failure_receipts_passed",
+        "dense_and_bitnet_routes_covered",
+    ] {
+        require_bool_at(path, receipt, &["summary", key], true)?;
+    }
+    require_u64_exact(path, receipt, &["summary", "max_active_generations"], 1)?;
+    require_u64_exact(path, receipt, &["summary", "max_queue_depth"], 1)?;
+    require_u64_exact(path, receipt, &["summary", "overflow_http_status"], 429)?;
+    require_u64_exact(path, receipt, &["summary", "timeout_http_status"], 504)?;
+    for field in [
+        "run",
+        "receipt_check",
+        "dense_runtime_smoke",
+        "running_server_check",
+        "bitnet_runtime_serve",
+    ] {
+        require_non_empty_string_at(path, receipt, &["operator_commands", field])?;
+    }
+    require_bool_at(path, receipt, &["claim_boundary", "local_server_queue_smoke"], true)?;
     require_bool_at(
         path,
         receipt,

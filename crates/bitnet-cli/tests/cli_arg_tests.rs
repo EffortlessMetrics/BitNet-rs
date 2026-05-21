@@ -3564,6 +3564,73 @@ fn mac_receipts_check_rejects_serve_failure_semantics_production_claim()
 }
 
 #[test]
+fn mac_serve_backpressure_smoke_help_documents_queue_receipt() {
+    bitnet()
+        .args(["mac", "serve-backpressure-smoke", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("queue/backpressure"))
+        .stdout(predicate::str::contains("--json-out <PATH>"));
+}
+
+#[test]
+fn mac_serve_backpressure_smoke_writes_receipts_checkable_summary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let summary = dir.path().join("summary.json");
+    let summary_str = summary.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "serve-backpressure-smoke", "--json-out", summary_str.as_str()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Mac serve queue/backpressure contract recorded"));
+
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&summary)?)?;
+    assert_eq!(receipt["artifact_kind"], "apple_m4_serve_backpressure_smoke");
+    assert_eq!(receipt["work_item"], "M4-SERVE-EX-004");
+    assert_eq!(receipt["route_family_count"], 2);
+    assert_eq!(receipt["case_count"], 14);
+    assert_eq!(receipt["summary"]["queue_limit_passed"], true);
+    assert_eq!(receipt["summary"]["busy_response_passed"], true);
+    assert_eq!(receipt["summary"]["resident_model_reuse_passed"], true);
+    assert_eq!(receipt["claim_boundary"]["production_hosting_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["openai_compatibility_claimed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", summary_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_serve_backpressure_smoke"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_receipts_check_rejects_serve_backpressure_production_claim()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let summary = dir.path().join("summary.json");
+    let summary_str = summary.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "serve-backpressure-smoke", "--json-out", summary_str.as_str()])
+        .assert()
+        .success();
+
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&summary)?)?;
+    receipt["claim_boundary"]["production_hosting_claimed"] = serde_json::json!(true);
+    std::fs::write(&summary, serde_json::to_vec_pretty(&receipt)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", summary_str.as_str(), "--json"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("production_hosting_claimed"));
+    Ok(())
+}
+
+#[test]
 fn mac_chat_help_documents_resident_prompts() {
     bitnet()
         .args(["mac", "chat", "--help"])
