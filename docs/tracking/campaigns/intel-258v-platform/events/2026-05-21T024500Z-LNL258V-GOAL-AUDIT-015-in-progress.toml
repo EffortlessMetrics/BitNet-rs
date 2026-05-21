@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T02:45:00Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-015"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-015-post-power010"
+actor = "codex"
+summary = "Started a no-inference audit refresh after the merged POWER-010 battery-plan work."
+
+notes = [
+  "The refresh records POWER-010/#116 and closeout #117 in the excellence audit and goal artifact checklist.",
+  "The audit indexes `lunar-lake-low-power-battery-plan.json` as operator planning evidence only, not battery-mode telemetry or power-advantage evidence.",
+  "POWER-006 remains blocked until real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage exist.",
+]

@@ -2,13 +2,13 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-21T01:10:00Z",
+  "created_utc": "2026-05-21T02:45:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "7c2184ccfcf655b3bf5d18aa236a76b6406b3938",
+  "source_revision": "99f5fc47d0aed614ca0fd15a93379ed0995e4610",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
   "excellent_support_ready": false,
-  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness, REG-011 gates route/profile and cold/warm evidence on route/model identity, OP-013 makes blocked auto routes fail closed before model resolution, OP-014 makes the blocked low_power auto ask surface point to the POWER-006 battery runbook and next battery-mode evidence, VALIDATE-003 carries that blocked low_power ask receipt into operator readiness so validate, regress, and compare all index the same runbook guidance, POWER-009/#6097 plus closeout #6099 are merged and carry the same runbook plus telemetry-context --require-battery guidance through power-profile evidence, REG-012/#6102 plus closeout #6103 are merged with Arc/NPU bounded proof coverage exposed as strict regression-surface indexed/ready fields without changing claims, and REG-013/#6106 plus closeout #6107 are merged with BitNet CPU reference route evidence exposed as strict regression-surface indexed/ready fields without changing BitNet behavior. ASK-006/ASK-007 index appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-004 is merged and closed out with pending A770 shared BitNet semantic stack watchpoints #4756, #4757, #4767, #4853, and #5064 indexed, POWER-007/POWER-008 make the physical battery-mode low_power runbook discoverable, and A770-005/#6072 plus closeout #6079 and A770-006/#6110 plus closeout #6112 landed adjacent selected-device OpenCL smoke/parity evidence without changing Lunar Lake BitNet semantic rerun state. The swarm main-history import #104, CLI model-cache module-path fix #100, and Qwen3 comparator support-bundle lock #99 are recorded as repo/support-gate updates; they do not add Lunar Lake inference, route promotion, speedup, power advantage, or BitNet behavior claims. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof.",
+  "reason": "The platform is operator-ready and profile-aware, with structured promoted on the dense Qwen CPU control route, OpenVINO GPU promoted for ask_short, ask_normal, prefill_heavy, and decode_heavy, and OpenVINO NPU promoted only for warm_resident from existing resident-session evidence. REG-010 and VALIDATE-002 carry low_power power-profile context plus thermal temperature availability through strict regression and operator readiness, REG-011 gates route/profile and cold/warm evidence on route/model identity, OP-013 makes blocked auto routes fail closed before model resolution, OP-014 makes the blocked low_power auto ask surface point to the POWER-006 battery runbook and next battery-mode evidence, VALIDATE-003 carries that blocked low_power ask receipt into operator readiness so validate, regress, and compare all index the same runbook guidance, POWER-009/#6097 plus closeout #6099 are merged and carry the same runbook plus telemetry-context --require-battery guidance through power-profile evidence, REG-012/#6102 plus closeout #6103 are merged with Arc/NPU bounded proof coverage exposed as strict regression-surface indexed/ready fields without changing claims, and REG-013/#6106 plus closeout #6107 are merged with BitNet CPU reference route evidence exposed as strict regression-surface indexed/ready fields without changing BitNet behavior. ASK-006/ASK-007 index appliance-level auto ask receipts for ask_normal and ask_short, BITNET-INTAKE-004 is merged and closed out with pending A770 shared BitNet semantic stack watchpoints #4756, #4757, #4767, #4853, and #5064 indexed, POWER-007/POWER-008 make the physical battery-mode low_power runbook discoverable, and A770-005/#6072 plus closeout #6079 and A770-006/#6110 plus closeout #6112 landed adjacent selected-device OpenCL smoke/parity evidence without changing Lunar Lake BitNet semantic rerun state. The swarm main-history import #104, CLI model-cache module-path fix #100, and Qwen3 comparator support-bundle lock #99 are recorded as repo/support-gate updates; they do not add Lunar Lake inference, route promotion, speedup, power advantage, or BitNet behavior claims. Excellent all-profile support is not complete while low_power still has no promoted route; the current energy-proxy receipt is AC-only and does not provide battery-mode or power-advantage proof. POWER-010/#116 plus closeout #117 are now merged and add a no-inference low_power battery-plan command plus committed lunar-lake-low-power-battery-plan.json receipt so POWER-006 has a machine-readable operator plan before physical battery evidence collection; this does not add battery-mode evidence, route promotion, speedup, power advantage, measured temperature, native accelerator execution, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior changes. The SLM-CPU-067/#109 exact Q8 sidecar runtime hook is now on swarm main as an adjacent SLM CPU runtime support update; it is not Lunar Lake inference, route promotion, speedup, broad quality, or BitNet QK256/I2_S behavior evidence.",
   "tracker_state": {
     "active_item": "LNL258V-POWER-006",
     "active_item_status": "blocked",
@@ -76,7 +76,26 @@
     "last_bitnet_cpu_reference_surface_merge_sha": "5fb87bbb38a8e27a7b2847c59e0f6be496f3d3c2",
     "last_bitnet_cpu_reference_surface_closeout_pr": 6107,
     "last_bitnet_cpu_reference_surface_closeout_merge_sha": "72d86a72e7deaf8cdeed6a620f79dddf48ca5dd6",
-    "audit_refresh_scope": "no_inference_swarm_main_sync_refresh"
+    "audit_refresh_scope": "no_inference_post_power010_battery_plan_closeout",
+    "last_merged_low_power_battery_plan_item": "LNL258V-POWER-010",
+    "last_merged_low_power_battery_plan_pr": 116,
+    "last_merged_low_power_battery_plan_merge_sha": "456b15f78231e78baafd61acc9c622f8b784c5cf",
+    "last_merged_low_power_battery_plan_closeout_pr": 117,
+    "last_merged_low_power_battery_plan_closeout_merge_sha": "e6958473a5b8ef93ae9b3026a5fb9a2100e1a7aa",
+    "last_swarm_slm_cpu_q8_hook_pr": 109,
+    "last_swarm_slm_cpu_q8_hook_merge_sha": "ec2145727cf48dcb5ea47da35acf85d5e427c8d4",
+    "last_swarm_cuda_qwen25_ops_pr": 118,
+    "last_swarm_cuda_qwen25_ops_merge_sha": "684a0cd01cb40e677e9d982104d9422f772a0f71",
+    "last_swarm_slm_cpu_q8_timing_pr": 120,
+    "last_swarm_slm_cpu_q8_timing_merge_sha": "287ef74a8e8345cb26429bddd191cb712467c45d",
+    "last_swarm_apple_m4_serve_failure_pr": 112,
+    "last_swarm_apple_m4_serve_failure_merge_sha": "a3aed519ef85522af9dcb7f67b4d30af9fc3198e",
+    "last_swarm_slm_cpu_event_trim_pr": 122,
+    "last_swarm_slm_cpu_event_trim_merge_sha": "6ace3cfe6fb05a8e5903b3d6010e25f35161788e",
+    "last_swarm_qwen3_repeated_comparator_plan_pr": 123,
+    "last_swarm_qwen3_repeated_comparator_plan_merge_sha": "2dc3cfad7dd0a50d647f25146fe947170c4e5ddf",
+    "last_swarm_slm_cpu_q8_locality_plan_pr": 121,
+    "last_swarm_slm_cpu_q8_locality_plan_merge_sha": "99f5fc47d0aed614ca0fd15a93379ed0995e4610"
   },
   "command_surface": {
     "ask": {
@@ -136,6 +155,12 @@
       "bitnet_cpu_reference_evidence_ready": true,
       "arc_npu_bounded_evidence_ready": true,
       "evidence": "lunar-lake-operator-comparison.json"
+    },
+    "low_power_plan": {
+      "status": "ready_operator_plan_no_evidence_no_promotion_change",
+      "operator_plan_ready": true,
+      "can_collect_battery_evidence_now": false,
+      "evidence": "lunar-lake-low-power-battery-plan.json"
     }
   },
   "route_policy": {
@@ -408,7 +433,9 @@
       "battery-mode sample is missing for low_power promotion",
       "no low_power route has benchmark-qualified power evidence",
       "thermal-zone visibility is indexed but measured temperature readings remain unavailable"
-    ]
+    ],
+    "low_power_battery_plan_indexed": true,
+    "low_power_battery_plan_receipt": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-low-power-battery-plan.json"
   },
   "remaining_gaps": [
     "No promoted route for low_power.",
@@ -420,9 +447,11 @@
     "A770-005/#6072 and closeout #6079 add selected-device OpenCL smoke evidence, and A770-006/#6110 plus closeout #6112 add selected-device OpenCL matmul_i2s CPU parity evidence; neither merges an indexed shared BitNet semantic fix and therefore neither stales Lunar Lake BitNet receipts.",
     "BitNet CPU reference route evidence is now an explicit strict-regression-surface gate, separate from dense Qwen SLM evidence.",
     "Arc/NPU bounded proof receipts are now explicit strict-regression-surface gates, but still remain bounded proof and not full accelerator inference.",
-    "BitNet accelerator inference and packed QK256 accelerator decode remain unclaimed."
+    "BitNet accelerator inference and packed QK256 accelerator decode remain unclaimed.",
+    "The low_power battery-plan receipt is ready, but can_collect_battery_evidence_now=false while telemetry-context --require-battery remains AC-blocked."
   ],
   "next_recommended_work": [
+    "Use bitnet lunar-lake low-power-plan to confirm operator_plan_ready=true before the physical POWER-006 battery run.",
     "Follow docs/hardware/intel-258v-low-power-battery-runbook.md, rerun lunar-lake telemetry-context --require-battery while on battery power, then rebuild low_power power-profile evidence.",
     "LNL258V-POWER follow-up for benchmark-qualified low_power power advantage.",
     "Continue NPU low-power follow-up before any low_power NPU promotion.",
@@ -492,7 +521,18 @@
     "npu_rmsnorm_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-rmsnorm-subgraph-parity.json",
     "npu_linear_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-linear-projection-subgraph-parity.json",
     "npu_ffn_subgraph": "ci\\hardware\\intel-258v\\2026-05-08/npu-bitnet-ffn-subgraph-parity.json",
-    "cpu_profile_run": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-cpu-profile-run.json"
+    "cpu_profile_run": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-cpu-profile-run.json",
+    "low_power_battery_plan": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-low-power-battery-plan.json",
+    "power_010_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T022330Z-LNL258V-POWER-010-merged.toml",
+    "power_010_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/116",
+    "power_010_closeout_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/117",
+    "swarm_slm_cpu_q8_hook_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/109",
+    "swarm_cuda_qwen25_ops_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/118",
+    "swarm_slm_cpu_q8_timing_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/120",
+    "swarm_apple_m4_serve_failure_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/112",
+    "swarm_slm_cpu_event_trim_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/122",
+    "swarm_qwen3_repeated_comparator_plan_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/123",
+    "swarm_slm_cpu_q8_locality_plan_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/121"
   },
   "claim_boundary": {
     "new_inference_run": false,
@@ -505,6 +545,6 @@
     "measured_temperature_claim": false,
     "full_bitnet_accelerator_inference_claim": false,
     "bitnet_qk256_i2s_behavior_change": false,
-    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, Arc/NPU bounded proof surface flags, BitNet CPU reference surface flags, BitNet semantic-intake, BITNET-INTAKE-004 closeout, POWER-007/POWER-008 runbook discoverability, OP-014 low_power blocked-ask guidance, VALIDATE-003 blocked-ask readiness indexing, POWER-009/#6097 power-profile runbook guidance, POWER-009 closeout #6099, REG-012/#6102, REG-012 closeout #6103, REG-013/#6106, REG-013 closeout #6107, A770-006/#6110, A770-006 closeout #6112, swarm history import #104, model-cache fix #100, Qwen3 support-bundle lock #99, and tracker evidence"
+    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, Arc/NPU bounded proof surface flags, BitNet CPU reference surface flags, BitNet semantic-intake, BITNET-INTAKE-004 closeout, POWER-007/POWER-008 runbook discoverability, OP-014 low_power blocked-ask guidance, VALIDATE-003 blocked-ask readiness indexing, POWER-009/#6097 power-profile runbook guidance, POWER-009 closeout #6099, REG-012/#6102, REG-012 closeout #6103, REG-013/#6106, REG-013 closeout #6107, A770-006/#6110, A770-006 closeout #6112, swarm history import #104, model-cache fix #100, Qwen3 support-bundle lock #99, and tracker evidence, POWER-010/#116 low_power battery-plan receipt, and POWER-010 closeout #117, and SLM-CPU-067/#109 adjacent sidecar runtime-support main update without Lunar Lake route-evidence change"
   }
 }
