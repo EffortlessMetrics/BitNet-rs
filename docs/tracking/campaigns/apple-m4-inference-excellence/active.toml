@@ -2532,7 +2532,7 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-REPRO-001", "M4-BENCH-003"]
-pr = 6162
+pr = 94
 acceptance = "Refresh dense SLM local-server conformance on M4 for supported model identities, including health, ready, one-shot request, streaming completion, per-request receipt export, timeout behavior, fallback=false backend fields, and service claim boundaries."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_serve -- --nocapture",

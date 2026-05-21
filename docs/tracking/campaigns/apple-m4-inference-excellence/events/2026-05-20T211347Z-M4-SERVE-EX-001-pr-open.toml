@@ -5,12 +5,12 @@ event = "pr_open"
 actor = "codex"
 previous_status = "in_progress"
 new_status = "pr_open"
-pr = 6162
-head_sha = "121fedf270a45286587e31bce3bade0173c27c91"
+pr = 94
+head_sha = "be3f35bf925da601e45efc1507985c51f81b2355"
 branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-dense-serve-conformance"
 
 notes = [
-  "Opened PR #6162 for the dense-only M4 serve-smoke harness and receipt validator.",
+  "Mapped the source PR #6162 work item to live swarm PR #94 for the dense-only M4 serve-smoke harness and receipt validator during source tree sync.",
   "`bitnet mac serve-smoke` exercises health, ready, models, non-streaming completion, streaming completion, and per-request receipt export through the existing local server handlers, then writes a `bitnet_apple_m4_dense_local_server_smoke` aggregate receipt.",
   "The PR intentionally leaves M4-SERVE-EX-001 open until live M4 dense serve-smoke receipts are collected under `ci/hardware/apple-m4-mac-mini/**/slm-serve/**` and validated with receipts-check.",
   "No BitNet serve enablement, service production readiness, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
