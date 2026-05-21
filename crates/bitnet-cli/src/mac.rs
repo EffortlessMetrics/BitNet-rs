@@ -3449,7 +3449,6 @@ fn apple_m4_route_state_matrix_json(report_inventory: &serde_json::Value) -> ser
                 "requires_gate_receipt": false,
                 "evidence": [
                     route_matrix_evidence("M4-BITNET-EX-003", "bitnet_benchmark", "bitnet_apple_m4_benchmark_v1", report_inventory, "bitnet_benchmark"),
-                    route_matrix_evidence("M4-BITNET-EX-005", "bitnet_one_shot_failure", "bitnet_apple_m4_mac_ask_failure", report_inventory, "bitnet_one_shot_failure"),
                 ],
                 "claim_boundary": "Accepted BitNet artifact/tokenizer one-shot route only; not chat, serve, broad quality, or speed proof.",
             },
@@ -23676,13 +23675,32 @@ fn require_m4_route_state_matrix(path: &Path, receipt: &serde_json::Value) -> Re
             );
         }
         surfaces.insert(surface.to_string());
-        if matches!(state, "enabled" | "batch_only")
-            && row["evidence"].as_array().is_none_or(|evidence| evidence.is_empty())
-        {
-            anyhow::bail!(
-                "{} route_state_matrix enabled row {route_id} must record evidence",
-                path.display()
-            );
+        if matches!(state, "enabled" | "batch_only") {
+            let evidence = row["evidence"].as_array().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "{} route_state_matrix enabled row {route_id} must record evidence",
+                    path.display()
+                )
+            })?;
+            if evidence.is_empty() {
+                anyhow::bail!(
+                    "{} route_state_matrix enabled row {route_id} must record evidence",
+                    path.display()
+                );
+            }
+            for evidence_item in evidence {
+                if !evidence_item["latest_receipt"]
+                    .as_str()
+                    .is_some_and(|receipt| !receipt.trim().is_empty())
+                {
+                    let item = evidence_item["item"].as_str().unwrap_or("<unknown>");
+                    let family = evidence_item["receipt_family"].as_str().unwrap_or("<unknown>");
+                    anyhow::bail!(
+                        "{} route_state_matrix row {route_id} evidence {item}/{family} must resolve latest_receipt",
+                        path.display()
+                    );
+                }
+            }
         }
         if state == "disabled" && row["requires_gate_receipt"].as_bool() != Some(true) {
             anyhow::bail!(
