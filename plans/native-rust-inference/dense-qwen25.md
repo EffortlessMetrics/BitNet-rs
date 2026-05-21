@@ -176,12 +176,13 @@ booleans were promoted by this work item.
 
 ## Work item: CUDA-DENSE-QWEN25-OPS-004
 
-Status: in_progress
+Status: merged
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
-Blocks: device top-k implementation and refreshed exact-profile comparator
+Blocks: refreshed exact-profile comparator after reduced-D2H proof receipts
+Consumed by: PR #6098 device top-k proof-receipt path
 Blocked by: CUDA-DENSE-QWEN25-PERF-007
 
 ### Goal
@@ -191,16 +192,23 @@ claim reduced D2H bytes.
 
 ### Production delta
 
-Dense Qwen short-decode and warm-session receipt validation must reject a
-`device_to_host_bytes_reduced=true` claim unless the receipt also proves a
-CUDA device-side top-k or greedy sampler path, `sampling_location=cuda_device`,
-measured D2H bytes below the full-logits envelope, selected-token equality,
-top-k evidence preservation, and unchanged quality receipts.
+PR #6076 added `docs/reports/CUDA_DENSE_QWEN25_OPS_004_LOGITS_TRANSFER_REDUCTION_CONTRACT.md`
+and tightened dense Qwen short-decode and warm-session receipt validation so a
+`device_to_host_bytes_reduced=true` claim is rejected unless the receipt also
+proves a CUDA device-side top-k or greedy sampler path,
+`sampling_location=cuda_device`, measured D2H bytes below the full-logits
+envelope, selected-token equality, top-k evidence preservation, and unchanged
+quality receipts.
+
+Follow-on PR #6098 added the device top-k proof-receipt path that consumes this
+contract. It did not promote Qwen2.5 speedup, benchmark-qualified speed, full
+residency, server readiness, broad dense GGUF support, or BitNet QK256 proof.
 
 ### Non-goals
 
-No runtime sampler, CUDA kernel, benchmark requalification, speedup promotion,
-full-residency promotion, server-readiness change, or BitNet proof change.
+OPS-004 itself did not add a runtime sampler, CUDA kernel, benchmark
+requalification, speedup promotion, full-residency promotion,
+server-readiness change, or BitNet proof change.
 
 ### Acceptance
 
@@ -222,5 +230,6 @@ git diff --check
 
 ### Rollback
 
-Revert the receipt-validator tightening and this work item. Existing Qwen2.5
-product CLI and exact-profile server readiness evidence remains unchanged.
+Revert PR #6076 receipt-validator tightening and the OPS-004 report. Existing
+Qwen2.5 product CLI and exact-profile server readiness evidence remains
+unchanged.
