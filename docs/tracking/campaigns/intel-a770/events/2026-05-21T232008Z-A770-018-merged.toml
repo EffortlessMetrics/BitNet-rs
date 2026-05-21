@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T23:20:08Z"
+campaign = "intel-a770"
+item = "A770-018"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex-a770"
+pr = 242
+branch = "codex/intel-a770/A770-018-live-answer-corpus-diagnostic"
+head_sha = "0e9219c49337f1d4f853fdae412df39efe9a1a43"
+merge_sha = "03c7bbd54e5ba4a62efe40d53225cf9ee28f24ba"
+summary = "Merged PR #242 with the live A770 answer-corpus diagnostic receipt."
+notes = [
+  "The committed aggregate receipt records selected_backend=intel-a770-opencl, runtime_api=opencl, fallback_used=false, quality_summary.passed=5, and quality_summary.failed=0 for the fixed five-case corpus.",
+  "The receipt also records reference_not_supplied=5 and keeps strict answer readiness, coherent answer, full residency, speedup, and trusted-partial claims false.",
+  "No reference parity, broad answer quality, full BitNet inference, residency, speed, or completion claim is promoted.",
+]
