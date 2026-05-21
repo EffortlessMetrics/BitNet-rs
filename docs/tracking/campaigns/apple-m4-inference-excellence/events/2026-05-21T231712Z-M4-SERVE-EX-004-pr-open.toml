@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T23:17:12Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-004"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-004-queue-backpressure"
+pr = 6173
+head_sha = "70bea8465552105826378ccee047d6dd6b6c84fb"
+
+notes = [
+  "Opened draft PR #6173 for the bounded M4 local-server queue and backpressure receipt contract.",
+  "The PR adds `mac serve-backpressure-smoke`, receipt validation, CLI tests, docs, and tracker updates for dense SLM plus gated BitNet serve route coverage.",
+  "Local Rust compile/test validation is blocked by host disk pressure; `cargo fmt --all`, `cargo fmt --all --check`, and `git diff --check` passed before opening.",
+]
