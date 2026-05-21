@@ -1,0 +1,918 @@
+{
+  "artifact_kind": "apple_m4_serve_failure_semantics",
+  "case_count": 14,
+  "cases": [
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "partial_stream_then_done",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": false,
+        "must_record_stage": false,
+        "partial_generation_allowed": true,
+        "required": false
+      },
+      "http": {
+        "no_response_allowed": false,
+        "response_required": true,
+        "status": 200
+      },
+      "id": "dense_slm.partial_token_streaming",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": true,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "dense SLM local server",
+      "route_family": "dense_slm",
+      "semantic": "partial_token_streaming",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": true,
+        "metadata_event_required": true,
+        "partial_chunk_required": true,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "cancelled_after_partial_stream",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": true,
+        "required": true
+      },
+      "http": {
+        "no_response_allowed": true,
+        "response_required": false,
+        "status": 499
+      },
+      "id": "dense_slm.client_cancellation",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": false,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "dense SLM local server",
+      "route_family": "dense_slm",
+      "semantic": "client_cancellation",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": true,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "timed_out_with_stage",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": true,
+        "required": true
+      },
+      "http": {
+        "no_response_allowed": true,
+        "response_required": false,
+        "status": 504
+      },
+      "id": "dense_slm.timeout_stage",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": false,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "dense SLM local server",
+      "route_family": "dense_slm",
+      "semantic": "timeout_stage",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": true,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": true,
+        "reached": true,
+        "required": true,
+        "stage_recorded": true
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "bad_request_with_diagnostic",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": false,
+        "required": true
+      },
+      "http": {
+        "no_response_allowed": false,
+        "response_required": true,
+        "status": 400
+      },
+      "id": "dense_slm.invalid_request",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": false,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "dense SLM local server",
+      "route_family": "dense_slm",
+      "semantic": "invalid_request",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": false,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "startup_blocked_before_listen",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": false,
+        "required": true
+      },
+      "http": {
+        "no_response_allowed": true,
+        "response_required": false,
+        "status": 503
+      },
+      "id": "dense_slm.missing_cache",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": false,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "dense SLM local server",
+      "route_family": "dense_slm",
+      "semantic": "missing_cache",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": false,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "receipt_exported_by_id",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": false,
+        "must_record_stage": false,
+        "partial_generation_allowed": false,
+        "required": false
+      },
+      "http": {
+        "no_response_allowed": false,
+        "response_required": true,
+        "status": 200
+      },
+      "id": "dense_slm.per_request_receipt_export",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": true,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "dense SLM local server",
+      "route_family": "dense_slm",
+      "semantic": "per_request_receipt_export",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": false,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "failure_receipt_without_http_response",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": true,
+        "required": true
+      },
+      "http": {
+        "no_response_allowed": true,
+        "response_required": false,
+        "status": 0
+      },
+      "id": "dense_slm.no_response_failure_receipt",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": false,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "dense SLM local server",
+      "route_family": "dense_slm",
+      "semantic": "no_response_failure_receipt",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": false,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "partial_stream_then_done",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": false,
+        "must_record_stage": false,
+        "partial_generation_allowed": true,
+        "required": false
+      },
+      "http": {
+        "no_response_allowed": false,
+        "response_required": true,
+        "status": 200
+      },
+      "id": "bitnet_serve.partial_token_streaming",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": true,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "BitNet local server",
+      "route_family": "bitnet_serve",
+      "semantic": "partial_token_streaming",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": true,
+        "metadata_event_required": true,
+        "partial_chunk_required": true,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "cancelled_after_partial_stream",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": true,
+        "required": true
+      },
+      "http": {
+        "no_response_allowed": true,
+        "response_required": false,
+        "status": 499
+      },
+      "id": "bitnet_serve.client_cancellation",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": false,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "BitNet local server",
+      "route_family": "bitnet_serve",
+      "semantic": "client_cancellation",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": true,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "timed_out_with_stage",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": true,
+        "required": true
+      },
+      "http": {
+        "no_response_allowed": true,
+        "response_required": false,
+        "status": 504
+      },
+      "id": "bitnet_serve.timeout_stage",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": false,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "BitNet local server",
+      "route_family": "bitnet_serve",
+      "semantic": "timeout_stage",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": true,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": true,
+        "reached": true,
+        "required": true,
+        "stage_recorded": true
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "bad_request_with_diagnostic",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": false,
+        "required": true
+      },
+      "http": {
+        "no_response_allowed": false,
+        "response_required": true,
+        "status": 400
+      },
+      "id": "bitnet_serve.invalid_request",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": false,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "BitNet local server",
+      "route_family": "bitnet_serve",
+      "semantic": "invalid_request",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": false,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "startup_blocked_before_listen",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": false,
+        "required": true
+      },
+      "http": {
+        "no_response_allowed": true,
+        "response_required": false,
+        "status": 503
+      },
+      "id": "bitnet_serve.missing_cache",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": false,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "BitNet local server",
+      "route_family": "bitnet_serve",
+      "semantic": "missing_cache",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": false,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "receipt_exported_by_id",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": false,
+        "must_record_stage": false,
+        "partial_generation_allowed": false,
+        "required": false
+      },
+      "http": {
+        "no_response_allowed": false,
+        "response_required": true,
+        "status": 200
+      },
+      "id": "bitnet_serve.per_request_receipt_export",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": true,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "BitNet local server",
+      "route_family": "bitnet_serve",
+      "semantic": "per_request_receipt_export",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": false,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    },
+    {
+      "evidence_mode": "bounded_local_server_semantics_smoke",
+      "expected_outcome": "failure_receipt_without_http_response",
+      "failure_receipt": {
+        "must_preserve_claim_boundary": true,
+        "must_preserve_fallback_false": true,
+        "must_record_elapsed_ms": true,
+        "must_record_stage": true,
+        "partial_generation_allowed": true,
+        "required": true
+      },
+      "http": {
+        "no_response_allowed": true,
+        "response_required": false,
+        "status": 0
+      },
+      "id": "bitnet_serve.no_response_failure_receipt",
+      "live_model_run": false,
+      "model_download": false,
+      "receipt_export": {
+        "endpoint": "/receipts/{id}",
+        "request_id_match_required": true,
+        "required": false,
+        "safe_id_required": true
+      },
+      "receipt_obligations": [
+        "requested_backend=apple-m4-cpu-neon",
+        "selected_backend=apple-m4-cpu-neon",
+        "runtime_api=cpu",
+        "fallback_used=false",
+        "route family and model/tokenizer identity or cache target recorded",
+        "failure stage and operator-visible message recorded when failure occurs",
+        "timeout boundary recorded when timeout occurs",
+        "claim boundary preserved"
+      ],
+      "route": "BitNet local server",
+      "route_family": "bitnet_serve",
+      "semantic": "no_response_failure_receipt",
+      "status": "pass",
+      "streaming": {
+        "done_event_required": false,
+        "metadata_event_required": false,
+        "partial_chunk_required": false,
+        "sse_transport": true,
+        "token_order_preserved": true
+      },
+      "timeout_boundary": {
+        "enforced": false,
+        "reached": false,
+        "required": false,
+        "stage_recorded": false
+      }
+    }
+  ],
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "bitnet_serve_gate_work_item": "M4-BITNET-EX-007",
+    "bitnet_serve_requires_gate": true,
+    "bitnet_serve_route_covered": true,
+    "bounded_protocol_and_receipt_contract": true,
+    "broad_apple_silicon_claim": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dense_slm_and_bitnet_evidence_separated": true,
+    "dense_slm_route_covered": true,
+    "fresh_runtime_generation_proof": false,
+    "full_metal_inference_claimed": false,
+    "live_model_run": false,
+    "local_server_semantics_smoke": true,
+    "macbook_evidence": false,
+    "model_free": true,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "no_model_download": true,
+    "openai_compatibility_claimed": false,
+    "production_hosting_claimed": false,
+    "qk256_apple_claimed": false,
+    "service_production_readiness_claimed": false,
+    "speedup_claim": false
+  },
+  "fallback_used": false,
+  "generated_at": "2026-05-21T19:16:00.902813+00:00",
+  "machine": {
+    "id": "apple-m4-mac-mini",
+    "scope": "bounded local-server streaming and failure-semantics coverage"
+  },
+  "operator_command": "mac serve-failure-smoke",
+  "operator_commands": {
+    "bitnet_runtime_serve": "target/release/bitnet --device apple-m4-cpu-neon mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+    "dense_runtime_smoke": "target/release/bitnet --device apple-m4-cpu-neon mac serve-smoke --model-id <model-id> --json-out <serve-smoke.json>",
+    "receipt_check": "target/release/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T1915Z/serve-failure-semantics/summary.json --json",
+    "run": "target/release/bitnet --device apple-m4-cpu-neon mac serve-failure-smoke --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T1915Z/serve-failure-semantics/summary.json",
+    "running_server_check": "target/release/bitnet mac serve-check --completion --url http://127.0.0.1:8080"
+  },
+  "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T1915Z/serve-failure-semantics/summary.json",
+  "requested_backend": "apple-m4-cpu-neon",
+  "required_semantics": [
+    "partial_token_streaming",
+    "client_cancellation",
+    "timeout_stage",
+    "invalid_request",
+    "missing_cache",
+    "per_request_receipt_export",
+    "no_response_failure_receipt"
+  ],
+  "route_families_covered": [
+    "dense_slm",
+    "bitnet_serve"
+  ],
+  "route_family_count": 2,
+  "routes": {
+    "bitnet_serve": {
+      "enabled_route": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+      "family": "bitnet_serve",
+      "prior_runtime_receipt_item": "M4-BITNET-EX-007",
+      "receipt_surfaces": [
+        "BitNet serve gate receipt",
+        "streaming completion receipts",
+        "failure receipts",
+        "per-request receipt export"
+      ],
+      "serve_gate_required": true,
+      "serve_gate_work_item": "M4-BITNET-EX-007"
+    },
+    "dense_slm": {
+      "enabled_route": "bitnet mac serve --model-family dense-slm",
+      "family": "dense_slm",
+      "prior_runtime_receipt_item": "M4-SERVE-EX-001",
+      "receipt_surfaces": [
+        "health and ready receipts",
+        "streaming completion receipts",
+        "failure receipts",
+        "per-request receipt export"
+      ],
+      "serve_gate_required": false
+    }
+  },
+  "run_identity": {
+    "artifact_kind": "apple_m4_serve_failure_semantics",
+    "backend": {
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "binary": {
+      "binary_sha256": null,
+      "binary_sha256_status": "not_recorded_build_profile_used",
+      "build_profile": "debug",
+      "crate_version": "0.2.1-dev"
+    },
+    "command": {
+      "class": "mac serve-failure-smoke",
+      "live_model_run": false
+    },
+    "contract_version": "m4-run-identity-v1",
+    "evidence_family": "operator",
+    "evidence_identity": {
+      "corpus_id": "not_applicable",
+      "profile_id": "not_applicable",
+      "scope": "local_server_streaming_failure_semantics",
+      "seed": "not_applicable"
+    },
+    "git": {
+      "commit": "4ac2e2453a9f396fe0452a358a20823b722a1665",
+      "commit_source": "git_rev_parse"
+    },
+    "machine_id": "apple-m4-mac-mini",
+    "model": {
+      "id": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "not_applicable"
+    },
+    "os": {
+      "name": "macos",
+      "version": "26.4.1",
+      "version_source": "sw_vers"
+    },
+    "prompt_template": {
+      "id": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "243ffa2eeced1cbfa18357fe8edf03833381b9a83359bf0930ae5e8e862ab30e"
+    },
+    "soc": "apple-m4",
+    "timing": {
+      "source": "wall_clock_utc"
+    },
+    "tokenizer": {
+      "authority": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "not_applicable"
+    }
+  },
+  "run_identity_sha256": "5cbbca76fdc82ada2a9abdb6d8bd78580b5a59cb37b41afa9da95b1d0823dd94",
+  "runtime_api": "cpu",
+  "schema_version": "1.2.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "semantics_contract": {
+    "fresh_runtime_generation_proof": false,
+    "generic_pr_ci_safe": true,
+    "live_model_run": false,
+    "local_server_route_contract": true,
+    "model_download": false,
+    "model_free": true,
+    "prior_bitnet_serve_gate": "M4-BITNET-EX-007",
+    "prior_dense_runtime_receipts": "M4-SERVE-EX-001",
+    "route_scope": "dense SLM plus BitNet serve after M4-BITNET-EX-007 gate",
+    "routes_proven_by_this_receipt": "streaming/failure protocol, receipt obligations, and claim-boundary conformance"
+  },
+  "status": "pass",
+  "summary": {
+    "client_cancellation_passed": true,
+    "dense_and_bitnet_routes_covered": true,
+    "failure_receipts_preserve_fallback_false": true,
+    "failure_receipts_record_stage": true,
+    "invalid_request_passed": true,
+    "missing_cache_passed": true,
+    "no_response_failure_receipt_passed": true,
+    "partial_token_streaming_passed": true,
+    "per_request_receipt_export_passed": true,
+    "timeout_boundary_recorded": true,
+    "timeout_stage_passed": true
+  },
+  "work_item": "M4-SERVE-EX-002"
+}

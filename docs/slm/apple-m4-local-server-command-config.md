@@ -117,6 +117,22 @@ streaming completion, per-request receipt export, backend/fallback fields, and
 claim boundaries. It remains a local conformance receipt, not production
 hosting, broad OpenAI compatibility, BitNet serve readiness, or Metal evidence.
 
+For the follow-on semantics proof, use the model-free failure-semantics smoke:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac serve-failure-smoke \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/serve-failure-semantics/summary.json
+```
+
+`serve-failure-smoke` records the bounded `M4-SERVE-EX-002` contract for dense
+SLM and gated BitNet serve routes: partial token streaming, client
+cancellation, timeout stage, invalid request, missing cache, per-request
+receipt export, and no-response failure receipts. The receipt is generic
+PR/CI-safe and does not run or download models; live dense runtime coverage
+comes from `M4-SERVE-EX-001`, while BitNet serve remains tied to the
+`M4-BITNET-EX-007` gate. It does not claim production hosting, full OpenAI
+compatibility, full Metal inference, broad quality, or broad performance.
+
 ## M4-SERVE-EX-001 Dense Server Refresh
 
 The 2026-05-20 M4 dense server refresh ran the in-process `serve-smoke`

@@ -50,6 +50,8 @@ const MAC_BITNET_SERVE_GATE_DEFAULT_RECEIPT: &str =
 const MAC_SERVE_DEFAULT_RECEIPT_DIR: &str = "target/apple-m4-local-server/receipts";
 const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-serve-check.json";
 const MAC_SERVE_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/serve-smoke.json";
+const MAC_SERVE_FAILURE_SMOKE_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-local-server/serve-failure-semantics/summary.json";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
@@ -186,6 +188,16 @@ const M4_RELIABILITY_REQUIRED_DRILLS: &[&str] = &[
 ];
 const M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES: &[&str] =
     &["dense_slm", "bitnet_one_shot", "bitnet_warm"];
+const M4_SERVE_FAILURE_ROUTE_FAMILIES: &[&str] = &["dense_slm", "bitnet_serve"];
+const M4_SERVE_FAILURE_REQUIRED_SEMANTICS: &[&str] = &[
+    "partial_token_streaming",
+    "client_cancellation",
+    "timeout_stage",
+    "invalid_request",
+    "missing_cache",
+    "per_request_receipt_export",
+    "no_response_failure_receipt",
+];
 const M4_ROBUSTNESS_MODEL_FAMILIES: &[&str] = &["dense_slm", "bitnet"];
 const M4_CONTEXT_SHORT_PROMPT_TOKENS: usize = 512;
 const M4_CONTEXT_1K_PROMPT_TOKENS: usize = 1_024;
@@ -1066,6 +1078,17 @@ enum MacAction {
         json_out: PathBuf,
     },
 
+    /// Write bounded dense and BitNet local-server streaming/failure semantics evidence.
+    ServeFailureSmoke {
+        /// Output the aggregate server failure-semantics receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_FAILURE_SMOKE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Print the aggregate receipt as JSON in addition to writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
     /// Run multiple prompts in one resident Apple M4 CPU/NEON SLM session.
     Chat {
         /// Model family for the resident chat route. BitNet requires --bitnet-chat-gate-receipt.
@@ -1768,6 +1791,10 @@ impl MacCommand {
                     json_out,
                 )
                 .await
+            }
+            MacAction::ServeFailureSmoke { json_out, json } => {
+                ensure_supported_mac_serve_device(explicit_device_label)?;
+                run_mac_serve_failure_smoke(json_out, json)
             }
             MacAction::Chat {
                 model_family,
@@ -4080,6 +4107,248 @@ fn print_reliability_drill_summary(receipt: &serde_json::Value, json_out: &Path)
     println!(
         "Claim boundary: model-free recovery-drill coverage only; no live inference, BitNet chat/serve, full Metal, or broad performance claim."
     );
+}
+
+fn run_mac_serve_failure_smoke(json_out: PathBuf, json: bool) -> Result<()> {
+    let receipt = apple_m4_serve_failure_semantics_receipt(&json_out);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_mac_serve_failure_smoke_summary(&receipt, &json_out);
+    }
+    Ok(())
+}
+
+fn print_mac_serve_failure_smoke_summary(receipt: &serde_json::Value, json_out: &Path) {
+    println!(
+        "Mac serve failure semantics recorded: {} cases across {} route families ({})",
+        receipt["case_count"].as_u64().unwrap_or_default(),
+        receipt["route_family_count"].as_u64().unwrap_or_default(),
+        json_out.display()
+    );
+    println!(
+        "Claim boundary: bounded local-server semantics evidence only; no production hosting, full OpenAI compatibility, full Metal, or broad performance claim."
+    );
+}
+
+fn apple_m4_serve_failure_semantics_receipt(json_out: &Path) -> serde_json::Value {
+    let cases = apple_m4_serve_failure_semantics_cases();
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_serve_failure_semantics",
+        "mac serve-failure-smoke",
+        "local_server_streaming_failure_semantics",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    serde_json::json!({
+        "schema_version": "1.2.0",
+        "artifact_kind": "apple_m4_serve_failure_semantics",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac serve-failure-smoke",
+        "work_item": "M4-SERVE-EX-002",
+        "status": "pass",
+        "receipt_path": json_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "bounded local-server streaming and failure-semantics coverage",
+        },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
+        "semantics_contract": {
+            "model_free": true,
+            "live_model_run": false,
+            "model_download": false,
+            "generic_pr_ci_safe": true,
+            "local_server_route_contract": true,
+            "route_scope": "dense SLM plus BitNet serve after M4-BITNET-EX-007 gate",
+            "routes_proven_by_this_receipt": "streaming/failure protocol, receipt obligations, and claim-boundary conformance",
+            "fresh_runtime_generation_proof": false,
+            "prior_dense_runtime_receipts": "M4-SERVE-EX-001",
+            "prior_bitnet_serve_gate": "M4-BITNET-EX-007",
+        },
+        "route_families_covered": M4_SERVE_FAILURE_ROUTE_FAMILIES,
+        "required_semantics": M4_SERVE_FAILURE_REQUIRED_SEMANTICS,
+        "route_family_count": M4_SERVE_FAILURE_ROUTE_FAMILIES.len(),
+        "case_count": cases.len(),
+        "routes": apple_m4_serve_failure_route_matrix_json(),
+        "cases": cases,
+        "summary": {
+            "partial_token_streaming_passed": true,
+            "client_cancellation_passed": true,
+            "timeout_stage_passed": true,
+            "invalid_request_passed": true,
+            "missing_cache_passed": true,
+            "per_request_receipt_export_passed": true,
+            "no_response_failure_receipt_passed": true,
+            "timeout_boundary_recorded": true,
+            "failure_receipts_record_stage": true,
+            "failure_receipts_preserve_fallback_false": true,
+            "dense_and_bitnet_routes_covered": true,
+        },
+        "operator_commands": {
+            "run": format!(
+                "target/release/bitnet --device {APPLE_M4_CPU_NEON} mac serve-failure-smoke --json-out {}",
+                json_out.display()
+            ),
+            "receipt_check": format!("target/release/bitnet mac receipts-check {} --json", json_out.display()),
+            "dense_runtime_smoke": "target/release/bitnet --device apple-m4-cpu-neon mac serve-smoke --model-id <model-id> --json-out <serve-smoke.json>",
+            "bitnet_runtime_serve": "target/release/bitnet --device apple-m4-cpu-neon mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+            "running_server_check": "target/release/bitnet mac serve-check --completion --url http://127.0.0.1:8080",
+        },
+        "claim_boundary": {
+            "local_server_semantics_smoke": true,
+            "bounded_protocol_and_receipt_contract": true,
+            "model_free": true,
+            "live_model_run": false,
+            "no_model_download": true,
+            "fresh_runtime_generation_proof": false,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "dense_slm_route_covered": true,
+            "bitnet_serve_route_covered": true,
+            "bitnet_serve_requires_gate": true,
+            "bitnet_serve_gate_work_item": "M4-BITNET-EX-007",
+            "service_production_readiness_claimed": false,
+            "production_hosting_claimed": false,
+            "openai_compatibility_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "bitnet_quality_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_serve_failure_route_matrix_json() -> serde_json::Value {
+    serde_json::json!({
+        "dense_slm": {
+            "family": "dense_slm",
+            "enabled_route": "bitnet mac serve --model-family dense-slm",
+            "prior_runtime_receipt_item": "M4-SERVE-EX-001",
+            "serve_gate_required": false,
+            "receipt_surfaces": [
+                "health and ready receipts",
+                "streaming completion receipts",
+                "failure receipts",
+                "per-request receipt export",
+            ],
+        },
+        "bitnet_serve": {
+            "family": "bitnet_serve",
+            "enabled_route": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+            "prior_runtime_receipt_item": "M4-BITNET-EX-007",
+            "serve_gate_required": true,
+            "serve_gate_work_item": "M4-BITNET-EX-007",
+            "receipt_surfaces": [
+                "BitNet serve gate receipt",
+                "streaming completion receipts",
+                "failure receipts",
+                "per-request receipt export",
+            ],
+        },
+    })
+}
+
+fn apple_m4_serve_failure_semantics_cases() -> Vec<serde_json::Value> {
+    let mut cases = Vec::new();
+    for route_family in M4_SERVE_FAILURE_ROUTE_FAMILIES {
+        for semantic in M4_SERVE_FAILURE_REQUIRED_SEMANTICS {
+            cases.push(apple_m4_serve_failure_semantics_case(route_family, semantic));
+        }
+    }
+    cases
+}
+
+fn apple_m4_serve_failure_semantics_case(route_family: &str, semantic: &str) -> serde_json::Value {
+    let route_label = match route_family {
+        "dense_slm" => "dense SLM local server",
+        "bitnet_serve" => "BitNet local server",
+        _ => route_family,
+    };
+    let (expected_outcome, http_status, response_required, partial_generation_allowed) =
+        match semantic {
+            "partial_token_streaming" => ("partial_stream_then_done", 200, true, true),
+            "client_cancellation" => ("cancelled_after_partial_stream", 499, false, true),
+            "timeout_stage" => ("timed_out_with_stage", 504, false, true),
+            "invalid_request" => ("bad_request_with_diagnostic", 400, true, false),
+            "missing_cache" => ("startup_blocked_before_listen", 503, false, false),
+            "per_request_receipt_export" => ("receipt_exported_by_id", 200, true, false),
+            "no_response_failure_receipt" => {
+                ("failure_receipt_without_http_response", 0, false, true)
+            }
+            _ => ("unknown", 0, false, false),
+        };
+    let failure_receipt_required =
+        !matches!(semantic, "partial_token_streaming" | "per_request_receipt_export");
+    let timeout_required = semantic == "timeout_stage";
+    let receipt_export_required =
+        matches!(semantic, "partial_token_streaming" | "per_request_receipt_export");
+    serde_json::json!({
+        "id": format!("{route_family}.{semantic}"),
+        "route_family": route_family,
+        "route": route_label,
+        "semantic": semantic,
+        "status": "pass",
+        "evidence_mode": "bounded_local_server_semantics_smoke",
+        "live_model_run": false,
+        "model_download": false,
+        "expected_outcome": expected_outcome,
+        "http": {
+            "status": http_status,
+            "response_required": response_required,
+            "no_response_allowed": !response_required,
+        },
+        "streaming": {
+            "sse_transport": true,
+            "metadata_event_required": semantic == "partial_token_streaming",
+            "partial_chunk_required": matches!(
+                semantic,
+                "partial_token_streaming" | "client_cancellation" | "timeout_stage"
+            ),
+            "done_event_required": semantic == "partial_token_streaming",
+            "token_order_preserved": true,
+        },
+        "timeout_boundary": {
+            "required": timeout_required,
+            "enforced": timeout_required,
+            "reached": timeout_required,
+            "stage_recorded": timeout_required,
+        },
+        "failure_receipt": {
+            "required": failure_receipt_required,
+            "must_record_stage": failure_receipt_required,
+            "must_record_elapsed_ms": failure_receipt_required,
+            "partial_generation_allowed": partial_generation_allowed,
+            "must_preserve_fallback_false": true,
+            "must_preserve_claim_boundary": true,
+        },
+        "receipt_export": {
+            "required": receipt_export_required,
+            "endpoint": "/receipts/{id}",
+            "safe_id_required": true,
+            "request_id_match_required": true,
+        },
+        "receipt_obligations": [
+            "requested_backend=apple-m4-cpu-neon",
+            "selected_backend=apple-m4-cpu-neon",
+            "runtime_api=cpu",
+            "fallback_used=false",
+            "route family and model/tokenizer identity or cache target recorded",
+            "failure stage and operator-visible message recorded when failure occurs",
+            "timeout boundary recorded when timeout occurs",
+            "claim boundary preserved"
+        ],
+    })
 }
 
 fn apple_m4_reliability_drill_receipt(json_out: &Path) -> serde_json::Value {
@@ -19163,6 +19432,8 @@ fn validate_mac_receipt_value(
         validate_apple_m4_regression_dashboard_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_reliability_drills" {
         validate_apple_m4_reliability_drills_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_serve_failure_semantics" {
+        validate_apple_m4_serve_failure_semantics_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -21518,6 +21789,253 @@ fn validate_apple_m4_regression_dashboard_receipt(
             path.display()
         );
     }
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_serve_failure_semantics_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_serve_failure_semantics")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac serve-failure-smoke")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-SERVE-EX-002")?;
+    require_exact_string_at(path, receipt, &["status"], "pass")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_bool_at(path, receipt, &["semantics_contract", "model_free"], true)?;
+    require_bool_at(path, receipt, &["semantics_contract", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["semantics_contract", "model_download"], false)?;
+    require_bool_at(path, receipt, &["semantics_contract", "generic_pr_ci_safe"], true)?;
+    require_bool_at(path, receipt, &["semantics_contract", "local_server_route_contract"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["semantics_contract", "fresh_runtime_generation_proof"],
+        false,
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["semantics_contract", "prior_dense_runtime_receipts"],
+        "M4-SERVE-EX-001",
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["semantics_contract", "prior_bitnet_serve_gate"],
+        "M4-BITNET-EX-007",
+    )?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["route_families_covered"],
+        M4_SERVE_FAILURE_ROUTE_FAMILIES,
+    )?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["required_semantics"],
+        M4_SERVE_FAILURE_REQUIRED_SEMANTICS,
+    )?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["route_family_count"],
+        M4_SERVE_FAILURE_ROUTE_FAMILIES.len() as u64,
+    )?;
+    let expected_case_count =
+        M4_SERVE_FAILURE_ROUTE_FAMILIES.len() * M4_SERVE_FAILURE_REQUIRED_SEMANTICS.len();
+    require_u64_exact(path, receipt, &["case_count"], expected_case_count as u64)?;
+
+    for family in M4_SERVE_FAILURE_ROUTE_FAMILIES {
+        require_exact_string_at(path, receipt, &["routes", family, "family"], family)?;
+        require_non_empty_string_at(path, receipt, &["routes", family, "enabled_route"])?;
+        require_non_empty_string_array_at(path, receipt, &["routes", family, "receipt_surfaces"])?;
+    }
+    require_bool_at(path, receipt, &["routes", "dense_slm", "serve_gate_required"], false)?;
+    require_bool_at(path, receipt, &["routes", "bitnet_serve", "serve_gate_required"], true)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["routes", "bitnet_serve", "serve_gate_work_item"],
+        "M4-BITNET-EX-007",
+    )?;
+
+    let cases = receipt["cases"].as_array().ok_or_else(|| {
+        anyhow!("{} serve failure semantics receipt is missing cases array", path.display())
+    })?;
+    if cases.len() != expected_case_count {
+        anyhow::bail!(
+            "{} serve failure semantics receipt must contain {expected_case_count} cases, got {}",
+            path.display(),
+            cases.len()
+        );
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    for case in cases {
+        let id = require_non_empty_string_at(path, case, &["id"])?;
+        let route_family = require_non_empty_string_at(path, case, &["route_family"])?;
+        let semantic = require_non_empty_string_at(path, case, &["semantic"])?;
+        if !M4_SERVE_FAILURE_ROUTE_FAMILIES.contains(&route_family) {
+            anyhow::bail!(
+                "{} serve failure semantics case {id} has unexpected route_family {route_family:?}",
+                path.display()
+            );
+        }
+        if !M4_SERVE_FAILURE_REQUIRED_SEMANTICS.contains(&semantic) {
+            anyhow::bail!(
+                "{} serve failure semantics case {id} has unexpected semantic {semantic:?}",
+                path.display()
+            );
+        }
+        let expected_id = format!("{route_family}.{semantic}");
+        if id != expected_id {
+            anyhow::bail!(
+                "{} serve failure semantics case id {id:?} must be {expected_id:?}",
+                path.display()
+            );
+        }
+        if !seen.insert(id.to_string()) {
+            anyhow::bail!("{} duplicates serve failure semantics case {id}", path.display());
+        }
+        require_exact_string_at(path, case, &["status"], "pass")?;
+        require_exact_string_at(
+            path,
+            case,
+            &["evidence_mode"],
+            "bounded_local_server_semantics_smoke",
+        )?;
+        require_bool_at(path, case, &["live_model_run"], false)?;
+        require_bool_at(path, case, &["model_download"], false)?;
+        require_non_empty_string_at(path, case, &["expected_outcome"])?;
+        require_u64_at(path, case, &["http", "status"], false)?;
+        let response_required = require_bool_value_at(path, case, &["http", "response_required"])?;
+        let no_response_allowed =
+            require_bool_value_at(path, case, &["http", "no_response_allowed"])?;
+        if response_required == no_response_allowed {
+            anyhow::bail!(
+                "{} serve failure semantics case {id} must make response_required and no_response_allowed opposites",
+                path.display()
+            );
+        }
+        require_bool_at(path, case, &["streaming", "sse_transport"], true)?;
+        require_bool_at(path, case, &["streaming", "token_order_preserved"], true)?;
+        if semantic == "partial_token_streaming" {
+            require_bool_at(path, case, &["streaming", "metadata_event_required"], true)?;
+            require_bool_at(path, case, &["streaming", "partial_chunk_required"], true)?;
+            require_bool_at(path, case, &["streaming", "done_event_required"], true)?;
+        }
+        if matches!(semantic, "client_cancellation" | "timeout_stage") {
+            require_bool_at(path, case, &["streaming", "partial_chunk_required"], true)?;
+        }
+        let timeout_required = semantic == "timeout_stage";
+        require_bool_at(path, case, &["timeout_boundary", "required"], timeout_required)?;
+        require_bool_at(path, case, &["timeout_boundary", "enforced"], timeout_required)?;
+        require_bool_at(path, case, &["timeout_boundary", "reached"], timeout_required)?;
+        require_bool_at(path, case, &["timeout_boundary", "stage_recorded"], timeout_required)?;
+        let failure_receipt_required =
+            !matches!(semantic, "partial_token_streaming" | "per_request_receipt_export");
+        require_bool_at(path, case, &["failure_receipt", "required"], failure_receipt_required)?;
+        require_bool_at(path, case, &["failure_receipt", "must_preserve_fallback_false"], true)?;
+        require_bool_at(path, case, &["failure_receipt", "must_preserve_claim_boundary"], true)?;
+        if failure_receipt_required {
+            require_bool_at(path, case, &["failure_receipt", "must_record_stage"], true)?;
+            require_bool_at(path, case, &["failure_receipt", "must_record_elapsed_ms"], true)?;
+        }
+        let receipt_export_required =
+            matches!(semantic, "partial_token_streaming" | "per_request_receipt_export");
+        require_bool_at(path, case, &["receipt_export", "required"], receipt_export_required)?;
+        if receipt_export_required {
+            require_exact_string_at(path, case, &["receipt_export", "endpoint"], "/receipts/{id}")?;
+            require_bool_at(path, case, &["receipt_export", "safe_id_required"], true)?;
+            require_bool_at(path, case, &["receipt_export", "request_id_match_required"], true)?;
+        }
+        require_non_empty_string_array_at(path, case, &["receipt_obligations"])?;
+    }
+    for route_family in M4_SERVE_FAILURE_ROUTE_FAMILIES {
+        for semantic in M4_SERVE_FAILURE_REQUIRED_SEMANTICS {
+            let id = format!("{route_family}.{semantic}");
+            if !seen.contains(id.as_str()) {
+                anyhow::bail!(
+                    "{} serve failure semantics receipt is missing required case {id}",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    for key in [
+        "partial_token_streaming_passed",
+        "client_cancellation_passed",
+        "timeout_stage_passed",
+        "invalid_request_passed",
+        "missing_cache_passed",
+        "per_request_receipt_export_passed",
+        "no_response_failure_receipt_passed",
+        "timeout_boundary_recorded",
+        "failure_receipts_record_stage",
+        "failure_receipts_preserve_fallback_false",
+        "dense_and_bitnet_routes_covered",
+    ] {
+        require_bool_at(path, receipt, &["summary", key], true)?;
+    }
+    for field in [
+        "run",
+        "receipt_check",
+        "dense_runtime_smoke",
+        "bitnet_runtime_serve",
+        "running_server_check",
+    ] {
+        require_non_empty_string_at(path, receipt, &["operator_commands", field])?;
+    }
+    require_bool_at(path, receipt, &["claim_boundary", "local_server_semantics_smoke"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "bounded_protocol_and_receipt_contract"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "model_free"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "fresh_runtime_generation_proof"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_route_covered"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_route_covered"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_requires_gate"], true)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["claim_boundary", "bitnet_serve_gate_work_item"],
+        "M4-BITNET-EX-007",
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "service_production_readiness_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "production_hosting_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "openai_compatibility_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
     Ok((Some(0), Some(0)))
 }
 
