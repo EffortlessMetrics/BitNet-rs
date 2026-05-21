@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T21:51:07Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-001"
+event = "closeout"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-dense-serve-conformance"
+pr = 6162
+head_sha = "e33961a7bdeb820cb2762475422b91d61a39d01b"
+
+notes = [
+  "Collected live M4 dense serve-smoke receipts for all supported dense SLM identities under ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/.",
+  "Receipts validate health, ready, models, non-streaming completion, streaming completion, per-request receipt export, selected_backend=apple-m4-cpu-neon, runtime_api=cpu, and fallback_used=false for qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m.",
+  "The in-process smoke records timeout boundaries as metadata-only with enforcement deferred to M4-SERVE-EX-002.",
+  "No BitNet serve enablement, service production readiness, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]
