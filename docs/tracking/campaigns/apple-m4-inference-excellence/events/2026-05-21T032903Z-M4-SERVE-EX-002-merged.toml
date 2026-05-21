@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T03:29:03Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-002"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-002-streaming-failure-semantics"
+pr = 112
+merge_sha = "a3aed519ef85522af9dcb7f67b4d30af9fc3198e"
+
+notes = [
+  "PR #112 merged dense M4 local-server failure-semantics support and bounded apple-m4-cpu-neon receipt evidence.",
+  "The merged evidence records serve-failure-semantics receipts for timeout, cancellation, invalid request, missing cache, no-response, per-request receipt export, and health/ready recovery semantics.",
+  "The evidence remains dense-local-server scoped; BitNet serve and chat stay disabled and separately gated.",
+  "Closeout is tracker-only and records the already-merged PR; it does not claim production hosting, full OpenAI compatibility, BitNet chat, BitNet serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon behavior.",
+]
