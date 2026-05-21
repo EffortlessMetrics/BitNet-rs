@@ -1,0 +1,136 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_low_power_battery_plan",
+  "proof_stage": "low_power_battery_operator_plan_no_evidence_no_promotion_change",
+  "created_utc": "2026-05-21T02:09:26Z",
+  "machine_id": "intel-258v",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
+  "power_profile_evidence_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json",
+  "blocked_ask_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-low-power-blocked.json",
+  "battery_telemetry_context_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-telemetry-blocked.json",
+  "current_status": "blocked_until_telemetry_context_require_battery_passes_on_battery",
+  "operator_plan_ready": true,
+  "can_collect_battery_evidence_now": false,
+  "blockers": [
+    "low_power has no promoted route in current evidence",
+    "battery-mode sample is missing for low_power promotion",
+    "current telemetry is AC-only; battery comparison evidence is missing",
+    "no low_power route has benchmark-qualified power evidence",
+    "battery-mode telemetry sample required but current power context indicates AC power"
+  ],
+  "required_artifacts": [
+    "lunar-lake-low-power-battery-before.json",
+    "battery-mode low_power route/profile receipts for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate",
+    "lunar-lake-low-power-battery-after.json",
+    "lunar-lake-low-power-energy-proxy.json",
+    "lunar-lake-power-profile-evidence.json",
+    "lunar-lake-regression-bundle-v2.json",
+    "lunar-lake-operator-comparison.json",
+    "lunar-lake-excellence-audit.json"
+  ],
+  "command_sequence": [
+    {
+      "step": "preflight",
+      "purpose": "Build the CLI and confirm Windows reports battery mode before evidence collection.",
+      "command": [
+        "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+        "Get-CimInstance Win32_Battery | Select-Object BatteryStatus, EstimatedChargeRemaining, Status | Format-List"
+      ],
+      "continue_if": [
+        "BatteryStatus is not 2 and the telemetry receipt reports ac_power_inferred=false"
+      ],
+      "stop_if": [
+        "BatteryStatus=2 or telemetry-context --require-battery reports ac_power_inferred=true"
+      ]
+    },
+    {
+      "step": "battery_start_receipt",
+      "purpose": "Capture the before telemetry sample with strict battery enforcement.",
+      "command": [
+        "target/debug/bitnet.exe lunar-lake telemetry-context --artifact-root ci/hardware/intel-258v/2026-05-08 --require-battery --json-out lunar-lake-low-power-battery-before.json --created-utc <battery-run-start-utc> --strict"
+      ],
+      "continue_if": [
+        "capture_requirements.battery_mode_required=true",
+        "capture_requirements.battery_mode_sample_recorded=true",
+        "capture_requirements.requirement_satisfied=true",
+        "power.ac_power_inferred=false"
+      ],
+      "stop_if": [
+        "strict mode fails after writing a blocked receipt"
+      ]
+    },
+    {
+      "step": "route_profile_samples",
+      "purpose": "Run the battery-mode low_power route/profile matrix without hidden fallback.",
+      "command": [
+        "run low_power samples for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate with fallback_used=false receipts"
+      ],
+      "continue_if": [
+        "each sampled route records answer gate, route identity, timing, memory, power, and thermal context"
+      ],
+      "stop_if": [
+        "a route falls back, cannot run, or loses route identity; preserve that receipt as blocker evidence"
+      ]
+    },
+    {
+      "step": "battery_end_receipt",
+      "purpose": "Capture the after telemetry sample immediately after the route/profile run.",
+      "command": [
+        "target/debug/bitnet.exe lunar-lake telemetry-context --artifact-root ci/hardware/intel-258v/2026-05-08 --require-battery --json-out lunar-lake-low-power-battery-after.json --created-utc <battery-run-end-utc> --strict"
+      ],
+      "continue_if": [
+        "the after receipt is also a valid battery-mode sample"
+      ],
+      "stop_if": [
+        "the after receipt is AC, charging, or cannot identify battery mode"
+      ]
+    },
+    {
+      "step": "energy_proxy",
+      "purpose": "Build the battery-drain proxy only from battery-mode before/after telemetry.",
+      "command": [
+        "target/debug/bitnet.exe lunar-lake energy-proxy --artifact-root ci/hardware/intel-258v/2026-05-08 --before-telemetry-context lunar-lake-low-power-battery-before.json --after-telemetry-context lunar-lake-low-power-battery-after.json --route dense_slm_openvino_npu_candidate --profile low_power --sample-count <battery-run-sample-count> --json-out lunar-lake-low-power-energy-proxy.json --created-utc <battery-run-end-utc> --strict"
+      ],
+      "continue_if": [
+        "energy_proxy_recorded=true and battery_mode_sample_recorded=true"
+      ],
+      "stop_if": [
+        "before or after telemetry is not a battery-mode sample"
+      ]
+    },
+    {
+      "step": "refresh_artifacts",
+      "purpose": "Refresh low_power power-profile, strict regression, and operator comparison from the battery evidence.",
+      "command": [
+        "target/debug/bitnet.exe lunar-lake power-profile --artifact-root ci/hardware/intel-258v/2026-05-08 --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --telemetry-context lunar-lake-power-thermal-context.json --battery-telemetry-context lunar-lake-low-power-battery-after.json --energy-proxy lunar-lake-low-power-energy-proxy.json --json-out lunar-lake-power-profile-evidence.json --created-utc <battery-run-end-utc> --strict",
+        "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc <battery-run-end-utc> --strict",
+        "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc <battery-run-end-utc> --strict"
+      ],
+      "continue_if": [
+        "power-profile, regression, and comparison preserve fallback=false and the same route decision"
+      ],
+      "stop_if": [
+        "any refreshed artifact claims promotion, speedup, power advantage, native accelerator execution, or BitNet QK256/I2_S behavior without explicit promotion-lane proof"
+      ]
+    }
+  ],
+  "promotion_rule": [
+    "answer gates pass for the low_power route/profile evidence being considered",
+    "fallback_used=false for the sampled route",
+    "timing is stable for the sampled profile",
+    "before and after telemetry receipts are valid battery-mode samples",
+    "power-profile evidence records benchmark-qualified power advantage",
+    "strict regression and operator comparison preserve the same decision"
+  ],
+  "claim_boundary": {
+    "new_inference_executed": false,
+    "route_promotion_changed": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "native_npu_inference_claim": false,
+    "bitnet_qk256_i2s_behavior_changed": false,
+    "hidden_fallback_allowed": false
+  }
+}

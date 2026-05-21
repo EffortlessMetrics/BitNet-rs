@@ -59,7 +59,10 @@ const POWER_THERMAL_CONTEXT_FILE: &str = "lunar-lake-power-thermal-context.json"
 const POWER_PROFILE_EVIDENCE_FILE: &str = "lunar-lake-power-profile-evidence.json";
 const THERMAL_TEMPERATURE_AVAILABILITY_FILE: &str =
     "lunar-lake-thermal-temperature-availability.json";
+const LOW_POWER_BATTERY_TELEMETRY_BLOCKED_FILE: &str =
+    "lunar-lake-low-power-battery-telemetry-blocked.json";
 const LOW_POWER_ENERGY_PROXY_FILE: &str = "lunar-lake-low-power-energy-proxy.json";
+const LOW_POWER_BATTERY_PLAN_FILE: &str = "lunar-lake-low-power-battery-plan.json";
 const DURABILITY_BUNDLE: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
 const DURABLE_QWEN_CPU_WARM_SESSION: &str = "lunar-lake-durable-qwen25-cpu-warm-session.json";
@@ -738,6 +741,40 @@ pub enum LunarLakeAction {
         created_utc: Option<String>,
 
         /// Fail when battery-mode and energy-proxy evidence cannot be recorded.
+        #[arg(long, default_value_t = false)]
+        strict: bool,
+    },
+
+    /// Emit the no-inference low_power battery-run command plan and current blockers.
+    LowPowerPlan {
+        /// Artifact root for relative input and output paths.
+        #[arg(long, default_value = DEFAULT_ARTIFACT_ROOT)]
+        artifact_root: PathBuf,
+
+        /// Power-profile evidence receipt carrying low_power blockers and runbook guidance.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = POWER_PROFILE_EVIDENCE_FILE)]
+        power_profile_evidence: PathBuf,
+
+        /// Blocked low_power auto-ask receipt carrying fail-closed route guidance.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = BLOCKED_AUTO_ASK_RECEIPT)]
+        blocked_ask_receipt: PathBuf,
+
+        /// Optional battery telemetry receipt to classify whether collection can proceed now.
+        /// Relative paths are resolved under artifact-root.
+        #[arg(long, default_value = LOW_POWER_BATTERY_TELEMETRY_BLOCKED_FILE)]
+        battery_telemetry_context: Option<PathBuf>,
+
+        /// Output JSON low-power battery plan receipt to file.
+        #[arg(long, default_value = LOW_POWER_BATTERY_PLAN_FILE)]
+        json_out: PathBuf,
+
+        /// Override the receipt creation timestamp for reproducible committed receipts.
+        #[arg(long)]
+        created_utc: Option<String>,
+
+        /// Fail when the operator plan loses required runbook or next-evidence guidance.
         #[arg(long, default_value_t = false)]
         strict: bool,
     },
@@ -2482,6 +2519,37 @@ pub struct LunarLakeLowPowerEnergyProxy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LunarLakeLowPowerBatteryPlan {
+    pub schema_version: String,
+    pub artifact_kind: String,
+    pub proof_stage: String,
+    pub created_utc: String,
+    pub machine_id: String,
+    pub artifact_root: String,
+    pub operator_runbook: String,
+    pub power_profile_evidence_receipt: String,
+    pub blocked_ask_receipt: String,
+    pub battery_telemetry_context_receipt: Option<String>,
+    pub current_status: String,
+    pub operator_plan_ready: bool,
+    pub can_collect_battery_evidence_now: bool,
+    pub blockers: Vec<String>,
+    pub required_artifacts: Vec<String>,
+    pub command_sequence: Vec<LowPowerBatteryPlanCommand>,
+    pub promotion_rule: Vec<String>,
+    pub claim_boundary: PowerProfileClaimBoundary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LowPowerBatteryPlanCommand {
+    pub step: String,
+    pub purpose: String,
+    pub command: Vec<String>,
+    pub continue_if: Vec<String>,
+    pub stop_if: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeDurabilityBundle {
     pub schema_version: String,
     pub artifact_kind: String,
@@ -3135,6 +3203,36 @@ impl LunarLakeCommand {
                 write_or_print_low_power_energy_proxy(&receipt, Some(&json_out))?;
                 if *strict && !receipt.gaps.is_empty() {
                     bail!("Lunar Lake low-power energy proxy failed: {}", receipt.gaps.join("; "));
+                }
+                Ok(())
+            }
+            LunarLakeAction::LowPowerPlan {
+                artifact_root,
+                power_profile_evidence,
+                blocked_ask_receipt,
+                battery_telemetry_context,
+                json_out,
+                created_utc,
+                strict,
+            } => {
+                let created_utc = match created_utc {
+                    Some(created_utc) => normalize_created_utc(created_utc)?,
+                    None => chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                };
+                let receipt = build_low_power_battery_plan_with_created_utc(
+                    artifact_root,
+                    power_profile_evidence,
+                    blocked_ask_receipt,
+                    battery_telemetry_context.as_deref(),
+                    created_utc,
+                )?;
+                let json_out = resolve_receipt_path(artifact_root, json_out);
+                write_or_print_low_power_battery_plan(&receipt, Some(&json_out))?;
+                if *strict && !receipt.operator_plan_ready {
+                    bail!(
+                        "Lunar Lake low_power battery plan is not ready: {}",
+                        receipt.blockers.join("; ")
+                    );
                 }
                 Ok(())
             }
@@ -8784,6 +8882,252 @@ pub fn build_low_power_energy_proxy_with_created_utc(
     })
 }
 
+pub fn build_low_power_battery_plan_with_created_utc(
+    root: &Path,
+    power_profile_evidence: &Path,
+    blocked_ask_receipt: &Path,
+    battery_telemetry_context: Option<&Path>,
+    created_utc: String,
+) -> Result<LunarLakeLowPowerBatteryPlan> {
+    let power_profile_path = resolve_receipt_path(root, power_profile_evidence);
+    let blocked_ask_path = resolve_receipt_path(root, blocked_ask_receipt);
+    let battery_telemetry_path =
+        battery_telemetry_context.map(|path| resolve_receipt_path(root, path));
+    let power: LunarLakePowerProfileEvidence = read_json_receipt(&power_profile_path)?;
+    let blocked_ask_json: Value = read_json_receipt(&blocked_ask_path)?;
+    let battery_telemetry_json =
+        battery_telemetry_path.as_ref().map(|path| read_json_receipt::<Value>(path)).transpose()?;
+
+    let blocked_runbook =
+        string_at_any(&blocked_ask_json, &["operator_runbook", "route_selection.operator_runbook"]);
+    let blocked_next_required = non_empty_string_array_at_any(
+        &blocked_ask_json,
+        &["next_required_evidence", "route_selection.next_required_evidence"],
+    );
+    let power_mentions_battery_requirement = power
+        .next_required_evidence
+        .iter()
+        .any(|item| item.contains("telemetry-context --require-battery"));
+    let blocked_mentions_battery_requirement = blocked_next_required
+        .iter()
+        .any(|item| item.contains("telemetry-context --require-battery"));
+    let battery_requirement_satisfied = battery_telemetry_json
+        .as_ref()
+        .and_then(|json| value_at(json, "capture_requirements.requirement_satisfied"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let battery_sample_recorded = battery_telemetry_json
+        .as_ref()
+        .and_then(|json| value_at(json, "capture_requirements.battery_mode_sample_recorded"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let battery_ac_power_inferred = battery_telemetry_json
+        .as_ref()
+        .and_then(|json| value_at(json, "power.ac_power_inferred"))
+        .and_then(Value::as_bool);
+
+    let mut blockers = Vec::new();
+    if power.operator_runbook.as_deref() != Some(LOW_POWER_BATTERY_RUNBOOK) {
+        blockers.push(format!("power-profile evidence must point to {LOW_POWER_BATTERY_RUNBOOK}"));
+    }
+    if blocked_runbook.as_deref() != Some(LOW_POWER_BATTERY_RUNBOOK) {
+        blockers.push(format!(
+            "blocked low_power ask receipt must point to {LOW_POWER_BATTERY_RUNBOOK}"
+        ));
+    }
+    if !power_mentions_battery_requirement {
+        blockers.push(
+            "power-profile evidence must name telemetry-context --require-battery as next evidence"
+                .to_string(),
+        );
+    }
+    if !blocked_mentions_battery_requirement {
+        blockers.push(
+            "blocked low_power ask receipt must name telemetry-context --require-battery as next evidence"
+                .to_string(),
+        );
+    }
+    if !power.low_power_promotion_ready {
+        blockers.push("low_power has no promoted route in current evidence".to_string());
+    }
+    if !power.telemetry.battery_mode_sample_recorded {
+        blockers.push("battery-mode sample is missing for low_power promotion".to_string());
+    }
+    if power.telemetry.current_context_is_ac_only {
+        blockers.push(
+            "current telemetry is AC-only; battery comparison evidence is missing".to_string(),
+        );
+    }
+    if !power.power_advantage_proven {
+        blockers.push("no low_power route has benchmark-qualified power evidence".to_string());
+    }
+    if let Some(json) = battery_telemetry_json.as_ref() {
+        blockers.extend(string_array_at(json, "capture_requirements.gaps"));
+    } else {
+        blockers.push("battery telemetry context receipt is not indexed by the plan".to_string());
+    }
+    let mut deduped_blockers = Vec::new();
+    for blocker in blockers {
+        if !deduped_blockers.contains(&blocker) {
+            deduped_blockers.push(blocker);
+        }
+    }
+    let blockers = deduped_blockers;
+
+    let required_guidance_ready = power.operator_runbook.as_deref()
+        == Some(LOW_POWER_BATTERY_RUNBOOK)
+        && blocked_runbook.as_deref() == Some(LOW_POWER_BATTERY_RUNBOOK)
+        && power_mentions_battery_requirement
+        && blocked_mentions_battery_requirement;
+    let claim_boundary = PowerProfileClaimBoundary {
+        new_inference_executed: false,
+        route_promotion_changed: false,
+        speedup_claim: false,
+        power_advantage_claim: false,
+        acceleration_claim: false,
+        native_npu_inference_claim: false,
+        bitnet_qk256_i2s_behavior_changed: false,
+        hidden_fallback_allowed: false,
+    };
+    let operator_plan_ready = required_guidance_ready
+        && !claim_boundary.new_inference_executed
+        && !claim_boundary.route_promotion_changed
+        && !claim_boundary.speedup_claim
+        && !claim_boundary.power_advantage_claim
+        && !claim_boundary.acceleration_claim
+        && !claim_boundary.native_npu_inference_claim
+        && !claim_boundary.bitnet_qk256_i2s_behavior_changed
+        && !claim_boundary.hidden_fallback_allowed;
+    let can_collect_battery_evidence_now = battery_requirement_satisfied
+        && battery_sample_recorded
+        && battery_ac_power_inferred == Some(false);
+    let current_status = if can_collect_battery_evidence_now {
+        "battery_mode_preflight_satisfied_collect_route_matrix_next"
+    } else {
+        "blocked_until_telemetry_context_require_battery_passes_on_battery"
+    };
+
+    Ok(LunarLakeLowPowerBatteryPlan {
+        schema_version: "1.0.0".to_string(),
+        artifact_kind: "lunar_lake_low_power_battery_plan".to_string(),
+        proof_stage: "low_power_battery_operator_plan_no_evidence_no_promotion_change".to_string(),
+        created_utc,
+        machine_id: "intel-258v".to_string(),
+        artifact_root: path_string(root),
+        operator_runbook: LOW_POWER_BATTERY_RUNBOOK.to_string(),
+        power_profile_evidence_receipt: path_string(&power_profile_path),
+        blocked_ask_receipt: path_string(&blocked_ask_path),
+        battery_telemetry_context_receipt: battery_telemetry_path
+            .as_ref()
+            .map(|path| path_string(path)),
+        current_status: current_status.to_string(),
+        operator_plan_ready,
+        can_collect_battery_evidence_now,
+        blockers,
+        required_artifacts: low_power_battery_plan_required_artifacts(),
+        command_sequence: low_power_battery_plan_commands(),
+        promotion_rule: low_power_battery_plan_promotion_rule(),
+        claim_boundary,
+    })
+}
+
+fn low_power_battery_plan_required_artifacts() -> Vec<String> {
+    [
+        "lunar-lake-low-power-battery-before.json",
+        "battery-mode low_power route/profile receipts for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate",
+        "lunar-lake-low-power-battery-after.json",
+        LOW_POWER_ENERGY_PROXY_FILE,
+        POWER_PROFILE_EVIDENCE_FILE,
+        REGRESSION_BUNDLE_V2,
+        OPERATOR_COMPARISON,
+        "lunar-lake-excellence-audit.json",
+    ]
+    .into_iter()
+    .map(ToString::to_string)
+    .collect()
+}
+
+fn low_power_battery_plan_promotion_rule() -> Vec<String> {
+    [
+        "answer gates pass for the low_power route/profile evidence being considered",
+        "fallback_used=false for the sampled route",
+        "timing is stable for the sampled profile",
+        "before and after telemetry receipts are valid battery-mode samples",
+        "power-profile evidence records benchmark-qualified power advantage",
+        "strict regression and operator comparison preserve the same decision",
+    ]
+    .into_iter()
+    .map(ToString::to_string)
+    .collect()
+}
+
+fn low_power_battery_plan_commands() -> Vec<LowPowerBatteryPlanCommand> {
+    vec![
+        LowPowerBatteryPlanCommand {
+            step: "preflight".to_string(),
+            purpose: "Build the CLI and confirm Windows reports battery mode before evidence collection.".to_string(),
+            command: vec![
+                "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet".to_string(),
+                "Get-CimInstance Win32_Battery | Select-Object BatteryStatus, EstimatedChargeRemaining, Status | Format-List".to_string(),
+            ],
+            continue_if: vec!["BatteryStatus is not 2 and the telemetry receipt reports ac_power_inferred=false".to_string()],
+            stop_if: vec!["BatteryStatus=2 or telemetry-context --require-battery reports ac_power_inferred=true".to_string()],
+        },
+        LowPowerBatteryPlanCommand {
+            step: "battery_start_receipt".to_string(),
+            purpose: "Capture the before telemetry sample with strict battery enforcement.".to_string(),
+            command: vec![
+                "target/debug/bitnet.exe lunar-lake telemetry-context --artifact-root ci/hardware/intel-258v/2026-05-08 --require-battery --json-out lunar-lake-low-power-battery-before.json --created-utc <battery-run-start-utc> --strict".to_string(),
+            ],
+            continue_if: vec![
+                "capture_requirements.battery_mode_required=true".to_string(),
+                "capture_requirements.battery_mode_sample_recorded=true".to_string(),
+                "capture_requirements.requirement_satisfied=true".to_string(),
+                "power.ac_power_inferred=false".to_string(),
+            ],
+            stop_if: vec!["strict mode fails after writing a blocked receipt".to_string()],
+        },
+        LowPowerBatteryPlanCommand {
+            step: "route_profile_samples".to_string(),
+            purpose: "Run the battery-mode low_power route/profile matrix without hidden fallback.".to_string(),
+            command: vec![
+                "run low_power samples for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate with fallback_used=false receipts".to_string(),
+            ],
+            continue_if: vec!["each sampled route records answer gate, route identity, timing, memory, power, and thermal context".to_string()],
+            stop_if: vec!["a route falls back, cannot run, or loses route identity; preserve that receipt as blocker evidence".to_string()],
+        },
+        LowPowerBatteryPlanCommand {
+            step: "battery_end_receipt".to_string(),
+            purpose: "Capture the after telemetry sample immediately after the route/profile run.".to_string(),
+            command: vec![
+                "target/debug/bitnet.exe lunar-lake telemetry-context --artifact-root ci/hardware/intel-258v/2026-05-08 --require-battery --json-out lunar-lake-low-power-battery-after.json --created-utc <battery-run-end-utc> --strict".to_string(),
+            ],
+            continue_if: vec!["the after receipt is also a valid battery-mode sample".to_string()],
+            stop_if: vec!["the after receipt is AC, charging, or cannot identify battery mode".to_string()],
+        },
+        LowPowerBatteryPlanCommand {
+            step: "energy_proxy".to_string(),
+            purpose: "Build the battery-drain proxy only from battery-mode before/after telemetry.".to_string(),
+            command: vec![
+                "target/debug/bitnet.exe lunar-lake energy-proxy --artifact-root ci/hardware/intel-258v/2026-05-08 --before-telemetry-context lunar-lake-low-power-battery-before.json --after-telemetry-context lunar-lake-low-power-battery-after.json --route dense_slm_openvino_npu_candidate --profile low_power --sample-count <battery-run-sample-count> --json-out lunar-lake-low-power-energy-proxy.json --created-utc <battery-run-end-utc> --strict".to_string(),
+            ],
+            continue_if: vec!["energy_proxy_recorded=true and battery_mode_sample_recorded=true".to_string()],
+            stop_if: vec!["before or after telemetry is not a battery-mode sample".to_string()],
+        },
+        LowPowerBatteryPlanCommand {
+            step: "refresh_artifacts".to_string(),
+            purpose: "Refresh low_power power-profile, strict regression, and operator comparison from the battery evidence.".to_string(),
+            command: vec![
+                "target/debug/bitnet.exe lunar-lake power-profile --artifact-root ci/hardware/intel-258v/2026-05-08 --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --telemetry-context lunar-lake-power-thermal-context.json --battery-telemetry-context lunar-lake-low-power-battery-after.json --energy-proxy lunar-lake-low-power-energy-proxy.json --json-out lunar-lake-power-profile-evidence.json --created-utc <battery-run-end-utc> --strict".to_string(),
+                "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc <battery-run-end-utc> --strict".to_string(),
+                "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc <battery-run-end-utc> --strict".to_string(),
+            ],
+            continue_if: vec!["power-profile, regression, and comparison preserve fallback=false and the same route decision".to_string()],
+            stop_if: vec!["any refreshed artifact claims promotion, speedup, power advantage, native accelerator execution, or BitNet QK256/I2_S behavior without explicit promotion-lane proof".to_string()],
+        },
+    ]
+}
+
 fn battery_charge_percent(status: &str) -> Option<i64> {
     status.split(';').find_map(|field| {
         let (key, value) = field.split_once('=')?;
@@ -11574,6 +11918,25 @@ fn write_or_print_low_power_energy_proxy(
         }
         fs::write(path, json)?;
         println!("Lunar Lake low-power energy proxy written to {}", path.display());
+    } else {
+        println!("{}", String::from_utf8_lossy(&json));
+    }
+    Ok(())
+}
+
+fn write_or_print_low_power_battery_plan(
+    receipt: &LunarLakeLowPowerBatteryPlan,
+    path: Option<&Path>,
+) -> Result<()> {
+    let json = serde_json::to_vec_pretty(receipt)?;
+    if let Some(path) = path {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, json)?;
+        println!("Lunar Lake low-power battery plan written to {}", path.display());
     } else {
         println!("{}", String::from_utf8_lossy(&json));
     }
@@ -19637,6 +20000,92 @@ mod tests {
     }
 
     #[test]
+    fn low_power_battery_plan_surfaces_blocked_physical_run_without_claims() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_low_power_plan_inputs(temp.path(), true, false)?;
+
+        let receipt = build_low_power_battery_plan_with_created_utc(
+            temp.path(),
+            Path::new(POWER_PROFILE_EVIDENCE_FILE),
+            Path::new(BLOCKED_AUTO_ASK_RECEIPT),
+            Some(Path::new(LOW_POWER_BATTERY_TELEMETRY_BLOCKED_FILE)),
+            "2026-05-21T02:00:00Z".to_string(),
+        )?;
+
+        assert!(receipt.operator_plan_ready, "{:?}", receipt.blockers);
+        assert!(!receipt.can_collect_battery_evidence_now);
+        assert_eq!(receipt.operator_runbook, LOW_POWER_BATTERY_RUNBOOK);
+        assert!(
+            receipt
+                .required_artifacts
+                .iter()
+                .any(|item| { item == "lunar-lake-low-power-battery-before.json" })
+        );
+        assert!(receipt.command_sequence.iter().any(|step| {
+            step.step == "battery_start_receipt"
+                && step
+                    .command
+                    .iter()
+                    .any(|command| command.contains("telemetry-context --artifact-root"))
+                && step.command.iter().any(|command| command.contains("--require-battery"))
+        }));
+        assert!(receipt.blockers.iter().any(|blocker| {
+            blocker.contains("current telemetry is AC-only")
+                || blocker.contains("current power context indicates AC power")
+        }));
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        assert!(!receipt.claim_boundary.power_advantage_claim);
+        assert!(!receipt.claim_boundary.bitnet_qk256_i2s_behavior_changed);
+        Ok(())
+    }
+
+    #[test]
+    fn low_power_battery_plan_requires_runbook_guidance() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_low_power_plan_inputs(temp.path(), false, false)?;
+
+        let receipt = build_low_power_battery_plan_with_created_utc(
+            temp.path(),
+            Path::new(POWER_PROFILE_EVIDENCE_FILE),
+            Path::new(BLOCKED_AUTO_ASK_RECEIPT),
+            Some(Path::new(LOW_POWER_BATTERY_TELEMETRY_BLOCKED_FILE)),
+            "2026-05-21T02:10:00Z".to_string(),
+        )?;
+
+        assert!(!receipt.operator_plan_ready);
+        assert!(receipt.blockers.iter().any(|blocker| {
+            blocker.contains("power-profile evidence must point")
+                || blocker.contains("blocked low_power ask receipt must point")
+        }));
+        assert!(!receipt.claim_boundary.new_inference_executed);
+        assert!(!receipt.claim_boundary.route_promotion_changed);
+        Ok(())
+    }
+
+    #[test]
+    fn low_power_battery_plan_marks_battery_preflight_ready_when_receipt_passes() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_low_power_plan_inputs(temp.path(), true, true)?;
+
+        let receipt = build_low_power_battery_plan_with_created_utc(
+            temp.path(),
+            Path::new(POWER_PROFILE_EVIDENCE_FILE),
+            Path::new(BLOCKED_AUTO_ASK_RECEIPT),
+            Some(Path::new(LOW_POWER_BATTERY_TELEMETRY_BLOCKED_FILE)),
+            "2026-05-21T02:20:00Z".to_string(),
+        )?;
+
+        assert!(receipt.operator_plan_ready, "{:?}", receipt.blockers);
+        assert!(receipt.can_collect_battery_evidence_now);
+        assert_eq!(
+            receipt.current_status,
+            "battery_mode_preflight_satisfied_collect_route_matrix_next"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn durability_bundle_indexes_repeat_gap_and_repeated_stability() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
@@ -22496,6 +22945,152 @@ mod tests {
         fs::create_dir_all(root)?;
         fs::write(root.join(file), serde_json::to_vec_pretty(&value)?)?;
         Ok(())
+    }
+
+    fn write_low_power_plan_inputs(
+        root: &Path,
+        include_runbook_guidance: bool,
+        battery_requirement_satisfied: bool,
+    ) -> Result<()> {
+        let runbook = include_runbook_guidance.then_some(LOW_POWER_BATTERY_RUNBOOK);
+        let next_required_evidence = if include_runbook_guidance {
+            json!([
+                "rerun telemetry-context --require-battery on battery power before collecting low_power route samples",
+                "collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix"
+            ])
+        } else {
+            json!(["collect battery evidence"])
+        };
+        write_json(
+            root,
+            POWER_PROFILE_EVIDENCE_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_profile_evidence",
+                "proof_stage": "low_power_evidence_indexed_no_promotion_change",
+                "created_utc": "2026-05-21T01:00:00Z",
+                "machine_id": "intel-258v",
+                "artifact_root": path_string(root),
+                "route_profile_comparison_receipt": "route-profile.json",
+                "cold_warm_benchmark_receipt": "benchmark.json",
+                "telemetry_context_receipt": "telemetry.json",
+                "battery_telemetry_context_receipt": LOW_POWER_BATTERY_TELEMETRY_BLOCKED_FILE,
+                "energy_proxy_receipt": LOW_POWER_ENERGY_PROXY_FILE,
+                "telemetry": {
+                    "memory_context_recorded": true,
+                    "power_context_recorded": true,
+                    "thermal_context_recorded": true,
+                    "active_scheme": "Balanced",
+                    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+                    "ac_power_inferred": true,
+                    "thermal_zones_visible": 1,
+                    "thermal_temperature_count": 0,
+                    "current_context_is_ac_only": true,
+                    "battery_mode_sample_recorded": battery_requirement_satisfied,
+                    "battery_sample_source": if battery_requirement_satisfied { Some("battery_telemetry_context") } else { None::<&str> },
+                    "energy_proxy_recorded": true,
+                    "energy_proxy_source": "energy_proxy_receipt"
+                },
+                "low_power_routes": [
+                    {
+                        "route_id": "dense_slm_openvino_npu_candidate",
+                        "route_status": "candidate",
+                        "ledger_route_status": "candidate",
+                        "selected_backend": "openvino-npu",
+                        "runtime_api": "openvino_genai",
+                        "fallback_used": false,
+                        "answer_gate_passed": true,
+                        "total_response_ms": 950.0,
+                        "throughput_tokens_per_s": 9.5,
+                        "benchmark_qualified_advantage": false,
+                        "power_related_blockers": ["power advantage evidence missing for low_power promotion"],
+                        "all_blockers": ["route not promoted for profile low_power"],
+                        "power_promotion_ready": false
+                    }
+                ],
+                "power_profile_index_ready": true,
+                "low_power_promotion_ready": false,
+                "power_advantage_proven": false,
+                "gaps": [
+                    "current telemetry is AC-only; battery comparison evidence is missing",
+                    "no low_power route has benchmark-qualified power evidence"
+                ],
+                "operator_runbook": runbook,
+                "next_required_evidence": next_required_evidence,
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "native_npu_inference_claim": false,
+                    "bitnet_qk256_i2s_behavior_changed": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        write_json(
+            root,
+            BLOCKED_AUTO_ASK_RECEIPT,
+            json!({
+                "artifact_kind": "lunar_lake_operator_ask",
+                "profile_id": "low_power",
+                "route_selection_blocked": true,
+                "operator_runbook": runbook,
+                "next_required_evidence": next_required_evidence,
+                "route_selection": {
+                    "operator_runbook": runbook,
+                    "next_required_evidence": next_required_evidence
+                },
+                "claim_boundary": {
+                    "new_inference_executed": false,
+                    "route_promotion_changed": false,
+                    "speedup_claim": false,
+                    "power_advantage_claim": false,
+                    "acceleration_claim": false,
+                    "bitnet_qk256_i2s_behavior_changed": false,
+                    "hidden_fallback_allowed": false
+                }
+            }),
+        )?;
+        write_json(
+            root,
+            LOW_POWER_BATTERY_TELEMETRY_BLOCKED_FILE,
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_power_thermal_context",
+                "proof_stage": if battery_requirement_satisfied {
+                    "battery_mode_telemetry_context_captured_no_promotion_change"
+                } else {
+                    "battery_mode_telemetry_context_blocked_no_promotion_change"
+                },
+                "power": {
+                    "battery_status": if battery_requirement_satisfied {
+                        "BatteryStatus=1;EstimatedChargeRemaining=96"
+                    } else {
+                        "BatteryStatus=2;EstimatedChargeRemaining=100"
+                    },
+                    "ac_power_inferred": !battery_requirement_satisfied
+                },
+                "capture_requirements": {
+                    "battery_mode_required": true,
+                    "battery_mode_sample_recorded": battery_requirement_satisfied,
+                    "requirement_satisfied": battery_requirement_satisfied,
+                    "status": if battery_requirement_satisfied {
+                        "battery_mode_sample_recorded"
+                    } else {
+                        "blocked"
+                    },
+                    "gaps": if battery_requirement_satisfied {
+                        Vec::<String>::new()
+                    } else {
+                        vec![
+                            "battery-mode telemetry sample required but current power context indicates AC power".to_string()
+                        ]
+                    }
+                }
+            }),
+        )
     }
 
     fn benchmark_qualified_openvino_profile(profile_id: &str, route_id: &str) -> Value {

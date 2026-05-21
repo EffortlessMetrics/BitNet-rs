@@ -37,6 +37,25 @@ Get-CimInstance Win32_Battery |
 Stop if `BatteryStatus=2` or if the telemetry receipt below reports
 `ac_power_inferred=true`.
 
+Before unplugging for the physical run, emit the machine-readable plan receipt
+from the current committed blocker evidence:
+
+```powershell
+target/debug/bitnet.exe lunar-lake low-power-plan `
+  --artifact-root ci/hardware/intel-258v/2026-05-08 `
+  --power-profile-evidence lunar-lake-power-profile-evidence.json `
+  --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json `
+  --battery-telemetry-context lunar-lake-low-power-battery-telemetry-blocked.json `
+  --json-out lunar-lake-low-power-battery-plan.json `
+  --created-utc <plan-utc> `
+  --strict
+```
+
+This plan is not battery evidence. Continue only if it records
+`operator_plan_ready=true`; if `can_collect_battery_evidence_now=false`, keep
+following the strict battery telemetry preflight below before collecting route
+samples.
+
 ## Battery Start Receipt
 
 Capture the required before-sample with strict battery enforcement:

@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T02:15:00Z"
+event = "pr_open"
+item = "LNL258V-POWER-010"
+pr = 116
+head_sha = "6a9868e3ed92bb494c9c6b0e2f643cf3fd1251cb"
+branch = "codex/lunar-lake/LNL258V-POWER-010-battery-plan"
+actor = "codex"
+summary = "Opened PR #116 for the no-inference low_power battery-plan command and receipt."
+
+notes = [
+  "The PR adds `bitnet lunar-lake low-power-plan` and a committed `lunar-lake-low-power-battery-plan.json` receipt from existing AC-blocked evidence.",
+  "The receipt packages the POWER-006 battery runbook, required artifacts, command sequence, current blockers, and claim boundaries before physical battery evidence collection.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, broad quality claim, Qwen3 Lunar Lake promotion claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]
