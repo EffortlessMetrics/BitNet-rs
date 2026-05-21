@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_dense_q8_exact_hook_timing_classification",
+  "work_item": "SLM-CPU-072",
+  "claim": "post_071_real_artifact_timing_gate",
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "broad_answer_quality_claim": false,
+  "default_runtime_changed": false,
+  "model": {
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3",
+    "quant_format": null
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "strict": true
+  },
+  "host": {
+    "cpu": "Intel64 Family 6 Model 142 Stepping 10, GenuineIntel",
+    "arch": "x86_64",
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "threads": 4,
+    "thermal": "not_sampled_in_slm_cpu_warm_session",
+    "power": "not_sampled_in_slm_cpu_warm_session",
+    "storage_model_path_available_bytes": 33964851200
+  },
+  "hook": {
+    "tensor": "layers.0.attention.q_proj.weight",
+    "source_tensor": "blk.0.attn_q.weight",
+    "scope": "exact_tensor_only",
+    "default_selected_path": "eager_f32_candle",
+    "opt_in_selected_path": "packed_q8_sidecar",
+    "opt_in_selected_kernel": "dense-q8-sidecar-linear",
+    "runtime_compute_enabled_by_default": false,
+    "opt_in_requires_payload_and_runtime_env": true
+  },
+  "inputs": {
+    "before_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-before-warm-session.json",
+    "after_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-after-warm-session.json",
+    "equivalence_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-runtime-hook-equivalence.json"
+  },
+  "behavior_equivalence": {
+    "prompt_count": 6,
+    "prompt_ids_match": true,
+    "generated_ids_match": true,
+    "decoded_text_match": true,
+    "model_sha_match": true,
+    "tokenizer_source_match": true,
+    "selected_backend_match": true,
+    "fallback_false_before_after": true,
+    "passed": true
+  },
+  "timing": {
+    "classification": "regressed_on_bounded_six_prompt_artifact",
+    "before": {
+      "selected_path": "eager_f32_candle",
+      "selected_kernel": "dense-f32-candle-linear",
+      "runtime_compute_enabled": false,
+      "total_session_ms": 220827.789,
+      "warm_prompt_wall_ms": 142710.292,
+      "decode_total_ms": 37200.45,
+      "prefill_ms": 101517.74,
+      "tokenize_ms": 3989.062,
+      "sampling_ms": 271.409,
+      "decode_generated_tok_s": 1.237,
+      "warm_prompt_generated_tok_s": 0.322,
+      "cold_session_generated_tok_s": 0.208
+    },
+    "after": {
+      "selected_path": "packed_q8_sidecar",
+      "selected_kernel": "dense-q8-sidecar-linear",
+      "runtime_compute_enabled": true,
+      "total_session_ms": 241939.114,
+      "warm_prompt_wall_ms": 163585.829,
+      "decode_total_ms": 41490.017,
+      "prefill_ms": 118223.357,
+      "tokenize_ms": 3869.585,
+      "sampling_ms": 266.893,
+      "decode_generated_tok_s": 1.109,
+      "warm_prompt_generated_tok_s": 0.281,
+      "cold_session_generated_tok_s": 0.19
+    },
+    "delta": {
+      "total_session_ms": 21111.325,
+      "total_session_percent": 9.56,
+      "warm_prompt_wall_ms": 20875.537,
+      "warm_prompt_wall_percent": 14.628,
+      "decode_total_ms": 4289.567,
+      "decode_total_percent": 11.531,
+      "prefill_ms": 16705.617,
+      "prefill_percent": 16.456,
+      "decode_generated_tok_s": -0.128,
+      "decode_generated_tok_s_percent": -10.348,
+      "warm_prompt_generated_tok_s": -0.041,
+      "cold_session_generated_tok_s": -0.018
+    }
+  },
+  "decision": {
+    "runtime_promotion_recommended": false,
+    "default_runtime_should_remain": "eager_f32_candle",
+    "next_safe_step": "Keep the exact-tensor packed Q8_0 hook opt-in; use this real six-prompt artifact as the timing gate before further locality/kernel work.",
+    "reason": "The opt-in packed sidecar path preserves prompt IDs, generated IDs, decoded text, strict tokenizer authority, CPU backend identity, and fallback=false, but regresses total session time on the bounded six-prompt two-repeat 4-thread i5-8250U run."
+  },
+  "claim_boundary": [
+    "This artifact classifies only the committed SLM-CPU-072 six-prompt two-repeat 4-thread i5-8250U receipts.",
+    "The exact-tensor packed Q8_0 hook is not enabled by default.",
+    "Behavior equivalence is preserved for the compared receipts.",
+    "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made."
+  ]
+}

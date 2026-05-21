@@ -116,7 +116,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-063 | merged | #6127 defined the BitNet-rs release-surface intake gate for audited Kaby SLM artifacts produced by bitnet-rs-swarm. |
 | SLM-CPU-064 | merged | #6138 accepted the first audited Kaby SLM package returned from bitnet-rs-swarm as release-surface evidence only; runtime promotion remains separate. |
 | SLM-CPU-071 | merged | #177 defined the required real i5-8250U post-SLM-CPU-070 before/after timing gate; it did not commit the actual Qwen3 artifact pack. |
-| SLM-CPU-072 | ready | Capture or ingest the real Qwen3 Q8_0 4-thread before/after warm-session receipts for the SLM-CPU-071 timing gate before timing is classified. |
+| SLM-CPU-072 | pr_open | #192 captures the real Qwen3 Q8_0 4-thread before/after warm-session receipts for the SLM-CPU-071 timing gate, proves behavior equivalence, and classifies the opt-in packed sidecar path as regressed on the bounded artifact. |
 | SLM-CPU-065 | ready | Open the first release-surface runtime-promotion gate for the accepted single-tensor packed Q8_0 sidecar candidate, preserving the strict Qwen3 Q8_0 oracle and keeping runtime promotion disabled by default unless before/after receipts prove identical behavior. |
 
 ## Review Policy
