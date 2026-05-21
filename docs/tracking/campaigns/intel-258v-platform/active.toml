@@ -11172,7 +11172,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-011"
-status = "in_progress"
+status = "merged"
+pr = 223
+head_sha = "0696101ce52ff588c2658eae089acf4c3c69c797"
+merge_sha = "6fea0020926add54ef487990d115d0684dbf2e69"
 branch = "codex/lunar-lake/LNL258V-POWER-011-low-power-sample-plan"
 stackable = false
 review_mode = "codex_premerge"
