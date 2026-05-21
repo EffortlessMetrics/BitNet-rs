@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T23:55:34Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-004"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-004-queue-backpressure"
+pr = 6173
+head_sha = "6eb57f141113ab1ee37c9098baaeddaf470a321e"
+merge_sha = "f22d40c3124485f51ec90d6feefb66ff801143a7"
+
+notes = [
+  "Merged PR #6173 after all GitHub checks passed.",
+  "The merged slice adds the model-free M4 serve-backpressure smoke receipt contract for dense SLM and gated BitNet serve routes, covering concurrency, queue limits, busy and timeout responses, resident reuse, per-request receipts, and failure receipts.",
+  "The merge does not claim production hosting, full OpenAI compatibility, live runtime proof, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon support.",
+]

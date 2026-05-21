@@ -2651,7 +2651,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-EX-004"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-004-queue-backpressure"
 stackable = false
 review_mode = "codex_premerge"
@@ -2659,7 +2659,8 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-SERVE-EX-001", "M4-SERVE-EX-003", "M4-CONTEXT-001"]
 pr = 6173
-head_sha = "70bea8465552105826378ccee047d6dd6b6c84fb"
+head_sha = "6eb57f141113ab1ee37c9098baaeddaf470a321e"
+merge_sha = "f22d40c3124485f51ec90d6feefb66ff801143a7"
 acceptance = "Add bounded local-server queue, backpressure, and resident-state evidence for the M4 appliance: concurrent local requests, queue limits, busy/timeout responses, resident model reuse, per-request receipts, and failure receipts without production-hosting or full OpenAI-compatibility claims."
 commands = [
   "cargo test --locked -p bitnet-server -- --nocapture",
