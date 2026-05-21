@@ -2558,7 +2558,8 @@ fn mac_bitnet_serve_help_documents_ready_gate() {
         .stdout(predicate::str::contains("--model-family <MODEL_FAMILY>"))
         .stdout(predicate::str::contains("--model-path <PATH>"))
         .stdout(predicate::str::contains("--tokenizer <PATH>"))
-        .stdout(predicate::str::contains("--bitnet-serve-gate-receipt <PATH>"));
+        .stdout(predicate::str::contains("--bitnet-serve-gate-receipt <PATH>"))
+        .stdout(predicate::str::contains("--allow-network-bind"));
 }
 
 #[test]
@@ -2585,6 +2586,24 @@ fn mac_bitnet_serve_requires_ready_gate_before_cache_or_bind()
         .stderr(predicate::str::contains("bitnet mac bitnet-serve-gate"))
         .stderr(predicate::str::contains("--bitnet-serve-gate-receipt"))
         .stderr(predicate::str::contains("bitnet model fetch").not())
+        .stderr(predicate::str::contains("failed to bind").not());
+    Ok(())
+}
+
+#[test]
+fn mac_serve_rejects_non_loopback_without_explicit_network_bind()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_dir = dir.path().join("receipts");
+    let receipt_dir_str = receipt_dir.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "serve", "--host", "0.0.0.0", "--receipt-dir", receipt_dir_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Refusing non-loopback host 0.0.0.0"))
+        .stderr(predicate::str::contains("--allow-network-bind"))
+        .stderr(predicate::str::contains("model cache is not ready").not())
         .stderr(predicate::str::contains("failed to bind").not());
     Ok(())
 }

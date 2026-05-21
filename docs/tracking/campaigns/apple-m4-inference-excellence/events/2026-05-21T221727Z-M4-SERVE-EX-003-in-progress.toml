@@ -1,0 +1,13 @@
+timestamp = "2026-05-21T22:17:27Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-003-local-safety-defaults"
+
+notes = [
+  "Started the bounded M4 local-server safety-defaults slice for localhost binding, explicit wider-bind opt-in, telemetry/CORS defaults, request-size limits, HTTP path redaction, and receipt export redaction.",
+  "The implementation scope is local appliance safety defaults and operator-facing documentation; it does not claim production hosting, full security audit coverage, or full OpenAI compatibility.",
+]

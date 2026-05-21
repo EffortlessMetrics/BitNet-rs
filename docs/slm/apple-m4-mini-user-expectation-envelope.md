@@ -341,6 +341,13 @@ Only a ready gate can be consumed by `bitnet mac serve --model-family bitnet`.
 That route is a local service wrapper only; it is not production hosting and
 does not prove broad OpenAI compatibility.
 
+All `bitnet mac serve` routes bind to `127.0.0.1` by default. A non-loopback
+host requires `--allow-network-bind`, keeps the same local-service claim
+boundary, and still does not enable telemetry, wildcard CORS, production
+hosting, or broad OpenAI compatibility. Operator HTTP metadata and receipt
+export redact cache/model/receipt paths; local receipt files remain the
+canonical run evidence.
+
 Use the chat gate command to make missing BitNet chat evidence concrete:
 
 ```bash

@@ -55,6 +55,9 @@ Options:
 
           [default: 127.0.0.1]
 
+      --allow-network-bind
+          Allow binding outside loopback. This explicitly exposes local server metadata
+
       --port <PORT>
           Port to bind
 
