@@ -524,3 +524,52 @@ must_not_claim = [
   "Performance speedup is proven.",
   "A770 trusted partial acceleration is claim-grade.",
 ]
+
+[[work_item]]
+id = "A770-013"
+status = "pr_open"
+pr = 176
+branch = "codex/intel-a770/A770-013-cli-opencl-route-receipts"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-012"]
+acceptance = "Wire the CLI OpenCL feature into the real BitNet model/QK256 dispatch stack and add strict A770 OpenCL QK256 route receipt fields without promoting BitNet inference, quality, residency, speed, or trusted-partial acceleration."
+commands = [
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli a770_opencl -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/Cargo.toml",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/simple_generation/backend.rs",
+  "crates/bitnet-cli/src/simple_generation/environment.rs",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "ci/hardware/amd-5700x-intel-a770/**",
+]
+may_claim = [
+  "The CLI OpenCL feature now compiles the real BitNet model/QK256 dispatch stack needed to exercise the selected-device A770 QK256 candidate from a strict CLI route.",
+  "Strict A770 CLI receipts can record QK256 A770 OpenCL contribution counters and runtime bytes while staying diagnostic-only.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are fully proven.",
+  "BitNet inference works on A770.",
+  "A770 answer quality is proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]

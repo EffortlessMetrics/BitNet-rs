@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T09:08:57Z"
+campaign = "intel-a770"
+item = "A770-013"
+event = "pr_open"
+pr = 176
+head_sha = "857ced51f9ad9f3c9a36223142312e81114afdc2"
+branch = "codex/intel-a770/A770-013-cli-opencl-route-receipts"
+actor = "codex"
+
+notes = [
+  "Opened PR #176 for A770-013 CLI OpenCL route receipts.",
+  "The PR wires the CLI OpenCL feature into the real BitNet model/QK256 OpenCL dependency stack and adds strict A770 OpenCL route/kernel/runtime receipt fields.",
+  "No BitNet inference, answer quality, activation quantization residency, selected attention residency, resident KV, full residency, performance speedup, trusted-partial acceleration, or completion claim is promoted.",
+]

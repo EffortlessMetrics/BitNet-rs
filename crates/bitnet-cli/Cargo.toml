@@ -116,7 +116,16 @@ metal = [
   "runtime-profile-core",
 ]
 gpu = ["cuda", "metal", "bitnet-runtime-bootstrap/runtime-profile-gpu"]
-opencl = ["bitnet-device-probe/opencl"]
+opencl = [
+  "bitnet-common/opencl",
+  "bitnet-device-probe/opencl",
+  "bitnet-inference/opencl",
+  "bitnet-kernels/opencl",
+  "bitnet-models/opencl",
+  "bitnet-qk256-dispatch/opencl",
+  "bitnet-quantization/opencl",
+  "runtime-profile-core",
+]
 # IQ2_S support via GGML FFI
 iq2s-ffi = [
     "bitnet-models/iq2s-ffi",

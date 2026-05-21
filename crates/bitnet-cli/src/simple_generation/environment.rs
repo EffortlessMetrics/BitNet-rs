@@ -66,6 +66,7 @@ pub(crate) fn apply_backend_identity_env(
     selected_backend: &str,
     runtime_api: &str,
     strict_cuda_backend_selected: bool,
+    strict_a770_opencl_backend_selected: bool,
 ) {
     unsafe {
         std::env::set_var("BITNET_REQUESTED_BACKEND", requested_backend);
@@ -75,6 +76,11 @@ pub(crate) fn apply_backend_identity_env(
             std::env::set_var("BITNET_STRICT_CUDA_BACKEND", "1");
         } else {
             std::env::remove_var("BITNET_STRICT_CUDA_BACKEND");
+        }
+        if strict_a770_opencl_backend_selected {
+            std::env::set_var("BITNET_STRICT_A770_OPENCL_BACKEND", "1");
+        } else {
+            std::env::remove_var("BITNET_STRICT_A770_OPENCL_BACKEND");
         }
     }
 }
