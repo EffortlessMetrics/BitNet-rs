@@ -10802,6 +10802,70 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-BITNET-INTAKE-005"
+status = "pr_open"
+branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-005-closed-watchpoints"
+pr = 159
+head_sha = "6a44f409b65c15b17f25e9efc4c9d8912fcb6c3f"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-BITNET-INTAKE-004", "LNL258V-GOAL-AUDIT-017"]
+acceptance = "Refresh Lunar Lake BitNet semantic-intake evidence after live GitHub state shows old A770 shared BitNet semantic watchpoint PRs #4756, #4757, #4767, #4853, and #5064 are closed unmerged. The source-change ledger, semantic-intake receipt, strict regression bundle, operator comparison, excellence audit, and goal artifact checklist must record pending_shared_change_count=0, closed_shared_change_count=6, stale_after_merged_count=0, rerun_required=false, and POWER-006 still blocked on real battery-mode low_power evidence. Preserve no inference, model load, route promotion, speedup, power-advantage, native accelerator, acceleration, dense-SLM-as-BitNet-proof, full BitNet accelerator, packed QK256 accelerator decode, or BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "gh pr view 4756 --repo EffortlessMetrics/BitNet-rs --json number,state,mergedAt,mergeCommit,title,url",
+  "gh pr view 4757 --repo EffortlessMetrics/BitNet-rs --json number,state,mergedAt,mergeCommit,title,url",
+  "gh pr view 4767 --repo EffortlessMetrics/BitNet-rs --json number,state,mergedAt,mergeCommit,title,url",
+  "gh pr view 4853 --repo EffortlessMetrics/BitNet-rs --json number,state,mergedAt,mergeCommit,title,url",
+  "gh pr view 5064 --repo EffortlessMetrics/BitNet-rs --json number,state,mergedAt,mergeCommit,title,url",
+  "target/debug/bitnet.exe lunar-lake bitnet-intake --artifact-root ci/hardware/intel-258v/2026-05-08 --source-changes lunar-lake-bitnet-semantic-source-changes.json --cpu-reference-bundle cpu-reference-bundle-after-semantic-fix.json --operator-comparison lunar-lake-operator-comparison.json --json-out lunar-lake-bitnet-semantic-intake.json --created-utc 2026-05-21T06:49:14Z --strict",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-21T06:49:14Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-21T06:49:14Z --strict",
+  "rg -n '\"pending_shared_change_count\": 0|\"closed_shared_change_count\": 6|\"rerun_required\": false' ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/**",
+]
+may_claim = [
+  "Old A770 shared BitNet semantic watchpoint PRs #4756, #4757, #4767, #4853, and #5064 are closed unmerged in live GitHub state.",
+  "Lunar Lake semantic intake now records zero pending shared BitNet semantic changes and no rerun required.",
+  "POWER-006 remains blocked until real battery-mode low_power telemetry and energy-proxy evidence exist.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any model was loaded by this PR.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Battery-mode low_power evidence is now available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-006"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"

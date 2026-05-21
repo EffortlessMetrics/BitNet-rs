@@ -1,14 +1,14 @@
 {
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_bitnet_semantic_source_changes",
-  "created_utc": "2026-05-20T12:15:00Z",
+  "created_utc": "2026-05-21T06:49:14Z",
   "machine_id": "intel-258v",
   "changes": [
     {
       "source_lane": "a770",
       "source_pr": 4756,
       "title": "transformer(bitnet): wire sub-layernorms",
-      "status": "pending_stack",
+      "status": "closed_unmerged",
       "base_ref": "a770/hf-tokenizer-embedded-specials",
       "head_sha": "ff33cb0c33a7fdfc755e3b75c766a185541d2c5a",
       "semantic_scope": [
@@ -16,14 +16,14 @@
         "attention_output_sub_layernorm",
         "ffn_sub_layernorm"
       ],
-      "requires_lunar_lake_rerun_when_merged_to_main": true,
-      "claim_boundary": "pending stacked A770 PR wires BitNet attention and FFN sub-layernorm semantics; if merged to main it requires Lunar Lake BitNet answer, parity, phase, and operator reruns before route decisions update; no current Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
+      "requires_lunar_lake_rerun_when_merged_to_main": false,
+      "claim_boundary": "shared A770 semantic PR was closed without main merge; no Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
     },
     {
       "source_lane": "a770",
       "source_pr": 4757,
       "title": "transformer(bitnet): apply architecture norm and activation defaults",
-      "status": "pending_stack",
+      "status": "closed_unmerged",
       "base_ref": "a770/localize-strict-bitnet-quality",
       "head_sha": "c0138a6a2d171ada1f9726934733ed176def2349",
       "semantic_scope": [
@@ -32,14 +32,14 @@
         "relu2_ffn_activation",
         "gguf_architecture_defaults"
       ],
-      "requires_lunar_lake_rerun_when_merged_to_main": true,
-      "claim_boundary": "pending stacked A770 PR changes BitNet architecture default semantics for norms and FFN activation; if merged to main it requires Lunar Lake BitNet answer, parity, phase, and operator reruns before route decisions update; no current Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
+      "requires_lunar_lake_rerun_when_merged_to_main": false,
+      "claim_boundary": "shared A770 semantic PR was closed without main merge; no Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
     },
     {
       "source_lane": "a770",
       "source_pr": 4767,
       "title": "fix(bitnet): apply i2s trailer scale in qk256 dispatch",
-      "status": "pending_stack",
+      "status": "closed_unmerged",
       "base_ref": "a770/diag-transformer-qk256-history-sensitivity",
       "head_sha": "42d925133973edbaed8a3707153355641ecfe0a8",
       "semantic_scope": [
@@ -47,14 +47,14 @@
         "i2s_qk256_packed_semantics",
         "cpu_opencl_qk256_dispatch"
       ],
-      "requires_lunar_lake_rerun_when_merged_to_main": true,
-      "claim_boundary": "pending stacked A770 PR changes BitNet QK256/I2_S trailer-scale dispatch semantics; if merged to main it requires Lunar Lake BitNet answer, scalar/AVX2 parity, phase, and operator reruns before route decisions update; no current Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
+      "requires_lunar_lake_rerun_when_merged_to_main": false,
+      "claim_boundary": "shared A770 semantic PR was closed without main merge; no Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
     },
     {
       "source_lane": "a770",
       "source_pr": 4853,
       "title": "fix(bitnet): use activation-quantized I2S QK256 dispatch",
-      "status": "pending_stack",
+      "status": "closed_unmerged",
       "base_ref": "a770/proof-i2s-activation-quant-gemv",
       "head_sha": "e709bab0754eb955e26b1da1a73fbe86a281d3ec",
       "semantic_scope": [
@@ -62,14 +62,14 @@
         "activation_quantized_i2s_dispatch",
         "opencl_qk256_diagnostic_kernel"
       ],
-      "requires_lunar_lake_rerun_when_merged_to_main": true,
-      "claim_boundary": "pending stacked A770 PR changes BitNet QK256/I2_S activation-quantized dispatch semantics; if merged to main it requires Lunar Lake BitNet answer, scalar/AVX2 parity, phase, and operator reruns before route decisions update; no current Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
+      "requires_lunar_lake_rerun_when_merged_to_main": false,
+      "claim_boundary": "shared A770 semantic PR was closed without main merge; no Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
     },
     {
       "source_lane": "a770",
       "source_pr": 5064,
       "title": "diag(reference): report truncated Qcur score samples",
-      "status": "pending_stack",
+      "status": "closed_unmerged",
       "base_ref": "a770/diag-score-kcur-history-attribution",
       "head_sha": "7de548b57f9ebdb0e10cb3fac7de2fe51a501469",
       "semantic_scope": [
@@ -77,8 +77,8 @@
         "qk_attention_score_input_semantics",
         "a770_reference_trace_diagnostics"
       ],
-      "requires_lunar_lake_rerun_when_merged_to_main": true,
-      "claim_boundary": "pending stacked A770 PR includes a BitNet transformer attention_score_key_input f16-roundtrip semantic change plus diagnostic trace reporting; if merged to main it requires Lunar Lake BitNet reruns before route decisions update; no current Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
+      "requires_lunar_lake_rerun_when_merged_to_main": false,
+      "claim_boundary": "shared A770 semantic PR was closed without main merge; no Lunar Lake rerun, route promotion, speedup, acceleration, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior-change claim is made"
     },
     {
       "source_lane": "a770",
