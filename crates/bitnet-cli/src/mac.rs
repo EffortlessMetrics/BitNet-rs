@@ -7765,6 +7765,7 @@ async fn run_bitnet_smoke(
         None,
         answer_receipt_path.clone(),
         false,
+        MacTraceContext::disabled("mac smoke", "mac smoke"),
         true,
     )
     .await?;
@@ -8676,6 +8677,7 @@ async fn run_bitnet_benchmark_once(
         None,
         ask_receipt.clone(),
         progress,
+        false,
         quiet,
     )
     .await?;
