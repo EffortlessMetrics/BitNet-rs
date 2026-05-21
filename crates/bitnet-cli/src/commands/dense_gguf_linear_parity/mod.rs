@@ -921,11 +921,32 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         let _seed = ScopedEnvVar::set("BITNET_SEED", "42");
         let _strict_cuda_backend = ScopedEnvVar::remove("BITNET_STRICT_CUDA_BACKEND");
 
-        let prerequisites = DenseQwenOneTokenPrerequisites::load(
+        let receipt_defaults = dense_qwen_receipts_for_proof_model(proof_model);
+        let all_layer_plan = dense_qwen_model_default_receipt_path(
             &self.all_layer_plan,
+            DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+            receipt_defaults.all_layer_plan,
+        );
+        let model_boundary_fixtures = dense_qwen_model_default_receipt_path(
             &self.model_boundary_fixtures,
+            DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT,
+            receipt_defaults.model_boundary_fixtures,
+        );
+        let kv_cache_policy = dense_qwen_model_default_receipt_path(
             &self.kv_cache_policy,
+            DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT,
+            receipt_defaults.kv_cache_policy,
+        );
+        let sampling_policy = dense_qwen_model_default_receipt_path(
             &self.sampling_policy,
+            DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT,
+            receipt_defaults.sampling_policy,
+        );
+        let prerequisites = DenseQwenOneTokenPrerequisites::load(
+            &all_layer_plan,
+            &model_boundary_fixtures,
+            &kv_cache_policy,
+            &sampling_policy,
             proof_model,
         )?;
 
@@ -13878,6 +13899,30 @@ mod tests {
         );
 
         assert_eq!(resolved, PathBuf::from(DEFAULT_QWEN3_ALL_LAYER_PLAN_RECEIPT));
+        assert_eq!(
+            dense_qwen_model_default_receipt_path(
+                Path::new(DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT),
+                DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT,
+                receipts.model_boundary_fixtures,
+            ),
+            PathBuf::from(DEFAULT_QWEN3_MODEL_BOUNDARY_FIXTURES_RECEIPT)
+        );
+        assert_eq!(
+            dense_qwen_model_default_receipt_path(
+                Path::new(DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT),
+                DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT,
+                receipts.kv_cache_policy,
+            ),
+            PathBuf::from(DEFAULT_QWEN3_KV_CACHE_POLICY_RECEIPT)
+        );
+        assert_eq!(
+            dense_qwen_model_default_receipt_path(
+                Path::new(DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT),
+                DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT,
+                receipts.sampling_policy,
+            ),
+            PathBuf::from(DEFAULT_QWEN3_SAMPLING_POLICY_RECEIPT)
+        );
 
         let explicit = dense_qwen_model_default_receipt_path(
             Path::new("target/custom-qwen3-prereq.json"),
