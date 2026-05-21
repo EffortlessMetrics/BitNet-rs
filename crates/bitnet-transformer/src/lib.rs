@@ -29,9 +29,141 @@ use layer_builders::{
 };
 use qk256::{TIED_EMBED_QK256_KEY, qk256_inline_scale};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Instant;
 
 pub type DenseLinearRuntimeHookRegistry = HashMap<String, DenseLinearRuntimeHookDescriptor>;
 const SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR: &str = "layers.0.attention.q_proj.weight";
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DenseQ8SidecarInstrumentationSnapshot {
+    pub selector_dispatch_calls: u64,
+    pub selector_selected_calls: u64,
+    pub selector_declined_calls: u64,
+    pub selector_error_calls: u64,
+    pub selector_dispatch_ns: u64,
+    pub input_materialization_calls: u64,
+    pub input_materialization_ns: u64,
+    pub input_values_materialized: u64,
+    pub bias_materialization_calls: u64,
+    pub bias_materialization_ns: u64,
+    pub bias_values_materialized: u64,
+    pub packed_matvec_calls: u64,
+    pub packed_matvec_ns: u64,
+    pub packed_matvec_input_rows: u64,
+    pub packed_matvec_output_values: u64,
+    pub output_tensor_construction_calls: u64,
+    pub output_tensor_construction_ns: u64,
+}
+
+struct DenseQ8SidecarInstrumentationCounters {
+    selector_dispatch_calls: AtomicU64,
+    selector_selected_calls: AtomicU64,
+    selector_declined_calls: AtomicU64,
+    selector_error_calls: AtomicU64,
+    selector_dispatch_ns: AtomicU64,
+    input_materialization_calls: AtomicU64,
+    input_materialization_ns: AtomicU64,
+    input_values_materialized: AtomicU64,
+    bias_materialization_calls: AtomicU64,
+    bias_materialization_ns: AtomicU64,
+    bias_values_materialized: AtomicU64,
+    packed_matvec_calls: AtomicU64,
+    packed_matvec_ns: AtomicU64,
+    packed_matvec_input_rows: AtomicU64,
+    packed_matvec_output_values: AtomicU64,
+    output_tensor_construction_calls: AtomicU64,
+    output_tensor_construction_ns: AtomicU64,
+}
+
+impl DenseQ8SidecarInstrumentationCounters {
+    const fn new() -> Self {
+        Self {
+            selector_dispatch_calls: AtomicU64::new(0),
+            selector_selected_calls: AtomicU64::new(0),
+            selector_declined_calls: AtomicU64::new(0),
+            selector_error_calls: AtomicU64::new(0),
+            selector_dispatch_ns: AtomicU64::new(0),
+            input_materialization_calls: AtomicU64::new(0),
+            input_materialization_ns: AtomicU64::new(0),
+            input_values_materialized: AtomicU64::new(0),
+            bias_materialization_calls: AtomicU64::new(0),
+            bias_materialization_ns: AtomicU64::new(0),
+            bias_values_materialized: AtomicU64::new(0),
+            packed_matvec_calls: AtomicU64::new(0),
+            packed_matvec_ns: AtomicU64::new(0),
+            packed_matvec_input_rows: AtomicU64::new(0),
+            packed_matvec_output_values: AtomicU64::new(0),
+            output_tensor_construction_calls: AtomicU64::new(0),
+            output_tensor_construction_ns: AtomicU64::new(0),
+        }
+    }
+
+    fn reset(&self) {
+        self.selector_dispatch_calls.store(0, Ordering::Relaxed);
+        self.selector_selected_calls.store(0, Ordering::Relaxed);
+        self.selector_declined_calls.store(0, Ordering::Relaxed);
+        self.selector_error_calls.store(0, Ordering::Relaxed);
+        self.selector_dispatch_ns.store(0, Ordering::Relaxed);
+        self.input_materialization_calls.store(0, Ordering::Relaxed);
+        self.input_materialization_ns.store(0, Ordering::Relaxed);
+        self.input_values_materialized.store(0, Ordering::Relaxed);
+        self.bias_materialization_calls.store(0, Ordering::Relaxed);
+        self.bias_materialization_ns.store(0, Ordering::Relaxed);
+        self.bias_values_materialized.store(0, Ordering::Relaxed);
+        self.packed_matvec_calls.store(0, Ordering::Relaxed);
+        self.packed_matvec_ns.store(0, Ordering::Relaxed);
+        self.packed_matvec_input_rows.store(0, Ordering::Relaxed);
+        self.packed_matvec_output_values.store(0, Ordering::Relaxed);
+        self.output_tensor_construction_calls.store(0, Ordering::Relaxed);
+        self.output_tensor_construction_ns.store(0, Ordering::Relaxed);
+    }
+
+    fn snapshot(&self) -> DenseQ8SidecarInstrumentationSnapshot {
+        DenseQ8SidecarInstrumentationSnapshot {
+            selector_dispatch_calls: self.selector_dispatch_calls.load(Ordering::Relaxed),
+            selector_selected_calls: self.selector_selected_calls.load(Ordering::Relaxed),
+            selector_declined_calls: self.selector_declined_calls.load(Ordering::Relaxed),
+            selector_error_calls: self.selector_error_calls.load(Ordering::Relaxed),
+            selector_dispatch_ns: self.selector_dispatch_ns.load(Ordering::Relaxed),
+            input_materialization_calls: self.input_materialization_calls.load(Ordering::Relaxed),
+            input_materialization_ns: self.input_materialization_ns.load(Ordering::Relaxed),
+            input_values_materialized: self.input_values_materialized.load(Ordering::Relaxed),
+            bias_materialization_calls: self.bias_materialization_calls.load(Ordering::Relaxed),
+            bias_materialization_ns: self.bias_materialization_ns.load(Ordering::Relaxed),
+            bias_values_materialized: self.bias_values_materialized.load(Ordering::Relaxed),
+            packed_matvec_calls: self.packed_matvec_calls.load(Ordering::Relaxed),
+            packed_matvec_ns: self.packed_matvec_ns.load(Ordering::Relaxed),
+            packed_matvec_input_rows: self.packed_matvec_input_rows.load(Ordering::Relaxed),
+            packed_matvec_output_values: self.packed_matvec_output_values.load(Ordering::Relaxed),
+            output_tensor_construction_calls: self
+                .output_tensor_construction_calls
+                .load(Ordering::Relaxed),
+            output_tensor_construction_ns: self
+                .output_tensor_construction_ns
+                .load(Ordering::Relaxed),
+        }
+    }
+}
+
+static DENSE_Q8_SIDECAR_INSTRUMENTATION: DenseQ8SidecarInstrumentationCounters =
+    DenseQ8SidecarInstrumentationCounters::new();
+
+fn elapsed_ns_u64(start: Instant) -> u64 {
+    start.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64
+}
+
+fn add_counter(counter: &AtomicU64, value: u64) {
+    counter.fetch_add(value, Ordering::Relaxed);
+}
+
+pub fn reset_dense_q8_sidecar_instrumentation() {
+    DENSE_Q8_SIDECAR_INSTRUMENTATION.reset();
+}
+
+pub fn dense_q8_sidecar_instrumentation_snapshot() -> DenseQ8SidecarInstrumentationSnapshot {
+    DENSE_Q8_SIDECAR_INSTRUMENTATION.snapshot()
+}
 
 /// Evidence-scoped packed Q8_0 payload for a dense-linear runtime hook.
 ///
@@ -204,35 +336,67 @@ fn maybe_forward_dense_q8_sidecar_linear(
     tensor_name: &str,
     hooks: &DenseLinearRuntimeHookRegistry,
 ) -> Result<Option<Tensor>> {
+    let selector_start = Instant::now();
     let Some(descriptor) = hooks.get(tensor_name) else {
         return Ok(None);
     };
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_calls, 1);
     let boundary = DenseLinearRuntimeHookBoundary::from_sidecar_descriptor(tensor_name, descriptor);
     if !boundary.runtime_compute_enabled {
+        add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_declined_calls, 1);
+        add_counter(
+            &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+            elapsed_ns_u64(selector_start),
+        );
         return Ok(None);
     }
     let Some(payload) = descriptor.packed_q8_payload.as_ref() else {
+        add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_error_calls, 1);
+        add_counter(
+            &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+            elapsed_ns_u64(selector_start),
+        );
         return Err(BitNetError::Validation(format!(
             "packed Q8 runtime hook for {tensor_name} was enabled without payload bytes"
         )));
     };
     if tensor_name != SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR {
+        add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_error_calls, 1);
+        add_counter(
+            &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+            elapsed_ns_u64(selector_start),
+        );
         return Err(BitNetError::Validation(format!(
             "packed Q8 runtime hook is scoped to {SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR}, got {tensor_name}"
         )));
     }
     if !payload.shape_matches_matvec_contract() || !payload.payload_len_matches_contract() {
+        add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_error_calls, 1);
+        add_counter(
+            &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+            elapsed_ns_u64(selector_start),
+        );
         return Err(BitNetError::Validation(format!(
             "packed Q8 runtime hook payload contract is invalid for {tensor_name}"
         )));
     }
     if linear.weight().dims() != [payload.matrix_rows, payload.matrix_cols] {
+        add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_error_calls, 1);
+        add_counter(
+            &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+            elapsed_ns_u64(selector_start),
+        );
         return Err(BitNetError::Validation(format!(
             "packed Q8 runtime hook shape {:?} does not match Candle linear weight {:?} for {tensor_name}",
             [payload.matrix_rows, payload.matrix_cols],
             linear.weight().dims()
         )));
     }
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_selected_calls, 1);
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+        elapsed_ns_u64(selector_start),
+    );
 
     dense_q8_sidecar_linear_forward(input, linear.bias(), payload)
         .map(Some)
@@ -255,7 +419,17 @@ fn dense_q8_sidecar_linear_forward(
             payload.matrix_cols
         );
     }
+    let input_materialization_start = Instant::now();
     let input_values = input.to_dtype(DType::F32)?.flatten_all()?.to_vec1::<f32>()?;
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.input_materialization_calls, 1);
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.input_materialization_ns,
+        elapsed_ns_u64(input_materialization_start),
+    );
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.input_values_materialized,
+        input_values.len() as u64,
+    );
     if input_values.len() % payload.matrix_cols != 0 {
         candle_core::bail!(
             "packed Q8 runtime hook input value count {} is not divisible by cols {}",
@@ -264,10 +438,20 @@ fn dense_q8_sidecar_linear_forward(
         );
     }
 
+    let bias_materialization_start = Instant::now();
     let bias_values = match bias {
         Some(bias) => Some(bias.to_dtype(DType::F32)?.to_vec1::<f32>()?),
         None => None,
     };
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.bias_materialization_calls, 1);
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.bias_materialization_ns,
+        elapsed_ns_u64(bias_materialization_start),
+    );
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.bias_values_materialized,
+        bias_values.as_ref().map_or(0, Vec::len) as u64,
+    );
     if let Some(bias_values) = bias_values.as_ref()
         && bias_values.len() != payload.matrix_rows
     {
@@ -278,13 +462,10 @@ fn dense_q8_sidecar_linear_forward(
         );
     }
 
-    let mut output = Vec::with_capacity(
-        input_values
-            .len()
-            .checked_div(payload.matrix_cols)
-            .unwrap_or(0)
-            .saturating_mul(payload.matrix_rows),
-    );
+    let input_rows = input_values.len().checked_div(payload.matrix_cols).unwrap_or(0);
+    let output_values = input_rows.saturating_mul(payload.matrix_rows);
+    let mut output = Vec::with_capacity(output_values);
+    let matvec_start = Instant::now();
     for input_row in input_values.chunks_exact(payload.matrix_cols) {
         for row in 0..payload.matrix_rows {
             let mut sum = bias_values.as_ref().map_or(0.0, |bias| bias[row]);
@@ -313,10 +494,24 @@ fn dense_q8_sidecar_linear_forward(
             output.push(sum);
         }
     }
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.packed_matvec_calls, 1);
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.packed_matvec_ns, elapsed_ns_u64(matvec_start));
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.packed_matvec_input_rows, input_rows as u64);
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.packed_matvec_output_values,
+        output_values as u64,
+    );
 
     let mut output_shape = prefix.to_vec();
     output_shape.push(payload.matrix_rows);
-    Tensor::from_vec(output, output_shape, input.device())
+    let output_construction_start = Instant::now();
+    let tensor = Tensor::from_vec(output, output_shape, input.device());
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.output_tensor_construction_calls, 1);
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.output_tensor_construction_ns,
+        elapsed_ns_u64(output_construction_start),
+    );
+    tensor
 }
 
 fn attention_f16_dot_input(tensor: &Tensor) -> Result<Tensor> {
@@ -2226,6 +2421,7 @@ mod tests {
             },
         );
 
+        let instrumentation_before = dense_q8_sidecar_instrumentation_snapshot();
         let Some(output) = maybe_forward_dense_q8_sidecar_linear(
             &input,
             &linear,
@@ -2243,6 +2439,81 @@ mod tests {
         assert_eq!(
             output.flatten_all()?.to_vec1::<f32>()?,
             linear.forward(&input)?.flatten_all()?.to_vec1::<f32>()?
+        );
+        let instrumentation_after = dense_q8_sidecar_instrumentation_snapshot();
+        assert!(
+            instrumentation_after.selector_dispatch_calls
+                > instrumentation_before.selector_dispatch_calls
+        );
+        assert!(
+            instrumentation_after.selector_selected_calls
+                > instrumentation_before.selector_selected_calls
+        );
+        assert!(
+            instrumentation_after.input_materialization_calls
+                > instrumentation_before.input_materialization_calls
+        );
+        assert!(
+            instrumentation_after.input_values_materialized
+                >= instrumentation_before.input_values_materialized + 2
+        );
+        assert!(
+            instrumentation_after.bias_materialization_calls
+                > instrumentation_before.bias_materialization_calls
+        );
+        assert!(
+            instrumentation_after.packed_matvec_calls > instrumentation_before.packed_matvec_calls
+        );
+        assert!(
+            instrumentation_after.packed_matvec_input_rows
+                >= instrumentation_before.packed_matvec_input_rows + 1
+        );
+        assert!(
+            instrumentation_after.packed_matvec_output_values
+                >= instrumentation_before.packed_matvec_output_values + 2
+        );
+        assert!(
+            instrumentation_after.output_tensor_construction_calls
+                > instrumentation_before.output_tensor_construction_calls
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn exact_q8_sidecar_runtime_hook_records_declined_selector_path() -> Result<()> {
+        let device = Device::Cpu;
+        let weight = Tensor::from_slice(&[0.5f32, 1.0, 1.5, 2.0], (2, 2), &device)?;
+        let linear = Linear::new(weight, None);
+        let input = Tensor::from_slice(&[2.0f32, 3.0], (1, 1, 2), &device)?;
+        let mut hooks = DenseLinearRuntimeHookRegistry::default();
+        hooks.insert(
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR.to_string(),
+            DenseLinearRuntimeHookDescriptor {
+                tensor_name: "blk.0.attn_q.weight".to_string(),
+                role: "AttentionQ".to_string(),
+                sidecar_payload_sha256: Some("sha256:test".to_string()),
+                packed_q8_payload: None,
+                runtime_compute_enabled: false,
+            },
+        );
+
+        let instrumentation_before = dense_q8_sidecar_instrumentation_snapshot();
+        let output = maybe_forward_dense_q8_sidecar_linear(
+            &input,
+            &linear,
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR,
+            &hooks,
+        )?;
+
+        assert!(output.is_none());
+        let instrumentation_after = dense_q8_sidecar_instrumentation_snapshot();
+        assert!(
+            instrumentation_after.selector_dispatch_calls
+                > instrumentation_before.selector_dispatch_calls
+        );
+        assert!(
+            instrumentation_after.selector_declined_calls
+                > instrumentation_before.selector_declined_calls
         );
         Ok(())
     }

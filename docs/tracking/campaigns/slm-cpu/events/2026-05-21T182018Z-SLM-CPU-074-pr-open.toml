@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T18:20:18Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-074"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+pr = 219
+branch = "codex/slm-cpu-074-packed-q8-sidecar-instrumentation"
+head_sha = "4a06eacbb73f01d73e0a83712cdef3336cf5c8f3"
+summary = "Opened PR #219 with packed Q8_0 sidecar instrumentation."
+notes = [
+  "The PR adds aggregate diagnostic counters for selector dispatch, input materialization, bias extraction, packed matvec compute, and output tensor construction on the exact layers.0.attention.q_proj.weight sidecar path.",
+  "Targeted sidecar parity tests and bitnet-transformer clippy pass with the default eager_f32_candle path preserved.",
+  "Packed Q8_0 execution remains opt-in and exact-tensor scoped; no speedup, default enablement, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256 claim is made.",
+]

@@ -1037,3 +1037,29 @@ behavior remains identical.
 This gate does not claim packed Q8_0 execution, speedup, sustained throughput,
 broad answer quality, Q4/Q5 runtime support, server execution, accelerator
 execution, Qwen3.5 support, or BitNet QK256 changes.
+
+## SLM-CPU-074 Packed Q8 Sidecar Instrumentation
+
+SLM-CPU-074 adds aggregate runtime counters for the opt-in exact-tensor
+`layers.0.attention.q_proj.weight` packed Q8_0 sidecar path. The counters are
+available from `bitnet-transformer` through
+`dense_q8_sidecar_instrumentation_snapshot()` and can be reset with
+`reset_dense_q8_sidecar_instrumentation()`.
+
+The instrumentation measures the costs that SLM-CPU-073 identified as the next
+blocking surface:
+
+```text
+selector dispatch calls and elapsed ns
+selector selected / declined / error counts
+input materialization calls, elapsed ns, and value count
+bias extraction calls, elapsed ns, and value count
+packed matvec calls, elapsed ns, input rows, and output values
+output tensor construction calls and elapsed ns
+```
+
+The default production path remains `eager_f32_candle`. Packed Q8_0 sidecar
+execution remains opt-in, payload-gated, and exact-tensor scoped. These counters
+are diagnostic evidence only; they do not claim speedup, sustained 8250U
+throughput, broad answer quality, Q4/Q5 runtime support, server execution,
+accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
