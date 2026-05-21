@@ -426,7 +426,7 @@
 | intel-258v-platform | LNL258V-GOAL-AUDIT-018 | LNL258V-BITNET-INTAKE-005 | merged |
 | intel-258v-platform | SWARM-LNL258V-MIGRATE-001 | LNL258V-GOAL-AUDIT-018 | merged |
 | intel-258v-platform | LNL258V-GOAL-AUDIT-019 | SWARM-LNL258V-MIGRATE-001 | merged |
-| intel-258v-platform | LNL258V-GOAL-AUDIT-020 | LNL258V-GOAL-AUDIT-019 | in_progress |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-020 | LNL258V-GOAL-AUDIT-019 | merged |
 | intel-258v-platform | LNL258V-POWER-006 | LNL258V-POWER-005 | blocked |
 | intel-258v-platform | LNL258V-POWER-005 | LNL258V-POWER-004, LNL258V-ASK-005 | merged |
 | intel-258v-platform | LNL258V-ASK-005 | LNL258V-ROUTE-024 | merged |

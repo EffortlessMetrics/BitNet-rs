@@ -11042,7 +11042,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-GOAL-AUDIT-020"
-status = "in_progress"
+status = "merged"
+pr = 216
+head_sha = "84be3ccf4a5da9b312c72972e7a525ac59658efd"
+merge_sha = "78facdeb627dd3df0afecdfdc0109658ac2f468b"
 branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-020-openvino-env-overrides"
 stackable = false
 review_mode = "codex_premerge"
