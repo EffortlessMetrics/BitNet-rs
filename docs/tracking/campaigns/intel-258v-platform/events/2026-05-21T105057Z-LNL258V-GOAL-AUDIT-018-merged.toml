@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T10:50:57Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-018"
+pr = 182
+head_sha = "f962560f4bf3a36b722a594189551c48cd894ad5"
+merge_sha = "c16bec00d2108e3aec60791434e17d9fe98122bc"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-018-post-bitnet-intake005"
+actor = "codex"
+summary = "Merged the no-inference Lunar Lake excellence audit refresh after BITNET-INTAKE-005 closeout."
+
+notes = [
+  "PR #182 refreshed the Lunar Lake excellence audit and goal artifact checklist after BITNET-INTAKE-005/#159 and closeout #179.",
+  "The audit/checklist now identify BITNET-INTAKE-005 as the latest BitNet semantic-intake tracker state while keeping excellent support incomplete because POWER-006 still lacks real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage.",
+  "No inference, model load, route promotion, speedup, power-advantage, battery-mode evidence, measured-temperature, native accelerator, acceleration, broad quality, stale BitNet, A770 semantic merge-to-main, or BitNet QK256/I2_S behavior-change claim was made.",
+]
