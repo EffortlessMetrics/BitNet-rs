@@ -126,14 +126,15 @@ impl DetectedModel {
 /// "model-00001-of-00006.safetensors".
 pub fn parse_shard_info(filename: &str) -> Option<(usize, usize)> {
     // Pattern: *-NNNNN-of-NNNNN.*
-    let parts: Vec<&str> = filename.split('-').collect();
-    for (i, part) in parts.iter().enumerate() {
-        if *part == "of" && i > 0 && i + 1 < parts.len() {
-            let idx_str = parts[i - 1];
-            let total_str = parts[i + 1].split('.').next().unwrap_or("");
-            if let (Ok(idx), Ok(total)) = (idx_str.parse::<usize>(), total_str.parse::<usize>()) {
-                return Some((idx, total));
-            }
+    for (prefix, suffix) in filename.rsplit_once("-of-").into_iter() {
+        let idx_str = prefix.rsplit('-').next()?;
+        let total_str = suffix.split('.').next()?;
+        let (Ok(idx), Ok(total)) = (idx_str.parse::<usize>(), total_str.parse::<usize>()) else {
+            return None;
+        };
+
+        if idx > 0 && total > 0 && idx <= total {
+            return Some((idx, total));
         }
     }
     None
@@ -300,6 +301,13 @@ mod tests {
     #[test]
     fn test_parse_shard_info_varied() {
         assert_eq!(parse_shard_info("weights-00003-of-00012.safetensors"), Some((3, 12)));
+    }
+
+    #[test]
+    fn test_parse_shard_info_rejects_zero_and_out_of_range() {
+        assert_eq!(parse_shard_info("model-00000-of-00006.safetensors"), None);
+        assert_eq!(parse_shard_info("model-00007-of-00006.safetensors"), None);
+        assert_eq!(parse_shard_info("model-00001-of-00000.safetensors"), None);
     }
 
     #[test]
