@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T19:25:02Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-002"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6167
+head_sha = "1ae9ff01e65e50fbf6e10d37270f180ec2c0373b"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-002-streaming-failure-semantics"
+
+notes = [
+  "Opened PR #6167 for the M4-SERVE-EX-002 serve-failure-smoke receipt contract and validator.",
+  "The PR records bounded dense SLM and gated BitNet serve-route semantics for partial token streaming, client cancellation, timeout stage, invalid request, missing cache, per-request receipt export, and no-response failure receipts.",
+  "The committed receipt is model-free and does not claim a live production server, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, broad performance, or broad Apple Silicon support.",
+]
