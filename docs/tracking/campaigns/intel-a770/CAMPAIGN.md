@@ -43,7 +43,7 @@ Make the Intel Arc A770 a receipt-backed OpenCL-first BitNet acceleration lane. 
 | A770-011 | merged | Wire a first inline-scaled selected-device A770 OpenCL QK256 dispatch candidate while keeping CPU activation quantization, quality, residency, speed, and full-inference claims closed. |
 | A770-012 | merged | Commit a strict selected-device A770 OpenCL QK256 dispatch receipt and wire it into diagnostic route/kernel matrices without promoting inference, quality, residency, speed, or trusted-partial claims. |
 | A770-013 | merged | Wire the CLI OpenCL feature into the real BitNet model/QK256 dispatch stack and add strict A770 route receipt fields without promoting inference, quality, residency, speed, or trusted-partial claims. |
-| A770-014 | pr_open | Align the official BitNet model contract route matrix with the committed A770 diagnostic QK256 route without promoting answer quality, residency, speed, or trusted-partial claims. |
+| A770-014 | merged | Align the official BitNet model contract route matrix with the committed A770 diagnostic QK256 route without promoting answer quality, residency, speed, or trusted-partial claims. |
 
 ## Current Claim Boundary
 

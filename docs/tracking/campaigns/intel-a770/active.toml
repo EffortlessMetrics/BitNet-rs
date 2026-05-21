@@ -576,8 +576,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-014"
-status = "pr_open"
+status = "merged"
 pr = 198
+head_sha = "cc6232aa70d8493dc6523a4d28041c9ccfe524ed"
+merge_sha = "fb95daeaa6861bb0d1c63af49b42108caee5000e"
 branch = "codex/intel-a770/A770-014-model-contract-route-alignment"
 stackable = false
 review_mode = "codex_premerge"
