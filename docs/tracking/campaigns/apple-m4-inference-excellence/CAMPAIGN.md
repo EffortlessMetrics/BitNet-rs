@@ -137,7 +137,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-STABILITY-002 | proposed | Add cache and disk-pressure repair receipts for operator flows. |
 | M4-STABILITY-003 | merged | Define scheduled M4 trend-retention and stale-identity policy. |
 | M4-RELIABILITY-001 | merged | Add recovery drills for cancellation, interruption, low disk, cache corruption, and restart. |
-| M4-OBS-001 | in_progress | Correlate progress events, logs, receipts, and failure diagnostics. |
+| M4-OBS-001 | pr_open | Correlate progress events, logs, receipts, and failure diagnostics. |
 | M4-SERVE-EX-001 | pr_open | Refresh dense SLM local-server conformance receipts. |
 | M4-SERVE-EX-002 | proposed | Prove dense and BitNet streaming/failure semantics after BitNet serve is gated. |
 | M4-SERVE-EX-003 | proposed | Document and test local-server safety defaults for appliance operation. |
