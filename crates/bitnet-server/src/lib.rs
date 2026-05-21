@@ -28,6 +28,7 @@ pub mod monitoring;
 pub mod rate_limiter;
 pub mod request_context;
 pub mod request_router;
+pub mod request_utils;
 pub mod runtime_model_registry;
 pub mod security;
 pub mod sse;
@@ -55,7 +56,6 @@ use bitnet_inference::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, VecDeque};
-use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
@@ -63,11 +63,15 @@ use tower_http::trace::TraceLayer;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-use batch_engine::{BatchEngine, BatchRequest, RequestPriority};
+use batch_engine::{BatchEngine, BatchRequest};
 use concurrency::{ConcurrencyManager, RequestMetadata};
 pub use config::{DeviceConfig, ServerConfig};
 use execution_router::ExecutionRouter;
 use model_manager::ModelManager;
+use request_utils::{
+    calculate_tokens_per_second, create_error_response, extract_client_ip_from_headers,
+    handle_validation_error, parse_device, parse_priority,
+};
 use security::{SecurityValidator, configure_cors, security_headers_middleware};
 
 #[cfg(feature = "prometheus")]
@@ -1953,102 +1957,6 @@ async fn request_validation_middleware(
     Ok(next.run(request).await)
 }
 
-/// Utility functions
-/// Calculate tokens per second from token count and duration
-fn calculate_tokens_per_second(tokens: u64, duration: Duration) -> f64 {
-    let duration_ms = duration.as_millis();
-    if duration_ms > 0 && tokens > 0 { (tokens as f64 * 1000.0) / duration_ms as f64 } else { 0.0 }
-}
-
-/// Create standardized error response
-fn create_error_response(
-    error: &str,
-    error_code: &str,
-    request_id: Option<String>,
-    details: Option<serde_json::Value>,
-) -> Json<ErrorResponse> {
-    Json(ErrorResponse {
-        error: error.to_string(),
-        error_code: error_code.to_string(),
-        request_id,
-        details,
-    })
-}
-
-/// Handle validation errors with consistent response format
-fn handle_validation_error(
-    error: &security::ValidationError,
-    request_id: Option<String>,
-) -> (StatusCode, Json<ErrorResponse>) {
-    let (status, error_code) = match error {
-        security::ValidationError::PromptTooLong(_, _) => {
-            (StatusCode::BAD_REQUEST, "PROMPT_TOO_LONG")
-        }
-        security::ValidationError::TooManyTokens(_, _) => {
-            (StatusCode::BAD_REQUEST, "TOO_MANY_TOKENS")
-        }
-        security::ValidationError::InvalidCharacters => {
-            (StatusCode::BAD_REQUEST, "INVALID_CHARACTERS")
-        }
-        security::ValidationError::BlockedContent(_) => {
-            (StatusCode::BAD_REQUEST, "BLOCKED_CONTENT")
-        }
-        security::ValidationError::MissingField(_) => (StatusCode::BAD_REQUEST, "MISSING_FIELD"),
-        security::ValidationError::InvalidFieldValue(_) => {
-            (StatusCode::BAD_REQUEST, "INVALID_FIELD_VALUE")
-        }
-    };
-
-    let response = create_error_response(&error.to_string(), error_code, request_id, None);
-    (status, response)
-}
-
-/// Parse request priority from string
-fn parse_priority(priority: Option<&str>) -> RequestPriority {
-    match priority {
-        Some("low") => RequestPriority::Low,
-        Some("normal") => RequestPriority::Normal,
-        Some("high") => RequestPriority::High,
-        Some("critical") => RequestPriority::Critical,
-        _ => RequestPriority::Normal,
-    }
-}
-
-/// Parse device from string
-fn parse_device(device: &str) -> Result<Device> {
-    let normalized = device.to_lowercase();
-    match normalized.as_str() {
-        "cpu" => Ok(Device::Cpu),
-        "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" => Ok(Device::Cuda(0)),
-        _ if normalized.starts_with("cuda:") => {
-            let id_str = &normalized[5..];
-            let id = id_str.parse::<usize>()?;
-            Ok(Device::Cuda(id))
-        }
-        _ if normalized.starts_with("vulkan:") => {
-            let id_str = &normalized[7..];
-            let id = id_str.parse::<usize>()?;
-            Ok(Device::Cuda(id))
-        }
-        _ if normalized.starts_with("opencl:") => {
-            let id_str = &normalized[7..];
-            let id = id_str.parse::<usize>()?;
-            Ok(Device::Cuda(id))
-        }
-        _ if normalized.starts_with("ocl:") => {
-            let id_str = &normalized[4..];
-            let id = id_str.parse::<usize>()?;
-            Ok(Device::Cuda(id))
-        }
-        _ => anyhow::bail!("Unknown device: {}", device),
-    }
-}
-
-/// Extract client IP from headers using security module's implementation
-fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
-    security::extract_client_ip_from_headers(headers)
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
@@ -2061,7 +1969,6 @@ mod tests {
         body::Body,
         http::{Request, StatusCode},
     };
-    use bitnet_common::Device;
     use serde_json::Value;
     use std::time::SystemTime;
     use tower::ServiceExt;
