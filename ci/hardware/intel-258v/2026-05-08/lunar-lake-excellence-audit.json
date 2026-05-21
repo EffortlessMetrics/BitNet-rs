@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-21T16:22:30Z",
+  "created_utc": "2026-05-21T17:49:31Z",
   "machine_id": "intel-258v",
-  "source_revision": "334daa4ada286cc1f8366676539009aaa734bef1",
+  "source_revision": "ba1b2ebdfb7725d646c3a67c8da46de58838e98f",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
   "excellent_support_ready": false,
@@ -110,7 +110,16 @@
     "last_swarm_lunar_lake_migration_inventory_merge_sha": "58c697a285eca8c67cdc3c063054e45be314eb80",
     "last_swarm_lunar_lake_migration_inventory_closeout_pr": 204,
     "last_swarm_lunar_lake_migration_inventory_closeout_merge_sha": "334daa4ada286cc1f8366676539009aaa734bef1",
-    "audit_refresh_scope": "no_inference_post_swarm_migration_inventory_closeout"
+    "last_swarm_openvino_ask_env_override_pr": 212,
+    "last_swarm_openvino_ask_env_override_head_sha": "34ec2ad7c43327229077a22858b9b2976547f0b3",
+    "last_swarm_openvino_ask_env_override_merge_sha": "66fece6fa6c9de143d67481583689914d3c29b27",
+    "last_a770_answer_corpus_route_contract_closeout_pr": 214,
+    "last_a770_answer_corpus_route_contract_closeout_merge_sha": "bce0d2932ccbeb83340cf2f5fad5df39eeb2cb0d",
+    "last_m4_workload_tracker_closeout_pr": 215,
+    "last_m4_workload_tracker_closeout_merge_sha": "bc25a20f18ed5e93ef6e6b43b421586e9d333e0b",
+    "last_swarm_runner_rollout_plan_pr": 207,
+    "last_swarm_runner_rollout_plan_merge_sha": "ba1b2ebdfb7725d646c3a67c8da46de58838e98f",
+    "audit_refresh_scope": "no_inference_post_openvino_ask_env_overrides"
   },
   "command_surface": {
     "ask": {
@@ -123,6 +132,13 @@
         "lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json",
         "lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json",
         "lunar-lake-operator-ask-auto-low-power-blocked.json"
+      ],
+      "runtime_env_overrides_documented": true,
+      "runtime_env_override_evidence": [
+        "BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR",
+        "BITNET_LUNAR_LAKE_OPENVINO_PYTHON",
+        "docs/environment-variables.md",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/212"
       ]
     },
     "validate": {
@@ -177,6 +193,17 @@
       "can_collect_battery_evidence_now": false,
       "evidence": "lunar-lake-low-power-battery-plan.json"
     }
+  },
+  "runtime_environment": {
+    "status": "openvino_ask_env_overrides_available",
+    "pr": 212,
+    "merge_sha": "66fece6fa6c9de143d67481583689914d3c29b27",
+    "fields": [
+      "BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR",
+      "BITNET_LUNAR_LAKE_OPENVINO_PYTHON"
+    ],
+    "purpose": "Allow migrated swarm checkouts to point Lunar Lake OpenVINO ask routes at ignored local OpenVINO IR exports and a Python executable containing openvino_genai.",
+    "claim_boundary": "Runtime configuration only; no committed inference receipt, route promotion, speedup, power advantage, native accelerator proof, broad quality claim, or BitNet QK256/I2_S behavior change."
   },
   "route_policy": {
     "policy_ready": true,
@@ -559,7 +586,16 @@
     "swarm_lunar_lake_migration_doc": "docs/migrations/lunar-lake-from-bitnet-rs.md",
     "swarm_lunar_lake_migration_inventory_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/201",
     "swarm_lunar_lake_migration_inventory_closeout_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/204",
-    "swarm_lunar_lake_migration_inventory_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T160109Z-SWARM-LNL258V-MIGRATE-001-merged.toml"
+    "swarm_lunar_lake_migration_inventory_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T160109Z-SWARM-LNL258V-MIGRATE-001-merged.toml",
+    "swarm_openvino_ask_env_override_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/212",
+    "swarm_openvino_ask_env_override_merge_sha": "66fece6fa6c9de143d67481583689914d3c29b27",
+    "openvino_runtime_env_docs": "docs/environment-variables.md",
+    "a770_answer_corpus_route_contract_closeout_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/214",
+    "a770_answer_corpus_route_contract_closeout_merge_sha": "bce0d2932ccbeb83340cf2f5fad5df39eeb2cb0d",
+    "m4_workload_tracker_closeout_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/215",
+    "m4_workload_tracker_closeout_merge_sha": "bc25a20f18ed5e93ef6e6b43b421586e9d333e0b",
+    "swarm_runner_rollout_plan_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/207",
+    "swarm_runner_rollout_plan_merge_sha": "ba1b2ebdfb7725d646c3a67c8da46de58838e98f"
   },
   "claim_boundary": {
     "new_inference_run": false,
@@ -572,6 +608,6 @@
     "measured_temperature_claim": false,
     "full_bitnet_accelerator_inference_claim": false,
     "bitnet_qk256_i2s_behavior_change": false,
-    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, Arc/NPU bounded proof surface flags, BitNet CPU reference surface flags, BitNet semantic-intake, BITNET-INTAKE-005/#159 and closeout #179, POWER-007/POWER-008 runbook discoverability, OP-014 low_power blocked-ask guidance, VALIDATE-003 blocked-ask readiness indexing, POWER-009/#6097 power-profile runbook guidance, POWER-009 closeout #6099, REG-012/#6102, REG-012 closeout #6103, REG-013/#6106, REG-013 closeout #6107, A770-006/#6110, A770-006 closeout #6112, swarm history import #104, model-cache fix #100, Qwen3 support-bundle lock #99, and tracker evidence, POWER-010/#116 low_power battery-plan receipt, POWER-010 closeout #117, SLM-CPU-067/#109 adjacent sidecar runtime-support main update without Lunar Lake route-evidence change, A770-011/#115 plus A770-011 closeout #143 adjacent selected-device inline-scaled QK256 OpenCL candidate evidence without Lunar Lake route-evidence, semantic-intake, or BitNet behavior change, and SWARM-LNL258V-MIGRATE-001/#201 plus closeout #204 migration inventory tracking without route-policy, evidence, command, or claim changes"
+    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, Arc/NPU bounded proof surface flags, BitNet CPU reference surface flags, BitNet semantic-intake, BITNET-INTAKE-005/#159 and closeout #179, POWER-007/POWER-008 runbook discoverability, OP-014 low_power blocked-ask guidance, VALIDATE-003 blocked-ask readiness indexing, POWER-009/#6097 power-profile runbook guidance, POWER-009 closeout #6099, REG-012/#6102, REG-012 closeout #6103, REG-013/#6106, REG-013 closeout #6107, A770-006/#6110, A770-006 closeout #6112, swarm history import #104, model-cache fix #100, Qwen3 support-bundle lock #99, and tracker evidence, POWER-010/#116 low_power battery-plan receipt, POWER-010 closeout #117, SLM-CPU-067/#109 adjacent sidecar runtime-support main update without Lunar Lake route-evidence change, A770-011/#115 plus A770-011 closeout #143 adjacent selected-device inline-scaled QK256 OpenCL candidate evidence without Lunar Lake route-evidence, semantic-intake, or BitNet behavior change, SWARM-LNL258V-MIGRATE-001/#201 plus closeout #204 migration inventory tracking without route-policy, evidence, command, or claim changes, PR #212 OpenVINO ask env overrides as runtime configuration only without committed route-evidence, promotion, speedup, power, native accelerator, or BitNet behavior claims, A770 #214 tracker closeout as adjacent non-Lunar-Lake state without semantic-intake, route-evidence, or claim changes, M4 #215 tracker closeout as adjacent non-Lunar-Lake state without route-evidence or claim changes, and runner rollout #207 as adjacent control-plane documentation without Lunar Lake route-evidence or claim changes"
   }
 }

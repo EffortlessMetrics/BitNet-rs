@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-21T16:22:30Z",
+  "created_utc": "2026-05-21T17:49:31Z",
   "machine_id": "intel-258v",
-  "source_revision": "334daa4ada286cc1f8366676539009aaa734bef1",
+  "source_revision": "ba1b2ebdfb7725d646c3a67c8da46de58838e98f",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
@@ -413,6 +413,21 @@
       ]
     },
     {
+      "id": "openvino_ask_env_overrides",
+      "status": "covered_runtime_config_only",
+      "evidence": [
+        "crates/bitnet-cli/src/main.rs",
+        "docs/environment-variables.md",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/212",
+        "66fece6fa6c9de143d67481583689914d3c29b27"
+      ],
+      "notes": [
+        "PR #212 adds BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR and BITNET_LUNAR_LAKE_OPENVINO_PYTHON so migrated swarm checkouts can point Lunar Lake OpenVINO ask routes at ignored local model exports and a Python runtime with openvino_genai.",
+        "This is runtime configuration for existing OpenVINO ask routes only; it does not commit model binaries, change route policy, create a new committed inference receipt, promote or demote any route, claim speedup or power advantage, prove native accelerator execution, or change BitNet QK256/I2_S behavior.",
+        "PR #212 CI completed green, including Build & Test, Documentation, Fuzz targets build, validation integration, clippy, feature matrix, docs, guards, and routed Rust checks."
+      ]
+    },
+    {
       "id": "final_boring_support",
       "status": "not_complete",
       "evidence": [
@@ -436,7 +451,11 @@
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/121",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/115",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/201",
-        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/204"
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/204",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/212",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/214",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/215",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/207"
       ],
       "notes": [
         "The platform is well instrumented and profile-aware, but not yet excellent across all requested profiles.",
@@ -452,7 +471,11 @@
         "QWEN3 repeated-comparator plan #123 is recorded only as adjacent Qwen3 planning work on current swarm main; it does not change Lunar Lake route evidence or completion status.",
         "SLM-CPU-069/#121 is recorded only as adjacent SLM CPU packed-Q8 locality follow-up planning on current swarm main; it does not change Lunar Lake route evidence or completion status.",
         "A770-011/#115 plus A770-011 closeout #143 are recorded only as adjacent selected-device inline-scaled QK256 OpenCL candidate evidence on current swarm main; they do not change Lunar Lake route evidence, semantic-intake freshness, route promotion, speedup, power advantage, native accelerator proof, full BitNet accelerator inference, packed QK256 accelerator decode, or completion status.",
-        "SWARM-LNL258V-MIGRATE-001/#201 plus closeout #204 are recorded as migration inventory and tracker closeout only; they do not change Lunar Lake route evidence, route promotion, command behavior, speedup, power advantage, native accelerator proof, dense-SLM-as-BitNet-proof status, BitNet QK256/I2_S behavior, or completion status."
+        "SWARM-LNL258V-MIGRATE-001/#201 plus closeout #204 are recorded as migration inventory and tracker closeout only; they do not change Lunar Lake route evidence, route promotion, command behavior, speedup, power advantage, native accelerator proof, dense-SLM-as-BitNet-proof status, BitNet QK256/I2_S behavior, or completion status.",
+        "PR #212 is recorded as OpenVINO ask runtime configuration for migrated swarm checkouts only; it does not change route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
+        "A770 tracker closeout #214 is recorded only as adjacent non-Lunar-Lake tracker state; it does not change Lunar Lake semantic-intake freshness, route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
+        "M4 tracker closeout #215 is recorded only as adjacent non-Lunar-Lake tracker state; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
+        "Runner rollout plan #207 is recorded only as adjacent control-plane documentation; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status."
       ]
     }
   ],
@@ -471,6 +494,11 @@
       "id": "low_power_power_advantage",
       "status": "not_proven",
       "reason": "No benchmark-qualified low_power power advantage exists from battery-mode evidence."
+    },
+    {
+      "id": "openvino_runtime_environment",
+      "status": "configured",
+      "reason": "PR #212 documents environment overrides for OpenVINO model directory and Python runtime selection, but this is not route evidence or a promotion signal."
     },
     {
       "id": "bitnet_accelerator_inference",
@@ -554,6 +582,34 @@
       "closeout_merge_sha": "b39b2c4c6229ff7c680113726ede5e54f69068b1",
       "status": "adjacent_a770_selected_device_inline_scaled_qk256_opencl_candidate_not_lunar_lake_route_evidence",
       "claim_boundary": "no Lunar Lake inference, route promotion, speedup, power advantage, native OpenCL/NPU proof, full BitNet accelerator inference, packed QK256 accelerator decode, stale semantic-intake claim, or BitNet QK256/I2_S behavior claim"
+    },
+    {
+      "id": "OPENVINO-ASK-ENV-OVERRIDES",
+      "pr": 212,
+      "merge_sha": "66fece6fa6c9de143d67481583689914d3c29b27",
+      "status": "lunar_lake_runtime_configuration_not_route_evidence",
+      "claim_boundary": "no committed inference receipt, route promotion, speedup, power advantage, native accelerator proof, broad quality claim, model-binary claim, or BitNet QK256/I2_S behavior claim"
+    },
+    {
+      "id": "A770-015-CLOSEOUT",
+      "pr": 214,
+      "merge_sha": "bce0d2932ccbeb83340cf2f5fad5df39eeb2cb0d",
+      "status": "adjacent_a770_tracker_closeout_not_lunar_lake_route_evidence",
+      "claim_boundary": "no Lunar Lake inference, semantic-intake stale claim, route promotion, speedup, power advantage, native accelerator proof, full BitNet accelerator inference, broad quality claim, or BitNet QK256/I2_S behavior claim"
+    },
+    {
+      "id": "M4-WORKLOAD-001-CLOSEOUT",
+      "pr": 215,
+      "merge_sha": "bc25a20f18ed5e93ef6e6b43b421586e9d333e0b",
+      "status": "adjacent_m4_tracker_closeout_not_lunar_lake_route_evidence",
+      "claim_boundary": "no Lunar Lake inference, route promotion, speedup, power advantage, native accelerator proof, broad quality claim, BitNet semantic-intake change, or BitNet QK256/I2_S behavior claim"
+    },
+    {
+      "id": "SWARM-RUNNER-ROLLOUT-PLAN",
+      "pr": 207,
+      "merge_sha": "ba1b2ebdfb7725d646c3a67c8da46de58838e98f",
+      "status": "adjacent_control_plane_documentation_not_lunar_lake_route_evidence",
+      "claim_boundary": "no Lunar Lake inference, route promotion, speedup, power advantage, native accelerator proof, broad quality claim, BitNet semantic-intake change, or BitNet QK256/I2_S behavior claim"
     }
   ]
 }
