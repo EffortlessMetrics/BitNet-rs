@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T19:51:36Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-002"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-002-streaming-failure-semantics"
+pr = 6167
+merge_sha = "3cfbaf7d051674e0080972ccbb6ed0d9d0c28b94"
+
+notes = [
+  "PR #6167 merged the bounded M4 serve-failure-smoke receipt contract and validator for M4-SERVE-EX-002.",
+  "The merged receipt under ci/hardware/apple-m4-mac-mini/2026-05-21T1915Z/serve-failure-semantics/ records dense SLM and gated BitNet serve-route semantics for partial token streaming, client cancellation, timeout stage, invalid request, missing cache, per-request receipt export, and no-response failure receipts.",
+  "The receipt is model-free and does not claim a live production server, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad model quality, broad performance, or broad Apple Silicon support.",
+]
