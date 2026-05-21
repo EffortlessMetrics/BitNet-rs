@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T07:05:55Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-003"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 160
+head_sha = "57dd09833d596877f0a4a195d815de35acaa1958"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-003-local-safety-defaults"
+
+notes = [
+  "Opened PR #160 for local M4 serve safety defaults.",
+  "The PR requires explicit non-loopback opt-in, documents no telemetry, adds fail-closed CORS metadata, makes request-size limits configurable, and records path-disclosure and trace/receipt redaction rules.",
+  "No BitNet serve/chat, production-hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

@@ -2485,13 +2485,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OBS-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-OBS-001-trace-correlation"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-RECEIPT-001", "M4-RELIABILITY-001", "M4-SERVE-EX-002"]
+pr = 151
+merge_sha = "3c9dc249baa334107cc028f9e14e3391762b08e0"
 acceptance = "Add M4 observability correlation for CLI and server routes: trace IDs linking progress events, logs, per-run or per-request receipts, failure receipts, cancellation/timeout stages, and operator-facing diagnostics without leaking prompts or cache paths beyond the documented redaction policy."
 commands = [
   "bitnet mac ask --trace --json-out ci/hardware/apple-m4-mac-mini/<date>/observability/ask.json <prompt>",
@@ -2609,13 +2611,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-EX-003"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-003-local-safety-defaults"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-SERVE-EX-001"]
+pr = 160
 acceptance = "Document and test local-server safety defaults for the M4 appliance: localhost binding by default, explicit opt-in for wider binding, no telemetry, predictable CORS behavior, request-size limits, cache-path disclosure boundaries, and receipt redaction rules."
 commands = [
   "cargo test --locked -p bitnet-server -- --nocapture",

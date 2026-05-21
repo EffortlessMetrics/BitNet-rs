@@ -55,6 +55,9 @@ Options:
 
           [default: 127.0.0.1]
 
+      --allow-non-loopback
+          Allow binding to a non-loopback host such as 0.0.0.0
+
       --port <PORT>
           Port to bind
 
@@ -71,6 +74,11 @@ Options:
 
           [default: 64]
           [aliases: --max-tokens, --n-predict]
+
+      --max-request-bytes <MAX_REQUEST_BYTES>
+          Maximum raw HTTP request size accepted by the local server
+
+          [default: 1048576]
 
       --temperature <TEMPERATURE>
           Default completion temperature
@@ -99,6 +107,9 @@ Options:
           Directory where later request receipts will be exported
 
           [default: target/apple-m4-local-server/receipts]
+
+      --trace
+          Emit redacted trace-correlation diagnostics and record trace IDs in server receipts
 
   -h, --help
           Print help (see a summary with '-h')

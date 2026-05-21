@@ -1,0 +1,13 @@
+timestamp = "2026-05-21T06:49:23Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-003"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-003-local-safety-defaults"
+
+notes = [
+  "Started local-server safety defaults: loopback-by-default binding, explicit wider-bind opt-in, no telemetry, fail-closed CORS contract, request-size limits, cache-path disclosure boundaries, and receipt/trace redaction rules.",
+  "No BitNet serve/chat, production-hosting, full OpenAI compatibility, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim.",
+]

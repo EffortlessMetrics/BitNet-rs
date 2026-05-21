@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T06:34:36Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OBS-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 151
+merge_sha = "3c9dc249baa334107cc028f9e14e3391762b08e0"
+
+notes = [
+  "Merged the opt-in M4 trace-correlation route for CLI/server diagnostics.",
+  "This is observability only and does not claim model quality, performance, production readiness, BitNet chat/serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon behavior.",
+]

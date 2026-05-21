@@ -55,6 +55,7 @@ const MAC_SERVE_FAILURE_SMOKE_DEFAULT_RECEIPT: &str =
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
+const MAC_SERVE_DEFAULT_MAX_REQUEST_BYTES: usize = 1_048_576;
 const MAC_SERVE_CONTEXT_GUARDRAIL_ERROR_PREFIX: &str =
     "mac serve context guardrail blocked request:";
 const MAC_SERVE_CONTEXT_GUARDRAIL_RECEIPT_MARKER: &str = "; receipt written to ";
@@ -973,6 +974,10 @@ enum MacAction {
         #[arg(long, default_value = MAC_SERVE_DEFAULT_HOST)]
         host: String,
 
+        /// Allow binding to a non-loopback host such as 0.0.0.0.
+        #[arg(long, default_value_t = false)]
+        allow_non_loopback: bool,
+
         /// Port to bind.
         #[arg(long, default_value_t = MAC_SERVE_DEFAULT_PORT)]
         port: u16,
@@ -988,6 +993,10 @@ enum MacAction {
         /// Default maximum new tokens for completion requests that omit max_tokens.
         #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = MAC_SERVE_DEFAULT_MAX_NEW_TOKENS)]
         max_new_tokens: usize,
+
+        /// Maximum raw HTTP request size accepted by the local server.
+        #[arg(long, default_value_t = MAC_SERVE_DEFAULT_MAX_REQUEST_BYTES)]
+        max_request_bytes: usize,
 
         /// Default completion temperature.
         #[arg(long, default_value_t = 0.0)]
@@ -1746,10 +1755,12 @@ impl MacCommand {
                 cache_dir,
                 device,
                 host,
+                allow_non_loopback,
                 port,
                 strict,
                 stream,
                 max_new_tokens,
+                max_request_bytes,
                 temperature,
                 top_k,
                 top_p,
@@ -1774,6 +1785,7 @@ impl MacCommand {
                     repetition_penalty,
                     seed,
                 };
+                let safety = MacServeSafetyDefaults { allow_non_loopback, max_request_bytes };
                 let endpoint = MacServeEndpoint { host, port };
                 run_mac_serve(
                     model_family,
@@ -1787,6 +1799,7 @@ impl MacCommand {
                     strict,
                     stream,
                     defaults,
+                    safety,
                     receipt_dir,
                     trace,
                 )
@@ -9227,6 +9240,18 @@ struct MacServeEndpoint {
 }
 
 #[derive(Clone, Debug)]
+struct MacServeSafetyDefaults {
+    allow_non_loopback: bool,
+    max_request_bytes: usize,
+}
+
+impl Default for MacServeSafetyDefaults {
+    fn default() -> Self {
+        Self { allow_non_loopback: false, max_request_bytes: MAC_SERVE_DEFAULT_MAX_REQUEST_BYTES }
+    }
+}
+
+#[derive(Clone, Debug)]
 struct MacObservabilityContext {
     trace_id: String,
     route: &'static str,
@@ -9310,6 +9335,7 @@ async fn run_mac_serve(
     strict: bool,
     stream: bool,
     defaults: MacServeGenerationDefaults,
+    safety: MacServeSafetyDefaults,
     receipt_dir: PathBuf,
     trace: bool,
 ) -> Result<()> {
@@ -9320,6 +9346,17 @@ async fn run_mac_serve(
     if device != APPLE_M4_CPU_NEON {
         anyhow::bail!(
             "mac serve routes the supported Mac local service path through --device {APPLE_M4_CPU_NEON}; requested --device {device}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+        );
+    }
+    if safety.max_request_bytes < 4096 {
+        anyhow::bail!(
+            "mac serve --max-request-bytes must be at least 4096 bytes; got {}",
+            safety.max_request_bytes
+        );
+    }
+    if !mac_serve_host_is_loopback(&host) && !safety.allow_non_loopback {
+        anyhow::bail!(
+            "mac serve defaults to loopback-only binding; pass --allow-non-loopback with --host {host} to opt in to wider local-service exposure"
         );
     }
     let effective_model_family = if model_family == MacServeModelFamily::Bitnet
@@ -9383,7 +9420,7 @@ async fn run_mac_serve(
     mac_trace_log(observability.as_ref(), "serve_start", || {
         format!("host={host} port={port} receipt_dir={}", receipt_dir.display())
     });
-    let state = Arc::new(MacServeState::new_with_route(
+    let state = Arc::new(MacServeState::new_with_route_and_safety(
         model,
         effective_model_family,
         cache_status,
@@ -9392,6 +9429,7 @@ async fn run_mac_serve(
         port,
         stream,
         defaults,
+        safety,
         receipt_dir,
         Some(generator),
         observability,
@@ -9399,7 +9437,7 @@ async fn run_mac_serve(
     let address = format!("{host}:{port}");
     if !mac_serve_host_is_loopback(&host) {
         eprintln!(
-            "warning: bitnet mac serve is a local-service wrapper; binding to non-loopback host {host} may expose health/readiness state outside this machine"
+            "warning: bitnet mac serve is a local-service wrapper; --allow-non-loopback exposes local health/readiness and receipt-export surfaces on {host}"
         );
     }
     let listener = TcpListener::bind(&address)
@@ -9441,6 +9479,7 @@ struct MacServeState {
     port: u16,
     stream: bool,
     defaults: MacServeGenerationDefaults,
+    safety: MacServeSafetyDefaults,
     receipt_dir: PathBuf,
     generator: Option<tokio::sync::Mutex<MacServeGenerator>>,
     observability: Option<MacObservabilityContext>,
@@ -9458,7 +9497,7 @@ impl MacServeState {
         generator: Option<MacServeGenerator>,
     ) -> Self {
         let cache_status = verified_cache_status_json(&model);
-        Self::new_with_route(
+        Self::new_with_route_and_safety(
             model,
             MacServeModelFamily::DenseSlm,
             cache_status,
@@ -9467,6 +9506,7 @@ impl MacServeState {
             port,
             stream,
             defaults,
+            MacServeSafetyDefaults::default(),
             receipt_dir,
             generator,
             None,
@@ -9483,6 +9523,37 @@ impl MacServeState {
         port: u16,
         stream: bool,
         defaults: MacServeGenerationDefaults,
+        receipt_dir: PathBuf,
+        generator: Option<MacServeGenerator>,
+        observability: Option<MacObservabilityContext>,
+    ) -> Self {
+        Self::new_with_route_and_safety(
+            model,
+            model_family,
+            cache_status,
+            bitnet_gate,
+            host,
+            port,
+            stream,
+            defaults,
+            MacServeSafetyDefaults::default(),
+            receipt_dir,
+            generator,
+            observability,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn new_with_route_and_safety(
+        model: VerifiedCachedModel,
+        model_family: MacServeModelFamily,
+        cache_status: serde_json::Value,
+        bitnet_gate: Option<(BitnetServeGateEvidence, String)>,
+        host: String,
+        port: u16,
+        stream: bool,
+        defaults: MacServeGenerationDefaults,
+        safety: MacServeSafetyDefaults,
         receipt_dir: PathBuf,
         generator: Option<MacServeGenerator>,
         observability: Option<MacObservabilityContext>,
@@ -9504,6 +9575,7 @@ impl MacServeState {
             port,
             stream,
             defaults,
+            safety,
             receipt_dir,
             generator: generator.map(tokio::sync::Mutex::new),
             observability,
@@ -9854,6 +9926,7 @@ impl MacServeGenerator {
             "fallback_used": false,
             "fallback_reason": serde_json::Value::Null,
             "server": mac_serve_server_json(state),
+            "safety_defaults": mac_serve_safety_defaults_json(state),
             "context_envelope": context_envelope,
             "model_family": if bitnet_route { "bitnet" } else { "dense-slm" },
             "model": {
@@ -10049,11 +10122,37 @@ async fn handle_mac_serve_connection(
     mut stream: TcpStream,
     state: Arc<MacServeState>,
 ) -> Result<()> {
-    let request = read_mac_serve_http_request(&mut stream).await?;
+    let request =
+        match read_mac_serve_http_request(&mut stream, state.safety.max_request_bytes).await {
+            Ok(request) => request,
+            Err(error) if mac_serve_request_limit_error(&error) => {
+                let response = MacServeHttpReply::json(
+                    413,
+                    "Payload Too Large",
+                    serde_json::json!({
+                        "status": "error",
+                        "error": "request_too_large",
+                        "message": error.to_string(),
+                        "safety_defaults": mac_serve_safety_defaults_json(&state),
+                    }),
+                )?;
+                write_mac_serve_http_reply(&mut stream, response).await?;
+                return Ok(());
+            }
+            Err(error) => return Err(error),
+        };
     if request.is_empty() {
         return Ok(());
     }
     let response = mac_serve_http_reply(&request, &state).await?;
+    write_mac_serve_http_reply(&mut stream, response).await?;
+    Ok(())
+}
+
+async fn write_mac_serve_http_reply(
+    stream: &mut TcpStream,
+    response: MacServeHttpReply,
+) -> Result<()> {
     let header = format!(
         "HTTP/1.1 {} {}\r\ncontent-type: {}\r\ncache-control: no-store\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
         response.status,
@@ -10094,7 +10193,10 @@ impl MacServeHttpReply {
     }
 }
 
-async fn read_mac_serve_http_request(stream: &mut TcpStream) -> Result<String> {
+async fn read_mac_serve_http_request(
+    stream: &mut TcpStream,
+    max_request_bytes: usize,
+) -> Result<String> {
     let mut buffer = Vec::with_capacity(8192);
     let mut chunk = [0u8; 4096];
     loop {
@@ -10103,14 +10205,20 @@ async fn read_mac_serve_http_request(stream: &mut TcpStream) -> Result<String> {
             break;
         }
         buffer.extend_from_slice(&chunk[..read]);
-        if buffer.len() > 1_048_576 {
-            anyhow::bail!("M4 local server request exceeded 1 MiB limit");
+        if buffer.len() > max_request_bytes {
+            anyhow::bail!(
+                "M4 local server request exceeded configured max_request_bytes={max_request_bytes}"
+            );
         }
         if mac_serve_http_request_complete(&buffer) {
             break;
         }
     }
     Ok(String::from_utf8_lossy(&buffer).to_string())
+}
+
+fn mac_serve_request_limit_error(error: &anyhow::Error) -> bool {
+    error.to_string().contains("max_request_bytes")
 }
 
 fn mac_serve_http_request_complete(buffer: &[u8]) -> bool {
@@ -10133,6 +10241,19 @@ fn mac_serve_http_request_complete(buffer: &[u8]) -> bool {
 
 async fn mac_serve_http_reply(request: &str, state: &MacServeState) -> Result<MacServeHttpReply> {
     let (method, path) = mac_serve_request_method_path(request);
+    if method == "OPTIONS" {
+        return MacServeHttpReply::json(
+            403,
+            "Forbidden",
+            serde_json::json!({
+                "status": "error",
+                "error": "cors_disabled",
+                "message": "bitnet mac serve does not enable browser CORS by default; run a same-origin local proxy or use an explicit later CORS-gated item",
+                "cors": mac_serve_cors_json(),
+                "safety_defaults": mac_serve_safety_defaults_json(state),
+            }),
+        );
+    }
     if method == "POST" && path == "/v1/chat/completions" {
         return mac_serve_completion_http_reply(request, state).await;
     }
@@ -11578,6 +11699,7 @@ fn mac_serve_health_json(state: &MacServeState) -> serde_json::Value {
         "status": "healthy",
         "model_family": mac_serve_model_family_label(state.model_family),
         "server": mac_serve_server_json(state),
+        "safety_defaults": mac_serve_safety_defaults_json(state),
         "uptime_seconds": state.uptime_seconds(),
         "generation_executed": false,
         "endpoints": {
@@ -11598,6 +11720,7 @@ fn mac_serve_models_json(state: &MacServeState) -> Result<serde_json::Value> {
         "status": "ok",
         "model_family": mac_serve_model_family_label(state.model_family),
         "server": mac_serve_server_json(state),
+        "safety_defaults": mac_serve_safety_defaults_json(state),
         "resident_model_id": &state.model.id,
         "resident_route": {
             "model_family": mac_serve_model_family_label(state.model_family),
@@ -11630,6 +11753,7 @@ fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
         "ready": ready,
         "model_family": mac_serve_model_family_label(state.model_family),
         "server": mac_serve_server_json(state),
+        "safety_defaults": mac_serve_safety_defaults_json(state),
         "model": {
             "id": &state.model.id,
             "display_name": &state.model.display_name,
@@ -11697,10 +11821,76 @@ fn mac_serve_server_json(state: &MacServeState) -> serde_json::Value {
         "streaming_default": state.stream,
         "receipt_dir": &state.receipt_dir,
         "model_family": mac_serve_model_family_label(state.model_family),
+        "safety_defaults": mac_serve_safety_defaults_json(state),
         "observability": state
             .observability
             .as_ref()
             .map(|context| context.json("serve_session", None, None)),
+    })
+}
+
+fn mac_serve_safety_defaults_json(state: &MacServeState) -> serde_json::Value {
+    let loopback = mac_serve_host_is_loopback(&state.host);
+    serde_json::json!({
+        "work_item": "M4-SERVE-EX-003",
+        "binding": {
+            "default_host": MAC_SERVE_DEFAULT_HOST,
+            "configured_host": &state.host,
+            "loopback": loopback,
+            "loopback_only_by_default": true,
+            "non_loopback_requires_explicit_opt_in": true,
+            "allow_non_loopback": state.safety.allow_non_loopback,
+            "wider_binding_enabled": !loopback && state.safety.allow_non_loopback,
+        },
+        "telemetry": {
+            "external_telemetry_enabled": false,
+            "opentelemetry_enabled": false,
+            "network_telemetry_export_enabled": false,
+            "trace_correlation_opt_in": state.observability.is_some(),
+        },
+        "cors": mac_serve_cors_json(),
+        "request_limits": {
+            "max_request_bytes": state.safety.max_request_bytes,
+            "default_max_request_bytes": MAC_SERVE_DEFAULT_MAX_REQUEST_BYTES,
+            "max_completion_tokens": 512,
+            "health_ready_generate": false,
+        },
+        "path_disclosure": {
+            "health_endpoint_cache_paths": false,
+            "models_endpoint_cache_summary": true,
+            "ready_endpoint_operator_paths": true,
+            "receipt_export_operator_paths": true,
+            "non_loopback_requires_opt_in_before_paths_are_exposed": true,
+            "cache_paths_in_trace": false,
+        },
+        "receipt_redaction": {
+            "receipt_export_is_local_operator_surface": true,
+            "completion_response_embeds_receipt_for_local_conformance": true,
+            "raw_prompt_in_trace": false,
+            "rendered_prompt_in_trace": false,
+            "system_prompt_in_trace": false,
+            "cache_path_in_trace": false,
+            "tokenizer_path_in_trace": false,
+            "model_path_in_trace": false,
+        },
+        "claim_boundary": {
+            "local_safety_defaults_documented": true,
+            "production_hosting_claimed": false,
+            "browser_cors_claimed": false,
+            "authentication_claimed": false,
+            "network_service_hardening_claimed": false,
+        },
+    })
+}
+
+fn mac_serve_cors_json() -> serde_json::Value {
+    serde_json::json!({
+        "mode": "disabled_by_default",
+        "preflight_status": 403,
+        "allow_origin_header": serde_json::Value::Null,
+        "allow_credentials": false,
+        "allowed_origins": Vec::<String>::new(),
+        "reason": "local CLI/API clients do not require browser CORS; any browser exposure needs a later explicit CORS-gated item",
     })
 }
 
@@ -29772,6 +29962,30 @@ mod tests {
     }
 
     #[test]
+    fn mac_serve_health_json_documents_local_safety_defaults()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
+
+        let health = mac_serve_health_json(&state);
+
+        assert_eq!(health["safety_defaults"]["work_item"], "M4-SERVE-EX-003");
+        assert_eq!(health["safety_defaults"]["binding"]["loopback_only_by_default"], true);
+        assert_eq!(
+            health["safety_defaults"]["binding"]["non_loopback_requires_explicit_opt_in"],
+            true
+        );
+        assert_eq!(health["safety_defaults"]["telemetry"]["external_telemetry_enabled"], false);
+        assert_eq!(health["safety_defaults"]["cors"]["mode"], "disabled_by_default");
+        assert_eq!(
+            health["safety_defaults"]["request_limits"]["max_request_bytes"],
+            MAC_SERVE_DEFAULT_MAX_REQUEST_BYTES
+        );
+        assert_eq!(health["safety_defaults"]["path_disclosure"]["cache_paths_in_trace"], false);
+        assert_eq!(health["safety_defaults"]["receipt_redaction"]["raw_prompt_in_trace"], false);
+        Ok(())
+    }
+
+    #[test]
     fn mac_serve_receipt_dir_probe_rejects_non_directory() {
         let temp = tempfile::tempdir().expect("tempdir");
         let receipt_path = temp.path().join("receipt-file");
@@ -29795,6 +30009,23 @@ mod tests {
             mac_serve_http_response("GET /v1/chat/completions HTTP/1.1\r\n\r\n", &state);
         assert_eq!((status, reason), (404, "Not Found"));
         assert_eq!(body["error"], "not_found");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn mac_serve_options_preflight_fails_closed_with_cors_contract()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_temp, state) = test_state()?;
+
+        let reply =
+            mac_serve_http_reply("OPTIONS /v1/chat/completions HTTP/1.1\r\n\r\n", &state).await?;
+        let body: serde_json::Value = serde_json::from_slice(&reply.body)?;
+
+        assert_eq!(reply.status, 403);
+        assert_eq!(body["error"], "cors_disabled");
+        assert_eq!(body["cors"]["mode"], "disabled_by_default");
+        assert_eq!(body["cors"]["allow_credentials"], false);
+        assert_eq!(body["safety_defaults"]["claim_boundary"]["browser_cors_claimed"], false);
         Ok(())
     }
 

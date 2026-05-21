@@ -3400,7 +3400,9 @@ fn mac_serve_help_documents_health_ready_surface() {
         .stdout(predicate::str::contains("health and readiness endpoints"))
         .stdout(predicate::str::contains("--model-id <MODEL_ID>"))
         .stdout(predicate::str::contains("--host <HOST>"))
+        .stdout(predicate::str::contains("--allow-non-loopback"))
         .stdout(predicate::str::contains("--port <PORT>"))
+        .stdout(predicate::str::contains("--max-request-bytes <MAX_REQUEST_BYTES>"))
         .stdout(predicate::str::contains("--trace"))
         .stdout(predicate::str::contains("--receipt-dir <PATH>"));
 }
@@ -3436,6 +3438,25 @@ fn mac_serve_rejects_full_metal_request_before_cache_lookup() {
         .failure()
         .stderr(predicate::str::contains("mac serve routes the supported Mac local service path"))
         .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
+fn mac_serve_requires_explicit_non_loopback_opt_in_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "serve", "--host", "0.0.0.0"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("defaults to loopback-only binding"))
+        .stderr(predicate::str::contains("--allow-non-loopback"));
+}
+
+#[test]
+fn mac_serve_rejects_tiny_request_size_limit_before_cache_lookup() {
+    bitnet()
+        .args(["mac", "serve", "--max-request-bytes", "1024"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("--max-request-bytes must be at least 4096"));
 }
 
 #[test]

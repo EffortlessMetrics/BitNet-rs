@@ -50,9 +50,13 @@ bitnet serve \
 | `model_id` | `qwen2.5-0.5b-instruct-q8_0` | The current M4 dense SLM default. |
 | `device` | `apple-m4-cpu-neon` | The only full dense SLM answer backend claimed by this contract. |
 | `host` | `127.0.0.1` | Loopback by default. Binding to non-loopback must be explicit. |
+| `allow_non_loopback` | `false` | Required before `--host 0.0.0.0`, LAN IPs, or other wider binds are accepted. |
 | `port` | `8080` | Matches the existing server crate default unless overridden. |
 | `strict` | `true` | Hidden fallback is not allowed. |
 | `stream` | `true` | Token streaming should be the default user experience. |
+| `max_request_bytes` | `1048576` | Raw HTTP request limit before completion parsing. |
+| `cors` | disabled | Browser CORS is fail-closed by default; CLI/local HTTP clients remain supported. |
+| `telemetry` | off | No external telemetry or OpenTelemetry export is enabled by `bitnet mac serve`. |
 | `cache_dir` | existing Mac model cache default | Override with `--cache-dir` or config. |
 | `receipt_dir` | local user state receipt directory | Override with `--receipt-dir`. |
 | `receipt_mode` | `per_request` | Aggregate session receipts can be added later. |
@@ -166,6 +170,29 @@ bitnet --device apple-m4-cpu-neon mac serve-failure-smoke \
 This is not a production hosting claim, full OpenAI compatibility claim, BitNet
 serve/chat enablement, Metal evidence, QK256 evidence, Neural Engine evidence,
 MPSGraph evidence, speedup claim, or broad Apple Silicon behavior claim.
+
+## M4-SERVE-EX-003 Local Safety Defaults
+
+`bitnet mac serve` is a local appliance surface, not a hardened network
+service. The default bind remains `127.0.0.1`; wider binding now requires both
+`--host <non-loopback>` and `--allow-non-loopback`. The safety contract emitted
+by health, models, ready, and completion receipts records:
+
+- loopback-only default binding and explicit wider-bind opt-in;
+- no external telemetry, no OpenTelemetry export, and trace correlation only
+  when `--trace` is passed;
+- CORS disabled by default, with `OPTIONS` preflight failing closed;
+- raw HTTP request size capped by `--max-request-bytes`, defaulting to 1 MiB;
+- cache/local path disclosure boundaries for operator endpoints and receipt
+  export;
+- trace redaction rules that keep raw prompts, rendered prompts, system prompts,
+  model paths, tokenizer paths, and cache paths out of trace diagnostics.
+
+This item documents and tests local safety defaults only. It does not claim
+authentication, production hosting, browser compatibility, broader OpenAI
+compatibility, BitNet serve/chat readiness, Metal evidence, QK256 evidence,
+Neural Engine evidence, MPSGraph evidence, speedup, or broad Apple Silicon
+behavior.
 
 ## Config File Shape
 
