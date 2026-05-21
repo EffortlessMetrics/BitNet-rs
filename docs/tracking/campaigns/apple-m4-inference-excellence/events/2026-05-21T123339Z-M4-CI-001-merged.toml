@@ -1,0 +1,18 @@
+timestamp = "2026-05-21T12:33:39Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CI-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-CI-001-evidence-lanes"
+pr = 190
+head_sha = "a9b25e29ca1e0772e67ee31ce0f21f9b2ed02706"
+merge_sha = "67f83671b86eefa28325e49e58ca1c8496e3e8ea"
+
+notes = [
+  "PR #190 merged the M4 evidence CI lane and retention contract.",
+  "The merged change documents generic PR Tier 0, advisory local, scheduled M4, and release-gate lanes, plus short-lived Tier 0 debug artifact retention and non-blocking hardware timing behavior.",
+  "Closeout is tracker-only and records the already-merged PR.",
+  "No live M4 inference, model evidence refresh, BitNet chat or serve, production hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]
