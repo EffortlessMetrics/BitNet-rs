@@ -2783,8 +2783,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-073"
-status = "pr_open"
+status = "merged"
 pr = 195
+head_sha = "92c464e790f7a7f2297d55c9612d3861898544d3"
+merge_sha = "d429f515514e4680442df0a2dc7d70020ae1a485"
 branch = "codex/slm-cpu-073-packed-q8-regression-root-cause"
 stackable = false
 review_mode = "codex_premerge"
@@ -2822,6 +2824,58 @@ must_not_claim = [
   "Packed Q8_0 runtime compute is enabled by default.",
   "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
   "A speedup or sustained 8250U throughput claim is proven.",
+  "Generated IDs, decoded text, model SHA, tokenizer authority, selected CPU backend/kernel identity, dense hook identity, or fallback=false provenance changed.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-074"
+status = "ready"
+branch = "codex/slm-cpu-074-packed-q8-sidecar-instrumentation"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-073"]
+acceptance = "Add the packed Q8_0 sidecar matvec instrumentation and scratch-elimination gate after SLM-CPU-073. The slice must keep eager_f32_candle as the default runtime, keep packed sidecar execution opt-in and exact-tensor scoped to `layers.0.attention.q_proj.weight`, measure or eliminate input flatten/to_vec, output Vec allocation, and bias extraction costs before any broader packed-Q8 runtime selection, add per-call or aggregate timing counters around sidecar input materialization, packed matvec compute, output tensor construction, and selector dispatch, and preserve identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend identity, dense hook identity, and fallback_used=false. It must not claim speedup unless a separate bounded before/after timing artifact proves it, enable packed Q8_0 by default, broaden beyond the exact tensor, start Q4/Q5 runtime support, or touch server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 paths."
+commands = [
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_dense_linear_reference",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_reference_across_q8_blocks",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_reference_when_rows_split_q8_blocks",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-transformer/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-073 localized the remaining exact-tensor packed Q8_0 sidecar regression to host tensor materialization, scalar matvec, and scratch allocation.",
+  "SLM-CPU-074 may measure or eliminate those exact costs only while preserving the Qwen3 Q8_0 appliance behavior oracle.",
+]
+must_not_claim = [
+  "Packed Q8_0 runtime compute is enabled by default.",
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "A speedup or sustained 8250U throughput claim is proven without a separate bounded before/after timing artifact.",
   "Generated IDs, decoded text, model SHA, tokenizer authority, selected CPU backend/kernel identity, dense hook identity, or fallback=false provenance changed.",
   "Broad answer quality is proven.",
   "Q4_K_M or Q4_K_S runtime support exists.",
