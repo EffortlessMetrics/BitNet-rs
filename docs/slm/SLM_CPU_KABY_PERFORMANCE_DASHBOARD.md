@@ -930,6 +930,16 @@ real_qwen3_generated_id_receipts_regenerated = false
 speedup_claim = false
 ```
 
+SLM-CPU-071 is the required real-artifact gate after that prototype. It must
+regenerate the verified Qwen3-0.6B Q8_0 i5-8250U 4-thread warm-session
+before/after receipts with the default eager F32 path and the opt-in exact
+`layers.0.attention.q_proj.weight` packed sidecar candidate. The first gate is
+behavioral: prompt IDs, generated IDs, decoded text, strict GGUF tokenizer
+authority, selected CPU backend/kernel, model SHA, hook identity, and
+`fallback=false` must match before timing is classified as improved, regressed,
+or inconclusive. This gate still does not enable packed Q8_0 by default or claim
+sustained throughput.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:

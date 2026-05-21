@@ -2678,6 +2678,57 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-071"
+status = "pr_open"
+pr = 177
+head_sha = "d402440e0d17c056d1f0141bf92d1f9a199a35fb"
+branch = "codex/slm-cpu-071-post070-real-timing-gate"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-070"]
+acceptance = "Regenerate the verified Qwen3-0.6B Q8_0 i5-8250U strict warm-session before/after artifact pack after the SLM-CPU-070 block-local packed Q8_0 sidecar prototype. The slice must run the established 4-thread appliance profile with the default eager_f32_candle path and with the opt-in exact-tensor `layers.0.attention.q_proj.weight` packed_q8_sidecar candidate, prove identical prompt IDs, generated IDs, decoded text, strict GGUF tokenizer authority, selected CPU backend/kernel identity, dense hook-selection identity, model SHA, and fallback_used=false before any timing interpretation, then classify timing as improved, regressed, or inconclusive. It must not enable packed Q8_0 by default, broaden beyond the exact tensor, claim sustained throughput, claim broad answer quality, start Q4/Q5 runtime support, or touch server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 paths."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-21\\qwen3-slm-cpu-071-before-warm-session.json",
+  "cmd /C \"set BITNET_DENSE_Q8_RUNTIME_ENABLE=1&& set BITNET_DENSE_Q8_RUNTIME_TENSOR=blk.0.attn_q.weight&& cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 2 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-21\\qwen3-slm-cpu-071-after-warm-session.json\"",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "BitNet QK256/I2_S kernels",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+]
+may_claim = [
+  "SLM-CPU-071 is the required real i5-8250U artifact timing gate after the SLM-CPU-070 block-local packed Q8_0 prototype.",
+  "Timing classification is allowed only after generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel, model SHA, hook identity, and fallback=false match the Qwen3 Q8_0 appliance oracle.",
+]
+must_not_claim = [
+  "Packed Q8_0 runtime compute is enabled by default.",
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "A speedup or sustained 8250U throughput claim is proven before the real before/after artifact pack is validated.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-033"
 status = "merged"
 pr = 5603

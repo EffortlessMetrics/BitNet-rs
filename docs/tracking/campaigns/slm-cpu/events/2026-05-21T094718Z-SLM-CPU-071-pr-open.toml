@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T09:47:18Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-071"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+actor = "codex"
+pr = 177
+branch = "codex/slm-cpu-071-post070-real-timing-gate"
+head_sha = "d402440e0d17c056d1f0141bf92d1f9a199a35fb"
+summary = "Opened PR #177 for the real i5-8250U Qwen3 Q8_0 post-SLM-CPU-070 timing gate."
+notes = [
+  "The PR keeps SLM-CPU-071 scoped to a real before/after artifact gate after the SLM-CPU-070 packed Q8_0 sidecar prototype.",
+  "The before/after timing classification remains blocked on identical generated IDs, decoded text, tokenizer authority, backend/kernel identity, model SHA, hook identity, and fallback=false.",
+  "No packed-Q8 default enablement, speedup, sustained-throughput, Q4/Q5, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
