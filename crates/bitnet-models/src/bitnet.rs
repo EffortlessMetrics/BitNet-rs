@@ -1,7 +1,10 @@
 //! BitNet model implementation
 
 use crate::dense_gguf_q8_dispatch::{DenseQ8DispatchSelection, select_dense_q8_runtime};
-use crate::dense_gguf_q8_sidecar::{DenseGgufQ8SidecarDescriptor, DenseGgufQ8SidecarRegistry};
+use crate::dense_gguf_q8_sidecar::{
+    DenseGgufQ8SidecarDescriptor, DenseGgufQ8SidecarRegistry,
+    dense_q8_runtime_compute_tensor_from_env,
+};
 use crate::transformer::{KVCache, TransformerModel};
 use bitnet_common::{
     BitNetConfig, BitNetError, BitNetTensor, ConcreteTensor, Device, Result, Tensor,
@@ -236,18 +239,23 @@ impl BitNetModel {
             .map(|transformer| transformer.dense_linear_runtime_hook_boundaries())
             .unwrap_or_default();
         let example = hook_boundaries.first();
+        let runtime_boundary =
+            hook_boundaries.iter().find(|boundary| boundary.runtime_compute_enabled);
         let payload_boundary =
             hook_boundaries.iter().find(|boundary| boundary.sidecar_payload_bytes_available);
+        let selected_boundary = runtime_boundary.or(payload_boundary).or(example);
         let payload_bearing_boundary_count = hook_boundaries
             .iter()
             .filter(|boundary| boundary.sidecar_payload_bytes_available)
             .count();
+        let runtime_compute_enabled =
+            hook_boundaries.iter().any(|boundary| boundary.runtime_compute_enabled);
+        let dense_runtime_replaced =
+            hook_boundaries.iter().any(|boundary| boundary.dense_runtime_replaced);
         let sidecar_descriptor_count = self.dense_q8_sidecars.descriptor_count();
         let hook_boundary_count = hook_boundaries.len();
         let sidecar_descriptors_reached_transformer = hook_boundary_count > 0
-            && hook_boundaries.iter().any(|boundary| {
-                boundary.sidecar_descriptor_present && boundary.preserves_eager_f32()
-            });
+            && hook_boundaries.iter().any(|boundary| boundary.sidecar_descriptor_present);
         let boundary_json = |boundary: &bitnet_transformer::DenseLinearRuntimeHookBoundary| {
             serde_json::json!({
                 "tensor_name": boundary.tensor_name,
@@ -274,23 +282,34 @@ impl BitNetModel {
         serde_json::json!({
             "schema": 1,
             "artifact_kind": "dense_gguf_q8_hook_selection_receipt_gate",
-            "selected_path": "eager_f32_candle",
-            "selected_kernel": "dense-f32-candle-linear",
+            "selected_path": selected_boundary
+                .map(|boundary| boundary.selected_path)
+                .unwrap_or("eager_f32_candle"),
+            "selected_kernel": selected_boundary
+                .map(|boundary| boundary.selected_kernel)
+                .unwrap_or("dense-f32-candle-linear"),
             "sidecar_descriptor_count": sidecar_descriptor_count,
             "hook_boundary_count": hook_boundary_count,
             "sidecar_descriptors_reached_transformer": sidecar_descriptors_reached_transformer,
             "example_boundary": example.map(boundary_json),
             "payload_bearing_boundary_count": payload_bearing_boundary_count,
             "payload_bearing_boundary": payload_boundary.map(boundary_json),
+            "runtime_boundary": runtime_boundary.map(boundary_json),
             "all_boundaries_preserve_eager_f32": hook_boundaries.iter().all(|boundary| boundary.preserves_eager_f32()),
-            "runtime_compute_enabled": false,
-            "dense_runtime_replaced": false,
+            "runtime_compute_enabled": runtime_compute_enabled,
+            "dense_runtime_replaced": dense_runtime_replaced,
             "speedup_claim": false,
             "fallback_used": false,
-            "remaining_blockers": [
-                "packed_q8_sidecar_compute_kernel_not_enabled",
-                "before_after_qwen3_q8_warm_session_receipts_with_hook_selection_identity_missing"
-            ],
+            "remaining_blockers": if runtime_compute_enabled {
+                serde_json::json!([
+                    "before_after_qwen3_q8_warm_session_receipts_with_hook_selection_identity_missing"
+                ])
+            } else {
+                serde_json::json!([
+                    "packed_q8_sidecar_compute_kernel_not_enabled",
+                    "before_after_qwen3_q8_warm_session_receipts_with_hook_selection_identity_missing"
+                ])
+            },
             "next_safe_step": "run before/after Qwen3 Q8_0 warm-session receipts that record identical model SHA, tokenizer source/strictness, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook selection identity, and fallback_used=false before enabling packed sidecar compute"
         })
     }
@@ -319,10 +338,15 @@ fn dense_q8_runtime_hooks_from_sidecars(
     registry: &DenseGgufQ8SidecarRegistry,
 ) -> DenseLinearRuntimeHookRegistry {
     let mut hooks = DenseLinearRuntimeHookRegistry::default();
+    let runtime_compute_tensor = dense_q8_runtime_compute_tensor_from_env();
     for descriptor in &registry.descriptors {
         let Some(canonical_name) = dense_q8_transformer_hook_name(descriptor) else {
             continue;
         };
+        let runtime_compute_enabled = runtime_compute_tensor
+            .as_deref()
+            .is_some_and(|tensor| tensor == descriptor.tensor_name)
+            && descriptor.packed_q8_bytes.is_some();
         hooks.insert(
             canonical_name,
             DenseLinearRuntimeHookDescriptor {
@@ -330,7 +354,7 @@ fn dense_q8_runtime_hooks_from_sidecars(
                 role: format!("{:?}", descriptor.role),
                 sidecar_payload_sha256: Some(descriptor.packed_q8_bytes_sha256.clone()),
                 packed_q8_payload: dense_q8_packed_payload_from_sidecar(descriptor),
-                runtime_compute_enabled: descriptor.runtime_compute_enabled,
+                runtime_compute_enabled,
             },
         );
     }
@@ -367,7 +391,9 @@ fn dense_q8_transformer_hook_name(descriptor: &DenseGgufQ8SidecarDescriptor) -> 
 #[cfg(test)]
 mod dense_q8_runtime_hook_tests {
     use super::*;
+    use crate::dense_gguf_q8_sidecar::{DENSE_Q8_RUNTIME_ENABLE_ENV, DENSE_Q8_RUNTIME_TENSOR_ENV};
     use crate::formats::gguf::{GgufTensorType, TensorInfo};
+    use serial_test::serial;
 
     fn q8_tensor_info(name: &str, shape: Vec<usize>) -> TensorInfo {
         let value_count = shape.iter().copied().product::<usize>();
@@ -383,7 +409,12 @@ mod dense_q8_runtime_hook_tests {
     }
 
     #[test]
+    #[serial]
     fn dense_gguf_q8_sidecar_hooks_map_vendor_tensor_names() -> Result<()> {
+        unsafe {
+            std::env::remove_var(DENSE_Q8_RUNTIME_ENABLE_ENV);
+            std::env::remove_var(DENSE_Q8_RUNTIME_TENSOR_ENV);
+        }
         let mut registry = DenseGgufQ8SidecarRegistry::default();
         let tensor_info = q8_tensor_info("blk.0.attn_q.weight", vec![64, 32]);
         let data = vec![0_u8; tensor_info.size as usize];
@@ -404,7 +435,12 @@ mod dense_q8_runtime_hook_tests {
     }
 
     #[test]
+    #[serial]
     fn dense_gguf_q8_sidecar_hook_can_carry_one_real_payload_candidate() -> Result<()> {
+        unsafe {
+            std::env::remove_var(DENSE_Q8_RUNTIME_ENABLE_ENV);
+            std::env::remove_var(DENSE_Q8_RUNTIME_TENSOR_ENV);
+        }
         let mut registry = DenseGgufQ8SidecarRegistry::default();
         let tensor_info = q8_tensor_info("blk.0.attn_q.weight", vec![64, 32]);
         let data = vec![7_u8; tensor_info.size as usize];
@@ -434,6 +470,41 @@ mod dense_q8_runtime_hook_tests {
         assert!(payload.payload_len_matches_contract());
         assert!(!hook.runtime_compute_enabled);
         Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn dense_gguf_q8_sidecar_runtime_compute_requires_explicit_exact_tensor_gate() -> Result<()> {
+        unsafe {
+            std::env::set_var(DENSE_Q8_RUNTIME_ENABLE_ENV, "1");
+            std::env::set_var(DENSE_Q8_RUNTIME_TENSOR_ENV, "blk.0.attn_q.weight");
+        }
+        let result = (|| -> Result<()> {
+            let mut registry = DenseGgufQ8SidecarRegistry::default();
+            let tensor_info = q8_tensor_info("blk.0.attn_q.weight", vec![64, 32]);
+            let data = vec![7_u8; tensor_info.size as usize];
+            registry.try_push_tensor_with_payload_candidate(
+                &tensor_info,
+                &data,
+                Some("blk.0.attn_q.weight"),
+            )?;
+
+            let hooks = dense_q8_runtime_hooks_from_sidecars(&registry);
+            let Some(hook) = hooks.get("layers.0.attention.q_proj.weight") else {
+                return Err(BitNetError::Validation(
+                    "expected canonical attention q_proj hook".to_string(),
+                ));
+            };
+
+            assert!(hook.runtime_compute_enabled);
+            assert!(hook.packed_q8_payload.is_some());
+            Ok(())
+        })();
+        unsafe {
+            std::env::remove_var(DENSE_Q8_RUNTIME_ENABLE_ENV);
+            std::env::remove_var(DENSE_Q8_RUNTIME_TENSOR_ENV);
+        }
+        result
     }
 }
 

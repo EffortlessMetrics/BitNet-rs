@@ -2474,6 +2474,65 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-067"
+status = "pr_open"
+pr = 109
+head_sha = "6aaf887ee570cb6353142acc10a48a93978d097e"
+branch = "codex/slm-cpu-067-exact-tensor-q8-runtime-hook"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-066"]
+acceptance = "Implement or produce a blocker for an exact-tensor packed Q8_0 runtime compute hook for `layers.0.attention.q_proj.weight` only, using the accepted SLM-CPU-065/066 sidecar evidence and preserving eager F32 Candle as the default path. Any opt-in runtime candidate must emit before/after strict CPU receipts proving unchanged model SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false before it can be exported back to BitNet-rs release-surface review. The slice must not enable packed Q8_0 compute by default or claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5 support, or BitNet QK256 changes."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-common/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "ci/slm-cpu/**",
+  "docs/swarm/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-067 is the next swarm development item after the SLM-CPU-066 release-gate handoff.",
+  "Any candidate remains exact-tensor scoped to `layers.0.attention.q_proj.weight` and must preserve the Qwen3 Q8_0 strict CPU behavior oracle.",
+  "A blocker artifact is acceptable if the current runtime API still cannot select packed Q8_0 compute for the exact tensor without weakening receipt invariants.",
+]
+must_not_claim = [
+  "Packed Q8_0 runtime compute is enabled by default.",
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "Generated IDs or decoded text changed.",
+  "Strict GGUF tokenizer authority, selected CPU backend/kernel identity, model SHA, dense hook-selection identity, or fallback=false provenance changed.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-033"
 status = "merged"
 pr = 5603

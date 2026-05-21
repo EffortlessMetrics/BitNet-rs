@@ -344,7 +344,7 @@ fn dense_linear_runtime_hook_boundary_can_carry_payload_without_enabling_compute
                 matrix_rows: 8,
                 matrix_cols: 8,
             }),
-            runtime_compute_enabled: true,
+            runtime_compute_enabled: false,
         },
     );
     let model = TransformerModel::new_with_tensors_and_dense_linear_hooks(

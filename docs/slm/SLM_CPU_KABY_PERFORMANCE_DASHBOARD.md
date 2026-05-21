@@ -813,6 +813,43 @@ dense linear role. A runtime replacement still requires before/after warm-sessio
 receipts proving unchanged generated IDs, decoded text, strict tokenizer
 authority, selected CPU backend/kernel, model SHA, and `fallback=false`.
 
+SLM-CPU-067 promotes that boundary to one exact real Qwen3 tensor path:
+`layers.0.attention.q_proj.weight`, sourced from `blk.0.attn_q.weight`. The
+runtime hook remains opt-in and exact-tensor gated. By default, the transformer
+continues to use the eager F32 Candle linear path. Packed sidecar execution is
+selected only when all four environment gates name the same evidence-scoped
+tensor:
+
+```text
+BITNET_DENSE_Q8_PAYLOAD_ENABLE=1
+BITNET_DENSE_Q8_PAYLOAD_TENSOR=blk.0.attn_q.weight
+BITNET_DENSE_Q8_RUNTIME_ENABLE=1
+BITNET_DENSE_Q8_RUNTIME_TENSOR=blk.0.attn_q.weight
+```
+
+The SLM-CPU-067 Kaby artifact bundle records before/after strict warm-session
+receipts for the verified Qwen3 Q8_0 appliance profile:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-067-before-warm-session.json
+ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-067-after-warm-session.json
+ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-067-runtime-hook-equivalence.json
+```
+
+The baseline receipt reports `selected_path = eager_f32_candle`. The opt-in
+receipt reports `selected_path = packed_q8_sidecar`,
+`selected_kernel = dense-q8-sidecar-linear`, and
+`runtime_compute_enabled = true` for only the exact Q projection tensor. The
+equivalence artifact records matching prompt IDs, generated IDs, decoded text,
+model SHA, strict GGUF tokenizer authority, selected CPU backend, and
+`fallback=false` across both receipts.
+
+This is a behavior-preserving exact-tensor runtime hook candidate. It does not
+enable packed Q8_0 runtime compute by default, does not generalize packed Q8_0
+execution to all dense tensors, and does not claim speedup, sustained
+throughput, broad answer quality, Q4/Q5 runtime support, accelerator execution,
+Qwen3.5 support, or BitNet QK256 changes.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:

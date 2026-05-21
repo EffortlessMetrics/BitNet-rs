@@ -1,5 +1,8 @@
 #[cfg(test)]
 use bitnet_common::config::NormType;
+#[cfg(test)]
+use bitnet_common::dtype_convert::f32_to_fp16;
+use bitnet_common::dtype_convert::fp16_to_f32;
 use bitnet_common::{BitNetConfig, BitNetError, Result, config::ActivationType};
 use bitnet_qk256_dispatch::{
     forward_qk256_with_scale, record_bitnet_linear_cpu_fallback, record_bitnet_linear_unsupported,
@@ -28,6 +31,7 @@ use qk256::{TIED_EMBED_QK256_KEY, qk256_inline_scale};
 use std::collections::HashMap;
 
 pub type DenseLinearRuntimeHookRegistry = HashMap<String, DenseLinearRuntimeHookDescriptor>;
+const SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR: &str = "layers.0.attention.q_proj.weight";
 
 /// Evidence-scoped packed Q8_0 payload for a dense-linear runtime hook.
 ///
@@ -132,11 +136,28 @@ impl DenseLinearRuntimeHookBoundary {
         tensor_name: impl Into<String>,
         descriptor: &DenseLinearRuntimeHookDescriptor,
     ) -> Self {
+        let tensor_name = tensor_name.into();
         let payload = descriptor.packed_q8_payload.as_ref();
+        let payload_contract_valid = payload.is_some_and(|payload| {
+            payload.tensor_name == descriptor.tensor_name
+                && payload.shape_matches_matvec_contract()
+                && payload.payload_len_matches_contract()
+        });
+        let runtime_compute_enabled = descriptor.runtime_compute_enabled
+            && tensor_name == SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR
+            && payload_contract_valid;
         Self {
-            tensor_name: tensor_name.into(),
-            selected_path: "eager_f32_candle",
-            selected_kernel: "dense-f32-candle-linear",
+            tensor_name,
+            selected_path: if runtime_compute_enabled {
+                "packed_q8_sidecar"
+            } else {
+                "eager_f32_candle"
+            },
+            selected_kernel: if runtime_compute_enabled {
+                "dense-q8-sidecar-linear"
+            } else {
+                "dense-f32-candle-linear"
+            },
             sidecar_descriptor_present: true,
             sidecar_role: Some(descriptor.role.clone()),
             sidecar_payload_sha256: descriptor.sidecar_payload_sha256.clone(),
@@ -145,14 +166,10 @@ impl DenseLinearRuntimeHookBoundary {
             sidecar_q8_block_count: payload.map(|payload| payload.q8_block_count),
             sidecar_matrix_rows: payload.map(|payload| payload.matrix_rows),
             sidecar_matrix_cols: payload.map(|payload| payload.matrix_cols),
-            sidecar_payload_contract_valid: payload.is_some_and(|payload| {
-                payload.tensor_name == descriptor.tensor_name
-                    && payload.shape_matches_matvec_contract()
-                    && payload.payload_len_matches_contract()
-            }),
-            runtime_compute_enabled: false,
-            eager_f32_runtime_preserved: true,
-            dense_runtime_replaced: false,
+            sidecar_payload_contract_valid: payload_contract_valid,
+            runtime_compute_enabled,
+            eager_f32_runtime_preserved: !runtime_compute_enabled,
+            dense_runtime_replaced: runtime_compute_enabled,
             speedup_claim: false,
             generated_id_preservation_required_before_runtime_use: true,
             next_receipt_gate: "before_after_qwen3_q8_generated_id_text_receipts",
@@ -179,6 +196,120 @@ fn dense_linear_runtime_hook_boundary(
             DenseLinearRuntimeHookBoundary::from_sidecar_descriptor(tensor_name, descriptor)
         })
         .unwrap_or_else(|| DenseLinearRuntimeHookBoundary::eager_f32(tensor_name))
+}
+
+fn maybe_forward_dense_q8_sidecar_linear(
+    input: &Tensor,
+    linear: &Linear,
+    tensor_name: &str,
+    hooks: &DenseLinearRuntimeHookRegistry,
+) -> Result<Option<Tensor>> {
+    let Some(descriptor) = hooks.get(tensor_name) else {
+        return Ok(None);
+    };
+    let boundary = DenseLinearRuntimeHookBoundary::from_sidecar_descriptor(tensor_name, descriptor);
+    if !boundary.runtime_compute_enabled {
+        return Ok(None);
+    }
+    let Some(payload) = descriptor.packed_q8_payload.as_ref() else {
+        return Err(BitNetError::Validation(format!(
+            "packed Q8 runtime hook for {tensor_name} was enabled without payload bytes"
+        )));
+    };
+    if tensor_name != SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR {
+        return Err(BitNetError::Validation(format!(
+            "packed Q8 runtime hook is scoped to {SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR}, got {tensor_name}"
+        )));
+    }
+    if !payload.shape_matches_matvec_contract() || !payload.payload_len_matches_contract() {
+        return Err(BitNetError::Validation(format!(
+            "packed Q8 runtime hook payload contract is invalid for {tensor_name}"
+        )));
+    }
+    if linear.weight().dims() != [payload.matrix_rows, payload.matrix_cols] {
+        return Err(BitNetError::Validation(format!(
+            "packed Q8 runtime hook shape {:?} does not match Candle linear weight {:?} for {tensor_name}",
+            [payload.matrix_rows, payload.matrix_cols],
+            linear.weight().dims()
+        )));
+    }
+
+    dense_q8_sidecar_linear_forward(input, linear.bias(), payload)
+        .map(Some)
+        .map_err(BitNetError::from)
+}
+
+fn dense_q8_sidecar_linear_forward(
+    input: &Tensor,
+    bias: Option<&Tensor>,
+    payload: &DenseLinearPackedQ8Payload,
+) -> candle_core::Result<Tensor> {
+    let dims = input.dims();
+    let Some((&input_cols, prefix)) = dims.split_last() else {
+        candle_core::bail!("packed Q8 runtime hook requires a tensor with at least one dimension");
+    };
+    if input_cols != payload.matrix_cols {
+        candle_core::bail!(
+            "packed Q8 runtime hook input cols {} do not match payload matrix cols {}",
+            input_cols,
+            payload.matrix_cols
+        );
+    }
+    let input_values = input.to_dtype(DType::F32)?.flatten_all()?.to_vec1::<f32>()?;
+    if input_values.len() % payload.matrix_cols != 0 {
+        candle_core::bail!(
+            "packed Q8 runtime hook input value count {} is not divisible by cols {}",
+            input_values.len(),
+            payload.matrix_cols
+        );
+    }
+
+    let bias_values = match bias {
+        Some(bias) => Some(bias.to_dtype(DType::F32)?.to_vec1::<f32>()?),
+        None => None,
+    };
+    if let Some(bias_values) = bias_values.as_ref()
+        && bias_values.len() != payload.matrix_rows
+    {
+        candle_core::bail!(
+            "packed Q8 runtime hook bias length {} does not match rows {}",
+            bias_values.len(),
+            payload.matrix_rows
+        );
+    }
+
+    let mut output = Vec::with_capacity(
+        input_values
+            .len()
+            .checked_div(payload.matrix_cols)
+            .unwrap_or(0)
+            .saturating_mul(payload.matrix_rows),
+    );
+    for input_row in input_values.chunks_exact(payload.matrix_cols) {
+        for row in 0..payload.matrix_rows {
+            let mut sum = bias_values.as_ref().map_or(0.0, |bias| bias[row]);
+            let row_start = row * payload.matrix_cols;
+            for (col, input_value) in input_row.iter().enumerate() {
+                let weight_idx = row_start + col;
+                let block_offset =
+                    (weight_idx / payload.q8_block_size) * (2 + payload.q8_block_size);
+                let scale_bits = u16::from_le_bytes([
+                    payload.packed_q8_bytes[block_offset],
+                    payload.packed_q8_bytes[block_offset + 1],
+                ]);
+                let scale = fp16_to_f32(scale_bits);
+                let q = payload.packed_q8_bytes
+                    [block_offset + 2 + (weight_idx % payload.q8_block_size)]
+                    as i8;
+                sum += scale * f32::from(q) * *input_value;
+            }
+            output.push(sum);
+        }
+    }
+
+    let mut output_shape = prefix.to_vec();
+    output_shape.push(payload.matrix_rows);
+    Tensor::from_vec(output, output_shape, input.device())
 }
 
 fn attention_f16_dot_input(tensor: &Tensor) -> Result<Tensor> {
@@ -455,6 +586,14 @@ impl MultiHeadAttention {
             runtime_compute_enabled = hook_boundary.runtime_compute_enabled,
             "dense linear production hook boundary"
         );
+        if let Some(output) = maybe_forward_dense_q8_sidecar_linear(
+            input,
+            linear,
+            &dense_tensor_name,
+            dense_linear_hooks,
+        )? {
+            return Ok(output);
+        }
         record_bitnet_linear_cpu_fallback();
         linear.forward(input).map_err(BitNetError::from)
     }
@@ -675,6 +814,14 @@ impl FeedForward {
             runtime_compute_enabled = hook_boundary.runtime_compute_enabled,
             "dense linear production hook boundary"
         );
+        if let Some(output) = maybe_forward_dense_q8_sidecar_linear(
+            input,
+            linear,
+            &dense_tensor_name,
+            dense_linear_hooks,
+        )? {
+            return Ok(output);
+        }
         record_bitnet_linear_cpu_fallback();
         linear.forward(input).map_err(BitNetError::from)
     }
@@ -2036,6 +2183,60 @@ mod tests {
         let values = output.flatten_all()?.to_vec1::<f32>()?;
 
         assert_eq!(values, vec![1.0003, -2.0007, 3.1259, -4.2509]);
+        Ok(())
+    }
+
+    #[test]
+    fn exact_q8_sidecar_runtime_hook_matches_dense_linear_reference() -> Result<()> {
+        let device = Device::Cpu;
+        let weight = Tensor::from_slice(&[0.5f32, 1.0, 1.5, 2.0], (2, 2), &device)?;
+        let linear = Linear::new(weight, None);
+        let input = Tensor::from_slice(&[2.0f32, 3.0], (1, 1, 2), &device)?;
+
+        let mut packed = Vec::new();
+        packed.extend_from_slice(&f32_to_fp16(0.5).to_le_bytes());
+        for value in [1i8, 2, 3, 4] {
+            packed.push(value as u8);
+        }
+        packed.resize(34, 0);
+
+        let mut hooks = DenseLinearRuntimeHookRegistry::default();
+        hooks.insert(
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR.to_string(),
+            DenseLinearRuntimeHookDescriptor {
+                tensor_name: "blk.0.attn_q.weight".to_string(),
+                role: "AttentionQ".to_string(),
+                sidecar_payload_sha256: Some("sha256:test".to_string()),
+                packed_q8_payload: Some(DenseLinearPackedQ8Payload {
+                    tensor_name: "blk.0.attn_q.weight".to_string(),
+                    packed_q8_bytes: std::sync::Arc::from(packed.into_boxed_slice()),
+                    q8_block_size: 32,
+                    q8_block_count: 1,
+                    matrix_rows: 2,
+                    matrix_cols: 2,
+                }),
+                runtime_compute_enabled: true,
+            },
+        );
+
+        let Some(output) = maybe_forward_dense_q8_sidecar_linear(
+            &input,
+            &linear,
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR,
+            &hooks,
+        )?
+        else {
+            return Err(BitNetError::Validation(
+                "expected exact Q8 sidecar runtime hook to run".to_string(),
+            ));
+        };
+
+        assert_eq!(output.dims(), &[1, 1, 2]);
+        assert_eq!(output.flatten_all()?.to_vec1::<f32>()?, vec![4.0, 9.0]);
+        assert_eq!(
+            output.flatten_all()?.to_vec1::<f32>()?,
+            linear.forward(&input)?.flatten_all()?.to_vec1::<f32>()?
+        );
         Ok(())
     }
 

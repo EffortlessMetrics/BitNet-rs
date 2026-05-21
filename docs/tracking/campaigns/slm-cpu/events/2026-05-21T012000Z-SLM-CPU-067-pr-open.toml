@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T01:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-067"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+actor = "codex"
+pr = 109
+head_sha = "160a55e17b2d5277add199303fcd29a3e3fff594"
+branch = "codex/slm-cpu-067-exact-tensor-q8-runtime-hook"
+summary = "Opened the exact-tensor packed Q8_0 runtime hook candidate PR."
+notes = [
+  "PR #109 keeps eager F32 Candle as the default runtime path and requires explicit payload plus runtime env gates for blk.0.attn_q.weight before selecting the packed Q8_0 sidecar hook.",
+  "The hook is exact-tensor scoped to layers.0.attention.q_proj.weight and does not generalize packed Q8_0 execution to other dense tensors.",
+  "The artifact bundle records before/after strict Qwen3 Q8_0 warm-session receipts and an equivalence receipt preserving prompt IDs, generated IDs, decoded text, model SHA, tokenizer authority, selected CPU backend, and fallback_used=false.",
+  "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
