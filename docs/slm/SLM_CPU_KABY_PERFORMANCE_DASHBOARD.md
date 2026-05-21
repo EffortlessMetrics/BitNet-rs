@@ -940,6 +940,14 @@ authority, selected CPU backend/kernel, model SHA, hook identity, and
 or inconclusive. This gate still does not enable packed Q8_0 by default or claim
 sustained throughput.
 
+SLM-CPU-071 merged the gate definition, not the actual before/after artifact
+pack. No `qwen3-slm-cpu-071-*` warm-session receipts are committed under
+`ci/slm-cpu/intel-i5-8250u/2026-05-21/`. SLM-CPU-072 is therefore the real
+artifact-capture follow-up: it must either commit the before/after receipts and
+classification for the exact Qwen3 Q8_0 appliance profile, or record that the
+verified GGUF was unavailable in the execution environment. It must not treat
+the merged gate definition as timing evidence.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:
