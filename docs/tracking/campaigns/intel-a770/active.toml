@@ -424,7 +424,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-011"
-status = "in_progress"
+status = "merged"
+pr = 115
+head_sha = "20233b19da70772529135e750e8d90e8550351a8"
+merge_sha = "40b2ef2f857ab477fdbfd1f9aef33f368b2cfb7a"
 branch = "codex/intel-a770/A770-011-qk256-opencl-dispatch-candidate"
 stackable = false
 review_mode = "codex_premerge"
