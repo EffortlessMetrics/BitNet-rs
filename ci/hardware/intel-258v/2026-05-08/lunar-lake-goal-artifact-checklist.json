@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-21T09:59:35Z",
+  "created_utc": "2026-05-21T16:22:30Z",
   "machine_id": "intel-258v",
-  "source_revision": "eed08101b169a2fcc79c755e5be0dbc8f96b22a8",
+  "source_revision": "334daa4ada286cc1f8366676539009aaa734bef1",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
@@ -397,6 +397,22 @@
       ]
     },
     {
+      "id": "swarm_migration_inventory",
+      "status": "covered_no_claim_change",
+      "evidence": [
+        "docs/migrations/lunar-lake-from-bitnet-rs.md",
+        "ci/hardware/intel-258v/MIGRATION_MANIFEST.json",
+        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T160109Z-SWARM-LNL258V-MIGRATE-001-merged.toml",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/201",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/204"
+      ],
+      "notes": [
+        "SWARM-LNL258V-MIGRATE-001 records the BitNet-rs to bitnet-rs-swarm Lunar Lake handoff ledger and was closed out in the Intel 258V tracker.",
+        "The migration inventory names source cutoff anchors, moved artifacts, not-moved history, claim boundaries, and POWER-006 as the next blocked low_power evidence item.",
+        "This is state migration and tracker visibility only; it does not run inference, alter route policy, promote or demote any route, claim speedup or power advantage, prove native accelerator execution, or change BitNet QK256/I2_S behavior."
+      ]
+    },
+    {
       "id": "final_boring_support",
       "status": "not_complete",
       "evidence": [
@@ -418,7 +434,9 @@
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/122",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/123",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/121",
-        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/115"
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/115",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/201",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/204"
       ],
       "notes": [
         "The platform is well instrumented and profile-aware, but not yet excellent across all requested profiles.",
@@ -433,7 +451,8 @@
         "SLM-CPU-067/#122 is recorded only as adjacent SLM CPU tracker event cleanup on current swarm main; it does not change Lunar Lake route evidence or completion status.",
         "QWEN3 repeated-comparator plan #123 is recorded only as adjacent Qwen3 planning work on current swarm main; it does not change Lunar Lake route evidence or completion status.",
         "SLM-CPU-069/#121 is recorded only as adjacent SLM CPU packed-Q8 locality follow-up planning on current swarm main; it does not change Lunar Lake route evidence or completion status.",
-        "A770-011/#115 plus A770-011 closeout #143 are recorded only as adjacent selected-device inline-scaled QK256 OpenCL candidate evidence on current swarm main; they do not change Lunar Lake route evidence, semantic-intake freshness, route promotion, speedup, power advantage, native accelerator proof, full BitNet accelerator inference, packed QK256 accelerator decode, or completion status."
+        "A770-011/#115 plus A770-011 closeout #143 are recorded only as adjacent selected-device inline-scaled QK256 OpenCL candidate evidence on current swarm main; they do not change Lunar Lake route evidence, semantic-intake freshness, route promotion, speedup, power advantage, native accelerator proof, full BitNet accelerator inference, packed QK256 accelerator decode, or completion status.",
+        "SWARM-LNL258V-MIGRATE-001/#201 plus closeout #204 are recorded as migration inventory and tracker closeout only; they do not change Lunar Lake route evidence, route promotion, command behavior, speedup, power advantage, native accelerator proof, dense-SLM-as-BitNet-proof status, BitNet QK256/I2_S behavior, or completion status."
       ]
     }
   ],

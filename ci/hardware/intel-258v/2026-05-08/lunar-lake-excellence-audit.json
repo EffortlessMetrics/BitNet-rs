@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-21T09:59:35Z",
+  "created_utc": "2026-05-21T16:22:30Z",
   "machine_id": "intel-258v",
-  "source_revision": "eed08101b169a2fcc79c755e5be0dbc8f96b22a8",
+  "source_revision": "334daa4ada286cc1f8366676539009aaa734bef1",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
   "excellent_support_ready": false,
@@ -85,7 +85,7 @@
     "last_bitnet_cpu_reference_surface_merge_sha": "5fb87bbb38a8e27a7b2847c59e0f6be496f3d3c2",
     "last_bitnet_cpu_reference_surface_closeout_pr": 6107,
     "last_bitnet_cpu_reference_surface_closeout_merge_sha": "72d86a72e7deaf8cdeed6a620f79dddf48ca5dd6",
-    "audit_refresh_scope": "no_inference_post_a770011_qk256_opencl_candidate_closeout",
+    "previous_audit_refresh_scope": "no_inference_post_a770011_qk256_opencl_candidate_closeout",
     "last_merged_low_power_battery_plan_item": "LNL258V-POWER-010",
     "last_merged_low_power_battery_plan_pr": 116,
     "last_merged_low_power_battery_plan_merge_sha": "456b15f78231e78baafd61acc9c622f8b784c5cf",
@@ -104,7 +104,13 @@
     "last_swarm_qwen3_repeated_comparator_plan_pr": 123,
     "last_swarm_qwen3_repeated_comparator_plan_merge_sha": "2dc3cfad7dd0a50d647f25146fe947170c4e5ddf",
     "last_swarm_slm_cpu_q8_locality_plan_pr": 121,
-    "last_swarm_slm_cpu_q8_locality_plan_merge_sha": "99f5fc47d0aed614ca0fd15a93379ed0995e4610"
+    "last_swarm_slm_cpu_q8_locality_plan_merge_sha": "99f5fc47d0aed614ca0fd15a93379ed0995e4610",
+    "last_swarm_lunar_lake_migration_inventory_item": "SWARM-LNL258V-MIGRATE-001",
+    "last_swarm_lunar_lake_migration_inventory_pr": 201,
+    "last_swarm_lunar_lake_migration_inventory_merge_sha": "58c697a285eca8c67cdc3c063054e45be314eb80",
+    "last_swarm_lunar_lake_migration_inventory_closeout_pr": 204,
+    "last_swarm_lunar_lake_migration_inventory_closeout_merge_sha": "334daa4ada286cc1f8366676539009aaa734bef1",
+    "audit_refresh_scope": "no_inference_post_swarm_migration_inventory_closeout"
   },
   "command_surface": {
     "ask": {
@@ -548,7 +554,12 @@
     "swarm_apple_m4_serve_failure_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/112",
     "swarm_slm_cpu_event_trim_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/122",
     "swarm_qwen3_repeated_comparator_plan_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/123",
-    "swarm_slm_cpu_q8_locality_plan_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/121"
+    "swarm_slm_cpu_q8_locality_plan_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/121",
+    "swarm_lunar_lake_migration_manifest": "ci/hardware/intel-258v/MIGRATION_MANIFEST.json",
+    "swarm_lunar_lake_migration_doc": "docs/migrations/lunar-lake-from-bitnet-rs.md",
+    "swarm_lunar_lake_migration_inventory_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/201",
+    "swarm_lunar_lake_migration_inventory_closeout_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/204",
+    "swarm_lunar_lake_migration_inventory_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T160109Z-SWARM-LNL258V-MIGRATE-001-merged.toml"
   },
   "claim_boundary": {
     "new_inference_run": false,
@@ -561,6 +572,6 @@
     "measured_temperature_claim": false,
     "full_bitnet_accelerator_inference_claim": false,
     "bitnet_qk256_i2s_behavior_change": false,
-    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, Arc/NPU bounded proof surface flags, BitNet CPU reference surface flags, BitNet semantic-intake, BITNET-INTAKE-005/#159 and closeout #179, POWER-007/POWER-008 runbook discoverability, OP-014 low_power blocked-ask guidance, VALIDATE-003 blocked-ask readiness indexing, POWER-009/#6097 power-profile runbook guidance, POWER-009 closeout #6099, REG-012/#6102, REG-012 closeout #6103, REG-013/#6106, REG-013 closeout #6107, A770-006/#6110, A770-006 closeout #6112, swarm history import #104, model-cache fix #100, Qwen3 support-bundle lock #99, and tracker evidence, POWER-010/#116 low_power battery-plan receipt, POWER-010 closeout #117, SLM-CPU-067/#109 adjacent sidecar runtime-support main update without Lunar Lake route-evidence change, and A770-011/#115 plus A770-011 closeout #143 adjacent selected-device inline-scaled QK256 OpenCL candidate evidence without Lunar Lake route-evidence, semantic-intake, or BitNet behavior change"
+    "new_inference_scope": "no new inference; audit refresh from committed readiness, appliance ask receipts, route-policy, route/model identity, power, regression, comparison, Arc/NPU bounded proof surface flags, BitNet CPU reference surface flags, BitNet semantic-intake, BITNET-INTAKE-005/#159 and closeout #179, POWER-007/POWER-008 runbook discoverability, OP-014 low_power blocked-ask guidance, VALIDATE-003 blocked-ask readiness indexing, POWER-009/#6097 power-profile runbook guidance, POWER-009 closeout #6099, REG-012/#6102, REG-012 closeout #6103, REG-013/#6106, REG-013 closeout #6107, A770-006/#6110, A770-006 closeout #6112, swarm history import #104, model-cache fix #100, Qwen3 support-bundle lock #99, and tracker evidence, POWER-010/#116 low_power battery-plan receipt, POWER-010 closeout #117, SLM-CPU-067/#109 adjacent sidecar runtime-support main update without Lunar Lake route-evidence change, A770-011/#115 plus A770-011 closeout #143 adjacent selected-device inline-scaled QK256 OpenCL candidate evidence without Lunar Lake route-evidence, semantic-intake, or BitNet behavior change, and SWARM-LNL258V-MIGRATE-001/#201 plus closeout #204 migration inventory tracking without route-policy, evidence, command, or claim changes"
   }
 }

@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T16:28:05Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-019"
+previous_status = "in_progress"
+new_status = "in_progress"
+pr = 206
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-019-post-migration"
+actor = "codex"
+summary = "Opened PR #206 for the no-inference Lunar Lake post-migration audit refresh."
+
+notes = [
+  "The PR refreshes the excellence audit and goal artifact checklist after SWARM-LNL258V-MIGRATE-001/#201 and closeout #204.",
+  "The refresh records migration inventory state only and keeps POWER-006 blocked on real battery-mode low_power evidence.",
+  "The PR preserves no inference, model load, fallback, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, dense-SLM-as-BitNet-proof, broad quality, or BitNet QK256/I2_S behavior-change claims.",
+]
