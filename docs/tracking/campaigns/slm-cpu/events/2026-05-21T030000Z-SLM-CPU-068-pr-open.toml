@@ -6,6 +6,7 @@ previous_status = "ready"
 new_status = "pr_open"
 actor = "codex"
 pr = 120
+head_sha = "95919954f6d403d9fae9f416bf960977e84c47fe"
 branch = "codex/slm-cpu-068-exact-hook-timing-classification"
 summary = "Opened the exact-tensor runtime hook timing classification PR."
 notes = [

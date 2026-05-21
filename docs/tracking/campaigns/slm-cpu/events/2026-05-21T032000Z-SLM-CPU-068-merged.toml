@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T03:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-068"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 120
+head_sha = "95919954f6d403d9fae9f416bf960977e84c47fe"
+merge_sha = "287ef74a8e8345cb26429bddd191cb712467c45d"
+branch = "codex/slm-cpu-068-exact-hook-timing-classification"
+summary = "Merged the exact-tensor packed Q8_0 timing classification."
+notes = [
+  "The SLM-CPU-068 artifact records behavior equivalence for the exact-tensor opt-in packed Q8_0 sidecar path.",
+  "The bounded two-prompt 4-thread i5-8250U timing classification is regressed_on_bounded_two_prompt_artifact.",
+  "The default runtime remains eager F32 Candle and no speedup, sustained throughput, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
