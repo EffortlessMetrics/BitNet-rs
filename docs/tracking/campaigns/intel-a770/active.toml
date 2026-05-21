@@ -679,9 +679,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-016"
-status = "pr_open"
+status = "merged"
 pr = 220
-head_sha = "9ce655dfca62cc6aa37a7ad359df6ed0cc7e765c"
+head_sha = "c7d527692a0c754f50f6a097244ea0501d2039f9"
+merge_sha = "8f7a8774c4fc9825f9cb4421eb3f28446537ad70"
 branch = "codex/intel-a770/A770-016-answer-corpus-proof-route"
 stackable = false
 review_mode = "codex_premerge"

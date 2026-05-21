@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T20:14:49Z"
+campaign = "intel-a770"
+item = "A770-016"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex-a770"
+pr = 220
+branch = "codex/intel-a770/A770-016-answer-corpus-proof-route"
+head_sha = "c7d527692a0c754f50f6a097244ea0501d2039f9"
+merge_sha = "8f7a8774c4fc9825f9cb4421eb3f28446537ad70"
+summary = "Merged PR #220 with the A770 answer-corpus proof-route binding."
+notes = [
+  "A770 answer-corpus child invocations now declare the official BitNet 2B I2_S model contract and diagnostic QK256 route metadata.",
+  "The receipt checks reject missing A770 model-contract or QK256 route declarations while keeping the route diagnostic-only.",
+  "No live A770 answer-corpus execution, BitNet inference, answer quality, residency, speed, full-inference, or trusted-partial acceleration claim is promoted.",
+]
