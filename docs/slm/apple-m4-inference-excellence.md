@@ -1427,6 +1427,19 @@ the exact evidence item and receipt family required for that state; disabled
 BitNet rows name the required chat or serve gate; unsupported backend rows stay
 unsupported until a separate full-route receipt exists.
 
+`M4-EVIDENCE-REPLAY-001` adds replayable evidence bundle manifests for auditing
+committed dense SLM and BitNet refreshes. The first bundle is
+`ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json`.
+It records exact model-free replay/audit commands, git and binary identity,
+dense SLM and BitNet model/tokenizer identity, receipt inputs, dashboard
+outputs, expected advisory regression result, and claim boundaries. Operators
+audit it with `bitnet mac evidence replay --bundle <manifest.json> --dry-run
+--json`; the dry-run checks the committed manifest and referenced receipts only.
+It does not execute live inference, download models, validate uncommitted
+artifacts, enable disabled BitNet routes, or create Metal, QK256, Neural Engine,
+MPSGraph, MacBook, broad quality, broad performance, speedup, or broad Apple
+Silicon claims.
+
 ## Release Gates
 
 Before the public M4 expectation envelope changes, a go/no-go matrix should say

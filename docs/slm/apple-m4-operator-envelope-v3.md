@@ -21,6 +21,7 @@ The durable envelope is based on these committed evidence surfaces:
 | BitNet benchmark refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json` | Accepted BitNet one-shot benchmark profile | comparable matching history exists |
 | BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | comparable matching history exists |
 | Report dashboard | `target/apple-m4-inference-excellence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | refreshed by `M4-EXCELLENCE-003`; five families, 18 reports, and nine comparable groups |
+| Evidence replay bundle | `ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json` | Exact audit commands, git/binary identity, model/tokenizer identity, receipt inputs, dashboard outputs, expected advisory regression result, and claim boundary | dry-run audit only; no live model run |
 
 `M4-BENCH-002` validates the dense SLM benchmark surface above with
 `target/release/bitnet mac receipts-check ... --json` for all three supported
@@ -180,6 +181,10 @@ bitnet mac status
 bitnet mac evidence \
   --json-out target/apple-m4-inference-excellence/evidence-summary.json \
   --json
+bitnet mac evidence replay \
+  --bundle ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
+  --dry-run \
+  --json
 bitnet mac report-refresh \
   --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json \
   --explain \
@@ -193,12 +198,20 @@ bitnet mac regression-dashboard \
   --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/regression-dashboard.json --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/evidence-summary.json --json
+bitnet mac receipts-check \
+  ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
+  --json
 ```
 
 The `--explain` and `--open-targets` flags are operator affordances only. They
 print status meanings, per-family or per-group reasons, and openable receipt,
 Markdown, latest-report, and baseline-report targets without launching live
 inference or downloading models.
+
+The evidence replay dry-run is also model-free. It checks only the committed
+bundle manifest and referenced receipt/dashboard paths, records a dry-run audit
+receipt, and leaves live dense SLM or BitNet refresh execution in the scheduled
+M4 lane.
 
 The detailed CI and artifact-retention contract is
 `docs/slm/apple-m4-evidence-ci-lanes.md`. Generic PR Tier 0 stays model-free;

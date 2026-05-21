@@ -2816,9 +2816,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ROUTE-MATRIX-001"
-status = "in_progress"
+status = "merged"
 pr = 196
-head_sha = "7d0f939ccc83a43968e8b3bc856f4aa3226a5571"
+merge_sha = "d86c3d1933a9a53e578f7bf19123878708bbead3"
 branch = "codex/apple-m4-inference-excellence/M4-ROUTE-MATRIX-001-route-states"
 stackable = false
 review_mode = "codex_premerge"
@@ -2895,7 +2895,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EVIDENCE-REPLAY-001"
-status = "proposed"
+status = "pr_open"
+pr = 200
+head_sha = "a1edc85a8a1edf2589debc2e9f45d5cc476a0a4e"
 branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
 stackable = false
 review_mode = "codex_premerge"

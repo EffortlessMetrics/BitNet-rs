@@ -1,0 +1,168 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "apple_m4_evidence_replay_bundle",
+  "bundle_id": "apple-m4-evidence-replay-2026-05-21T145609Z",
+  "created_at": "2026-05-21T14:56:09Z",
+  "operator_command": "mac evidence replay",
+  "work_item": "M4-EVIDENCE-REPLAY-001",
+  "campaign": "apple-m4-inference-excellence",
+  "evidence_family": "dense_slm_and_bitnet",
+  "requested_backend": "apple-m4-cpu-neon",
+  "selected_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "fallback_used": false,
+  "machine": {
+    "id": "apple-m4-mac-mini",
+    "scope": "committed evidence replay bundle manifest"
+  },
+  "git_identity": {
+    "repository": "EffortlessMetrics/bitnet-rs-swarm",
+    "branch": "main",
+    "commit": "d86c3d1933a9a53e578f7bf19123878708bbead3",
+    "dirty_tree_expected": false
+  },
+  "binary_identity": {
+    "command": "bitnet mac evidence replay --bundle ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json --dry-run --json",
+    "package": "bitnet-cli",
+    "profile": "release-or-current-source",
+    "lockfile": "Cargo.lock",
+    "dry_run_only": true
+  },
+  "model_identity": [
+    {
+      "evidence_family": "dense_slm",
+      "model_id": "qwen2.5-0.5b-instruct-q8_0",
+      "source_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+      "model": {
+        "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+        "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+        "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+        "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+        "family": "qwen",
+        "architecture": "qwen2",
+        "quantization": "Q8_0"
+      },
+      "tokenizer": {
+        "source": "gguf_metadata",
+        "authority": "gguf_metadata",
+        "pretokenizer_authority": "qwen2",
+        "strict": true
+      }
+    },
+    {
+      "evidence_family": "bitnet",
+      "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+      "source_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T0133Z/bitnet-eval-250-repaired/answer-corpus.json",
+      "model": {
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "file": "ggml-model-i2_s.gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "family": "bitnet",
+        "architecture": "bitnet_b1_58",
+        "quantization": "I2_S"
+      },
+      "tokenizer": {
+        "source": "explicit",
+        "authority": "llama-bpe",
+        "pretokenizer_authority": "llama-bpe",
+        "strict": true
+      }
+    }
+  ],
+  "receipt_inputs": [
+    {
+      "id": "dense_slm_eval_summary",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+      "artifact_kind": "apple_m4_slm_eval_summary",
+      "purpose": "Dense SLM model, tokenizer, backend, prompt-count, quality, and fallback identity."
+    },
+    {
+      "id": "dense_slm_task_family_pass_rates",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/task-family-pass-rates.json",
+      "artifact_kind": "apple_m4_slm_eval_task_family_pass_rates",
+      "purpose": "Dense SLM campaign-level task-family summary for auditing the refresh result."
+    },
+    {
+      "id": "bitnet_answer_corpus",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-20T0133Z/bitnet-eval-250-repaired/answer-corpus.json",
+      "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+      "purpose": "BitNet local-answer corpus receipt with model, tokenizer, backend, and fallback identity."
+    }
+  ],
+  "dashboard_outputs": [
+    {
+      "id": "regression_dashboard",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/regression-dashboard/regression-dashboard.json",
+      "artifact_kind": "apple_m4_regression_dashboard",
+      "purpose": "Committed dashboard output that records comparable groups and advisory regression status."
+    },
+    {
+      "id": "report_refresh_manifest",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/report-refresh/report-refresh-manifest.json",
+      "artifact_kind": "apple_m4_report_refresh_manifest",
+      "purpose": "Committed report inventory manifest for the evidence families covered by this replay bundle."
+    }
+  ],
+  "expected_regression": {
+    "result": "advisory_ready",
+    "dashboard": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/regression-dashboard/regression-dashboard.json",
+    "accepted_group_statuses": [
+      "ready",
+      "insufficient_history"
+    ],
+    "fail_on_drift": false,
+    "claim_boundary": "Regression output is advisory evidence for committed receipts only and does not claim speedup or broad quality."
+  },
+  "replay_commands": [
+    {
+      "id": "dry_run_bundle_audit",
+      "command": "bitnet mac evidence replay --bundle ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json --dry-run --json",
+      "executes_live_model": false,
+      "purpose": "Validate the committed manifest and referenced receipts without executing model inference."
+    },
+    {
+      "id": "receipt_check_bundle",
+      "command": "bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json --json",
+      "executes_live_model": false,
+      "purpose": "Run the Mac receipt contract against the replay bundle manifest."
+    },
+    {
+      "id": "campaign_check",
+      "command": "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+      "executes_live_model": false,
+      "purpose": "Verify campaign tracker consistency after adding the replay bundle."
+    },
+    {
+      "id": "campaign_generate_check",
+      "command": "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+      "executes_live_model": false,
+      "purpose": "Verify generated campaign dashboards are current."
+    },
+    {
+      "id": "diff_check",
+      "command": "git diff --check",
+      "executes_live_model": false,
+      "purpose": "Verify whitespace hygiene for the replay bundle change."
+    }
+  ],
+  "claim_boundary": {
+    "replay_bundle_only": true,
+    "dry_run_only": true,
+    "commands_executed": false,
+    "no_live_model_run": true,
+    "no_model_download": true,
+    "validates_committed_manifest_and_inputs_only": true,
+    "dense_slm_and_bitnet_evidence_separated": true,
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "macbook_evidence": false,
+    "broad_apple_silicon_claim": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "speedup_claim": false
+  }
+}

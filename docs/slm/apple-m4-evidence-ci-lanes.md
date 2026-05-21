@@ -10,7 +10,7 @@ The lane split is deliberately conservative:
 | Lane | Trigger | Required checks | Live M4 model run | Blocking behavior |
 |---|---|---|---|---|
 | Generic PR Tier 0 | Pull requests that touch M4 docs, corpus files, committed summaries, workflows, or tracker state | Parser tests, scorer tests, dry-run corpus shape, committed receipt schema checks, self-baseline regression checks, generated dashboard checks, diff hygiene | no | Blocks only on model-free contract failures |
-| Advisory local | After syncing `main`, changing model cache state, changing receipt schemas, or changing M4 CLI/operator code | `bitnet mac models`, `bitnet mac status`, `bitnet mac evidence`, `bitnet mac report-refresh`, `bitnet mac regression-dashboard`, targeted `bitnet mac receipts-check` | no by default | Advisory; publish only when a tracker item asks for evidence |
+| Advisory local | After syncing `main`, changing model cache state, changing receipt schemas, or changing M4 CLI/operator code | `bitnet mac models`, `bitnet mac status`, `bitnet mac evidence`, `bitnet mac evidence replay --dry-run`, `bitnet mac report-refresh`, `bitnet mac regression-dashboard`, targeted `bitnet mac receipts-check` | no by default | Advisory; publish only when a tracker item asks for evidence |
 | Scheduled M4 refresh | Nightly or weekly on the M4 Mac mini when disk/cache preflight passes | Dense SLM eval/benchmark, BitNet eval/benchmark, BitNet variable warm, report-refresh, regression-dashboard, receipt validation | yes | Non-blocking for generic PRs; failures open repair work or block later claims |
 | Release gate | Before publishing a new M4 expectation envelope or promoting a route class | Full supported dense matrix, accepted BitNet artifact/tokenizer eval and benchmark, warm-session receipts, service conformance, dashboard refresh, operator docs | yes | Blocks the release claim when quality, timeout, fallback, identity, or required receipt validation fails |
 
@@ -40,6 +40,7 @@ Retain source evidence separately from generated summaries:
 | Committed source receipts | `ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json` | Keep at least the current report and previous matching baseline for every current dense SLM and accepted BitNet identity |
 | Required child receipts | `ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250-repaired/answer-corpus-runs/*.json` | Commit only when needed for receipt validation, generated text or token-ID audit, or failure taxonomy |
 | Generated dashboards | `target/apple-m4-inference-excellence/regression-dashboard.json` | Regenerate from committed receipts; do not treat as source evidence unless a tracker item explicitly asks to commit it |
+| Replay bundle manifests | `ci/hardware/apple-m4-mac-mini/<date>/evidence-replay/manifest.json` | Commit when a tracker item asks for replay/audit coverage; validate with `bitnet mac evidence replay --dry-run` and `bitnet mac receipts-check` |
 | Generic PR Tier 0 artifacts | `target/apple-m4-slm-eval-tier0/**`, `target/apple-m4-inference-ops-tier0/**` | Upload as short-lived CI artifacts for debugging; they are not evidence refreshes |
 | Scheduled or manual hardware artifacts | `target/apple-m4-dense-slm-regression/<run-id>/**` | Upload with the workflow retention setting and commit only the accepted receipt bundle requested by the tracker |
 
@@ -56,6 +57,10 @@ bitnet mac models
 bitnet mac status
 bitnet mac evidence \
   --json-out target/apple-m4-inference-excellence/evidence-summary.json \
+  --json
+bitnet mac evidence replay \
+  --bundle ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
+  --dry-run \
   --json
 bitnet mac report-refresh \
   --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json \

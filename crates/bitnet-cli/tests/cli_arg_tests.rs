@@ -1185,6 +1185,70 @@ fn assert_route_matrix_live_states_have_receipts(
 }
 
 #[test]
+fn mac_evidence_replay_dry_run_audits_bundle_manifest() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let bundle = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json",
+    );
+    let receipt = dir.path().join("evidence-replay-dry-run.json");
+    let bundle_str = bundle.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "evidence",
+            "replay",
+            "--bundle",
+            bundle_str.as_str(),
+            "--dry-run",
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_evidence_replay_dry_run"))
+        .stdout(predicate::str::contains("commands_executed"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_evidence_replay_dry_run");
+    assert_eq!(receipt_json["operator_command"], "mac evidence replay --dry-run");
+    assert_eq!(receipt_json["bundle"]["work_item"], "M4-EVIDENCE-REPLAY-001");
+    assert_eq!(receipt_json["validation"]["bundle_valid"], true);
+    assert_eq!(receipt_json["validation"]["commands_executed"], false);
+    assert_eq!(receipt_json["validation"]["missing_input_count"], 0);
+    assert_eq!(receipt_json["validation"]["artifact_mismatch_count"], 0);
+    assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
+    assert_eq!(receipt_json["claim_boundary"]["dry_run_only"], true);
+    assert!(receipt_json["model_identity"].as_array().is_some_and(|models| {
+        models.iter().any(|model| model["evidence_family"] == "dense_slm")
+            && models.iter().any(|model| model["evidence_family"] == "bitnet")
+    }));
+    assert!(receipt_json["replay_commands"].as_array().is_some_and(|commands| {
+        commands.iter().any(|command| {
+            command["command"]
+                .as_str()
+                .is_some_and(|text| text.contains("bitnet mac evidence replay"))
+                && command["executes_live_model"] == false
+        })
+    }));
+
+    bitnet()
+        .args(["mac", "receipts-check", bundle_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_evidence_replay_bundle"));
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_evidence_replay_dry_run"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
 fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");

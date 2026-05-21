@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T15:22:19Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EVIDENCE-REPLAY-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 200
+head_sha = "a1edc85a8a1edf2589debc2e9f45d5cc476a0a4e"
+branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
+
+notes = [
+  "Opened draft PR #200 for the M4 evidence replay bundle audit path.",
+  "The PR adds `bitnet mac evidence replay --bundle <manifest.json> --dry-run --json`, validates `apple_m4_evidence_replay_bundle` and `apple_m4_evidence_replay_dry_run` receipts, and commits the first dense SLM plus BitNet replay bundle manifest.",
+  "The replay path is model-free and checks committed manifests and receipt/dashboard paths only; it does not run live inference, download models, validate uncommitted artifacts, enable BitNet chat or serve, or claim full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon support.",
+]

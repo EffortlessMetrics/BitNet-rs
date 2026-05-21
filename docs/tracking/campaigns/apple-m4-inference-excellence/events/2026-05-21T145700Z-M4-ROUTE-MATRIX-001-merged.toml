@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T14:57:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ROUTE-MATRIX-001"
+event = "merged"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "merged"
+pr = 196
+head_sha = "885183df7713a1c7c95b0c485355ab61f8d28682"
+merge_sha = "d86c3d1933a9a53e578f7bf19123878708bbead3"
+branch = "codex/apple-m4-inference-excellence/M4-ROUTE-MATRIX-001-route-states"
+
+notes = [
+  "Closed M4-ROUTE-MATRIX-001 after PR #196 merged the model-free route-state matrix into main.",
+  "The merged status/evidence receipts expose dense SLM and BitNet route states while preserving disabled BitNet chat and serve gates.",
+  "Closeout records the tracker state transition; it does not add fresh runtime proof, enable disabled routes, or claim full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon support.",
+]

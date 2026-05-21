@@ -58,6 +58,41 @@ Validate the receipt with:
 bitnet mac receipts-check target/apple-m4-inference-ops/mac-status.json --json
 ```
 
+## Evidence Replay Bundles
+
+`M4-EVIDENCE-REPLAY-001` adds a model-free dry-run replay/audit command:
+
+```bash
+bitnet mac evidence replay \
+  --bundle ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
+  --dry-run \
+  --json
+```
+
+The committed manifest uses artifact kind `apple_m4_evidence_replay_bundle`.
+It lists exact audit commands, git and binary identity, dense SLM and BitNet
+model/tokenizer identity, receipt inputs, dashboard outputs, the expected
+advisory regression result, and the claim boundary. The dry-run command writes
+an `apple_m4_evidence_replay_dry_run` receipt to
+`target/apple-m4-inference-ops/evidence-replay-dry-run.json` by default.
+
+The replay dry-run validates only the committed manifest and referenced receipt
+paths. It does not execute replay commands, run live inference, download
+models, validate uncommitted artifacts, enable BitNet chat or serve, or make
+Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad
+performance, speedup, or broad Apple Silicon claims.
+
+Validate the bundle and dry-run receipt with:
+
+```bash
+bitnet mac receipts-check \
+  ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
+  --json
+bitnet mac receipts-check \
+  target/apple-m4-inference-ops/evidence-replay-dry-run.json \
+  --json
+```
+
 ## Report Refresh Manifest
 
 `M4-INF-OPS-002` adds a model-free manifest command:
