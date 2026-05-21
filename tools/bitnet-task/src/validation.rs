@@ -1,5 +1,7 @@
 use super::*;
 
+mod envlock;
+
 pub(crate) fn cmd_check_ignore_annotations(root: &Path) -> Result<()> {
     let script = root.join("scripts/lib/ignore_check.sh");
     if !script.exists() {
@@ -19,42 +21,7 @@ pub(crate) fn cmd_check_ignore_annotations(root: &Path) -> Result<()> {
 }
 
 pub(crate) fn cmd_check_envlock(root: &Path) -> Result<()> {
-    let allowed = [
-        "tests/common/env.rs",
-        "tests/static_initialization_tests.rs",
-        "tests/support/env_guard.rs",
-    ];
-    let mut violations = Vec::new();
-    for path in collect_rust_files(root.join("tests"))? {
-        if allowed.iter().any(|allowed| path.ends_with(allowed)) {
-            continue;
-        }
-        let rel = path.strip_prefix(root).unwrap_or(&path);
-        let content = fs::read_to_string(&path)
-            .with_context(|| format!("failed to read {}", rel.display()))?;
-        for (line_no, line) in content.lines().enumerate() {
-            let code = line.split("//").next().unwrap_or("").trim();
-            if code.is_empty() {
-                continue;
-            }
-            let compact = code.chars().filter(|c| !c.is_whitespace()).collect::<String>();
-            if compact.contains("OnceLock<Mutex<()>>") {
-                violations.push(format!("{}:{}", path.display(), line_no + 1));
-                break;
-            }
-        }
-    }
-
-    if !violations.is_empty() {
-        println!("❌ Found duplicate env lock definitions; use common::env_guard()");
-        for violation in violations {
-            println!("{violation}");
-        }
-        bail!("duplicate env lock definitions found");
-    }
-
-    println!("✅ No duplicate env locks found");
-    Ok(())
+    envlock::run(root)
 }
 
 pub(crate) fn cmd_check_patch_policy(root: &Path, strict: bool, create_issue: bool) -> Result<()> {
