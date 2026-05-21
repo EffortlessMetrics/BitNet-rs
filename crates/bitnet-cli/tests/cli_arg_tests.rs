@@ -1157,6 +1157,96 @@ fn mac_evidence_writes_operator_summary() -> Result<(), Box<dyn std::error::Erro
     Ok(())
 }
 
+#[test]
+fn mac_workload_writes_operator_suite_manifest() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
+    let receipt = dir.path().join("workload-summary.json");
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "workload",
+            "--suite",
+            "m4-operator",
+            "--root",
+            report_root_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_operator_workload_suite"))
+        .stdout(predicate::str::contains("m4-operator"))
+        .stdout(predicate::str::contains("route_state_summary"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_operator_workload_suite");
+    assert_eq!(receipt_json["operator_command"], "mac workload");
+    assert_eq!(receipt_json["suite"]["work_item"], "M4-WORKLOAD-001");
+    assert_eq!(receipt_json["suite"]["live_model_run"], false);
+    assert_eq!(receipt_json["suite"]["workflow_count"], 6);
+    assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
+    assert_eq!(receipt_json["claim_boundary"]["broad_model_quality_claim"], false);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_chat_enabled"], false);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_serve_enabled"], false);
+
+    let workflows =
+        receipt_json["workflow_cases"].as_array().ok_or("workflow_cases must be an array")?;
+    for required in ["summarize", "extract", "classify", "json", "rewrite", "table_qa"] {
+        assert!(
+            workflows.iter().any(|workflow| {
+                workflow["id"] == required
+                    && workflow["mechanical_checks"]
+                        .as_array()
+                        .is_some_and(|checks| !checks.is_empty())
+            }),
+            "missing workload workflow {required}"
+        );
+    }
+
+    let route_plan = receipt_json["route_plan"].as_array().ok_or("route_plan must be an array")?;
+    assert!(route_plan.iter().any(|entry| {
+        entry["model_family"] == "dense_slm"
+            && entry["command_surface"] == "serve"
+            && entry["route_enabled_for_suite"] == true
+            && entry["live_command"].as_str().is_some_and(|command| command.contains("serve-smoke"))
+    }));
+    assert!(route_plan.iter().any(|entry| {
+        entry["model_family"] == "bitnet"
+            && entry["command_surface"] == "warm_session"
+            && entry["route_enabled_for_suite"] == true
+            && entry["expected_artifact_kind"] == "bitnet_apple_m4_warm_session"
+    }));
+    assert!(route_plan.iter().any(|entry| {
+        entry["model_family"] == "bitnet"
+            && entry["command_surface"] == "chat"
+            && entry["requires_gate_receipt"] == true
+            && entry["route_enabled_for_suite"] == false
+    }));
+    assert!(route_plan.iter().any(|entry| {
+        entry["model_family"] == "bitnet"
+            && entry["command_surface"] == "serve"
+            && entry["requires_gate_receipt"] == true
+            && entry["route_enabled_for_suite"] == false
+    }));
+    assert_eq!(
+        receipt_json["route_state_matrix"]["claim_boundary"]["does_not_enable_routes"],
+        true
+    );
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_operator_workload_suite"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
 fn assert_route_matrix_live_states_have_receipts(
     rows: &[serde_json::Value],
 ) -> Result<(), Box<dyn std::error::Error>> {

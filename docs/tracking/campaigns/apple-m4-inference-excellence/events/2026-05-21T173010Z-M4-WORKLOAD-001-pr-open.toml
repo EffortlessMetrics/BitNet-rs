@@ -1,0 +1,18 @@
+timestamp = "2026-05-21T17:30:10Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-WORKLOAD-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-operator-suite"
+pr = 213
+head_sha = "f199820623b6f1e94c732881acbdf45a7b71b258"
+
+notes = [
+  "Opened draft PR #213 for the M4 operator workload suite.",
+  "The PR adds `bitnet mac workload --suite m4-operator`, receipt validation for `apple_m4_operator_workload_suite`, a focused CLI test, and a committed workload manifest at `ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json`.",
+  "The workload manifest covers summarize, extract, classify, JSON, rewrite, and table-QA workflows across dense SLM ask/chat/warm-session/serve route states and enabled BitNet ask/warm-session route states, while preserving disabled BitNet chat/serve boundaries.",
+  "Local verification passed for the focused CLI workload test, workload receipt generation, receipts-check, cargo fmt --check, campaign check, campaign generate --check, and git diff --check.",
+  "No live inference, model download, disabled BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

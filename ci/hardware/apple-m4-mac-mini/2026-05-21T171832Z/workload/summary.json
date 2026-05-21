@@ -1,0 +1,2651 @@
+{
+  "artifact_kind": "apple_m4_operator_workload_suite",
+  "claim_boundary": {
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "broad_apple_silicon_claim": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dense_slm_and_bitnet_evidence_separated": true,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence": false,
+    "mechanical_checks_are_workflow_gates_not_quality_judging": true,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "no_live_model_run": true,
+    "no_model_download": true,
+    "qk256_apple_claimed": false,
+    "route_state_boundaries_only": true,
+    "speedup_claim": false,
+    "workload_manifest_only": true
+  },
+  "commands": {
+    "bitnet_ask": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <gguf> --tokenizer <tokenizer.json> --question <prompt> --json-out <receipt.json>",
+    "bitnet_chat_gate": "bitnet mac bitnet-chat-gate --model-id microsoft-bitnet-b1.58-2B-4T-i2s --warm-receipt <warm.json> --failure-receipt <failure.json> --streaming-receipt <streaming.json>",
+    "bitnet_serve_gate": "bitnet mac bitnet-serve-gate --model-id microsoft-bitnet-b1.58-2B-4T-i2s --chat-receipt <chat.json> --streaming-receipt <streaming.json> --failure-receipt <failure.json> --serve-check-receipt <serve-check.json>",
+    "bitnet_warm": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <gguf> --tokenizer <tokenizer.json> --prompt <prompt> --prompt <repeat-prompt> --json-out <receipt.json>",
+    "dense_ask": "bitnet mac ask --question <prompt> --json-out <receipt.json>",
+    "dense_chat": "bitnet mac chat --prompt <prompt> --prompt <follow-up> --json-out <receipt.json>",
+    "dense_serve": "bitnet mac serve-smoke --prompt <prompt> --json-out <receipt.json>",
+    "dense_warm_session": "bitnet mac chat --prompt <prompt> --prompt <follow-up> --json-out <receipt.json>",
+    "receipts_check": "bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json --json",
+    "workload": "bitnet mac workload --suite m4-operator --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json"
+  },
+  "fallback_used": false,
+  "generated_at": "2026-05-21T17:27:07.257246+00:00",
+  "machine": {
+    "id": "apple-m4-mac-mini",
+    "scope": "model-free operator workload suite manifest"
+  },
+  "operator_command": "mac workload",
+  "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json",
+  "report_inventory": {
+    "bitnet_benchmark": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+    "bitnet_benchmark_variance": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json",
+    "bitnet_chat_gate": null,
+    "bitnet_eval": "ci/hardware/apple-m4-mac-mini/2026-05-20T0133Z/bitnet-eval-250-repaired/answer-corpus.json",
+    "bitnet_one_shot_failure": null,
+    "bitnet_serve_gate": null,
+    "bitnet_streaming_semantics": null,
+    "bitnet_variable_warm": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+    "dense_slm_benchmark_v2": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+    "dense_slm_benchmark_variance": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+    "dense_slm_chat_smoke": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+    "dense_slm_context_benchmark": "ci/hardware/apple-m4-mac-mini/2026-05-20T1611Z/context/benchmark.json",
+    "dense_slm_context_eval": "ci/hardware/apple-m4-mac-mini/2026-05-20T1611Z/context/answer-corpus.json",
+    "dense_slm_eval_v2": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+    "dense_slm_serve_smoke": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json",
+    "root": "ci/hardware/apple-m4-mac-mini",
+    "serve_failure_semantics": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json"
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "route_plan": [
+    {
+      "claim_boundary": "Supported dense Qwen M4 identities only; not BitNet evidence and not broad quality or performance proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_local_answer",
+      "expected_receipt_path": "{workload_dir}/summarize/dense_slm-ask.json",
+      "live_command": "bitnet mac ask --question 'Summarize this operator note in one sentence: The M4 appliance is offline, cache verified, and receipts must prove the route used.' --json-out {workload_dir}/summarize/dense_slm-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "offline",
+            "cache",
+            "receipts"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "cloud",
+            "remote api"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "item": "M4-ACCURACY-007",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_eval_v2"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2"
+        }
+      ],
+      "route_id": "dense_slm_ask_short",
+      "route_state": "enabled",
+      "task_family": "summarize",
+      "workflow_id": "summarize"
+    },
+    {
+      "claim_boundary": "Dense chat conformance only; does not prove BitNet chat, server behavior, or broad model quality.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/summarize/dense_slm-chat.json",
+      "live_command": "bitnet mac chat --prompt 'Summarize this operator note in one sentence: The M4 appliance is offline, cache verified, and receipts must prove the route used.' --prompt 'Rewrite the summary in ten words or fewer.' --json-out {workload_dir}/summarize/dense_slm-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "offline",
+            "cache",
+            "receipts"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "cloud",
+            "remote api"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        }
+      ],
+      "route_id": "dense_slm_chat_resident",
+      "route_state": "enabled",
+      "task_family": "summarize",
+      "workflow_id": "summarize"
+    },
+    {
+      "claim_boundary": "Resident dense session reuse only for supported Qwen identities; not a long soak or broad performance claim.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/summarize/dense_slm-warm_session.json",
+      "live_command": "bitnet mac chat --prompt 'Summarize this operator note in one sentence: The M4 appliance is offline, cache verified, and receipts must prove the route used.' --prompt 'Rewrite the summary in ten words or fewer.' --json-out {workload_dir}/summarize/dense_slm-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "offline",
+            "cache",
+            "receipts"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "cloud",
+            "remote api"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2 resident profiles"
+        }
+      ],
+      "route_id": "dense_slm_warm_session",
+      "route_state": "enabled",
+      "task_family": "summarize",
+      "workflow_id": "summarize"
+    },
+    {
+      "claim_boundary": "Local loopback appliance route only; not production hosting and not broad OpenAI compatibility.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+      "expected_receipt_path": "{workload_dir}/summarize/dense_slm-serve.json",
+      "live_command": "bitnet mac serve-smoke --prompt 'Summarize this operator note in one sentence: The M4 appliance is offline, cache verified, and receipts must prove the route used.' --json-out {workload_dir}/summarize/dense_slm-serve.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "offline",
+            "cache",
+            "receipts"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "cloud",
+            "remote api"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "advisory",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+          "item": "M4-SERVE-EX-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json",
+          "receipt_family": "dense_slm_serve_smoke"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+          "item": "M4-SERVE-EX-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json",
+          "receipt_family": "serve_failure_semantics"
+        }
+      ],
+      "route_id": "dense_slm_serve_loopback",
+      "route_state": "enabled",
+      "task_family": "summarize",
+      "workflow_id": "summarize"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer one-shot route only; not chat, serve, broad quality, or speed proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "strict_bitnet_cpu_profile",
+      "expected_receipt_path": "{workload_dir}/summarize/bitnet-ask.json",
+      "live_command": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --question 'Summarize this operator note in one sentence: The M4 appliance is offline, cache verified, and receipts must prove the route used.' --json-out {workload_dir}/summarize/bitnet-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "offline",
+            "cache",
+            "receipts"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "cloud",
+            "remote api"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "item": "M4-BITNET-EX-003",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+          "receipt_family": "bitnet_benchmark"
+        }
+      ],
+      "route_id": "bitnet_ask_one_shot",
+      "route_state": "batch_only",
+      "task_family": "summarize",
+      "workflow_id": "summarize"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer warm-session evidence only; chat and serve remain separate gated surfaces.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/summarize/bitnet-warm_session.json",
+      "live_command": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --prompt 'Summarize this operator note in one sentence: The M4 appliance is offline, cache verified, and receipts must prove the route used.' --prompt 'Summarize this operator note in one sentence: The M4 appliance is offline, cache verified, and receipts must prove the route used.' --json-out {workload_dir}/summarize/bitnet-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "offline",
+            "cache",
+            "receipts"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "cloud",
+            "remote api"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-EX-004",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-REG-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm_regression"
+        }
+      ],
+      "route_id": "bitnet_warm_session",
+      "route_state": "batch_only",
+      "task_family": "summarize",
+      "workflow_id": "summarize"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready chat gate; one-shot, warm, or dense receipts do not enable BitNet chat.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_chat_gate",
+      "expected_receipt_path": "{workload_dir}/summarize/bitnet-chat.json",
+      "live_command": "bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json> --prompt 'Summarize this operator note in one sentence: The M4 appliance is offline, cache verified, and receipts must prove the route used.' --json-out {workload_dir}/summarize/bitnet-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "offline",
+            "cache",
+            "receipts"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "cloud",
+            "remote api"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_chat_gate",
+        "item": "M4-BITNET-EX-006",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_chat_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_chat_gate_required",
+      "route_state": "disabled",
+      "task_family": "summarize",
+      "workflow_id": "summarize"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready serve gate; dense serve receipts do not enable BitNet serve.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_serve_gate",
+      "expected_receipt_path": "{workload_dir}/summarize/bitnet-serve.json",
+      "live_command": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "offline",
+            "cache",
+            "receipts"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "cloud",
+            "remote api"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_serve_gate",
+        "item": "M4-BITNET-EX-007",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_serve_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_serve_gate_required",
+      "route_state": "disabled",
+      "task_family": "summarize",
+      "workflow_id": "summarize"
+    },
+    {
+      "claim_boundary": "Supported dense Qwen M4 identities only; not BitNet evidence and not broad quality or performance proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_local_answer",
+      "expected_receipt_path": "{workload_dir}/extract/dense_slm-ask.json",
+      "live_command": "bitnet mac ask --question 'Extract the ticket id and owner from: Ticket M4-271 owner Ada priority high. Return key=value pairs.' --json-out {workload_dir}/extract/dense_slm-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "M4-271",
+            "Ada"
+          ]
+        },
+        {
+          "field": "owner",
+          "kind": "normalized_match",
+          "value": "ada"
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "item": "M4-ACCURACY-007",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_eval_v2"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2"
+        }
+      ],
+      "route_id": "dense_slm_ask_short",
+      "route_state": "enabled",
+      "task_family": "extract",
+      "workflow_id": "extract"
+    },
+    {
+      "claim_boundary": "Dense chat conformance only; does not prove BitNet chat, server behavior, or broad model quality.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/extract/dense_slm-chat.json",
+      "live_command": "bitnet mac chat --prompt 'Extract the ticket id and owner from: Ticket M4-271 owner Ada priority high. Return key=value pairs.' --prompt 'Return only the owner value from the same note.' --json-out {workload_dir}/extract/dense_slm-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "M4-271",
+            "Ada"
+          ]
+        },
+        {
+          "field": "owner",
+          "kind": "normalized_match",
+          "value": "ada"
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        }
+      ],
+      "route_id": "dense_slm_chat_resident",
+      "route_state": "enabled",
+      "task_family": "extract",
+      "workflow_id": "extract"
+    },
+    {
+      "claim_boundary": "Resident dense session reuse only for supported Qwen identities; not a long soak or broad performance claim.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/extract/dense_slm-warm_session.json",
+      "live_command": "bitnet mac chat --prompt 'Extract the ticket id and owner from: Ticket M4-271 owner Ada priority high. Return key=value pairs.' --prompt 'Return only the owner value from the same note.' --json-out {workload_dir}/extract/dense_slm-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "M4-271",
+            "Ada"
+          ]
+        },
+        {
+          "field": "owner",
+          "kind": "normalized_match",
+          "value": "ada"
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2 resident profiles"
+        }
+      ],
+      "route_id": "dense_slm_warm_session",
+      "route_state": "enabled",
+      "task_family": "extract",
+      "workflow_id": "extract"
+    },
+    {
+      "claim_boundary": "Local loopback appliance route only; not production hosting and not broad OpenAI compatibility.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+      "expected_receipt_path": "{workload_dir}/extract/dense_slm-serve.json",
+      "live_command": "bitnet mac serve-smoke --prompt 'Extract the ticket id and owner from: Ticket M4-271 owner Ada priority high. Return key=value pairs.' --json-out {workload_dir}/extract/dense_slm-serve.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "M4-271",
+            "Ada"
+          ]
+        },
+        {
+          "field": "owner",
+          "kind": "normalized_match",
+          "value": "ada"
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "advisory",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+          "item": "M4-SERVE-EX-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json",
+          "receipt_family": "dense_slm_serve_smoke"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+          "item": "M4-SERVE-EX-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json",
+          "receipt_family": "serve_failure_semantics"
+        }
+      ],
+      "route_id": "dense_slm_serve_loopback",
+      "route_state": "enabled",
+      "task_family": "extract",
+      "workflow_id": "extract"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer one-shot route only; not chat, serve, broad quality, or speed proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "strict_bitnet_cpu_profile",
+      "expected_receipt_path": "{workload_dir}/extract/bitnet-ask.json",
+      "live_command": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --question 'Extract the ticket id and owner from: Ticket M4-271 owner Ada priority high. Return key=value pairs.' --json-out {workload_dir}/extract/bitnet-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "M4-271",
+            "Ada"
+          ]
+        },
+        {
+          "field": "owner",
+          "kind": "normalized_match",
+          "value": "ada"
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "item": "M4-BITNET-EX-003",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+          "receipt_family": "bitnet_benchmark"
+        }
+      ],
+      "route_id": "bitnet_ask_one_shot",
+      "route_state": "batch_only",
+      "task_family": "extract",
+      "workflow_id": "extract"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer warm-session evidence only; chat and serve remain separate gated surfaces.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/extract/bitnet-warm_session.json",
+      "live_command": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --prompt 'Extract the ticket id and owner from: Ticket M4-271 owner Ada priority high. Return key=value pairs.' --prompt 'Extract the ticket id and owner from: Ticket M4-271 owner Ada priority high. Return key=value pairs.' --json-out {workload_dir}/extract/bitnet-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "M4-271",
+            "Ada"
+          ]
+        },
+        {
+          "field": "owner",
+          "kind": "normalized_match",
+          "value": "ada"
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-EX-004",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-REG-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm_regression"
+        }
+      ],
+      "route_id": "bitnet_warm_session",
+      "route_state": "batch_only",
+      "task_family": "extract",
+      "workflow_id": "extract"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready chat gate; one-shot, warm, or dense receipts do not enable BitNet chat.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_chat_gate",
+      "expected_receipt_path": "{workload_dir}/extract/bitnet-chat.json",
+      "live_command": "bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json> --prompt 'Extract the ticket id and owner from: Ticket M4-271 owner Ada priority high. Return key=value pairs.' --json-out {workload_dir}/extract/bitnet-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "M4-271",
+            "Ada"
+          ]
+        },
+        {
+          "field": "owner",
+          "kind": "normalized_match",
+          "value": "ada"
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_chat_gate",
+        "item": "M4-BITNET-EX-006",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_chat_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_chat_gate_required",
+      "route_state": "disabled",
+      "task_family": "extract",
+      "workflow_id": "extract"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready serve gate; dense serve receipts do not enable BitNet serve.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_serve_gate",
+      "expected_receipt_path": "{workload_dir}/extract/bitnet-serve.json",
+      "live_command": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "M4-271",
+            "Ada"
+          ]
+        },
+        {
+          "field": "owner",
+          "kind": "normalized_match",
+          "value": "ada"
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_serve_gate",
+        "item": "M4-BITNET-EX-007",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_serve_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_serve_gate_required",
+      "route_state": "disabled",
+      "task_family": "extract",
+      "workflow_id": "extract"
+    },
+    {
+      "claim_boundary": "Supported dense Qwen M4 identities only; not BitNet evidence and not broad quality or performance proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_local_answer",
+      "expected_receipt_path": "{workload_dir}/classify/dense_slm-ask.json",
+      "live_command": "bitnet mac ask --question 'Classify the sentence as billing, hardware, or docs: The local model cache checksum changed after disk repair. Answer with one label.' --json-out {workload_dir}/classify/dense_slm-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "one_of",
+          "values": [
+            "hardware"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "billing",
+            "docs"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "item": "M4-ACCURACY-007",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_eval_v2"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2"
+        }
+      ],
+      "route_id": "dense_slm_ask_short",
+      "route_state": "enabled",
+      "task_family": "classify",
+      "workflow_id": "classify"
+    },
+    {
+      "claim_boundary": "Dense chat conformance only; does not prove BitNet chat, server behavior, or broad model quality.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/classify/dense_slm-chat.json",
+      "live_command": "bitnet mac chat --prompt 'Classify the sentence as billing, hardware, or docs: The local model cache checksum changed after disk repair. Answer with one label.' --prompt 'Classify this as urgent or routine: checksum changed before release.' --json-out {workload_dir}/classify/dense_slm-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "one_of",
+          "values": [
+            "hardware"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "billing",
+            "docs"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        }
+      ],
+      "route_id": "dense_slm_chat_resident",
+      "route_state": "enabled",
+      "task_family": "classify",
+      "workflow_id": "classify"
+    },
+    {
+      "claim_boundary": "Resident dense session reuse only for supported Qwen identities; not a long soak or broad performance claim.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/classify/dense_slm-warm_session.json",
+      "live_command": "bitnet mac chat --prompt 'Classify the sentence as billing, hardware, or docs: The local model cache checksum changed after disk repair. Answer with one label.' --prompt 'Classify this as urgent or routine: checksum changed before release.' --json-out {workload_dir}/classify/dense_slm-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "one_of",
+          "values": [
+            "hardware"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "billing",
+            "docs"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2 resident profiles"
+        }
+      ],
+      "route_id": "dense_slm_warm_session",
+      "route_state": "enabled",
+      "task_family": "classify",
+      "workflow_id": "classify"
+    },
+    {
+      "claim_boundary": "Local loopback appliance route only; not production hosting and not broad OpenAI compatibility.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+      "expected_receipt_path": "{workload_dir}/classify/dense_slm-serve.json",
+      "live_command": "bitnet mac serve-smoke --prompt 'Classify the sentence as billing, hardware, or docs: The local model cache checksum changed after disk repair. Answer with one label.' --json-out {workload_dir}/classify/dense_slm-serve.json",
+      "mechanical_checks": [
+        {
+          "kind": "one_of",
+          "values": [
+            "hardware"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "billing",
+            "docs"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "advisory",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+          "item": "M4-SERVE-EX-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json",
+          "receipt_family": "dense_slm_serve_smoke"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+          "item": "M4-SERVE-EX-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json",
+          "receipt_family": "serve_failure_semantics"
+        }
+      ],
+      "route_id": "dense_slm_serve_loopback",
+      "route_state": "enabled",
+      "task_family": "classify",
+      "workflow_id": "classify"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer one-shot route only; not chat, serve, broad quality, or speed proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "strict_bitnet_cpu_profile",
+      "expected_receipt_path": "{workload_dir}/classify/bitnet-ask.json",
+      "live_command": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --question 'Classify the sentence as billing, hardware, or docs: The local model cache checksum changed after disk repair. Answer with one label.' --json-out {workload_dir}/classify/bitnet-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "one_of",
+          "values": [
+            "hardware"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "billing",
+            "docs"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "item": "M4-BITNET-EX-003",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+          "receipt_family": "bitnet_benchmark"
+        }
+      ],
+      "route_id": "bitnet_ask_one_shot",
+      "route_state": "batch_only",
+      "task_family": "classify",
+      "workflow_id": "classify"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer warm-session evidence only; chat and serve remain separate gated surfaces.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/classify/bitnet-warm_session.json",
+      "live_command": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --prompt 'Classify the sentence as billing, hardware, or docs: The local model cache checksum changed after disk repair. Answer with one label.' --prompt 'Classify the sentence as billing, hardware, or docs: The local model cache checksum changed after disk repair. Answer with one label.' --json-out {workload_dir}/classify/bitnet-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "one_of",
+          "values": [
+            "hardware"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "billing",
+            "docs"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-EX-004",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-REG-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm_regression"
+        }
+      ],
+      "route_id": "bitnet_warm_session",
+      "route_state": "batch_only",
+      "task_family": "classify",
+      "workflow_id": "classify"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready chat gate; one-shot, warm, or dense receipts do not enable BitNet chat.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_chat_gate",
+      "expected_receipt_path": "{workload_dir}/classify/bitnet-chat.json",
+      "live_command": "bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json> --prompt 'Classify the sentence as billing, hardware, or docs: The local model cache checksum changed after disk repair. Answer with one label.' --json-out {workload_dir}/classify/bitnet-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "one_of",
+          "values": [
+            "hardware"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "billing",
+            "docs"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_chat_gate",
+        "item": "M4-BITNET-EX-006",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_chat_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_chat_gate_required",
+      "route_state": "disabled",
+      "task_family": "classify",
+      "workflow_id": "classify"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready serve gate; dense serve receipts do not enable BitNet serve.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_serve_gate",
+      "expected_receipt_path": "{workload_dir}/classify/bitnet-serve.json",
+      "live_command": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+      "mechanical_checks": [
+        {
+          "kind": "one_of",
+          "values": [
+            "hardware"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "billing",
+            "docs"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_serve_gate",
+        "item": "M4-BITNET-EX-007",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_serve_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_serve_gate_required",
+      "route_state": "disabled",
+      "task_family": "classify",
+      "workflow_id": "classify"
+    },
+    {
+      "claim_boundary": "Supported dense Qwen M4 identities only; not BitNet evidence and not broad quality or performance proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_local_answer",
+      "expected_receipt_path": "{workload_dir}/json/dense_slm-ask.json",
+      "live_command": "bitnet mac ask --question 'Return JSON with keys route and status for route mac ask status ready. No markdown.' --json-out {workload_dir}/json/dense_slm-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "json_schema",
+          "required_keys": [
+            "route",
+            "status"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "```"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "item": "M4-ACCURACY-007",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_eval_v2"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2"
+        }
+      ],
+      "route_id": "dense_slm_ask_short",
+      "route_state": "enabled",
+      "task_family": "json",
+      "workflow_id": "json"
+    },
+    {
+      "claim_boundary": "Dense chat conformance only; does not prove BitNet chat, server behavior, or broad model quality.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/json/dense_slm-chat.json",
+      "live_command": "bitnet mac chat --prompt 'Return JSON with keys route and status for route mac ask status ready. No markdown.' --prompt 'Return JSON with keys route and status for route mac chat status ready. No markdown.' --json-out {workload_dir}/json/dense_slm-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "json_schema",
+          "required_keys": [
+            "route",
+            "status"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "```"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        }
+      ],
+      "route_id": "dense_slm_chat_resident",
+      "route_state": "enabled",
+      "task_family": "json",
+      "workflow_id": "json"
+    },
+    {
+      "claim_boundary": "Resident dense session reuse only for supported Qwen identities; not a long soak or broad performance claim.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/json/dense_slm-warm_session.json",
+      "live_command": "bitnet mac chat --prompt 'Return JSON with keys route and status for route mac ask status ready. No markdown.' --prompt 'Return JSON with keys route and status for route mac chat status ready. No markdown.' --json-out {workload_dir}/json/dense_slm-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "json_schema",
+          "required_keys": [
+            "route",
+            "status"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "```"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2 resident profiles"
+        }
+      ],
+      "route_id": "dense_slm_warm_session",
+      "route_state": "enabled",
+      "task_family": "json",
+      "workflow_id": "json"
+    },
+    {
+      "claim_boundary": "Local loopback appliance route only; not production hosting and not broad OpenAI compatibility.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+      "expected_receipt_path": "{workload_dir}/json/dense_slm-serve.json",
+      "live_command": "bitnet mac serve-smoke --prompt 'Return JSON with keys route and status for route mac ask status ready. No markdown.' --json-out {workload_dir}/json/dense_slm-serve.json",
+      "mechanical_checks": [
+        {
+          "kind": "json_schema",
+          "required_keys": [
+            "route",
+            "status"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "```"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "advisory",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+          "item": "M4-SERVE-EX-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json",
+          "receipt_family": "dense_slm_serve_smoke"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+          "item": "M4-SERVE-EX-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json",
+          "receipt_family": "serve_failure_semantics"
+        }
+      ],
+      "route_id": "dense_slm_serve_loopback",
+      "route_state": "enabled",
+      "task_family": "json",
+      "workflow_id": "json"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer one-shot route only; not chat, serve, broad quality, or speed proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "strict_bitnet_cpu_profile",
+      "expected_receipt_path": "{workload_dir}/json/bitnet-ask.json",
+      "live_command": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --question 'Return JSON with keys route and status for route mac ask status ready. No markdown.' --json-out {workload_dir}/json/bitnet-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "json_schema",
+          "required_keys": [
+            "route",
+            "status"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "```"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "item": "M4-BITNET-EX-003",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+          "receipt_family": "bitnet_benchmark"
+        }
+      ],
+      "route_id": "bitnet_ask_one_shot",
+      "route_state": "batch_only",
+      "task_family": "json",
+      "workflow_id": "json"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer warm-session evidence only; chat and serve remain separate gated surfaces.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/json/bitnet-warm_session.json",
+      "live_command": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --prompt 'Return JSON with keys route and status for route mac ask status ready. No markdown.' --prompt 'Return JSON with keys route and status for route mac ask status ready. No markdown.' --json-out {workload_dir}/json/bitnet-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "json_schema",
+          "required_keys": [
+            "route",
+            "status"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "```"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-EX-004",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-REG-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm_regression"
+        }
+      ],
+      "route_id": "bitnet_warm_session",
+      "route_state": "batch_only",
+      "task_family": "json",
+      "workflow_id": "json"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready chat gate; one-shot, warm, or dense receipts do not enable BitNet chat.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_chat_gate",
+      "expected_receipt_path": "{workload_dir}/json/bitnet-chat.json",
+      "live_command": "bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json> --prompt 'Return JSON with keys route and status for route mac ask status ready. No markdown.' --json-out {workload_dir}/json/bitnet-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "json_schema",
+          "required_keys": [
+            "route",
+            "status"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "```"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_chat_gate",
+        "item": "M4-BITNET-EX-006",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_chat_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_chat_gate_required",
+      "route_state": "disabled",
+      "task_family": "json",
+      "workflow_id": "json"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready serve gate; dense serve receipts do not enable BitNet serve.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_serve_gate",
+      "expected_receipt_path": "{workload_dir}/json/bitnet-serve.json",
+      "live_command": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+      "mechanical_checks": [
+        {
+          "kind": "json_schema",
+          "required_keys": [
+            "route",
+            "status"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "```"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_serve_gate",
+        "item": "M4-BITNET-EX-007",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_serve_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_serve_gate_required",
+      "route_state": "disabled",
+      "task_family": "json",
+      "workflow_id": "json"
+    },
+    {
+      "claim_boundary": "Supported dense Qwen M4 identities only; not BitNet evidence and not broad quality or performance proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_local_answer",
+      "expected_receipt_path": "{workload_dir}/rewrite/dense_slm-ask.json",
+      "live_command": "bitnet mac ask --question 'Rewrite for an operator log: The server is okay but do not claim BitNet serve is ready.' --json-out {workload_dir}/rewrite/dense_slm-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "BitNet",
+            "serve"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "ready",
+            "enabled"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "item": "M4-ACCURACY-007",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_eval_v2"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2"
+        }
+      ],
+      "route_id": "dense_slm_ask_short",
+      "route_state": "enabled",
+      "task_family": "rewrite",
+      "workflow_id": "rewrite"
+    },
+    {
+      "claim_boundary": "Dense chat conformance only; does not prove BitNet chat, server behavior, or broad model quality.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/rewrite/dense_slm-chat.json",
+      "live_command": "bitnet mac chat --prompt 'Rewrite for an operator log: The server is okay but do not claim BitNet serve is ready.' --prompt 'Rewrite the same warning in a terse release-note style.' --json-out {workload_dir}/rewrite/dense_slm-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "BitNet",
+            "serve"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "ready",
+            "enabled"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        }
+      ],
+      "route_id": "dense_slm_chat_resident",
+      "route_state": "enabled",
+      "task_family": "rewrite",
+      "workflow_id": "rewrite"
+    },
+    {
+      "claim_boundary": "Resident dense session reuse only for supported Qwen identities; not a long soak or broad performance claim.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/rewrite/dense_slm-warm_session.json",
+      "live_command": "bitnet mac chat --prompt 'Rewrite for an operator log: The server is okay but do not claim BitNet serve is ready.' --prompt 'Rewrite the same warning in a terse release-note style.' --json-out {workload_dir}/rewrite/dense_slm-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "BitNet",
+            "serve"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "ready",
+            "enabled"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2 resident profiles"
+        }
+      ],
+      "route_id": "dense_slm_warm_session",
+      "route_state": "enabled",
+      "task_family": "rewrite",
+      "workflow_id": "rewrite"
+    },
+    {
+      "claim_boundary": "Local loopback appliance route only; not production hosting and not broad OpenAI compatibility.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+      "expected_receipt_path": "{workload_dir}/rewrite/dense_slm-serve.json",
+      "live_command": "bitnet mac serve-smoke --prompt 'Rewrite for an operator log: The server is okay but do not claim BitNet serve is ready.' --json-out {workload_dir}/rewrite/dense_slm-serve.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "BitNet",
+            "serve"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "ready",
+            "enabled"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "advisory",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+          "item": "M4-SERVE-EX-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json",
+          "receipt_family": "dense_slm_serve_smoke"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+          "item": "M4-SERVE-EX-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json",
+          "receipt_family": "serve_failure_semantics"
+        }
+      ],
+      "route_id": "dense_slm_serve_loopback",
+      "route_state": "enabled",
+      "task_family": "rewrite",
+      "workflow_id": "rewrite"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer one-shot route only; not chat, serve, broad quality, or speed proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "strict_bitnet_cpu_profile",
+      "expected_receipt_path": "{workload_dir}/rewrite/bitnet-ask.json",
+      "live_command": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --question 'Rewrite for an operator log: The server is okay but do not claim BitNet serve is ready.' --json-out {workload_dir}/rewrite/bitnet-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "BitNet",
+            "serve"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "ready",
+            "enabled"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "item": "M4-BITNET-EX-003",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+          "receipt_family": "bitnet_benchmark"
+        }
+      ],
+      "route_id": "bitnet_ask_one_shot",
+      "route_state": "batch_only",
+      "task_family": "rewrite",
+      "workflow_id": "rewrite"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer warm-session evidence only; chat and serve remain separate gated surfaces.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/rewrite/bitnet-warm_session.json",
+      "live_command": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --prompt 'Rewrite for an operator log: The server is okay but do not claim BitNet serve is ready.' --prompt 'Rewrite for an operator log: The server is okay but do not claim BitNet serve is ready.' --json-out {workload_dir}/rewrite/bitnet-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "BitNet",
+            "serve"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "ready",
+            "enabled"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-EX-004",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-REG-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm_regression"
+        }
+      ],
+      "route_id": "bitnet_warm_session",
+      "route_state": "batch_only",
+      "task_family": "rewrite",
+      "workflow_id": "rewrite"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready chat gate; one-shot, warm, or dense receipts do not enable BitNet chat.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_chat_gate",
+      "expected_receipt_path": "{workload_dir}/rewrite/bitnet-chat.json",
+      "live_command": "bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json> --prompt 'Rewrite for an operator log: The server is okay but do not claim BitNet serve is ready.' --json-out {workload_dir}/rewrite/bitnet-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "BitNet",
+            "serve"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "ready",
+            "enabled"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_chat_gate",
+        "item": "M4-BITNET-EX-006",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_chat_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_chat_gate_required",
+      "route_state": "disabled",
+      "task_family": "rewrite",
+      "workflow_id": "rewrite"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready serve gate; dense serve receipts do not enable BitNet serve.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_serve_gate",
+      "expected_receipt_path": "{workload_dir}/rewrite/bitnet-serve.json",
+      "live_command": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "BitNet",
+            "serve"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "ready",
+            "enabled"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_serve_gate",
+        "item": "M4-BITNET-EX-007",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_serve_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_serve_gate_required",
+      "route_state": "disabled",
+      "task_family": "rewrite",
+      "workflow_id": "rewrite"
+    },
+    {
+      "claim_boundary": "Supported dense Qwen M4 identities only; not BitNet evidence and not broad quality or performance proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_local_answer",
+      "expected_receipt_path": "{workload_dir}/table_qa/dense_slm-ask.json",
+      "live_command": "bitnet mac ask --question 'Table: route|state; ask|enabled; chat|enabled; bitnet-serve|disabled. Which route is disabled? Answer with the route name.' --json-out {workload_dir}/table_qa/dense_slm-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "exact_or_normalized_match",
+          "values": [
+            "bitnet-serve",
+            "disabled"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "bitnet chat enabled"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "item": "M4-ACCURACY-007",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_eval_v2"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2"
+        }
+      ],
+      "route_id": "dense_slm_ask_short",
+      "route_state": "enabled",
+      "task_family": "table_qa",
+      "workflow_id": "table_qa"
+    },
+    {
+      "claim_boundary": "Dense chat conformance only; does not prove BitNet chat, server behavior, or broad model quality.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/table_qa/dense_slm-chat.json",
+      "live_command": "bitnet mac chat --prompt 'Table: route|state; ask|enabled; chat|enabled; bitnet-serve|disabled. Which route is disabled? Answer with the route name.' --prompt 'Using the same table, answer only enabled or disabled for ask.' --json-out {workload_dir}/table_qa/dense_slm-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "exact_or_normalized_match",
+          "values": [
+            "bitnet-serve",
+            "disabled"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "bitnet chat enabled"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        }
+      ],
+      "route_id": "dense_slm_chat_resident",
+      "route_state": "enabled",
+      "task_family": "table_qa",
+      "workflow_id": "table_qa"
+    },
+    {
+      "claim_boundary": "Resident dense session reuse only for supported Qwen identities; not a long soak or broad performance claim.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "slm_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/table_qa/dense_slm-warm_session.json",
+      "live_command": "bitnet mac chat --prompt 'Table: route|state; ask|enabled; chat|enabled; bitnet-serve|disabled. Which route is disabled? Answer with the route name.' --prompt 'Using the same table, answer only enabled or disabled for ask.' --json-out {workload_dir}/table_qa/dense_slm-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "exact_or_normalized_match",
+          "values": [
+            "bitnet-serve",
+            "disabled"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "bitnet chat enabled"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "interactive_or_advisory_by_model",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "apple_m4_slm_chat_smoke",
+          "item": "M4-DENSE-CHAT-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+          "receipt_family": "dense_slm_chat_smoke"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "item": "M4-BENCH-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "receipt_family": "dense_slm_benchmark_v2 resident profiles"
+        }
+      ],
+      "route_id": "dense_slm_warm_session",
+      "route_state": "enabled",
+      "task_family": "table_qa",
+      "workflow_id": "table_qa"
+    },
+    {
+      "claim_boundary": "Local loopback appliance route only; not production hosting and not broad OpenAI compatibility.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+      "expected_receipt_path": "{workload_dir}/table_qa/dense_slm-serve.json",
+      "live_command": "bitnet mac serve-smoke --prompt 'Table: route|state; ask|enabled; chat|enabled; bitnet-serve|disabled. Which route is disabled? Answer with the route name.' --json-out {workload_dir}/table_qa/dense_slm-serve.json",
+      "mechanical_checks": [
+        {
+          "kind": "exact_or_normalized_match",
+          "values": [
+            "bitnet-serve",
+            "disabled"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "bitnet chat enabled"
+          ]
+        }
+      ],
+      "model_family": "dense_slm",
+      "operator_class": "advisory",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+          "item": "M4-SERVE-EX-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json",
+          "receipt_family": "dense_slm_serve_smoke"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+          "item": "M4-SERVE-EX-002",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json",
+          "receipt_family": "serve_failure_semantics"
+        }
+      ],
+      "route_id": "dense_slm_serve_loopback",
+      "route_state": "enabled",
+      "task_family": "table_qa",
+      "workflow_id": "table_qa"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer one-shot route only; not chat, serve, broad quality, or speed proof.",
+      "command_surface": "ask",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "strict_bitnet_cpu_profile",
+      "expected_receipt_path": "{workload_dir}/table_qa/bitnet-ask.json",
+      "live_command": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --question 'Table: route|state; ask|enabled; chat|enabled; bitnet-serve|disabled. Which route is disabled? Answer with the route name.' --json-out {workload_dir}/table_qa/bitnet-ask.json",
+      "mechanical_checks": [
+        {
+          "kind": "exact_or_normalized_match",
+          "values": [
+            "bitnet-serve",
+            "disabled"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "bitnet chat enabled"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "item": "M4-BITNET-EX-003",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+          "receipt_family": "bitnet_benchmark"
+        }
+      ],
+      "route_id": "bitnet_ask_one_shot",
+      "route_state": "batch_only",
+      "task_family": "table_qa",
+      "workflow_id": "table_qa"
+    },
+    {
+      "claim_boundary": "Accepted BitNet artifact/tokenizer warm-session evidence only; chat and serve remain separate gated surfaces.",
+      "command_surface": "warm_session",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+      "expected_receipt_path": "{workload_dir}/table_qa/bitnet-warm_session.json",
+      "live_command": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted-gguf> --tokenizer <tokenizer.json> --prompt 'Table: route|state; ask|enabled; chat|enabled; bitnet-serve|disabled. Which route is disabled? Answer with the route name.' --prompt 'Table: route|state; ask|enabled; chat|enabled; bitnet-serve|disabled. Which route is disabled? Answer with the route name.' --json-out {workload_dir}/table_qa/bitnet-warm_session.json",
+      "mechanical_checks": [
+        {
+          "kind": "exact_or_normalized_match",
+          "values": [
+            "bitnet-serve",
+            "disabled"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "bitnet chat enabled"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "batch",
+      "required_gate": null,
+      "requires_gate_receipt": false,
+      "route_enabled_for_suite": true,
+      "route_evidence": [
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-EX-004",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "item": "M4-BITNET-REG-001",
+          "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "receipt_family": "bitnet_variable_warm_regression"
+        }
+      ],
+      "route_id": "bitnet_warm_session",
+      "route_state": "batch_only",
+      "task_family": "table_qa",
+      "workflow_id": "table_qa"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready chat gate; one-shot, warm, or dense receipts do not enable BitNet chat.",
+      "command_surface": "chat",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_chat_gate",
+      "expected_receipt_path": "{workload_dir}/table_qa/bitnet-chat.json",
+      "live_command": "bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json> --prompt 'Table: route|state; ask|enabled; chat|enabled; bitnet-serve|disabled. Which route is disabled? Answer with the route name.' --json-out {workload_dir}/table_qa/bitnet-chat.json",
+      "mechanical_checks": [
+        {
+          "kind": "exact_or_normalized_match",
+          "values": [
+            "bitnet-serve",
+            "disabled"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "bitnet chat enabled"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_chat_gate",
+        "item": "M4-BITNET-EX-006",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_chat_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_chat_gate_required",
+      "route_state": "disabled",
+      "task_family": "table_qa",
+      "workflow_id": "table_qa"
+    },
+    {
+      "claim_boundary": "The route must refuse without a ready serve gate; dense serve receipts do not enable BitNet serve.",
+      "command_surface": "serve",
+      "executes_live_model_in_this_command": false,
+      "expected_artifact_kind": "bitnet_apple_m4_serve_gate",
+      "expected_receipt_path": "{workload_dir}/table_qa/bitnet-serve.json",
+      "live_command": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+      "mechanical_checks": [
+        {
+          "kind": "exact_or_normalized_match",
+          "values": [
+            "bitnet-serve",
+            "disabled"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "bitnet chat enabled"
+          ]
+        }
+      ],
+      "model_family": "bitnet",
+      "operator_class": "disabled_until_ready_gate",
+      "required_gate": {
+        "artifact_kind": "bitnet_apple_m4_serve_gate",
+        "item": "M4-BITNET-EX-007",
+        "latest_receipt": null,
+        "receipt_family": "bitnet_serve_gate"
+      },
+      "requires_gate_receipt": true,
+      "route_enabled_for_suite": false,
+      "route_evidence": null,
+      "route_id": "bitnet_serve_gate_required",
+      "route_state": "disabled",
+      "task_family": "table_qa",
+      "workflow_id": "table_qa"
+    }
+  ],
+  "route_state_matrix": {
+    "claim_boundary": {
+      "bitnet_chat_enabled_without_gate": false,
+      "bitnet_serve_enabled_without_gate": false,
+      "broad_apple_silicon_claim": false,
+      "broad_model_quality_claim": false,
+      "broad_performance_claim": false,
+      "dense_slm_and_bitnet_evidence_separated": true,
+      "does_not_enable_routes": true,
+      "full_metal_inference_claimed": false,
+      "macbook_evidence": false,
+      "mpsgraph_inference_claimed": false,
+      "neural_engine_execution_claimed": false,
+      "no_live_model_run": true,
+      "qk256_apple_claimed": false,
+      "route_matrix_only": true,
+      "speedup_claim": false
+    },
+    "contract_version": "1.0.0",
+    "matrix_scope": "M4 Mac mini local operator routes only",
+    "rows": [
+      {
+        "claim_boundary": "Supported dense Qwen M4 identities only; not BitNet evidence and not broad quality or performance proof.",
+        "command": "bitnet mac ask \"What is 2+2?\"",
+        "command_surface": "ask",
+        "evidence": [
+          {
+            "artifact_kind": "apple_m4_slm_eval_summary",
+            "item": "M4-ACCURACY-007",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+            "receipt_family": "dense_slm_eval_v2"
+          },
+          {
+            "artifact_kind": "apple_m4_slm_benchmark_v2",
+            "item": "M4-BENCH-002",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+            "receipt_family": "dense_slm_benchmark_v2"
+          }
+        ],
+        "model_family": "dense_slm",
+        "operator_class": "interactive_or_advisory_by_model",
+        "requires_gate_receipt": false,
+        "requires_ready_cache": true,
+        "route_id": "dense_slm_ask_short",
+        "state": "enabled",
+        "streaming": false
+      },
+      {
+        "claim_boundary": "Dense chat conformance only; does not prove BitNet chat, server behavior, or broad model quality.",
+        "command": "bitnet mac chat --prompt <prompt> --prompt <prompt>",
+        "command_surface": "chat",
+        "evidence": [
+          {
+            "artifact_kind": "apple_m4_slm_chat_smoke",
+            "item": "M4-DENSE-CHAT-001",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+            "receipt_family": "dense_slm_chat_smoke"
+          }
+        ],
+        "model_family": "dense_slm",
+        "operator_class": "interactive_or_advisory_by_model",
+        "requires_gate_receipt": false,
+        "requires_ready_cache": true,
+        "route_id": "dense_slm_chat_resident",
+        "state": "enabled",
+        "streaming": true
+      },
+      {
+        "claim_boundary": "Resident dense session reuse only for supported Qwen identities; not a long soak or broad performance claim.",
+        "command": "bitnet mac chat --prompt <prompt> --prompt <prompt>",
+        "command_surface": "warm_session",
+        "evidence": [
+          {
+            "artifact_kind": "apple_m4_slm_chat_smoke",
+            "item": "M4-DENSE-CHAT-001",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/qwen2.5-1.5b-instruct-q4_k_m/chat-smoke.json",
+            "receipt_family": "dense_slm_chat_smoke"
+          },
+          {
+            "artifact_kind": "apple_m4_slm_benchmark_v2",
+            "item": "M4-BENCH-002",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+            "receipt_family": "dense_slm_benchmark_v2 resident profiles"
+          }
+        ],
+        "model_family": "dense_slm",
+        "operator_class": "interactive_or_advisory_by_model",
+        "requires_gate_receipt": false,
+        "requires_ready_cache": true,
+        "route_id": "dense_slm_warm_session",
+        "state": "enabled",
+        "streaming": true
+      },
+      {
+        "claim_boundary": "Recorded context envelopes are batch/local evidence; requests beyond the envelope are unsupported guardrail blocks.",
+        "command": "bitnet mac ask/chat/serve inside recorded context_1k or context_4k envelopes",
+        "command_surface": "ask_chat_serve_context",
+        "evidence": [
+          {
+            "artifact_kind": "apple_m4_long_context_eval_summary",
+            "item": "M4-CONTEXT-002",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T1611Z/context/answer-corpus.json",
+            "receipt_family": "dense_slm_context_eval"
+          },
+          {
+            "artifact_kind": "apple_m4_slm_benchmark_v2",
+            "item": "M4-CONTEXT-002",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T1611Z/context/benchmark.json",
+            "receipt_family": "dense_slm_context_benchmark"
+          }
+        ],
+        "model_family": "dense_slm",
+        "operator_class": "batch",
+        "requires_gate_receipt": false,
+        "requires_ready_cache": true,
+        "route_id": "dense_slm_context_batch",
+        "state": "batch_only",
+        "streaming": false
+      },
+      {
+        "claim_boundary": "Local loopback appliance route only; not production hosting and not broad OpenAI compatibility.",
+        "command": "bitnet mac serve --host 127.0.0.1 --port 8080",
+        "command_surface": "serve",
+        "evidence": [
+          {
+            "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+            "item": "M4-SERVE-EX-001",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json",
+            "receipt_family": "dense_slm_serve_smoke"
+          },
+          {
+            "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+            "item": "M4-SERVE-EX-002",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json",
+            "receipt_family": "serve_failure_semantics"
+          }
+        ],
+        "model_family": "dense_slm",
+        "operator_class": "advisory",
+        "requires_gate_receipt": false,
+        "requires_ready_cache": true,
+        "route_id": "dense_slm_serve_loopback",
+        "state": "enabled",
+        "streaming": true
+      },
+      {
+        "claim_boundary": "Dense local-server streaming and failure semantics only; not BitNet serve evidence.",
+        "command": "bitnet mac serve streaming completion",
+        "command_surface": "streaming",
+        "evidence": [
+          {
+            "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+            "item": "M4-SERVE-EX-001",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json",
+            "receipt_family": "dense_slm_serve_smoke"
+          },
+          {
+            "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+            "item": "M4-SERVE-EX-002",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json",
+            "receipt_family": "serve_failure_semantics"
+          }
+        ],
+        "model_family": "dense_slm",
+        "operator_class": "advisory",
+        "requires_gate_receipt": false,
+        "requires_ready_cache": true,
+        "route_id": "dense_slm_streaming",
+        "state": "enabled",
+        "streaming": true
+      },
+      {
+        "claim_boundary": "Accepted BitNet artifact/tokenizer one-shot route only; not chat, serve, broad quality, or speed proof.",
+        "command": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <gguf> --tokenizer <tokenizer.json> <prompt>",
+        "command_surface": "ask",
+        "evidence": [
+          {
+            "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+            "item": "M4-BITNET-EX-003",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+            "receipt_family": "bitnet_benchmark"
+          }
+        ],
+        "model_family": "bitnet",
+        "operator_class": "batch",
+        "requires_gate_receipt": false,
+        "requires_ready_cache": true,
+        "route_id": "bitnet_ask_one_shot",
+        "state": "batch_only",
+        "streaming": false
+      },
+      {
+        "claim_boundary": "Accepted BitNet artifact/tokenizer warm-session evidence only; chat and serve remain separate gated surfaces.",
+        "command": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <gguf> --tokenizer <tokenizer.json>",
+        "command_surface": "warm_session",
+        "evidence": [
+          {
+            "artifact_kind": "bitnet_apple_m4_warm_session",
+            "item": "M4-BITNET-EX-004",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+            "receipt_family": "bitnet_variable_warm"
+          },
+          {
+            "artifact_kind": "bitnet_apple_m4_warm_session",
+            "item": "M4-BITNET-REG-001",
+            "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+            "receipt_family": "bitnet_variable_warm_regression"
+          }
+        ],
+        "model_family": "bitnet",
+        "operator_class": "batch",
+        "requires_gate_receipt": false,
+        "requires_ready_cache": true,
+        "route_id": "bitnet_warm_session",
+        "state": "batch_only",
+        "streaming": false
+      },
+      {
+        "claim_boundary": "The route must refuse without a ready chat gate; one-shot, warm, or dense receipts do not enable BitNet chat.",
+        "command": "bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json>",
+        "command_surface": "chat",
+        "model_family": "bitnet",
+        "operator_class": "disabled_until_ready_gate",
+        "required_gate": {
+          "artifact_kind": "bitnet_apple_m4_chat_gate",
+          "item": "M4-BITNET-EX-006",
+          "latest_receipt": null,
+          "receipt_family": "bitnet_chat_gate"
+        },
+        "requires_gate_receipt": true,
+        "requires_ready_cache": true,
+        "route_id": "bitnet_chat_gate_required",
+        "state": "disabled",
+        "streaming": true
+      },
+      {
+        "claim_boundary": "The route must refuse without a ready serve gate; dense serve receipts do not enable BitNet serve.",
+        "command": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+        "command_surface": "serve",
+        "model_family": "bitnet",
+        "operator_class": "disabled_until_ready_gate",
+        "required_gate": {
+          "artifact_kind": "bitnet_apple_m4_serve_gate",
+          "item": "M4-BITNET-EX-007",
+          "latest_receipt": null,
+          "receipt_family": "bitnet_serve_gate"
+        },
+        "requires_gate_receipt": true,
+        "requires_ready_cache": true,
+        "route_id": "bitnet_serve_gate_required",
+        "state": "disabled",
+        "streaming": true
+      },
+      {
+        "claim_boundary": "BitNet streaming is part of the gate evidence and is not enabled by dense local-server streaming receipts.",
+        "command": "BitNet chat or serve streaming through the gated BitNet routes",
+        "command_surface": "streaming",
+        "model_family": "bitnet",
+        "operator_class": "disabled_until_ready_gate",
+        "required_gate": {
+          "artifact_kind": "bitnet_apple_m4_chat_streaming_semantics or bitnet_apple_m4_serve_streaming_semantics",
+          "item": "M4-BITNET-EX-006/M4-BITNET-EX-007",
+          "latest_receipt": null,
+          "receipt_family": "bitnet_chat_or_serve_streaming_semantics"
+        },
+        "requires_gate_receipt": true,
+        "requires_ready_cache": true,
+        "route_id": "bitnet_streaming_gate_required",
+        "state": "disabled",
+        "streaming": true
+      },
+      {
+        "claim_boundary": "No full-route accepted M4 evidence exists for these backends or machine classes.",
+        "command": "apple-m4-metal full route, QK256-on-Apple, Neural Engine, MPSGraph, MacBook runtime",
+        "command_surface": "backend",
+        "evidence": [],
+        "model_family": "all",
+        "operator_class": "unsupported",
+        "requires_gate_receipt": false,
+        "requires_ready_cache": false,
+        "route_id": "unsupported_apple_backends",
+        "state": "unsupported",
+        "streaming": false
+      }
+    ],
+    "state_definitions": {
+      "batch_only": "Accepted M4 receipts exist, but the operator envelope sets no interactive expectation.",
+      "disabled": "The route intentionally refuses unless a ready gate receipt is supplied.",
+      "enabled": "Accepted M4 receipts exist and the route may run when local cache and command preflight pass.",
+      "unsupported": "No accepted M4 full-route receipt exists for this backend, machine, or surface."
+    },
+    "work_item": "M4-ROUTE-MATRIX-001"
+  },
+  "route_state_summary": {
+    "bitnet_enabled_entries": 12,
+    "dense_slm_enabled_entries": 24,
+    "disabled_bitnet_surfaces": [
+      "chat",
+      "serve"
+    ],
+    "disabled_gate_boundary_entries": 12,
+    "enabled_bitnet_surfaces": [
+      "ask",
+      "warm_session"
+    ],
+    "route_entry_count": 48,
+    "surfaces": [
+      "ask",
+      "chat",
+      "serve",
+      "warm_session"
+    ],
+    "workflow_count": 6
+  },
+  "run_identity": {
+    "artifact_kind": "apple_m4_operator_workload_suite",
+    "backend": {
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "binary": {
+      "binary_sha256": null,
+      "binary_sha256_status": "not_recorded_build_profile_used",
+      "build_profile": "debug",
+      "crate_version": "0.2.1-dev"
+    },
+    "command": {
+      "class": "mac workload",
+      "live_model_run": false
+    },
+    "contract_version": "m4-run-identity-v1",
+    "evidence_family": "operator",
+    "evidence_identity": {
+      "corpus_id": "not_applicable",
+      "profile_id": "not_applicable",
+      "scope": "operator_workload_suite",
+      "seed": "not_applicable"
+    },
+    "git": {
+      "commit": "acc7b17e095eb62383f48f1319e62032d90d80b8",
+      "commit_source": "git_rev_parse"
+    },
+    "machine_id": "apple-m4-mac-mini",
+    "model": {
+      "id": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "not_applicable"
+    },
+    "os": {
+      "name": "macos",
+      "version": "26.4.1",
+      "version_source": "sw_vers"
+    },
+    "prompt_template": {
+      "id": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "243ffa2eeced1cbfa18357fe8edf03833381b9a83359bf0930ae5e8e862ab30e"
+    },
+    "soc": "apple-m4",
+    "timing": {
+      "source": "wall_clock_utc"
+    },
+    "tokenizer": {
+      "authority": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "not_applicable"
+    }
+  },
+  "run_identity_sha256": "efa882eb44d70eb07edb672ec4c2abe59ec6da71cba12eabcf407ec54ee674be",
+  "runtime_api": "cpu",
+  "schema_version": "1.2.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "status": "ok",
+  "suite": {
+    "execution_mode": "model_free_workload_manifest",
+    "id": "m4-operator",
+    "live_model_run": false,
+    "model_download": false,
+    "model_families": [
+      "dense_slm",
+      "bitnet"
+    ],
+    "required_task_families": [
+      "summarize",
+      "extract",
+      "classify",
+      "json",
+      "rewrite",
+      "table_qa"
+    ],
+    "route_surfaces": [
+      "ask",
+      "chat",
+      "warm_session",
+      "serve"
+    ],
+    "work_item": "M4-WORKLOAD-001",
+    "workflow_count": 6
+  },
+  "workflow_cases": [
+    {
+      "follow_up_prompt": "Rewrite the summary in ten words or fewer.",
+      "id": "summarize",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "offline",
+            "cache",
+            "receipts"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "cloud",
+            "remote api"
+          ]
+        }
+      ],
+      "prompt": "Summarize this operator note in one sentence: The M4 appliance is offline, cache verified, and receipts must prove the route used.",
+      "task_family": "summarize"
+    },
+    {
+      "follow_up_prompt": "Return only the owner value from the same note.",
+      "id": "extract",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "M4-271",
+            "Ada"
+          ]
+        },
+        {
+          "field": "owner",
+          "kind": "normalized_match",
+          "value": "ada"
+        }
+      ],
+      "prompt": "Extract the ticket id and owner from: Ticket M4-271 owner Ada priority high. Return key=value pairs.",
+      "task_family": "extract"
+    },
+    {
+      "follow_up_prompt": "Classify this as urgent or routine: checksum changed before release.",
+      "id": "classify",
+      "mechanical_checks": [
+        {
+          "kind": "one_of",
+          "values": [
+            "hardware"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "billing",
+            "docs"
+          ]
+        }
+      ],
+      "prompt": "Classify the sentence as billing, hardware, or docs: The local model cache checksum changed after disk repair. Answer with one label.",
+      "task_family": "classify"
+    },
+    {
+      "follow_up_prompt": "Return JSON with keys route and status for route mac chat status ready. No markdown.",
+      "id": "json",
+      "mechanical_checks": [
+        {
+          "kind": "json_schema",
+          "required_keys": [
+            "route",
+            "status"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "```"
+          ]
+        }
+      ],
+      "prompt": "Return JSON with keys route and status for route mac ask status ready. No markdown.",
+      "task_family": "json"
+    },
+    {
+      "follow_up_prompt": "Rewrite the same warning in a terse release-note style.",
+      "id": "rewrite",
+      "mechanical_checks": [
+        {
+          "kind": "required_keywords",
+          "values": [
+            "BitNet",
+            "serve"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "ready",
+            "enabled"
+          ]
+        }
+      ],
+      "prompt": "Rewrite for an operator log: The server is okay but do not claim BitNet serve is ready.",
+      "task_family": "rewrite"
+    },
+    {
+      "follow_up_prompt": "Using the same table, answer only enabled or disabled for ask.",
+      "id": "table_qa",
+      "mechanical_checks": [
+        {
+          "kind": "exact_or_normalized_match",
+          "values": [
+            "bitnet-serve",
+            "disabled"
+          ]
+        },
+        {
+          "kind": "forbidden_tokens",
+          "values": [
+            "bitnet chat enabled"
+          ]
+        }
+      ],
+      "prompt": "Table: route|state; ask|enabled; chat|enabled; bitnet-serve|disabled. Which route is disabled? Answer with the route name.",
+      "task_family": "table_qa"
+    }
+  ]
+}

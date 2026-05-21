@@ -93,6 +93,46 @@ bitnet mac receipts-check \
   --json
 ```
 
+## Operator Workload Suite
+
+`M4-WORKLOAD-001` adds a model-free workload manifest command:
+
+```bash
+bitnet mac workload \
+  --suite m4-operator \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json \
+  --json
+```
+
+The command writes an `apple_m4_operator_workload_suite` receipt. It does not
+run live inference or download models. The committed manifest covers the
+operator workflows `summarize`, `extract`, `classify`, `json`, `rewrite`, and
+`table_qa` across dense SLM ask/chat/warm-session/serve surfaces and the enabled
+BitNet ask/warm-session surfaces. BitNet chat and serve remain gate-disabled
+route boundaries in the workload plan.
+
+The receipt records:
+
+- six workflow prompts with mechanical checks, not LLM judging;
+- 48 route-plan entries covering the workflow, model family, and route-surface
+  matrix;
+- the current route-state matrix and report inventory used to explain each
+  enabled, batch-only, disabled, or unsupported route;
+- exact live commands an operator would run later for per-route receipts.
+
+Validate the committed manifest with:
+
+```bash
+bitnet mac receipts-check \
+  ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json \
+  --json
+```
+
+This is a workload plan and receipt-contract check. It is not broad assistant
+quality proof, BitNet chat or serve enablement, production hosting proof, full
+Metal inference, QK256, Neural Engine, MPSGraph, MacBook evidence, speedup, broad
+performance, or broad Apple Silicon evidence.
+
 ## Report Refresh Manifest
 
 `M4-INF-OPS-002` adds a model-free manifest command:

@@ -41,6 +41,7 @@ Retain source evidence separately from generated summaries:
 | Required child receipts | `ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250-repaired/answer-corpus-runs/*.json` | Commit only when needed for receipt validation, generated text or token-ID audit, or failure taxonomy |
 | Generated dashboards | `target/apple-m4-inference-excellence/regression-dashboard.json` | Regenerate from committed receipts; do not treat as source evidence unless a tracker item explicitly asks to commit it |
 | Replay bundle manifests | `ci/hardware/apple-m4-mac-mini/<date>/evidence-replay/manifest.json` | Commit when a tracker item asks for replay/audit coverage; validate with `bitnet mac evidence replay --dry-run` and `bitnet mac receipts-check` |
+| Operator workload manifests | `ci/hardware/apple-m4-mac-mini/<date>/workload/summary.json` | Commit when a tracker item asks for workflow/route coverage; validate with `bitnet mac receipts-check`; the manifest is model-free and not a live evidence refresh |
 | Generic PR Tier 0 artifacts | `target/apple-m4-slm-eval-tier0/**`, `target/apple-m4-inference-ops-tier0/**` | Upload as short-lived CI artifacts for debugging; they are not evidence refreshes |
 | Scheduled or manual hardware artifacts | `target/apple-m4-dense-slm-regression/<run-id>/**` | Upload with the workflow retention setting and commit only the accepted receipt bundle requested by the tracker |
 
@@ -62,6 +63,10 @@ bitnet mac evidence replay \
   --bundle ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
   --dry-run \
   --json
+bitnet mac workload \
+  --suite m4-operator \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json \
+  --json
 bitnet mac report-refresh \
   --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json \
   --explain \
@@ -74,6 +79,7 @@ bitnet mac regression-dashboard \
   --open-targets \
   --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/evidence-summary.json --json
+bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/regression-dashboard.json --json
 ```
 

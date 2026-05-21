@@ -34,6 +34,8 @@ const MAC_STATUS_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-ops/mac-stat
 const MAC_EVIDENCE_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-ops/evidence-summary.json";
 const MAC_EVIDENCE_REPLAY_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-ops/evidence-replay-dry-run.json";
+const MAC_WORKLOAD_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-inference-excellence/workload/summary.json";
 const MAC_REPORT_REFRESH_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-ops/report-refresh-manifest.json";
 const MAC_REGRESSION_DASHBOARD_DEFAULT_RECEIPT: &str =
@@ -315,6 +317,21 @@ impl MacEvalSuite {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
+enum MacWorkloadSuite {
+    /// Build the M4 operator workload suite across ask, chat, warm-session, and serve route states.
+    #[value(name = "m4-operator")]
+    M4Operator,
+}
+
+impl MacWorkloadSuite {
+    const fn id(self) -> &'static str {
+        match self {
+            Self::M4Operator => "m4-operator",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 enum MacSmokeModelFamily {
     /// Run the dense Qwen SLM golden smoke path.
     DenseSlm,
@@ -546,6 +563,25 @@ enum MacAction {
 
     /// Summarize committed M4 evidence, cache/disk state, regressions, and next command.
     Evidence(MacEvidenceArgs),
+
+    /// Build a receipt-backed M4 operator workload suite manifest over enabled route states.
+    Workload {
+        /// Workload suite to build.
+        #[arg(long, value_enum)]
+        suite: MacWorkloadSuite,
+
+        /// Committed Apple M4 report root used for route evidence.
+        #[arg(long, value_name = "PATH", default_value = APPLE_M4_REPORT_ROOT)]
+        root: PathBuf,
+
+        /// Output workload suite summary receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_WORKLOAD_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Emit JSON to stdout after writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
 
     /// Generate a model-free advisory/nightly Apple M4 report refresh manifest.
     ReportRefresh {
@@ -1625,6 +1661,10 @@ impl MacCommand {
                     }
                     None => run_evidence(args.cache_dir, args.root, args.json_out, args.json),
                 }
+            }
+            MacAction::Workload { suite, root, json_out, json } => {
+                ensure_supported_mac_device(explicit_device_label, "mac workload")?;
+                run_workload(suite, root, json_out, json)
             }
             MacAction::ReportRefresh { root, json_out, explain, open_targets, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac report-refresh")?;
@@ -3715,6 +3755,355 @@ fn run_evidence_replay(
     Ok(())
 }
 
+fn run_workload(
+    suite: MacWorkloadSuite,
+    root: PathBuf,
+    json_out: PathBuf,
+    json: bool,
+) -> Result<()> {
+    let receipt = apple_m4_operator_workload_suite_receipt(suite, &root, &json_out)?;
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_mac_workload_summary(&receipt, &json_out);
+    }
+    Ok(())
+}
+
+fn apple_m4_operator_workload_suite_receipt(
+    suite: MacWorkloadSuite,
+    root: &Path,
+    json_out: &Path,
+) -> Result<serde_json::Value> {
+    let report_inventory = apple_m4_report_inventory_for_root(root);
+    let route_state_matrix = apple_m4_route_state_matrix_json(&report_inventory);
+    let workflow_cases = apple_m4_operator_workload_cases_json();
+    let route_plan =
+        apple_m4_operator_workload_route_plan_json(&workflow_cases, &route_state_matrix)?;
+    let route_state_summary = apple_m4_operator_workload_route_summary_json(&route_plan);
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_operator_workload_suite",
+        "mac workload",
+        "operator_workload_suite",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    Ok(serde_json::json!({
+        "schema_version": "1.2.0",
+        "artifact_kind": "apple_m4_operator_workload_suite",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac workload",
+        "status": "ok",
+        "receipt_path": json_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "model-free operator workload suite manifest",
+        },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
+        "suite": {
+            "id": suite.id(),
+            "work_item": "M4-WORKLOAD-001",
+            "execution_mode": "model_free_workload_manifest",
+            "live_model_run": false,
+            "model_download": false,
+            "workflow_count": workflow_cases.len(),
+            "required_task_families": [
+                "summarize",
+                "extract",
+                "classify",
+                "json",
+                "rewrite",
+                "table_qa",
+            ],
+            "route_surfaces": ["ask", "chat", "warm_session", "serve"],
+            "model_families": ["dense_slm", "bitnet"],
+        },
+        "workflow_cases": workflow_cases,
+        "route_plan": route_plan,
+        "route_state_summary": route_state_summary,
+        "route_state_matrix": route_state_matrix,
+        "report_inventory": report_inventory,
+        "commands": {
+            "workload": format!("bitnet mac workload --suite {} --json-out {}", suite.id(), json_out.display()),
+            "receipts_check": format!("bitnet mac receipts-check {} --json", json_out.display()),
+            "dense_ask": "bitnet mac ask --question <prompt> --json-out <receipt.json>",
+            "dense_chat": "bitnet mac chat --prompt <prompt> --prompt <follow-up> --json-out <receipt.json>",
+            "dense_warm_session": "bitnet mac chat --prompt <prompt> --prompt <follow-up> --json-out <receipt.json>",
+            "dense_serve": "bitnet mac serve-smoke --prompt <prompt> --json-out <receipt.json>",
+            "bitnet_ask": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <gguf> --tokenizer <tokenizer.json> --question <prompt> --json-out <receipt.json>",
+            "bitnet_warm": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <gguf> --tokenizer <tokenizer.json> --prompt <prompt> --prompt <repeat-prompt> --json-out <receipt.json>",
+            "bitnet_chat_gate": format!("bitnet mac bitnet-chat-gate --model-id {BITNET_M4_MODEL_ID} --warm-receipt <warm.json> --failure-receipt <failure.json> --streaming-receipt <streaming.json>"),
+            "bitnet_serve_gate": format!("bitnet mac bitnet-serve-gate --model-id {BITNET_M4_MODEL_ID} --chat-receipt <chat.json> --streaming-receipt <streaming.json> --failure-receipt <failure.json> --serve-check-receipt <serve-check.json>"),
+        },
+        "claim_boundary": {
+            "workload_manifest_only": true,
+            "no_live_model_run": true,
+            "no_model_download": true,
+            "route_state_boundaries_only": true,
+            "mechanical_checks_are_workflow_gates_not_quality_judging": true,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    }))
+}
+
+fn apple_m4_operator_workload_cases_json() -> Vec<serde_json::Value> {
+    vec![
+        serde_json::json!({
+            "id": "summarize",
+            "task_family": "summarize",
+            "prompt": "Summarize this operator note in one sentence: The M4 appliance is offline, cache verified, and receipts must prove the route used.",
+            "follow_up_prompt": "Rewrite the summary in ten words or fewer.",
+            "mechanical_checks": [
+                {"kind": "required_keywords", "values": ["offline", "cache", "receipts"]},
+                {"kind": "forbidden_tokens", "values": ["cloud", "remote api"]},
+            ],
+        }),
+        serde_json::json!({
+            "id": "extract",
+            "task_family": "extract",
+            "prompt": "Extract the ticket id and owner from: Ticket M4-271 owner Ada priority high. Return key=value pairs.",
+            "follow_up_prompt": "Return only the owner value from the same note.",
+            "mechanical_checks": [
+                {"kind": "required_keywords", "values": ["M4-271", "Ada"]},
+                {"kind": "normalized_match", "field": "owner", "value": "ada"},
+            ],
+        }),
+        serde_json::json!({
+            "id": "classify",
+            "task_family": "classify",
+            "prompt": "Classify the sentence as billing, hardware, or docs: The local model cache checksum changed after disk repair. Answer with one label.",
+            "follow_up_prompt": "Classify this as urgent or routine: checksum changed before release.",
+            "mechanical_checks": [
+                {"kind": "one_of", "values": ["hardware"]},
+                {"kind": "forbidden_tokens", "values": ["billing", "docs"]},
+            ],
+        }),
+        serde_json::json!({
+            "id": "json",
+            "task_family": "json",
+            "prompt": "Return JSON with keys route and status for route mac ask status ready. No markdown.",
+            "follow_up_prompt": "Return JSON with keys route and status for route mac chat status ready. No markdown.",
+            "mechanical_checks": [
+                {"kind": "json_schema", "required_keys": ["route", "status"]},
+                {"kind": "forbidden_tokens", "values": ["```"]},
+            ],
+        }),
+        serde_json::json!({
+            "id": "rewrite",
+            "task_family": "rewrite",
+            "prompt": "Rewrite for an operator log: The server is okay but do not claim BitNet serve is ready.",
+            "follow_up_prompt": "Rewrite the same warning in a terse release-note style.",
+            "mechanical_checks": [
+                {"kind": "required_keywords", "values": ["BitNet", "serve"]},
+                {"kind": "forbidden_tokens", "values": ["ready", "enabled"]},
+            ],
+        }),
+        serde_json::json!({
+            "id": "table_qa",
+            "task_family": "table_qa",
+            "prompt": "Table: route|state; ask|enabled; chat|enabled; bitnet-serve|disabled. Which route is disabled? Answer with the route name.",
+            "follow_up_prompt": "Using the same table, answer only enabled or disabled for ask.",
+            "mechanical_checks": [
+                {"kind": "exact_or_normalized_match", "values": ["bitnet-serve", "disabled"]},
+                {"kind": "forbidden_tokens", "values": ["bitnet chat enabled"]},
+            ],
+        }),
+    ]
+}
+
+fn apple_m4_operator_workload_route_plan_json(
+    workflow_cases: &[serde_json::Value],
+    route_state_matrix: &serde_json::Value,
+) -> Result<Vec<serde_json::Value>> {
+    let dense_routes = [
+        ("dense_slm_ask_short", "ask", "slm_apple_m4_local_answer"),
+        ("dense_slm_chat_resident", "chat", "slm_apple_m4_warm_session"),
+        ("dense_slm_warm_session", "warm_session", "slm_apple_m4_warm_session"),
+        ("dense_slm_serve_loopback", "serve", "bitnet_apple_m4_dense_local_server_smoke"),
+    ];
+    let bitnet_routes = [
+        ("bitnet_ask_one_shot", "ask", "strict_bitnet_cpu_profile"),
+        ("bitnet_warm_session", "warm_session", "bitnet_apple_m4_warm_session"),
+        ("bitnet_chat_gate_required", "chat", "bitnet_apple_m4_chat_gate"),
+        ("bitnet_serve_gate_required", "serve", "bitnet_apple_m4_serve_gate"),
+    ];
+
+    let mut plan = Vec::new();
+    for workflow in workflow_cases {
+        for (route_id, surface, artifact_kind) in dense_routes {
+            let row = m4_route_matrix_row(route_state_matrix, route_id)?;
+            plan.push(apple_m4_operator_workload_route_entry(
+                workflow,
+                "dense_slm",
+                route_id,
+                surface,
+                artifact_kind,
+                row,
+            ));
+        }
+        for (route_id, surface, artifact_kind) in bitnet_routes {
+            let row = m4_route_matrix_row(route_state_matrix, route_id)?;
+            plan.push(apple_m4_operator_workload_route_entry(
+                workflow,
+                "bitnet",
+                route_id,
+                surface,
+                artifact_kind,
+                row,
+            ));
+        }
+    }
+    Ok(plan)
+}
+
+fn apple_m4_operator_workload_route_entry(
+    workflow: &serde_json::Value,
+    model_family: &str,
+    route_id: &str,
+    surface: &str,
+    expected_artifact_kind: &str,
+    route_row: &serde_json::Value,
+) -> serde_json::Value {
+    let state = route_row["state"].as_str().unwrap_or("unknown");
+    let requires_gate = route_row["requires_gate_receipt"].as_bool().unwrap_or(false);
+    let enabled_for_suite = matches!(state, "enabled" | "batch_only") && !requires_gate;
+    let workflow_id = workflow["id"].as_str().unwrap_or("unknown");
+    let prompt = workflow["prompt"].as_str().unwrap_or("<prompt>");
+    let follow_up = workflow["follow_up_prompt"].as_str().unwrap_or(prompt);
+    serde_json::json!({
+        "workflow_id": workflow_id,
+        "task_family": workflow["task_family"].clone(),
+        "model_family": model_family,
+        "route_id": route_id,
+        "command_surface": surface,
+        "route_state": state,
+        "operator_class": route_row["operator_class"].clone(),
+        "route_enabled_for_suite": enabled_for_suite,
+        "requires_gate_receipt": requires_gate,
+        "executes_live_model_in_this_command": false,
+        "live_command": apple_m4_operator_workload_live_command(
+            model_family,
+            surface,
+            prompt,
+            follow_up,
+            &format!("{{workload_dir}}/{workflow_id}/{model_family}-{surface}.json"),
+        ),
+        "expected_receipt_path": format!("{{workload_dir}}/{workflow_id}/{model_family}-{surface}.json"),
+        "expected_artifact_kind": expected_artifact_kind,
+        "mechanical_checks": workflow["mechanical_checks"].clone(),
+        "route_evidence": route_row["evidence"].clone(),
+        "required_gate": route_row["required_gate"].clone(),
+        "claim_boundary": route_row["claim_boundary"].clone(),
+    })
+}
+
+fn apple_m4_operator_workload_live_command(
+    model_family: &str,
+    surface: &str,
+    prompt: &str,
+    follow_up: &str,
+    receipt_path: &str,
+) -> String {
+    let prompt = shell_quote_text(prompt);
+    let follow_up = shell_quote_text(follow_up);
+    match (model_family, surface) {
+        ("dense_slm", "ask") => {
+            format!("bitnet mac ask --question {prompt} --json-out {receipt_path}")
+        }
+        ("dense_slm", "chat" | "warm_session") => {
+            format!(
+                "bitnet mac chat --prompt {prompt} --prompt {follow_up} --json-out {receipt_path}"
+            )
+        }
+        ("dense_slm", "serve") => {
+            format!("bitnet mac serve-smoke --prompt {prompt} --json-out {receipt_path}")
+        }
+        ("bitnet", "ask") => format!(
+            "bitnet mac ask --model-id {BITNET_M4_MODEL_ID} --model-path <accepted-gguf> --tokenizer <tokenizer.json> --question {prompt} --json-out {receipt_path}"
+        ),
+        ("bitnet", "warm_session") => format!(
+            "bitnet mac bitnet-warm --model-id {BITNET_M4_MODEL_ID} --model-path <accepted-gguf> --tokenizer <tokenizer.json> --prompt {prompt} --prompt {prompt} --json-out {receipt_path}"
+        ),
+        ("bitnet", "chat") => format!(
+            "bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json> --prompt {prompt} --json-out {receipt_path}"
+        ),
+        ("bitnet", "serve") => {
+            format!(
+                "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>"
+            )
+        }
+        _ => "unsupported route".to_string(),
+    }
+}
+
+fn shell_quote_text(text: &str) -> String {
+    format!("'{}'", text.replace('\'', "'\\''"))
+}
+
+fn m4_route_matrix_row<'a>(
+    route_state_matrix: &'a serde_json::Value,
+    route_id: &str,
+) -> Result<&'a serde_json::Value> {
+    route_state_matrix["rows"]
+        .as_array()
+        .and_then(|rows| rows.iter().find(|row| row["route_id"].as_str() == Some(route_id)))
+        .ok_or_else(|| anyhow!("M4 route-state matrix is missing route {route_id}"))
+}
+
+fn apple_m4_operator_workload_route_summary_json(
+    route_plan: &[serde_json::Value],
+) -> serde_json::Value {
+    let mut surfaces = std::collections::BTreeSet::new();
+    let mut workflows = std::collections::BTreeSet::new();
+    let mut dense_enabled = 0usize;
+    let mut bitnet_enabled = 0usize;
+    let mut disabled_boundaries = 0usize;
+    for entry in route_plan {
+        if let Some(surface) = entry["command_surface"].as_str() {
+            surfaces.insert(surface.to_string());
+        }
+        if let Some(workflow_id) = entry["workflow_id"].as_str() {
+            workflows.insert(workflow_id.to_string());
+        }
+        if entry["route_enabled_for_suite"].as_bool() == Some(true) {
+            if entry["model_family"].as_str() == Some("dense_slm") {
+                dense_enabled += 1;
+            } else if entry["model_family"].as_str() == Some("bitnet") {
+                bitnet_enabled += 1;
+            }
+        } else if entry["requires_gate_receipt"].as_bool() == Some(true) {
+            disabled_boundaries += 1;
+        }
+    }
+    serde_json::json!({
+        "workflow_count": workflows.len(),
+        "route_entry_count": route_plan.len(),
+        "dense_slm_enabled_entries": dense_enabled,
+        "bitnet_enabled_entries": bitnet_enabled,
+        "disabled_gate_boundary_entries": disabled_boundaries,
+        "surfaces": surfaces.into_iter().collect::<Vec<_>>(),
+        "enabled_bitnet_surfaces": ["ask", "warm_session"],
+        "disabled_bitnet_surfaces": ["chat", "serve"],
+    })
+}
+
 fn apple_m4_evidence_replay_dry_run_receipt(
     bundle: &Path,
     manifest: &serde_json::Value,
@@ -3951,6 +4340,29 @@ fn print_mac_evidence_replay_summary(receipt: &serde_json::Value, json_out: &Pat
     println!("Receipt: {}", json_out.display());
     println!(
         "Claim boundary: dry-run audit only; no live model run, no model download, no route enablement."
+    );
+}
+
+fn print_mac_workload_summary(receipt: &serde_json::Value, json_out: &Path) {
+    println!(
+        "Apple M4 operator workload suite: {}",
+        receipt["status"].as_str().unwrap_or("unknown")
+    );
+    println!("Suite: {}", receipt["suite"]["id"].as_str().unwrap_or("<unknown>"));
+    println!(
+        "Workflows: {}, route entries: {}",
+        receipt["route_state_summary"]["workflow_count"].as_u64().unwrap_or(0),
+        receipt["route_state_summary"]["route_entry_count"].as_u64().unwrap_or(0)
+    );
+    println!(
+        "Enabled entries: dense={}, BitNet={}, disabled gate boundaries={}",
+        receipt["route_state_summary"]["dense_slm_enabled_entries"].as_u64().unwrap_or(0),
+        receipt["route_state_summary"]["bitnet_enabled_entries"].as_u64().unwrap_or(0),
+        receipt["route_state_summary"]["disabled_gate_boundary_entries"].as_u64().unwrap_or(0)
+    );
+    println!("Receipt: {}", json_out.display());
+    println!(
+        "Claim boundary: workload manifest only; no live model run, no model download, no BitNet chat/serve enablement, no broad quality claim."
     );
 }
 
@@ -21153,6 +21565,8 @@ fn validate_mac_receipt_value(
         validate_apple_m4_first_run_setup_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_operator_evidence_summary" {
         validate_apple_m4_operator_evidence_summary_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_operator_workload_suite" {
+        validate_apple_m4_operator_workload_suite_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_evidence_replay_bundle" {
         validate_apple_m4_evidence_replay_bundle_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_evidence_replay_dry_run" {
@@ -23227,6 +23641,211 @@ fn validate_apple_m4_operator_evidence_summary_receipt(
     require_bool_at(path, receipt, &["claim_boundary", "evidence_summary_only"], true)?;
     require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
     require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_operator_workload_suite_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_operator_workload_suite")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac workload")?;
+    require_exact_string_at(path, receipt, &["status"], "ok")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_exact_string_at(path, receipt, &["suite", "id"], "m4-operator")?;
+    require_exact_string_at(path, receipt, &["suite", "work_item"], "M4-WORKLOAD-001")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["suite", "execution_mode"],
+        "model_free_workload_manifest",
+    )?;
+    require_bool_at(path, receipt, &["suite", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["suite", "model_download"], false)?;
+    require_u64_exact(path, receipt, &["suite", "workflow_count"], 6)?;
+
+    let workflows = receipt["workflow_cases"].as_array().ok_or_else(|| {
+        anyhow!("{} operator workload suite must include workflow_cases", path.display())
+    })?;
+    if workflows.len() != 6 {
+        anyhow::bail!("{} operator workload suite must include six workflows", path.display());
+    }
+    let mut workflow_ids = std::collections::BTreeSet::new();
+    for workflow in workflows {
+        let id = require_non_empty_string_at(path, workflow, &["id"])?;
+        workflow_ids.insert(id.to_string());
+        require_non_empty_string_at(path, workflow, &["task_family"])?;
+        require_non_empty_string_at(path, workflow, &["prompt"])?;
+        let checks = workflow["mechanical_checks"].as_array().ok_or_else(|| {
+            anyhow!(
+                "{} operator workload workflow {id} must include mechanical_checks",
+                path.display()
+            )
+        })?;
+        if checks.is_empty() {
+            anyhow::bail!(
+                "{} operator workload workflow {id} must include mechanical checks",
+                path.display()
+            );
+        }
+        for check in checks {
+            let kind = require_non_empty_string_at(path, check, &["kind"])?;
+            if kind == "llm_judge" {
+                anyhow::bail!(
+                    "{} operator workload workflow {id} must not require LLM judging",
+                    path.display()
+                );
+            }
+        }
+    }
+    for required in ["summarize", "extract", "classify", "json", "rewrite", "table_qa"] {
+        if !workflow_ids.contains(required) {
+            anyhow::bail!("{} operator workload is missing workflow {required}", path.display());
+        }
+    }
+
+    let route_plan = receipt["route_plan"].as_array().ok_or_else(|| {
+        anyhow!("{} operator workload suite must include route_plan", path.display())
+    })?;
+    if route_plan.len() < 48 {
+        anyhow::bail!(
+            "{} operator workload route_plan must cover all workflow/route boundary entries",
+            path.display()
+        );
+    }
+    let mut dense_surfaces = std::collections::BTreeSet::new();
+    let mut bitnet_enabled_surfaces = std::collections::BTreeSet::new();
+    let mut bitnet_disabled_surfaces = std::collections::BTreeSet::new();
+    for entry in route_plan {
+        let workflow_id = require_non_empty_string_at(path, entry, &["workflow_id"])?;
+        if !workflow_ids.contains(workflow_id) {
+            anyhow::bail!(
+                "{} route_plan entry references unknown workflow {workflow_id}",
+                path.display()
+            );
+        }
+        let model_family = require_non_empty_string_at(path, entry, &["model_family"])?;
+        let surface = require_non_empty_string_at(path, entry, &["command_surface"])?;
+        let route_state = require_non_empty_string_at(path, entry, &["route_state"])?;
+        require_non_empty_string_at(path, entry, &["route_id"])?;
+        require_non_empty_string_at(path, entry, &["live_command"])?;
+        require_non_empty_string_at(path, entry, &["expected_receipt_path"])?;
+        require_non_empty_string_at(path, entry, &["expected_artifact_kind"])?;
+        require_bool_at(path, entry, &["executes_live_model_in_this_command"], false)?;
+        if model_family == "dense_slm" && entry["route_enabled_for_suite"].as_bool() == Some(true) {
+            dense_surfaces.insert(surface.to_string());
+        }
+        if model_family == "bitnet" && entry["route_enabled_for_suite"].as_bool() == Some(true) {
+            bitnet_enabled_surfaces.insert(surface.to_string());
+        }
+        if model_family == "bitnet" && entry["requires_gate_receipt"].as_bool() == Some(true) {
+            bitnet_disabled_surfaces.insert(surface.to_string());
+            require_bool_at(path, entry, &["route_enabled_for_suite"], false)?;
+        }
+        if matches!(route_state, "enabled" | "batch_only") {
+            let evidence = entry["route_evidence"].as_array().ok_or_else(|| {
+                anyhow!(
+                    "{} enabled workload route {model_family}/{surface} must record evidence",
+                    path.display()
+                )
+            })?;
+            if evidence.is_empty() {
+                anyhow::bail!(
+                    "{} enabled workload route {model_family}/{surface} must record evidence",
+                    path.display()
+                );
+            }
+            let checks = entry["mechanical_checks"].as_array().ok_or_else(|| {
+                anyhow!(
+                    "{} enabled workload route {model_family}/{surface} must record mechanical checks",
+                    path.display()
+                )
+            })?;
+            if checks.is_empty() {
+                anyhow::bail!(
+                    "{} enabled workload route {model_family}/{surface} must record mechanical checks",
+                    path.display()
+                );
+            }
+        }
+    }
+    for surface in ["ask", "chat", "warm_session", "serve"] {
+        if !dense_surfaces.contains(surface) {
+            anyhow::bail!("{} dense workload routes must include {surface}", path.display());
+        }
+    }
+    for surface in ["ask", "warm_session"] {
+        if !bitnet_enabled_surfaces.contains(surface) {
+            anyhow::bail!("{} BitNet workload routes must include {surface}", path.display());
+        }
+    }
+    for surface in ["chat", "serve"] {
+        if !bitnet_disabled_surfaces.contains(surface) {
+            anyhow::bail!(
+                "{} BitNet workload boundaries must keep {surface} gate-disabled",
+                path.display()
+            );
+        }
+    }
+
+    require_u64_exact(path, receipt, &["route_state_summary", "workflow_count"], 6)?;
+    require_u64_at(path, receipt, &["route_state_summary", "dense_slm_enabled_entries"], true)?;
+    require_u64_at(path, receipt, &["route_state_summary", "bitnet_enabled_entries"], true)?;
+    require_u64_at(
+        path,
+        receipt,
+        &["route_state_summary", "disabled_gate_boundary_entries"],
+        true,
+    )?;
+    require_m4_route_state_matrix(path, receipt)?;
+    require_non_empty_string_at(path, receipt, &["report_inventory", "root"])?;
+    for command in [
+        "workload",
+        "receipts_check",
+        "dense_ask",
+        "dense_chat",
+        "dense_warm_session",
+        "dense_serve",
+        "bitnet_ask",
+        "bitnet_warm",
+        "bitnet_chat_gate",
+        "bitnet_serve_gate",
+    ] {
+        require_non_empty_string_at(path, receipt, &["commands", command])?;
+    }
+
+    require_bool_at(path, receipt, &["claim_boundary", "workload_manifest_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "route_state_boundaries_only"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "mechanical_checks_are_workflow_gates_not_quality_judging"],
+        true,
+    )?;
     require_bool_at(
         path,
         receipt,

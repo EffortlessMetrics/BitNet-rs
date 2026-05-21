@@ -22,6 +22,7 @@ The durable envelope is based on these committed evidence surfaces:
 | BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | comparable matching history exists |
 | Report dashboard | `target/apple-m4-inference-excellence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | refreshed by `M4-EXCELLENCE-003`; five families, 18 reports, and nine comparable groups |
 | Evidence replay bundle | `ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json` | Exact audit commands, git/binary identity, model/tokenizer identity, receipt inputs, dashboard outputs, expected advisory regression result, and claim boundary | dry-run audit only; no live model run |
+| Operator workload suite | `ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json` | Six workflow families across dense SLM ask/chat/warm-session/serve and enabled BitNet ask/warm-session route states, with disabled BitNet chat/serve boundaries | model-free manifest only; no live model run |
 
 `M4-BENCH-002` validates the dense SLM benchmark surface above with
 `target/release/bitnet mac receipts-check ... --json` for all three supported
@@ -70,6 +71,13 @@ The current class map is:
 | BitNet `bitnet mac chat --model-family bitnet` | `disabled` unless a ready `bitnet_apple_m4_chat_gate` receipt is supplied | The route is gate-required; one-shot, benchmark, or warm receipts alone are not chat enablement | No chat timing expectation is published by this envelope | Uses the same accepted BitNet artifact/tokenizer only after the gate passes | `M4-BITNET-EX-006` defines the gate; missing or blocked gate receipts must keep the route disabled |
 | BitNet `bitnet mac serve --model-family bitnet` | `disabled` unless a ready `bitnet_apple_m4_serve_gate` receipt is supplied | The route is gate-required after chat and service evidence; dense serve receipts do not prove BitNet serve | No BitNet serve timing expectation is published by this envelope | Uses the same accepted BitNet artifact/tokenizer only after the gate passes | `M4-BITNET-EX-007` defines the gate; missing or blocked gate receipts must keep the route disabled |
 | Full `apple-m4-metal`, QK256-on-Apple, Neural Engine, MPSGraph, MacBook, and broad Apple Silicon routes | `unsupported` | No supported inference profile in this envelope | No timing expectation | No memory or disk expectation | No accepted full-route receipt in this envelope |
+
+`M4-WORKLOAD-001` translates this route-state map into an operator workload
+manifest. `bitnet mac workload --suite m4-operator` records summarize, extract,
+classify, JSON, rewrite, and table-QA workflow cases, mechanical checks, route
+evidence, and exact follow-up live commands. The receipt is validated by
+`bitnet mac receipts-check` and records zero prompts and zero generated tokens
+because it is a manifest, not a live inference run.
 
 ## Route-State Matrix
 

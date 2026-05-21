@@ -1440,6 +1440,24 @@ artifacts, enable disabled BitNet routes, or create Metal, QK256, Neural Engine,
 MPSGraph, MacBook, broad quality, broad performance, speedup, or broad Apple
 Silicon claims.
 
+`M4-WORKLOAD-001` adds a model-free operator workload suite manifest:
+`ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json`.
+The `bitnet mac workload --suite m4-operator` receipt covers six operator
+workflow families: `summarize`, `extract`, `classify`, `json`, `rewrite`, and
+`table_qa`. For each workflow it records mechanical checks and route-plan entries
+over dense SLM ask/chat/warm-session/serve surfaces plus BitNet ask/warm-session
+surfaces. BitNet chat and serve remain disabled gate boundaries that name the
+missing gate families instead of enabling those routes.
+
+The committed workload receipt validates with `bitnet mac receipts-check` and
+records `prompt_count=0`, `generated_tokens=0`, `no_live_model_run=true`, and
+`workload_manifest_only=true`. It supplies exact follow-up commands for later
+live route receipts, but it does not run those commands itself. This is operator
+coverage and receipt-contract evidence only: it does not prove broad assistant
+quality, enable BitNet chat or serve, claim production server readiness, claim
+full Metal inference, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup,
+broad performance, or broad Apple Silicon support.
+
 ## Release Gates
 
 Before the public M4 expectation envelope changes, a go/no-go matrix should say

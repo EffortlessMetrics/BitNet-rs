@@ -2855,7 +2855,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-WORKLOAD-001"
-status = "proposed"
+status = "pr_open"
+pr = 213
+head_sha = "f199820623b6f1e94c732881acbdf45a7b71b258"
 branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-operator-suite"
 stackable = false
 review_mode = "codex_premerge"
