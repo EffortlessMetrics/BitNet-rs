@@ -3477,6 +3477,28 @@ fn mac_serve_smoke_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_serve_failure_smoke_help_documents_failure_semantics_receipt() {
+    bitnet()
+        .args(["mac", "serve-failure-smoke", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("timeout/cancellation/failure semantics smoke"))
+        .stdout(predicate::str::contains("--timeout-seconds <TIMEOUT_SECONDS>"))
+        .stdout(predicate::str::contains("--receipt-dir <PATH>"))
+        .stdout(predicate::str::contains("--json-out <PATH>"));
+}
+
+#[test]
+fn mac_serve_failure_smoke_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "serve-failure-smoke"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac serve routes the supported Mac local service path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
 fn mac_chat_help_documents_resident_prompts() {
     bitnet()
         .args(["mac", "chat", "--help"])

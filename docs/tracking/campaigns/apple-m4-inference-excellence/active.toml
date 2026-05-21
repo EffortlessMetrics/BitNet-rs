@@ -2568,13 +2568,14 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-EX-002"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-002-streaming-failure-semantics"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-SERVE-EX-001", "M4-BITNET-EX-007"]
+pr = 112
 acceptance = "Prove local-server streaming and failure semantics across dense SLM and enabled BitNet serve paths: partial token streaming, client cancellation, timeout stage, invalid request, missing cache, per-request receipt export, and no-response failure receipts."
 commands = [
   "cargo test --locked -p bitnet-server -- --nocapture",

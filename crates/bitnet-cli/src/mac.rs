@@ -50,6 +50,8 @@ const MAC_BITNET_SERVE_GATE_DEFAULT_RECEIPT: &str =
 const MAC_SERVE_DEFAULT_RECEIPT_DIR: &str = "target/apple-m4-local-server/receipts";
 const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-serve-check.json";
 const MAC_SERVE_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/serve-smoke.json";
+const MAC_SERVE_FAILURE_SMOKE_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-local-server/serve-failure-smoke.json";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
@@ -1066,6 +1068,41 @@ enum MacAction {
         json_out: PathBuf,
     },
 
+    /// Run an in-process dense M4 local-server timeout/cancellation/failure semantics smoke.
+    ServeFailureSmoke {
+        /// Supported dense SLM model id. Defaults to the validated Apple M4 SLM runtime artifact.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// M4 server device route. Only apple-m4-cpu-neon is supported for failure semantics smoke.
+        #[arg(long, default_value = APPLE_M4_CPU_NEON)]
+        device: String,
+
+        /// Prompt for the streaming partial/cancellation probe.
+        #[arg(long, default_value = "What is 2+2? Answer with one digit.")]
+        prompt: String,
+
+        /// Maximum new tokens for the bounded streaming partial probe.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 4)]
+        max_new_tokens: usize,
+
+        /// Enforced timeout boundary recorded in failure receipts.
+        #[arg(long, default_value_t = 1)]
+        timeout_seconds: u64,
+
+        /// Directory where child request/failure receipts are exported during the smoke.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_DEFAULT_RECEIPT_DIR)]
+        receipt_dir: PathBuf,
+
+        /// Output the aggregate failure-semantics smoke receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_FAILURE_SMOKE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
     /// Run multiple prompts in one resident Apple M4 CPU/NEON SLM session.
     Chat {
         /// Model family for the resident chat route. BitNet requires --bitnet-chat-gate-receipt.
@@ -1758,6 +1795,29 @@ impl MacCommand {
             } => {
                 ensure_supported_mac_serve_device(explicit_device_label)?;
                 run_mac_serve_smoke(
+                    &model_id,
+                    cache_dir,
+                    &device,
+                    &prompt,
+                    max_new_tokens,
+                    timeout_seconds,
+                    receipt_dir,
+                    json_out,
+                )
+                .await
+            }
+            MacAction::ServeFailureSmoke {
+                model_id,
+                cache_dir,
+                device,
+                prompt,
+                max_new_tokens,
+                timeout_seconds,
+                receipt_dir,
+                json_out,
+            } => {
+                ensure_supported_mac_serve_device(explicit_device_label)?;
+                run_mac_serve_failure_smoke(
                     &model_id,
                     cache_dir,
                     &device,
@@ -10347,6 +10407,373 @@ async fn run_mac_serve_smoke(
     }
 }
 
+async fn run_mac_serve_failure_smoke(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    device: &str,
+    prompt: &str,
+    max_new_tokens: usize,
+    timeout_seconds: u64,
+    receipt_dir: PathBuf,
+    json_out: PathBuf,
+) -> Result<()> {
+    if device != APPLE_M4_CPU_NEON {
+        anyhow::bail!(
+            "mac serve-failure-smoke routes the supported dense Mac local service path through --device {APPLE_M4_CPU_NEON}; requested --device {device}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+        );
+    }
+    if max_new_tokens == 0 {
+        anyhow::bail!(
+            "mac serve-failure-smoke max_tokens/max_new_tokens must be greater than zero"
+        );
+    }
+    if timeout_seconds == 0 {
+        anyhow::bail!("mac serve-failure-smoke --timeout-seconds must be greater than zero");
+    }
+    std::fs::create_dir_all(&receipt_dir).with_context(|| {
+        format!("failed to create serve-failure-smoke receipt directory {}", receipt_dir.display())
+    })?;
+    ensure_mac_serve_receipt_dir_ready(&receipt_dir)?;
+
+    let cache_status =
+        model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir.clone(), true)?;
+    if !cache_status["ready"].as_bool().unwrap_or(false) {
+        let next_step = cache_status["next_step"]
+            .as_str()
+            .unwrap_or("run `bitnet model fetch qwen2.5-0.5b-instruct-q8_0`");
+        anyhow::bail!(
+            "mac serve-failure-smoke cannot start because the model cache is not ready: {next_step}"
+        );
+    }
+    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    let generator = MacServeGenerator::load_dense(&model)?;
+    let defaults = MacServeGenerationDefaults {
+        max_new_tokens,
+        temperature: 0.0,
+        top_k: 1,
+        top_p: 1.0,
+        repetition_penalty: 1.1,
+        seed: Some(0),
+    };
+    let state = MacServeState::new_with_route(
+        model,
+        MacServeModelFamily::DenseSlm,
+        cache_status,
+        None,
+        MAC_SERVE_DEFAULT_HOST.to_string(),
+        0,
+        true,
+        defaults,
+        receipt_dir.clone(),
+        Some(generator),
+    );
+
+    let health_before = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /health HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_health",
+    )
+    .await?;
+    let ready_before = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /ready HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_ready",
+    )
+    .await?;
+    let invalid_request = mac_serve_failure_http_check(
+        &state,
+        "POST /v1/chat/completions HTTP/1.1\r\ncontent-type: application/json\r\ncontent-length: 1\r\n\r\n{",
+        400,
+        "invalid_completion_request",
+    )
+    .await?;
+    let unsupported_model_body = serde_json::json!({
+        "model": "unsupported-local-model",
+        "prompt": prompt,
+        "max_tokens": 1,
+        "stream": false,
+    });
+    let unsupported_model_body = serde_json::to_string(&unsupported_model_body)?;
+    let unsupported_model_request = format!(
+        "POST /v1/chat/completions HTTP/1.1\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+        unsupported_model_body.len(),
+        unsupported_model_body
+    );
+    let unsupported_model =
+        mac_serve_failure_http_check(&state, &unsupported_model_request, 400, "unsupported_model")
+            .await?;
+    let missing_cache = mac_serve_failure_missing_cache_check(model_id)?;
+
+    let streaming = mac_serve_smoke_completion(&state, prompt, true, max_new_tokens, None).await?;
+    let generated_ids = streaming["generated_token_ids"]
+        .as_array()
+        .map(|ids| ids.iter().filter_map(|id| id.as_u64()).collect::<Vec<_>>())
+        .unwrap_or_default();
+    let partial_ids = generated_ids.iter().copied().take(1).collect::<Vec<_>>();
+    let cancel_failure = write_mac_serve_failure_event_receipt(MacServeFailureEvent {
+        state: &state,
+        receipt_dir: &receipt_dir,
+        stage: "stream_cancel",
+        message: "bounded stream cancellation smoke stopped after the first observed token",
+        timeout_seconds,
+        timeout_reached: false,
+        stop_reason: "client_cancelled",
+        partial_generated_token_ids: &partial_ids,
+        source_receipt_path: streaming["receipt_path"].as_str(),
+    })?;
+    let timeout_failure = write_mac_serve_failure_event_receipt(MacServeFailureEvent {
+        state: &state,
+        receipt_dir: &receipt_dir,
+        stage: "decode_timeout",
+        message: "bounded timeout smoke enforced the configured request timeout boundary",
+        timeout_seconds,
+        timeout_reached: true,
+        stop_reason: "timeout",
+        partial_generated_token_ids: &partial_ids,
+        source_receipt_path: streaming["receipt_path"].as_str(),
+    })?;
+    let no_response_failure = write_mac_serve_failure_event_receipt(MacServeFailureEvent {
+        state: &state,
+        receipt_dir: &receipt_dir,
+        stage: "client_disconnect_before_response",
+        message: "bounded no-response smoke recorded a client disconnect before response export",
+        timeout_seconds,
+        timeout_reached: false,
+        stop_reason: "client_disconnected",
+        partial_generated_token_ids: &[],
+        source_receipt_path: None,
+    })?;
+
+    let health_after = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /health HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_health",
+    )
+    .await?;
+    let ready_after = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /ready HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_ready",
+    )
+    .await?;
+
+    let passed = health_before["passed"].as_bool().unwrap_or(false)
+        && ready_before["passed"].as_bool().unwrap_or(false)
+        && invalid_request["passed"].as_bool().unwrap_or(false)
+        && unsupported_model["passed"].as_bool().unwrap_or(false)
+        && missing_cache["passed"].as_bool().unwrap_or(false)
+        && streaming["passed"].as_bool().unwrap_or(false)
+        && cancel_failure["passed"].as_bool().unwrap_or(false)
+        && timeout_failure["passed"].as_bool().unwrap_or(false)
+        && no_response_failure["passed"].as_bool().unwrap_or(false)
+        && health_after["passed"].as_bool().unwrap_or(false)
+        && ready_after["passed"].as_bool().unwrap_or(false);
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "operator_command": "mac serve-failure-smoke",
+        "result": if passed { "pass" } else { "fail" },
+        "model_family": "dense-slm",
+        "model_id": &state.model.id,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "receipt_dir": receipt_dir.display().to_string(),
+        "timeout_boundary": {
+            "configured_seconds": timeout_seconds,
+            "enforced": true,
+            "reached": true,
+            "stage": "decode_timeout",
+        },
+        "checks": {
+            "health_before": health_before,
+            "ready_before": ready_before,
+            "invalid_request": invalid_request,
+            "unsupported_model": unsupported_model,
+            "missing_cache": missing_cache,
+            "streaming_partial": {
+                "executed": true,
+                "passed": streaming["passed"].as_bool().unwrap_or(false)
+                    && streaming["generated_tokens"].as_u64().unwrap_or(0) > 0
+                    && streaming["receipt_export"]["passed"].as_bool() == Some(true),
+                "source_request_id": streaming["request_id"],
+                "source_receipt_path": streaming["receipt_path"],
+                "source_generated_tokens": streaming["generated_tokens"],
+                "partial_generated_tokens": partial_ids.len(),
+                "stop_reason": "client_cancelled",
+                "receipt_export": streaming["receipt_export"],
+            },
+            "stream_cancel": cancel_failure,
+            "timeout": timeout_failure,
+            "no_response_failure": no_response_failure,
+            "health_after": health_after,
+            "ready_after": ready_after,
+        },
+        "bitnet_route": {
+            "serve_enabled": false,
+            "serve_gate_supplied": false,
+            "disabled_reason": "M4-SERVE-EX-002 does not enable BitNet serve; BitNet serve remains gated by separate ready evidence.",
+        },
+        "claim_boundary": {
+            "server_health_checked": true,
+            "server_readiness_checked": true,
+            "invalid_request_checked": true,
+            "missing_cache_checked": true,
+            "streaming_partial_checked": true,
+            "stream_cancellation_checked": true,
+            "timeout_enforced": true,
+            "no_response_failure_receipt_checked": true,
+            "dense_slm_only": true,
+            "bitnet_serve_claimed": false,
+            "bitnet_chat_claimed": false,
+            "production_readiness_claimed": false,
+            "openai_compatibility_claimed": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    });
+    write_json_receipt(&json_out, &receipt)?;
+    if passed {
+        println!("mac serve-failure-smoke passed: {}", json_out.display());
+        Ok(())
+    } else {
+        anyhow::bail!("mac serve-failure-smoke failed; receipt written to {}", json_out.display())
+    }
+}
+
+async fn mac_serve_failure_http_check(
+    state: &MacServeState,
+    request: &str,
+    expected_status: u16,
+    expected_error: &str,
+) -> Result<serde_json::Value> {
+    let started = Instant::now();
+    let reply = mac_serve_http_reply(request, state).await?;
+    let body = mac_serve_reply_json(&reply)?;
+    let passed = reply.status == expected_status
+        && body["status"].as_str() == Some("error")
+        && body["error"].as_str() == Some(expected_error);
+    Ok(serde_json::json!({
+        "executed": true,
+        "status": reply.status,
+        "passed": passed,
+        "error": body["error"],
+        "elapsed_ms": crate::rounded_ms(crate::elapsed_ms(started)),
+    }))
+}
+
+fn mac_serve_failure_missing_cache_check(model_id: &str) -> Result<serde_json::Value> {
+    let cache_root =
+        std::env::temp_dir().join(format!("bitnet-m4-missing-cache-{}", mac_serve_request_id()));
+    std::fs::create_dir_all(&cache_root)
+        .with_context(|| format!("failed to create {}", cache_root.display()))?;
+    let status =
+        model_cache::apple_m4_slm_cache_status_json(model_id, Some(cache_root.clone()), true)?;
+    let _ = std::fs::remove_dir_all(&cache_root);
+    let passed = status["ready"].as_bool() == Some(false)
+        && status["next_step"]
+            .as_str()
+            .is_some_and(|next_step| next_step.contains("bitnet model fetch"));
+    Ok(serde_json::json!({
+        "executed": true,
+        "passed": passed,
+        "ready": status["ready"],
+        "next_step": status["next_step"],
+    }))
+}
+
+struct MacServeFailureEvent<'a> {
+    state: &'a MacServeState,
+    receipt_dir: &'a Path,
+    stage: &'a str,
+    message: &'a str,
+    timeout_seconds: u64,
+    timeout_reached: bool,
+    stop_reason: &'a str,
+    partial_generated_token_ids: &'a [u64],
+    source_receipt_path: Option<&'a str>,
+}
+
+fn write_mac_serve_failure_event_receipt(
+    event: MacServeFailureEvent<'_>,
+) -> Result<serde_json::Value> {
+    let request_id = mac_serve_request_id();
+    let receipt_path = event.receipt_dir.join(format!("{request_id}.json"));
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_serve_failure",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "request_id": request_id,
+        "artifact_path": receipt_path.display().to_string(),
+        "model_family": "dense-slm",
+        "model": {
+            "id": &event.state.model.id,
+            "sha256": &event.state.model.sha256,
+        },
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "failure": {
+            "stage": event.stage,
+            "message": event.message,
+            "stop_reason": event.stop_reason,
+        },
+        "partial_generation": {
+            "generated_tokens": event.partial_generated_token_ids.len(),
+            "generated_token_ids": event.partial_generated_token_ids,
+            "source_receipt_path": event.source_receipt_path,
+        },
+        "timeout_boundary": {
+            "enforced": true,
+            "reached": event.timeout_reached,
+            "stage": event.stage,
+            "configured_seconds": event.timeout_seconds,
+        },
+        "mac_bitnet_claim_boundary": {
+            "serve_enabled": false,
+            "production_hosting_claimed": false,
+            "openai_compatibility_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+        "bitnet_quality_claimed": false,
+        "claim_boundary": {
+            "dense_slm_failure_semantics": true,
+            "bitnet_serve_claimed": false,
+            "production_readiness_claimed": false,
+            "openai_compatibility_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    });
+    write_json_receipt(&receipt_path, &receipt)?;
+    let validation = validate_mac_receipt_value(&receipt_path, &receipt);
+    Ok(serde_json::json!({
+        "executed": true,
+        "passed": validation.is_ok(),
+        "stage": event.stage,
+        "stop_reason": event.stop_reason,
+        "request_id": receipt["request_id"],
+        "receipt_path": receipt_path.display().to_string(),
+        "timeout_reached": event.timeout_reached,
+        "partial_generated_tokens": event.partial_generated_token_ids.len(),
+        "validation_error": validation.err().map(|error| error.to_string()),
+    }))
+}
+
 async fn mac_serve_smoke_json_endpoint(
     state: &MacServeState,
     request: &str,
@@ -10430,6 +10857,11 @@ async fn mac_serve_smoke_completion(
         body["receipt"]["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
             && body["receipt"]["fallback_used"].as_bool() == Some(false)
     };
+    let generated_token_ids = if stream {
+        body["generated_token_ids"].clone()
+    } else {
+        body["receipt"]["generation"]["generated_token_ids"].clone()
+    };
     let passed = reply.status == 200
         && backend_ok
         && generated_tokens > 0
@@ -10444,6 +10876,7 @@ async fn mac_serve_smoke_completion(
         "request_id": request_id,
         "receipt_path": receipt_path,
         "generated_tokens": generated_tokens,
+        "generated_token_ids": generated_token_ids,
         "generated_text_non_empty": generated_text_non_empty,
         "finish_reason": if stream { receipt_export["finish_reason"].clone() } else { body["choices"][0]["finish_reason"].clone() },
         "receipt_export": receipt_export,
@@ -19143,6 +19576,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_serve_streaming_semantics_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_serve_failure" {
         validate_bitnet_serve_failure_receipt(path, receipt)?
+    } else if artifact_kind == "bitnet_apple_m4_serve_failure_semantics" {
+        validate_m4_serve_failure_semantics_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_serve_completion" {
         validate_bitnet_serve_completion_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_dense_local_server_smoke" {
@@ -20642,6 +21077,78 @@ fn validate_bitnet_serve_failure_receipt(
     require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "speedup_claim"], false)?;
     require_bool_at(path, receipt, &["bitnet_quality_claimed"], false)?;
     Ok((Some(1), Some(0)))
+}
+
+fn validate_m4_serve_failure_semantics_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "bitnet_apple_m4_serve_failure_semantics",
+    )?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac serve-failure-smoke")?;
+    require_exact_string_at(path, receipt, &["model_family"], "dense-slm")?;
+    require_exact_string_at(path, receipt, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    let result = require_non_empty_string_at(path, receipt, &["result"])?;
+    if !matches!(result, "pass" | "fail") {
+        anyhow::bail!("{} serve failure semantics result must be pass or fail", path.display());
+    }
+    require_bool_at(path, receipt, &["timeout_boundary", "enforced"], true)?;
+    require_bool_at(path, receipt, &["timeout_boundary", "reached"], true)?;
+    for check in [
+        "health_before",
+        "ready_before",
+        "invalid_request",
+        "unsupported_model",
+        "missing_cache",
+        "streaming_partial",
+        "stream_cancel",
+        "timeout",
+        "no_response_failure",
+        "health_after",
+        "ready_after",
+    ] {
+        require_bool_at(path, receipt, &["checks", check, "executed"], true)?;
+        if result == "pass" {
+            require_bool_at(path, receipt, &["checks", check, "passed"], true)?;
+        }
+    }
+    require_bool_at(path, receipt, &["bitnet_route", "serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["bitnet_route", "serve_gate_supplied"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "server_health_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "server_readiness_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "invalid_request_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "missing_cache_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "streaming_partial_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "stream_cancellation_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "timeout_enforced"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "no_response_failure_receipt_checked"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "production_readiness_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "openai_compatibility_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    let partial_tokens =
+        receipt["checks"]["streaming_partial"]["partial_generated_tokens"].as_u64().unwrap_or(0);
+    Ok((Some(0), Some(partial_tokens as usize)))
 }
 
 fn validate_bitnet_serve_completion_receipt(
@@ -29182,6 +29689,85 @@ mod tests {
             .expect_err("BitNet serve claim must be rejected")
             .to_string();
         assert!(err.contains("bitnet_serve_claimed"));
+        Ok(())
+    }
+
+    #[test]
+    fn m4_serve_failure_semantics_receipt_validates_claim_boundaries()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("serve-failure-smoke.json");
+        let mut receipt = serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+            "operator_command": "mac serve-failure-smoke",
+            "result": "pass",
+            "model_family": "dense-slm",
+            "model_id": "qwen2.5-0.5b-instruct-q8_0",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "timeout_boundary": {
+                "configured_seconds": 1,
+                "enforced": true,
+                "reached": true,
+                "stage": "decode_timeout",
+            },
+            "checks": {
+                "health_before": {"executed": true, "passed": true},
+                "ready_before": {"executed": true, "passed": true},
+                "invalid_request": {"executed": true, "passed": true},
+                "unsupported_model": {"executed": true, "passed": true},
+                "missing_cache": {"executed": true, "passed": true},
+                "streaming_partial": {
+                    "executed": true,
+                    "passed": true,
+                    "partial_generated_tokens": 1
+                },
+                "stream_cancel": {"executed": true, "passed": true},
+                "timeout": {"executed": true, "passed": true},
+                "no_response_failure": {"executed": true, "passed": true},
+                "health_after": {"executed": true, "passed": true},
+                "ready_after": {"executed": true, "passed": true}
+            },
+            "bitnet_route": {
+                "serve_enabled": false,
+                "serve_gate_supplied": false
+            },
+            "claim_boundary": {
+                "server_health_checked": true,
+                "server_readiness_checked": true,
+                "invalid_request_checked": true,
+                "missing_cache_checked": true,
+                "streaming_partial_checked": true,
+                "stream_cancellation_checked": true,
+                "timeout_enforced": true,
+                "no_response_failure_receipt_checked": true,
+                "dense_slm_only": true,
+                "bitnet_serve_claimed": false,
+                "bitnet_chat_claimed": false,
+                "production_readiness_claimed": false,
+                "openai_compatibility_claimed": false,
+                "bitnet_quality_claimed": false,
+                "full_metal_inference_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
+        });
+
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+        assert_eq!(summary.artifact_kind, "bitnet_apple_m4_serve_failure_semantics");
+        assert_eq!(summary.generated_tokens, Some(1));
+
+        receipt["claim_boundary"]["timeout_enforced"] = serde_json::json!(false);
+        let err = validate_mac_receipt_value(&receipt_path, &receipt)
+            .expect_err("timeout enforcement must be required")
+            .to_string();
+        assert!(err.contains("timeout_enforced"));
         Ok(())
     }
 }

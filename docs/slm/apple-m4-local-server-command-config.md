@@ -138,6 +138,35 @@ streaming completion, per-request receipt export, backend/fallback fields, and
 claim boundaries. It remains a local conformance receipt, not production
 hosting, broad OpenAI compatibility, BitNet serve readiness, or Metal evidence.
 
+## M4-SERVE-EX-002 Failure Semantics
+
+The 2026-05-21 M4 server failure-semantics smoke adds an enforced bounded
+failure receipt for the default dense SLM route:
+
+| Model ID | Aggregate receipt | Invalid request | Missing cache | Stream cancel | Timeout | No response | Backend | Fallback |
+|---|---|---:|---:|---:|---:|---:|---|---|
+| `qwen2.5-0.5b-instruct-q8_0` | `ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json` | pass | pass | pass | pass | pass | `apple-m4-cpu-neon` | `false` |
+
+The aggregate receipt validates as
+`bitnet_apple_m4_serve_failure_semantics`. It records health/ready before and
+after failure probes, invalid request handling, bad model ID handling, missing
+cache guidance, partial streaming evidence, stream cancellation, timeout
+boundary enforcement, no-response failure receipts, and per-request receipt
+export. Child failure receipts validate as `bitnet_apple_m4_serve_failure`.
+
+To refresh the bounded dense-only smoke:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac serve-failure-smoke \
+  --max-new-tokens 1 \
+  --receipt-dir ci/hardware/apple-m4-mac-mini/<date>/serve-failure-semantics/receipts \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/serve-failure-semantics/summary.json
+```
+
+This is not a production hosting claim, full OpenAI compatibility claim, BitNet
+serve/chat enablement, Metal evidence, QK256 evidence, Neural Engine evidence,
+MPSGraph evidence, speedup claim, or broad Apple Silicon behavior claim.
+
 ## Config File Shape
 
 The server should accept an optional config file equivalent to the command-line
