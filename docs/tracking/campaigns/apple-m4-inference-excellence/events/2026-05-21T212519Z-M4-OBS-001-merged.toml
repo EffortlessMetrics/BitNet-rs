@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T21:25:19Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OBS-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6169
+head_sha = "aa4a12054a3e858adc438805900a22d460efdad6"
+merge_sha = "911e7ce33e8f8f93f825140ce1f56e0ddfebbf85"
+
+notes = [
+  "Merged PR #6169 with `bitnet mac ask --trace` and `bitnet mac serve --trace` observability correlation.",
+  "The merged slice links redacted `m4obs-*` trace IDs across progress, logs, receipts, server metadata, and failure diagnostics with observability contract validation.",
+  "No model quality, performance, BitNet chat/serve readiness, full Metal inference, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, or production-hosting claim was added.",
+]

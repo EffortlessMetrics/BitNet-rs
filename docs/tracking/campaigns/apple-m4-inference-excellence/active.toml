@@ -2485,7 +2485,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-OBS-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-OBS-001-trace-correlation"
 stackable = false
 review_mode = "codex_premerge"
@@ -2493,6 +2493,7 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-RECEIPT-001", "M4-RELIABILITY-001", "M4-SERVE-EX-002"]
 pr = 6169
+merge_sha = "911e7ce33e8f8f93f825140ce1f56e0ddfebbf85"
 acceptance = "Add M4 observability correlation for CLI and server routes: trace IDs linking progress events, logs, per-run or per-request receipts, failure receipts, cancellation/timeout stages, and operator-facing diagnostics without leaking prompts or cache paths beyond the documented redaction policy."
 commands = [
   "bitnet mac ask --trace --json-out ci/hardware/apple-m4-mac-mini/<date>/observability/ask.json <prompt>",
