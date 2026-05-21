@@ -1,0 +1,12 @@
+timestamp = "2026-05-21T17:56:56Z"
+campaign = "intel-a770"
+item = "A770-016"
+event = "in_progress"
+branch = "codex/intel-a770/A770-016-answer-corpus-proof-route"
+actor = "codex-a770"
+
+notes = [
+  "A770-015 added the diagnostic answer-corpus route contract; this slice binds live child run invocations to the official BitNet 2B I2_S model contract and the committed diagnostic QK256 route id.",
+  "The receipt checker remains claim-closed and rejects missing A770 model-contract or QK256 route declarations.",
+  "No A770 answer quality, live answer-corpus execution, full BitNet inference, residency, speed, or trusted-partial acceleration claim is made.",
+]

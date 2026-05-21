@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T18:29:35Z"
+campaign = "intel-a770"
+item = "A770-016"
+event = "pr_open"
+pr = 220
+head_sha = "6365895afe6bccfe6205fb6d2701581de7fdcca0"
+branch = "codex/intel-a770/A770-016-answer-corpus-proof-route"
+actor = "codex-a770"
+
+notes = [
+  "Opened PR #220 for A770-016 answer-corpus proof-route binding.",
+  "The PR binds A770 answer-corpus child invocations to the official BitNet 2B I2_S model contract and the committed diagnostic QK256 route id.",
+  "No A770 answer quality, live answer-corpus execution, full BitNet inference, residency, speed, or trusted-partial acceleration claim is made.",
+]

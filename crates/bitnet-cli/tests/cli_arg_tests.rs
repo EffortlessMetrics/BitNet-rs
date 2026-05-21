@@ -9429,6 +9429,17 @@ fn answer_corpus_dry_run_accepts_a770_opencl_lane() -> Result<(), Box<dyn std::e
     assert_eq!(receipt["claim_boundary"]["full_a770_residency_claimed"], false);
     assert_eq!(receipt["claim_boundary"]["trusted_partial_acceleration_claimed"], false);
     assert_eq!(receipt["claim_boundary"]["a770_speedup_claimed"], false);
+    assert_eq!(receipt["proof_route_contract"]["enabled"], true);
+    assert_eq!(
+        receipt["proof_route_contract"]["model_contract"],
+        "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml"
+    );
+    assert_eq!(
+        receipt["proof_route_contract"]["kernel_route"]["route_id"],
+        "a770.bitnet.i2s.qk256"
+    );
+    assert_eq!(receipt["proof_route_contract"]["kernel_route"]["diagnostic_only"], true);
+    assert_eq!(receipt["proof_route_contract"]["kernel_route"]["claimable"], false);
     assert_eq!(receipt["speedup_claim"], false);
     assert_eq!(receipt["quality_summary"]["not_run"], 5);
     Ok(())
