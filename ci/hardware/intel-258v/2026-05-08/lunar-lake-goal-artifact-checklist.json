@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-21T17:49:31Z",
+  "created_utc": "2026-05-21T19:35:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "ba1b2ebdfb7725d646c3a67c8da46de58838e98f",
+  "source_revision": "2f34c1947b033b7950d9a0b2d71f61a379bd31ec",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
@@ -15,7 +15,7 @@
     "reason": "Real battery-mode low_power telemetry and energy-proxy evidence are unavailable while the current power context indicates AC power.",
     "required_to_clear": [
       "telemetry-context --require-battery passes before the route/profile run",
-      "battery-mode low_power route/profile samples exist for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate",
+      "battery-mode low_power route/profile samples exist for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate using the explicit POWER-011 receipt paths",
       "before/after battery-mode telemetry can rebuild lunar-lake-low-power-energy-proxy.json",
       "power-profile, regression-v2, operator-comparison, and excellence-audit artifacts are refreshed from battery-mode evidence",
       "operators follow docs/hardware/intel-258v-low-power-battery-runbook.md before collecting POWER-006 evidence",
@@ -290,12 +290,17 @@
         "docs/hardware/intel-258v-low-power-battery-runbook.md",
         "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T022330Z-LNL258V-POWER-010-merged.toml",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/116",
-        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/117"
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/117",
+        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T191032Z-LNL258V-POWER-011-merged.toml",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/223",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/224"
       ],
       "notes": [
         "POWER-010 adds bitnet lunar-lake low-power-plan and a committed plan receipt for the POWER-006 physical battery-mode low_power run.",
         "The plan records operator_plan_ready=true from existing runbook and next-evidence guidance, while can_collect_battery_evidence_now=false because the telemetry context is AC-blocked.",
-        "The plan is not battery-mode evidence, route promotion, speedup, power advantage, measured temperature, native accelerator evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior evidence."
+        "The plan is not battery-mode evidence, route promotion, speedup, power advantage, measured temperature, native accelerator evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior evidence.",
+        "POWER-011 replaces the placeholder route/profile sample step with exact CPU/GPU/NPU explicit-route ask commands and receipt paths.",
+        "POWER-011 still does not run inference, collect battery-mode telemetry, promote low_power, prove speedup or power advantage, add model binaries, or change BitNet QK256/I2_S behavior."
       ]
     },
     {
@@ -455,7 +460,9 @@
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/212",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/214",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/215",
-        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/207"
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/207",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/223",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/224"
       ],
       "notes": [
         "The platform is well instrumented and profile-aware, but not yet excellent across all requested profiles.",
@@ -475,7 +482,8 @@
         "PR #212 is recorded as OpenVINO ask runtime configuration for migrated swarm checkouts only; it does not change route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
         "A770 tracker closeout #214 is recorded only as adjacent non-Lunar-Lake tracker state; it does not change Lunar Lake semantic-intake freshness, route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
         "M4 tracker closeout #215 is recorded only as adjacent non-Lunar-Lake tracker state; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
-        "Runner rollout plan #207 is recorded only as adjacent control-plane documentation; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status."
+        "Runner rollout plan #207 is recorded only as adjacent control-plane documentation; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
+        "POWER-011/#223 plus closeout #224 make the low_power battery sample commands explicit, but final boring support remains not complete until POWER-006 has real battery-mode telemetry and benchmark-qualified power advantage."
       ]
     }
   ],

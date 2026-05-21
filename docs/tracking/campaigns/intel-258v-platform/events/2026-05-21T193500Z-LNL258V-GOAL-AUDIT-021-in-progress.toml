@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T19:35:00Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-021"
+previous_status = "planned"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-021-post-power011"
+actor = "codex"
+summary = "Started a no-inference Lunar Lake audit refresh after POWER-011 and its closeout merged."
+
+notes = [
+  "The refresh records POWER-011/#223 and closeout #224 as explicit low_power battery sample planning only.",
+  "The audit/checklist will name the CPU/GPU/NPU expected low_power battery sample receipt paths while preserving LNL258V-POWER-006 as blocked.",
+  "No inference, model load, fallback behavior change, route promotion, speedup, power-advantage, battery-mode evidence, measured-temperature, native accelerator, acceleration, broad quality, model-binary, or BitNet QK256/I2_S behavior-change claim is made.",
+]

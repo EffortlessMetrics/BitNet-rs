@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_excellence_audit",
   "proof_stage": "completion_audit_no_inference",
-  "created_utc": "2026-05-21T17:49:31Z",
+  "created_utc": "2026-05-21T19:35:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "ba1b2ebdfb7725d646c3a67c8da46de58838e98f",
+  "source_revision": "2f34c1947b033b7950d9a0b2d71f61a379bd31ec",
   "audited_goal": "Profile-aware Lunar Lake local inference appliance with Qwen CPU control route, earned OpenVINO GPU/NPU routes, protected BitNet CPU reference, strict regression, and explicit claim boundaries.",
   "goal_status": "operator_ready_profile_aware_with_gpu_interactive_and_npu_warm_resident_promoted_low_power_blocked",
   "excellent_support_ready": false,
@@ -85,12 +85,18 @@
     "last_bitnet_cpu_reference_surface_merge_sha": "5fb87bbb38a8e27a7b2847c59e0f6be496f3d3c2",
     "last_bitnet_cpu_reference_surface_closeout_pr": 6107,
     "last_bitnet_cpu_reference_surface_closeout_merge_sha": "72d86a72e7deaf8cdeed6a620f79dddf48ca5dd6",
-    "previous_audit_refresh_scope": "no_inference_post_a770011_qk256_opencl_candidate_closeout",
+    "previous_audit_refresh_scope": "no_inference_post_openvino_ask_env_overrides",
     "last_merged_low_power_battery_plan_item": "LNL258V-POWER-010",
     "last_merged_low_power_battery_plan_pr": 116,
     "last_merged_low_power_battery_plan_merge_sha": "456b15f78231e78baafd61acc9c622f8b784c5cf",
     "last_merged_low_power_battery_plan_closeout_pr": 117,
     "last_merged_low_power_battery_plan_closeout_merge_sha": "e6958473a5b8ef93ae9b3026a5fb9a2100e1a7aa",
+    "last_merged_low_power_sample_plan_item": "LNL258V-POWER-011",
+    "last_merged_low_power_sample_plan_pr": 223,
+    "last_merged_low_power_sample_plan_head_sha": "0696101ce52ff588c2658eae089acf4c3c69c797",
+    "last_merged_low_power_sample_plan_merge_sha": "6fea0020926add54ef487990d115d0684dbf2e69",
+    "last_merged_low_power_sample_plan_closeout_pr": 224,
+    "last_merged_low_power_sample_plan_closeout_merge_sha": "2f34c1947b033b7950d9a0b2d71f61a379bd31ec",
     "last_swarm_slm_cpu_q8_hook_pr": 109,
     "last_swarm_slm_cpu_q8_hook_merge_sha": "ec2145727cf48dcb5ea47da35acf85d5e427c8d4",
     "last_swarm_cuda_qwen25_ops_pr": 118,
@@ -119,7 +125,7 @@
     "last_m4_workload_tracker_closeout_merge_sha": "bc25a20f18ed5e93ef6e6b43b421586e9d333e0b",
     "last_swarm_runner_rollout_plan_pr": 207,
     "last_swarm_runner_rollout_plan_merge_sha": "ba1b2ebdfb7725d646c3a67c8da46de58838e98f",
-    "audit_refresh_scope": "no_inference_post_openvino_ask_env_overrides"
+    "audit_refresh_scope": "no_inference_post_power011_sample_plan_closeout"
   },
   "command_surface": {
     "ask": {
@@ -191,7 +197,13 @@
       "status": "ready_operator_plan_no_evidence_no_promotion_change",
       "operator_plan_ready": true,
       "can_collect_battery_evidence_now": false,
-      "evidence": "lunar-lake-low-power-battery-plan.json"
+      "evidence": "lunar-lake-low-power-battery-plan.json",
+      "explicit_sample_commands_indexed": true,
+      "sample_receipts": [
+        "lunar-lake-operator-ask-battery-low-power-cpu.json",
+        "lunar-lake-operator-ask-battery-low-power-gpu.json",
+        "lunar-lake-operator-ask-battery-low-power-npu.json"
+      ]
     }
   },
   "runtime_environment": {
@@ -479,7 +491,13 @@
       "thermal-zone visibility is indexed but measured temperature readings remain unavailable"
     ],
     "low_power_battery_plan_indexed": true,
-    "low_power_battery_plan_receipt": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-low-power-battery-plan.json"
+    "low_power_battery_plan_receipt": "ci\\hardware\\intel-258v\\2026-05-08/lunar-lake-low-power-battery-plan.json",
+    "low_power_battery_sample_plan_indexed": true,
+    "low_power_battery_sample_plan_receipts": [
+      "lunar-lake-operator-ask-battery-low-power-cpu.json",
+      "lunar-lake-operator-ask-battery-low-power-gpu.json",
+      "lunar-lake-operator-ask-battery-low-power-npu.json"
+    ]
   },
   "remaining_gaps": [
     "No promoted route for low_power.",
@@ -575,6 +593,9 @@
     "power_010_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T022330Z-LNL258V-POWER-010-merged.toml",
     "power_010_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/116",
     "power_010_closeout_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/117",
+    "power_011_merged_event": "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T191032Z-LNL258V-POWER-011-merged.toml",
+    "power_011_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/223",
+    "power_011_closeout_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/224",
     "swarm_slm_cpu_q8_hook_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/109",
     "swarm_cuda_qwen25_ops_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/118",
     "swarm_slm_cpu_q8_timing_pr": "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/120",
