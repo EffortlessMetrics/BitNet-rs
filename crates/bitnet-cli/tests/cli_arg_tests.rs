@@ -1023,6 +1023,28 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
     assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
     assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
     assert_eq!(receipt_json["claim_boundary"]["full_metal_inference_claimed"], false);
+    assert_eq!(receipt_json["route_state_matrix"]["work_item"], "M4-ROUTE-MATRIX-001");
+    let route_rows = receipt_json["route_state_matrix"]["rows"]
+        .as_array()
+        .ok_or("route_state_matrix.rows must be an array")?;
+    assert!(route_rows.iter().any(|row| {
+        row["route_id"] == "dense_slm_serve_loopback"
+            && row["state"] == "enabled"
+            && row["command_surface"] == "serve"
+    }));
+    assert!(route_rows.iter().any(|row| {
+        row["route_id"] == "bitnet_warm_session"
+            && row["state"] == "batch_only"
+            && row["command_surface"] == "warm_session"
+    }));
+    assert!(route_rows.iter().any(|row| {
+        row["route_id"] == "bitnet_chat_gate_required"
+            && row["state"] == "disabled"
+            && row["required_gate"]["artifact_kind"] == "bitnet_apple_m4_chat_gate"
+    }));
+    assert!(route_rows.iter().any(|row| {
+        row["route_id"] == "unsupported_apple_backends" && row["state"] == "unsupported"
+    }));
     assert!(
         receipt_json["commands"]["bitnet_chat_gate"]
             .as_str()
@@ -1090,6 +1112,17 @@ fn mac_evidence_writes_operator_summary() -> Result<(), Box<dyn std::error::Erro
     assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
     assert_eq!(receipt_json["unsupported_claims"]["full_metal_inference"], false);
     assert_eq!(receipt_json["unsupported_claims"]["qk256"], false);
+    assert_eq!(receipt_json["route_state_matrix"]["work_item"], "M4-ROUTE-MATRIX-001");
+    assert_eq!(
+        receipt_json["route_state_matrix"]["claim_boundary"]["does_not_enable_routes"],
+        true
+    );
+    assert!(receipt_json["route_state_matrix"]["rows"].as_array().is_some_and(|rows| {
+        rows.iter().any(|row| row["route_id"] == "dense_slm_streaming" && row["state"] == "enabled")
+            && rows.iter().any(|row| {
+                row["route_id"] == "bitnet_serve_gate_required" && row["state"] == "disabled"
+            })
+    }));
     assert!(
         receipt_json["recommended_next_command"]
             .as_str()

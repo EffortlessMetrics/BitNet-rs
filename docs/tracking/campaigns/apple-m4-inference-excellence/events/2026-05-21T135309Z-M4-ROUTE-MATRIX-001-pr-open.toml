@@ -1,0 +1,18 @@
+timestamp = "2026-05-21T13:53:09Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ROUTE-MATRIX-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "in_progress"
+pr = 196
+head_sha = "7d0f939ccc83a43968e8b3bc856f4aa3226a5571"
+branch = "codex/apple-m4-inference-excellence/M4-ROUTE-MATRIX-001-route-states"
+
+notes = [
+  "Opened PR #196 for the M4 route-state matrix publication.",
+  "The PR adds model-free `route_state_matrix` output to `bitnet mac status --json` and `bitnet mac evidence --json`, with dense SLM and BitNet ask, chat, warm-session, serve, streaming, batch-only, disabled, and unsupported rows.",
+  "Enabled or batch-only rows name their evidence item and receipt family; disabled BitNet chat, serve, and streaming rows name the required gate receipt families.",
+  "Local verification passed for status/evidence JSON generation, receipts-check on both receipts, campaign check, campaign generate --check, git diff --check, and the focused status/evidence CLI tests.",
+  "No live runtime run, route enablement without receipts, disabled BitNet chat or serve support, production hosting, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

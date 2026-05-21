@@ -2816,7 +2816,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-ROUTE-MATRIX-001"
-status = "proposed"
+status = "in_progress"
+pr = 196
+head_sha = "7d0f939ccc83a43968e8b3bc856f4aa3226a5571"
 branch = "codex/apple-m4-inference-excellence/M4-ROUTE-MATRIX-001-route-states"
 stackable = false
 review_mode = "codex_premerge"

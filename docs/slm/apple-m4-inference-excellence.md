@@ -1378,6 +1378,7 @@ current regressions
 unsupported claims
 recommended next command
 route envelope class
+route-state matrix
 ```
 
 `bitnet mac evidence` is the operator-facing summary for that view. It reads
@@ -1417,6 +1418,14 @@ committed evidence identity, max context or profile guidance, timing
 expectation, and memory/disk posture. The map is an operator expectation layer
 only; it does not enable a disabled route or turn bounded receipts into broad
 quality or performance claims.
+
+`M4-ROUTE-MATRIX-001` adds the model-free route-state matrix to `bitnet mac
+status --json` and `bitnet mac evidence --json`. The matrix separates dense SLM
+ask, chat, warm-session, serve, and streaming states from BitNet ask,
+warm-session, chat, serve, and streaming states. Enabled or batch-only rows name
+the exact evidence item and receipt family required for that state; disabled
+BitNet rows name the required chat or serve gate; unsupported backend rows stay
+unsupported until a separate full-route receipt exists.
 
 ## Release Gates
 

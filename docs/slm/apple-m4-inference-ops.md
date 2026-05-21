@@ -21,6 +21,8 @@ The command writes an `apple_m4_inference_status` receipt to
 - BitNet ask/warm readiness and explicit disabled chat/serve state;
 - current local report inventory for dense eval v2, dense benchmark v2, BitNet
   eval, BitNet benchmark, and variable warm-session evidence;
+- the M4 route-state matrix for dense SLM and BitNet ask, chat, warm-session,
+  serve, streaming, disabled, batch-only, and unsupported surfaces;
 - known operator commands for model fetch/verify, ask, chat, serve, doctor,
   smoke, regression, BitNet warm, and the BitNet chat gate.
 
@@ -43,6 +45,12 @@ broad_apple_silicon_claim=false
 broad_performance_claim=false
 speedup_claim=false
 ```
+
+The `route_state_matrix` field is model-free and descriptive. Enabled and
+batch-only rows point at their required evidence item and receipt family;
+disabled BitNet chat/serve/streaming rows point at the required gate receipt
+families; unsupported backend rows remain non-routable until separate full-route
+receipts exist.
 
 Validate the receipt with:
 
