@@ -399,7 +399,7 @@ jobs:
 
       - name: Upload Lane B artifacts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: lane-b-linux-${{ github.run_id }}
           path: |
@@ -501,7 +501,7 @@ jobs:
 
       - name: Upload Lane A artifacts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: lane-a-bitnet-${{ github.run_id }}
           path: |
@@ -592,7 +592,7 @@ jobs:
           cat crossval-summary.md
 
       - name: Upload summary
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: crossval-summary-${{ github.run_id }}
           path: crossval-summary.md
