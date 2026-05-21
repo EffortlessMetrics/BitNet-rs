@@ -24,24 +24,31 @@ disposition and retains the original large snapshot below for provenance.
 ## Current Queue State
 
 - Date: 2026-05-20
-- Command: `rtk gh pr list --state open --json number,title,isDraft,mergeable,mergeStateStatus,updatedAt,headRefName,labels,author,url --limit 100`
-- Open PR count: 1
+- Commands:
+  - `rtk gh pr list --repo EffortlessMetrics/BitNet-rs --state open --limit 80 --json number,title,isDraft,mergeStateStatus,reviewDecision,baseRefName,headRefName,updatedAt,author,additions,deletions,labels,url`
+  - `rtk gh api -X GET repos/EffortlessMetrics/BitNet-rs/pulls -f state=open -f per_page=100 --jq 'length'`
+- Open PR count: 0
 - Duplicate open PR clusters: none
-- Direct `main` PRs: #5092 only
-- Worktree audit: clean on `main` when this refresh was recorded
+- Direct `main` PRs: none
+- Worktree audit: clean on `main` / `origin/main` before opening the ledger
+  closeout branch; `target/pr-ledger/open-prs.json` also records
+  `open_pr_count = 0`.
 
 | PR | Lane | Current signal | Disposition |
 |---:|---|---|---|
-| #5092 | CPU AVX2 / perf | Draft, mergeable, GitHub check rollup green, one changed file: `crates/bitnet-quantization/src/i2s_qk256_avx2.rs`. Labels: `blocked`, `disp:draft-hold`, `claim:perf-evidence-required`, `proof:partial`, `lane:cpu-avx2`, `lane:perf`, `prio:p2`. | Keep blocked as draft. Direct `bitnet-quantization --features cpu,avx2` proof is not product-route proof. Undraft or merge only after accepted selected-route/counter proof, exact-profile benchmark evidence, and claim review. |
+| n/a | n/a | No open PRs in `EffortlessMetrics/BitNet-rs`. | Source/release-repo queue is closed for this recovery pass. New feature, hardware-lane, performance, diagnostic, refactor, and proof-tooling work belongs in `EffortlessMetrics/bitnet-rs-swarm` unless it is a release promotion, release-blocking hotfix, or release-artifact documentation correction. |
 
-Current #5092 claim boundary:
+Closed #5092 continuation boundary:
 
-- local F32/no-scale AVX2 QK256 kernel candidate only;
-- no scaled BitNet I2_S x I8_S AVX2 execution claim;
-- no generated-token parity, model answer, server-readiness, residency, or
-  accepted speedup claim;
-- `speedup_claim` remains false until an exact-profile performance review
-  accepts a narrow claim.
+- #5092 was closed, not merged, after successor issue
+  `EffortlessMetrics/bitnet-rs-swarm#96` was created.
+- The migrated scope remains a local F32/no-scale AVX2 QK256 kernel candidate
+  only.
+- It does not prove scaled BitNet I2_S x I8_S AVX2 execution, generated-token
+  parity, model answer quality, server-readiness, residency, product-route
+  proof, or accepted speedup.
+- `speedup_claim` remains false until exact-profile performance review accepts
+  a narrow claim in the swarm repo.
 
 Durable value already salvaged from #5092:
 
@@ -212,13 +219,13 @@ or commit.
 | 2026-05-18 | #5722 | Merged into A770 branch chain only | Diagnostic selected-key score history evidence merged to `a770/diag-rust-score-input-operand-drift`, not `main`; it remains lineage evidence, not mainline proof. |
 | 2026-05-18 | #5725 | Merged into A770 branch chain only | Diagnostic selected-key score-input bucket source evidence merged to `a770/diag-rust-score-input-operand-drift`, not `main`; it remains lineage evidence for the next selected-key source-boundary diagnostic, not mainline proof. |
 
-## New Open Cluster After Refresh
+## Historical New Open Cluster After Refresh
 
 | PRs | Intent | Disposition |
 |---|---|---|
 | #5540, #5541, #5542, #5543, #5544, #5545, #5546, #5547 | AVX2/QK256 hot-path audit, diagnostic counters, receipt fields, and implementation planning. | Treat as a duplicate/overlap cluster. Compare claims and proofs, keep at most one canonical implementation plus one docs/plan PR if evidence supports it, and close only exact duplicates or superseded attempts with successor PRs named. |
 
-## Current Queue Head
+## Historical Current Queue Head
 
 | PR | Lane | Current signal | Disposition rule |
 |---:|---|---|---|
@@ -228,7 +235,7 @@ or commit.
 | #5547 | AVX2 hot-path docs/plan | Conflicting member of the AVX2 duplicate planning cluster. | Compare against #5541 and related #5540-#5547 attempts; keep one canonical plan if still useful. |
 | #5541 | AVX2 QK256 hot-path counters and receipt fields | Mergeable code/test change, but Policy failed and the PR body lacks final test completion evidence. | Triage Policy and rerun exact QK256 proof before considering as the canonical implementation. |
 
-## Latest Queue Head
+## Historical Latest Queue Head
 
 | PR or cluster | Lane | Current signal | Disposition rule |
 |---:|---|---|---|
