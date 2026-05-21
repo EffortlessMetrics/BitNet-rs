@@ -988,36 +988,36 @@ mod tests {
         assert_eq!(manifest["selected_route"], "dense_regular_llm_cuda");
         assert_eq!(manifest["model"]["id"], "qwen3-0.6b-instruct-q8_0");
 
-        let profiles = manifest["profiles"].as_array().expect("profiles");
-        assert_eq!(profiles.len(), 5);
-        assert!(profiles.iter().any(|profile| {
-            profile["profile"] == "decode_128_from_warm_context"
-                && profile["expected_generated_tokens"] == 128
-                && profile["run_flag"] == "--decode-128-from-warm-context-run"
+        assert_eq!(manifest["profiles"].as_array().map(Vec::len), Some(5));
+        assert!(manifest["profiles"].as_array().is_some_and(|profiles| {
+            profiles.iter().any(|profile| {
+                profile["profile"] == "decode_128_from_warm_context"
+                    && profile["expected_generated_tokens"] == 128
+                    && profile["run_flag"] == "--decode-128-from-warm-context-run"
+            })
         }));
-        assert!(
-            manifest["accepted_optional_source_fields"]
-                .as_array()
-                .expect("accepted_optional_source_fields")
-                .iter()
-                .any(|field| field
-                    .as_str()
-                    .is_some_and(|text| text.contains("host_to_device_ms_source")))
-        );
-        assert!(manifest["claim_boundaries"].as_array().expect("claim_boundaries").iter().any(
-            |boundary| {
+        assert!(manifest["accepted_optional_source_fields"].as_array().is_some_and(|fields| {
+            fields.iter().any(|field| {
+                field.as_str().is_some_and(|text| text.contains("host_to_device_ms_source"))
+            })
+        }));
+        assert!(manifest["claim_boundaries"].as_array().is_some_and(|boundaries| {
+            boundaries.iter().any(|boundary| {
                 boundary
                     .as_str()
                     .is_some_and(|text| text.contains("does not prove hardware execution"))
-            }
-        ));
+            })
+        }));
     }
 
     #[test]
     fn preflight_reports_all_missing_profile_inputs() {
         let args = args_with_prefix("target/qwen3/missing");
-        let err = assert_input_paths_exist(&args).expect_err("missing inputs should fail");
-        let message = err.to_string();
+        let message = match assert_input_paths_exist(&args) {
+            Ok(()) => String::new(),
+            Err(err) => err.to_string(),
+        };
+        assert!(!message.is_empty(), "missing inputs should fail");
 
         for profile in [
             "one_token",
