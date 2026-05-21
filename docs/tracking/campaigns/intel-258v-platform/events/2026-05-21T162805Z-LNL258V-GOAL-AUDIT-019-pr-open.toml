@@ -5,6 +5,7 @@ item = "LNL258V-GOAL-AUDIT-019"
 previous_status = "in_progress"
 new_status = "in_progress"
 pr = 206
+head_sha = "c68acea365c34be5611b573e1edb05f673740ca2"
 branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-019-post-migration"
 actor = "codex"
 summary = "Opened PR #206 for the no-inference Lunar Lake post-migration audit refresh."
