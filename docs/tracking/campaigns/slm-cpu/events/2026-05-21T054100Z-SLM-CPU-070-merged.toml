@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T05:41:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-070"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 129
+branch = "codex/slm-cpu-070-packed-q8-block-local-matvec"
+head_sha = "05f89de29308ef205af5d723b65e401240d6ad18"
+merge_sha = "67e63d7b2b0f2b2c3cdc8697f71b43e41695cfd0"
+summary = "Recorded PR #129 merge for the packed Q8_0 block-local matvec prototype."
+notes = [
+  "PR #129 added behavior-gated packed Q8_0 block-local matvec coverage for the exact sidecar tensor while keeping eager_f32_candle as the default runtime.",
+  "The merged slice includes single-block, multi-block, and row-split Q8_0 block reference tests.",
+  "No speedup, sustained throughput, broad quality, default runtime promotion, Q4/Q5, server, accelerator, Qwen3.5, or BitNet QK256 claim was added.",
+]
