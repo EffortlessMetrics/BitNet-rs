@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "lunar_lake_migration_manifest",
+  "migration_id": "SWARM-LNL258V-MIGRATE-001",
+  "created_utc": "2026-05-21T15:23:58Z",
+  "source_repo": "EffortlessMetrics/BitNet-rs",
+  "target_repo": "EffortlessMetrics/bitnet-rs-swarm",
+  "source_cutoff": {
+    "description": "Latest imported old-repo Lunar Lake operating anchors plus the current swarm no-inference audit cutoff.",
+    "old_repo_operating_anchors": [
+      {
+        "work_item": "LNL258V-BENCH-004",
+        "source_pr": 5289,
+        "summary": "Telemetry-context capture and refreshed benchmark, durability, regression-v2, and comparison artifacts."
+      },
+      {
+        "work_item": "LNL258V-ROUTE-017",
+        "source_pr": 5777,
+        "summary": "Profile-scoped route status while preserving the global route ledger state."
+      },
+      {
+        "work_item": "LNL258V-ROUTE-018",
+        "source_pr": 5780,
+        "summary": "Route-promotion scope and claim-boundary clarity after profile-scoped GPU promotion."
+      },
+      {
+        "work_item": "LNL258V-BITNET-INTAKE-001",
+        "source_pr": 5785,
+        "summary": "Shared BitNet semantic-intake receipt for Lunar Lake rerun decisions."
+      },
+      {
+        "work_item": "LNL258V-REG-007",
+        "source_pr": 5788,
+        "summary": "Strict regression v2 fails closed on stale merged shared BitNet semantic fixes requiring Lunar Lake reruns."
+      },
+      {
+        "work_item": "LNL258V-GOAL-AUDIT-013",
+        "source_pr": 6116,
+        "summary": "Post-A770-006 audit refresh records selected-device A770 OpenCL matmul_i2s parity as adjacent non-semantic evidence."
+      }
+    ],
+    "current_swarm_audit_cutoff": {
+      "work_item": "LNL258V-GOAL-AUDIT-018",
+      "source_pr": 182,
+      "closeout_pr": 179,
+      "source_revision": "eed08101b169a2fcc79c755e5be0dbc8f96b22a8",
+      "summary": "Current swarm no-inference audit after LNL258V-BITNET-INTAKE-005 and closeout, with low_power still blocked on battery-mode evidence."
+    }
+  },
+  "moved_items": [
+    {
+      "path": "ci/quality/lunar-lake-answer-corpus-v2.yaml",
+      "kind": "answer_corpus_v2_fixture"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+      "kind": "operator_readiness"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+      "kind": "route_promotion_ledger"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+      "kind": "route_profile_comparison"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+      "kind": "cold_warm_profile_benchmark"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-thermal-context.json",
+      "kind": "telemetry_context"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json",
+      "kind": "durability_bundle"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+      "kind": "strict_regression_v2"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+      "kind": "operator_comparison"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-source-changes.json",
+      "kind": "bitnet_semantic_source_changes"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-bitnet-semantic-intake.json",
+      "kind": "bitnet_semantic_intake"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/cpu-reference-bundle-after-semantic-fix.json",
+      "kind": "bitnet_cpu_reference_bundle"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/slm-answer-corpus-qwen25-cpu-corpus-v2.json",
+      "kind": "dense_qwen_cpu_corpus_v2"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/slm-openvino-cpu-gpu-npu-corpus-v2.json",
+      "kind": "openvino_corpus_v2"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-gpu-corpus-v2-diagnosis.json",
+      "kind": "openvino_gpu_corpus_v2_diagnosis"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-corpus-v2-diagnosis.json",
+      "kind": "openvino_npu_corpus_v2_diagnosis"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cold-start-diagnosis.json",
+      "kind": "openvino_npu_cold_start_diagnosis"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-cache-experiment.json",
+      "kind": "openvino_npu_cache_experiment"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-openvino-npu-resident-session.json",
+      "kind": "openvino_npu_resident_session"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-plan.json",
+      "kind": "low_power_battery_plan"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-telemetry-blocked.json",
+      "kind": "low_power_ac_blocker_receipt"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+      "kind": "no_inference_excellence_audit"
+    },
+    {
+      "path": "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+      "kind": "objective_artifact_checklist"
+    }
+  ],
+  "not_moved_items": [
+    "Old branch history as tracker truth.",
+    "Stale historical receipts that are not referenced by the latest route, regression, comparison, audit, or manifest surfaces.",
+    "Model binaries, local model caches, OpenVINO IR directories, and machine-local virtual environments.",
+    "A770 diagnostic runtime machinery inside Lunar Lake command surfaces.",
+    "Dense SLM receipts as BitNet QK256/I2_S proof."
+  ],
+  "current_operating_state": {
+    "default_route": "dense_slm_default_cpu",
+    "gpu_status": "profile_promoted_for_committed_interactive_profiles_only",
+    "npu_status": "profile_promoted_for_warm_resident_only",
+    "bitnet_status": "cpu_reference_route_protected_by_semantic_intake",
+    "low_power_status": "blocked_pending_battery_mode_telemetry_energy_proxy_measured_thermal_and_benchmark_qualified_power_advantage",
+    "strict_regression_status": "regression_v2_indexes_route_profile_telemetry_power_bitnet_intake_arc_npu_surface_and_bitnet_cpu_reference_fields"
+  },
+  "claim_boundaries": [
+    "Migration inventory only.",
+    "No new inference.",
+    "No model load.",
+    "No fallback behavior change.",
+    "No route promotion or demotion.",
+    "No speedup claim.",
+    "No power-advantage claim.",
+    "No battery-mode evidence claim.",
+    "No measured-temperature claim.",
+    "No native OpenCL or native NPU claim.",
+    "No broad accelerator support claim.",
+    "No dense-SLM-as-BitNet-proof claim.",
+    "No full BitNet accelerator inference claim.",
+    "No packed QK256 accelerator decode claim.",
+    "No BitNet QK256/I2_S behavior change."
+  ],
+  "next_swarm_items": [
+    {
+      "work_item": "LNL258V-POWER-006",
+      "status": "blocked",
+      "reason": "Battery-mode low_power telemetry and energy-proxy evidence are unavailable while the current 258V power context indicates AC power.",
+      "required_to_clear": [
+        "Run telemetry-context with --require-battery successfully before route/profile collection.",
+        "Collect battery-mode low_power route/profile samples for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate.",
+        "Refresh lunar-lake-low-power-energy-proxy.json from battery-mode before/after telemetry.",
+        "Refresh power-profile, regression-v2, operator-comparison, excellence-audit, and goal checklist artifacts from the battery-mode evidence.",
+        "Keep low_power unpromoted unless answer gates, fallback=false, stable timing, and benchmark-qualified power advantage all pass."
+      ]
+    }
+  ],
+  "validation": {
+    "expected_commands": [
+      "python -m json.tool ci/hardware/intel-258v/MIGRATION_MANIFEST.json",
+      "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+      "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+      "git diff --check"
+    ]
+  }
+}
