@@ -2889,7 +2889,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-075"
-status = "ready"
+status = "pr_open"
+pr = 225
 branch = "codex/slm-cpu-075-packed-q8-instrumentation-artifact"
 stackable = false
 review_mode = "codex_premerge"

@@ -1063,3 +1063,31 @@ execution remains opt-in, payload-gated, and exact-tensor scoped. These counters
 are diagnostic evidence only; they do not claim speedup, sustained 8250U
 throughput, broad answer quality, Q4/Q5 runtime support, server execution,
 accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
+
+## SLM-CPU-075 Instrumentation Artifact Boundary
+
+SLM-CPU-075 records the first post-instrumentation diagnostic artifact:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-075-packed-q8-instrumentation-artifact.json
+```
+
+The artifact consumes the SLM-CPU-074 counter surface and keeps the prior
+SLM-CPU-072 before/after receipts as the behavior oracle. It classifies selector
+dispatch, input materialization, bias extraction, packed matvec compute, and
+output tensor construction as instrumented surfaces, but it does not claim real
+end-to-end counter values because the warm-session receipt path does not yet
+snapshot and serialize the transformer-side aggregate counters around a bounded
+Qwen3 Q8_0 run.
+
+The resulting blocker is narrow: add a warm-session sidecar instrumentation
+receipt bridge before using these counters to drive another packed-Q8 runtime
+promotion or optimization. That bridge must reset the counters before the
+opt-in exact-tensor run, snapshot them afterward, and prove generated IDs,
+decoded text, model SHA, tokenizer source and strictness, selected CPU backend
+identity, dense hook identity, and `fallback_used=false` remain unchanged.
+
+The default path remains `eager_f32_candle`; packed Q8_0 sidecar execution
+remains opt-in and exact-tensor scoped to `layers.0.attention.q_proj.weight`.
+SLM-CPU-075 makes no speedup, sustained-throughput, broad answer-quality,
+Q4/Q5 runtime-support, server, accelerator, Qwen3.5, or BitNet QK256 claim.
