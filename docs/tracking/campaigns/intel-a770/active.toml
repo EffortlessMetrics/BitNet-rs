@@ -775,3 +775,52 @@ must_not_claim = [
   "Performance speedup is proven.",
   "A770 trusted partial acceleration is claim-grade.",
 ]
+
+[[work_item]]
+id = "A770-018"
+status = "pr_open"
+pr = 242
+head_sha = "f8919442bb362189768016fa37cb12d9bd94391f"
+branch = "codex/intel-a770/A770-018-live-answer-corpus-diagnostic"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-017"]
+acceptance = "Record the first committed live five-case A770 OpenCL answer-corpus diagnostic receipt for the official BitNet 2B I2_S model, with selected_backend=intel-a770-opencl, runtime_api=opencl, fallback_used=false, all five fixed-corpus cases passed, and reference parity, broad answer quality, residency, speed, trusted-partial, and strict answer-readiness claims kept closed."
+commands = [
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli",
+  "target/debug/bitnet.exe answer-corpus --corpus ci/quality/bitnet-answer-corpus.yaml --model <official BitNet 2B I2_S GGUF> --tokenizer <official tokenizer.json> --device intel-a770-opencl --json-out ci/hardware/amd-5700x-intel-a770/2026-05-21/a770-answer-corpus/answer-corpus.json --per-prompt-timeout-seconds 300 --fail-on-quality",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/amd-5700x-intel-a770/2026-05-21/a770-answer-corpus/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+]
+may_claim = [
+  "The fixed five-case answer-corpus executed locally against the official BitNet 2B I2_S model with selected_backend=intel-a770-opencl, runtime_api=opencl, and fallback_used=false.",
+  "The committed diagnostic receipt records five passed narrow quality gates and A770 OpenCL kernel invocation counts for the bounded corpus.",
+]
+must_not_claim = [
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]

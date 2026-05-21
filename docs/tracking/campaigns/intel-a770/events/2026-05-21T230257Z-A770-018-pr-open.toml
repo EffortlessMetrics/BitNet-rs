@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T23:02:57Z"
+campaign = "intel-a770"
+item = "A770-018"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-018-live-answer-corpus-diagnostic"
+pr = 242
+head_sha = "f8919442bb362189768016fa37cb12d9bd94391f"
+summary = "Opened the live A770 answer-corpus diagnostic receipt PR."
+notes = [
+  "The PR commits the live five-case A770 OpenCL answer-corpus diagnostic receipt under ci/hardware/amd-5700x-intel-a770/2026-05-21/a770-answer-corpus/.",
+  "The aggregate receipt records selected_backend=intel-a770-opencl, runtime_api=opencl, fallback_used=false, quality_summary.passed=5, and quality_summary.failed=0.",
+  "The receipt also records reference_not_supplied=5 and keeps strict answer readiness, coherent answer, full residency, speedup, and trusted-partial claims false.",
+]
