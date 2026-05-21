@@ -895,9 +895,16 @@ fn stale_generated_dashboards(writes: &BTreeMap<PathBuf, String>) -> Vec<PathBuf
         .iter()
         .filter_map(|(path, content)| {
             let current = fs::read_to_string(path).ok();
-            if current.as_deref() == Some(content.as_str()) { None } else { Some(path.clone()) }
+            let is_current = current
+                .as_deref()
+                .is_some_and(|current| normalize_newlines(current) == normalize_newlines(content));
+            if is_current { None } else { Some(path.clone()) }
         })
         .collect()
+}
+
+fn normalize_newlines(value: &str) -> String {
+    value.replace("\r\n", "\n")
 }
 
 fn changed_legacy_tracker_files(root: &Path) -> Result<Vec<PathBuf>> {
@@ -1290,7 +1297,7 @@ fn fail_on_errors(problems: &[Problem]) -> Result<()> {
 mod tests {
     use super::{
         CampaignManifest, LoadedCampaign, Severity, TextList, WorkItem, current_item,
-        parse_pull_request_ref, text_contains_item_token, validate_campaign,
+        normalize_newlines, parse_pull_request_ref, text_contains_item_token, validate_campaign,
     };
     use std::path::PathBuf;
 
@@ -1305,6 +1312,15 @@ mod tests {
     fn rejects_non_pull_request_refs() {
         assert_eq!(parse_pull_request_ref("refs/heads/main"), None);
         assert_eq!(parse_pull_request_ref(""), None);
+    }
+
+    #[test]
+    fn generated_dashboard_checks_ignore_windows_newline_conversion() {
+        assert_eq!(normalize_newlines("line one\r\nline two\r\n"), "line one\nline two\n");
+        assert_eq!(
+            normalize_newlines("line one\r\nline two\r\n"),
+            normalize_newlines("line one\nline two\n")
+        );
     }
 
     #[test]
