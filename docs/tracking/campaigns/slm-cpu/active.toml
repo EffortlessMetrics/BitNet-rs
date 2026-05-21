@@ -2942,9 +2942,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-076"
-status = "pr_open"
+status = "merged"
 pr = 229
-head_sha = "d68ec056b72d90ac3c06fdd6c662c7242f46b4fe"
+head_sha = "93d04ab2fe53e3424aa39ceb27b3129f4cf8d3ee"
+merge_sha = "3436ba44928865157be1cd94f03858ebc3a01d12"
 branch = "codex/slm-cpu-076-sidecar-instrumentation-receipt-bridge"
 stackable = false
 review_mode = "codex_premerge"
