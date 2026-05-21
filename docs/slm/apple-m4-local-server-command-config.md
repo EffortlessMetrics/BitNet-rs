@@ -277,6 +277,32 @@ verified the supported model cache, tokenizer authority, `apple-m4-cpu-neon`
 backend route, no-hidden-fallback policy, disk/cache state, and receipt
 directory. Missing or invalid cache still prevents startup.
 
+## Observability Correlation
+
+`M4-OBS-001` adds an opt-in `--trace` flag for `bitnet mac ask` and
+`bitnet mac serve`. The flag emits a redacted operator trace ID on stderr and
+records an `observability` block in supported receipts. The block is for
+correlating progress, logs, per-run receipts, per-request receipts, and failure
+stages only.
+
+The trace block records:
+
+- `work_item = "M4-OBS-001"`;
+- a stable `trace_id` for the command/session;
+- route and stage labels;
+- request ID when the route has a per-request server receipt;
+- prompt SHA256 values, not raw prompt text;
+- redaction policy fields showing that raw prompts, rendered prompts, system
+  prompts, cache paths, model paths, and tokenizer paths are not included in
+  trace diagnostics;
+- claim-boundary fields stating that trace correlation does not prove model
+  quality, performance, or production readiness.
+
+The existing generation receipts still carry their normal model, tokenizer,
+backend, timing, token, and claim-boundary fields. The trace contract only
+constrains the additional diagnostic surface; it must not be used as a quality
+or benchmark claim.
+
 ## Receipt Requirements
 
 Every completed generation request should be able to export a receipt with:

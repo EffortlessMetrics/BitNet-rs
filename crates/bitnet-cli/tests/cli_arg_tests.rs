@@ -1677,6 +1677,16 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_ask_help_documents_trace_correlation() {
+    bitnet()
+        .args(["mac", "ask", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("--trace"))
+        .stdout(predicate::str::contains("trace-correlation"));
+}
+
+#[test]
 fn mac_context_dense_ask_blocks_beyond_recorded_4k_before_cache_lookup()
 -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
@@ -3391,6 +3401,7 @@ fn mac_serve_help_documents_health_ready_surface() {
         .stdout(predicate::str::contains("--model-id <MODEL_ID>"))
         .stdout(predicate::str::contains("--host <HOST>"))
         .stdout(predicate::str::contains("--port <PORT>"))
+        .stdout(predicate::str::contains("--trace"))
         .stdout(predicate::str::contains("--receipt-dir <PATH>"));
 }
 
