@@ -579,6 +579,7 @@ fn mac_eval_help_documents_robustness_dry_run() {
         .success()
         .stdout(predicate::str::contains("--suite <SUITE>"))
         .stdout(predicate::str::contains("m4-robustness"))
+        .stdout(predicate::str::contains("m4-long-context"))
         .stdout(predicate::str::contains("--dry-run"))
         .stdout(predicate::str::contains("--json-out <PATH>"));
 }
@@ -656,6 +657,164 @@ fn mac_eval_robustness_requires_dry_run_until_live_gate() {
         .assert()
         .failure()
         .stderr(predicate::str::contains("currently supports only --dry-run"));
+}
+
+#[test]
+fn mac_eval_long_context_dry_run_writes_contract_summary() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let corpus = workspace_path("ci/quality/apple-m4-long-context-corpus.yaml");
+    let receipt = dir.path().join("long-context-summary.json");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "eval",
+            "--suite",
+            "m4-long-context",
+            "--corpus",
+            corpus_str.as_str(),
+            "--dry-run",
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_long_context_eval_summary"))
+        .stdout(predicate::str::contains("\"suite\": \"m4-long-context\""))
+        .stdout(predicate::str::contains("unsupported_until_bitnet_long_context_receipts_exist"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_long_context_eval_summary");
+    assert_eq!(receipt_json["suite"], "m4-long-context");
+    assert_eq!(receipt_json["work_item"], "M4-CONTEXT-HARNESS-001");
+    assert_eq!(receipt_json["requested_backend"], "apple-m4-cpu-neon");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["dry_run"], true);
+    assert_eq!(receipt_json["corpus"]["mechanical_scoring_only"], true);
+    assert_eq!(receipt_json["corpus"]["required_llm_judge"], false);
+    assert_eq!(receipt_json["coverage"]["retrieval_copy"], true);
+    assert_eq!(receipt_json["coverage"]["table_extraction"], true);
+    assert_eq!(receipt_json["coverage"]["late_context_instruction_following"], true);
+    assert_eq!(receipt_json["coverage"]["truncation_behavior"], true);
+    assert_eq!(receipt_json["claim_boundary"]["live_long_context_quality_claim"], false);
+    assert_eq!(receipt_json["claim_boundary"]["dense_slm_evidence_proves_bitnet"], false);
+    assert_eq!(receipt_json["evidence_status"]["live_quality_receipts_published"], false);
+    let families = receipt_json["families"].as_array().ok_or("missing families")?;
+    assert_eq!(families.len(), 2);
+    assert!(families.iter().any(|family| {
+        family["model_family"] == "dense_slm"
+            && family["long_context_supported_for_live_run"] == true
+    }));
+    assert!(families.iter().any(|family| {
+        family["model_family"] == "bitnet"
+            && family["long_context_supported_for_live_run"] == false
+            && family["unsupported_boundary"]["dense_slm_evidence_proves_bitnet"] == false
+    }));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_long_context_eval_summary"))
+        .stdout(predicate::str::contains("\"prompt_count\": 8"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_eval_long_context_live_requires_ready_model_cache_before_receipt()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache_dir = dir.path().join("cache");
+    let receipt = dir.path().join("long-context-live.json");
+    let cache_str = cache_dir.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "eval",
+            "--suite",
+            "m4-long-context",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("cached Apple M4 SLM model"))
+        .stderr(predicate::str::contains("is not ready"));
+    assert!(!receipt.exists(), "preflight failure should not write a proof receipt");
+    Ok(())
+}
+
+#[test]
+fn mac_eval_long_context_rejects_duplicate_case_ids() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let corpus = dir.path().join("duplicate-long-context.yaml");
+    let receipt = dir.path().join("long-context-summary.json");
+    std::fs::write(
+        &corpus,
+        r#"schema: 1
+artifact_kind: apple_m4_long_context_corpus
+name: duplicate-long-context
+description: Duplicate case id fixture.
+defaults:
+  families: [dense_slm, bitnet]
+  family_prompt_templates:
+    dense_slm: qwen2.5
+    bitnet: bitnetcpp-answer
+cases:
+- id: duplicate
+  category: retrieval_copy
+  question: "What key?"
+  scoring:
+    kind: normalized_match
+    expected_normalized: alpha
+- id: duplicate
+  category: table_extraction
+  question: "What route?"
+  scoring:
+    kind: normalized_match
+    expected_normalized: beta
+- id: late
+  category: late_context_instruction_following
+  question: "Final code?"
+  scoring:
+    kind: required_keywords
+    required_keywords: [final]
+- id: truncation
+  category: truncation_behavior
+  question: "State?"
+  scoring:
+    kind: normalized_match
+    expected_normalized: unsupported_context
+"#,
+    )?;
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "eval",
+            "--suite",
+            "m4-long-context",
+            "--corpus",
+            corpus_str.as_str(),
+            "--dry-run",
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("case id `duplicate` is duplicated"));
+    Ok(())
 }
 
 #[test]
@@ -1515,6 +1674,258 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
         .failure()
         .stderr(predicate::str::contains("mac ask routes the supported Mac local-answer path"))
         .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
+fn mac_context_dense_ask_blocks_beyond_recorded_4k_before_cache_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let receipt = dir.path().join("dense-context-guardrail.json");
+    let prompt = "dense context guardrail ".repeat(900);
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "ask",
+            prompt.as_str(),
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac ask context guardrail blocked request"))
+        .stderr(predicate::str::contains("unsupported_context_exceeds_recorded_evidence"))
+        .stderr(predicate::str::contains("receipt written"))
+        .stderr(predicate::str::contains("bitnet model fetch").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_context_guardrail");
+    assert_eq!(receipt_json["operator_command"], "mac ask");
+    assert_eq!(receipt_json["status"], "blocked");
+    assert_eq!(receipt_json["fallback_used"], false);
+    assert_eq!(receipt_json["model_family"], "dense-slm");
+    assert_eq!(receipt_json["context_envelope"]["work_item"], "M4-CONTEXT-001");
+    assert_eq!(receipt_json["context_envelope"]["route"], "mac ask");
+    assert_eq!(receipt_json["context_envelope"]["allowed"], false);
+    assert_eq!(receipt_json["context_envelope"]["operator_class"], "unsupported");
+    assert_eq!(
+        receipt_json["context_envelope"]["status"],
+        "unsupported_context_exceeds_recorded_evidence"
+    );
+    assert_eq!(
+        receipt_json["context_envelope"]["recorded_envelope"]["evidence_profile"],
+        "beyond_context_4k"
+    );
+    assert_eq!(receipt_json["claim_boundary"]["live_generation_executed"], false);
+    assert_eq!(receipt_json["claim_boundary"]["unsupported_context_supported"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_context_guardrail"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_context_bitnet_ask_blocks_beyond_recorded_prompt_before_tokenizer_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("bitnet-context-guardrail.json");
+    let tokenizer = dir.path().join("missing-tokenizer.json");
+    let prompt = "bitnet context guardrail ".repeat(120);
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "ask",
+            prompt.as_str(),
+            "--model-id",
+            "microsoft-bitnet-b1.58-2B-4T-i2s",
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            tokenizer_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac ask context guardrail blocked request"))
+        .stderr(predicate::str::contains("unsupported_context_exceeds_recorded_evidence"))
+        .stderr(predicate::str::contains("receipt written"))
+        .stderr(predicate::str::contains("tokenizer is missing").not())
+        .stderr(predicate::str::contains("requires explicit tokenizer authority").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_context_guardrail");
+    assert_eq!(receipt_json["operator_command"], "mac ask");
+    assert_eq!(receipt_json["model_family"], "bitnet");
+    assert_eq!(receipt_json["model_id"], "microsoft-bitnet-b1.58-2B-4T-i2s");
+    assert_eq!(receipt_json["context_envelope"]["work_item"], "M4-CONTEXT-001");
+    assert_eq!(receipt_json["context_envelope"]["route"], "mac ask");
+    assert_eq!(receipt_json["context_envelope"]["allowed"], false);
+    assert_eq!(receipt_json["context_envelope"]["operator_class"], "unsupported");
+    assert_eq!(
+        receipt_json["context_envelope"]["recorded_envelope"]["evidence_profile"],
+        "beyond_bitnet_bounded_ask_warm"
+    );
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_chat_enabled"], false);
+    assert_eq!(receipt_json["claim_boundary"]["bitnet_serve_enabled"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_context_guardrail"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_context_dense_chat_blocks_beyond_recorded_4k_before_cache_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let receipt = dir.path().join("dense-chat-context-guardrail.json");
+    let prompt = "dense chat context guardrail ".repeat(700);
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "chat",
+            "--prompt",
+            prompt.as_str(),
+            "--prompt",
+            "second bounded turn",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac chat context guardrail blocked request"))
+        .stderr(predicate::str::contains("unsupported_context_exceeds_recorded_evidence"))
+        .stderr(predicate::str::contains("receipt written"))
+        .stderr(predicate::str::contains("mac chat requires at least two prompts").not())
+        .stderr(predicate::str::contains("bitnet model fetch").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_context_guardrail");
+    assert_eq!(receipt_json["operator_command"], "mac chat");
+    assert_eq!(receipt_json["model_family"], "dense-slm");
+    assert_eq!(receipt_json["context_envelope"]["route"], "mac chat");
+    assert_eq!(receipt_json["context_envelope"]["allowed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_context_guardrail"));
+    Ok(())
+}
+
+#[test]
+fn mac_context_dense_chat_smoke_blocks_large_system_before_cache_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let cache = dir.path().join("models");
+    let receipt = dir.path().join("chat-smoke-context-guardrail.json");
+    let system_prompt = "dense chat smoke system context guardrail ".repeat(600);
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "chat-smoke",
+            "--system",
+            system_prompt.as_str(),
+            "--cache-dir",
+            cache_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac chat-smoke context guardrail blocked request"))
+        .stderr(predicate::str::contains("unsupported_context_exceeds_recorded_evidence"))
+        .stderr(predicate::str::contains("receipt written"))
+        .stderr(predicate::str::contains("bitnet model fetch").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_context_guardrail");
+    assert_eq!(receipt_json["operator_command"], "mac chat-smoke");
+    assert_eq!(receipt_json["model_family"], "dense-slm");
+    assert_eq!(receipt_json["context_envelope"]["route"], "mac chat-smoke");
+    assert_eq!(receipt_json["context_envelope"]["allowed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_context_guardrail"));
+    Ok(())
+}
+
+#[test]
+fn mac_context_bitnet_warm_blocks_beyond_recorded_prompt_before_tokenizer_lookup()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("bitnet-warm-context-guardrail.json");
+    let tokenizer = dir.path().join("missing-tokenizer.json");
+    let prompt = "bitnet warm context guardrail ".repeat(120);
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let tokenizer_str = tokenizer.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "bitnet-warm",
+            "--prompt",
+            prompt.as_str(),
+            "--prompt",
+            prompt.as_str(),
+            "--model-path",
+            "missing-bitnet.gguf",
+            "--tokenizer",
+            tokenizer_str.as_str(),
+            "--json-out",
+            receipt_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac bitnet-warm context guardrail blocked request"))
+        .stderr(predicate::str::contains("unsupported_context_exceeds_recorded_evidence"))
+        .stderr(predicate::str::contains("receipt written"))
+        .stderr(predicate::str::contains("tokenizer is missing").not());
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_context_guardrail");
+    assert_eq!(receipt_json["operator_command"], "mac bitnet-warm");
+    assert_eq!(receipt_json["model_family"], "bitnet");
+    assert_eq!(receipt_json["context_envelope"]["route"], "mac bitnet-warm");
+    assert_eq!(receipt_json["context_envelope"]["allowed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_context_guardrail"));
+    Ok(())
 }
 
 #[test]
@@ -3017,6 +3428,55 @@ fn mac_serve_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
+fn mac_serve_smoke_help_documents_dense_conformance_receipt() {
+    bitnet()
+        .args(["mac", "serve-smoke", "--help"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("dense M4 local-server conformance smoke"))
+        .stdout(predicate::str::contains("--model-id <MODEL_ID>"))
+        .stdout(predicate::str::contains("--receipt-dir <PATH>"))
+        .stdout(predicate::str::contains("--json-out <PATH>"));
+}
+
+#[test]
+fn mac_serve_smoke_missing_cache_fails_before_generation() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let cache = dir.path().join("models");
+    let receipt_dir = dir.path().join("receipts");
+    let json_out = dir.path().join("serve-smoke.json");
+    let cache_str = cache.to_string_lossy().into_owned();
+    let receipt_str = receipt_dir.to_string_lossy().into_owned();
+    let json_out_str = json_out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "serve-smoke",
+            "--cache-dir",
+            cache_str.as_str(),
+            "--receipt-dir",
+            receipt_str.as_str(),
+            "--json-out",
+            json_out_str.as_str(),
+        ])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac serve-smoke cannot start"))
+        .stderr(predicate::str::contains("bitnet model fetch qwen2.5-0.5b-instruct-q8_0"));
+}
+
+#[test]
+fn mac_serve_smoke_rejects_full_metal_request_before_cache_lookup() {
+    bitnet()
+        .args(["--device", "apple-m4-metal", "mac", "serve-smoke"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac serve routes the supported Mac local service path"))
+        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+}
+
+#[test]
 fn mac_chat_help_documents_resident_prompts() {
     bitnet()
         .args(["mac", "chat", "--help"])
@@ -4481,6 +4941,24 @@ fn mac_benchmark_requires_release_build() {
 fn mac_benchmark_accepts_resident_100_profile_before_release_gate() {
     bitnet()
         .args(["mac", "benchmark", "--profile", "resident_100"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac benchmark must be run from a release build"));
+}
+
+#[test]
+fn mac_benchmark_accepts_mixed_model_switch_profile_before_release_gate() {
+    bitnet()
+        .args(["mac", "benchmark", "--profile", "mixed_model_switch"])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("mac benchmark must be run from a release build"));
+}
+
+#[test]
+fn mac_benchmark_accepts_context_profile_alias_before_release_gate() {
+    bitnet()
+        .args(["mac", "benchmark", "--profile", "context"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("mac benchmark must be run from a release build"));
@@ -7003,7 +7481,6 @@ fn bench_help_documents_no_cuda_fallback() {
         .success()
         .stdout(predicate::str::contains("only cpu/auto"))
         .stdout(predicate::str::contains("--cuda-benchmark-receipt"))
-        .stdout(predicate::str::contains("--profile"))
         .stdout(predicate::str::contains("receipt-backed CUDA"));
 }
 
@@ -7017,205 +7494,12 @@ fn bench_cuda_device_fails_closed_without_cpu_fallback() -> Result<(), Box<dyn s
     let model_str = model.to_string_lossy().into_owned();
 
     bitnet()
-        .args([
-            "bench",
-            "--model",
-            model_str.as_str(),
-            "--device",
-            "cuda",
-            "--profile",
-            "one_token",
-        ])
+        .args(["bench", "--model", model_str.as_str(), "--device", "cuda"])
         .assert()
         .failure()
         .stderr(predicate::str::contains("does not support device label 'cuda'"))
         .stderr(predicate::str::contains("must not silently fall back to CPU"))
-        .stderr(predicate::str::contains("CPU fallback cannot count as CUDA execution"))
-        .stderr(predicate::str::contains("Profile `one_token`"));
-    Ok(())
-}
-
-/// Exact RTX 5070 Ti PERF-005 profiles enter the live strict CUDA dispatcher, not the legacy CPU benchmark.
-#[cfg(feature = "full-cli")]
-#[test]
-fn bench_rtx5070ti_profile_enters_live_perf005_dispatch_without_cpu_fallback()
--> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let model = dir.path().join("placeholder.gguf");
-    let receipt = dir.path().join("one-token.json");
-    std::fs::write(&model, b"placeholder")?;
-    let model_str = model.to_string_lossy().into_owned();
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    bitnet()
-        .args([
-            "bench",
-            "--model",
-            model_str.as_str(),
-            "--device",
-            "nvidia-rtx-5070-ti-cuda",
-            "--profile",
-            "one_token",
-            "--output",
-            receipt_str.as_str(),
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains(
-            "PERF-005 profile `one_token` dispatches through strict RTX 5070 Ti CUDA generation",
-        ))
-        .stderr(predicate::str::contains("speedup_claim=false"))
-        .stderr(predicate::str::contains("legacy benchmark simulates benchmark work").not());
-    Ok(())
-}
-
-/// The first missing PERF-005 prefill profile enters the live strict CUDA dispatcher.
-#[cfg(feature = "full-cli")]
-#[test]
-fn bench_rtx5070ti_dispatches_prefill_128_perf005_profile_without_cpu_fallback()
--> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let model = dir.path().join("placeholder.gguf");
-    let receipt = dir.path().join("prefill-128-decode-16.json");
-    std::fs::write(&model, b"placeholder")?;
-    let model_str = model.to_string_lossy().into_owned();
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    bitnet()
-        .args([
-            "bench",
-            "--model",
-            model_str.as_str(),
-            "--device",
-            "nvidia-rtx-5070-ti-cuda",
-            "--profile",
-            "prefill_128_decode_16",
-            "--output",
-            receipt_str.as_str(),
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains(
-            "PERF-005 profile `prefill_128_decode_16` dispatches through strict RTX 5070 Ti CUDA generation",
-        ))
-        .stderr(predicate::str::contains("speedup_claim=false"))
-        .stderr(predicate::str::contains("full_residency_claim=false"))
-        .stderr(predicate::str::contains("legacy benchmark simulates benchmark work").not());
-    Ok(())
-}
-
-/// The ten-turn PERF-005 warm-session profile enters the live strict CUDA warm-session dispatcher.
-#[cfg(feature = "full-cli")]
-#[test]
-fn bench_rtx5070ti_dispatches_warm_session_10_perf005_profile_without_cpu_fallback()
--> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let model = dir.path().join("placeholder.gguf");
-    let receipt = dir.path().join("warm-session-10-turns.json");
-    std::fs::write(&model, b"placeholder")?;
-    let model_str = model.to_string_lossy().into_owned();
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    bitnet()
-        .args([
-            "bench",
-            "--model",
-            model_str.as_str(),
-            "--device",
-            "nvidia-rtx-5070-ti-cuda",
-            "--profile",
-            "warm_session_10_turns",
-            "--output",
-            receipt_str.as_str(),
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains(
-            "PERF-005 profile `warm_session_10_turns` dispatches through strict RTX 5070 Ti CUDA generation",
-        ))
-        .stderr(predicate::str::contains("profile_kind=warm_session"))
-        .stderr(predicate::str::contains("turns=10"))
-        .stderr(predicate::str::contains("max_new_tokens=16"))
-        .stderr(predicate::str::contains("speedup_claim=false"))
-        .stderr(predicate::str::contains("full_residency_claim=false"))
-        .stderr(predicate::str::contains("legacy benchmark simulates benchmark work").not());
-    Ok(())
-}
-
-/// The long-prefill PERF-005 profile enters the live strict CUDA dispatcher.
-#[cfg(feature = "full-cli")]
-#[test]
-fn bench_rtx5070ti_dispatches_prefill_512_perf005_profile_without_cpu_fallback()
--> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let model = dir.path().join("placeholder.gguf");
-    let receipt = dir.path().join("prefill-512-decode-32.json");
-    std::fs::write(&model, b"placeholder")?;
-    let model_str = model.to_string_lossy().into_owned();
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    bitnet()
-        .args([
-            "bench",
-            "--model",
-            model_str.as_str(),
-            "--device",
-            "nvidia-rtx-5070-ti-cuda",
-            "--profile",
-            "prefill_512_decode_32",
-            "--output",
-            receipt_str.as_str(),
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains(
-            "PERF-005 profile `prefill_512_decode_32` dispatches through strict RTX 5070 Ti CUDA generation",
-        ))
-        .stderr(predicate::str::contains("profile_kind=single_decode"))
-        .stderr(predicate::str::contains("min_prefill_tokens=512"))
-        .stderr(predicate::str::contains("max_new_tokens=32"))
-        .stderr(predicate::str::contains("speedup_claim=false"))
-        .stderr(predicate::str::contains("full_residency_claim=false"))
-        .stderr(predicate::str::contains("legacy benchmark simulates benchmark work").not());
-    Ok(())
-}
-
-/// The warm-context PERF-005 profile enters the live strict CUDA dispatcher.
-#[cfg(feature = "full-cli")]
-#[test]
-fn bench_rtx5070ti_dispatches_decode_128_warm_context_perf005_profile_without_cpu_fallback()
--> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let model = dir.path().join("placeholder.gguf");
-    let receipt = dir.path().join("decode-128-from-warm-context.json");
-    std::fs::write(&model, b"placeholder")?;
-    let model_str = model.to_string_lossy().into_owned();
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    let profile = "decode_128_from_warm_context";
-    bitnet()
-        .args([
-            "bench",
-            "--model",
-            model_str.as_str(),
-            "--device",
-            "nvidia-rtx-5070-ti-cuda",
-            "--profile",
-            profile,
-            "--output",
-            receipt_str.as_str(),
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains(format!(
-            "PERF-005 profile `{profile}` dispatches through strict RTX 5070 Ti CUDA generation"
-        )))
-        .stderr(predicate::str::contains("profile_kind=warm_context_decode"))
-        .stderr(predicate::str::contains("min_prefill_tokens=512"))
-        .stderr(predicate::str::contains("max_new_tokens=128"))
-        .stderr(predicate::str::contains("speedup_claim=false"))
-        .stderr(predicate::str::contains("full_residency_claim=false"))
-        .stderr(predicate::str::contains("legacy benchmark simulates benchmark work").not());
+        .stderr(predicate::str::contains("CPU fallback cannot count as CUDA execution"));
     Ok(())
 }
 
@@ -7282,169 +7566,6 @@ fn bench_cuda_benchmark_receipt_reports_json() -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
-/// Official BitNet PERF-005 governed receipts expose the full eight-profile matrix.
-#[cfg(feature = "full-cli")]
-#[test]
-fn bench_bitnet_perf005_benchmark_receipt_reports_profile_matrix_json()
--> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let receipt = dir.path().join("cuda-bitnet-perf-005-profile-matrix-contract.json");
-    write_bitnet_perf005_governed_cuda_benchmark_receipt(&receipt)?;
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    let output = bitnet()
-        .args([
-            "bench",
-            "--device",
-            "nvidia-rtx-5070-ti-cuda",
-            "--cuda-benchmark-receipt",
-            receipt_str.as_str(),
-            "--format",
-            "json",
-        ])
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let report: serde_json::Value = serde_json::from_slice(&output)?;
-    let profiles = report["profiles"].as_array().ok_or("profiles array")?;
-    let profile_names: Vec<&str> =
-        profiles.iter().filter_map(|entry| entry["profile"].as_str()).collect();
-
-    assert_eq!(report["artifact_kind"], "strict_cuda_benchmark_qualification_review");
-    assert_eq!(report["selected_backend"], "nvidia-rtx-5070-ti-cuda");
-    assert_eq!(report["selected_route"], "bitnet_qk256_cuda");
-    assert_eq!(report["runtime_api"], "cuda");
-    assert_eq!(report["fallback_used"], false);
-    assert_eq!(report["speedup_claim"], false);
-    assert_eq!(report["benchmark_qualified_speedup"], false);
-    assert_eq!(report["full_cuda_residency_claimed"], false);
-    assert_eq!(report["qualification_status"], "not_accepted");
-    assert_eq!(report["profile_count"], 8);
-    assert_eq!(
-        profile_names,
-        vec![
-            "one_token",
-            "short_decode_8",
-            "short_decode_32",
-            "prefill_128_decode_16",
-            "prefill_512_decode_32",
-            "warm_session_3_turns",
-            "warm_session_10_turns",
-            "decode_128_from_warm_context",
-        ]
-    );
-    assert!(profiles.iter().all(|entry| entry["decision"] == "not_accepted"));
-    assert!(profiles.iter().all(|entry| entry["benchmark_qualified_speedup"] == false));
-    Ok(())
-}
-
-/// Governed CUDA benchmark receipt reports can be narrowed to one exact profile.
-#[cfg(feature = "full-cli")]
-#[test]
-fn bench_cuda_benchmark_receipt_profile_filters_json() -> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let receipt = dir.path().join("dense-qwen-benchmark-qualification.json");
-    write_governed_cuda_benchmark_receipt(&receipt)?;
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    let output = bitnet()
-        .args([
-            "bench",
-            "--device",
-            "cuda",
-            "--cuda-benchmark-receipt",
-            receipt_str.as_str(),
-            "--profile",
-            "short_decode_8",
-            "--format",
-            "json",
-        ])
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let report: serde_json::Value = serde_json::from_slice(&output)?;
-
-    assert_eq!(report["profile_count"], 1);
-    assert_eq!(report["profiles"].as_array().ok_or("profiles array")?.len(), 1);
-    assert_eq!(report["profiles"][0]["profile"], "short_decode_8");
-    assert_eq!(report["fallback_used"], false);
-    assert_eq!(report["speedup_claim"], false);
-    Ok(())
-}
-
-/// Official BitNet PERF-005 reports can be narrowed to one long-profile entry.
-#[cfg(feature = "full-cli")]
-#[test]
-fn bench_bitnet_perf005_benchmark_receipt_profile_filters_json()
--> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let receipt = dir.path().join("cuda-bitnet-perf-005-profile-matrix-contract.json");
-    write_bitnet_perf005_governed_cuda_benchmark_receipt(&receipt)?;
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    let output = bitnet()
-        .args([
-            "bench",
-            "--device",
-            "cuda",
-            "--cuda-benchmark-receipt",
-            receipt_str.as_str(),
-            "--profile",
-            "decode_128_from_warm_context",
-            "--format",
-            "json",
-        ])
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let report: serde_json::Value = serde_json::from_slice(&output)?;
-
-    assert_eq!(report["profile_count"], 1);
-    assert_eq!(report["profiles"].as_array().ok_or("profiles array")?.len(), 1);
-    assert_eq!(report["profiles"][0]["profile"], "decode_128_from_warm_context");
-    assert_eq!(report["profiles"][0]["decision"], "not_accepted");
-    assert_eq!(report["profiles"][0]["benchmark_qualified_speedup"], false);
-    assert_eq!(report["fallback_used"], false);
-    assert_eq!(report["speedup_claim"], false);
-    assert_eq!(report["full_cuda_residency_claimed"], false);
-    Ok(())
-}
-
-/// Unknown governed CUDA benchmark profiles fail closed instead of reporting all profiles.
-#[cfg(feature = "full-cli")]
-#[test]
-fn bench_cuda_benchmark_receipt_unknown_profile_fails_closed()
--> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let receipt = dir.path().join("dense-qwen-benchmark-qualification.json");
-    write_governed_cuda_benchmark_receipt(&receipt)?;
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    bitnet()
-        .args([
-            "bench",
-            "--device",
-            "cuda",
-            "--cuda-benchmark-receipt",
-            receipt_str.as_str(),
-            "--profile",
-            "prefill_512_decode_32",
-            "--format",
-            "json",
-        ])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("profile `prefill_512_decode_32` was not found"))
-        .stderr(predicate::str::contains("available profiles: one_token, short_decode_8"));
-    Ok(())
-}
-
 /// Governed CUDA benchmark receipt reports support profile CSV output.
 #[cfg(feature = "full-cli")]
 #[test]
@@ -7507,17 +7628,6 @@ fn write_governed_cuda_benchmark_receipt(path: &std::path::Path) -> std::io::Res
       "quality_passed": true,
       "fallback_free": true,
       "benchmark_qualified_speedup": false
-    },
-    {
-      "profile": "short_decode_8",
-      "decision": "not_accepted",
-      "cpu_total_ms_mean": 3.0,
-      "cuda_total_ms_mean": 4.0,
-      "host_to_device_ms": 3.5,
-      "device_to_host_ms": 0.2,
-      "quality_passed": true,
-      "fallback_free": true,
-      "benchmark_qualified_speedup": false
     }
   ],
   "claim_boundary": {
@@ -7525,153 +7635,6 @@ fn write_governed_cuda_benchmark_receipt(path: &std::path::Path) -> std::io::Res
     "benchmark_qualified_speedup": false,
     "full_cuda_residency_claimed": false,
     "bitnet_packed_i2s_qk256_proof": false
-  }
-}"#,
-    )
-}
-
-#[cfg(feature = "full-cli")]
-fn write_bitnet_perf005_governed_cuda_benchmark_receipt(
-    path: &std::path::Path,
-) -> std::io::Result<()> {
-    std::fs::write(
-        path,
-        r#"{
-  "artifact_kind": "strict_cuda_benchmark_qualification_review",
-  "claim": "strict_cuda_benchmark_qualification_review",
-  "selected_backend": "nvidia-rtx-5070-ti-cuda",
-  "selected_route": "bitnet_qk256_cuda",
-  "runtime_api": "cuda",
-  "fallback_used": false,
-  "speedup_claim": false,
-  "benchmark_qualified_speedup": false,
-  "full_cuda_residency_claimed": false,
-  "profile_matrix_id": "cuda-bitnet-perf-005",
-  "target_profiles": [
-    "one_token",
-    "short_decode_8",
-    "short_decode_32",
-    "prefill_128_decode_16",
-    "prefill_512_decode_32",
-    "warm_session_3_turns",
-    "warm_session_10_turns",
-    "decode_128_from_warm_context"
-  ],
-  "benchmark_policy": {
-    "profile_specific_decisions_only": true,
-    "global_speedup_claim": false,
-    "dense_cuda_evidence_used": false,
-    "bitnet_packed_i2s_qk256_only": true
-  },
-  "qualification_decision": {
-    "status": "not_accepted",
-    "speedup_claim_allowed": false,
-    "benchmark_qualified_speedup": false,
-    "accepted_profiles": [],
-    "blocked_profiles": [
-      "one_token",
-      "short_decode_8",
-      "short_decode_32",
-      "prefill_128_decode_16",
-      "prefill_512_decode_32",
-      "warm_session_3_turns",
-      "warm_session_10_turns",
-      "decode_128_from_warm_context"
-    ],
-    "reason": "The full CUDA-BITNET-PERF-005 matrix is visible but not accepted for speedup."
-  },
-  "profile_reviews": [
-    {
-      "profile": "one_token",
-      "decision": "not_accepted",
-      "evidence_status": "missing",
-      "speedup_claim_allowed": false,
-      "benchmark_qualified_speedup": false,
-      "fallback_free": false,
-      "quality_passed": false,
-      "dense_cuda_evidence_used": false
-    },
-    {
-      "profile": "short_decode_8",
-      "decision": "not_accepted",
-      "evidence_status": "single_run_baseline",
-      "speedup_claim_allowed": false,
-      "benchmark_qualified_speedup": false,
-      "fallback_free": true,
-      "quality_passed": true,
-      "dense_cuda_evidence_used": false,
-      "cpu_total_ms_mean": 147593.0,
-      "cuda_total_ms_mean": 1866.0,
-      "host_to_device_ms": 0.0,
-      "device_to_host_ms": 0.0
-    },
-    {
-      "profile": "short_decode_32",
-      "decision": "not_accepted",
-      "evidence_status": "missing",
-      "speedup_claim_allowed": false,
-      "benchmark_qualified_speedup": false,
-      "fallback_free": false,
-      "quality_passed": false,
-      "dense_cuda_evidence_used": false
-    },
-    {
-      "profile": "prefill_128_decode_16",
-      "decision": "not_accepted",
-      "evidence_status": "missing",
-      "speedup_claim_allowed": false,
-      "benchmark_qualified_speedup": false,
-      "fallback_free": false,
-      "quality_passed": false,
-      "dense_cuda_evidence_used": false
-    },
-    {
-      "profile": "prefill_512_decode_32",
-      "decision": "not_accepted",
-      "evidence_status": "missing",
-      "speedup_claim_allowed": false,
-      "benchmark_qualified_speedup": false,
-      "fallback_free": false,
-      "quality_passed": false,
-      "dense_cuda_evidence_used": false
-    },
-    {
-      "profile": "warm_session_3_turns",
-      "decision": "not_accepted",
-      "evidence_status": "missing",
-      "speedup_claim_allowed": false,
-      "benchmark_qualified_speedup": false,
-      "fallback_free": false,
-      "quality_passed": false,
-      "dense_cuda_evidence_used": false
-    },
-    {
-      "profile": "warm_session_10_turns",
-      "decision": "not_accepted",
-      "evidence_status": "missing",
-      "speedup_claim_allowed": false,
-      "benchmark_qualified_speedup": false,
-      "fallback_free": false,
-      "quality_passed": false,
-      "dense_cuda_evidence_used": false
-    },
-    {
-      "profile": "decode_128_from_warm_context",
-      "decision": "not_accepted",
-      "evidence_status": "missing",
-      "speedup_claim_allowed": false,
-      "benchmark_qualified_speedup": false,
-      "fallback_free": false,
-      "quality_passed": false,
-      "dense_cuda_evidence_used": false
-    }
-  ],
-  "claim_boundary": {
-    "speedup_claim": false,
-    "benchmark_qualified_speedup": false,
-    "full_cuda_residency_claimed": false,
-    "bitnet_packed_i2s_qk256_proof": true,
-    "dense_regular_llm_cuda_proof": false
   }
 }"#,
     )
@@ -8227,6 +8190,138 @@ fn slm_eval_scoring_dry_run_preserves_seeded_scoring_contract()
     assert_eq!(receipt["cases"][9]["quality"]["scoring"]["forbidden_tokens"][0], "maybe");
     assert_eq!(receipt["claim_boundary"]["bounded_slm_answer_smoke_passed"], false);
     assert_eq!(receipt["claim_boundary"]["broad_performance_claimed"], false);
+    Ok(())
+}
+
+/// `answer-corpus --dry-run` validates the Apple M4 long-context live corpus contract.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_long_context_dry_run_preserves_context_profiles()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let out = dir.path().join("apple-m4-long-context-answer-corpus.json");
+    let corpus = workspace_path("ci/quality/apple-m4-long-context-answer-corpus.yaml");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            "missing.gguf",
+            "--model-id",
+            "qwen2.5-0.5b-instruct-q8_0",
+            "--corpus",
+            corpus_str.as_str(),
+            "--json-out",
+            out_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(out)?)?;
+    assert_eq!(receipt["corpus"]["id"], "apple-m4-long-context-answer-corpus-v1");
+    assert_eq!(receipt["corpus"]["name"], "apple-m4-long-context-answer-corpus-v1");
+    assert_eq!(receipt["corpus"]["metadata"]["work_item"], "M4-CONTEXT-002");
+    assert_eq!(receipt["corpus"]["case_count"], 4);
+    assert_eq!(receipt["quality_summary"]["not_run"], 4);
+    assert_eq!(receipt["scoring_summary"]["enabled"], true);
+    assert_eq!(receipt["scoring_summary"]["total"], 4);
+    assert_eq!(receipt["profile_summary"]["context_1k"]["total"], 2);
+    assert_eq!(receipt["profile_summary"]["context_4k"]["total"], 1);
+    assert_eq!(receipt["profile_summary"]["unsupported_boundary"]["total"], 1);
+    assert_eq!(
+        receipt["corpus"]["metadata"]["claim_boundary"]["dense_slm_evidence_proves_bitnet"],
+        false
+    );
+    assert_eq!(
+        receipt["corpus"]["metadata"]["claim_boundary"]["bitnet_long_context_proven"],
+        false
+    );
+    Ok(())
+}
+
+/// `mac receipts-check` accepts the annotated M4-CONTEXT-002 long-context answer-corpus shape.
+#[cfg(feature = "full-cli")]
+#[test]
+fn mac_receipts_check_accepts_long_context_answer_corpus_shape()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let out = dir.path().join("apple-m4-long-context-answer-corpus.json");
+    let corpus = workspace_path("ci/quality/apple-m4-long-context-answer-corpus.yaml");
+    let corpus_str = corpus.to_string_lossy().into_owned();
+    let out_str = out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "apple-m4-cpu-neon",
+            "--model",
+            "missing.gguf",
+            "--model-id",
+            "qwen2.5-0.5b-instruct-q8_0",
+            "--corpus",
+            corpus_str.as_str(),
+            "--json-out",
+            out_str.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&out)?)?;
+    receipt["artifact_kind"] = serde_json::json!("apple_m4_long_context_answer_corpus");
+    receipt["suite"] = serde_json::json!("m4-long-context");
+    receipt["work_item"] = serde_json::json!("M4-CONTEXT-002");
+    receipt["model_id"] = serde_json::json!("qwen2.5-0.5b-instruct-q8_0");
+    receipt["model_sha256"] =
+        serde_json::json!("ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e");
+    receipt["quality_summary"]["passed"] = serde_json::json!(4);
+    receipt["quality_summary"]["failed"] = serde_json::json!(0);
+    receipt["quality_summary"]["timeout"] = serde_json::json!(0);
+    receipt["quality_summary"]["not_run"] = serde_json::json!(0);
+    receipt["scoring_summary"]["passed"] = serde_json::json!(4);
+    receipt["scoring_summary"]["failed"] = serde_json::json!(0);
+    receipt["scoring_summary"]["not_run"] = serde_json::json!(0);
+    receipt["m4_context_proof"] = serde_json::json!({
+        "suite": "m4-long-context",
+        "work_item": "M4-CONTEXT-002",
+        "source_answer_corpus": "ci/quality/apple-m4-long-context-answer-corpus.yaml",
+        "tested_model_id": "qwen2.5-0.5b-instruct-q8_0",
+        "tested_model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+        "tested_backend": "apple-m4-cpu-neon",
+        "quality_gate_passed": true,
+        "live_quality_receipt_published": true,
+        "benchmark_receipt_required": true,
+        "profiles_required": ["context_1k", "context_4k", "unsupported_boundary"],
+        "bitnet_long_context": {
+            "status": "unsupported_until_bitnet_long_context_receipts_exist",
+            "dense_slm_evidence_proves_bitnet": false
+        }
+    });
+    receipt["claim_boundary"]["dense_slm_evidence_proves_bitnet"] = serde_json::json!(false);
+    receipt["claim_boundary"]["bitnet_long_context_proven"] = serde_json::json!(false);
+    receipt["claim_boundary"]["long_context_quality_receipt"] = serde_json::json!(true);
+    receipt["claim_boundary"]["long_context_quality_gate_passed"] = serde_json::json!(true);
+    receipt["claim_boundary"]["macbook_evidence"] = serde_json::json!(false);
+    for case in receipt["cases"].as_array_mut().ok_or("missing cases")? {
+        case["status"] = serde_json::json!("passed");
+        case["quality"]["passed"] = serde_json::json!(true);
+        case["quality"]["generated_tokens"] = serde_json::json!(1);
+    }
+    std::fs::write(&out, serde_json::to_vec_pretty(&receipt)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", out_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_long_context_answer_corpus"))
+        .stdout(predicate::str::contains("\"prompt_count\": 4"))
+        .stdout(predicate::str::contains("\"generated_tokens\": 4"));
     Ok(())
 }
 

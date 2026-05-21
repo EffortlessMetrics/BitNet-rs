@@ -1,5 +1,11 @@
 # Real BitNet Model Integration: API Contracts Reference
 
+> Claim boundary: these API contracts describe intended integration surfaces.
+> They do not prove model quality, tokenizer authority, backend execution,
+> speedup, server readiness, fallback behavior, or residency for current builds.
+> Current claims must come from active receipts, model coverage, status docs,
+> specs, and claim gates.
+
 ## Overview
 
 This document defines the comprehensive API contracts for real BitNet model integration across the BitNet-rs neural network inference pipeline. These contracts ensure consistent interfaces for model loading, quantization, inference, and validation while maintaining backward compatibility and supporting device-aware execution.

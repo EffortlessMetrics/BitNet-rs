@@ -1,19 +1,5 @@
-use std::{
-    env,
-    error::Error,
-    io,
-    path::PathBuf,
-    time::{Duration, Instant},
-};
+use std::{env, error::Error, io, path::PathBuf};
 
-use bitnet_kernels::a770_opencl_fixture::{
-    A770_MATMUL_I2S_ACTIVATIONS, A770_MATMUL_I2S_K, A770_MATMUL_I2S_M, A770_MATMUL_I2S_N,
-    A770_QK256_SCALED_ACT_SCALE, A770_QK256_SCALED_COLS, A770_QK256_SCALED_ROW_STRIDE_BYTES,
-    A770_QK256_SCALED_ROWS, A770_QK256_SCALED_WEIGHT_SCALE, a770_matmul_i2s_cpu_reference,
-    a770_qk256_scaled_activation_sum, a770_qk256_scaled_cpu_reference,
-    a770_qk256_scaled_i8s_activations, pack_a770_matmul_i2s_weights,
-    pack_a770_qk256_scaled_weights,
-};
 use opencl3::command_queue::{CL_QUEUE_PROFILING_ENABLE, CommandQueue};
 use opencl3::context::Context;
 use opencl3::device::{CL_DEVICE_TYPE_GPU, Device};
@@ -27,60 +13,21 @@ const RECEIPT_ENV: &str = "BITNET_A770_OPENCL_PARITY_RECEIPT";
 const TOLERANCE: f32 = 1.0e-6;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let args = parse_args()?;
-    let receipt = match args.fixture {
-        FixtureContract::MatmulI2s => run_a770_matmul_i2s(args.mode)?.to_json(),
-        FixtureContract::Qk256I8sScaled => {
-            if matches!(args.mode, RunMode::Benchmark(_)) {
-                return Err(io_error(
-                    "--benchmark is only supported for the matmul-i2s fixture today",
-                ));
-            }
-            run_a770_qk256_i8s_scaled()?.to_json()
-        }
-    };
-    if let Some(path) = args.receipt_path {
+    let receipt_path = receipt_path_from_args()?;
+    let receipt = run_a770_matmul_i2s_parity()?;
+    if let Some(path) = receipt_path {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(&path, &receipt)?;
+        std::fs::write(&path, receipt.to_json())?;
     }
-    println!("{receipt}");
+    println!("{}", receipt.to_json());
     Ok(())
 }
 
-#[derive(Debug)]
-struct CliArgs {
-    receipt_path: Option<PathBuf>,
-    fixture: FixtureContract,
-    mode: RunMode,
-}
-
-#[derive(Debug)]
-enum FixtureContract {
-    MatmulI2s,
-    Qk256I8sScaled,
-}
-
-#[derive(Debug)]
-enum RunMode {
-    Parity,
-    Benchmark(BenchmarkConfig),
-}
-
-#[derive(Clone, Copy, Debug)]
-struct BenchmarkConfig {
-    iterations: usize,
-    warmup_iterations: usize,
-}
-
-fn parse_args() -> Result<CliArgs, Box<dyn Error>> {
+fn receipt_path_from_args() -> Result<Option<PathBuf>, Box<dyn Error>> {
     let mut args = env::args().skip(1);
     let mut receipt = env::var_os(RECEIPT_ENV).map(PathBuf::from);
-    let mut benchmark = false;
-    let mut fixture = FixtureContract::MatmulI2s;
-    let mut iterations = 30usize;
-    let mut warmup_iterations = 5usize;
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--receipt" => {
@@ -88,60 +35,16 @@ fn parse_args() -> Result<CliArgs, Box<dyn Error>> {
                     args.next().ok_or_else(|| io_error("--receipt requires a path argument"))?;
                 receipt = Some(PathBuf::from(path));
             }
-            "--fixture" => {
-                let value = args.next().ok_or_else(|| io_error("--fixture requires a value"))?;
-                fixture = parse_fixture_contract(&value)?;
-            }
-            "--benchmark" => benchmark = true,
-            "--iterations" => {
-                let value = args.next().ok_or_else(|| io_error("--iterations requires a value"))?;
-                iterations = parse_positive_usize("--iterations", &value)?;
-            }
-            "--warmup" => {
-                let value = args.next().ok_or_else(|| io_error("--warmup requires a value"))?;
-                warmup_iterations = parse_usize("--warmup", &value)?;
-            }
             "--help" | "-h" => {
-                println!(concat!(
-                    "Usage: a770-opencl-parity [--receipt <path>] ",
-                    "[--fixture matmul-i2s|qk256-i8s-scaled] [--benchmark] ",
-                    "[--iterations <N>] [--warmup <N>]\n\n",
-                    "Runs selected Intel Arc A770 OpenCL parity fixtures against CPU references.\n",
-                    "With --benchmark, records a diagnostic kernel baseline receipt without speed claims."
-                ));
+                println!(
+                    "Usage: a770-opencl-parity [--receipt <path>]\n\nRuns selected Intel Arc A770 OpenCL matmul_i2s parity against a CPU reference."
+                );
                 std::process::exit(0);
             }
             other => return Err(io_error(format!("unknown argument {other:?}"))),
         }
     }
-    let mode = if benchmark {
-        RunMode::Benchmark(BenchmarkConfig { iterations, warmup_iterations })
-    } else {
-        RunMode::Parity
-    };
-    Ok(CliArgs { receipt_path: receipt, fixture, mode })
-}
-
-fn parse_fixture_contract(value: &str) -> Result<FixtureContract, Box<dyn Error>> {
-    match value {
-        "matmul-i2s" => Ok(FixtureContract::MatmulI2s),
-        "qk256-i8s-scaled" => Ok(FixtureContract::Qk256I8sScaled),
-        other => Err(io_error(format!(
-            "unsupported --fixture {other:?}; expected matmul-i2s or qk256-i8s-scaled"
-        ))),
-    }
-}
-
-fn parse_positive_usize(flag: &str, value: &str) -> Result<usize, Box<dyn Error>> {
-    let parsed = parse_usize(flag, value)?;
-    if parsed == 0 {
-        return Err(io_error(format!("{flag} must be greater than zero")));
-    }
-    Ok(parsed)
-}
-
-fn parse_usize(flag: &str, value: &str) -> Result<usize, Box<dyn Error>> {
-    value.parse::<usize>().map_err(|err| io_error(format!("invalid {flag} value {value:?}: {err}")))
+    Ok(receipt)
 }
 
 #[derive(Debug)]
@@ -159,63 +62,17 @@ struct A770OpenClParityReceipt {
     activation_values: usize,
     max_abs_error: f32,
     mean_abs_error: f32,
-    benchmark: Option<BenchmarkSummary>,
-}
-
-#[derive(Debug)]
-struct BenchmarkSummary {
-    iterations: usize,
-    warmup_iterations: usize,
-    cpu_reference_total_ms: f64,
-    cpu_reference_avg_ms: f64,
-    opencl_kernel_total_ms: f64,
-    opencl_kernel_avg_ms: f64,
-    cpu_reference_samples_ms: Vec<f64>,
-    opencl_kernel_samples_ms: Vec<f64>,
-    initial_host_to_device_bytes: usize,
-    device_to_host_bytes: usize,
-    kernel_invocations: usize,
-}
-
-#[derive(Debug)]
-struct A770OpenClQk256ScaledReceipt {
-    runtime_device: String,
-    platform_index: usize,
-    device_index: usize,
-    platform_name: String,
-    vendor: String,
-    driver_version: String,
-    rows: usize,
-    cols: usize,
-    row_stride_bytes: usize,
-    packed_weight_bytes: usize,
-    activation_values: usize,
-    activation_sum: i32,
-    activation_scale: f32,
-    weight_scale: f32,
-    max_abs_error: f32,
-    mean_abs_error: f32,
 }
 
 impl A770OpenClParityReceipt {
     fn to_json(&self) -> String {
-        let (work_item, proof_family, proof_stage) = if self.benchmark.is_some() {
-            (
-                "A770-008",
-                "a770_opencl_matmul_i2s_benchmark_baseline",
-                "diagnostic_benchmark_candidate",
-            )
-        } else {
-            ("A770-006R", "a770_opencl_matmul_i2s_cpu_parity", "cpu_opencl_parity_tested")
-        };
-        let benchmark_json = self.benchmark_json();
         format!(
             concat!(
                 "{{\n",
                 "  \"campaign\": \"intel-a770\",\n",
-                "  \"work_item\": \"{}\",\n",
-                "  \"proof_family\": \"{}\",\n",
-                "  \"proof_stage\": \"{}\",\n",
+                "  \"work_item\": \"A770-006\",\n",
+                "  \"proof_family\": \"a770_opencl_matmul_i2s_cpu_parity\",\n",
+                "  \"proof_stage\": \"cpu_opencl_parity_tested\",\n",
                 "  \"requested_backend\": \"intel-arc-a770\",\n",
                 "  \"selected_backend\": \"intel-arc-a770-opencl\",\n",
                 "  \"runtime_api\": \"opencl\",\n",
@@ -227,9 +84,6 @@ impl A770OpenClParityReceipt {
                 "  \"driver_version\": \"{}\",\n",
                 "  \"kernel_source\": \"bitnet_kernels::kernels::MATMUL_I2S_SRC\",\n",
                 "  \"kernel_name\": \"matmul_i2s\",\n",
-                "  \"fixture_contract\": \"a770_matmul_i2s_explicit_activation_and_packed_weight_operands\",\n",
-                "  \"operand_a\": \"int8_activations_row_major_m_by_k\",\n",
-                "  \"operand_b\": \"packed_i2s_weights_k_by_n_four_weights_per_byte\",\n",
                 "  \"matrix_m\": {},\n",
                 "  \"matrix_n\": {},\n",
                 "  \"matrix_k\": {},\n",
@@ -238,11 +92,6 @@ impl A770OpenClParityReceipt {
                 "  \"tolerance\": {},\n",
                 "  \"max_abs_error\": {},\n",
                 "  \"mean_abs_error\": {},\n",
-                "  \"benchmark\": {},\n",
-                "  \"benchmark_candidate\": {},\n",
-                "  \"benchmark_profile\": {},\n",
-                "  \"benchmark_claim_allowed\": false,\n",
-                "  \"speedup_claim\": false,\n",
                 "  \"passed\": true,\n",
                 "  \"opencl_execution\": true,\n",
                 "  \"cpu_reference\": true,\n",
@@ -265,9 +114,6 @@ impl A770OpenClParityReceipt {
                 "  ]\n",
                 "}}\n"
             ),
-            work_item,
-            proof_family,
-            proof_stage,
             json_escape(&self.runtime_device),
             self.platform_index,
             self.device_index,
@@ -281,147 +127,12 @@ impl A770OpenClParityReceipt {
             self.activation_values,
             TOLERANCE,
             self.max_abs_error,
-            self.mean_abs_error,
-            benchmark_json,
-            self.benchmark.is_some(),
-            if self.benchmark.is_some() { "\"matmul_i2s_kernel_baseline\"" } else { "null" },
-        )
-    }
-
-    fn benchmark_json(&self) -> String {
-        let Some(benchmark) = &self.benchmark else {
-            return "null".to_string();
-        };
-        format!(
-            concat!(
-                "{{\n",
-                "    \"scope\": \"kernel_only_after_initial_upload\",\n",
-                "    \"iterations\": {},\n",
-                "    \"warmup_iterations\": {},\n",
-                "    \"cpu_reference\": {{\n",
-                "      \"implementation\": \"scalar_fixture_reference\",\n",
-                "      \"total_ms\": {},\n",
-                "      \"avg_ms\": {},\n",
-                "      \"samples_ms\": {}\n",
-                "    }},\n",
-                "    \"opencl_kernel\": {{\n",
-                "      \"total_ms\": {},\n",
-                "      \"avg_ms\": {},\n",
-                "      \"samples_ms\": {},\n",
-                "      \"kernel_invocations\": {}\n",
-                "    }},\n",
-                "    \"transfer_bytes\": {{\n",
-                "      \"initial_host_to_device\": {},\n",
-                "      \"device_to_host\": {}\n",
-                "    }},\n",
-                "    \"cpu_avx2_applicable\": false,\n",
-                "    \"profile_timing_applicable\": true,\n",
-                "    \"quality_passed\": false,\n",
-                "    \"quality_gate\": \"not_applicable_toy_fixture\",\n",
-                "    \"performance_claim_allowed\": false\n",
-                "  }}"
-            ),
-            benchmark.iterations,
-            benchmark.warmup_iterations,
-            format_f64(benchmark.cpu_reference_total_ms),
-            format_f64(benchmark.cpu_reference_avg_ms),
-            format_f64_array(&benchmark.cpu_reference_samples_ms),
-            format_f64(benchmark.opencl_kernel_total_ms),
-            format_f64(benchmark.opencl_kernel_avg_ms),
-            format_f64_array(&benchmark.opencl_kernel_samples_ms),
-            benchmark.kernel_invocations,
-            benchmark.initial_host_to_device_bytes,
-            benchmark.device_to_host_bytes
+            self.mean_abs_error
         )
     }
 }
 
-impl A770OpenClQk256ScaledReceipt {
-    fn to_json(&self) -> String {
-        format!(
-            concat!(
-                "{{\n",
-                "  \"campaign\": \"intel-a770\",\n",
-                "  \"work_item\": \"A770-009\",\n",
-                "  \"proof_family\": \"a770_opencl_qk256_i2s_i8s_scaled_fixture\",\n",
-                "  \"proof_stage\": \"qk256_operand_parity_candidate\",\n",
-                "  \"requested_backend\": \"intel-arc-a770\",\n",
-                "  \"selected_backend\": \"intel-arc-a770-opencl\",\n",
-                "  \"runtime_api\": \"opencl\",\n",
-                "  \"runtime_device\": \"{}\",\n",
-                "  \"platform_index\": {},\n",
-                "  \"device_index\": {},\n",
-                "  \"platform_name\": \"{}\",\n",
-                "  \"vendor\": \"{}\",\n",
-                "  \"driver_version\": \"{}\",\n",
-                "  \"kernel_source\": \"bitnet_kernels::kernels::QK256_I2S_I8S_SCALED_GEMV_SRC\",\n",
-                "  \"kernel_name\": \"qk256_i2s_i8s_scaled_gemv\",\n",
-                "  \"fixture_contract\": \"ggml_grouped_qk256_i2s_bytes_with_prequantized_i8s_activation_scale_sum\",\n",
-                "  \"operand_a\": \"prequantized_i8s_activation_row_cpu_fixture\",\n",
-                "  \"operand_b\": \"ggml_grouped_qk256_i2s_weight_rows\",\n",
-                "  \"rows\": {},\n",
-                "  \"cols\": {},\n",
-                "  \"row_stride_bytes\": {},\n",
-                "  \"packed_weight_bytes\": {},\n",
-                "  \"activation_values\": {},\n",
-                "  \"activation_sum\": {},\n",
-                "  \"activation_scale\": {},\n",
-                "  \"weight_scale\": {},\n",
-                "  \"tolerance\": {},\n",
-                "  \"max_abs_error\": {},\n",
-                "  \"mean_abs_error\": {},\n",
-                "  \"passed\": true,\n",
-                "  \"opencl_execution\": true,\n",
-                "  \"cpu_reference\": true,\n",
-                "  \"cpu_opencl_parity\": true,\n",
-                "  \"fallback_used\": false,\n",
-                "  \"cpu_fallback_allowed\": false,\n",
-                "  \"bitnet_inference\": false,\n",
-                "  \"qk256_decode\": false,\n",
-                "  \"official_model_artifact\": false,\n",
-                "  \"activation_quantization_on_gpu\": false,\n",
-                "  \"transformer_dispatch_wired\": false,\n",
-                "  \"claim_allowed\": false,\n",
-                "  \"diagnostic_only\": true,\n",
-                "  \"benchmark_candidate\": false,\n",
-                "  \"benchmark_claim_allowed\": false,\n",
-                "  \"speedup_claim\": false,\n",
-                "  \"performance_claim\": false,\n",
-                "  \"full_residency_claim\": false,\n",
-                "  \"model_family\": null,\n",
-                "  \"must_not_claim\": [\n",
-                "    \"Official BitNet QK256 production semantics are proven\",\n",
-                "    \"BitNet inference works on A770\",\n",
-                "    \"A770 trusted partial acceleration is claim-grade\",\n",
-                "    \"Activation quantization is GPU-resident\",\n",
-                "    \"Transformer QK256 dispatch is wired to OpenCL\",\n",
-                "    \"Full A770 residency is proven\",\n",
-                "    \"A770 performance speedup is proven\"\n",
-                "  ]\n",
-                "}}\n"
-            ),
-            json_escape(&self.runtime_device),
-            self.platform_index,
-            self.device_index,
-            json_escape(&self.platform_name),
-            json_escape(&self.vendor),
-            json_escape(&self.driver_version),
-            self.rows,
-            self.cols,
-            self.row_stride_bytes,
-            self.packed_weight_bytes,
-            self.activation_values,
-            self.activation_sum,
-            self.activation_scale,
-            self.weight_scale,
-            TOLERANCE,
-            self.max_abs_error,
-            self.mean_abs_error,
-        )
-    }
-}
-
-fn run_a770_matmul_i2s(mode: RunMode) -> Result<A770OpenClParityReceipt, Box<dyn Error>> {
+fn run_a770_matmul_i2s_parity() -> Result<A770OpenClParityReceipt, Box<dyn Error>> {
     let selected = find_a770_device()?;
     let context = Context::from_device(&selected.device)
         .map_err(|err| io_error(format!("failed to create OpenCL context: {err}")))?;
@@ -441,25 +152,30 @@ fn run_a770_matmul_i2s(mode: RunMode) -> Result<A770OpenClParityReceipt, Box<dyn
     const N: usize = 3;
     const K: usize = 8;
 
-    debug_assert_eq!(M, A770_MATMUL_I2S_M);
-    debug_assert_eq!(N, A770_MATMUL_I2S_N);
-    debug_assert_eq!(K, A770_MATMUL_I2S_K);
-
-    let packed_weights = pack_a770_matmul_i2s_weights().map_err(io_error)?;
-    let expected = a770_matmul_i2s_cpu_reference();
+    let weights = [
+        1i8, 0, -1, 1, 0, -1, 1, 0, //
+        -1, 1, 0, 0, 1, -1, 0, 1,
+    ];
+    let activations = [
+        1u8, 2, 3, //
+        4, 5, 6, //
+        7, 8, 9, //
+        2, 4, 6, //
+        3, 6, 9, //
+        5, 7, 11, //
+        13, 17, 19, //
+        23, 29, 31,
+    ];
+    let packed_weights = pack_i2s_weights(&weights)?;
+    let expected = cpu_matmul_i2s_reference(&weights, &activations, M, N, K);
     let mut actual = vec![0.0f32; expected.len()];
 
     let mut buf_a = unsafe {
-        Buffer::<i8>::create(
-            &context,
-            CL_MEM_READ_ONLY,
-            A770_MATMUL_I2S_ACTIVATIONS.len(),
-            std::ptr::null_mut(),
-        )
-        .map_err(|err| io_error(format!("failed to create input A buffer: {err}")))?
+        Buffer::<i8>::create(&context, CL_MEM_READ_ONLY, packed_weights.len(), std::ptr::null_mut())
+            .map_err(|err| io_error(format!("failed to create input A buffer: {err}")))?
     };
     let mut buf_b = unsafe {
-        Buffer::<u8>::create(&context, CL_MEM_READ_ONLY, packed_weights.len(), std::ptr::null_mut())
+        Buffer::<u8>::create(&context, CL_MEM_READ_ONLY, activations.len(), std::ptr::null_mut())
             .map_err(|err| io_error(format!("failed to create input B buffer: {err}")))?
     };
     let buf_out = unsafe {
@@ -469,26 +185,12 @@ fn run_a770_matmul_i2s(mode: RunMode) -> Result<A770OpenClParityReceipt, Box<dyn
 
     unsafe {
         queue
-            .enqueue_write_buffer(&mut buf_a, CL_BLOCKING, 0, &A770_MATMUL_I2S_ACTIVATIONS, &[])
+            .enqueue_write_buffer(&mut buf_a, CL_BLOCKING, 0, &packed_weights, &[])
             .map_err(|err| io_error(format!("failed to write input A buffer: {err}")))?;
         queue
-            .enqueue_write_buffer(&mut buf_b, CL_BLOCKING, 0, &packed_weights, &[])
+            .enqueue_write_buffer(&mut buf_b, CL_BLOCKING, 0, &activations, &[])
             .map_err(|err| io_error(format!("failed to write input B buffer: {err}")))?;
     }
-
-    let benchmark = match mode {
-        RunMode::Parity => None,
-        RunMode::Benchmark(config) => Some(run_benchmark(
-            config,
-            &queue,
-            &kernel,
-            &buf_a,
-            &buf_b,
-            &buf_out,
-            &mut actual,
-            packed_weights.len(),
-        )?),
-    };
 
     let matrix_m = M as u32;
     let matrix_n = N as u32;
@@ -538,203 +240,53 @@ fn run_a770_matmul_i2s(mode: RunMode) -> Result<A770OpenClParityReceipt, Box<dyn
         matrix_n: N,
         matrix_k: K,
         packed_weight_bytes: packed_weights.len(),
-        activation_values: A770_MATMUL_I2S_ACTIVATIONS.len(),
-        max_abs_error,
-        mean_abs_error,
-        benchmark,
-    })
-}
-
-fn run_a770_qk256_i8s_scaled() -> Result<A770OpenClQk256ScaledReceipt, Box<dyn Error>> {
-    let selected = find_a770_device()?;
-    let context = Context::from_device(&selected.device)
-        .map_err(|err| io_error(format!("failed to create OpenCL context: {err}")))?;
-    let queue =
-        CommandQueue::create_default_with_properties(&context, CL_QUEUE_PROFILING_ENABLE, 0)
-            .map_err(|err| io_error(format!("failed to create OpenCL command queue: {err}")))?;
-    let program = Program::create_and_build_from_source(
-        &context,
-        bitnet_kernels::kernels::QK256_I2S_I8S_SCALED_GEMV_SRC,
-        "",
-    )
-    .map_err(|err| {
-        io_error(format!("failed to build bitnet-kernels QK256_I2S_I8S_SCALED_GEMV_SRC: {err}"))
-    })?;
-    let kernel = Kernel::create(&program, "qk256_i2s_i8s_scaled_gemv").map_err(|err| {
-        io_error(format!("failed to create qk256_i2s_i8s_scaled_gemv kernel: {err}"))
-    })?;
-
-    let activations = a770_qk256_scaled_i8s_activations();
-    let packed_weights = pack_a770_qk256_scaled_weights().map_err(io_error)?;
-    let expected = a770_qk256_scaled_cpu_reference().map_err(io_error)?;
-    let activation_sum = a770_qk256_scaled_activation_sum();
-    let mut actual = vec![0.0f32; expected.len()];
-
-    let mut buf_q = unsafe {
-        Buffer::<i8>::create(&context, CL_MEM_READ_ONLY, activations.len(), std::ptr::null_mut())
-            .map_err(|err| io_error(format!("failed to create QK256 activation buffer: {err}")))?
-    };
-    let mut buf_qs = unsafe {
-        Buffer::<u8>::create(&context, CL_MEM_READ_ONLY, packed_weights.len(), std::ptr::null_mut())
-            .map_err(|err| io_error(format!("failed to create QK256 weight buffer: {err}")))?
-    };
-    let buf_out = unsafe {
-        Buffer::<f32>::create(&context, CL_MEM_WRITE_ONLY, actual.len(), std::ptr::null_mut())
-            .map_err(|err| io_error(format!("failed to create QK256 output buffer: {err}")))?
-    };
-
-    unsafe {
-        queue
-            .enqueue_write_buffer(&mut buf_q, CL_BLOCKING, 0, &activations, &[])
-            .map_err(|err| io_error(format!("failed to write QK256 activation buffer: {err}")))?;
-        queue
-            .enqueue_write_buffer(&mut buf_qs, CL_BLOCKING, 0, &packed_weights, &[])
-            .map_err(|err| io_error(format!("failed to write QK256 weight buffer: {err}")))?;
-    }
-
-    let rows = A770_QK256_SCALED_ROWS as u32;
-    let cols = A770_QK256_SCALED_COLS as u32;
-    let row_stride_bytes = A770_QK256_SCALED_ROW_STRIDE_BYTES as u32;
-    let event = unsafe {
-        ExecuteKernel::new(&kernel)
-            .set_arg(&buf_q.get())
-            .set_arg(&buf_qs.get())
-            .set_arg(&buf_out.get())
-            .set_arg(&rows)
-            .set_arg(&cols)
-            .set_arg(&row_stride_bytes)
-            .set_arg(&activation_sum)
-            .set_arg(&A770_QK256_SCALED_ACT_SCALE)
-            .set_arg(&A770_QK256_SCALED_WEIGHT_SCALE)
-            .set_global_work_sizes(&[A770_QK256_SCALED_ROWS])
-            .enqueue_nd_range(&queue)
-            .map_err(|err| {
-                io_error(format!("failed to enqueue qk256_i2s_i8s_scaled_gemv kernel: {err}"))
-            })?
-    };
-    event
-        .wait()
-        .map_err(|err| io_error(format!("qk256_i2s_i8s_scaled_gemv kernel wait failed: {err}")))?;
-
-    unsafe {
-        queue
-            .enqueue_read_buffer(&buf_out, CL_BLOCKING, 0, &mut actual, &[])
-            .map_err(|err| io_error(format!("failed to read QK256 output buffer: {err}")))?;
-    }
-
-    let mut max_abs_error = 0.0f32;
-    let mut sum_abs_error = 0.0f32;
-    for (expected_value, actual_value) in expected.iter().zip(&actual) {
-        let delta = (expected_value - actual_value).abs();
-        max_abs_error = max_abs_error.max(delta);
-        sum_abs_error += delta;
-    }
-    let mean_abs_error = sum_abs_error / expected.len() as f32;
-    if max_abs_error > TOLERANCE {
-        return Err(io_error(format!(
-            "A770 OpenCL QK256 scaled fixture parity exceeded tolerance: {max_abs_error}"
-        )));
-    }
-
-    Ok(A770OpenClQk256ScaledReceipt {
-        runtime_device: selected.device_name,
-        platform_index: selected.platform_index,
-        device_index: selected.device_index,
-        platform_name: selected.platform_name,
-        vendor: selected.vendor,
-        driver_version: selected.driver_version,
-        rows: A770_QK256_SCALED_ROWS,
-        cols: A770_QK256_SCALED_COLS,
-        row_stride_bytes: A770_QK256_SCALED_ROW_STRIDE_BYTES,
-        packed_weight_bytes: packed_weights.len(),
         activation_values: activations.len(),
-        activation_sum,
-        activation_scale: A770_QK256_SCALED_ACT_SCALE,
-        weight_scale: A770_QK256_SCALED_WEIGHT_SCALE,
         max_abs_error,
         mean_abs_error,
     })
 }
 
-fn run_benchmark(
-    config: BenchmarkConfig,
-    queue: &CommandQueue,
-    kernel: &Kernel,
-    buf_a: &Buffer<i8>,
-    buf_b: &Buffer<u8>,
-    buf_out: &Buffer<f32>,
-    actual: &mut [f32],
-    packed_weight_bytes: usize,
-) -> Result<BenchmarkSummary, Box<dyn Error>> {
-    for _ in 0..config.warmup_iterations {
-        enqueue_matmul_i2s(queue, kernel, buf_a, buf_b, buf_out)?;
+fn pack_i2s_weights(weights: &[i8]) -> Result<Vec<i8>, Box<dyn Error>> {
+    let mut packed_weights = Vec::with_capacity(weights.len().div_ceil(4));
+    for chunk in weights.chunks(4) {
+        let mut packed = 0u8;
+        for (sub, value) in chunk.iter().enumerate() {
+            packed |= encode_i2s_weight(*value)? << (sub * 2);
+        }
+        packed_weights.push(packed as i8);
     }
-
-    let mut cpu_samples = Vec::with_capacity(config.iterations);
-    let mut cpu_total = Duration::ZERO;
-    for _ in 0..config.iterations {
-        let start = Instant::now();
-        let _ = a770_matmul_i2s_cpu_reference();
-        let elapsed = start.elapsed();
-        cpu_total += elapsed;
-        cpu_samples.push(duration_ms(elapsed));
-    }
-
-    let mut opencl_samples = Vec::with_capacity(config.iterations);
-    let mut opencl_total = Duration::ZERO;
-    for _ in 0..config.iterations {
-        let start = Instant::now();
-        enqueue_matmul_i2s(queue, kernel, buf_a, buf_b, buf_out)?;
-        let elapsed = start.elapsed();
-        opencl_total += elapsed;
-        opencl_samples.push(duration_ms(elapsed));
-    }
-
-    unsafe {
-        queue
-            .enqueue_read_buffer(buf_out, CL_BLOCKING, 0, actual, &[])
-            .map_err(|err| io_error(format!("failed to read benchmark output buffer: {err}")))?;
-    }
-
-    Ok(BenchmarkSummary {
-        iterations: config.iterations,
-        warmup_iterations: config.warmup_iterations,
-        cpu_reference_total_ms: duration_ms(cpu_total),
-        cpu_reference_avg_ms: duration_ms(cpu_total) / config.iterations as f64,
-        opencl_kernel_total_ms: duration_ms(opencl_total),
-        opencl_kernel_avg_ms: duration_ms(opencl_total) / config.iterations as f64,
-        cpu_reference_samples_ms: cpu_samples,
-        opencl_kernel_samples_ms: opencl_samples,
-        initial_host_to_device_bytes: A770_MATMUL_I2S_ACTIVATIONS.len() + packed_weight_bytes,
-        device_to_host_bytes: std::mem::size_of_val(actual),
-        kernel_invocations: config.iterations,
-    })
+    Ok(packed_weights)
 }
 
-fn enqueue_matmul_i2s(
-    queue: &CommandQueue,
-    kernel: &Kernel,
-    buf_a: &Buffer<i8>,
-    buf_b: &Buffer<u8>,
-    buf_out: &Buffer<f32>,
-) -> Result<(), Box<dyn Error>> {
-    let matrix_m = A770_MATMUL_I2S_M as u32;
-    let matrix_n = A770_MATMUL_I2S_N as u32;
-    let matrix_k = A770_MATMUL_I2S_K as u32;
-    let event = unsafe {
-        ExecuteKernel::new(kernel)
-            .set_arg(&buf_a.get())
-            .set_arg(&buf_b.get())
-            .set_arg(&buf_out.get())
-            .set_arg(&matrix_m)
-            .set_arg(&matrix_n)
-            .set_arg(&matrix_k)
-            .set_global_work_sizes(&[A770_MATMUL_I2S_M, A770_MATMUL_I2S_N])
-            .enqueue_nd_range(queue)
-            .map_err(|err| io_error(format!("failed to enqueue matmul_i2s kernel: {err}")))?
-    };
-    event.wait().map_err(|err| io_error(format!("matmul_i2s kernel wait failed: {err}")))?;
-    Ok(())
+fn encode_i2s_weight(value: i8) -> Result<u8, Box<dyn Error>> {
+    match value {
+        1 => Ok(0x01),
+        -1 => Ok(0x03),
+        0 => Ok(0x00),
+        other => Err(io_error(format!("unsupported i2s fixture weight {other}"))),
+    }
+}
+
+fn cpu_matmul_i2s_reference(
+    weights: &[i8],
+    activations: &[u8],
+    m: usize,
+    n: usize,
+    k: usize,
+) -> Vec<f32> {
+    let mut output = vec![0.0f32; m * n];
+    for row in 0..m {
+        for col in 0..n {
+            let mut sum = 0.0f32;
+            for depth in 0..k {
+                let weight = weights[row * k + depth] as f32;
+                let activation = activations[depth * n + col] as f32;
+                sum += weight * activation;
+            }
+            output[row * n + col] = sum;
+        }
+    }
+    output
 }
 
 #[derive(Debug)]
@@ -801,141 +353,6 @@ fn json_escape(value: &str) -> String {
     escaped
 }
 
-fn duration_ms(duration: Duration) -> f64 {
-    duration.as_secs_f64() * 1000.0
-}
-
-fn format_f64(value: f64) -> String {
-    format!("{value:.9}")
-}
-
-fn format_f64_array(values: &[f64]) -> String {
-    let mut output = String::from("[");
-    for (index, value) in values.iter().enumerate() {
-        if index > 0 {
-            output.push_str(", ");
-        }
-        output.push_str(&format_f64(*value));
-    }
-    output.push(']');
-    output
-}
-
 fn io_error(message: impl Into<String>) -> Box<dyn Error> {
     Box::new(io::Error::other(message.into()))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn sample_receipt(benchmark: Option<BenchmarkSummary>) -> A770OpenClParityReceipt {
-        A770OpenClParityReceipt {
-            runtime_device: "Intel(R) Arc(TM) A770 Graphics".to_string(),
-            platform_index: 0,
-            device_index: 1,
-            platform_name: "Intel OpenCL".to_string(),
-            vendor: "Intel(R) Corporation".to_string(),
-            driver_version: "test".to_string(),
-            matrix_m: A770_MATMUL_I2S_M,
-            matrix_n: A770_MATMUL_I2S_N,
-            matrix_k: A770_MATMUL_I2S_K,
-            packed_weight_bytes: 6,
-            activation_values: A770_MATMUL_I2S_ACTIVATIONS.len(),
-            max_abs_error: 0.0,
-            mean_abs_error: 0.0,
-            benchmark,
-        }
-    }
-
-    #[test]
-    fn benchmark_receipt_stays_claim_closed() {
-        let receipt = sample_receipt(Some(BenchmarkSummary {
-            iterations: 2,
-            warmup_iterations: 1,
-            cpu_reference_total_ms: 0.2,
-            cpu_reference_avg_ms: 0.1,
-            opencl_kernel_total_ms: 0.4,
-            opencl_kernel_avg_ms: 0.2,
-            cpu_reference_samples_ms: vec![0.09, 0.11],
-            opencl_kernel_samples_ms: vec![0.19, 0.21],
-            initial_host_to_device_bytes: 22,
-            device_to_host_bytes: 24,
-            kernel_invocations: 2,
-        }));
-        let json = receipt.to_json();
-
-        assert!(json.contains("\"work_item\": \"A770-008\""));
-        assert!(json.contains("\"benchmark_candidate\": true"));
-        assert!(json.contains("\"benchmark_claim_allowed\": false"));
-        assert!(json.contains("\"speedup_claim\": false"));
-        assert!(json.contains("\"claim_allowed\": false"));
-        assert!(json.contains("\"quality_gate\": \"not_applicable_toy_fixture\""));
-        assert!(json.contains("\"Official BitNet QK256 production semantics are proven\""));
-    }
-
-    #[test]
-    fn parity_receipt_keeps_existing_work_item() {
-        let json = sample_receipt(None).to_json();
-
-        assert!(json.contains("\"work_item\": \"A770-006R\""));
-        assert!(json.contains("\"benchmark\": null"));
-        assert!(json.contains("\"benchmark_candidate\": false"));
-    }
-
-    #[test]
-    fn benchmark_iterations_must_be_positive() {
-        let err = parse_positive_usize("--iterations", "0").expect_err("zero rejected");
-        assert!(err.to_string().contains("--iterations must be greater than zero"));
-    }
-
-    #[test]
-    fn qk256_scaled_receipt_stays_claim_closed() {
-        let receipt = A770OpenClQk256ScaledReceipt {
-            runtime_device: "Intel(R) Arc(TM) A770 Graphics".to_string(),
-            platform_index: 0,
-            device_index: 1,
-            platform_name: "Intel OpenCL".to_string(),
-            vendor: "Intel(R) Corporation".to_string(),
-            driver_version: "test".to_string(),
-            rows: A770_QK256_SCALED_ROWS,
-            cols: A770_QK256_SCALED_COLS,
-            row_stride_bytes: A770_QK256_SCALED_ROW_STRIDE_BYTES,
-            packed_weight_bytes: A770_QK256_SCALED_ROWS * A770_QK256_SCALED_ROW_STRIDE_BYTES,
-            activation_values: A770_QK256_SCALED_COLS,
-            activation_sum: 4043,
-            activation_scale: A770_QK256_SCALED_ACT_SCALE,
-            weight_scale: A770_QK256_SCALED_WEIGHT_SCALE,
-            max_abs_error: 0.0,
-            mean_abs_error: 0.0,
-        };
-        let json = receipt.to_json();
-
-        assert!(json.contains("\"work_item\": \"A770-009\""));
-        assert!(json.contains("\"proof_stage\": \"qk256_operand_parity_candidate\""));
-        assert!(json.contains("\"fallback_used\": false"));
-        assert!(json.contains("\"bitnet_inference\": false"));
-        assert!(json.contains("\"qk256_decode\": false"));
-        assert!(json.contains("\"official_model_artifact\": false"));
-        assert!(json.contains("\"activation_quantization_on_gpu\": false"));
-        assert!(json.contains("\"transformer_dispatch_wired\": false"));
-        assert!(json.contains("\"claim_allowed\": false"));
-        assert!(json.contains("\"benchmark_claim_allowed\": false"));
-        assert!(json.contains("\"speedup_claim\": false"));
-        assert!(json.contains("\"Official BitNet QK256 production semantics are proven\""));
-    }
-
-    #[test]
-    fn fixture_parser_selects_qk256_scaled_fixture() -> Result<(), Box<dyn Error>> {
-        assert!(matches!(
-            parse_fixture_contract("qk256-i8s-scaled")?,
-            FixtureContract::Qk256I8sScaled
-        ));
-        let err = match parse_fixture_contract("qk256") {
-            Ok(_) => return Err(io_error("unknown fixture accepted")),
-            Err(err) => err,
-        };
-        assert!(err.to_string().contains("unsupported --fixture"));
-        Ok(())
-    }
 }

@@ -1,3 +1,11 @@
+> Historical PR receipt artifact only: this file is an archived generated
+> review or validation packet for an older PR. Production-ready, throughput,
+> tok/s, GPU/CUDA/OpenCL/A770, AVX, promotion, receipt, quality, and
+> release-readiness wording here is historical context only and is not a
+> current support, speed, backend, quality, promotion, or release claim.
+> Current claims must come from active receipts, model coverage, status docs,
+> specs, and claim gates.
+
 # Integrative T4 Security Validation Report
 
 **PR:** #461 - feat(validation): enforce strict quantized hot-path (no FP32 staging)

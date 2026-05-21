@@ -1,3 +1,12 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
+> Historical CI artifact only. This file records a past PR, gate, check run,
+> review, or agent handoff and must not be read as a current BitNet-rs support,
+> speedup, CUDA/GPU, server-readiness, residency, reference-parity, quality,
+> or product-readiness claim. Current claims must come from active model
+> coverage, receipts, specs, status docs, and claim gates.
+
 # PR #473 Integrative Flow - Final Pre-Merge Readiness Validation
 
 **Date**: 2025-10-22T02:45:00Z

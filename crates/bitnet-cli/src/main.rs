@@ -1822,13 +1822,7 @@ async fn async_main() -> Result<()> {
         #[cfg(feature = "full-cli")]
         Some(Commands::Convert(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "cli-bench")]
-        Some(Commands::Benchmark(cmd)) => {
-            if run_cuda_bitnet_perf005_benchmark_profile(&requested_backend_label, &cmd).await? {
-                Ok(())
-            } else {
-                cmd.execute(&config).await
-            }
-        }
+        Some(Commands::Benchmark(cmd)) => cmd.execute(&config).await,
         #[cfg(feature = "full-cli")]
         Some(Commands::Serve(cmd)) => cmd.execute(&config).await,
         Some(Commands::Tokenize { model, tokenizer, text, file, bos, json_out }) => {
@@ -4084,316 +4078,8 @@ where
     }
 }
 
-#[cfg(feature = "cli-bench")]
-#[derive(Debug, Clone, Copy)]
-enum CudaBitnetPerf005ProfileKind {
-    SingleDecode { max_new_tokens: usize, min_prefill_tokens: Option<usize> },
-    WarmContextDecode { max_new_tokens: usize, min_prefill_tokens: usize },
-    WarmSession { turns: usize, max_new_tokens: usize },
-}
-
-#[cfg(feature = "cli-bench")]
-#[derive(Debug, Clone, Copy)]
-struct CudaBitnetPerf005ProfilePlan {
-    profile_id: &'static str,
-    kind: CudaBitnetPerf005ProfileKind,
-}
-
-#[cfg(feature = "cli-bench")]
-async fn run_cuda_bitnet_perf005_benchmark_profile(
-    requested_backend_label: &str,
-    command: &BenchmarkCommand,
-) -> Result<bool> {
-    if command.cuda_benchmark_receipt.is_some() || requested_backend_label != RTX_5070_TI_CUDA {
-        return Ok(false);
-    }
-
-    let Some(profile) = command.profile.as_deref() else {
-        return Ok(false);
-    };
-
-    let plan = cuda_bitnet_perf005_profile_plan(profile)?;
-    let model_path = command
-        .model
-        .clone()
-        .context("--model <PATH> is required for live CUDA-BITNET-PERF-005 profile dispatch")?;
-    if !model_path.exists() {
-        anyhow::bail!("Model file does not exist: {}", model_path.display());
-    }
-    if command.format != "text" {
-        anyhow::bail!(
-            "live CUDA-BITNET-PERF-005 profile dispatch writes inference receipts through --output and currently supports --format text only; use --cuda-benchmark-receipt for json/csv benchmark reports"
-        );
-    }
-
-    let receipt_path = command.output.clone().unwrap_or_else(|| {
-        std::path::PathBuf::from("target")
-            .join("bitnet")
-            .join("receipts")
-            .join("cuda-bitnet-perf005")
-            .join(format!("{}.json", plan.profile_id))
-    });
-
-    let dispatch_detail = match plan.kind {
-        CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens, min_prefill_tokens } => {
-            let prefill_detail = min_prefill_tokens
-                .map(|tokens| format!(", min_prefill_tokens={tokens}"))
-                .unwrap_or_default();
-            format!("profile_kind=single_decode{prefill_detail}, max_new_tokens={max_new_tokens}")
-        }
-        CudaBitnetPerf005ProfileKind::WarmContextDecode { max_new_tokens, min_prefill_tokens } => {
-            format!(
-                "profile_kind=warm_context_decode, min_prefill_tokens={min_prefill_tokens}, max_new_tokens={max_new_tokens}"
-            )
-        }
-        CudaBitnetPerf005ProfileKind::WarmSession { turns, max_new_tokens } => {
-            format!("profile_kind=warm_session, turns={turns}, max_new_tokens={max_new_tokens}")
-        }
-    };
-    eprintln!(
-        "PERF-005 profile `{}` dispatches through strict RTX 5070 Ti CUDA generation; {}; speedup_claim=false, full_residency_claim=false, server_ready=false",
-        plan.profile_id, dispatch_detail
-    );
-
-    match plan.kind {
-        CudaBitnetPerf005ProfileKind::SingleDecode { max_new_tokens, .. }
-        | CudaBitnetPerf005ProfileKind::WarmContextDecode { max_new_tokens, .. } => {
-            run_simple_generation(
-                requested_backend_label,
-                model_path,
-                "auto".to_string(),
-                None,
-                None,
-                perf005_prompt_for_profile(plan.profile_id),
-                max_new_tokens,
-                0.0,
-                0,
-                1.0,
-                1.0,
-                Some(42),
-                false,
-                false,
-                true,
-                true,
-                Some(receipt_path),
-                None,
-                Some("bitnet_qk256_cuda".to_string()),
-                false,
-                false,
-                true,
-                true,
-                1,
-                BITNET_CPP_ANSWER_TEMPLATE.to_string(),
-                false,
-                None,
-                Vec::new(),
-                Vec::new(),
-                None,
-                10,
-                false,
-                None,
-                None,
-                false,
-                None,
-                false,
-                Some(plan.profile_id.to_string()),
-                false,
-                true,
-            )
-            .await
-        }
-        CudaBitnetPerf005ProfileKind::WarmSession { turns, max_new_tokens } => {
-            let prompts = perf005_warm_session_prompts(plan.profile_id, turns)?
-                .iter()
-                .map(|prompt| (*prompt).to_string())
-                .collect();
-            run_cuda_warm_session(
-                requested_backend_label,
-                model_path,
-                "auto".to_string(),
-                None,
-                prompts,
-                max_new_tokens,
-                0.0,
-                0,
-                1.0,
-                1.0,
-                Some(42),
-                true,
-                true,
-                true,
-                true,
-                1,
-                BITNET_CPP_ANSWER_TEMPLATE.to_string(),
-                None,
-                Vec::new(),
-                Vec::new(),
-                false,
-                receipt_path,
-            )
-            .await
-        }
-    }?;
-
-    Ok(true)
-}
-
-#[cfg(feature = "cli-bench")]
-fn cuda_bitnet_perf005_profile_plan(profile: &str) -> Result<CudaBitnetPerf005ProfilePlan> {
-    match profile {
-        "one_token" => Ok(CudaBitnetPerf005ProfilePlan {
-            profile_id: "one_token",
-            kind: CudaBitnetPerf005ProfileKind::SingleDecode {
-                max_new_tokens: 1,
-                min_prefill_tokens: None,
-            },
-        }),
-        "short_decode_8" => Ok(CudaBitnetPerf005ProfilePlan {
-            profile_id: "short_decode_8",
-            kind: CudaBitnetPerf005ProfileKind::SingleDecode {
-                max_new_tokens: 8,
-                min_prefill_tokens: None,
-            },
-        }),
-        "short_decode_32" => Ok(CudaBitnetPerf005ProfilePlan {
-            profile_id: "short_decode_32",
-            kind: CudaBitnetPerf005ProfileKind::SingleDecode {
-                max_new_tokens: 32,
-                min_prefill_tokens: None,
-            },
-        }),
-        "prefill_128_decode_16" => Ok(CudaBitnetPerf005ProfilePlan {
-            profile_id: "prefill_128_decode_16",
-            kind: CudaBitnetPerf005ProfileKind::SingleDecode {
-                max_new_tokens: 16,
-                min_prefill_tokens: Some(128),
-            },
-        }),
-        "prefill_512_decode_32" => Ok(CudaBitnetPerf005ProfilePlan {
-            profile_id: "prefill_512_decode_32",
-            kind: CudaBitnetPerf005ProfileKind::SingleDecode {
-                max_new_tokens: 32,
-                min_prefill_tokens: Some(512),
-            },
-        }),
-        "warm_session_3_turns" => Ok(CudaBitnetPerf005ProfilePlan {
-            profile_id: "warm_session_3_turns",
-            kind: CudaBitnetPerf005ProfileKind::WarmSession { turns: 3, max_new_tokens: 16 },
-        }),
-        "warm_session_10_turns" => Ok(CudaBitnetPerf005ProfilePlan {
-            profile_id: "warm_session_10_turns",
-            kind: CudaBitnetPerf005ProfileKind::WarmSession { turns: 10, max_new_tokens: 16 },
-        }),
-        "decode_128_from_warm_context" => Ok(CudaBitnetPerf005ProfilePlan {
-            profile_id: "decode_128_from_warm_context",
-            kind: CudaBitnetPerf005ProfileKind::WarmContextDecode {
-                max_new_tokens: 128,
-                min_prefill_tokens: 512,
-            },
-        }),
-        _ => {
-            anyhow::bail!(
-                "unknown CUDA-BITNET-PERF-005 profile `{profile}`; live profiles: one_token, short_decode_8, short_decode_32, prefill_128_decode_16, prefill_512_decode_32, warm_session_3_turns, warm_session_10_turns, decode_128_from_warm_context"
-            );
-        }
-    }
-}
-
-#[cfg(feature = "cli-bench")]
-fn perf005_warm_session_prompts(profile_id: &str, turns: usize) -> Result<&'static [&'static str]> {
-    const WARM_SESSION_3_TURNS: &[&str] = &[
-        "Define entropy in one sentence.",
-        "Name one use for quantization.",
-        "Summarize why fallback rejection matters.",
-    ];
-    const WARM_SESSION_10_TURNS: &[&str] = &[
-        "Define entropy in one sentence.",
-        "Name one use for quantization.",
-        "Summarize why fallback rejection matters.",
-        "Explain what selected backend means.",
-        "State why CPU fallback cannot prove CUDA execution.",
-        "Name the BitNet CUDA route used for QK256 proof.",
-        "Say whether dense CUDA proof proves BitNet QK256.",
-        "Explain why speedup remains profile scoped.",
-        "Name one receipt field that shows transfer volume.",
-        "Summarize the next proof after this warm session.",
-    ];
-
-    let prompts = match profile_id {
-        "warm_session_3_turns" => WARM_SESSION_3_TURNS,
-        "warm_session_10_turns" => WARM_SESSION_10_TURNS,
-        _ => anyhow::bail!("PERF-005 profile `{profile_id}` is not a warm-session profile"),
-    };
-    if prompts.len() != turns {
-        anyhow::bail!(
-            "PERF-005 profile `{profile_id}` expected {turns} warm-session prompts but has {}",
-            prompts.len()
-        );
-    }
-    Ok(prompts)
-}
-
-#[cfg(feature = "cli-bench")]
-fn perf005_prompt_for_profile(profile_id: &str) -> String {
-    match profile_id {
-        "one_token" => "Define entropy.".to_string(),
-        "short_decode_8" => "Define entropy in one sentence.".to_string(),
-        "short_decode_32" => {
-            "Explain why verified local inference needs fallback rejection.".to_string()
-        }
-        "prefill_128_decode_16" => perf005_repeated_prefill_prompt(128),
-        "prefill_512_decode_32" => perf005_repeated_prefill_prompt(512),
-        "decode_128_from_warm_context" => perf005_repeated_prefill_prompt(512),
-        _ => "Define entropy.".to_string(),
-    }
-}
-
-#[cfg(feature = "cli-bench")]
-fn perf005_repeated_prefill_prompt(target_prefill_tokens: usize) -> String {
-    let repeated_terms = target_prefill_tokens.saturating_mul(2);
-    format!(
-        "Explain proof-carrying local inference with deterministic benchmark context. {}",
-        "benchmark token ".repeat(repeated_terms)
-    )
-}
-
-fn validate_cuda_bitnet_perf005_single_decode_shape(
-    profile_id: &str,
-    prefill_tokens: usize,
-    generated_tokens: usize,
-) -> Result<()> {
-    let Some((min_prefill_tokens, min_generated_tokens)) = (match profile_id {
-        "one_token" => Some((None, 1)),
-        "short_decode_8" => Some((None, 8)),
-        "short_decode_32" => Some((None, 32)),
-        "prefill_128_decode_16" => Some((Some(128), 16)),
-        "prefill_512_decode_32" => Some((Some(512), 32)),
-        "decode_128_from_warm_context" => Some((Some(512), 128)),
-        _ => None,
-    }) else {
-        return Ok(());
-    };
-
-    if let Some(min_prefill_tokens) = min_prefill_tokens
-        && prefill_tokens < min_prefill_tokens
-    {
-        anyhow::bail!(
-            "PERF-005 profile `{profile_id}` requires at least {min_prefill_tokens} prefill tokens; observed {prefill_tokens}. speedup_claim=false, full_residency_claim=false"
-        );
-    }
-    if generated_tokens < min_generated_tokens {
-        anyhow::bail!(
-            "PERF-005 profile `{profile_id}` requires at least {min_generated_tokens} generated tokens; observed {generated_tokens}. speedup_claim=false, full_residency_claim=false"
-        );
-    }
-    Ok(())
-}
-
 /// Run text generation with sampling
-#[expect(
-    clippy::too_many_arguments,
-    reason = "policy:clippy-0001 existing CLI generation dispatcher carries explicit runtime/provenance knobs"
-)]
+#[allow(clippy::too_many_arguments)]
 async fn run_simple_generation(
     requested_backend_label: &str,
     model_path: std::path::PathBuf,
@@ -5335,13 +5021,6 @@ async fn run_simple_generation(
             tok_per_sec
         )
     });
-    if let Some(profile_id) = profile_id.as_deref() {
-        validate_cuda_bitnet_perf005_single_decode_shape(
-            profile_id,
-            prefill_token_count,
-            generated_tokens.len(),
-        )?;
-    }
 
     println!("\n\nGeneration complete!");
     println!(
@@ -13133,66 +12812,6 @@ mod tests {
     }
 
     #[test]
-    fn perf005_shape_accepts_prefill_512_profile_floor() {
-        assert!(
-            validate_cuda_bitnet_perf005_single_decode_shape("prefill_512_decode_32", 512, 32)
-                .is_ok()
-        );
-    }
-
-    #[test]
-    fn perf005_shape_rejects_short_prefill_512_profile() {
-        let result =
-            validate_cuda_bitnet_perf005_single_decode_shape("prefill_512_decode_32", 511, 32);
-        assert!(result.is_err(), "short prefill should be rejected");
-        let err_text = result.err().map(|err| err.to_string()).unwrap_or_default();
-
-        assert!(err_text.contains("requires at least 512 prefill tokens"));
-        assert!(err_text.contains("speedup_claim=false"));
-    }
-
-    #[test]
-    fn perf005_shape_accepts_decode_128_warm_context_floor() {
-        assert!(
-            validate_cuda_bitnet_perf005_single_decode_shape(
-                "decode_128_from_warm_context",
-                512,
-                128
-            )
-            .is_ok()
-        );
-    }
-
-    #[test]
-    fn perf005_shape_rejects_short_decode_128_warm_context() {
-        let result = validate_cuda_bitnet_perf005_single_decode_shape(
-            "decode_128_from_warm_context",
-            512,
-            127,
-        );
-        assert!(result.is_err(), "short warm-context decode should be rejected");
-        let err_text = result.err().map(|err| err.to_string()).unwrap_or_default();
-
-        assert!(err_text.contains("requires at least 128 generated tokens"));
-        assert!(err_text.contains("full_residency_claim=false"));
-    }
-
-    #[test]
-    fn perf005_shape_rejects_short_decode_profile() {
-        let result = validate_cuda_bitnet_perf005_single_decode_shape("short_decode_32", 4, 31);
-        assert!(result.is_err(), "short decode should be rejected");
-        let err_text = result.err().map(|err| err.to_string()).unwrap_or_default();
-
-        assert!(err_text.contains("requires at least 32 generated tokens"));
-        assert!(err_text.contains("full_residency_claim=false"));
-    }
-
-    #[test]
-    fn perf005_shape_ignores_non_perf005_profile() {
-        assert!(validate_cuda_bitnet_perf005_single_decode_shape("ask_normal", 0, 0).is_ok());
-    }
-
-    #[test]
     #[cfg(feature = "full-cli")]
     fn slm_warm_session_quality_accepts_qwen_marker_answer() {
         let gate = SlmWarmSessionGate {
@@ -13741,7 +13360,6 @@ mod tests {
             format: "text".to_string(),
             output: None,
             cuda_benchmark_receipt: Some(std::path::PathBuf::from("receipt.json")),
-            profile: None,
             memory_profile: false,
             batch_sizes: vec![1, 4, 8],
             sequence_lengths: vec![128, 512, 1024],
@@ -13758,7 +13376,6 @@ mod tests {
             format: "text".to_string(),
             output: None,
             cuda_benchmark_receipt: None,
-            profile: None,
             memory_profile: false,
             batch_sizes: vec![1, 4, 8],
             sequence_lengths: vec![128, 512, 1024],

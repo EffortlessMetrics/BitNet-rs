@@ -1,3 +1,11 @@
+> **Archived planning-doc claim boundary**
+>
+> This file is a historical TDD/sprint planning or completion artifact from
+> active development. Complete, successful, ready, passing, implementation,
+> GPU, tokenizer, model-loading, performance, and production wording below is
+> historical context only and is not a current test, implementation, backend,
+> model, quality, performance, product, or release claim. Current claims must
+> come from active docs, trackers, receipts, specs, and claim gates.
 # TDD Scaffold Implementation Guide: GPU, Tokenizer, and Other Tests
 
 **Files**: Multiple test suites across bitnet-kernels, bitnet-tokenizers, bitnet-cli, bitnet-common, bitnet-models

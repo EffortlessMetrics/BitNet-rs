@@ -2,7 +2,13 @@ name: ROCm Smoke Tests
 
 on:
   pull_request:
-    types: [labeled]
+    paths:
+      - '.github/workflows/rocm-smoke.yml'
+      - 'crates/bitnet-kernels/**'
+      - 'crates/bitnet-cli/**'
+      - 'crates/bitnet/**'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
   workflow_dispatch:
     inputs:
       run_parity:
@@ -33,10 +39,6 @@ jobs:
     name: ROCm Compile Check
     runs-on: ubuntu-22.04
     timeout-minutes: 30
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'rocm') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
 
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4

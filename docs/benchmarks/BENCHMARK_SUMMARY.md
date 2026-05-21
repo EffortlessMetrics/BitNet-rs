@@ -1,5 +1,11 @@
 # Benchmark Summary: QK256 Dequantization
 
+> Claim boundary: this benchmark summary documents benchmark wiring and target
+> interpretation. Throughput, speedup, and AVX2 wording here must not be read as
+> current product support or exact-profile speed claims. Current performance
+> claims require active receipts, benchmark review, status docs, specs, and
+> claim gates.
+
 ## Changes Made
 
 Added comprehensive criterion benchmarks to measure AVX2 QK256 performance vs scalar baseline.

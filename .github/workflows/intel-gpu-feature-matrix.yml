@@ -9,7 +9,11 @@ on:
       - 'crates/bitnet-device-probe/**'
       - '.github/workflows/intel-gpu-feature-matrix.yml'
   pull_request:
-    types: [labeled]
+    paths:
+      - 'crates/bitnet-kernels/**'
+      - 'crates/bitnet-common/**'
+      - 'crates/bitnet-device-probe/**'
+      - '.github/workflows/intel-gpu-feature-matrix.yml'
   workflow_dispatch:
 
 concurrency:
@@ -26,12 +30,6 @@ env:
 jobs:
   feature-matrix:
     name: "Feature ${{ matrix.label }}"
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'intel-gpu') ||
-      contains(github.event.pull_request.labels.*.name, 'opencl') ||
-      contains(github.event.pull_request.labels.*.name, 'oneapi') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     strategy:
@@ -94,12 +92,6 @@ jobs:
 
   opencl-compile-check:
     name: OpenCL Compilation Check
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'intel-gpu') ||
-      contains(github.event.pull_request.labels.*.name, 'opencl') ||
-      contains(github.event.pull_request.labels.*.name, 'oneapi') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
@@ -132,12 +124,6 @@ jobs:
 
   doc-check:
     name: Documentation Check
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'intel-gpu') ||
-      contains(github.event.pull_request.labels.*.name, 'opencl') ||
-      contains(github.event.pull_request.labels.*.name, 'oneapi') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:

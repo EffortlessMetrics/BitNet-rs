@@ -1,0 +1,18 @@
+timestamp = "2026-05-20T07:55:45Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OPS-SLO-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6123
+head_sha = "4f8504e2c0bdaee3f22384457893713dde244548"
+merge_sha = "e2213309360ff8af4689035f02d09f90ed2af316"
+branch = "codex/apple-m4-inference-excellence/M4-OPS-SLO-001-envelope-classes"
+
+notes = [
+  "Merged PR #6123 after all required PR checks passed.",
+  "The merged docs classify current M4 dense Qwen, BitNet ask/warm, gated BitNet chat/serve, dense local serve, and unsupported backend routes by operator envelope class.",
+  "The class map is docs/tracker-only and preserves exact evidence identities, timing expectations, memory/disk posture, backend, fallback, and claim boundaries.",
+  "No runtime, model, BitNet chat/serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

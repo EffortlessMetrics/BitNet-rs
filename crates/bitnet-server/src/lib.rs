@@ -28,7 +28,6 @@ pub mod monitoring;
 pub mod rate_limiter;
 pub mod request_context;
 pub mod request_router;
-pub mod request_utils;
 pub mod runtime_model_registry;
 pub mod security;
 pub mod sse;
@@ -56,6 +55,7 @@ use bitnet_inference::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, VecDeque};
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
@@ -63,15 +63,11 @@ use tower_http::trace::TraceLayer;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-use batch_engine::{BatchEngine, BatchRequest};
+use batch_engine::{BatchEngine, BatchRequest, RequestPriority};
 use concurrency::{ConcurrencyManager, RequestMetadata};
 pub use config::{DeviceConfig, ServerConfig};
 use execution_router::ExecutionRouter;
 use model_manager::ModelManager;
-use request_utils::{
-    calculate_tokens_per_second, create_error_response, extract_client_ip_from_headers,
-    handle_validation_error, parse_device, parse_priority,
-};
 use security::{SecurityValidator, configure_cors, security_headers_middleware};
 
 #[cfg(feature = "prometheus")]
@@ -1957,6 +1953,102 @@ async fn request_validation_middleware(
     Ok(next.run(request).await)
 }
 
+/// Utility functions
+/// Calculate tokens per second from token count and duration
+fn calculate_tokens_per_second(tokens: u64, duration: Duration) -> f64 {
+    let duration_ms = duration.as_millis();
+    if duration_ms > 0 && tokens > 0 { (tokens as f64 * 1000.0) / duration_ms as f64 } else { 0.0 }
+}
+
+/// Create standardized error response
+fn create_error_response(
+    error: &str,
+    error_code: &str,
+    request_id: Option<String>,
+    details: Option<serde_json::Value>,
+) -> Json<ErrorResponse> {
+    Json(ErrorResponse {
+        error: error.to_string(),
+        error_code: error_code.to_string(),
+        request_id,
+        details,
+    })
+}
+
+/// Handle validation errors with consistent response format
+fn handle_validation_error(
+    error: &security::ValidationError,
+    request_id: Option<String>,
+) -> (StatusCode, Json<ErrorResponse>) {
+    let (status, error_code) = match error {
+        security::ValidationError::PromptTooLong(_, _) => {
+            (StatusCode::BAD_REQUEST, "PROMPT_TOO_LONG")
+        }
+        security::ValidationError::TooManyTokens(_, _) => {
+            (StatusCode::BAD_REQUEST, "TOO_MANY_TOKENS")
+        }
+        security::ValidationError::InvalidCharacters => {
+            (StatusCode::BAD_REQUEST, "INVALID_CHARACTERS")
+        }
+        security::ValidationError::BlockedContent(_) => {
+            (StatusCode::BAD_REQUEST, "BLOCKED_CONTENT")
+        }
+        security::ValidationError::MissingField(_) => (StatusCode::BAD_REQUEST, "MISSING_FIELD"),
+        security::ValidationError::InvalidFieldValue(_) => {
+            (StatusCode::BAD_REQUEST, "INVALID_FIELD_VALUE")
+        }
+    };
+
+    let response = create_error_response(&error.to_string(), error_code, request_id, None);
+    (status, response)
+}
+
+/// Parse request priority from string
+fn parse_priority(priority: Option<&str>) -> RequestPriority {
+    match priority {
+        Some("low") => RequestPriority::Low,
+        Some("normal") => RequestPriority::Normal,
+        Some("high") => RequestPriority::High,
+        Some("critical") => RequestPriority::Critical,
+        _ => RequestPriority::Normal,
+    }
+}
+
+/// Parse device from string
+fn parse_device(device: &str) -> Result<Device> {
+    let normalized = device.to_lowercase();
+    match normalized.as_str() {
+        "cpu" => Ok(Device::Cpu),
+        "gpu" | "cuda" | "vulkan" | "opencl" | "ocl" => Ok(Device::Cuda(0)),
+        _ if normalized.starts_with("cuda:") => {
+            let id_str = &normalized[5..];
+            let id = id_str.parse::<usize>()?;
+            Ok(Device::Cuda(id))
+        }
+        _ if normalized.starts_with("vulkan:") => {
+            let id_str = &normalized[7..];
+            let id = id_str.parse::<usize>()?;
+            Ok(Device::Cuda(id))
+        }
+        _ if normalized.starts_with("opencl:") => {
+            let id_str = &normalized[7..];
+            let id = id_str.parse::<usize>()?;
+            Ok(Device::Cuda(id))
+        }
+        _ if normalized.starts_with("ocl:") => {
+            let id_str = &normalized[4..];
+            let id = id_str.parse::<usize>()?;
+            Ok(Device::Cuda(id))
+        }
+        _ => anyhow::bail!("Unknown device: {}", device),
+    }
+}
+
+/// Extract client IP from headers using security module's implementation
+fn extract_client_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
+    security::extract_client_ip_from_headers(headers)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
@@ -1969,6 +2061,7 @@ mod tests {
         body::Body,
         http::{Request, StatusCode},
     };
+    use bitnet_common::Device;
     use serde_json::Value;
     use std::time::SystemTime;
     use tower::ServiceExt;
@@ -2556,63 +2649,6 @@ mod tests {
         assert_eq!(metadata.selected_backend, "nvidia-rtx-5070-ti-cuda");
         assert_eq!(metadata.selected_route, "dense_regular_llm_cuda");
         assert!(!metadata.fallback_used);
-    }
-
-    #[test]
-    fn server_shared_engine_receipt_preserves_m3_air_configured_backend_labels() {
-        let request = ChatCompletionRequest {
-            model: "qwen2.5-0.5b-instruct-q8_0".to_string(),
-            messages: vec![ChatCompletionMessage {
-                role: "user".to_string(),
-                content: "What is working capital?".to_string(),
-            }],
-            max_tokens: Some(16),
-            temperature: Some(0.0),
-            top_p: Some(1.0),
-            stream: Some(false),
-        };
-        let usage =
-            ChatCompletionUsage { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 };
-        let metadata = ModelMetadata {
-            model_id: "model-1".to_string(),
-            model_path: "models/qwen2.5-0.5b-q8_0.gguf".to_string(),
-            model_sha256: Some(
-                "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e".to_string(),
-            ),
-            device: "Cuda(0)".to_string(),
-            quantization_type: "Q8_0".to_string(),
-            loaded_at: SystemTime::UNIX_EPOCH,
-            size_mb: 512,
-            parameters: 500_000_000,
-            context_length: 32_768,
-            inference_count: 0,
-            avg_tokens_per_second: 0.0,
-        };
-
-        for (configured_device, expected_label) in [
-            (DeviceConfig::AppleM3AirMetal, "apple-m3-air-metal"),
-            (DeviceConfig::AppleM3AirMpsGraph, "apple-m3-air-mpsgraph"),
-            (DeviceConfig::AppleM3AirCpuNeon, "apple-m3-air-cpu-neon"),
-        ] {
-            let receipt = build_server_shared_engine_receipt(
-                "request-1",
-                &request,
-                &metadata,
-                &configured_device,
-                "chatml",
-                &usage,
-                "Working capital is current assets minus current liabilities.",
-                25,
-                None,
-            );
-
-            assert_eq!(receipt.requested_backend, expected_label);
-            assert_eq!(receipt.selected_backend, expected_label);
-            assert_eq!(receipt.runtime_api, "cuda");
-            assert!(!receipt.server_smoke_response_claimed);
-            assert!(!receipt.dense_regular_llm_cuda_inference_claimed);
-            assert!(!receipt.bitnet_packed_i2s_qk256_proof);
-        }
     }
 
     #[test]

@@ -1,3 +1,12 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
+> Historical CI artifact only. This file records a past PR, gate, check run,
+> review, or agent handoff and must not be read as a current BitNet-rs support,
+> speedup, CUDA/GPU, server-readiness, residency, reference-parity, quality,
+> or product-readiness claim. Current claims must come from active model
+> coverage, receipts, specs, status docs, and claim gates.
+
 # Issue #453 Spec Finalization Report
 
 **Agent:** spec-finalizer (microloop 1.3/8 - Issue Ledger validator)

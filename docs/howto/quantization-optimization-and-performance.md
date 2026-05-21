@@ -2,11 +2,18 @@
 
 This comprehensive guide shows you how to optimize BitNet-rs quantization performance for production workloads. You'll learn to configure device-aware quantization, enable strict mode to prevent mock fallbacks, tune performance parameters, and achieve realistic performance baselines with actual quantized computation.
 
+> Claim boundary: this guide gives optimization procedures and historical
+> examples. It does not prove current CUDA/GPU readiness, speedup, server
+> readiness, residency, fallback behavior, or product readiness. Use active
+> receipts, model coverage, status docs, specs, and claim gates for current
+> claims.
+
 ## Overview
 
 BitNet-rs provides advanced quantization optimization features:
 
-- **Device-Aware Quantization**: Automatic GPU acceleration with CPU fallback
+- **Device-Aware Quantization**: backend selection surfaces with explicit
+  fallback reporting
 - **Multiple Quantization Formats**: I2_S, TL1, TL2 quantization support
 - **SIMD Acceleration**: AVX2/AVX-512 (x86_64), NEON (ARM64) optimizations
 - **Memory Optimization**: Zero-copy operations and efficient memory layout

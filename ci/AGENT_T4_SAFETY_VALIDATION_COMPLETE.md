@@ -1,4 +1,13 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
 # T4 Safety Validation - PR #473 (feat/mvp-finalization)
+
+> Historical CI artifact only. This report records a 2025 PR/gate decision and
+> must not be read as a current BitNet-rs support, speedup, CUDA/GPU,
+> server-readiness, residency, reference-parity, quality, or product-readiness
+> claim. Current claims must come from active model coverage, receipts, specs,
+> status docs, and claim gates.
 
 **Agent**: Safety Scanner (Neural Network Security Expert)
 **Date**: 2025-10-21T23:50:00Z
@@ -332,4 +341,3 @@ The single medium CVE (RSA timing attack) is documented and mitigated within the
 **Validation Completed**: 2025-10-21T23:50:00Z
 **Next Gate**: T5 fuzz-tester
 **Confidence**: HIGH ✅
-

@@ -19,8 +19,6 @@ use std::{
 };
 use tokio::io::AsyncWriteExt;
 
-mod status_text;
-
 const DEFAULT_CACHE_RELATIVE: &[&str] = &["bitnet-rs", "models"];
 const MODEL_COVERAGE_MATRIX_RELATIVE: &[&str] =
     &["ci", "model-artifacts", "model-coverage-matrix.toml"];
@@ -1644,27 +1642,123 @@ fn server_status(entry: &ModelCoverageEntry) -> ServerStatus {
 }
 
 fn print_model_status_text(dashboard: &ModelStatusDashboard) {
-    status_text::print_model_status_text(dashboard);
+    println!("CUDA model status for {}", dashboard.device);
+    println!("requested backend: {}", dashboard.requested_backend);
+    if let Some(selected_backend) = &dashboard.selected_backend {
+        println!("selected backend: {selected_backend}");
+    } else {
+        println!("selected backend: none");
+    }
+    println!("source: {}", dashboard.source.display());
+    println!("{}", dashboard.note);
+    println!();
+
+    print_model_status_group(dashboard, "Supported", "supported");
+    println!();
+    print_model_status_group(dashboard, "Candidates", "candidate");
+}
+
+fn print_model_status_group(dashboard: &ModelStatusDashboard, title: &str, category: &str) {
+    println!("{title}:");
+    let mut printed = false;
+    for row in dashboard.models.iter().filter(|row| row.category == category) {
+        printed = true;
+        println!("  {}", row.display_name);
+        println!("    id: {}", row.id);
+        println!("    class: {}", model_status_class_label(&row.model_class));
+        println!("    route: {}", row.route.as_deref().unwrap_or("not ready"));
+        println!("    tier: {}", row.tier);
+        println!("    cpu answer: {}", ready_label(row.cpu_answer_ready));
+        println!("    cuda answer: {}", ready_label(row.accelerator_answer_ready));
+        println!("    ask: {}", row.ask);
+        if matches!(row.route.as_deref(), Some("dense_regular_llm_cuda" | "bitnet_qk256_cuda")) {
+            println!("    one-token: {}", row.one_token);
+            println!("    short-decode: {}", row.short_decode);
+        }
+        println!("    warm-session: {}", row.warm_session);
+        println!("    benchmark: {}", row.benchmark);
+        println!("    speedup: {}", if row.speedup_claim { "qualified" } else { "not qualified" });
+        println!("    server: {}", row.server);
+        println!(
+            "    full residency: {}",
+            if row.full_residency_claim { "claimed" } else { "not claimed" }
+        );
+        println!("    claim boundary: {}", row.claim_boundary);
+        if row.category == "candidate" {
+            println!("    next proof: {}", row.next_proof);
+        }
+        println!();
+    }
+
+    if !printed {
+        println!("  none");
+    }
 }
 
 fn model_status_display_name(entry: &ModelCoverageEntry) -> String {
-    status_text::model_status_display_name(entry)
+    if let Some(id) = &entry.capability_id {
+        return id.clone();
+    }
+    if let Some(id) = entry.verifier_surface.split_whitespace().last()
+        && !id.is_empty()
+        && id != "only"
+        && id != "matrix"
+    {
+        return id.to_string();
+    }
+    entry.contract_id.clone().unwrap_or_else(|| entry.id.clone())
+}
+
+fn model_status_class_label(model_class: &str) -> &'static str {
+    match model_class {
+        "bitnet" => "BitNet",
+        "dense_slm" => "dense SLM",
+        "small_llm" => "small dense LLM",
+        "modern_llm_docs_only" => "docs-only modern LLM",
+        _ => "model",
+    }
+}
+
+fn ready_label(ready: bool) -> &'static str {
+    if ready { "ready" } else { "not ready" }
 }
 
 fn ask_status(entry: &ModelCoverageEntry) -> String {
-    status_text::ask_status(entry)
+    if entry.claims.product_cli_ready && entry.claims.accelerator_answer_ready {
+        "ready".to_string()
+    } else {
+        "not ready".to_string()
+    }
 }
 
 fn dense_receipt_status(entry: &ModelCoverageEntry, receipt_fragment: &str) -> String {
-    status_text::dense_receipt_status(entry, receipt_fragment)
+    if entry.required_receipts.iter().any(|receipt| receipt.contains(receipt_fragment)) {
+        "ready".to_string()
+    } else {
+        "not ready".to_string()
+    }
 }
 
 fn warm_session_status(entry: &ModelCoverageEntry) -> String {
-    status_text::warm_session_status(entry)
+    if entry.required_receipts.iter().any(|receipt| receipt.contains("warm_session"))
+        && entry.claims.accelerator_answer_ready
+    {
+        "ready".to_string()
+    } else {
+        "not ready".to_string()
+    }
 }
 
 fn benchmark_status(entry: &ModelCoverageEntry) -> String {
-    status_text::benchmark_status(entry)
+    if entry.claims.benchmark_qualified && entry.claims.speedup_claim {
+        return "qualified".to_string();
+    }
+    if (entry.claims.product_cli_ready || entry.claims.accelerator_answer_ready)
+        && entry.required_receipts.iter().any(|receipt| receipt.contains("benchmark"))
+    {
+        return "reviewed, speedup not accepted".to_string();
+    }
+    "not ready".to_string()
 }
 
 fn list_models(cache_dir: Option<PathBuf>, json: bool) -> Result<()> {
@@ -3700,7 +3794,7 @@ mod tests {
         assert_eq!(dense.short_decode, "ready");
         assert_eq!(dense.warm_session, "ready");
         assert_eq!(dense.benchmark, "reviewed, speedup not accepted");
-        assert!(dense.claim_boundary.contains("BitNet packed I2_S/QK256 proof"));
+        assert!(dense.claim_boundary.contains("do not satisfy BitNet packed I2_S/QK256"));
         Ok(())
     }
 
@@ -3857,10 +3951,9 @@ mod tests {
 
         let qwen3 = model_status_json_row_for(&value, "dense_qwen3_06b_q8_candidate")?;
         assert_eq!(qwen3["model_coverage_row"], "dense_qwen3_06b_q8_candidate");
-        assert!(
-            qwen3["next_proof"]
-                .as_str()
-                .is_some_and(|next| next.contains("hardware aggregate receipt"))
+        assert_eq!(
+            qwen3["next_proof"],
+            "Qwen3 exact-profile server readiness is promoted only for the current-source non-streaming /v1/chat/completions RTX 5070 Ti shared-engine receipt at ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json. Separate exact-profile performance comparator evidence is still required before any speed, benchmark-qualified, or full-residency promotion."
         );
         assert_eq!(qwen3["category"], "supported");
         assert_eq!(qwen3["current_tier"], "product_cli_ready");

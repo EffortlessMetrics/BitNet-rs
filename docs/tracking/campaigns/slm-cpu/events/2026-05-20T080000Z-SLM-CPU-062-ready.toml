@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T08:00:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-062"
+event = "in_progress"
+previous_status = "none"
+new_status = "ready"
+actor = "codex"
+summary = "Add SLM-CPU-062 as the release-surface checkpoint for moving further Kaby SLM packed-Q8 compute-candidate development to bitnet-rs-swarm."
+notes = [
+  "SLM-CPU-061 merged the real Qwen3 Q8_0 sidecar payload candidate while keeping packed runtime compute gated and disabled outside the explicit evidence scope.",
+  "BitNet-rs remains the release/evidence surface for strict Kaby Qwen3 Q8_0 and Qwen2.5 Q8_0 CPU receipts.",
+  "Further packed Q8_0 compute-candidate development belongs in bitnet-rs-swarm and should return to BitNet-rs only as audited release/evidence artifacts.",
+  "This is tracker and documentation scope only; no runtime, receipt, model artifact, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, Q4/Q5, throughput, or BitNet QK256 claim is made.",
+]

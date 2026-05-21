@@ -27,3 +27,4 @@ notes = [
   "The merged slice keeps official BitNet QK256 server readiness, global dense GGUF server readiness, speedup, full residency, production deployment, concurrency, and broad chat-quality claims out of scope.",
   "CUDA-SERVER-006 remains the separate official BitNet I2_S/QK256 strict server-smoke item.",
 ]
+

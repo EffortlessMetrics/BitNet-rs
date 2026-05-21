@@ -2,12 +2,33 @@
 
 Welcome to BitNet-rs! We appreciate your interest in contributing to our high-performance 1-bit neural network quantization and inference library for Rust.
 
+## Development Intake Has Moved
+
+Active development now happens in
+[`EffortlessMetrics/bitnet-rs-swarm`](https://github.com/EffortlessMetrics/bitnet-rs-swarm).
+This repository is the release and publish repository for BitNet-rs.
+
+Open normal feature, hardware-lane, performance, diagnostic, refactor, and
+proof-tooling work in `bitnet-rs-swarm`.
+
+PRs accepted here are limited to:
+
+- release promotion PRs from `bitnet-rs-swarm`;
+- versioning, changelog, packaging, signing, and publish changes;
+- emergency security or release-blocking hotfixes;
+- documentation corrections needed for released artifacts.
+
+Do not open new feature or hardware-lane PRs in this repository. Useful open
+development PRs should keep their identity when feasible and move only after a
+content-aware handoff; age, branch distance, and old-stack status are not close
+reasons.
+
 ## Quick Start for Contributors
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/your-username/BitNet-rs.git
-   cd BitNet-rs
+   git clone https://github.com/your-username/bitnet-rs-swarm.git
+   cd bitnet-rs-swarm
    ```
 
 2. **Setup Development Environment**

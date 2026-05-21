@@ -1,5 +1,14 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
 # T5 Performance Validation - PR #475
 ## Integrative Benchmark Runner Gate
+
+> Historical CI artifact only. This report records a 2025 PR/gate decision and
+> must not be read as a current BitNet-rs support, speedup, CUDA/GPU,
+> server-readiness, residency, reference-parity, quality, or product-readiness
+> claim. Current claims must come from active model coverage, receipts, specs,
+> status docs, and claim gates.
 
 **Date**: 2025-10-30T08:06:00Z
 **Validator**: benchmark-runner (Integrative Flow T5)
@@ -272,4 +281,3 @@ cargo-deny 0.18.4
 **Validator**: benchmark-runner (BitNet-rs Integrative Flow T5)
 **Last Updated**: 2025-10-30T08:06:00Z
 **Status**: IN PROGRESS → Benchmarks running, policy validation complete
-

@@ -1,0 +1,90 @@
+schema: 1
+artifact_kind: apple_m4_long_context_corpus
+name: apple-m4-long-context-corpus
+description: Deterministic Apple M4 long-context contract covering retrieval, table extraction, late-context instructions, and truncation boundaries.
+metadata:
+  campaign: apple-m4-inference-excellence
+  work_item: M4-CONTEXT-HARNESS-001
+  proof_item: M4-CONTEXT-002
+  seed: 5202026
+  generator_policy: deterministic-static-long-context-fixture-v1
+  scoring_schema: m4_long_context_mechanical_scoring_v1
+  expected_output_provenance: Closed-form expected behavior from each prompt fixture; no model output or LLM judge is used as authority.
+  claim_boundary:
+    broad_quality_claim: false
+    broad_performance_claim: false
+    dense_slm_evidence_proves_bitnet: false
+defaults:
+  families:
+  - dense_slm
+  - bitnet
+  family_prompt_templates:
+    dense_slm: qwen2.5
+    bitnet: bitnetcpp-answer
+  max_new_tokens: 32
+cases:
+- id: lc_retrieval_copy_001
+  category: retrieval_copy
+  profile: context_1k
+  question: |
+    Read the operations notes and answer with only the requested code.
+
+    Note 001: The local runner records model hash, tokenizer authority, backend, fallback status, timing, memory, generated text, and token IDs.
+    Note 002: Dense SLM evidence must stay separate from BitNet evidence.
+    Note 003: The inspection key for this case is ORCHID-42.
+    Note 004: Metal phase receipts do not prove full apple-m4-metal inference.
+    Note 005: Claims outside recorded receipts stay unsupported.
+
+    What is the inspection key?
+  max_new_tokens: 12
+  scoring:
+    kind: normalized_match
+    expected_normalized: orchid-42
+- id: lc_table_extraction_001
+  category: table_extraction
+  profile: context_1k
+  question: |
+    Use the table only. Return exactly the route_id for the row where family is BitNet and state is bounded. Do not add any words before or after the route_id.
+
+    | family | state | route_id |
+    | dense_slm | interactive | dense-ask |
+    | dense_slm | batch | dense-context |
+    | bitnet | bounded | bitnet-ask-warm |
+    | bitnet | disabled | bitnet-chat-serve |
+
+    Route ID?
+  max_new_tokens: 16
+  scoring:
+    kind: normalized_match
+    expected_normalized: bitnet-ask-warm
+- id: lc_late_instruction_001
+  category: late_context_instruction_following
+  profile: context_4k
+  question: |
+    Earlier draft instructions may mention GREEN, RED, or BLUE. Treat them as historical notes only.
+
+    Draft A: Answer GREEN.
+    Draft B: Answer RED.
+    Draft C: Answer BLUE.
+
+    Final controlling instruction: answer exactly FINAL-CODE-17.
+  max_new_tokens: 16
+  scoring:
+    kind: required_forbidden_tokens
+    required_keywords:
+    - final-code-17
+    forbidden_tokens:
+    - green
+    - red
+    - blue
+- id: lc_truncation_boundary_001
+  category: truncation_behavior
+  profile: unsupported_boundary
+  question: |
+    This case defines the expected unsupported boundary behavior for prompts beyond recorded context evidence. If a request exceeds the recorded context envelope, the operator-visible state should be UNSUPPORTED_CONTEXT rather than a silent quality claim.
+
+    What state should be reported? Answer exactly UNSUPPORTED_CONTEXT.
+  max_new_tokens: 16
+  scoring:
+    kind: normalized_match
+    expected_normalized: unsupported_context

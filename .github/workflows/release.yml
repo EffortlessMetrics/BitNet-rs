@@ -28,6 +28,7 @@ jobs:
   # Pre-release validation
   validate:
     name: Pre-release Validation
+    if: github.repository == 'EffortlessMetrics/BitNet-rs'
     runs-on: ubuntu-22.04
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -103,6 +104,7 @@ jobs:
   # Cross-platform builds
   build:
     name: Build ${{ matrix.target }}
+    if: github.repository == 'EffortlessMetrics/BitNet-rs'
     runs-on: ${{ matrix.os }}
     needs: validate
     strategy:
@@ -223,6 +225,7 @@ jobs:
   # Build Python wheels
   build-python:
     name: Build Python wheels
+    if: github.repository == 'EffortlessMetrics/BitNet-rs'
     runs-on: ${{ matrix.os }}
     needs: validate
     strategy:
@@ -238,7 +241,7 @@ jobs:
           toolchain: "1.95.0"
 
       - name: Set up Python
-        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c  # v4
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: '3.8'
 
@@ -261,6 +264,7 @@ jobs:
   # Build WebAssembly
   build-wasm:
     name: Build WebAssembly
+    if: github.repository == 'EffortlessMetrics/BitNet-rs'
     runs-on: ubuntu-22.04
     needs: validate
     steps:
@@ -306,6 +310,7 @@ jobs:
   # Build Docker images
   build-docker:
     name: Build Docker images
+    if: github.repository == 'EffortlessMetrics/BitNet-rs'
     runs-on: ubuntu-22.04
     needs: validate
     steps:
@@ -317,7 +322,7 @@ jobs:
 
       - name: Log in to Docker Hub
         if: github.event.inputs.dry_run != 'true'
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef  # v3
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -334,7 +339,7 @@ jobs:
             type=semver,pattern={{major}}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v5
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  # v7.1.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -349,7 +354,7 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-22.04
     needs: [validate, build, build-python, build-wasm, build-docker]
-    if: github.event.inputs.dry_run != 'true'
+    if: github.repository == 'EffortlessMetrics/BitNet-rs' && github.event.inputs.dry_run != 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
@@ -405,7 +410,7 @@ jobs:
           done
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844  # v1
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
           tag_name: ${{ needs.validate.outputs.tag }}
           name: bitnet-rs ${{ needs.validate.outputs.version }}
@@ -421,7 +426,7 @@ jobs:
     name: Publish to crates.io
     runs-on: ubuntu-22.04
     needs: [validate, build]
-    if: github.event.inputs.dry_run != 'true'
+    if: github.repository == 'EffortlessMetrics/BitNet-rs' && github.event.inputs.dry_run != 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
@@ -473,7 +478,7 @@ jobs:
     name: Publish to PyPI
     runs-on: ubuntu-22.04
     needs: [validate, build-python]
-    if: github.event.inputs.dry_run != 'true'
+    if: github.repository == 'EffortlessMetrics/BitNet-rs' && github.event.inputs.dry_run != 'true'
     steps:
       - name: Download Python artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
@@ -483,7 +488,7 @@ jobs:
           merge-multiple: true
 
       - name: Set up Python
-        uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c  # v4
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: '3.8'
 
@@ -502,7 +507,7 @@ jobs:
     name: Publish to npm
     runs-on: ubuntu-22.04
     needs: [validate, build-wasm]
-    if: github.event.inputs.dry_run != 'true'
+    if: github.repository == 'EffortlessMetrics/BitNet-rs' && github.event.inputs.dry_run != 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
@@ -540,7 +545,7 @@ jobs:
     name: Post-release tasks
     runs-on: ubuntu-22.04
     needs: [validate, release, publish-crates, publish-python, publish-npm]
-    if: always() && github.event.inputs.dry_run != 'true'
+    if: always() && github.repository == 'EffortlessMetrics/BitNet-rs' && github.event.inputs.dry_run != 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4

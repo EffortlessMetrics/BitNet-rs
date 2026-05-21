@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T08:58:03Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CONTEXT-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-001-long-context-guardrails"
+
+notes = [
+  "Started long-context guardrails for M4 CLI and server routes against the recorded dense SLM and BitNet evidence envelopes.",
+  "Scope is route classification, blocked-request receipts, receipt validation, docs, and tests for contexts beyond recorded evidence.",
+  "Dense SLM requests beyond the recorded context_4k envelope and BitNet requests beyond bounded ask/warm prompt evidence must fail with explicit guardrail metadata instead of falling through to runtime/model lookup.",
+  "No long-context quality proof, unsupported-context support, BitNet chat/serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

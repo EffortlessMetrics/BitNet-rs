@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T18:17:30Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CONTEXT-002"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 6145
+head_sha = "e1702c6ae43cc401f67d1b16227748405c3014b0"
+merge_sha = "e3370f16c7c876a1cca732f95d7121e83271c95b"
+summary = "Merge the M4 long-context quality and timing receipt proof."
+
+notes = [
+  "PR #6145 published release `bitnet mac eval --suite m4-long-context` evidence for qwen2.5-0.5b-instruct-q8_0 on apple-m4-cpu-neon with fallback_used=false and 4/4 mechanical long-context cases passing.",
+  "The PR published the matching context benchmark receipt: context_1k completed as a warm-session profile, while context_4k hit the enforced 720s timeout and remains invalid for timing comparison.",
+  "The merged evidence is bounded to the tested default dense SLM identity and does not prove non-default dense identities, BitNet long-context behavior, BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup, broad model quality, broad performance, or broad Apple Silicon performance.",
+]

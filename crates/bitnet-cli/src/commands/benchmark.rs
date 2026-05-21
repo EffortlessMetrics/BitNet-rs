@@ -80,10 +80,6 @@ pub struct BenchmarkCommand {
     #[arg(long, value_name = "PATH")]
     pub cuda_benchmark_receipt: Option<PathBuf>,
 
-    /// Profile to select from a governed CUDA benchmark receipt report
-    #[arg(long, value_name = "PROFILE")]
-    pub profile: Option<String>,
-
     /// Memory profiling
     #[arg(long)]
     pub memory_profile: bool,
@@ -222,10 +218,7 @@ impl BenchmarkCommand {
 
         let device_label = self.requested_device_label(config);
         if is_cuda_benchmark_device_label(device_label) {
-            anyhow::bail!(
-                "{}",
-                unsupported_benchmark_device_message(device_label, self.profile.as_deref())
-            );
+            anyhow::bail!("{}", unsupported_benchmark_device_message(device_label));
         }
 
         let model_path = self.model_path()?;
@@ -312,13 +305,9 @@ impl BenchmarkCommand {
         let receipt_path =
             self.cuda_benchmark_receipt.as_ref().expect("checked cuda_benchmark_receipt presence");
         let receipt = read_benchmark_receipt_json(receipt_path)?;
-        let mut report =
-            cuda_benchmark_receipt_report(receipt_path, &receipt).with_context(|| {
-                format!("invalid governed CUDA benchmark receipt: {}", receipt_path.display())
-            })?;
-        if let Some(profile) = &self.profile {
-            filter_cuda_benchmark_receipt_report_profile(&mut report, profile)?;
-        }
+        let report = cuda_benchmark_receipt_report(receipt_path, &receipt).with_context(|| {
+            format!("invalid governed CUDA benchmark receipt: {}", receipt_path.display())
+        })?;
 
         self.output_cuda_benchmark_receipt_report(receipt_path, &receipt, &report).await
     }
@@ -370,10 +359,7 @@ impl BenchmarkCommand {
                 Ok(Device::Cpu)
             }
             label if is_supported_device_label(label) => {
-                anyhow::bail!(
-                    "{}",
-                    unsupported_benchmark_device_message(label, self.profile.as_deref())
-                )
+                anyhow::bail!("{}", unsupported_benchmark_device_message(label))
             }
             _ => anyhow::bail!("{}", invalid_device_message(device_str)),
         }
@@ -1001,27 +987,6 @@ fn cuda_benchmark_profile_reports(receipt: &Value) -> Vec<CudaBenchmarkProfileRe
     profiles
 }
 
-fn filter_cuda_benchmark_receipt_report_profile(
-    report: &mut CudaBenchmarkReceiptReport,
-    profile: &str,
-) -> Result<()> {
-    if profile.trim().is_empty() {
-        anyhow::bail!("--profile must not be empty");
-    }
-
-    let available: Vec<String> =
-        report.profiles.iter().map(|entry| entry.profile.clone()).collect();
-    report.profiles.retain(|entry| entry.profile == profile);
-    if report.profiles.is_empty() {
-        anyhow::bail!(
-            "profile `{profile}` was not found in governed CUDA benchmark receipt; available profiles: {}",
-            available.join(", ")
-        );
-    }
-    report.profile_count = report.profiles.len();
-    Ok(())
-}
-
 fn collect_cuda_benchmark_profiles(
     value: Option<&Value>,
     profiles: &mut Vec<CudaBenchmarkProfileReport>,
@@ -1118,15 +1083,8 @@ fn percentile(sorted_data: &[f64], p: f64) -> f64 {
     }
 }
 
-fn unsupported_benchmark_device_message(device: &str, profile: Option<&str>) -> String {
-    let profile_note = profile
-        .map(|profile| {
-            format!(
-                " Profile `{profile}` can run live only with --device {RTX_5070_TI_CUDA} for supported CUDA-BITNET-PERF-005 profiles, or with --cuda-benchmark-receipt for governed receipt reporting."
-            )
-        })
-        .unwrap_or_default();
+fn unsupported_benchmark_device_message(device: &str) -> String {
     format!(
-        "bitnet benchmark does not support device label '{device}'. This legacy benchmark simulates benchmark work and must not silently fall back to CPU for accelerator requests. Use receipt-backed CUDA paths such as `bitnet ask --device cuda ...`, `bitnet chat --device cuda ...`, or governed CUDA benchmark receipts; CPU fallback cannot count as CUDA execution.{profile_note}"
+        "bitnet benchmark does not support device label '{device}'. This legacy benchmark simulates benchmark work and must not silently fall back to CPU for accelerator requests. Use receipt-backed CUDA paths such as `bitnet ask --device cuda ...`, `bitnet chat --device cuda ...`, or governed CUDA benchmark receipts; CPU fallback cannot count as CUDA execution."
     )
 }

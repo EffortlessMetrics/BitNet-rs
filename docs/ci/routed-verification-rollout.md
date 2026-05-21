@@ -127,7 +127,10 @@ consuming it as an API:
   "packages": {
     "changed": [],
     "direct_dependents": [],
-    "canaries": []
+    "canaries": [],
+    "selected": [],
+    "broad_sweep_required": false,
+    "selection_reason": "changed packages plus direct dependents and canaries"
   },
   "risk_packs": [],
   "labels": []
@@ -431,9 +434,10 @@ unless a broad sweep is required.
 
 **Required behavior:**
 
-- Compute changed packages, direct dependents, canary packages, and
-  `broad_sweep_required`.
-- Run `cargo test` and `cargo clippy` on the selected package set.
+- Compute changed packages, direct dependents, canary packages, selected
+  packages, and `broad_sweep_required`.
+- Run CI Core build/test on the selected package set when a broad sweep is not
+  required.
 - Require broad sweep for manifest/toolchain/shared-foundation changes.
 - Summarize selected packages and reason.
 
@@ -463,6 +467,8 @@ git diff --check
 **Files:**
 
 - `.github/workflows/feature-matrix.yml`
+- `.github/workflows/pr-gate.yml`
+- `policy/ci-lane-whitelist.toml`
 - `policy/ci-risk-packs.toml`
 - `policy/ci-lanes.toml`
 - `docs/ci/cost-and-verification-policy.md`
@@ -470,9 +476,10 @@ git diff --check
 **Required behavior:**
 
 - Default ordinary PR matrix: `no-features` and `cpu`.
-- Run `cpu+full-cli` for CLI/server/validation/model-cache/full-cli feature
-  files, manifest/lock/toolchain changes, or labels `full-cli`,
-  `feature-matrix`, and `full-ci`.
+- Run targeted `cpu+full-cli` for CLI/server/validation/model-cache/full-cli
+  feature files, manifest/lock/toolchain changes, or label `full-cli`.
+- Treat `feature-matrix` and `full-ci` as full-matrix opt-ins; that full
+  matrix still includes `cpu+full-cli`.
 - Keep full matrix available on `main` and `full-ci`.
 
 **Validation:**

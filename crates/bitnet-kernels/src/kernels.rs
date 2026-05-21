@@ -6,9 +6,9 @@
 
 /// OpenCL kernel source for ternary (I2_S) matrix multiplication.
 ///
-/// Computes C = A x B where:
-/// - A is an [M x K] matrix of int8 activations (`char`)
-/// - B is a [K/4 x N] matrix of packed 2-bit I2_S weights (`uchar`)
+/// Computes C = A × B where:
+/// - A is packed 2-bit ternary weights (`char`, 4 values per byte)
+/// - B is activation vectors (`uchar`)
 /// - C is the `float` output
 ///
 /// Ternary encoding: 0b00 = 0, 0b01 = +1, 0b11 = -1.
@@ -21,79 +21,33 @@ __kernel void matmul_i2s(
     const uint N,
     const uint K
 ) {
-    const uint row = get_global_id(0);
-    const uint col = get_global_id(1);
+    uint row = get_global_id(0);
+    uint col = get_global_id(1);
 
     if (row >= M || col >= N) return;
 
     float sum = 0.0f;
-    const uint k_packed = K / 4;
+    for (uint i = 0; i < K; i++) {
+        // A is packed: 4 ternary values per byte
+        uint byte_idx = (row * K + i) / 4;
+        uint sub = (row * K + i) % 4;
+        uchar packed = (uchar)A[byte_idx];
+        uchar bits = (packed >> (sub * 2)) & 0x03;
 
-    for (uint kp = 0; kp < k_packed; kp++) {
-        uchar packed = B[kp * N + col];
-
-        for (uint sub = 0; sub < 4; sub++) {
-            uint k_idx = kp * 4 + sub;
-            if (k_idx >= K) break;
-
-            uchar bits = (packed >> (sub * 2)) & 0x03;
-
-            int w;
-            if (bits == 0x01) {
-                w = 1;
-            } else if (bits == 0x03) {
-                w = -1;
-            } else {
-                w = 0;
-            }
-
-            char a_val = A[row * K + k_idx];
-            sum += (float)a_val * (float)w;
+        // Decode ternary: 0x01 -> +1, 0x03 -> -1, else 0
+        int w;
+        if (bits == 0x01) {
+            w = 1;
+        } else if (bits == 0x03) {
+            w = -1;
+        } else {
+            w = 0;
         }
+
+        sum += (float)w * (float)B[i * N + col];
     }
 
     C[row * N + col] = sum;
-}
-"#;
-
-/// OpenCL kernel source for a QK256 grouped-layout I2_S × I8_S scaled GEMV
-/// fixture.
-///
-/// This fixture consumes already-quantized I8_S activations plus activation
-/// scale/sum metadata and GGML grouped QK256 I2_S weight bytes. It exercises
-/// the production BitNet scale/sum formula, but it does not prove GPU-resident
-/// activation quantization, transformer dispatch, or full BitNet inference.
-pub const QK256_I2S_I8S_SCALED_GEMV_SRC: &str = r#"
-__kernel void qk256_i2s_i8s_scaled_gemv(
-    __global const char* q,
-    __global const uchar* qs,
-    __global float* y,
-    const uint rows,
-    const uint cols,
-    const uint row_stride_bytes,
-    const int activation_sum,
-    const float activation_scale,
-    const float weight_scale
-) {
-    const uint row = get_global_id(0);
-    if (row >= rows) return;
-
-    int int_dot = 0;
-    const uint row_base = row * row_stride_bytes;
-
-    for (uint col = 0; col < cols; col++) {
-        const uint block = col / 256;
-        const uint offset = col - block * 256;
-        const uint chunk = offset / 128;
-        const uint lane = (offset - chunk * 128) / 32;
-        const uint gp = offset & 31;
-        const uint byte_index = row_base + block * 64 + chunk * 32 + gp;
-        const uchar packed = qs[byte_index];
-        const uchar code = (packed >> (6 - lane * 2)) & 0x03;
-        int_dot += ((int)code) * ((int)q[col]);
-    }
-
-    y[row] = (((float)(int_dot - activation_sum)) / activation_scale) * weight_scale;
 }
 "#;
 

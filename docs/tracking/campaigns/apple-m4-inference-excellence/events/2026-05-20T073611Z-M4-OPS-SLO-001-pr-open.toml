@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T07:36:11Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OPS-SLO-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6123
+head_sha = "4f8504e2c0bdaee3f22384457893713dde244548"
+branch = "codex/apple-m4-inference-excellence/M4-OPS-SLO-001-envelope-classes"
+
+notes = [
+  "Opened PR #6123 for M4 operator envelope classes.",
+  "The PR maps dense Qwen short, resident, and long/context routes; dense local serve; accepted BitNet ask/warm; gated BitNet chat/serve; and unsupported backend routes to interactive, advisory, batch, disabled, or unsupported classes.",
+  "The docs record max profile guidance, timing expectations, memory/disk posture, and exact committed evidence identities without changing runtime behavior.",
+  "No runtime, model, BitNet chat/serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claim is in scope.",
+]

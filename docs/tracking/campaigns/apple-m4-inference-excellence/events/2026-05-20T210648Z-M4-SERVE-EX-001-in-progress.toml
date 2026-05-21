@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T21:06:48Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-dense-serve-conformance"
+
+notes = [
+  "Started M4-SERVE-EX-001 by adding a dense-only `bitnet mac serve-smoke` harness and receipt validator for local-server conformance.",
+  "The harness exercises health, ready, models, non-streaming completion, streaming completion, per-request receipt export, backend/fallback fields, timeout-boundary metadata, and explicit claim boundaries through the existing local server handlers.",
+  "This starts the item but does not complete the live M4 evidence requirement; bounded dense serve-smoke receipts under `ci/hardware/apple-m4-mac-mini/**/slm-serve/**` are still required before the tracker can be marked merged.",
+  "No BitNet serve enablement, service production readiness, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

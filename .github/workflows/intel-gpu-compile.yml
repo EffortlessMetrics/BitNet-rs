@@ -2,7 +2,12 @@ name: Intel GPU Compile Check
 
 on:
   pull_request:
-    types: [labeled]
+    paths:
+      - 'crates/bitnet-kernels/src/gpu/**'
+      - 'crates/bitnet-kernels/src/opencl_*'
+      - 'crates/bitnet-opencl/**'
+      - 'crates/bitnet-device-probe/**'
+      - '.github/workflows/intel-gpu-compile.yml'
   push:
     branches: [main]
     paths:
@@ -27,12 +32,6 @@ env:
 jobs:
   compile-check-cpu:
     name: Compile Check (CPU)
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'intel-gpu') ||
-      contains(github.event.pull_request.labels.*.name, 'opencl') ||
-      contains(github.event.pull_request.labels.*.name, 'oneapi') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -53,12 +52,6 @@ jobs:
 
   compile-check-oneapi:
     name: Compile Check (OneAPI)
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'intel-gpu') ||
-      contains(github.event.pull_request.labels.*.name, 'opencl') ||
-      contains(github.event.pull_request.labels.*.name, 'oneapi') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -84,12 +77,6 @@ jobs:
 
   opencl-kernel-lint:
     name: OpenCL Kernel Lint
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'intel-gpu') ||
-      contains(github.event.pull_request.labels.*.name, 'opencl') ||
-      contains(github.event.pull_request.labels.*.name, 'oneapi') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -153,12 +140,6 @@ jobs:
 
   cpu-fallback-tests:
     name: CPU Fallback Tests
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'intel-gpu') ||
-      contains(github.event.pull_request.labels.*.name, 'opencl') ||
-      contains(github.event.pull_request.labels.*.name, 'oneapi') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -196,12 +177,6 @@ jobs:
 
   clippy-gpu:
     name: Clippy (OneAPI)
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'intel-gpu') ||
-      contains(github.event.pull_request.labels.*.name, 'opencl') ||
-      contains(github.event.pull_request.labels.*.name, 'oneapi') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

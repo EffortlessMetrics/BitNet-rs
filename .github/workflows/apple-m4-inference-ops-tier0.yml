@@ -3,7 +3,13 @@ name: Apple M4 Inference Ops Tier 0
 on:
   pull_request:
     branches: [main]
-    types: [labeled]
+    paths:
+      - '.github/workflows/apple-m4-inference-ops-tier0.yml'
+      - 'ci/hardware/apple-m4-mac-mini/**'
+      - 'crates/bitnet-cli/**'
+      - 'docs/slm/apple-m4-inference-ops.md'
+      - 'docs/slm/apple-m4-mini-user-expectation-envelope.md'
+      - 'docs/tracking/campaigns/apple-m4-inference-ops/**'
   push:
     branches: [main]
     paths:
@@ -38,11 +44,6 @@ env:
 jobs:
   tier0:
     name: Report Refresh Manifest
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'apple-m4') ||
-      contains(github.event.pull_request.labels.*.name, 'm4-inference-ops') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:

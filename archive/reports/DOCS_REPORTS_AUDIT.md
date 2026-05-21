@@ -1,3 +1,11 @@
+> **Archived CI/docs report claim boundary**
+>
+> This file is a historical CI/docs report from active development. Status,
+> ready, validated, merge, production, backend, performance, and publication
+> wording below is historical context only and is not a current project,
+> support, CI, quality, release, backend, performance, or publication claim.
+> Current claims must come from active docs, trackers, receipts, specs, and
+> claim gates.
 # Documentation Reports Directory Audit
 **Date**: 2025-10-23  
 **Scope**: `/home/steven/code/Rust/BitNet-rs/docs/reports/`

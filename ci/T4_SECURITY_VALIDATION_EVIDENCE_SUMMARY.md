@@ -1,4 +1,13 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
 # T4 Security Validation - Evidence Summary PR #475
+
+> Historical CI artifact only. This summary records a 2025 PR/gate decision and
+> must not be read as a current BitNet-rs support, speedup, CUDA/GPU,
+> server-readiness, residency, reference-parity, quality, or product-readiness
+> claim. Current claims must come from active model coverage, receipts, specs,
+> status docs, and claim gates.
 
 **Date**: 2025-10-30T08:02:30Z
 **Gate**: integrative:gate:security

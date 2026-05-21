@@ -54,7 +54,7 @@ cc = { version = "1.2.46", optional = true }
 
 [dev-dependencies]
 criterion.workspace = true
-env_logger = "0.11.10"
+env_logger = "0.11.8"
 serde_json.workspace = true
 tempfile = "3.23.0"
 temp-env = "0.3.6"

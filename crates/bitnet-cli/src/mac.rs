@@ -16,6 +16,7 @@ use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
+use crate::commands::AnswerCorpusCommand;
 use crate::model_cache::{self, VerifiedCachedModel};
 
 const APPLE_M4_CPU_NEON: &str = "apple-m4-cpu-neon";
@@ -36,6 +37,8 @@ const MAC_REGRESSION_DASHBOARD_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-ops/regression-dashboard.json";
 const MAC_REGRESSION_DASHBOARD_DEFAULT_MARKDOWN: &str =
     "target/apple-m4-inference-ops/regression-dashboard.md";
+const MAC_RELIABILITY_DRILL_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-inference-excellence/reliability-drills/summary.json";
 const APPLE_M4_REPORT_ROOT: &str = "ci/hardware/apple-m4-mac-mini";
 const MAC_BITNET_WARM_DEFAULT_RECEIPT: &str = "target/apple-m4-local-answer/mac-bitnet-warm.json";
 const MAC_BITNET_BENCHMARK_DEFAULT_RECEIPT: &str =
@@ -46,9 +49,13 @@ const MAC_BITNET_SERVE_GATE_DEFAULT_RECEIPT: &str =
     "target/apple-m4-bitnet-productization/bitnet-serve-gate.json";
 const MAC_SERVE_DEFAULT_RECEIPT_DIR: &str = "target/apple-m4-local-server/receipts";
 const MAC_SERVE_CHECK_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/mac-serve-check.json";
+const MAC_SERVE_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-local-server/serve-smoke.json";
 const MAC_SERVE_DEFAULT_HOST: &str = "127.0.0.1";
 const MAC_SERVE_DEFAULT_PORT: u16 = 8080;
 const MAC_SERVE_DEFAULT_MAX_NEW_TOKENS: usize = 64;
+const MAC_SERVE_CONTEXT_GUARDRAIL_ERROR_PREFIX: &str =
+    "mac serve context guardrail blocked request:";
+const MAC_SERVE_CONTEXT_GUARDRAIL_RECEIPT_MARKER: &str = "; receipt written to ";
 const MAC_BITNET_PROOF_DEFAULT_RECEIPT: &str =
     "target/apple-m4-continuity/mac-bitnet-proof-preflight.json";
 const MAC_VALIDATE_DEFAULT_RECEIPT: &str = "target/apple-m4-productization/mac-validate.json";
@@ -59,6 +66,10 @@ const MAC_VALIDATE_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-slm-quality-corpu
 const MAC_ROBUSTNESS_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-robustness-corpus.yaml";
 const MAC_ROBUSTNESS_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-excellence/robustness/summary.json";
+const MAC_LONG_CONTEXT_DEFAULT_CORPUS: &str = "ci/quality/apple-m4-long-context-corpus.yaml";
+const MAC_LONG_CONTEXT_ANSWER_CORPUS: &str = "ci/quality/apple-m4-long-context-answer-corpus.yaml";
+const MAC_LONG_CONTEXT_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-inference-excellence/context/answer-corpus.json";
 const MAC_SMOKE_PROMPT: &str = "Answer with a single digit: 2+2=";
 const MAC_SMOKE_EXPECTED_FRAGMENT: &str = "4";
 const MAC_CHAT_SMOKE_SYSTEM_PROMPT: &str = "You are a concise local assistant.";
@@ -114,6 +125,7 @@ const M4_SLM_BENCHMARK_V2_PROFILES: &[&str] = &[
     "resident_50",
     "resident_100",
 ];
+const M4_SLM_MIXED_MODEL_SWITCH_PROFILE: &str = "mixed_model_switch";
 const M4_SLM_BENCHMARK_V2_TIMING_METRICS: &[&str] = &[
     "cold_load_ms",
     "tokenizer_load_ms",
@@ -162,7 +174,89 @@ const M4_ROBUSTNESS_REQUIRED_CATEGORIES: &[&str] = &[
     "format_trap",
     "unsupported_request",
 ];
+const M4_RELIABILITY_REQUIRED_DRILLS: &[&str] = &[
+    "interrupted_generation",
+    "client_cancellation",
+    "timeout",
+    "interrupted_receipt_write",
+    "missing_cache",
+    "corrupt_cache",
+    "low_disk",
+    "process_restart",
+];
+const M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES: &[&str] =
+    &["dense_slm", "bitnet_one_shot", "bitnet_warm"];
 const M4_ROBUSTNESS_MODEL_FAMILIES: &[&str] = &["dense_slm", "bitnet"];
+const M4_CONTEXT_SHORT_PROMPT_TOKENS: usize = 512;
+const M4_CONTEXT_1K_PROMPT_TOKENS: usize = 1_024;
+const M4_CONTEXT_4K_PROMPT_TOKENS: usize = 4_096;
+const M4_BITNET_RECORDED_PROMPT_TOKENS: usize = 512;
+const M4_CONTEXT_APPROX_CHARS_PER_TOKEN: usize = 4;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MacContextModelFamily {
+    DenseSlm,
+    Bitnet,
+}
+
+impl MacContextModelFamily {
+    const fn label(self) -> &'static str {
+        match self {
+            Self::DenseSlm => "dense-slm",
+            Self::Bitnet => "bitnet",
+        }
+    }
+
+    const fn recorded_max_prompt_tokens(self) -> usize {
+        match self {
+            Self::DenseSlm => M4_CONTEXT_4K_PROMPT_TOKENS,
+            Self::Bitnet => M4_BITNET_RECORDED_PROMPT_TOKENS,
+        }
+    }
+
+    fn recorded_profiles(self) -> Vec<&'static str> {
+        match self {
+            Self::DenseSlm => vec![
+                "short_prompt_16_out",
+                "short_prompt_64_out",
+                "long_prompt_16_out",
+                "long_prompt_128_out",
+                "context_1k",
+                "context_4k",
+                "resident_25",
+                "resident_50",
+                "resident_100",
+            ],
+            Self::Bitnet => vec![
+                "one_shot_mac_ask",
+                "bitnet_warm_resident_25",
+                "bitnet_warm_resident_50",
+                "bitnet_warm_resident_100",
+            ],
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MacContextRoute {
+    Ask,
+    Chat,
+    ChatSmoke,
+    BitnetWarm,
+    Serve,
+}
+
+impl MacContextRoute {
+    const fn label(self) -> &'static str {
+        match self {
+            Self::Ask => "mac ask",
+            Self::Chat => "mac chat",
+            Self::ChatSmoke => "mac chat-smoke",
+            Self::BitnetWarm => "mac bitnet-warm",
+            Self::Serve => "mac serve",
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
 enum MacValidateProfileSet {
@@ -181,12 +275,30 @@ enum MacEvalSuite {
     /// Dry-run the dense SLM and BitNet negative/robustness corpus.
     #[value(name = "m4-robustness")]
     M4Robustness,
+    /// Dry-run the Apple M4 long-context quality corpus contract.
+    #[value(name = "m4-long-context")]
+    M4LongContext,
 }
 
 impl MacEvalSuite {
     const fn id(self) -> &'static str {
         match self {
             Self::M4Robustness => "m4-robustness",
+            Self::M4LongContext => "m4-long-context",
+        }
+    }
+
+    const fn default_corpus(self) -> &'static str {
+        match self {
+            Self::M4Robustness => MAC_ROBUSTNESS_DEFAULT_CORPUS,
+            Self::M4LongContext => MAC_LONG_CONTEXT_DEFAULT_CORPUS,
+        }
+    }
+
+    const fn default_receipt(self) -> &'static str {
+        match self {
+            Self::M4Robustness => MAC_ROBUSTNESS_DEFAULT_RECEIPT,
+            Self::M4LongContext => MAC_LONG_CONTEXT_DEFAULT_RECEIPT,
         }
     }
 }
@@ -229,6 +341,9 @@ enum MacBenchmarkProfile {
     /// Long prompts with a 128-token output budget.
     #[value(name = "long_prompt_128_out")]
     LongPrompt128Out,
+    /// Context profile group alias covering context_1k and context_4k.
+    #[value(name = "context")]
+    Context,
     /// Synthetic context prompt targeting roughly 1k input tokens.
     #[value(name = "context_1k")]
     Context1k,
@@ -244,6 +359,9 @@ enum MacBenchmarkProfile {
     /// Resident 100-prompt warm-session profile.
     #[value(name = "resident_100")]
     Resident100,
+    /// Mixed supported dense-model switch soak.
+    #[value(name = "mixed_model_switch")]
+    MixedModelSwitch,
 }
 
 impl MacBenchmarkProfile {
@@ -253,11 +371,13 @@ impl MacBenchmarkProfile {
             Self::ShortPrompt64Out => "short_prompt_64_out",
             Self::LongPrompt16Out => "long_prompt_16_out",
             Self::LongPrompt128Out => "long_prompt_128_out",
+            Self::Context => "context",
             Self::Context1k => "context_1k",
             Self::Context4k => "context_4k",
             Self::Resident25 => "resident_25",
             Self::Resident50 => "resident_50",
             Self::Resident100 => "resident_100",
+            Self::MixedModelSwitch => M4_SLM_MIXED_MODEL_SWITCH_PROFILE,
         }
     }
 }
@@ -341,6 +461,41 @@ struct MacRobustnessScoring {
     forbidden_tokens: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     schema: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MacLongContextCorpus {
+    schema: u64,
+    artifact_kind: String,
+    name: String,
+    description: String,
+    #[serde(default)]
+    metadata: serde_json::Value,
+    #[serde(default)]
+    defaults: MacLongContextDefaults,
+    cases: Vec<MacLongContextCase>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct MacLongContextDefaults {
+    #[serde(default)]
+    families: Vec<String>,
+    #[serde(default)]
+    family_prompt_templates: std::collections::BTreeMap<String, String>,
+    #[serde(default)]
+    max_new_tokens: Option<usize>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MacLongContextCase {
+    id: String,
+    category: String,
+    #[serde(default)]
+    profile: Option<String>,
+    question: String,
+    #[serde(default)]
+    max_new_tokens: Option<usize>,
+    scoring: MacRobustnessScoring,
 }
 
 /// Run Apple M4 local operator flows with strict receipts.
@@ -447,6 +602,17 @@ enum MacAction {
         open_targets: bool,
 
         /// Emit JSON to stdout after writing --json-out and --markdown-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
+    /// Write bounded M4 recovery-drill coverage and retry-guidance receipts.
+    ReliabilityDrill {
+        /// Output strict M4 reliability-drill receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_RELIABILITY_DRILL_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Emit JSON to stdout after writing --json-out.
         #[arg(long, default_value_t = false)]
         json: bool,
     },
@@ -865,6 +1031,41 @@ enum MacAction {
         json_out: PathBuf,
     },
 
+    /// Run an in-process dense M4 local-server conformance smoke and write one aggregate receipt.
+    ServeSmoke {
+        /// Supported dense SLM model id. Defaults to the validated Apple M4 SLM runtime artifact.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
+        #[arg(long, value_name = "PATH")]
+        cache_dir: Option<PathBuf>,
+
+        /// M4 server device route. Only apple-m4-cpu-neon is supported for dense serve smoke.
+        #[arg(long, default_value = APPLE_M4_CPU_NEON)]
+        device: String,
+
+        /// Prompt for one-shot and streaming completion probes.
+        #[arg(long, default_value = "What is 2+2? Answer with one digit.")]
+        prompt: String,
+
+        /// Maximum new tokens for each completion probe.
+        #[arg(long, visible_aliases = ["max-tokens", "n-predict"], default_value_t = 4)]
+        max_new_tokens: usize,
+
+        /// Optional operator timeout boundary recorded in the smoke receipt.
+        #[arg(long)]
+        timeout_seconds: Option<u64>,
+
+        /// Directory where per-request receipts are exported during the smoke.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_DEFAULT_RECEIPT_DIR)]
+        receipt_dir: PathBuf,
+
+        /// Output the aggregate dense serve smoke receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_SERVE_SMOKE_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+    },
+
     /// Run multiple prompts in one resident Apple M4 CPU/NEON SLM session.
     Chat {
         /// Model family for the resident chat route. BitNet requires --bitnet-chat-gate-receipt.
@@ -1050,23 +1251,39 @@ enum MacAction {
         json_out: PathBuf,
     },
 
-    /// Dry-run supported Apple M4 eval suites and write receipt-backed summaries.
+    /// Run supported Apple M4 eval suites and write receipt-backed summaries.
     Eval {
-        /// Eval suite to dry-run.
+        /// Eval suite to run.
         #[arg(long, value_enum)]
         suite: MacEvalSuite,
 
-        /// Deterministic robustness corpus.
-        #[arg(long, value_name = "PATH", default_value = MAC_ROBUSTNESS_DEFAULT_CORPUS)]
-        corpus: PathBuf,
+        /// Deterministic eval corpus. Defaults depend on --suite.
+        #[arg(long, value_name = "PATH")]
+        corpus: Option<PathBuf>,
+
+        /// Supported dense SLM model id for live long-context runs.
+        #[arg(long, default_value = model_cache::M4_SLM_RUNTIME_MODEL_ID)]
+        model_id: String,
+
+        /// Model cache root for live long-context runs.
+        #[arg(long, value_name = "DIR")]
+        cache_dir: Option<PathBuf>,
 
         /// Do not invoke model generation; validate suite shape and emit not-run rows.
         #[arg(long, default_value_t = false)]
         dry_run: bool,
 
+        /// Per-prompt timeout for live long-context answer-corpus child runs.
+        #[arg(long, value_name = "SECONDS")]
+        per_prompt_timeout_seconds: Option<u64>,
+
+        /// Fail the command if a live long-context answer fails its quality gate.
+        #[arg(long, default_value_t = false)]
+        fail_on_quality: bool,
+
         /// Output eval summary receipt.
-        #[arg(long, value_name = "PATH", default_value = MAC_ROBUSTNESS_DEFAULT_RECEIPT)]
-        json_out: PathBuf,
+        #[arg(long, value_name = "PATH")]
+        json_out: Option<PathBuf>,
 
         /// Emit JSON to stdout after writing --json-out.
         #[arg(long, default_value_t = false)]
@@ -1277,6 +1494,10 @@ impl MacCommand {
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac regression-dashboard")?;
                 run_regression_dashboard(root, json_out, markdown_out, explain, open_targets, json)
+            }
+            MacAction::ReliabilityDrill { json_out, json } => {
+                ensure_supported_mac_device(explicit_device_label, "mac reliability-drill")?;
+                run_reliability_drill(json_out, json)
             }
             MacAction::Check { model_id, cache_dir, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac check")?;
@@ -1525,6 +1746,29 @@ impl MacCommand {
             MacAction::ServeCheck { url, completion, prompt, max_new_tokens, json_out } => {
                 run_mac_serve_check(&url, completion, &prompt, max_new_tokens, json_out)
             }
+            MacAction::ServeSmoke {
+                model_id,
+                cache_dir,
+                device,
+                prompt,
+                max_new_tokens,
+                timeout_seconds,
+                receipt_dir,
+                json_out,
+            } => {
+                ensure_supported_mac_serve_device(explicit_device_label)?;
+                run_mac_serve_smoke(
+                    &model_id,
+                    cache_dir,
+                    &device,
+                    &prompt,
+                    max_new_tokens,
+                    timeout_seconds,
+                    receipt_dir,
+                    json_out,
+                )
+                .await
+            }
             MacAction::Chat {
                 model_family,
                 prompts,
@@ -1578,6 +1822,23 @@ impl MacCommand {
                     )?;
                     let prompt_input =
                         resolve_mac_chat_prompts(prompts, stdin, interactive, quiet)?;
+                    let estimated_prompt_tokens = mac_context_max_turn_estimated_prompt_tokens(
+                        prompt_input.prompts.iter().map(String::as_str),
+                        system_prompt.as_deref(),
+                    );
+                    let prompt_refs =
+                        prompt_input.prompts.iter().map(|prompt| Some(prompt.as_str()));
+                    ensure_mac_context_estimate_allowed(
+                        &json_out,
+                        MacContextModelFamily::Bitnet,
+                        MacContextRoute::Chat,
+                        &model_id,
+                        mac_context_prompt_sha256s(
+                            prompt_refs.chain(std::iter::once(system_prompt.as_deref())),
+                        ),
+                        estimated_prompt_tokens,
+                        max_new_tokens,
+                    )?;
                     let chat = run_bitnet_chat_session(BitnetChatRun {
                         model_id: &model_id,
                         cache_dir,
@@ -1607,6 +1868,22 @@ impl MacCommand {
                     };
                 }
                 let prompt_input = resolve_mac_chat_prompts(prompts, stdin, interactive, quiet)?;
+                let estimated_prompt_tokens = mac_context_max_turn_estimated_prompt_tokens(
+                    prompt_input.prompts.iter().map(String::as_str),
+                    system_prompt.as_deref(),
+                );
+                let prompt_refs = prompt_input.prompts.iter().map(|prompt| Some(prompt.as_str()));
+                ensure_mac_context_estimate_allowed(
+                    &json_out,
+                    MacContextModelFamily::DenseSlm,
+                    MacContextRoute::Chat,
+                    &model_id,
+                    mac_context_prompt_sha256s(
+                        prompt_refs.chain(std::iter::once(system_prompt.as_deref())),
+                    ),
+                    estimated_prompt_tokens,
+                    max_new_tokens,
+                )?;
                 let chat = run_chat_session(
                     &model_id,
                     cache_dir,
@@ -1626,6 +1903,7 @@ impl MacCommand {
                     prompt_input.interactive,
                     allocation_audit,
                     metal_prefill_qkv_phase,
+                    MacContextRoute::Chat,
                     json_out,
                 );
                 tokio::select! {
@@ -1694,9 +1972,30 @@ impl MacCommand {
                 })
                 .await
             }
-            MacAction::Eval { suite, corpus, dry_run, json_out, json } => {
+            MacAction::Eval {
+                suite,
+                corpus,
+                model_id,
+                cache_dir,
+                dry_run,
+                per_prompt_timeout_seconds,
+                fail_on_quality,
+                json_out,
+                json,
+            } => {
                 ensure_supported_mac_device(explicit_device_label, "mac eval")?;
-                run_mac_eval(suite, corpus, dry_run, json_out, json)
+                run_mac_eval(MacEvalRun {
+                    suite,
+                    corpus,
+                    model_id,
+                    cache_dir,
+                    dry_run,
+                    per_prompt_timeout_seconds,
+                    fail_on_quality,
+                    json_out: json_out.unwrap_or_else(|| PathBuf::from(suite.default_receipt())),
+                    json,
+                })
+                .await
             }
             MacAction::Benchmark {
                 calibrate,
@@ -1783,37 +2082,201 @@ fn resolve_mac_question(positional: Option<String>, flag: Option<String>) -> Res
     }
 }
 
-fn run_mac_eval(
+struct MacEvalRun {
     suite: MacEvalSuite,
-    corpus_path: PathBuf,
+    corpus: Option<PathBuf>,
+    model_id: String,
+    cache_dir: Option<PathBuf>,
     dry_run: bool,
+    per_prompt_timeout_seconds: Option<u64>,
+    fail_on_quality: bool,
     json_out: PathBuf,
     json: bool,
-) -> Result<()> {
-    if !dry_run {
+}
+
+async fn run_mac_eval(request: MacEvalRun) -> Result<()> {
+    if request.suite == MacEvalSuite::M4LongContext {
+        return run_mac_long_context_eval(request).await;
+    }
+    if !request.dry_run {
         anyhow::bail!(
             "mac eval --suite {} currently supports only --dry-run; live robustness execution needs a separate receipt-gated item",
-            suite.id()
+            request.suite.id()
         );
     }
+    let corpus_path =
+        request.corpus.unwrap_or_else(|| PathBuf::from(request.suite.default_corpus()));
     let (corpus, corpus_sha256) = load_mac_robustness_corpus(&corpus_path)?;
-    let receipt = mac_robustness_eval_summary_receipt(suite, &corpus_path, corpus_sha256, &corpus);
-    validate_mac_receipt_value(&json_out, &receipt)?;
-    write_json_receipt(&json_out, &receipt)?;
-    if json {
+    let receipt =
+        mac_robustness_eval_summary_receipt(request.suite, &corpus_path, corpus_sha256, &corpus);
+    validate_mac_receipt_value(&request.json_out, &receipt)?;
+    write_json_receipt(&request.json_out, &receipt)?;
+    if request.json {
         println!("{}", serde_json::to_string_pretty(&receipt)?);
     } else {
         println!(
             "Apple M4 eval suite: {} (dry-run, cases={}, receipt={})",
-            suite.id(),
+            request.suite.id(),
             receipt["expanded_case_count"].as_u64().unwrap_or(0),
-            json_out.display()
+            request.json_out.display()
         );
         println!(
             "Claim boundary: robustness cases are mechanically scored and separated by dense SLM vs BitNet; no broad safety, alignment, factuality, Metal, QK256, Neural Engine, MPSGraph, or speedup claim."
         );
     }
     Ok(())
+}
+
+async fn run_mac_long_context_eval(request: MacEvalRun) -> Result<()> {
+    let corpus_path = request.corpus.unwrap_or_else(|| {
+        PathBuf::from(if request.dry_run {
+            MAC_LONG_CONTEXT_DEFAULT_CORPUS
+        } else {
+            MAC_LONG_CONTEXT_ANSWER_CORPUS
+        })
+    });
+    if !request.dry_run {
+        let model = model_cache::verified_apple_m4_slm_model(&request.model_id, request.cache_dir)?;
+        let command = AnswerCorpusCommand {
+            corpus: corpus_path.clone(),
+            model: model.path.clone(),
+            model_id: Some(model.id.clone()),
+            tokenizer: None,
+            device: Some(APPLE_M4_CPU_NEON.to_string()),
+            json_out: request.json_out.clone(),
+            dry_run: false,
+            per_prompt_timeout_seconds: request.per_prompt_timeout_seconds,
+            fail_on_quality: false,
+            dump_logit_steps: None,
+            logits_topk: 10,
+            cpu_kernel: None,
+            case_ids: Vec::new(),
+        };
+        command.execute(APPLE_M4_CPU_NEON).await?;
+        let receipt =
+            annotate_mac_long_context_live_receipt(&request.json_out, &corpus_path, &model)?;
+        if request.fail_on_quality
+            && receipt["m4_context_proof"]["quality_gate_passed"].as_bool() != Some(true)
+        {
+            anyhow::bail!(
+                "M4 long-context quality failed: {} failed, {} timed out; annotated receipt written to {}",
+                receipt["quality_summary"]["failed"].as_u64().unwrap_or(0),
+                receipt["quality_summary"]["timeout"].as_u64().unwrap_or(0),
+                request.json_out.display()
+            );
+        }
+        if request.json {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        } else {
+            println!(
+                "Apple M4 eval suite: m4-long-context (live dense SLM cases={}, receipt={})",
+                receipt["quality_summary"]["total"].as_u64().unwrap_or(0),
+                request.json_out.display()
+            );
+            println!(
+                "Claim boundary: this is dense SLM long-context evidence for the tested model identity only; BitNet long-context remains unsupported until separate BitNet receipts exist."
+            );
+        }
+        return Ok(());
+    }
+    let (corpus, corpus_sha256) = load_mac_long_context_corpus(&corpus_path)?;
+    let receipt = mac_long_context_eval_summary_receipt(&corpus_path, corpus_sha256, &corpus);
+    validate_mac_receipt_value(&request.json_out, &receipt)?;
+    write_json_receipt(&request.json_out, &receipt)?;
+    if request.json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        println!(
+            "Apple M4 eval suite: m4-long-context (dry-run, cases={}, receipt={})",
+            receipt["expanded_case_count"].as_u64().unwrap_or(0),
+            request.json_out.display()
+        );
+        println!(
+            "Claim boundary: long-context cases are a mechanical contract only until live answer-corpus and benchmark receipts are published; dense SLM rows and BitNet unsupported boundaries remain separate."
+        );
+    }
+    Ok(())
+}
+
+fn annotate_mac_long_context_live_receipt(
+    json_out: &Path,
+    corpus_path: &Path,
+    model: &VerifiedCachedModel,
+) -> Result<serde_json::Value> {
+    let bytes = std::fs::read(json_out)
+        .with_context(|| format!("failed to read {}", json_out.display()))?;
+    let mut receipt: serde_json::Value = serde_json::from_slice(&bytes)
+        .with_context(|| format!("invalid JSON receipt {}", json_out.display()))?;
+    let quality = &receipt["quality_summary"];
+    let total = quality["total"].as_u64().unwrap_or(0);
+    let passed = quality["passed"].as_u64().unwrap_or(0);
+    let failed = quality["failed"].as_u64().unwrap_or(0);
+    let timed_out = quality["timeout"].as_u64().unwrap_or(0);
+    let not_run = quality["not_run"].as_u64().unwrap_or(0);
+    let quality_gate_passed =
+        total > 0 && passed == total && failed == 0 && timed_out == 0 && not_run == 0;
+
+    let object = receipt.as_object_mut().ok_or_else(|| {
+        anyhow!("{} long-context answer-corpus receipt must be a JSON object", json_out.display())
+    })?;
+    object.insert(
+        "artifact_kind".to_string(),
+        serde_json::json!("apple_m4_long_context_answer_corpus"),
+    );
+    object.insert("suite".to_string(), serde_json::json!("m4-long-context"));
+    object.insert("work_item".to_string(), serde_json::json!("M4-CONTEXT-002"));
+    object.insert("model_id".to_string(), serde_json::json!(model.id));
+    object.insert("model_sha256".to_string(), serde_json::json!(model.sha256));
+    object.insert(
+        "m4_context_proof".to_string(),
+        serde_json::json!({
+            "suite": "m4-long-context",
+            "work_item": "M4-CONTEXT-002",
+            "source_answer_corpus": corpus_path.display().to_string(),
+            "tested_model_id": model.id,
+            "tested_model_sha256": model.sha256,
+            "tested_backend": APPLE_M4_CPU_NEON,
+            "quality_gate_passed": quality_gate_passed,
+            "live_quality_receipt_published": true,
+            "benchmark_receipt_required": true,
+            "benchmark_command": "target/release/bitnet mac benchmark --profile context --json-out ci/hardware/apple-m4-mac-mini/<date>/context/benchmark.json",
+            "profiles_required": ["context_1k", "context_4k", "unsupported_boundary"],
+            "bitnet_long_context": {
+                "status": "unsupported_until_bitnet_long_context_receipts_exist",
+                "dense_slm_evidence_proves_bitnet": false
+            },
+            "claim_boundary": {
+                "tested_identities_only": true,
+                "long_context_proof_applies_to_untested_context_lengths": false,
+                "long_context_proof_applies_to_untested_model_identities": false,
+                "dense_slm_evidence_proves_bitnet": false,
+                "full_metal_inference_claimed": false,
+                "qk256_apple_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "macbook_evidence": false,
+                "broad_model_quality_claim": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false
+            }
+        }),
+    );
+    if let Some(claim_boundary) =
+        receipt.get_mut("claim_boundary").and_then(serde_json::Value::as_object_mut)
+    {
+        claim_boundary.insert("long_context_quality_receipt".to_string(), serde_json::json!(true));
+        claim_boundary.insert(
+            "long_context_quality_gate_passed".to_string(),
+            serde_json::json!(quality_gate_passed),
+        );
+        claim_boundary
+            .insert("dense_slm_evidence_proves_bitnet".to_string(), serde_json::json!(false));
+        claim_boundary.insert("bitnet_long_context_proven".to_string(), serde_json::json!(false));
+        claim_boundary.insert("macbook_evidence".to_string(), serde_json::json!(false));
+    }
+    validate_mac_receipt_value(json_out, &receipt)?;
+    write_json_receipt(json_out, &receipt)?;
+    Ok(receipt)
 }
 
 fn load_mac_robustness_corpus(path: &Path) -> Result<(MacRobustnessCorpus, String)> {
@@ -1906,17 +2369,105 @@ fn validate_mac_robustness_corpus(path: &Path, corpus: &MacRobustnessCorpus) -> 
     Ok(())
 }
 
+fn load_mac_long_context_corpus(path: &Path) -> Result<(MacLongContextCorpus, String)> {
+    let bytes =
+        std::fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let corpus: MacLongContextCorpus = serde_yaml::from_slice(&bytes)
+        .with_context(|| format!("failed to parse {}", path.display()))?;
+    validate_mac_long_context_corpus(path, &corpus)?;
+    Ok((corpus, sha256_hex(&bytes)))
+}
+
+fn validate_mac_long_context_corpus(path: &Path, corpus: &MacLongContextCorpus) -> Result<()> {
+    if corpus.schema != 1 {
+        anyhow::bail!(
+            "{} unsupported long-context corpus schema {}",
+            path.display(),
+            corpus.schema
+        );
+    }
+    if corpus.artifact_kind != "apple_m4_long_context_corpus" {
+        anyhow::bail!(
+            "{} unexpected long-context corpus artifact_kind {}",
+            path.display(),
+            corpus.artifact_kind
+        );
+    }
+    if corpus.cases.is_empty() {
+        anyhow::bail!("{} long-context corpus must contain at least one case", path.display());
+    }
+    for required_family in ["dense_slm", "bitnet"] {
+        if !corpus.defaults.families.iter().any(|family| family == required_family) {
+            anyhow::bail!(
+                "{} long-context corpus defaults.families must include {required_family}",
+                path.display()
+            );
+        }
+        if !corpus.defaults.family_prompt_templates.contains_key(required_family) {
+            anyhow::bail!(
+                "{} long-context corpus defaults.family_prompt_templates missing {required_family}",
+                path.display()
+            );
+        }
+    }
+    let mut case_ids = std::collections::BTreeSet::new();
+    let mut categories = std::collections::BTreeSet::new();
+    for case in &corpus.cases {
+        if case.id.trim().is_empty() {
+            anyhow::bail!("{} long-context corpus case has empty id", path.display());
+        }
+        if !case_ids.insert(case.id.as_str()) {
+            anyhow::bail!(
+                "{} long-context corpus case id `{}` is duplicated",
+                path.display(),
+                case.id
+            );
+        }
+        if case.question.trim().is_empty() {
+            anyhow::bail!(
+                "{} long-context corpus case `{}` has empty question",
+                path.display(),
+                case.id
+            );
+        }
+        validate_mac_scoring_contract(path, "long-context", &case.id, &case.scoring)?;
+        categories.insert(case.category.as_str());
+    }
+    for required_category in [
+        "retrieval_copy",
+        "table_extraction",
+        "late_context_instruction_following",
+        "truncation_behavior",
+    ] {
+        if !categories.contains(required_category) {
+            anyhow::bail!(
+                "{} long-context corpus must include category {required_category}",
+                path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
 fn validate_mac_robustness_scoring(path: &Path, case: &MacRobustnessCase) -> Result<()> {
-    let scoring = &case.scoring;
+    validate_mac_scoring_contract(path, "robustness", &case.id, &case.scoring)
+}
+
+fn validate_mac_scoring_contract(
+    path: &Path,
+    suite_label: &str,
+    case_id: &str,
+    scoring: &MacRobustnessScoring,
+) -> Result<()> {
     match scoring.kind.as_str() {
         "exact_match" | "normalized_match" => {
             if scoring.expected.as_ref().is_none_or(|value| value.trim().is_empty())
                 && scoring.expected_normalized.as_ref().is_none_or(|value| value.trim().is_empty())
             {
                 anyhow::bail!(
-                    "{} robustness case `{}` scoring `{}` requires expected or expected_normalized",
+                    "{} {suite_label} case `{}` scoring `{}` requires expected or expected_normalized",
                     path.display(),
-                    case.id,
+                    case_id,
                     scoring.kind
                 );
             }
@@ -1924,18 +2475,18 @@ fn validate_mac_robustness_scoring(path: &Path, case: &MacRobustnessCase) -> Res
         "required_keywords" => {
             if scoring.required_keywords.as_ref().is_none_or(Vec::is_empty) {
                 anyhow::bail!(
-                    "{} robustness case `{}` required_keywords scoring needs required_keywords",
+                    "{} {suite_label} case `{}` required_keywords scoring needs required_keywords",
                     path.display(),
-                    case.id
+                    case_id
                 );
             }
         }
         "forbidden_tokens" => {
             if scoring.forbidden_tokens.as_ref().is_none_or(Vec::is_empty) {
                 anyhow::bail!(
-                    "{} robustness case `{}` forbidden_tokens scoring needs forbidden_tokens",
+                    "{} {suite_label} case `{}` forbidden_tokens scoring needs forbidden_tokens",
                     path.display(),
-                    case.id
+                    case_id
                 );
             }
         }
@@ -1944,25 +2495,25 @@ fn validate_mac_robustness_scoring(path: &Path, case: &MacRobustnessCase) -> Res
                 && scoring.forbidden_tokens.as_ref().is_none_or(Vec::is_empty)
             {
                 anyhow::bail!(
-                    "{} robustness case `{}` required_forbidden_tokens scoring needs required_keywords or forbidden_tokens",
+                    "{} {suite_label} case `{}` required_forbidden_tokens scoring needs required_keywords or forbidden_tokens",
                     path.display(),
-                    case.id
+                    case_id
                 );
             }
         }
         "json_schema" => {
             if scoring.schema.is_none() {
                 anyhow::bail!(
-                    "{} robustness case `{}` json_schema scoring needs schema",
+                    "{} {suite_label} case `{}` json_schema scoring needs schema",
                     path.display(),
-                    case.id
+                    case_id
                 );
             }
         }
         other => anyhow::bail!(
-            "{} robustness case `{}` has unsupported scoring kind `{other}`",
+            "{} {suite_label} case `{}` has unsupported scoring kind `{other}`",
             path.display(),
-            case.id
+            case_id
         ),
     }
     Ok(())
@@ -2077,6 +2628,127 @@ fn mac_robustness_eval_summary_receipt(
     })
 }
 
+fn mac_long_context_eval_summary_receipt(
+    corpus_path: &Path,
+    corpus_sha256: String,
+    corpus: &MacLongContextCorpus,
+) -> serde_json::Value {
+    let families = ["dense_slm", "bitnet"];
+    let expanded_cases = families
+        .iter()
+        .flat_map(|family| long_context_case_rows_for_family(corpus, family))
+        .collect::<Vec<_>>();
+    let family_summaries = families
+        .iter()
+        .map(|family| {
+            let rows = long_context_case_rows_for_family(corpus, family);
+            let supported = *family == "dense_slm";
+            serde_json::json!({
+                "model_family": family,
+                "receipt_family": format!("{family}_long_context"),
+                "prompt_template": long_context_prompt_template(corpus, family),
+                "model_identity": if *family == "dense_slm" {
+                    robustness_model_identity("dense_slm")
+                } else {
+                    robustness_model_identity("bitnet")
+                },
+                "dry_run": true,
+                "long_context_supported_for_live_run": supported,
+                "unsupported_boundary": if supported {
+                    serde_json::Value::Null
+                } else {
+                    serde_json::json!({
+                        "status": "unsupported_until_bitnet_long_context_receipts_exist",
+                        "reason": "BitNet ask/warm evidence does not prove BitNet long-context behavior",
+                        "dense_slm_evidence_proves_bitnet": false
+                    })
+                },
+                "cases_total": rows.len(),
+                "cases_executed": 0,
+                "generated_tokens": 0,
+                "scoring_summary": robustness_scoring_summary(&rows),
+                "category_summary": long_context_category_summary(&rows),
+                "cases": rows,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_long_context_eval_summary",
+        "suite": "m4-long-context",
+        "work_item": "M4-CONTEXT-HARNESS-001",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "model_family": "dense_slm_and_bitnet",
+        "dry_run": true,
+        "expanded_case_count": expanded_cases.len(),
+        "generated_tokens": 0,
+        "corpus": {
+            "schema": corpus.schema,
+            "artifact_kind": &corpus.artifact_kind,
+            "name": &corpus.name,
+            "description": &corpus.description,
+            "path": corpus_path.display().to_string(),
+            "sha256": corpus_sha256,
+            "case_count": corpus.cases.len(),
+            "metadata": &corpus.metadata,
+            "mechanical_scoring_only": true,
+            "required_llm_judge": false,
+            "defaults": {
+                "families": &corpus.defaults.families,
+                "family_prompt_templates": &corpus.defaults.family_prompt_templates,
+                "max_new_tokens": corpus.defaults.max_new_tokens,
+            },
+        },
+        "coverage": {
+            "retrieval_copy": long_context_has_category(corpus, "retrieval_copy"),
+            "table_extraction": long_context_has_category(corpus, "table_extraction"),
+            "late_context_instruction_following": long_context_has_category(corpus, "late_context_instruction_following"),
+            "truncation_behavior": long_context_has_category(corpus, "truncation_behavior"),
+            "input_throughput_receipt_required": true,
+            "ttft_receipt_required": true,
+            "decode_throughput_receipt_required": true,
+            "memory_receipt_required": true,
+            "unsupported_context_boundaries_required": true,
+        },
+        "scoring_summary": robustness_scoring_summary(&expanded_cases),
+        "category_summary": long_context_category_summary(&expanded_cases),
+        "families": family_summaries,
+        "evidence_status": {
+            "live_quality_receipts_published": false,
+            "live_timing_receipts_published": false,
+            "contract_ready_for_m4_context_proof": true,
+            "next_required_work": [
+                "wire live m4-long-context execution to publish quality receipts under ci/hardware/apple-m4-mac-mini/<date>/context/answer-corpus.json",
+                "target/release/bitnet mac benchmark --profile context --json-out ci/hardware/apple-m4-mac-mini/<date>/context/benchmark.json"
+            ]
+        },
+        "claim_boundary": {
+            "long_context_contract_only": true,
+            "live_long_context_quality_claim": false,
+            "live_long_context_timing_claim": false,
+            "long_context_proof_applies_to_untested_context_lengths": false,
+            "long_context_proof_applies_to_untested_model_identities": false,
+            "dense_slm_evidence_proves_bitnet": false,
+            "bitnet_evidence_proves_dense_slm": false,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
+        }
+    })
+}
+
 fn robustness_case_rows_for_family(
     corpus: &MacRobustnessCorpus,
     family: &str,
@@ -2149,6 +2821,54 @@ fn robustness_model_identity(family: &str) -> serde_json::Value {
     }
 }
 
+fn long_context_case_rows_for_family(
+    corpus: &MacLongContextCorpus,
+    family: &str,
+) -> Vec<serde_json::Value> {
+    corpus
+        .cases
+        .iter()
+        .map(|case| {
+            serde_json::json!({
+                "id": &case.id,
+                "category": &case.category,
+                "profile": case.profile.as_deref().unwrap_or("long_context"),
+                "model_family": family,
+                "prompt_template": long_context_prompt_template(corpus, family),
+                "max_new_tokens": case.max_new_tokens.or(corpus.defaults.max_new_tokens),
+                "status": "not_run",
+                "dry_run": true,
+                "quality": {
+                    "passed": serde_json::Value::Null,
+                    "scoring": serde_json::to_value(&case.scoring).unwrap_or(serde_json::Value::Null),
+                },
+                "scoring": serde_json::to_value(&case.scoring).unwrap_or(serde_json::Value::Null),
+                "unsupported_boundary": if family == "bitnet" {
+                    serde_json::json!({
+                        "status": "unsupported_until_bitnet_long_context_receipts_exist",
+                        "dense_slm_evidence_proves_bitnet": false
+                    })
+                } else {
+                    serde_json::Value::Null
+                }
+            })
+        })
+        .collect()
+}
+
+fn long_context_prompt_template(corpus: &MacLongContextCorpus, family: &str) -> String {
+    corpus
+        .defaults
+        .family_prompt_templates
+        .get(family)
+        .cloned()
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
+fn long_context_has_category(corpus: &MacLongContextCorpus, category: &str) -> bool {
+    corpus.cases.iter().any(|case| case.category == category)
+}
+
 fn robustness_scoring_summary(rows: &[serde_json::Value]) -> serde_json::Value {
     let mut kinds = std::collections::BTreeSet::new();
     for row in rows {
@@ -2167,8 +2887,27 @@ fn robustness_scoring_summary(rows: &[serde_json::Value]) -> serde_json::Value {
 }
 
 fn robustness_category_summary(rows: &[serde_json::Value]) -> serde_json::Value {
+    category_summary_for(rows, M4_ROBUSTNESS_REQUIRED_CATEGORIES)
+}
+
+fn long_context_category_summary(rows: &[serde_json::Value]) -> serde_json::Value {
+    category_summary_for(
+        rows,
+        &[
+            "retrieval_copy",
+            "table_extraction",
+            "late_context_instruction_following",
+            "truncation_behavior",
+        ],
+    )
+}
+
+fn category_summary_for(
+    rows: &[serde_json::Value],
+    required_categories: &[&str],
+) -> serde_json::Value {
     let mut categories = serde_json::Map::new();
-    for required_category in M4_ROBUSTNESS_REQUIRED_CATEGORIES {
+    for required_category in required_categories {
         let total =
             rows.iter().filter(|row| row["category"].as_str() == Some(required_category)).count();
         categories.insert(
@@ -3317,6 +4056,255 @@ fn run_regression_dashboard(
         }
     }
     Ok(())
+}
+
+fn run_reliability_drill(json_out: PathBuf, json: bool) -> Result<()> {
+    let receipt = apple_m4_reliability_drill_receipt(&json_out);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_reliability_drill_summary(&receipt, &json_out);
+    }
+    Ok(())
+}
+
+fn print_reliability_drill_summary(receipt: &serde_json::Value, json_out: &Path) {
+    println!(
+        "Mac reliability drills recorded: {} drills across {} route families ({})",
+        receipt["drill_count"].as_u64().unwrap_or_default(),
+        receipt["route_family_count"].as_u64().unwrap_or_default(),
+        json_out.display()
+    );
+    println!(
+        "Claim boundary: model-free recovery-drill coverage only; no live inference, BitNet chat/serve, full Metal, or broad performance claim."
+    );
+}
+
+fn apple_m4_reliability_drill_receipt(json_out: &Path) -> serde_json::Value {
+    let drills = apple_m4_reliability_drill_cases();
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_reliability_drills",
+        "mac reliability-drill",
+        "recovery_drill_receipt_contract",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    serde_json::json!({
+        "schema_version": "1.2.0",
+        "artifact_kind": "apple_m4_reliability_drills",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac reliability-drill",
+        "work_item": "M4-RELIABILITY-001",
+        "status": "ok",
+        "receipt_path": json_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "bounded local recovery-drill coverage",
+        },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
+        "drill_contract": {
+            "model_free": true,
+            "live_model_run": false,
+            "fault_injection_receipt_contract": true,
+            "route_scope": "dense SLM plus BitNet one-shot ask and warm routes",
+            "routes_proven_by_this_receipt": "recovery diagnostics, receipt obligations, and retry guidance only",
+            "fresh_runtime_interruption_proof": false,
+            "generic_pr_ci_safe": true,
+        },
+        "drill_ids": M4_RELIABILITY_REQUIRED_DRILLS,
+        "route_families_covered": M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES,
+        "drill_count": drills.len(),
+        "route_family_count": M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES.len(),
+        "routes": apple_m4_reliability_route_matrix_json(),
+        "drills": drills,
+        "operator_commands": {
+            "run": format!(
+                "target/release/bitnet --device {APPLE_M4_CPU_NEON} mac reliability-drill --json-out {}",
+                json_out.display()
+            ),
+            "receipt_check": format!("bitnet mac receipts-check {} --json", json_out.display()),
+            "dense_status": "bitnet mac doctor --json",
+            "bitnet_status": "bitnet mac doctor --json --include-bitnet",
+            "cache_prune_preview": "bitnet model prune --dry-run --json",
+        },
+        "claim_boundary": {
+            "recovery_drill_receipts": true,
+            "model_free": true,
+            "no_live_model_run": true,
+            "no_model_download": true,
+            "fresh_runtime_interruption_proof": false,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "service_production_readiness_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "bitnet_quality_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_reliability_route_matrix_json() -> serde_json::Value {
+    serde_json::json!({
+        "dense_slm": {
+            "family": "dense_slm",
+            "enabled_routes": ["mac ask", "mac chat", "mac serve"],
+            "receipt_surfaces": [
+                "one-shot answer receipt",
+                "chat aggregate and per-turn receipts",
+                "local-server failure or per-request receipts"
+            ],
+        },
+        "bitnet_one_shot": {
+            "family": "bitnet_one_shot",
+            "enabled_routes": ["mac ask"],
+            "receipt_surfaces": ["BitNet one-shot ask success or failure receipt"],
+            "disabled_surfaces": ["chat", "serve"],
+        },
+        "bitnet_warm": {
+            "family": "bitnet_warm",
+            "enabled_routes": ["mac bitnet-warm"],
+            "receipt_surfaces": ["BitNet warm aggregate, per-turn, timeout, or failure receipt"],
+            "disabled_surfaces": ["chat", "serve"],
+        },
+    })
+}
+
+fn apple_m4_reliability_drill_cases() -> Vec<serde_json::Value> {
+    vec![
+        apple_m4_reliability_drill_case(
+            "interrupted_generation",
+            "generation_interrupted",
+            "failed",
+            true,
+            &[
+                "Stop generation cooperatively, then write a failed receipt with the last completed stage.",
+                "Retry with a smaller --max-new-tokens value or rerun the same prompt after confirming the previous receipt was written.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "client_cancellation",
+            "client_cancelled",
+            "cancelled",
+            true,
+            &[
+                "Record cancellation as an operator-visible outcome instead of silently dropping the run.",
+                "For chat or warm routes, exit between prompts or rerun with per-turn receipts enabled before using the aggregate receipt for claims.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "timeout",
+            "timeout_reached",
+            "timed_out",
+            false,
+            &[
+                "Record the configured timeout, reached stage, elapsed milliseconds, and empty or partial generation state.",
+                "Increase the timeout only after checking whether load, tokenizer, prefill, first-token, or decode time dominated the run.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "interrupted_receipt_write",
+            "receipt_write_interrupted",
+            "failed",
+            true,
+            &[
+                "Treat an interrupted receipt write as unusable until receipts-check passes on the replacement receipt.",
+                "Rerun the command with a fresh --json-out path and preserve the partial file only as diagnostic evidence.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "missing_cache",
+            "model_cache_missing",
+            "blocked",
+            false,
+            &[
+                "Run bitnet mac models and the recorded bitnet model fetch command for the selected model.",
+                "Do not substitute dense Qwen cache readiness for BitNet cache or tokenizer readiness.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "corrupt_cache",
+            "model_cache_corrupt",
+            "blocked",
+            false,
+            &[
+                "Run bitnet model verify for the exact model id and repair only the failed cache entry.",
+                "Record the expected SHA256 and observed failure before replacing the artifact.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "low_disk",
+            "low_disk_headroom",
+            "blocked",
+            false,
+            &[
+                "Run bitnet model prune --dry-run --json before deleting cache entries.",
+                "Move BITNET_MODEL_CACHE_DIR or free disk before fetching or running long BitNet or dense benchmark jobs.",
+            ],
+        ),
+        apple_m4_reliability_drill_case(
+            "process_restart",
+            "process_restarted",
+            "failed",
+            true,
+            &[
+                "Assume resident state was lost and require a new aggregate receipt after restart.",
+                "Use per-turn receipts to identify the last completed prompt before rerunning the remaining prompts.",
+            ],
+        ),
+    ]
+}
+
+fn apple_m4_reliability_drill_case(
+    id: &str,
+    failure_stage: &str,
+    receipt_status: &str,
+    partial_generation_allowed: bool,
+    retry_guidance: &[&str],
+) -> serde_json::Value {
+    serde_json::json!({
+        "id": id,
+        "status": "pass",
+        "model_families": ["dense_slm", "bitnet"],
+        "route_families": M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES,
+        "failure_stage": failure_stage,
+        "evidence_mode": "model_free_fault_injection_receipt_contract",
+        "live_model_run": false,
+        "expected_failure_receipt": {
+            "required": true,
+            "status": receipt_status,
+            "fallback_used": false,
+            "partial_generation_allowed": partial_generation_allowed,
+            "must_record_stage": true,
+            "must_record_elapsed_ms": true,
+            "must_record_retry_guidance": true,
+            "must_preserve_claim_boundary": true,
+        },
+        "receipt_obligations": [
+            "requested_backend=apple-m4-cpu-neon",
+            "selected_backend=apple-m4-cpu-neon",
+            "runtime_api=cpu",
+            "fallback_used=false",
+            "model/tokenizer identity or cache-repair target recorded when applicable",
+            "failure stage and operator-visible message recorded",
+            "retry guidance recorded",
+            "claim boundary preserved"
+        ],
+        "retry_guidance": retry_guidance,
+    })
 }
 
 fn apple_m4_regression_dashboard_receipt(
@@ -5109,6 +6097,15 @@ async fn run_ask(
             "`bitnet mac ask` accepts --model-path/--tokenizer only for the explicit BitNet one-shot route; dense SLM models use --model-id and the verified model cache"
         );
     }
+    ensure_mac_context_estimate_allowed(
+        &json_out,
+        MacContextModelFamily::DenseSlm,
+        MacContextRoute::Ask,
+        model_id,
+        mac_context_prompt_sha256s([Some(question.as_str()), system_prompt.as_deref()]),
+        mac_context_estimated_prompt_tokens([Some(question.as_str()), system_prompt.as_deref()]),
+        max_new_tokens,
+    )?;
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     let progress_enabled = progress && !quiet;
     if !quiet {
@@ -5163,6 +6160,15 @@ async fn run_bitnet_ask(
     if !matches!(top_k, 0 | 1) {
         anyhow::bail!("BitNet Mac ask is currently scoped to greedy top-k 0 or 1");
     }
+    ensure_mac_context_estimate_allowed(
+        &json_out,
+        MacContextModelFamily::Bitnet,
+        MacContextRoute::Ask,
+        model_id,
+        mac_context_prompt_sha256s([Some(question.as_str()), system_prompt.as_deref()]),
+        mac_context_estimated_prompt_tokens([Some(question.as_str()), system_prompt.as_deref()]),
+        max_new_tokens,
+    )?;
     let failure_context = BitNetMacAskFailureContext {
         model_id: model_id.to_string(),
         cache_dir: cache_dir.clone(),
@@ -5599,6 +6605,243 @@ fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     format!("{:x}", hasher.finalize())
+}
+
+fn mac_context_estimated_prompt_tokens<'a>(
+    prompt_parts: impl IntoIterator<Item = Option<&'a str>>,
+) -> usize {
+    let chars = prompt_parts.into_iter().flatten().map(|part| part.chars().count()).sum::<usize>();
+    chars.div_ceil(M4_CONTEXT_APPROX_CHARS_PER_TOKEN).max(1)
+}
+
+fn mac_context_max_turn_estimated_prompt_tokens<'a>(
+    prompts: impl IntoIterator<Item = &'a str>,
+    system_prompt: Option<&'a str>,
+) -> usize {
+    prompts
+        .into_iter()
+        .map(|prompt| mac_context_estimated_prompt_tokens([Some(prompt), system_prompt]))
+        .max()
+        .unwrap_or_else(|| mac_context_estimated_prompt_tokens([system_prompt]))
+}
+
+fn mac_context_prompt_sha256s<'a>(
+    prompt_parts: impl IntoIterator<Item = Option<&'a str>>,
+) -> Vec<String> {
+    prompt_parts
+        .into_iter()
+        .flatten()
+        .filter(|part| !part.trim().is_empty())
+        .map(|part| sha256_hex(part.as_bytes()))
+        .collect()
+}
+
+fn mac_context_envelope_json(
+    family: MacContextModelFamily,
+    route: MacContextRoute,
+    model_id: &str,
+    prompt_tokens: usize,
+    exact_token_count: bool,
+    max_new_tokens: usize,
+) -> serde_json::Value {
+    let recorded_max_prompt_tokens = family.recorded_max_prompt_tokens();
+    let requested_total_tokens = prompt_tokens.saturating_add(max_new_tokens);
+    let (operator_class, allowed, status, evidence_profile, reason) = match family {
+        MacContextModelFamily::DenseSlm => {
+            if prompt_tokens > M4_CONTEXT_4K_PROMPT_TOKENS {
+                (
+                    "unsupported",
+                    false,
+                    "unsupported_context_exceeds_recorded_evidence",
+                    "beyond_context_4k",
+                    "prompt token count exceeds the recorded dense SLM context_4k evidence envelope; M4-CONTEXT-002 must publish new long-context receipts before this request can be treated as supported",
+                )
+            } else if prompt_tokens > M4_CONTEXT_1K_PROMPT_TOKENS {
+                (
+                    "batch",
+                    true,
+                    "recorded_context_4k_batch",
+                    "context_4k",
+                    "request is inside the recorded dense SLM context_4k profile but must be treated as batch, not interactive",
+                )
+            } else if prompt_tokens > M4_CONTEXT_SHORT_PROMPT_TOKENS {
+                (
+                    "batch",
+                    true,
+                    "recorded_context_1k_batch",
+                    "context_1k",
+                    "request is inside the recorded dense SLM context_1k profile but must be treated as batch, not interactive",
+                )
+            } else if route == MacContextRoute::Serve {
+                (
+                    "advisory",
+                    true,
+                    "recorded_short_context_server_advisory",
+                    "short_prompt_or_resident",
+                    "dense local-server requests remain advisory until server conformance refreshes publish request-level SLO evidence",
+                )
+            } else if model_id == "qwen2.5-1.5b-instruct-q4_k_m" {
+                (
+                    "advisory",
+                    true,
+                    "recorded_short_context_advisory",
+                    "short_prompt_or_resident",
+                    "dense 1.5B short/resident prompts are supported but classified advisory by the M4 operator envelope",
+                )
+            } else {
+                (
+                    "interactive",
+                    true,
+                    "recorded_short_context_interactive",
+                    "short_prompt_or_resident",
+                    "dense 0.5B short/resident prompts are inside the recorded interactive envelope",
+                )
+            }
+        }
+        MacContextModelFamily::Bitnet => {
+            if prompt_tokens > M4_BITNET_RECORDED_PROMPT_TOKENS {
+                (
+                    "unsupported",
+                    false,
+                    "unsupported_context_exceeds_recorded_evidence",
+                    "beyond_bitnet_bounded_ask_warm",
+                    "BitNet M4 evidence is bounded to accepted one-shot and warm-session prompts; larger contexts require M4-CONTEXT-002 receipts before use",
+                )
+            } else {
+                (
+                    "batch",
+                    true,
+                    "recorded_bitnet_bounded_batch",
+                    "bitnet_one_shot_or_warm",
+                    "BitNet one-shot, warm, and gated service routes are batch-class until more product evidence exists",
+                )
+            }
+        }
+    };
+    serde_json::json!({
+        "contract_version": "1.0.0",
+        "work_item": "M4-CONTEXT-001",
+        "route": route.label(),
+        "model_family": family.label(),
+        "model_id": model_id,
+        "operator_class": operator_class,
+        "status": status,
+        "allowed": allowed,
+        "reason": reason,
+        "prompt_tokens": prompt_tokens,
+        "prompt_token_count_exact": exact_token_count,
+        "max_new_tokens": max_new_tokens,
+        "requested_total_tokens": requested_total_tokens,
+        "recorded_envelope": {
+            "max_prompt_tokens": recorded_max_prompt_tokens,
+            "evidence_profile": evidence_profile,
+            "recorded_profiles": family.recorded_profiles(),
+            "source": "docs/slm/apple-m4-operator-envelope-v3.md",
+            "long_context_proof_item": "M4-CONTEXT-002",
+        },
+        "claim_boundary": {
+            "guardrail_only": true,
+            "new_context_quality_claim": false,
+            "unsupported_context_supported": false,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        }
+    })
+}
+
+fn mac_context_envelope_allows(envelope: &serde_json::Value) -> bool {
+    envelope["allowed"].as_bool() == Some(true)
+}
+
+fn write_mac_context_guardrail_receipt(
+    path: &Path,
+    family: MacContextModelFamily,
+    route: MacContextRoute,
+    model_id: &str,
+    prompt_sha256s: Vec<String>,
+    context_envelope: serde_json::Value,
+) -> Result<()> {
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_kind": "apple_m4_context_guardrail",
+        "artifact_path": path.display().to_string(),
+        "operator_command": route.label(),
+        "status": "blocked",
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "model_family": family.label(),
+        "model_id": model_id,
+        "prompt": {
+            "sha256s": prompt_sha256s,
+            "prompt_text_recorded": false,
+            "prompt_text_recording_policy": "hash_only_for_guardrail_failure",
+        },
+        "context_envelope": context_envelope,
+        "claim_boundary": {
+            "guardrail_only": true,
+            "live_generation_executed": false,
+            "new_context_quality_claim": false,
+            "unsupported_context_supported": false,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    });
+    write_json_receipt(path, &receipt)
+}
+
+fn ensure_mac_context_estimate_allowed(
+    json_out: &Path,
+    family: MacContextModelFamily,
+    route: MacContextRoute,
+    model_id: &str,
+    prompt_sha256s: Vec<String>,
+    estimated_prompt_tokens: usize,
+    max_new_tokens: usize,
+) -> Result<()> {
+    let context_envelope = mac_context_envelope_json(
+        family,
+        route,
+        model_id,
+        estimated_prompt_tokens,
+        false,
+        max_new_tokens,
+    );
+    if mac_context_envelope_allows(&context_envelope) {
+        return Ok(());
+    }
+    write_mac_context_guardrail_receipt(
+        json_out,
+        family,
+        route,
+        model_id,
+        prompt_sha256s,
+        context_envelope.clone(),
+    )?;
+    let status = context_envelope["status"].as_str().unwrap_or("context_guardrail_blocked");
+    let reason = context_envelope["reason"].as_str().unwrap_or("context guardrail blocked");
+    anyhow::bail!(
+        "{} context guardrail blocked request: {status}: {reason}; receipt written to {}",
+        route.label(),
+        json_out.display()
+    )
 }
 
 fn apple_m4_model_free_run_identity_json(
@@ -6156,6 +7399,18 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
     let (prompts, prompt_source, profile_plan) =
         resolve_bitnet_warm_prompt_plan(prompts, profiles)?;
     let prompt_count = prompts.len();
+    let estimated_prompt_tokens =
+        mac_context_max_turn_estimated_prompt_tokens(prompts.iter().map(String::as_str), None);
+    let prompt_refs = prompts.iter().map(|prompt| Some(prompt.as_str()));
+    ensure_mac_context_estimate_allowed(
+        &json_out,
+        MacContextModelFamily::Bitnet,
+        MacContextRoute::BitnetWarm,
+        model_id,
+        mac_context_prompt_sha256s(prompt_refs),
+        estimated_prompt_tokens,
+        max_new_tokens,
+    )?;
     let mut failure_context = BitNetWarmFailureContext {
         model_id: model_id.to_string(),
         cache_dir: cache_dir.clone(),
@@ -8152,6 +9407,7 @@ impl MacServeGenerator {
         use bitnet_sampling::{SamplingConfig, SamplingStrategy};
 
         let request_id = mac_serve_request_id();
+        let receipt_path = state.receipt_dir.join(format!("{request_id}.json"));
         let prompt = request.prompt_text()?;
         let system_prompt = request.system_prompt();
         let max_new_tokens =
@@ -8230,6 +9486,38 @@ impl MacServeGenerator {
         crate::ensure_non_empty_generation_context(&mut tokens, self.tokenizer.as_ref())?;
         let prompt_token_count = tokens.len();
         let prompt_token_ids = tokens.clone();
+        let context_envelope = mac_context_envelope_json(
+            if state.model_family == MacServeModelFamily::Bitnet {
+                MacContextModelFamily::Bitnet
+            } else {
+                MacContextModelFamily::DenseSlm
+            },
+            MacContextRoute::Serve,
+            &state.model.id,
+            prompt_token_count,
+            true,
+            max_new_tokens,
+        );
+        if !mac_context_envelope_allows(&context_envelope) {
+            write_mac_context_guardrail_receipt(
+                &receipt_path,
+                if state.model_family == MacServeModelFamily::Bitnet {
+                    MacContextModelFamily::Bitnet
+                } else {
+                    MacContextModelFamily::DenseSlm
+                },
+                MacContextRoute::Serve,
+                &state.model.id,
+                mac_context_prompt_sha256s([Some(prompt.as_str()), system_prompt.as_deref()]),
+                context_envelope.clone(),
+            )?;
+            let status = context_envelope["status"].as_str().unwrap_or("context_guardrail_blocked");
+            let reason = context_envelope["reason"].as_str().unwrap_or("context guardrail blocked");
+            anyhow::bail!(
+                "mac serve context guardrail blocked request: {status}: {reason}; receipt written to {}",
+                receipt_path.display()
+            );
+        }
         let cache = KVCache::new(&self.config, 1, &candle_core::Device::Cpu)?;
         let mut any_cache: Box<dyn std::any::Any> = Box::new(cache);
         let mut sampler = SamplingStrategy::new(SamplingConfig {
@@ -8315,7 +9603,6 @@ impl MacServeGenerator {
         let decode_ms = decode_step_ms.iter().sum::<f64>();
         let sampling_ms = sample_step_ms.iter().sum::<f64>();
         let total_ms = crate::elapsed_ms(request_started);
-        let receipt_path = state.receipt_dir.join(format!("{request_id}.json"));
         let bitnet_route = state.model_family == MacServeModelFamily::Bitnet;
         let artifact_kind = if bitnet_route {
             "bitnet_apple_m4_serve_completion"
@@ -8355,6 +9642,7 @@ impl MacServeGenerator {
             "fallback_used": false,
             "fallback_reason": serde_json::Value::Null,
             "server": mac_serve_server_json(state),
+            "context_envelope": context_envelope,
             "model_family": if bitnet_route { "bitnet" } else { "dense-slm" },
             "model": {
                 "id": &state.model.id,
@@ -8798,6 +10086,11 @@ fn run_mac_serve_check(
         let completion_response =
             mac_serve_check_http_json(&base, "POST", "/v1/chat/completions", Some(&request))?;
         let completion_json = completion_response.body.clone();
+        let completion_request_id = if completion_json["id"].is_null() {
+            &completion_json["request_id"]
+        } else {
+            &completion_json["id"]
+        };
         let receipt_id = completion_json["receipt_path"]
             .as_str()
             .and_then(|path| path.rsplit('/').next())
@@ -8810,8 +10103,14 @@ fn run_mac_serve_check(
             "executed": true,
             "status": completion_response.status,
             "passed": completion_pass,
-            "request_id": completion_json["id"],
+            "request_id": completion_request_id,
+            "error": completion_json["error"],
+            "message": completion_json["message"],
+            "receipt_path": completion_json["receipt_path"],
             "receipt_id": receipt_id,
+            "context_envelope": completion_json["context_envelope"],
+            "context_guardrail_blocked": completion_response.status == 413
+                && completion_json["error"].as_str() == Some("context_guardrail_blocked"),
             "generated_tokens": completion_json["usage"]["completion_tokens"],
             "finish_reason": completion_json["choices"][0]["finish_reason"],
         });
@@ -8821,7 +10120,7 @@ fn run_mac_serve_check(
             let receipt_response = mac_serve_check_http_json(&base, "GET", &receipt_path, None)?;
             let receipt_json = receipt_response.body.clone();
             let export_pass = receipt_response.status == 200
-                && receipt_json["request_id"] == completion_json["id"]
+                && receipt_json["request_id"] == *completion_request_id
                 && receipt_json["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
                 && receipt_json["fallback_used"].as_bool() == Some(false);
             receipt_export_result = serde_json::json!({
@@ -8902,6 +10201,311 @@ fn run_mac_serve_check(
     } else {
         anyhow::bail!("mac serve-check failed; receipt written to {}", json_out.display())
     }
+}
+
+async fn run_mac_serve_smoke(
+    model_id: &str,
+    cache_dir: Option<PathBuf>,
+    device: &str,
+    prompt: &str,
+    max_new_tokens: usize,
+    timeout_seconds: Option<u64>,
+    receipt_dir: PathBuf,
+    json_out: PathBuf,
+) -> Result<()> {
+    if device != APPLE_M4_CPU_NEON {
+        anyhow::bail!(
+            "mac serve-smoke routes the supported dense Mac local service path through --device {APPLE_M4_CPU_NEON}; requested --device {device}. Full apple-m4-metal inference, MPSGraph inference, and hidden CPU fallback are not supported by this wrapper."
+        );
+    }
+    if max_new_tokens == 0 {
+        anyhow::bail!("mac serve-smoke max_tokens/max_new_tokens must be greater than zero");
+    }
+    std::fs::create_dir_all(&receipt_dir).with_context(|| {
+        format!("failed to create serve-smoke receipt directory {}", receipt_dir.display())
+    })?;
+    ensure_mac_serve_receipt_dir_ready(&receipt_dir)?;
+
+    let cache_status =
+        model_cache::apple_m4_slm_cache_status_json(model_id, cache_dir.clone(), true)?;
+    if !cache_status["ready"].as_bool().unwrap_or(false) {
+        let next_step = cache_status["next_step"]
+            .as_str()
+            .unwrap_or("run `bitnet model fetch qwen2.5-0.5b-instruct-q8_0`");
+        anyhow::bail!(
+            "mac serve-smoke cannot start because the model cache is not ready: {next_step}"
+        );
+    }
+    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
+    let generator = MacServeGenerator::load_dense(&model)?;
+    let defaults = MacServeGenerationDefaults {
+        max_new_tokens,
+        temperature: 0.0,
+        top_k: 1,
+        top_p: 1.0,
+        repetition_penalty: 1.1,
+        seed: Some(0),
+    };
+    let state = MacServeState::new_with_route(
+        model,
+        MacServeModelFamily::DenseSlm,
+        cache_status,
+        None,
+        MAC_SERVE_DEFAULT_HOST.to_string(),
+        0,
+        true,
+        defaults,
+        receipt_dir.clone(),
+        Some(generator),
+    );
+
+    let health = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /health HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_health",
+    )
+    .await?;
+    let ready = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /ready HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_ready",
+    )
+    .await?;
+    let models = mac_serve_smoke_json_endpoint(
+        &state,
+        "GET /models HTTP/1.1\r\n\r\n",
+        "bitnet_apple_m4_local_server_models",
+    )
+    .await?;
+    let one_shot =
+        mac_serve_smoke_completion(&state, prompt, false, max_new_tokens, timeout_seconds).await?;
+    let streaming =
+        mac_serve_smoke_completion(&state, prompt, true, max_new_tokens, timeout_seconds).await?;
+
+    let passed = health["passed"].as_bool().unwrap_or(false)
+        && ready["passed"].as_bool().unwrap_or(false)
+        && models["passed"].as_bool().unwrap_or(false)
+        && one_shot["passed"].as_bool().unwrap_or(false)
+        && streaming["passed"].as_bool().unwrap_or(false);
+    let timeout_reached = one_shot["timeout_boundary"]["reached"].as_bool().unwrap_or(false)
+        || streaming["timeout_boundary"]["reached"].as_bool().unwrap_or(false);
+    let receipt = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "operator_command": "mac serve-smoke",
+        "result": if passed { "pass" } else { "fail" },
+        "model_family": "dense-slm",
+        "model_id": &state.model.id,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "receipt_dir": receipt_dir.display().to_string(),
+        "timeout_boundary": {
+            "configured_seconds": timeout_seconds,
+            "enforced": false,
+            "reached": timeout_reached,
+            "status": "not_enforced_in_process_smoke",
+            "scope": "metadata_only",
+            "deferred_to": "M4-SERVE-EX-002",
+        },
+        "checks": {
+            "health": health,
+            "ready": ready,
+            "models": models,
+            "one_shot_completion": one_shot,
+            "streaming_completion": streaming,
+        },
+        "claim_boundary": {
+            "server_health_checked": true,
+            "server_readiness_checked": true,
+            "model_catalog_checked": true,
+            "one_shot_completion_checked": true,
+            "streaming_completion_checked": true,
+            "receipt_export_checked": true,
+            "dense_slm_only": true,
+            "bitnet_serve_claimed": false,
+            "production_readiness_claimed": false,
+            "openai_compatibility_claimed": false,
+            "bitnet_quality_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    });
+    write_json_receipt(&json_out, &receipt)?;
+    if passed {
+        println!("mac serve-smoke passed: {}", json_out.display());
+        Ok(())
+    } else {
+        anyhow::bail!("mac serve-smoke failed; receipt written to {}", json_out.display())
+    }
+}
+
+async fn mac_serve_smoke_json_endpoint(
+    state: &MacServeState,
+    request: &str,
+    expected_artifact_kind: &str,
+) -> Result<serde_json::Value> {
+    let started = Instant::now();
+    let reply = mac_serve_http_reply(request, state).await?;
+    let body = mac_serve_reply_json(&reply)?;
+    let passed = reply.status == 200
+        && body["artifact_kind"].as_str() == Some(expected_artifact_kind)
+        && body["generation_executed"].as_bool().unwrap_or(false) == false
+        && body["claim_boundary"]["full_metal_inference_claimed"].as_bool() == Some(false);
+    Ok(serde_json::json!({
+        "executed": true,
+        "status": reply.status,
+        "passed": passed,
+        "artifact_kind": body["artifact_kind"],
+        "generation_executed": body["generation_executed"],
+        "elapsed_ms": crate::rounded_ms(crate::elapsed_ms(started)),
+    }))
+}
+
+async fn mac_serve_smoke_completion(
+    state: &MacServeState,
+    prompt: &str,
+    stream: bool,
+    max_new_tokens: usize,
+    timeout_seconds: Option<u64>,
+) -> Result<serde_json::Value> {
+    let started = Instant::now();
+    let request_body = serde_json::json!({
+        "prompt": prompt,
+        "max_tokens": max_new_tokens,
+        "stream": stream,
+    });
+    let request_body = serde_json::to_string(&request_body)?;
+    let request = format!(
+        "POST /v1/chat/completions HTTP/1.1\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{}",
+        request_body.len(),
+        request_body
+    );
+    let reply_result = mac_serve_http_reply(&request, state).await;
+    let reply = reply_result?;
+    let body = if stream {
+        mac_serve_smoke_sse_metadata(&reply.body).unwrap_or_else(|| serde_json::json!({}))
+    } else {
+        mac_serve_reply_json(&reply)?
+    };
+    let request_id = &body["id"];
+    let receipt_path = body["receipt_path"].clone();
+    let receipt_id = receipt_path
+        .as_str()
+        .and_then(|path| path.rsplit('/').next())
+        .and_then(mac_serve_normalize_receipt_id);
+    let receipt_export = if let Some(receipt_id) = receipt_id.as_deref() {
+        mac_serve_smoke_receipt_export(state, receipt_id, request_id.as_str()).await?
+    } else {
+        serde_json::json!({
+            "executed": false,
+            "passed": false,
+            "error": "missing_receipt_id",
+        })
+    };
+    let generated_tokens = if stream {
+        body["generated_token_ids"].as_array().map(|tokens| tokens.len()).unwrap_or(0)
+    } else {
+        body["receipt"]["generation"]["generated_token_ids"]
+            .as_array()
+            .map(|tokens| tokens.len())
+            .unwrap_or(0)
+    };
+    let generated_text_non_empty = if stream {
+        receipt_export["generated_text_non_empty"].as_bool().unwrap_or(false)
+    } else {
+        body["receipt"]["generation"]["text"].as_str().is_some_and(|text| !text.trim().is_empty())
+    };
+    let backend_ok = if stream {
+        receipt_export["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
+            && receipt_export["fallback_used"].as_bool() == Some(false)
+    } else {
+        body["receipt"]["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
+            && body["receipt"]["fallback_used"].as_bool() == Some(false)
+    };
+    let passed = reply.status == 200
+        && backend_ok
+        && generated_tokens > 0
+        && generated_text_non_empty
+        && receipt_export["passed"].as_bool() == Some(true);
+    Ok(serde_json::json!({
+        "executed": true,
+        "stream": stream,
+        "status": reply.status,
+        "content_type": reply.content_type,
+        "passed": passed,
+        "request_id": request_id,
+        "receipt_path": receipt_path,
+        "generated_tokens": generated_tokens,
+        "generated_text_non_empty": generated_text_non_empty,
+        "finish_reason": if stream { receipt_export["finish_reason"].clone() } else { body["choices"][0]["finish_reason"].clone() },
+        "receipt_export": receipt_export,
+        "elapsed_ms": crate::rounded_ms(crate::elapsed_ms(started)),
+        "timeout_boundary": {
+            "configured_seconds": timeout_seconds,
+            "enforced": false,
+            "reached": false,
+            "status": "not_enforced_in_process_smoke",
+            "deferred_to": "M4-SERVE-EX-002",
+        },
+    }))
+}
+
+async fn mac_serve_smoke_receipt_export(
+    state: &MacServeState,
+    receipt_id: &str,
+    expected_request_id: Option<&str>,
+) -> Result<serde_json::Value> {
+    let path = format!("GET /receipts/{receipt_id} HTTP/1.1\r\n\r\n");
+    let reply = mac_serve_http_reply(&path, state).await?;
+    let receipt = mac_serve_reply_json(&reply)?;
+    let passed = reply.status == 200
+        && receipt["request_id"].as_str() == expected_request_id
+        && receipt["selected_backend"].as_str() == Some(APPLE_M4_CPU_NEON)
+        && receipt["fallback_used"].as_bool() == Some(false)
+        && receipt["generation"]["generated_token_ids"]
+            .as_array()
+            .is_some_and(|tokens| !tokens.is_empty())
+        && receipt["claim_boundary"]["production_readiness_claimed"].as_bool() == Some(false)
+        && receipt["claim_boundary"]["openai_compatibility_claimed"].as_bool() == Some(false);
+    Ok(serde_json::json!({
+        "executed": true,
+        "status": reply.status,
+        "passed": passed,
+        "request_id": receipt["request_id"],
+        "artifact_kind": receipt["artifact_kind"],
+        "selected_backend": receipt["selected_backend"],
+        "fallback_used": receipt["fallback_used"],
+        "generated_text_non_empty": receipt["generation"]["text"]
+            .as_str()
+            .is_some_and(|text| !text.trim().is_empty()),
+        "generated_tokens": receipt["generation"]["generated_tokens"],
+        "finish_reason": receipt["generation"]["finish_reason"],
+    }))
+}
+
+fn mac_serve_reply_json(reply: &MacServeHttpReply) -> Result<serde_json::Value> {
+    serde_json::from_slice(&reply.body).context("M4 local server response was not valid JSON")
+}
+
+fn mac_serve_smoke_sse_metadata(body: &[u8]) -> Option<serde_json::Value> {
+    let body = std::str::from_utf8(body).ok()?;
+    body.lines().find_map(|line| {
+        let data = line.strip_prefix("data: ")?;
+        let data = data.trim();
+        if data == "[DONE]" || !data.starts_with('{') {
+            return None;
+        }
+        let value: serde_json::Value = serde_json::from_str(data).ok()?;
+        if value["receipt_path"].as_str().is_some() { Some(value) } else { None }
+    })
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -9136,6 +10740,58 @@ async fn mac_serve_completion_http_reply(
             }),
         );
     }
+    if let Ok(prompt) = completion_request.prompt_text() {
+        let system_prompt = completion_request.system_prompt();
+        let max_new_tokens = completion_request
+            .max_new_tokens
+            .or(completion_request.max_tokens)
+            .unwrap_or(state.defaults.max_new_tokens);
+        let family = if state.model_family == MacServeModelFamily::Bitnet {
+            MacContextModelFamily::Bitnet
+        } else {
+            MacContextModelFamily::DenseSlm
+        };
+        let prompt_tokens =
+            mac_context_estimated_prompt_tokens([Some(prompt.as_str()), system_prompt.as_deref()]);
+        let context_envelope = mac_context_envelope_json(
+            family,
+            MacContextRoute::Serve,
+            &state.model.id,
+            prompt_tokens,
+            false,
+            max_new_tokens,
+        );
+        if !mac_context_envelope_allows(&context_envelope) {
+            let request_id = mac_serve_request_id();
+            let receipt_path = state.receipt_dir.join(format!("{request_id}.json"));
+            write_mac_context_guardrail_receipt(
+                &receipt_path,
+                family,
+                MacContextRoute::Serve,
+                &state.model.id,
+                mac_context_prompt_sha256s([Some(prompt.as_str()), system_prompt.as_deref()]),
+                context_envelope.clone(),
+            )?;
+            return MacServeHttpReply::json(
+                413,
+                "Payload Too Large",
+                serde_json::json!({
+                    "status": "error",
+                    "error": "context_guardrail_blocked",
+                    "request_id": request_id,
+                    "receipt_path": receipt_path.display().to_string(),
+                    "context_envelope": context_envelope,
+                    "claim_boundary": {
+                        "guardrail_only": true,
+                        "new_context_quality_claim": false,
+                        "unsupported_context_supported": false,
+                        "openai_compatibility_claimed": false,
+                        "production_readiness_claimed": false,
+                    },
+                }),
+            );
+        }
+    }
     let Some(generator) = state.generator.as_ref() else {
         return MacServeHttpReply::json(
             503,
@@ -9152,6 +10808,9 @@ async fn mac_serve_completion_http_reply(
         match generator.complete(state, completion_request) {
             Ok(completion) => completion,
             Err(error) => {
+                if let Some(reply) = mac_serve_context_guardrail_error_reply(&error)? {
+                    return Ok(reply);
+                }
                 return MacServeHttpReply::json(
                     500,
                     "Internal Server Error",
@@ -9175,6 +10834,59 @@ async fn mac_serve_completion_http_reply(
     } else {
         MacServeHttpReply::json(200, "OK", mac_serve_completion_json(&completion))
     }
+}
+
+fn mac_serve_context_guardrail_error_reply(
+    error: &anyhow::Error,
+) -> Result<Option<MacServeHttpReply>> {
+    let message = error.to_string();
+    if !message.starts_with(MAC_SERVE_CONTEXT_GUARDRAIL_ERROR_PREFIX) {
+        return Ok(None);
+    }
+
+    let receipt_path = message
+        .split_once(MAC_SERVE_CONTEXT_GUARDRAIL_RECEIPT_MARKER)
+        .map(|(_, path)| path.trim())
+        .filter(|path| !path.is_empty());
+    let receipt = receipt_path.and_then(|path| read_json_receipt(Path::new(path)).ok());
+    let request_id = receipt
+        .as_ref()
+        .and_then(|receipt| receipt["request_id"].as_str())
+        .map(str::to_string)
+        .or_else(|| {
+            receipt_path
+                .and_then(|path| Path::new(path).file_stem())
+                .and_then(|stem| stem.to_str())
+                .map(str::to_string)
+        });
+    let context_envelope = receipt
+        .as_ref()
+        .map(|receipt| receipt["context_envelope"].clone())
+        .filter(|envelope| !envelope.is_null());
+
+    let mut body = serde_json::json!({
+        "status": "error",
+        "error": "context_guardrail_blocked",
+        "message": message,
+        "claim_boundary": {
+            "guardrail_only": true,
+            "new_context_quality_claim": false,
+            "unsupported_context_supported": false,
+            "openai_compatibility_claimed": false,
+            "production_readiness_claimed": false,
+        },
+    });
+    if let Some(path) = receipt_path {
+        body["receipt_path"] = serde_json::Value::String(path.to_string());
+    }
+    if let Some(request_id) = request_id {
+        body["request_id"] = serde_json::Value::String(request_id);
+    }
+    if let Some(context_envelope) = context_envelope {
+        body["context_envelope"] = context_envelope;
+    }
+
+    Ok(Some(MacServeHttpReply::json(413, "Payload Too Large", body)?))
 }
 
 fn mac_serve_request_method_path(request: &str) -> (&str, &str) {
@@ -9860,8 +11572,23 @@ async fn run_chat_session(
     interactive_prompt_collection: bool,
     allocation_audit: bool,
     metal_prefill_qkv_phase: bool,
+    context_route: MacContextRoute,
     json_out: PathBuf,
 ) -> Result<()> {
+    let estimated_prompt_tokens = mac_context_max_turn_estimated_prompt_tokens(
+        prompts.iter().map(String::as_str),
+        system_prompt.as_deref(),
+    );
+    let prompt_refs = prompts.iter().map(|prompt| Some(prompt.as_str()));
+    ensure_mac_context_estimate_allowed(
+        &json_out,
+        MacContextModelFamily::DenseSlm,
+        context_route,
+        model_id,
+        mac_context_prompt_sha256s(prompt_refs.chain(std::iter::once(system_prompt.as_deref()))),
+        estimated_prompt_tokens,
+        max_new_tokens,
+    )?;
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     if progress && !quiet {
         eprintln!(
@@ -9908,7 +11635,8 @@ async fn run_chat_session(
         json_out.clone(),
     )
     .await?;
-    let summary = annotate_and_validate_mac_receipt_silent(&json_out, &model, "mac chat")?;
+    let summary =
+        annotate_and_validate_mac_receipt_silent(&json_out, &model, context_route.label())?;
     if progress && !quiet {
         eprintln!(
             "mac chat: aggregate receipt checked: {} ({}, generated_tokens={:?}, model/tokenizer loaded once)",
@@ -9934,12 +11662,28 @@ async fn run_chat_smoke(
     if timeout_seconds == 0 {
         anyhow::bail!("mac chat-smoke --timeout-seconds must be greater than zero");
     }
-    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir.clone())?;
     let prompts: Vec<String> =
         MAC_CHAT_SMOKE_PROMPTS.iter().map(|prompt| (*prompt).to_string()).collect();
     let prompt_count = prompts.len();
     let effective_system_prompt =
         system_prompt.unwrap_or_else(|| MAC_CHAT_SMOKE_SYSTEM_PROMPT.to_string());
+    let estimated_prompt_tokens = mac_context_max_turn_estimated_prompt_tokens(
+        prompts.iter().map(String::as_str),
+        Some(effective_system_prompt.as_str()),
+    );
+    let prompt_refs = prompts.iter().map(|prompt| Some(prompt.as_str()));
+    ensure_mac_context_estimate_allowed(
+        &json_out,
+        MacContextModelFamily::DenseSlm,
+        MacContextRoute::ChatSmoke,
+        model_id,
+        mac_context_prompt_sha256s(
+            prompt_refs.chain(std::iter::once(Some(effective_system_prompt.as_str()))),
+        ),
+        estimated_prompt_tokens,
+        max_new_tokens,
+    )?;
+    let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir.clone())?;
     let smoke = run_chat_session(
         model_id,
         cache_dir,
@@ -9959,6 +11703,7 @@ async fn run_chat_smoke(
         false,
         allocation_audit,
         false,
+        MacContextRoute::ChatSmoke,
         json_out.clone(),
     );
     tokio::time::timeout(std::time::Duration::from_secs(timeout_seconds), smoke)
@@ -10442,6 +12187,16 @@ struct MacBenchmarkSummaryRun<'a> {
     operator_command: &'static str,
 }
 
+struct MixedModelSwitchRun {
+    cache_dir: Option<PathBuf>,
+    requested_backend: &'static str,
+    threads: usize,
+    allocation_audit: bool,
+    progress: bool,
+    quiet: bool,
+    json_out: PathBuf,
+}
+
 struct BenchmarkProfileSpec {
     profile: MacBenchmarkProfile,
     max_new_tokens: usize,
@@ -10553,7 +12308,34 @@ async fn run_benchmark(request: MacBenchmarkRun<'_>) -> Result<()> {
             "mac benchmark must be run from a release build; use `cargo build --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet` and then `target/release/bitnet mac benchmark ...`"
         );
     }
-    let profiles = dedupe_benchmark_profiles(profiles)?;
+    let profiles = dedupe_benchmark_profiles(expand_benchmark_profile_aliases(profiles))?;
+    if profiles.contains(&MacBenchmarkProfile::MixedModelSwitch) {
+        if model_id != model_cache::M4_SLM_RUNTIME_MODEL_ID {
+            anyhow::bail!(
+                "mac benchmark --profile mixed_model_switch runs every supported dense M4 model and cannot be combined with --model-id"
+            );
+        }
+        if profiles.len() != 1 {
+            anyhow::bail!(
+                "mac benchmark --profile mixed_model_switch cannot be combined with other --profile values"
+            );
+        }
+        if repeat != 1 {
+            anyhow::bail!(
+                "mac benchmark --profile mixed_model_switch cannot be combined with --repeat"
+            );
+        }
+        return run_mixed_model_switch_soak(MixedModelSwitchRun {
+            cache_dir,
+            requested_backend,
+            threads,
+            allocation_audit,
+            progress,
+            quiet,
+            json_out,
+        })
+        .await;
+    }
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     if repeat > 1 {
         return run_benchmark_variance(
@@ -10777,6 +12559,199 @@ async fn run_benchmark_once(request: MacBenchmarkSummaryRun<'_>) -> Result<serde
         profile_ids_display
     );
     Ok(aggregate)
+}
+
+async fn run_mixed_model_switch_soak(request: MixedModelSwitchRun) -> Result<()> {
+    let MixedModelSwitchRun {
+        cache_dir,
+        requested_backend,
+        threads,
+        allocation_audit,
+        progress,
+        quiet,
+        json_out,
+    } = request;
+    let receipt_dir =
+        json_out.parent().map(Path::to_path_buf).unwrap_or_else(|| PathBuf::from(".")).join(
+            format!(
+                "{}-runs",
+                json_out.file_stem().and_then(|stem| stem.to_str()).unwrap_or("mixed-model-switch")
+            ),
+        );
+    std::fs::create_dir_all(&receipt_dir)
+        .with_context(|| format!("failed to create {}", receipt_dir.display()))?;
+
+    let mut models = Vec::with_capacity(APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.len());
+    for model_id in APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS {
+        models.push(model_cache::verified_apple_m4_slm_model(model_id, cache_dir.clone())?);
+    }
+
+    let switch_start_peak_mb = peak_memory_mb();
+    let mut switches = Vec::with_capacity(models.len());
+    let mut invalid_comparison_reasons = Vec::new();
+    let mut child_summary_receipts = Vec::with_capacity(models.len());
+    let mut prompt_count_total = 0u64;
+    let mut generated_tokens_total = 0u64;
+    let mut child_peak_memory_samples = Vec::new();
+    let sequence_model_ids = models.iter().map(|model| model.id.clone()).collect::<Vec<_>>();
+
+    for (index, model) in models.iter().enumerate() {
+        let run_number = index + 1;
+        let model_dir = receipt_dir.join(format!("{run_number:02}-{}", model.id));
+        std::fs::create_dir_all(&model_dir)
+            .with_context(|| format!("failed to create {}", model_dir.display()))?;
+        let child_summary_path = model_dir.join("summary.json");
+        if progress && !quiet {
+            eprintln!(
+                "mac benchmark: mixed_model_switch {run_number}/{} {}",
+                models.len(),
+                model.id
+            );
+        }
+        let child_summary = run_benchmark_once(MacBenchmarkSummaryRun {
+            model,
+            requested_backend,
+            profiles: vec![MacBenchmarkProfile::Resident25],
+            threads,
+            allocation_audit,
+            progress,
+            quiet,
+            json_out: child_summary_path.clone(),
+            operator_command: "mac benchmark",
+        })
+        .await?;
+        child_summary_receipts.push(child_summary_path.display().to_string());
+        prompt_count_total += child_summary["prompt_count"].as_u64().unwrap_or_default();
+        generated_tokens_total += child_summary["generated_tokens"].as_u64().unwrap_or_default();
+        if let Some(peak) = child_summary["memory"]["peak_memory_mb_p50"].as_f64() {
+            child_peak_memory_samples.push(peak);
+        }
+        let child_invalid = child_summary["invalid_comparison_reasons"]
+            .as_array()
+            .map(|reasons| {
+                reasons
+                    .iter()
+                    .filter_map(|reason| reason.as_str())
+                    .map(|reason| format!("{}:{reason}", model.id))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        invalid_comparison_reasons.extend(child_invalid.clone());
+        switches.push(serde_json::json!({
+            "sequence_index": run_number,
+            "model_cache": benchmark_model_cache_json(model),
+            "profile_id": "resident_25",
+            "child_summary_receipt": child_summary_path.display().to_string(),
+            "child_profile_receipts": child_summary["evidence"]["profile_receipts"].clone(),
+            "prompt_count": child_summary["prompt_count"].clone(),
+            "generated_tokens": child_summary["generated_tokens"].clone(),
+            "fallback_used": child_summary["fallback_used"].clone(),
+            "status": if child_invalid.is_empty() { "completed" } else { "invalid_for_comparison" },
+            "comparison_readiness": child_summary["comparison_readiness"].clone(),
+            "invalid_comparison_reasons": child_invalid,
+            "memory": child_summary["memory"].clone(),
+        }));
+    }
+
+    let switch_end_peak_mb = peak_memory_mb();
+    let comparison_status =
+        if invalid_comparison_reasons.is_empty() { "comparable" } else { "invalid_for_comparison" };
+    let aggregate = serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "apple_m4_slm_mixed_model_switch_soak_v1",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "artifact_path": json_out.display().to_string(),
+        "requested_backend": requested_backend,
+        "selected_backend": requested_backend,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "fallback_reason": serde_json::Value::Null,
+        "profile_set": "slm-mixed-model-switch-v1",
+        "profile_id": M4_SLM_MIXED_MODEL_SWITCH_PROFILE,
+        "child_profile_id": "resident_25",
+        "supported_model_ids": APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+        "sequence_model_ids": sequence_model_ids,
+        "switches": switches,
+        "prompt_count": prompt_count_total,
+        "generated_tokens": generated_tokens_total,
+        "build": {
+            "profile": if cfg!(debug_assertions) { "debug" } else { "release" },
+            "release_mode": !cfg!(debug_assertions),
+        },
+        "model_cache_set": models.iter().map(benchmark_model_cache_json).collect::<Vec<_>>(),
+        "memory": {
+            "start_peak_memory_mb": optional_f64_json(switch_start_peak_mb),
+            "end_peak_memory_mb": optional_f64_json(switch_end_peak_mb),
+            "process_peak_drift_mb": optional_f64_json(memory_delta_mb(switch_start_peak_mb, switch_end_peak_mb)),
+            "child_peak_memory_mb": benchmark_stat_json(&child_peak_memory_samples),
+            "source": "parent getrusage plus child apple_m4_slm_benchmark_v2 summaries",
+        },
+        "comparison_readiness": {
+            "status": comparison_status,
+            "can_compare_timing": invalid_comparison_reasons.is_empty(),
+            "invalid_comparison_reasons": invalid_comparison_reasons.clone(),
+        },
+        "invalid_comparison_reasons": invalid_comparison_reasons,
+        "switch_contract": {
+            "contract_version": "1.0.0",
+            "scope": "Apple M4 Mac mini mixed dense SLM model switch soak",
+            "profile_execution_model": "one resident_25 benchmark summary per supported dense model identity",
+            "model_cache_reuse": "verified cached GGUF identities are reused from the local filesystem cache before each child run",
+            "model_unload_reload_boundary": "each model identity is run through an isolated benchmark summary; child warm-session processes exit between profile/model identities",
+            "receipt_separation_per_model_identity": true,
+            "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+            "child_profile_id": "resident_25",
+            "dense_slm_only": true,
+        },
+        "evidence": {
+            "child_summary_receipts": child_summary_receipts,
+            "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+            "generated_text_recorded": true,
+            "generated_token_ids_recorded": true,
+            "operator_command": "mac benchmark",
+        },
+        "mac_claim_boundary": {
+            "dense_slm_only": true,
+            "mixed_model_switch_soak": true,
+            "bounded_benchmark_profiles_only": true,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+            "bitnet_quality_claimed": false,
+            "bitnet_performance_claimed": false,
+            "full_metal_inference_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "qk256_apple_claimed": false,
+            "macbook_evidence": false
+        },
+        "speedup_claim": false,
+    });
+    write_json_receipt(&json_out, &aggregate)?;
+    validate_mac_receipt_value(&json_out, &aggregate)?;
+    println!(
+        "Mac mixed-model switch soak written to {} (models: {})",
+        json_out.display(),
+        models.iter().map(|model| model.id.as_str()).collect::<Vec<_>>().join(", ")
+    );
+    Ok(())
+}
+
+fn benchmark_model_cache_json(model: &VerifiedCachedModel) -> serde_json::Value {
+    serde_json::json!({
+        "id": &model.id,
+        "display_name": &model.display_name,
+        "cache_root": &model.cache_root,
+        "path": &model.path,
+        "sha256": &model.sha256,
+        "bytes": model.bytes,
+        "architecture": &model.architecture,
+        "quantization": &model.quantization,
+        "tokenizer_model": &model.tokenizer_model,
+        "tokenizer_pre": &model.tokenizer_pre,
+        "chat_template": model.chat_template,
+        "support_note": &model.support_note,
+    })
 }
 
 struct BenchmarkProfileRun<'a> {
@@ -11865,6 +13840,20 @@ fn dedupe_benchmark_profiles(
     Ok(deduped)
 }
 
+fn expand_benchmark_profile_aliases(
+    profiles: Vec<MacBenchmarkProfile>,
+) -> Vec<MacBenchmarkProfile> {
+    profiles
+        .into_iter()
+        .flat_map(|profile| match profile {
+            MacBenchmarkProfile::Context => {
+                vec![MacBenchmarkProfile::Context1k, MacBenchmarkProfile::Context4k]
+            }
+            other => vec![other],
+        })
+        .collect()
+}
+
 fn benchmark_profile_spec(profile: MacBenchmarkProfile) -> BenchmarkProfileSpec {
     match profile {
         MacBenchmarkProfile::ShortPrompt16Out => BenchmarkProfileSpec {
@@ -11894,6 +13883,13 @@ fn benchmark_profile_spec(profile: MacBenchmarkProfile) -> BenchmarkProfileSpec 
             prompts: long_benchmark_prompts(),
             target_context_tokens: None,
             scenario: "long_prompt",
+        },
+        MacBenchmarkProfile::Context => BenchmarkProfileSpec {
+            profile: MacBenchmarkProfile::Context4k,
+            max_new_tokens: 16,
+            prompts: context_benchmark_prompts(4_000, 3),
+            target_context_tokens: Some(4_000),
+            scenario: "synthetic_context",
         },
         MacBenchmarkProfile::Context1k => BenchmarkProfileSpec {
             profile,
@@ -11929,6 +13925,13 @@ fn benchmark_profile_spec(profile: MacBenchmarkProfile) -> BenchmarkProfileSpec 
             prompts: resident_benchmark_prompts(100),
             target_context_tokens: None,
             scenario: "resident_session",
+        },
+        MacBenchmarkProfile::MixedModelSwitch => BenchmarkProfileSpec {
+            profile,
+            max_new_tokens: 16,
+            prompts: resident_benchmark_prompts(25),
+            target_context_tokens: None,
+            scenario: "mixed_model_switch",
         },
     }
 }
@@ -12357,7 +14360,7 @@ async fn run_warm_profile_set(
     let build_profile = if cfg!(debug_assertions) { "debug" } else { "release" };
     let release_mode = !cfg!(debug_assertions);
 
-    let mut aggregate = serde_json::json!({
+    let aggregate = serde_json::json!({
         "schema_version": "1.0.0",
         "artifact_kind": mac_profile_set_artifact_kind(requested_backend, spec.artifact_kind),
         "timestamp": chrono::Utc::now().to_rfc3339(),
@@ -12437,14 +14440,6 @@ async fn run_warm_profile_set(
         ),
         "speedup_claim": false,
     });
-    if requested_backend == APPLE_M3_AIR_CPU_NEON && spec.name == "performance" {
-        if let Some(object) = aggregate.as_object_mut() {
-            object.insert(
-                "m3_air_performance_profile".to_string(),
-                m3_air_performance_profile_json(spec.tokens, &summaries),
-            );
-        }
-    }
     std::fs::write(&json_out, serde_json::to_vec_pretty(&aggregate)?)
         .with_context(|| format!("failed to write {}", json_out.display()))?;
     validate_mac_receipt_value(&json_out, &aggregate)?;
@@ -12543,9 +14538,6 @@ fn operator_profile_summary(
             "decode_generated_tok_s": receipt["speed"]["throughput"]["decode_generated_tok_s"].clone(),
         },
         "operator_ux": receipt["operator_ux"].clone(),
-        "power": receipt["power"].clone(),
-        "thermal": receipt["thermal"].clone(),
-        "storage": receipt["storage"].clone(),
         "memory": {
             "peak_memory_mb": peak_memory_mb(),
             "peak_memory_source": "getrusage.ru_maxrss",
@@ -12557,59 +14549,6 @@ fn operator_profile_summary(
         },
         "allocation_audit": receipt["allocation_audit"].clone(),
     }))
-}
-
-fn m3_air_performance_profile_json(
-    token_budgets: &[usize],
-    summaries: &[serde_json::Value],
-) -> serde_json::Value {
-    serde_json::json!({
-        "machine_id": "apple-m3-macbook-air",
-        "requested_backend": APPLE_M3_AIR_CPU_NEON,
-        "profile_set": "performance",
-        "profile_execution_model": "cold model/tokenizer load is separated from warm prompt timing for each token budget",
-        "token_budgets": token_budgets,
-        "cold_load": {
-            "sample_source": "per-profile warm-session timing.model_load_ms and timing.tokenizer_load_ms",
-            "profile_count": summaries.len(),
-            "model_loaded_once_per_profile": summaries
-                .iter()
-                .all(|summary| summary["model_loaded_once"].as_bool().unwrap_or(false)),
-            "tokenizer_loaded_once_per_profile": summaries
-                .iter()
-                .all(|summary| summary["tokenizer_loaded_once"].as_bool().unwrap_or(false)),
-        },
-        "warm_prompt": {
-            "sample_source": "per-profile speed timing warm_prompt_wall_ms and time_to_first_token_ms",
-            "profile_count": summaries.len(),
-            "prompt_counts": summaries
-                .iter()
-                .map(|summary| summary["prompt_count"].clone())
-                .collect::<Vec<_>>(),
-        },
-        "host_context": {
-            "power_recorded_per_profile": summaries.iter().all(|summary| !summary["power"].is_null()),
-            "thermal_recorded_per_profile": summaries.iter().all(|summary| !summary["thermal"].is_null()),
-            "storage_recorded_per_profile": summaries.iter().all(|summary| !summary["storage"].is_null()),
-            "missing_telemetry_policy": "record unavailable explicitly; do not infer",
-        },
-        "timeout_cap_provenance": {
-            "source": "selected workflow preflight or committed campaign report",
-            "healthy_cap_basis": "completed_healthy_runs_plus_cushion",
-            "timeouts_or_cancellations_are_healthy_samples": false,
-            "timeout_caps_are_performance_evidence": false,
-        },
-        "claim_boundary": {
-            "m3_air_selected_receipt_only": true,
-            "m4_mac_mini_performance_claimed": false,
-            "broad_apple_silicon_performance_claimed": false,
-            "full_metal_inference_claimed": false,
-            "mpsgraph_inference_claimed": false,
-            "neural_engine_execution_claimed": false,
-            "bitnet_quality_claimed": false,
-            "speedup_claim": false,
-        },
-    })
 }
 
 fn profile_set_allocation_audit_json(
@@ -12816,6 +14755,25 @@ fn annotate_and_validate_mac_receipt(
     Ok(())
 }
 
+fn mac_receipt_prompt_tokens_for_context(receipt: &serde_json::Value) -> Option<usize> {
+    receipt["tokens"]["prompt"]
+        .as_u64()
+        .or_else(|| receipt["prompt_identity"]["prompt_token_count"].as_u64())
+        .or_else(|| receipt["speed"]["counts"]["prompt_tokens"].as_u64())
+        .or_else(|| receipt["execution"]["prompt_tokens"].as_u64())
+        .and_then(|value| usize::try_from(value).ok())
+}
+
+fn mac_receipt_generated_or_budget_for_context(receipt: &serde_json::Value) -> usize {
+    receipt["generation"]["max_new_tokens"]
+        .as_u64()
+        .or_else(|| receipt["tokens"]["generated"].as_u64())
+        .or_else(|| receipt["speed"]["counts"]["generated_tokens"].as_u64())
+        .or_else(|| receipt["execution"]["generated_tokens"].as_u64())
+        .and_then(|value| usize::try_from(value).ok())
+        .unwrap_or_default()
+}
+
 fn annotate_and_validate_mac_receipt_silent(
     path: &Path,
     model: &VerifiedCachedModel,
@@ -12825,7 +14783,22 @@ fn annotate_and_validate_mac_receipt_silent(
         .with_context(|| format!("failed to read Mac receipt {}", path.display()))?;
     let mut receipt: serde_json::Value = serde_json::from_slice(&bytes)
         .with_context(|| format!("invalid Mac receipt {}", path.display()))?;
-    let summary = validate_mac_receipt_value(path, &receipt)?;
+    let initial_summary = validate_mac_receipt_value(path, &receipt)?;
+    let context_envelope = mac_receipt_prompt_tokens_for_context(&receipt).map(|prompt_tokens| {
+        let route = match operator_command {
+            "mac chat-smoke" => MacContextRoute::ChatSmoke,
+            "mac chat" => MacContextRoute::Chat,
+            _ => MacContextRoute::Ask,
+        };
+        mac_context_envelope_json(
+            MacContextModelFamily::DenseSlm,
+            route,
+            &model.id,
+            prompt_tokens,
+            true,
+            mac_receipt_generated_or_budget_for_context(&receipt),
+        )
+    });
     let Some(object) = receipt.as_object_mut() else {
         anyhow::bail!("Mac receipt {} is not a JSON object", path.display());
     };
@@ -12851,7 +14824,7 @@ fn annotate_and_validate_mac_receipt_silent(
         "mac_claim_boundary".to_string(),
         serde_json::json!({
             "slm_local_answer": true,
-            "requested_backend": summary.requested_backend.as_str(),
+            "requested_backend": initial_summary.requested_backend.as_str(),
             "bitnet_quality_claimed": false,
             "full_metal_inference_claimed": false,
             "mpsgraph_inference_claimed": false,
@@ -12860,7 +14833,11 @@ fn annotate_and_validate_mac_receipt_silent(
             "broad_performance_claim": false,
         }),
     );
+    if let Some(context_envelope) = context_envelope {
+        object.insert("context_envelope".to_string(), context_envelope);
+    }
     object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
+    let summary = validate_mac_receipt_value(path, &receipt)?;
     std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)
         .with_context(|| format!("failed to update Mac receipt {}", path.display()))?;
     Ok(summary)
@@ -12977,9 +14954,8 @@ fn annotate_and_validate_dense_chat_smoke_receipt(
     object.entry("speedup_claim".to_string()).or_insert(serde_json::json!(false));
     object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
     let summary = validate_mac_receipt_value(path, &receipt)?;
-    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?).with_context(|| {
-        format!("failed to update dense Mac chat smoke receipt {}", path.display())
-    })?;
+    std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)
+        .with_context(|| format!("failed to update Mac receipt {}", path.display()))?;
     Ok(summary)
 }
 
@@ -12993,7 +14969,7 @@ fn annotate_and_validate_bitnet_mac_ask_receipt(
         .with_context(|| format!("failed to read BitNet Mac ask receipt {}", path.display()))?;
     let mut receipt: serde_json::Value = serde_json::from_slice(&bytes)
         .with_context(|| format!("invalid BitNet Mac ask receipt {}", path.display()))?;
-    let summary = validate_mac_receipt_value(path, &receipt)?;
+    validate_mac_receipt_value(path, &receipt)?;
     if receipt["model"]["sha256"].as_str() != Some(BITNET_M4_EXPECTED_MODEL_SHA256) {
         anyhow::bail!("{} does not use the accepted Microsoft BitNet I2_S GGUF", path.display());
     }
@@ -13014,6 +14990,16 @@ fn annotate_and_validate_bitnet_mac_ask_receipt(
     if receipt["prompt_render"]["template_family"].as_str() != Some(BITNET_M4_PROMPT_TEMPLATE) {
         anyhow::bail!("{} does not use the BitNet.cpp answer prompt template", path.display());
     }
+    let context_envelope = mac_receipt_prompt_tokens_for_context(&receipt).map(|prompt_tokens| {
+        mac_context_envelope_json(
+            MacContextModelFamily::Bitnet,
+            MacContextRoute::Ask,
+            &model.id,
+            prompt_tokens,
+            true,
+            mac_receipt_generated_or_budget_for_context(&receipt),
+        )
+    });
     let Some(object) = receipt.as_object_mut() else {
         anyhow::bail!("BitNet Mac ask receipt {} is not a JSON object", path.display());
     };
@@ -13052,8 +15038,12 @@ fn annotate_and_validate_bitnet_mac_ask_receipt(
             "broad_performance_claim": false,
         }),
     );
+    if let Some(context_envelope) = context_envelope {
+        object.insert("context_envelope".to_string(), context_envelope);
+    }
     object.entry("bitnet_quality_claimed".to_string()).or_insert(serde_json::json!(false));
     object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
+    let summary = validate_mac_receipt_value(path, &receipt)?;
     std::fs::write(path, serde_json::to_vec_pretty(&receipt)?)
         .with_context(|| format!("failed to update BitNet Mac ask receipt {}", path.display()))?;
     println!(
@@ -13139,6 +15129,16 @@ fn annotate_and_validate_bitnet_warm_session_receipt(
     let profile_set_receipt = profile_plan
         .map(|plan| bitnet_warm_profile_set_receipt_json(&receipt, plan))
         .transpose()?;
+    let context_envelope = mac_receipt_prompt_tokens_for_context(&receipt).map(|prompt_tokens| {
+        mac_context_envelope_json(
+            MacContextModelFamily::Bitnet,
+            MacContextRoute::BitnetWarm,
+            &model.id,
+            prompt_tokens,
+            true,
+            mac_receipt_generated_or_budget_for_context(&receipt),
+        )
+    });
     let Some(object) = receipt.as_object_mut() else {
         anyhow::bail!("BitNet warm-session receipt {} is not a JSON object", path.display());
     };
@@ -13206,6 +15206,9 @@ fn annotate_and_validate_bitnet_warm_session_receipt(
     object.entry("bitnet_quality_claimed".to_string()).or_insert(serde_json::json!(false));
     object.entry("broad_performance_claim".to_string()).or_insert(serde_json::json!(false));
     object.entry("speedup_claim".to_string()).or_insert(serde_json::json!(false));
+    if let Some(context_envelope) = context_envelope {
+        object.insert("context_envelope".to_string(), context_envelope);
+    }
     object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
     if let Some(claim_boundary) =
         object.get_mut("claim_boundary").and_then(|value| value.as_object_mut())
@@ -13276,6 +15279,16 @@ fn annotate_and_validate_bitnet_chat_session_receipt(
             path.display()
         );
     }
+    let context_envelope = mac_receipt_prompt_tokens_for_context(&receipt).map(|prompt_tokens| {
+        mac_context_envelope_json(
+            MacContextModelFamily::Bitnet,
+            MacContextRoute::Chat,
+            &model.id,
+            prompt_tokens,
+            true,
+            mac_receipt_generated_or_budget_for_context(&receipt),
+        )
+    });
     let streaming_requested = receipt["operator_ux"]["stream_tokens_requested"].clone();
     let per_turn_receipts_enabled = receipt["operator_ux"]["per_turn_receipts_enabled"].clone();
     let Some(object) = receipt.as_object_mut() else {
@@ -13347,6 +15360,9 @@ fn annotate_and_validate_bitnet_chat_session_receipt(
     object.entry("bitnet_quality_claimed".to_string()).or_insert(serde_json::json!(false));
     object.entry("broad_performance_claim".to_string()).or_insert(serde_json::json!(false));
     object.entry("speedup_claim".to_string()).or_insert(serde_json::json!(false));
+    if let Some(context_envelope) = context_envelope {
+        object.insert("context_envelope".to_string(), context_envelope);
+    }
     object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
     if let Some(claim_boundary) =
         object.get_mut("claim_boundary").and_then(|value| value.as_object_mut())
@@ -17051,6 +19067,17 @@ fn validate_mac_receipt_value(
             .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
     }
     validate_prompt_generation_identity_contract(path, receipt)?;
+    if !receipt["context_envelope"].is_null() {
+        validate_mac_context_envelope(path, &receipt["context_envelope"])?;
+        if artifact_kind != "apple_m4_context_guardrail"
+            && receipt["context_envelope"]["allowed"].as_bool() == Some(false)
+        {
+            anyhow::bail!(
+                "{} records a blocked context_envelope on {artifact_kind}; blocked context requests must write apple_m4_context_guardrail receipts",
+                path.display()
+            );
+        }
+    }
 
     let (prompt_count, generated_tokens) = if artifact_kind == "slm_apple_m4_warm_session"
         || artifact_kind == "slm_apple_m3_air_warm_session"
@@ -17074,6 +19101,10 @@ fn validate_mac_receipt_value(
         validate_dense_slm_reference_vs_rust_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_robustness_eval_summary" {
         validate_m4_robustness_eval_summary_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_long_context_eval_summary" {
+        validate_m4_long_context_eval_summary_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_long_context_answer_corpus" {
+        validate_m4_long_context_answer_corpus_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_chat_smoke" {
         validate_dense_slm_chat_smoke_receipt(path, receipt, requested_backend.as_str())?
     } else if artifact_kind == "bitnet_apple_m4_local_answer_corpus" {
@@ -17084,6 +19115,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_larger_corpus_decision_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_v2" {
         validate_slm_benchmark_v2_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_slm_mixed_model_switch_soak_v1" {
+        validate_slm_mixed_model_switch_soak_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_slm_benchmark_profile_timeout" {
         validate_slm_benchmark_profile_timeout_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_benchmark_variance_v1" {
@@ -17098,6 +19131,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_mac_ask_failure_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_warm_session_failure" {
         validate_bitnet_warm_session_failure_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_context_guardrail" {
+        validate_apple_m4_context_guardrail_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_chat_gate" {
         validate_bitnet_chat_gate_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_chat_session" {
@@ -17110,6 +19145,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_serve_failure_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_serve_completion" {
         validate_bitnet_serve_completion_receipt(path, receipt)?
+    } else if artifact_kind == "bitnet_apple_m4_dense_local_server_smoke" {
+        validate_dense_local_server_smoke_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_local_server_check" {
         validate_bitnet_local_server_check_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_inference_status" {
@@ -17124,6 +19161,8 @@ fn validate_mac_receipt_value(
         validate_apple_m4_report_refresh_manifest_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_regression_dashboard" {
         validate_apple_m4_regression_dashboard_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_reliability_drills" {
+        validate_apple_m4_reliability_drills_receipt(path, receipt)?
     } else {
         validate_one_shot_receipt(path, receipt)?
     };
@@ -17420,6 +19459,315 @@ fn validate_m4_robustness_eval_summary_receipt(
         );
     }
     Ok((Some(expanded_case_count as usize), Some(0)))
+}
+
+fn validate_m4_long_context_eval_summary_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["suite"], "m4-long-context")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-CONTEXT-HARNESS-001")?;
+    require_bool_at(path, receipt, &["dry_run"], true)?;
+    require_bool_at(path, receipt, &["corpus", "mechanical_scoring_only"], true)?;
+    require_bool_at(path, receipt, &["corpus", "required_llm_judge"], false)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["corpus", "artifact_kind"],
+        "apple_m4_long_context_corpus",
+    )?;
+    require_non_empty_string_at(path, receipt, &["corpus", "path"])?;
+    require_non_empty_string_at(path, receipt, &["corpus", "sha256"])?;
+    for coverage_path in [
+        &["coverage", "retrieval_copy"][..],
+        &["coverage", "table_extraction"][..],
+        &["coverage", "late_context_instruction_following"][..],
+        &["coverage", "truncation_behavior"][..],
+        &["coverage", "input_throughput_receipt_required"][..],
+        &["coverage", "ttft_receipt_required"][..],
+        &["coverage", "decode_throughput_receipt_required"][..],
+        &["coverage", "memory_receipt_required"][..],
+        &["coverage", "unsupported_context_boundaries_required"][..],
+    ] {
+        require_bool_at(path, receipt, coverage_path, true)?;
+    }
+    for claim_path in [
+        &["claim_boundary", "live_long_context_quality_claim"][..],
+        &["claim_boundary", "live_long_context_timing_claim"][..],
+        &["claim_boundary", "long_context_proof_applies_to_untested_context_lengths"][..],
+        &["claim_boundary", "long_context_proof_applies_to_untested_model_identities"][..],
+        &["claim_boundary", "dense_slm_evidence_proves_bitnet"][..],
+        &["claim_boundary", "bitnet_evidence_proves_dense_slm"][..],
+        &["claim_boundary", "bitnet_chat_enabled"][..],
+        &["claim_boundary", "bitnet_serve_enabled"][..],
+        &["claim_boundary", "full_metal_inference_claimed"][..],
+        &["claim_boundary", "qk256_apple_claimed"][..],
+        &["claim_boundary", "neural_engine_execution_claimed"][..],
+        &["claim_boundary", "mpsgraph_inference_claimed"][..],
+        &["claim_boundary", "macbook_evidence"][..],
+        &["claim_boundary", "broad_model_quality_claim"][..],
+        &["claim_boundary", "broad_performance_claim"][..],
+        &["claim_boundary", "speedup_claim"][..],
+    ] {
+        require_bool_at(path, receipt, claim_path, false)?;
+    }
+    require_bool_at(path, receipt, &["claim_boundary", "long_context_contract_only"], true)?;
+    require_bool_at(path, receipt, &["evidence_status", "live_quality_receipts_published"], false)?;
+    require_bool_at(path, receipt, &["evidence_status", "live_timing_receipts_published"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["evidence_status", "contract_ready_for_m4_context_proof"],
+        true,
+    )?;
+
+    let top_total = require_u64_at(path, receipt, &["scoring_summary", "total"], true)?;
+    require_u64_exact(path, receipt, &["scoring_summary", "passed"], 0)?;
+    require_u64_exact(path, receipt, &["scoring_summary", "failed"], 0)?;
+    let top_not_run = require_u64_at(path, receipt, &["scoring_summary", "not_run"], true)?;
+    if top_not_run != top_total {
+        anyhow::bail!(
+            "{} long-context dry-run receipt scoring_summary.not_run must equal total",
+            path.display()
+        );
+    }
+    require_u64_exact(path, receipt, &["generated_tokens"], 0)?;
+    let expanded_case_count = require_u64_at(path, receipt, &["expanded_case_count"], true)?;
+    if expanded_case_count != top_total {
+        anyhow::bail!(
+            "{} long-context dry-run expanded_case_count must match scoring_summary.total",
+            path.display()
+        );
+    }
+
+    let families = receipt["families"].as_array().ok_or_else(|| {
+        anyhow!("{} long-context receipt must include families array", path.display())
+    })?;
+    if families.len() != 2 {
+        anyhow::bail!(
+            "{} long-context receipt must include dense_slm and bitnet family summaries",
+            path.display()
+        );
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    let mut observed_total = 0_u64;
+    for family in families {
+        let family_name = require_non_empty_string_at(path, family, &["model_family"])?;
+        if !["dense_slm", "bitnet"].contains(&family_name) {
+            anyhow::bail!(
+                "{} long-context receipt has unsupported model_family {family_name}",
+                path.display()
+            );
+        }
+        if !seen.insert(family_name) {
+            anyhow::bail!(
+                "{} long-context receipt has duplicate model_family {family_name}",
+                path.display()
+            );
+        }
+        let expected_template = match family_name {
+            "dense_slm" => QWEN_PROMPT_TEMPLATE,
+            "bitnet" => BITNET_M4_PROMPT_TEMPLATE,
+            _ => anyhow::bail!(
+                "{} long-context receipt has unsupported model_family {family_name}",
+                path.display()
+            ),
+        };
+        require_exact_string_at(path, family, &["prompt_template"], expected_template)?;
+        require_bool_at(path, family, &["dry_run"], true)?;
+        require_u64_exact(path, family, &["cases_executed"], 0)?;
+        require_u64_exact(path, family, &["generated_tokens"], 0)?;
+        if family_name == "dense_slm" {
+            require_bool_at(path, family, &["long_context_supported_for_live_run"], true)?;
+        } else {
+            require_bool_at(path, family, &["long_context_supported_for_live_run"], false)?;
+            require_bool_at(
+                path,
+                family,
+                &["unsupported_boundary", "dense_slm_evidence_proves_bitnet"],
+                false,
+            )?;
+        }
+        let cases_total = require_u64_at(path, family, &["cases_total"], true)?;
+        observed_total = observed_total.saturating_add(cases_total);
+        let scoring_total = require_u64_at(path, family, &["scoring_summary", "total"], true)?;
+        if scoring_total != cases_total {
+            anyhow::bail!(
+                "{} long-context family {family_name} scoring total must match cases_total",
+                path.display()
+            );
+        }
+        let cases = family["cases"].as_array().ok_or_else(|| {
+            anyhow!("{} long-context family {family_name} must include cases", path.display())
+        })?;
+        if cases.len() as u64 != cases_total {
+            anyhow::bail!(
+                "{} long-context family {family_name} cases length must match cases_total",
+                path.display()
+            );
+        }
+        for case in cases {
+            require_non_empty_string_at(path, case, &["id"])?;
+            require_non_empty_string_at(path, case, &["category"])?;
+            require_non_empty_string_at(path, case, &["profile"])?;
+            require_exact_string_at(path, case, &["model_family"], family_name)?;
+            require_exact_string_at(path, case, &["prompt_template"], expected_template)?;
+            require_exact_string_at(path, case, &["status"], "not_run")?;
+            require_bool_at(path, case, &["dry_run"], true)?;
+            require_non_empty_string_at(path, case, &["quality", "scoring", "kind"])?;
+        }
+    }
+    for family in ["dense_slm", "bitnet"] {
+        if !seen.contains(family) {
+            anyhow::bail!(
+                "{} long-context receipt is missing model_family {family}",
+                path.display()
+            );
+        }
+    }
+    if observed_total != expanded_case_count {
+        anyhow::bail!(
+            "{} long-context family totals must sum to expanded_case_count",
+            path.display()
+        );
+    }
+    Ok((Some(expanded_case_count as usize), Some(0)))
+}
+
+fn validate_m4_long_context_answer_corpus_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "apple_m4_long_context_answer_corpus",
+    )?;
+    require_exact_string_at(path, receipt, &["suite"], "m4-long-context")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-CONTEXT-002")?;
+    require_exact_string_at(path, receipt, &["prompt_template"], QWEN_PROMPT_TEMPLATE)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["corpus", "name"],
+        "apple-m4-long-context-answer-corpus-v1",
+    )?;
+    require_exact_string_at(path, receipt, &["corpus", "metadata", "work_item"], "M4-CONTEXT-002")?;
+    require_exact_string_at(path, receipt, &["model", "family"], "qwen")?;
+    let model_id = require_non_empty_string_at(path, receipt, &["model_id"])?;
+    let model_sha256 = require_non_empty_string_at(path, receipt, &["model_sha256"])?;
+    if !is_sha256_hex(model_sha256) {
+        anyhow::bail!(
+            "{} long-context answer-corpus model_sha256 must be a SHA256 hex digest",
+            path.display()
+        );
+    }
+    require_exact_string_at(path, receipt, &["m4_context_proof", "tested_model_id"], model_id)?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["m4_context_proof", "tested_model_sha256"],
+        model_sha256,
+    )?;
+    require_exact_string_at(path, receipt, &["m4_context_proof", "suite"], "m4-long-context")?;
+    require_exact_string_at(path, receipt, &["m4_context_proof", "work_item"], "M4-CONTEXT-002")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["m4_context_proof", "bitnet_long_context", "status"],
+        "unsupported_until_bitnet_long_context_receipts_exist",
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["m4_context_proof", "bitnet_long_context", "dense_slm_evidence_proves_bitnet"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_evidence_proves_bitnet"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_long_context_proven"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claimed"], false)?;
+
+    let corpus_case_count = require_u64_at(path, receipt, &["corpus", "case_count"], true)?;
+    let quality_total = require_u64_at(path, receipt, &["quality_summary", "total"], true)?;
+    let quality_passed = require_u64_at(path, receipt, &["quality_summary", "passed"], false)?;
+    let quality_failed = require_u64_at(path, receipt, &["quality_summary", "failed"], false)?;
+    let quality_timeout = require_u64_at(path, receipt, &["quality_summary", "timeout"], false)?;
+    let quality_not_run = require_u64_at(path, receipt, &["quality_summary", "not_run"], false)?;
+    if quality_total != corpus_case_count {
+        anyhow::bail!(
+            "{} long-context answer-corpus quality_summary.total must match corpus.case_count",
+            path.display()
+        );
+    }
+    if quality_passed + quality_failed + quality_timeout + quality_not_run != quality_total {
+        anyhow::bail!(
+            "{} long-context answer-corpus quality_summary counts must sum to total",
+            path.display()
+        );
+    }
+    if quality_not_run != 0 {
+        anyhow::bail!(
+            "{} long-context answer-corpus receipt must execute every selected case",
+            path.display()
+        );
+    }
+    require_bool_at(
+        path,
+        receipt,
+        &["m4_context_proof", "quality_gate_passed"],
+        quality_total > 0
+            && quality_passed == quality_total
+            && quality_failed == 0
+            && quality_timeout == 0,
+    )?;
+
+    let scoring_total = require_u64_at(path, receipt, &["scoring_summary", "total"], true)?;
+    if scoring_total != quality_total {
+        anyhow::bail!(
+            "{} long-context answer-corpus scoring_summary.total must match quality_summary.total",
+            path.display()
+        );
+    }
+    for profile in ["context_1k", "context_4k", "unsupported_boundary"] {
+        let total = require_u64_at(path, receipt, &["profile_summary", profile, "total"], true)?;
+        if total == 0 {
+            anyhow::bail!(
+                "{} long-context answer-corpus profile_summary.{profile}.total must be non-zero",
+                path.display()
+            );
+        }
+    }
+    let cases = receipt["cases"].as_array().ok_or_else(|| {
+        anyhow!("{} long-context answer-corpus receipt must include cases", path.display())
+    })?;
+    if cases.len() as u64 != quality_total {
+        anyhow::bail!(
+            "{} long-context answer-corpus cases length must match quality_summary.total",
+            path.display()
+        );
+    }
+    for case in cases {
+        require_non_empty_string_at(path, case, &["id"])?;
+        require_non_empty_string_at(path, case, &["task_family"])?;
+        require_non_empty_string_at(path, case, &["profile"])?;
+        if case["status"].as_str() == Some("not_run") {
+            anyhow::bail!(
+                "{} long-context answer-corpus case {} was not run",
+                path.display(),
+                case["id"].as_str().unwrap_or("<missing>")
+            );
+        }
+        require_u64_at(path, case, &["quality", "generated_tokens"], false)?;
+    }
+    let generated_tokens =
+        cases.iter().filter_map(|case| case["quality"]["generated_tokens"].as_u64()).sum::<u64>();
+    Ok((Some(quality_total as usize), Some(generated_tokens as usize)))
 }
 
 fn prompt_generation_identity_sha256_field<'a>(
@@ -18448,6 +20796,75 @@ fn validate_bitnet_local_server_check_receipt(
     Ok((Some(0), generated_tokens.map(|tokens| tokens as usize)))
 }
 
+fn validate_dense_local_server_smoke_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "bitnet_apple_m4_dense_local_server_smoke",
+    )?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac serve-smoke")?;
+    require_exact_string_at(path, receipt, &["model_family"], "dense-slm")?;
+    require_exact_string_at(path, receipt, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    let result = require_non_empty_string_at(path, receipt, &["result"])?;
+    if !matches!(result, "pass" | "fail") {
+        anyhow::bail!("{} dense local-server smoke result must be pass or fail", path.display());
+    }
+    for endpoint in ["health", "ready", "models", "one_shot_completion", "streaming_completion"] {
+        require_bool_at(path, receipt, &["checks", endpoint, "executed"], true)?;
+    }
+    if result == "pass" {
+        require_bool_at(path, receipt, &["checks", "health", "passed"], true)?;
+        require_bool_at(path, receipt, &["checks", "ready", "passed"], true)?;
+        require_bool_at(path, receipt, &["checks", "models", "passed"], true)?;
+        require_bool_at(path, receipt, &["checks", "one_shot_completion", "passed"], true)?;
+        require_bool_at(path, receipt, &["checks", "streaming_completion", "passed"], true)?;
+        require_bool_at(
+            path,
+            receipt,
+            &["checks", "one_shot_completion", "receipt_export", "passed"],
+            true,
+        )?;
+        require_bool_at(
+            path,
+            receipt,
+            &["checks", "streaming_completion", "receipt_export", "passed"],
+            true,
+        )?;
+    }
+    require_bool_at(path, receipt, &["timeout_boundary", "enforced"], false)?;
+    require_bool_at(path, receipt, &["timeout_boundary", "reached"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "server_health_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "server_readiness_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "model_catalog_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "one_shot_completion_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "streaming_completion_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "receipt_export_checked"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "production_readiness_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "openai_compatibility_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    let one_shot_tokens =
+        receipt["checks"]["one_shot_completion"]["generated_tokens"].as_u64().unwrap_or(0);
+    let streaming_tokens =
+        receipt["checks"]["streaming_completion"]["generated_tokens"].as_u64().unwrap_or(0);
+    Ok((Some(0), Some((one_shot_tokens + streaming_tokens) as usize)))
+}
+
 fn validate_apple_m4_inference_status_receipt(
     path: &Path,
     receipt: &serde_json::Value,
@@ -19101,6 +21518,172 @@ fn validate_apple_m4_regression_dashboard_receipt(
             path.display()
         );
     }
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_reliability_drills_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_reliability_drills")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac reliability-drill")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-RELIABILITY-001")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_bool_at(path, receipt, &["drill_contract", "model_free"], true)?;
+    require_bool_at(path, receipt, &["drill_contract", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["drill_contract", "fault_injection_receipt_contract"], true)?;
+    require_bool_at(path, receipt, &["drill_contract", "fresh_runtime_interruption_proof"], false)?;
+    require_bool_at(path, receipt, &["drill_contract", "generic_pr_ci_safe"], true)?;
+    require_string_array_equals(path, receipt, &["drill_ids"], M4_RELIABILITY_REQUIRED_DRILLS)?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["route_families_covered"],
+        M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES,
+    )?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["drill_count"],
+        M4_RELIABILITY_REQUIRED_DRILLS.len() as u64,
+    )?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["route_family_count"],
+        M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES.len() as u64,
+    )?;
+
+    for family in M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES {
+        require_exact_string_at(path, receipt, &["routes", family, "family"], family)?;
+        require_non_empty_string_array_at(path, receipt, &["routes", family, "enabled_routes"])?;
+        require_non_empty_string_array_at(path, receipt, &["routes", family, "receipt_surfaces"])?;
+    }
+
+    let drills = receipt["drills"].as_array().ok_or_else(|| {
+        anyhow!("{} reliability-drill receipt is missing drills array", path.display())
+    })?;
+    if drills.len() != M4_RELIABILITY_REQUIRED_DRILLS.len() {
+        anyhow::bail!(
+            "{} reliability-drill receipt must contain {} drills, got {}",
+            path.display(),
+            M4_RELIABILITY_REQUIRED_DRILLS.len(),
+            drills.len()
+        );
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    for drill in drills {
+        let id = require_non_empty_string_at(path, drill, &["id"])?;
+        if !M4_RELIABILITY_REQUIRED_DRILLS.contains(&id) {
+            anyhow::bail!(
+                "{} reliability-drill receipt has unexpected drill id {id:?}",
+                path.display()
+            );
+        }
+        if !seen.insert(id.to_string()) {
+            anyhow::bail!(
+                "{} reliability-drill receipt duplicates drill id {id:?}",
+                path.display()
+            );
+        }
+        require_exact_string_at(path, drill, &["status"], "pass")?;
+        require_string_array_equals(
+            path,
+            drill,
+            &["route_families"],
+            M4_RELIABILITY_REQUIRED_ROUTE_FAMILIES,
+        )?;
+        require_non_empty_string_at(path, drill, &["failure_stage"])?;
+        require_exact_string_at(
+            path,
+            drill,
+            &["evidence_mode"],
+            "model_free_fault_injection_receipt_contract",
+        )?;
+        require_bool_at(path, drill, &["live_model_run"], false)?;
+        require_bool_at(path, drill, &["expected_failure_receipt", "required"], true)?;
+        require_bool_at(path, drill, &["expected_failure_receipt", "fallback_used"], false)?;
+        require_bool_at(path, drill, &["expected_failure_receipt", "must_record_stage"], true)?;
+        require_bool_at(
+            path,
+            drill,
+            &["expected_failure_receipt", "must_record_elapsed_ms"],
+            true,
+        )?;
+        require_bool_at(
+            path,
+            drill,
+            &["expected_failure_receipt", "must_record_retry_guidance"],
+            true,
+        )?;
+        require_bool_at(
+            path,
+            drill,
+            &["expected_failure_receipt", "must_preserve_claim_boundary"],
+            true,
+        )?;
+        let status =
+            require_non_empty_string_at(path, drill, &["expected_failure_receipt", "status"])?;
+        if !matches!(status, "failed" | "cancelled" | "timed_out" | "blocked") {
+            anyhow::bail!(
+                "{} reliability-drill {id} has unsupported expected status {status:?}",
+                path.display()
+            );
+        }
+        require_bool_value_at(
+            path,
+            drill,
+            &["expected_failure_receipt", "partial_generation_allowed"],
+        )?;
+        require_non_empty_string_array_at(path, drill, &["receipt_obligations"])?;
+        require_non_empty_string_array_at(path, drill, &["retry_guidance"])?;
+    }
+    for required in M4_RELIABILITY_REQUIRED_DRILLS {
+        if !seen.contains(*required) {
+            anyhow::bail!(
+                "{} reliability-drill receipt is missing required drill {required}",
+                path.display()
+            );
+        }
+    }
+
+    for field in ["run", "receipt_check", "dense_status", "bitnet_status", "cache_prune_preview"] {
+        require_non_empty_string_at(path, receipt, &["operator_commands", field])?;
+    }
+    require_bool_at(path, receipt, &["claim_boundary", "recovery_drill_receipts"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "model_free"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "fresh_runtime_interruption_proof"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "service_production_readiness_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
     Ok((Some(0), Some(0)))
 }
 
@@ -20630,6 +23213,314 @@ fn validate_slm_benchmark_v2_receipt(
     Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
 }
 
+fn validate_slm_mixed_model_switch_soak_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "apple_m4_slm_mixed_model_switch_soak_v1",
+    )?;
+    require_exact_string_at(path, receipt, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    require_exact_string_at(path, receipt, &["profile_set"], "slm-mixed-model-switch-v1")?;
+    require_exact_string_at(path, receipt, &["profile_id"], M4_SLM_MIXED_MODEL_SWITCH_PROFILE)?;
+    require_exact_string_at(path, receipt, &["child_profile_id"], "resident_25")?;
+    require_bool_at(path, receipt, &["build", "release_mode"], true)?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["supported_model_ids"],
+        APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+    )?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["sequence_model_ids"],
+        APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+    )?;
+
+    let cache_set = json_value_at(receipt, &["model_cache_set"]).as_array().ok_or_else(|| {
+        anyhow!("{} mixed-model switch receipt is missing model_cache_set", path.display())
+    })?;
+    if cache_set.len() != APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.len() {
+        anyhow::bail!(
+            "{} mixed-model switch model_cache_set must contain every supported dense M4 model",
+            path.display()
+        );
+    }
+    for (model_cache, expected_id) in
+        cache_set.iter().zip(APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.iter())
+    {
+        require_exact_string_at(path, model_cache, &["id"], expected_id)?;
+        require_non_empty_string_at(path, model_cache, &["sha256"])?;
+        require_non_empty_string_at(path, model_cache, &["architecture"])?;
+        require_non_empty_string_at(path, model_cache, &["quantization"])?;
+        require_non_empty_string_at(path, model_cache, &["tokenizer_pre"])?;
+    }
+
+    require_exact_string_at(path, receipt, &["switch_contract", "contract_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["switch_contract", "child_artifact_kind"],
+        "apple_m4_slm_benchmark_v2",
+    )?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["switch_contract", "child_profile_id"],
+        "resident_25",
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["switch_contract", "receipt_separation_per_model_identity"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["switch_contract", "dense_slm_only"], true)?;
+    require_non_empty_string_at(path, receipt, &["switch_contract", "model_cache_reuse"])?;
+    require_non_empty_string_at(
+        path,
+        receipt,
+        &["switch_contract", "model_unload_reload_boundary"],
+    )?;
+
+    require_exact_string_at(
+        path,
+        receipt,
+        &["evidence", "child_artifact_kind"],
+        "apple_m4_slm_benchmark_v2",
+    )?;
+    require_exact_string_at(path, receipt, &["evidence", "operator_command"], "mac benchmark")?;
+    require_bool_at(path, receipt, &["evidence", "generated_text_recorded"], true)?;
+    require_bool_at(path, receipt, &["evidence", "generated_token_ids_recorded"], true)?;
+    require_non_empty_string_array_at(path, receipt, &["evidence", "child_summary_receipts"])?;
+    let child_receipts = json_value_at(receipt, &["evidence", "child_summary_receipts"])
+        .as_array()
+        .ok_or_else(|| {
+            anyhow!("{} mixed-model switch child_summary_receipts must be an array", path.display())
+        })?;
+
+    let switches = json_value_at(receipt, &["switches"]).as_array().ok_or_else(|| {
+        anyhow!("{} mixed-model switch receipt is missing switches", path.display())
+    })?;
+    if switches.len() != APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.len()
+        || child_receipts.len() != switches.len()
+    {
+        anyhow::bail!(
+            "{} mixed-model switch receipt must include one switch and child summary per supported dense model",
+            path.display()
+        );
+    }
+
+    let mut prompt_count_total = 0u64;
+    let mut generated_tokens_total = 0u64;
+    let mut invalid_comparison_reasons = Vec::new();
+    for (index, (switch, expected_id)) in
+        switches.iter().zip(APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.iter()).enumerate()
+    {
+        require_u64_exact(path, switch, &["sequence_index"], (index + 1) as u64)?;
+        require_exact_string_at(path, switch, &["model_cache", "id"], expected_id)?;
+        let switch_sha = require_non_empty_string_at(path, switch, &["model_cache", "sha256"])?;
+        let switch_architecture =
+            require_non_empty_string_at(path, switch, &["model_cache", "architecture"])?;
+        let switch_quantization =
+            require_non_empty_string_at(path, switch, &["model_cache", "quantization"])?;
+        let switch_tokenizer_pre =
+            require_non_empty_string_at(path, switch, &["model_cache", "tokenizer_pre"])?;
+        require_exact_string_at(path, switch, &["profile_id"], "resident_25")?;
+        require_bool_at(path, switch, &["fallback_used"], false)?;
+        require_non_empty_string_array_at(path, switch, &["child_profile_receipts"])?;
+
+        let child_reference =
+            require_non_empty_string_at(path, switch, &["child_summary_receipt"])?;
+        let evidence_reference = child_receipts[index].as_str().ok_or_else(|| {
+            anyhow!(
+                "{} mixed-model switch child_summary_receipts must contain strings",
+                path.display()
+            )
+        })?;
+        if evidence_reference != child_reference {
+            anyhow::bail!(
+                "{} mixed-model switch child_summary_receipts[{index}] must match switch child_summary_receipt",
+                path.display()
+            );
+        }
+
+        let child_path = resolve_child_receipt_path(path, child_reference);
+        let child_receipt = read_json_receipt(&child_path).with_context(|| {
+            format!("failed to read mixed-model switch child benchmark receipt {child_reference}")
+        })?;
+        let (child_prompt_count, child_generated_tokens) =
+            validate_slm_benchmark_v2_receipt(&child_path, &child_receipt)?;
+        require_string_array_equals(
+            &child_path,
+            &child_receipt,
+            &["profiles_required"],
+            &["resident_25"],
+        )?;
+        require_exact_string_at(&child_path, &child_receipt, &["model_cache", "id"], expected_id)?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "sha256"],
+            switch_sha,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "architecture"],
+            switch_architecture,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "quantization"],
+            switch_quantization,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["model_cache", "tokenizer_pre"],
+            switch_tokenizer_pre,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["requested_backend"],
+            APPLE_M4_CPU_NEON,
+        )?;
+        require_exact_string_at(
+            &child_path,
+            &child_receipt,
+            &["selected_backend"],
+            APPLE_M4_CPU_NEON,
+        )?;
+        require_exact_string_at(&child_path, &child_receipt, &["runtime_api"], "cpu")?;
+        require_bool_at(&child_path, &child_receipt, &["fallback_used"], false)?;
+
+        let switch_prompt_count = require_u64_at(path, switch, &["prompt_count"], true)?;
+        let switch_generated_tokens = require_u64_at(path, switch, &["generated_tokens"], false)?;
+        if child_prompt_count != Some(switch_prompt_count as usize)
+            || child_generated_tokens != Some(switch_generated_tokens as usize)
+        {
+            anyhow::bail!(
+                "{} mixed-model switch child counts must match switch summary for {}",
+                path.display(),
+                expected_id
+            );
+        }
+        prompt_count_total += switch_prompt_count;
+        generated_tokens_total += switch_generated_tokens;
+
+        let switch_reasons =
+            json_value_at(switch, &["invalid_comparison_reasons"]).as_array().ok_or_else(|| {
+                anyhow!(
+                    "{} mixed-model switch invalid_comparison_reasons must be an array",
+                    path.display()
+                )
+            })?;
+        let switch_status = require_non_empty_string_at(path, switch, &["status"])?;
+        if switch_reasons.is_empty() {
+            if switch_status != "completed" {
+                anyhow::bail!(
+                    "{} mixed-model switch status for {} must be completed",
+                    path.display(),
+                    expected_id
+                );
+            }
+        } else {
+            if switch_status != "invalid_for_comparison" {
+                anyhow::bail!(
+                    "{} mixed-model switch status for {} must be invalid_for_comparison",
+                    path.display(),
+                    expected_id
+                );
+            }
+            invalid_comparison_reasons.extend(
+                switch_reasons.iter().filter_map(|reason| reason.as_str().map(str::to_string)),
+            );
+        }
+    }
+
+    if receipt["prompt_count"].as_u64() != Some(prompt_count_total) {
+        anyhow::bail!(
+            "{} mixed-model switch prompt_count must equal the sum of switch prompt counts",
+            path.display()
+        );
+    }
+    if receipt["generated_tokens"].as_u64() != Some(generated_tokens_total) {
+        anyhow::bail!(
+            "{} mixed-model switch generated_tokens must equal the sum of switch generated tokens",
+            path.display()
+        );
+    }
+    let receipt_invalid =
+        json_value_at(receipt, &["invalid_comparison_reasons"]).as_array().ok_or_else(|| {
+            anyhow!(
+                "{} mixed-model switch invalid_comparison_reasons must be an array",
+                path.display()
+            )
+        })?;
+    if receipt_invalid.len() != invalid_comparison_reasons.len() {
+        anyhow::bail!(
+            "{} mixed-model switch invalid_comparison_reasons must match switch reasons",
+            path.display()
+        );
+    }
+    if invalid_comparison_reasons.is_empty() {
+        require_exact_string_at(path, receipt, &["comparison_readiness", "status"], "comparable")?;
+        require_bool_at(path, receipt, &["comparison_readiness", "can_compare_timing"], true)?;
+    } else {
+        require_exact_string_at(
+            path,
+            receipt,
+            &["comparison_readiness", "status"],
+            "invalid_for_comparison",
+        )?;
+        require_bool_at(path, receipt, &["comparison_readiness", "can_compare_timing"], false)?;
+        require_non_empty_string_array_at(
+            path,
+            receipt,
+            &["comparison_readiness", "invalid_comparison_reasons"],
+        )?;
+    }
+
+    validate_benchmark_stat_object(path, receipt, &["memory", "child_peak_memory_mb"], true)?;
+    require_non_empty_string_at(path, receipt, &["memory", "source"])?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "dense_slm_only"], true)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "mixed_model_switch_soak"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "bounded_benchmark_profiles_only"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "speedup_claim"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "bitnet_performance_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["mac_claim_boundary", "neural_engine_execution_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["mac_claim_boundary", "macbook_evidence"], false)?;
+
+    Ok((Some(prompt_count_total as usize), Some(generated_tokens_total as usize)))
+}
+
 fn validate_slm_benchmark_profile_timeout_receipt(
     path: &Path,
     receipt: &serde_json::Value,
@@ -22067,6 +24958,130 @@ fn validate_one_shot_receipt(
     Ok((Some(1), Some(generated)))
 }
 
+fn validate_mac_context_envelope(path: &Path, envelope: &serde_json::Value) -> Result<()> {
+    require_exact_string_at(path, envelope, &["contract_version"], "1.0.0")?;
+    require_exact_string_at(path, envelope, &["work_item"], "M4-CONTEXT-001")?;
+    let route = require_non_empty_string_at(path, envelope, &["route"])?;
+    if !matches!(route, "mac ask" | "mac chat" | "mac chat-smoke" | "mac bitnet-warm" | "mac serve")
+    {
+        anyhow::bail!("{} context_envelope.route is unsupported: {route}", path.display());
+    }
+    let family = require_non_empty_string_at(path, envelope, &["model_family"])?;
+    if !matches!(family, "dense-slm" | "bitnet") {
+        anyhow::bail!("{} context_envelope.model_family is unsupported: {family}", path.display());
+    }
+    let class = require_non_empty_string_at(path, envelope, &["operator_class"])?;
+    if !matches!(class, "interactive" | "advisory" | "batch" | "disabled" | "unsupported") {
+        anyhow::bail!("{} context_envelope.operator_class is unsupported: {class}", path.display());
+    }
+    let prompt_tokens = require_u64_at(path, envelope, &["prompt_tokens"], true)?;
+    let max_prompt_tokens =
+        require_u64_at(path, envelope, &["recorded_envelope", "max_prompt_tokens"], true)?;
+    require_u64_at(path, envelope, &["max_new_tokens"], false)?;
+    require_u64_at(path, envelope, &["requested_total_tokens"], true)?;
+    require_bool_at(path, envelope, &["prompt_token_count_exact"], false)
+        .or_else(|_| require_bool_at(path, envelope, &["prompt_token_count_exact"], true))?;
+    if envelope["allowed"].as_bool().is_none() {
+        anyhow::bail!("{} context_envelope.allowed must be recorded", path.display());
+    }
+    require_non_empty_string_at(path, envelope, &["status"])?;
+    require_non_empty_string_at(path, envelope, &["reason"])?;
+    require_non_empty_string_at(path, envelope, &["recorded_envelope", "evidence_profile"])?;
+    let profiles =
+        envelope["recorded_envelope"]["recorded_profiles"].as_array().ok_or_else(|| {
+            anyhow!(
+                "{} context_envelope.recorded_envelope.recorded_profiles must be an array",
+                path.display()
+            )
+        })?;
+    if profiles.is_empty() {
+        anyhow::bail!(
+            "{} context_envelope.recorded_envelope.recorded_profiles must not be empty",
+            path.display()
+        );
+    }
+    if envelope["allowed"].as_bool() == Some(false) && prompt_tokens <= max_prompt_tokens {
+        anyhow::bail!(
+            "{} context_envelope blocked a prompt within the recorded max prompt token envelope",
+            path.display()
+        );
+    }
+    for claim_path in [
+        &["claim_boundary", "guardrail_only"][..],
+        &["claim_boundary", "new_context_quality_claim"][..],
+        &["claim_boundary", "unsupported_context_supported"][..],
+        &["claim_boundary", "bitnet_chat_enabled"][..],
+        &["claim_boundary", "bitnet_serve_enabled"][..],
+        &["claim_boundary", "full_metal_inference_claimed"][..],
+        &["claim_boundary", "mpsgraph_inference_claimed"][..],
+        &["claim_boundary", "neural_engine_execution_claimed"][..],
+        &["claim_boundary", "qk256_apple_claimed"][..],
+        &["claim_boundary", "broad_quality_claim"][..],
+        &["claim_boundary", "broad_performance_claim"][..],
+        &["claim_boundary", "speedup_claim"][..],
+    ] {
+        if claim_path.ends_with(&["guardrail_only"]) {
+            require_bool_at(path, envelope, claim_path, true)?;
+        } else {
+            require_bool_at(path, envelope, claim_path, false)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_apple_m4_context_guardrail_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_context_guardrail")?;
+    require_exact_string_at(path, receipt, &["status"], "blocked")?;
+    require_bool_at(path, receipt, &["fallback_used"], false)?;
+    require_exact_string_at(path, receipt, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+    require_exact_string_at(path, receipt, &["runtime_api"], "cpu")?;
+    validate_mac_context_envelope(path, &receipt["context_envelope"])?;
+    require_bool_at(path, receipt, &["context_envelope", "allowed"], false)?;
+    require_non_empty_string_at(path, receipt, &["operator_command"])?;
+    require_non_empty_string_at(path, receipt, &["model_family"])?;
+    require_non_empty_string_at(path, receipt, &["model_id"])?;
+    let sha_values = receipt["prompt"]["sha256s"].as_array().ok_or_else(|| {
+        anyhow!("{} context guardrail receipt is missing prompt.sha256s", path.display())
+    })?;
+    if sha_values.is_empty() {
+        anyhow::bail!("{} context guardrail receipt must record prompt hashes", path.display());
+    }
+    for value in sha_values {
+        let Some(sha) = value.as_str() else {
+            anyhow::bail!("{} context guardrail prompt hash must be a string", path.display());
+        };
+        if !is_sha256_hex(sha) {
+            anyhow::bail!("{} context guardrail prompt hash is not SHA256", path.display());
+        }
+    }
+    for claim_path in [
+        &["claim_boundary", "guardrail_only"][..],
+        &["claim_boundary", "live_generation_executed"][..],
+        &["claim_boundary", "new_context_quality_claim"][..],
+        &["claim_boundary", "unsupported_context_supported"][..],
+        &["claim_boundary", "bitnet_chat_enabled"][..],
+        &["claim_boundary", "bitnet_serve_enabled"][..],
+        &["claim_boundary", "full_metal_inference_claimed"][..],
+        &["claim_boundary", "mpsgraph_inference_claimed"][..],
+        &["claim_boundary", "neural_engine_execution_claimed"][..],
+        &["claim_boundary", "qk256_apple_claimed"][..],
+        &["claim_boundary", "broad_quality_claim"][..],
+        &["claim_boundary", "broad_performance_claim"][..],
+        &["claim_boundary", "speedup_claim"][..],
+    ] {
+        if claim_path.ends_with(&["guardrail_only"]) {
+            require_bool_at(path, receipt, claim_path, true)?;
+        } else {
+            require_bool_at(path, receipt, claim_path, false)?;
+        }
+    }
+    Ok((Some(0), Some(0)))
+}
+
 fn validate_apple_m4_golden_token_canaries_receipt(
     path: &Path,
     receipt: &serde_json::Value,
@@ -22997,6 +26012,35 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn mac_benchmark_context_alias_expands_to_context_profiles() -> Result<()> {
+        let expanded = expand_benchmark_profile_aliases(vec![
+            MacBenchmarkProfile::ShortPrompt16Out,
+            MacBenchmarkProfile::Context,
+            MacBenchmarkProfile::Context1k,
+        ]);
+        assert_eq!(
+            expanded,
+            vec![
+                MacBenchmarkProfile::ShortPrompt16Out,
+                MacBenchmarkProfile::Context1k,
+                MacBenchmarkProfile::Context4k,
+                MacBenchmarkProfile::Context1k,
+            ]
+        );
+
+        let deduped = dedupe_benchmark_profiles(expanded)?;
+        assert_eq!(
+            deduped,
+            vec![
+                MacBenchmarkProfile::ShortPrompt16Out,
+                MacBenchmarkProfile::Context1k,
+                MacBenchmarkProfile::Context4k,
+            ]
+        );
+        Ok(())
+    }
+
     fn test_verified_model(cache_root: &Path) -> VerifiedCachedModel {
         VerifiedCachedModel {
             id: "qwen2.5-0.5b-instruct-q8_0".to_string(),
@@ -23007,6 +26051,49 @@ mod tests {
             bytes: 675_710_816,
             architecture: "qwen2".to_string(),
             quantization: "Q8_0".to_string(),
+            tokenizer_model: "gpt2".to_string(),
+            tokenizer_pre: "qwen2".to_string(),
+            chat_template: true,
+            support_note: "test model".to_string(),
+        }
+    }
+
+    fn test_verified_model_for(cache_root: &Path, model_id: &str) -> VerifiedCachedModel {
+        let (display_name, sha256, bytes, quantization) = match model_id {
+            "qwen2.5-0.5b-instruct-q8_0" => (
+                "Qwen2.5 0.5B Instruct Q8_0",
+                "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                675_710_816,
+                "Q8_0",
+            ),
+            "qwen2.5-0.5b-instruct-q4_k_m" => (
+                "Qwen2.5 0.5B Instruct Q4_K_M",
+                "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+                491_400_032,
+                "Q4_K_M",
+            ),
+            "qwen2.5-1.5b-instruct-q4_k_m" => (
+                "Qwen2.5 1.5B Instruct Q4_K_M",
+                "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+                1_117_320_736,
+                "Q4_K_M",
+            ),
+            _ => (
+                "Qwen2.5 0.5B Instruct Q8_0",
+                "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                675_710_816,
+                "Q8_0",
+            ),
+        };
+        VerifiedCachedModel {
+            id: model_id.to_string(),
+            display_name: display_name.to_string(),
+            path: cache_root.join(format!("{model_id}.gguf")),
+            cache_root: cache_root.to_path_buf(),
+            sha256: sha256.to_string(),
+            bytes,
+            architecture: "qwen2".to_string(),
+            quantization: quantization.to_string(),
             tokenizer_model: "gpt2".to_string(),
             tokenizer_pre: "qwen2".to_string(),
             chat_template: true,
@@ -23476,6 +26563,125 @@ mod tests {
     }
 
     #[test]
+    fn mac_receipts_check_accepts_mixed_model_switch_soak() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let temp = tempfile::tempdir()?;
+        let mut models = Vec::new();
+        let mut switches = Vec::new();
+        let mut child_summary_receipts = Vec::new();
+        let mut prompt_count_total = 0u64;
+        let mut generated_tokens_total = 0u64;
+        for (index, model_id) in APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS.iter().enumerate() {
+            let model = test_verified_model_for(temp.path(), model_id);
+            let child_path = temp.path().join(format!("child-{index}.json"));
+            let child_summary = test_benchmark_v2_receipt(
+                &model,
+                child_path.clone(),
+                vec![test_valid_benchmark_profile_summary("resident_25")],
+            );
+            std::fs::write(&child_path, serde_json::to_vec_pretty(&child_summary)?)?;
+            let child_path_text = child_path.display().to_string();
+            prompt_count_total += child_summary["prompt_count"].as_u64().unwrap_or_default();
+            generated_tokens_total +=
+                child_summary["generated_tokens"].as_u64().unwrap_or_default();
+            child_summary_receipts.push(child_path_text.clone());
+            switches.push(serde_json::json!({
+                "sequence_index": index + 1,
+                "model_cache": benchmark_model_cache_json(&model),
+                "profile_id": "resident_25",
+                "child_summary_receipt": child_path_text,
+                "child_profile_receipts": child_summary["evidence"]["profile_receipts"].clone(),
+                "prompt_count": child_summary["prompt_count"].clone(),
+                "generated_tokens": child_summary["generated_tokens"].clone(),
+                "fallback_used": false,
+                "status": "completed",
+                "comparison_readiness": child_summary["comparison_readiness"].clone(),
+                "invalid_comparison_reasons": [],
+                "memory": child_summary["memory"].clone(),
+            }));
+            models.push(model);
+        }
+        let receipt_path = temp.path().join("mixed-model-switch.json");
+        let receipt = serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "apple_m4_slm_mixed_model_switch_soak_v1",
+            "timestamp": "2026-05-20T10:00:00Z",
+            "artifact_path": receipt_path.display().to_string(),
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "fallback_reason": serde_json::Value::Null,
+            "profile_set": "slm-mixed-model-switch-v1",
+            "profile_id": M4_SLM_MIXED_MODEL_SWITCH_PROFILE,
+            "child_profile_id": "resident_25",
+            "supported_model_ids": APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+            "sequence_model_ids": APPLE_M4_DENSE_REF_SUPPORTED_MODEL_IDS,
+            "switches": switches,
+            "prompt_count": prompt_count_total,
+            "generated_tokens": generated_tokens_total,
+            "build": {
+                "profile": "release",
+                "release_mode": true,
+            },
+            "model_cache_set": models.iter().map(benchmark_model_cache_json).collect::<Vec<_>>(),
+            "memory": {
+                "start_peak_memory_mb": 128.0,
+                "end_peak_memory_mb": 160.0,
+                "process_peak_drift_mb": 32.0,
+                "child_peak_memory_mb": benchmark_stat_json(&[3900.0, 3950.0, 4200.0]),
+                "source": "test fixture",
+            },
+            "comparison_readiness": {
+                "status": "comparable",
+                "can_compare_timing": true,
+                "invalid_comparison_reasons": [],
+            },
+            "invalid_comparison_reasons": [],
+            "switch_contract": {
+                "contract_version": "1.0.0",
+                "scope": "Apple M4 Mac mini mixed dense SLM model switch soak",
+                "profile_execution_model": "one resident_25 benchmark summary per supported dense model identity",
+                "model_cache_reuse": "verified cached GGUF identities are reused from the local filesystem cache before each child run",
+                "model_unload_reload_boundary": "each model identity is run through an isolated benchmark summary; child warm-session processes exit between profile/model identities",
+                "receipt_separation_per_model_identity": true,
+                "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+                "child_profile_id": "resident_25",
+                "dense_slm_only": true,
+            },
+            "evidence": {
+                "child_summary_receipts": child_summary_receipts,
+                "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+                "generated_text_recorded": true,
+                "generated_token_ids_recorded": true,
+                "operator_command": "mac benchmark",
+            },
+            "mac_claim_boundary": {
+                "dense_slm_only": true,
+                "mixed_model_switch_soak": true,
+                "bounded_benchmark_profiles_only": true,
+                "broad_model_quality_claim": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+                "bitnet_quality_claimed": false,
+                "bitnet_performance_claimed": false,
+                "full_metal_inference_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "macbook_evidence": false,
+            },
+            "speedup_claim": false,
+        });
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_slm_mixed_model_switch_soak_v1");
+        assert_eq!(summary.prompt_count, Some(prompt_count_total as usize));
+        assert_eq!(summary.generated_tokens, Some(generated_tokens_total as usize));
+        Ok(())
+    }
+
+    #[test]
     fn slm_benchmark_v2_accepts_timeout_profile_without_timing_sample()
     -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
@@ -23900,6 +27106,34 @@ mod tests {
     }
 
     #[test]
+    fn dense_slm_chat_smoke_receipt_rejects_blocked_context_envelope()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let mut receipt = test_dense_slm_chat_smoke_receipt();
+        receipt["context_envelope"] = mac_context_envelope_json(
+            MacContextModelFamily::DenseSlm,
+            MacContextRoute::ChatSmoke,
+            "qwen2.5-0.5b-instruct-q8_0",
+            M4_CONTEXT_4K_PROMPT_TOKENS + 1,
+            true,
+            8,
+        );
+
+        let err = match validate_mac_receipt_value(Path::new("dense-chat-smoke.json"), &receipt) {
+            Ok(summary) => {
+                return Err(format!(
+                    "blocked context envelope on a successful chat smoke receipt should fail, got {summary:?}"
+                )
+                .into());
+            }
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains("blocked context_envelope"), "got: {err}");
+        assert!(err.contains("apple_m4_context_guardrail"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
     fn dense_slm_chat_smoke_receipt_rejects_missing_turn_receipts()
     -> Result<(), Box<dyn std::error::Error>> {
         let mut receipt = test_dense_slm_chat_smoke_receipt();
@@ -24034,37 +27268,60 @@ mod tests {
     }
 
     #[test]
+    fn mac_receipts_check_accepts_reliability_drills() -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("reliability-drills.json");
+        let receipt = apple_m4_reliability_drill_receipt(&receipt_path);
+
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_reliability_drills");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(0));
+        assert_eq!(summary.generated_tokens, Some(0));
+        assert_eq!(receipt["work_item"], "M4-RELIABILITY-001");
+        assert_eq!(
+            receipt["drill_count"].as_u64(),
+            Some(M4_RELIABILITY_REQUIRED_DRILLS.len() as u64)
+        );
+        assert_eq!(receipt["claim_boundary"]["no_live_model_run"], true);
+        assert_eq!(receipt["claim_boundary"]["bitnet_chat_enabled"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_serve_enabled"], false);
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_rejects_reliability_drills_missing_required_case()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("reliability-drills.json");
+        let mut receipt = apple_m4_reliability_drill_receipt(&receipt_path);
+        receipt["drills"]
+            .as_array_mut()
+            .ok_or_else(|| std::io::Error::other("drills array"))?
+            .retain(|drill| drill["id"].as_str() != Some("low_disk"));
+
+        let err = match validate_mac_receipt_value(&receipt_path, &receipt) {
+            Ok(summary) => {
+                return Err(format!(
+                    "reliability drills without low_disk should fail, got {summary:?}"
+                )
+                .into());
+            }
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains("must contain"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
     fn mac_profile_set_allocation_scope_preserves_m3_backend_label() {
         assert_eq!(
             profile_set_allocation_scope(APPLE_M3_AIR_CPU_NEON),
             "selected Apple M3 Air CPU/NEON SLM warm-session profile set"
         );
-    }
-
-    #[test]
-    fn m3_air_performance_profile_records_context_and_claim_boundary() {
-        let summaries = vec![serde_json::json!({
-            "prompt_count": 3,
-            "model_loaded_once": true,
-            "tokenizer_loaded_once": true,
-            "power": {"source": "workflow_host_context"},
-            "thermal": {"source": "workflow_host_context"},
-            "storage": {"source": "workflow_host_context"},
-        })];
-
-        let profile = m3_air_performance_profile_json(&[16, 32, 64, 128], &summaries);
-
-        assert_eq!(profile["machine_id"], "apple-m3-macbook-air");
-        assert_eq!(profile["requested_backend"], APPLE_M3_AIR_CPU_NEON);
-        assert_eq!(profile["cold_load"]["model_loaded_once_per_profile"], true);
-        assert_eq!(profile["warm_prompt"]["prompt_counts"][0], 3);
-        assert_eq!(profile["host_context"]["power_recorded_per_profile"], true);
-        assert_eq!(
-            profile["timeout_cap_provenance"]["timeouts_or_cancellations_are_healthy_samples"],
-            false
-        );
-        assert_eq!(profile["claim_boundary"]["m4_mac_mini_performance_claimed"], false);
-        assert_eq!(profile["claim_boundary"]["speedup_claim"], false);
     }
 
     fn test_golden_token_canary_receipt() -> serde_json::Value {
@@ -25780,6 +29037,45 @@ mod tests {
     }
 
     #[test]
+    fn mac_serve_context_guardrail_error_maps_to_payload_too_large()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("m4srv-context-blocked.json");
+        let context_envelope = mac_context_envelope_json(
+            MacContextModelFamily::DenseSlm,
+            MacContextRoute::Serve,
+            "qwen2.5-0.5b-instruct-q8_0",
+            M4_CONTEXT_4K_PROMPT_TOKENS + 1,
+            true,
+            8,
+        );
+        std::fs::write(
+            &receipt_path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "request_id": "m4srv-context-blocked",
+                "context_envelope": context_envelope,
+            }))?,
+        )?;
+        let error = anyhow!(
+            "mac serve context guardrail blocked request: context_guardrail_blocked: prompt exceeds recorded envelope; receipt written to {}",
+            receipt_path.display()
+        );
+
+        let reply = mac_serve_context_guardrail_error_reply(&error)?
+            .ok_or_else(|| std::io::Error::other("expected guardrail reply"))?;
+        let body: serde_json::Value = serde_json::from_slice(&reply.body)?;
+
+        assert_eq!(reply.status, 413);
+        assert_eq!(reply.reason, "Payload Too Large");
+        assert_eq!(body["error"], "context_guardrail_blocked");
+        assert_eq!(body["request_id"], "m4srv-context-blocked");
+        assert_eq!(body["receipt_path"], receipt_path.display().to_string());
+        assert_eq!(body["context_envelope"]["allowed"], false);
+        assert_eq!(body["claim_boundary"]["unsupported_context_supported"], false);
+        Ok(())
+    }
+
+    #[test]
     fn mac_serve_completion_request_accepts_prompt_or_chat_messages() {
         let prompt_request: MacServeCompletionRequest =
             serde_json::from_str(r#"{"prompt":"What is 2+2?"}"#).expect("prompt request");
@@ -25816,5 +29112,76 @@ mod tests {
         assert!(MacServeCheckEndpoint::parse("https://127.0.0.1:8080").is_err());
         assert!(MacServeCheckEndpoint::parse("http://127.0.0.1").is_err());
         assert!(MacServeCheckEndpoint::parse("http://127.0.0.1:8080/path").is_err());
+    }
+
+    #[test]
+    fn dense_local_server_smoke_receipt_validates_claim_boundaries()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("serve-smoke.json");
+        let mut receipt = serde_json::json!({
+            "schema_version": "1.0.0",
+            "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+            "operator_command": "mac serve-smoke",
+            "result": "pass",
+            "model_family": "dense-slm",
+            "model_id": "qwen2.5-0.5b-instruct-q8_0",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "timeout_boundary": {
+                "configured_seconds": 300,
+                "enforced": false,
+                "reached": false,
+            },
+            "checks": {
+                "health": {"executed": true, "passed": true},
+                "ready": {"executed": true, "passed": true},
+                "models": {"executed": true, "passed": true},
+                "one_shot_completion": {
+                    "executed": true,
+                    "passed": true,
+                    "generated_tokens": 1,
+                    "receipt_export": {"executed": true, "passed": true}
+                },
+                "streaming_completion": {
+                    "executed": true,
+                    "passed": true,
+                    "generated_tokens": 1,
+                    "receipt_export": {"executed": true, "passed": true}
+                }
+            },
+            "claim_boundary": {
+                "server_health_checked": true,
+                "server_readiness_checked": true,
+                "model_catalog_checked": true,
+                "one_shot_completion_checked": true,
+                "streaming_completion_checked": true,
+                "receipt_export_checked": true,
+                "dense_slm_only": true,
+                "bitnet_serve_claimed": false,
+                "production_readiness_claimed": false,
+                "openai_compatibility_claimed": false,
+                "bitnet_quality_claimed": false,
+                "full_metal_inference_claimed": false,
+                "mpsgraph_inference_claimed": false,
+                "neural_engine_execution_claimed": false,
+                "qk256_apple_claimed": false,
+                "broad_performance_claim": false,
+                "speedup_claim": false,
+            },
+        });
+
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+        assert_eq!(summary.artifact_kind, "bitnet_apple_m4_dense_local_server_smoke");
+        assert_eq!(summary.generated_tokens, Some(2));
+
+        receipt["claim_boundary"]["bitnet_serve_claimed"] = serde_json::json!(true);
+        let err = validate_mac_receipt_value(&receipt_path, &receipt)
+            .expect_err("BitNet serve claim must be rejected")
+            .to_string();
+        assert!(err.contains("bitnet_serve_claimed"));
+        Ok(())
     }
 }

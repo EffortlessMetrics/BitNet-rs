@@ -837,3 +837,68 @@ Qwen3.5 support
 BitNet QK256 changes
 portable performance across other CPUs
 ```
+
+## Release-Surface Boundary
+
+After SLM-CPU-061, BitNet-rs keeps the Kaby Lake SLM lane as the audited
+release and evidence surface. The committed Qwen3 Q8_0 and Qwen2.5 Q8_0
+strict CPU receipts remain the behavior oracle for any future dense packed-Q8
+candidate.
+
+Further packed Q8_0 compute-candidate development should happen in
+`bitnet-rs-swarm`. A candidate can return to BitNet-rs only as an audited
+release/evidence artifact that preserves:
+
+```text
+model SHA
+strict GGUF tokenizer authority
+prompt IDs
+generated IDs
+decoded text
+selected CPU backend/kernel identity
+dense hook-selection identity
+fallback_used=false
+speedup_claim=false unless a separate bounded timing receipt proves otherwise
+```
+
+This boundary does not claim a new runtime compute path, speedup, sustained
+throughput, broad answer quality, Q4/Q5 runtime support, server execution,
+accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
+
+The intake rules for those returned artifacts are defined in
+`docs/slm/SLM_CPU_SWARM_ARTIFACT_INTAKE.md`.
+
+## SLM-CPU-065 Runtime Promotion Gate
+
+SLM-CPU-065 reviewed the accepted single-tensor packed Q8_0 sidecar candidate
+from the SLM-CPU-064 intake package:
+
+```text
+tensor = layers.0.attention.q_proj.weight
+role = AttentionQ
+payload_sha256 = a8e16a232ea8c19a5c5d2eb5f21bfdf5c297eba0ac90e74b0afc052577179c24
+```
+
+The release-surface decision is blocked, not promoted. BitNet-rs keeps the
+runtime on the strict eager F32 Candle path until an exact-tensor packed-Q8
+runtime receipt exists:
+
+```text
+selected_path = eager_f32_candle
+selected_kernel = dense-f32-candle-linear
+runtime_compute_enabled = false
+dense_runtime_replaced = false
+fallback_used = false
+speedup_claim = false
+```
+
+The gate artifact is
+`ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-065-runtime-promotion-gate.json`.
+It records that the sidecar evidence was accepted, but runtime promotion is
+blocked because the release surface has not produced a strict before/after
+receipt where packed sidecar compute is selected for this exact tensor and
+behavior remains identical.
+
+This gate does not claim packed Q8_0 execution, speedup, sustained throughput,
+broad answer quality, Q4/Q5 runtime support, server execution, accelerator
+execution, Qwen3.5 support, or BitNet QK256 changes.

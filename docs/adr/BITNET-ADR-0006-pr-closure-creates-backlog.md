@@ -78,3 +78,4 @@ Reverting this ADR requires replacing it with another durable operating
 decision that prevents queue closure from hiding unlanded work. Existing PRs and
 comments remain evidence for what happened even if future policy changes the
 allowed disposition categories.
+

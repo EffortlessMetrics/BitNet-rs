@@ -1,5 +1,11 @@
 # BitNet-rs Performance Issues - Executive Summary
 
+> Claim boundary: this is a historical issue-triage snapshot. Performance,
+> production-ready, GPU/CUDA, throughput, issue-status, and optimization-target
+> wording records that older analysis context only. Current support, speed,
+> backend, quality, and readiness claims must come from active receipts, model
+> coverage, status docs, specs, and claim gates.
+
 **Analysis Date**: November 11, 2025
 **Post**: PR #475 (GPU/CPU Feature Gate Unification)
 

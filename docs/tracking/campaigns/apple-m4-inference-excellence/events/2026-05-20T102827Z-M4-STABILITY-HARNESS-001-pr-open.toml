@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T10:28:27Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-HARNESS-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-HARNESS-001-mixed-model-profile"
+pr = 6131
+head_sha = "61d4b87d5826e429965c4e3696a06ea155ddac9f"
+
+notes = [
+  "Opened PR #6131 to add the mixed dense-model switch benchmark harness required before M4-STABILITY-001 records live soak evidence.",
+  "The PR exposes `bitnet mac benchmark --profile mixed_model_switch`, runs one resident_25 child benchmark summary per supported dense M4 model identity, and validates the aggregate apple_m4_slm_mixed_model_switch_soak_v1 receipt.",
+  "M4-STABILITY-001 remains blocked until this harness lands, then it can record ci/hardware mixed-model switch soak evidence with receipts-check validation.",
+  "No live mixed-model soak evidence, BitNet behavior, BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup, broad quality, or broad Apple Silicon performance claim is in scope.",
+]

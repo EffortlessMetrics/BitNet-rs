@@ -1,4 +1,13 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
 # T4 Safety Validation - PR #473
+
+> Historical CI artifact only. This report records a 2025 PR/gate decision and
+> must not be read as a current BitNet-rs support, speedup, CUDA/GPU,
+> server-readiness, residency, reference-parity, quality, or product-readiness
+> claim. Current claims must come from active model coverage, receipts, specs,
+> status docs, and claim gates.
 
 **Date**: 2025-10-21
 **PR**: #473 (feat/mvp-finalization)
@@ -406,4 +415,3 @@ GGUF validation: bounds checking + overflow prevention ✓
 1. Track RSA CVE (RUSTSEC-2023-0071) for upstream fix
 2. Consider JWT alternatives for production deployments if timing attack vector is a concern
 3. Continue safety-first approach in future quantization optimizations
-

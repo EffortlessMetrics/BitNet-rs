@@ -80,29 +80,19 @@ artifacts to separate strict proof items.
 | M3MBA-019 | merged | #5388 refreshes the post-handoff roadmap so next M3 work is split into device-model hardening, accuracy comparison, bounded performance, artifact-unblock, and M4 handoff alignment tracks. |
 | M3MBA-020 | merged | #5937 encodes the post-handoff execution queue as concrete follow-on work items instead of leaving the lane at a roadmap reset. |
 | M3MBA-021 | merged | #5952 extends the shared device/profile model with a structured M3 Air host profile contract and strict unsupported-backend claim boundaries. |
-| M3MBA-022 | merged | #6043 adds an M3 Air dense SLM accuracy comparison profile with prompt IDs, scoring policy, and comparable-evidence rules. |
-| M3MBA-023 | merged | #57 adds a bounded M3 Air performance profile that uses completed-run timeout provenance and phase artifact retention. |
-| M3MBA-024 | merged | #67 preflights secondary BitNet artifact authority, storage, and cleanup gates before any new large download. |
-| M3MBA-025 | merged | #78 aligns M3 accepted-artifact metadata with the separate M4 strict-proof checklist without manufacturing M4 proof. |
-| M3MBA-026 | merged | #30 hardens server shared-engine receipts so all three configured M3 Air labels survive CUDA-active model metadata without implying live M3 Metal, MPSGraph, M4 proof, or BitNet proof. |
+| M3MBA-022 | proposed | Add an M3 Air dense SLM accuracy comparison profile with prompt IDs, scoring policy, and comparable-evidence rules. |
+| M3MBA-023 | proposed | Add a bounded M3 Air performance profile that uses completed-run timeout provenance and phase artifact retention. |
+| M3MBA-024 | proposed | Unblock secondary BitNet artifacts through authority/storage preflight evidence before any new large download. |
+| M3MBA-025 | proposed | Align M3 accepted-artifact metadata with the separate M4 strict-proof checklist without manufacturing M4 proof. |
 
-Current focus: no post-handoff M3 Air slice is currently in progress. `M3MBA-025`
-is merged and maps the accepted Microsoft 2B M3 reference-runner artifact
-metadata to separate M4 receipt requirements without turning M3 evidence into
-M4 proof.
-`M3MBA-024` is merged as a no-download secondary BitNet artifact unblock
-preflight that refreshes official source availability, tokenizer-authority
-needs, storage gates, conversion or third-party approval requirements, and
-cleanup planning before any new M3 Air large download.
-`M3MBA-022`, `M3MBA-023`, `M3MBA-024`, `M3MBA-025`, and `M3MBA-026` are merged. The
-Microsoft 2B I2_S artifact is accepted only for the recorded M3 Air BitNet.cpp
-reference-runner context and is ready to seed separate M4 strict-proof work with
-fresh M4 receipts. `M3MBA-006` and
+Current focus: `M3MBA-022` builds on the merged `M3MBA-021` device/profile
+contract with a dense SLM accuracy comparison profile. The Microsoft 2B I2_S artifact is accepted only for the
+recorded M3 Air BitNet.cpp reference-runner context and is ready to seed
+separate M4 strict-proof work with fresh M4 receipts. `M3MBA-006` and
 `M3MBA-007` remain blocked because the official 1bitLLM repositories do not
 expose the GGUF artifacts required by their command shapes, and they are not
-handoff targets until a future item resolves artifact authority and
-storage-safe acceptance requirements. Accuracy, performance, and
-handoff-alignment work now use
+handoff targets until `M3MBA-024` records artifact authority and storage-safe
+preflight evidence. Accuracy, performance, and handoff-alignment work now use
 the structured M3 Air host/profile contract instead of broad Apple Silicon
 claims.
 
@@ -116,7 +106,7 @@ claims.
 | Storage hygiene | M3MBA-010 | Keep the MacBook lane usable for large artifacts without hiding local cache state. | Artifact ledger audit with retained/deleted state and free-space floor. |
 | Cross-lane synthesis | M3MBA-009 | Compare M3 dense SLM behavior against M4 and SLM CPU evidence without broad claims. | Synthesis report naming comparable receipts and non-comparable gaps. |
 | Strict-proof handoff | M3MBA-008 | Convert accepted artifact evidence into separate M4 proof work. | Handoff report only; no manufactured M4 receipt. |
-| Post-handoff execution | M3MBA-019, M3MBA-020, M3MBA-021, M3MBA-022, M3MBA-023, M3MBA-024, M3MBA-025, M3MBA-026 | Keep the M3 Air lane moving after the Microsoft 2B handoff with explicit device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment tracks. | Updated roadmap, concrete follow-on item boundaries, and later receipt-backed implementation PRs; no manufactured runtime claim. |
+| Post-handoff execution | M3MBA-019, M3MBA-020, M3MBA-021, M3MBA-022, M3MBA-023, M3MBA-024, M3MBA-025 | Keep the M3 Air lane moving after the Microsoft 2B handoff with explicit device-model, accuracy, performance, artifact-unblock, and M4 handoff alignment tracks. | Updated roadmap, concrete follow-on item boundaries, and later receipt-backed implementation PRs; no manufactured runtime claim. |
 
 ## Post-Handoff Execution Queue
 
@@ -130,10 +120,9 @@ work items so the next PRs have concrete ownership and validation surfaces.
 | 3 | `M3MBA-023` | Bounded performance | Selected M3 Air timing profile with cold/warm separation, power/thermal/storage fields, phase artifacts, and timeout caps derived from completed healthy runs plus cushion. |
 | 4 | `M3MBA-024` | Secondary artifact unblock | Official artifact availability, tokenizer authority, storage footprint, conversion or third-party approval needs, and cleanup plan before any new large download. |
 | 5 | `M3MBA-025` | M4 handoff alignment | Checklist mapping accepted M3 artifact metadata to separate M4 strict-proof requirements and unsupported claims. |
-| 6 | `M3MBA-026` | Server receipt label hardening | CUDA-active model metadata cannot collapse configured M3 Air Metal, MPSGraph, or CPU/NEON labels into generic active-model backend wording or proof claims. |
 
-`M3MBA-022`, `M3MBA-023`, `M3MBA-024`, `M3MBA-025`, and `M3MBA-026` are merged.
-Performance follow-ups should remain scoped to the exact M3 Air host and
+The next implementation PR after `M3MBA-021` should be `M3MBA-022`. Accuracy
+and performance work should remain scoped to the exact M3 Air host and
 proof-lane labels now represented by the device/profile contract. Secondary
 BitNet artifact work can proceed in parallel with dense SLM accuracy only if it
 stays in preflight/reporting paths and does not start a new large local

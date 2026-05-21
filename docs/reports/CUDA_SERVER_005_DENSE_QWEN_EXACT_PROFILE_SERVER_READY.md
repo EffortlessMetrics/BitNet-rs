@@ -103,3 +103,4 @@ those paths failed before evidence generation because `nvcc` could not find
 `cl.exe`, then `link.exe` could not find CUDA/Windows SDK libraries. After the
 environment was corrected, the build passed and the server generated the
 receipt above from the current source tree.
+

@@ -6,7 +6,7 @@ name: Test Telemetry
 on:
   pull_request:
     branches: [ main ]
-    types: [labeled]
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   push:
     branches: [ main ]
     paths:
