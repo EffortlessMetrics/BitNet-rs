@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T22:23:08Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-003"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-003-local-safety-defaults"
+pr = 6171
+head_sha = "1a4e876796ab301e4a6184eea56315ef1305749e"
+
+notes = [
+  "Opened draft PR #6171 for the bounded M4 local-server safety-defaults slice.",
+  "The PR adds localhost-by-default serving with explicit non-loopback opt-in, no-telemetry and disabled-CORS safety metadata, 1 MiB request limits, safe receipt IDs, and HTTP redaction for cache, model, and receipt paths.",
+  "Local Rust compile/test validation is blocked by host disk pressure; `cargo fmt --all --check` and `git diff --check` passed before opening.",
+]
