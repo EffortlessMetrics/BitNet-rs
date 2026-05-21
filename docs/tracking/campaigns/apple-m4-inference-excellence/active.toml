@@ -2525,7 +2525,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-EX-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-dense-serve-conformance"
 stackable = false
 review_mode = "codex_premerge"
@@ -2533,6 +2533,7 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-REPRO-001", "M4-BENCH-003"]
 pr = 94
+merge_sha = "d3e891b8b51f9af6565d18f9811a03f2e04257ed"
 acceptance = "Refresh dense SLM local-server conformance on M4 for supported model identities, including health, ready, one-shot request, streaming completion, per-request receipt export, timeout behavior, fallback=false backend fields, and service claim boundaries."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_serve -- --nocapture",

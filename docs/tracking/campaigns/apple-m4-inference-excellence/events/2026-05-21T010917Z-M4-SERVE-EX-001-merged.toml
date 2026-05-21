@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T01:09:17Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-dense-serve-conformance"
+pr = 94
+merge_sha = "d3e891b8b51f9af6565d18f9811a03f2e04257ed"
+
+notes = [
+  "PR #94 merged dense-only M4 local-server conformance evidence for all supported dense SLM model IDs.",
+  "The merged evidence records aggregate and per-request serve-smoke receipts for qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m.",
+  "Each aggregate receipt remains scoped to apple-m4-cpu-neon dense SLM local server conformance with fallback_used=false; timeout enforcement remains deferred to M4-SERVE-EX-002.",
+  "Closeout is tracker-only and records the already-merged PR; it does not enable BitNet serve or chat, production hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claims.",
+]
