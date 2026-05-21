@@ -568,7 +568,7 @@
 | nvidia-5070ti | CUDA-MODEL-014B | CUDA-MODEL-013 | merged |
 | nvidia-5070ti | CUDA-MODEL-015 | CUDA-MODEL-014B | merged |
 | nvidia-5070ti | CUDA-MODEL-016 | CUDA-MODEL-015 | merged |
-| nvidia-5070ti | CUDA-MODEL-017A | CUDA-MODEL-016 | ready |
+| nvidia-5070ti | CUDA-MODEL-017A | CUDA-MODEL-016 | in_progress |
 | nvidia-5070ti | CUDA-MODEL-017 | CUDA-MODEL-017A | blocked |
 | nvidia-5070ti | CUDA-MODEL-018 | CUDA-MODEL-017 | blocked |
 | nvidia-5070ti | CUDA-MODEL-SMOLLM2-001 | CUDA-MODEL-008 | merged |

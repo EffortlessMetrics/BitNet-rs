@@ -380,6 +380,10 @@ fn assert_source_receipt(profile: &str, receipt: &Value) -> Result<(), Box<dyn E
     if !str_at(receipt, "/artifact_kind")?.starts_with("dense_gguf_qwen_") {
         return Err("source receipt must be a dense Qwen proof".into());
     }
+    let expected_artifact = expected_source_artifact_kind(profile)?;
+    if str_at(receipt, "/artifact_kind")? != expected_artifact {
+        return Err(format!("{profile} requires source artifact kind {expected_artifact}").into());
+    }
     if str_at(receipt, "/model/id")? != "qwen3-0.6b-instruct-q8_0" {
         return Err("source receipt must use the Qwen3 0.6B artifact".into());
     }
@@ -416,6 +420,18 @@ fn assert_source_receipt(profile: &str, receipt: &Value) -> Result<(), Box<dyn E
         return Err(format!("{profile} generated token count does not match its profile").into());
     }
     Ok(())
+}
+
+fn expected_source_artifact_kind(profile: &str) -> Result<&'static str, Box<dyn Error>> {
+    match profile {
+        "one_token" => Ok("dense_gguf_qwen_one_token_strict_cuda_proof"),
+        "short_decode_8" | "short_decode_32" => {
+            Ok("dense_gguf_qwen_short_decode_strict_cuda_proof")
+        }
+        "warm_session_3_turns" => Ok("dense_gguf_qwen_warm_session_strict_cuda_proof"),
+        "decode_128_from_warm_context" => Ok("dense_gguf_qwen_warm_decode_strict_cuda_proof"),
+        other => Err(format!("unknown profile {other}").into()),
+    }
 }
 
 fn build_receipt(args: &Args, runs: &ProfileRuns) -> Result<Value, Box<dyn Error>> {
@@ -684,30 +700,13 @@ fn generated_identity(profile: &str, receipt: &Value) -> Result<GeneratedIdentit
             top_k_compared: bool_at(receipt, "/short_decode_proof/top_k_compared")?,
         }),
         "decode_128_from_warm_context" => Ok(GeneratedIdentity {
-            ids_sha256: str_at_any(
-                receipt,
-                &[
-                    "/warm_decode_proof/cpu_generated_token_ids_sha256",
-                    "/short_decode_proof/cpu_generated_token_ids_sha256",
-                ],
-            )?
-            .to_owned(),
-            ids_match: bool_at_any(
-                receipt,
-                &[
-                    "/warm_decode_proof/generated_token_ids_match",
-                    "/short_decode_proof/generated_token_ids_match",
-                ],
-            )?,
+            ids_sha256: str_at(receipt, "/warm_decode_proof/cpu_generated_token_ids_sha256")?
+                .to_owned(),
+            ids_match: bool_at(receipt, "/warm_decode_proof/generated_token_ids_match")?,
             first_divergence_report: divergence_report(
-                receipt.pointer("/warm_decode_proof/first_token_divergence_index").or_else(|| {
-                    receipt.pointer("/short_decode_proof/first_token_divergence_index")
-                }),
+                receipt.pointer("/warm_decode_proof/first_token_divergence_index"),
             ),
-            top_k_compared: bool_at_any(
-                receipt,
-                &["/warm_decode_proof/top_k_compared", "/short_decode_proof/top_k_compared"],
-            )?,
+            top_k_compared: bool_at(receipt, "/warm_decode_proof/top_k_compared")?,
         }),
         "warm_session_3_turns" => Ok(GeneratedIdentity {
             ids_sha256: str_at(receipt, "/warm_session_proof/cpu_generated_token_ids_sha256")?
@@ -812,13 +811,12 @@ fn prompt_token_count(profile: &str, receipt: &Value) -> Result<u64, Box<dyn Err
 fn generated_tokens(profile: &str, receipt: &Value) -> Result<u64, Box<dyn Error>> {
     match profile {
         "one_token" => u64_at(receipt, "/one_token_proof/generated_tokens_count"),
-        "short_decode_8" | "short_decode_32" | "decode_128_from_warm_context" => u64_at_any(
-            receipt,
-            &[
-                "/warm_decode_proof/generated_tokens_count",
-                "/short_decode_proof/generated_tokens_count",
-            ],
-        ),
+        "short_decode_8" | "short_decode_32" => {
+            u64_at(receipt, "/short_decode_proof/generated_tokens_count")
+        }
+        "decode_128_from_warm_context" => {
+            u64_at(receipt, "/warm_decode_proof/generated_tokens_count")
+        }
         "warm_session_3_turns" => u64_at(receipt, "/warm_session_proof/generated_tokens_total"),
         other => Err(format!("unknown profile {other}").into()),
     }
@@ -899,13 +897,6 @@ fn str_at<'a>(value: &'a Value, pointer: &str) -> Result<&'a str, Box<dyn Error>
         .ok_or_else(|| format!("{pointer} must be a string").into())
 }
 
-fn str_at_any<'a>(value: &'a Value, pointers: &[&str]) -> Result<&'a str, Box<dyn Error>> {
-    pointers
-        .iter()
-        .find_map(|pointer| value.pointer(pointer).and_then(Value::as_str))
-        .ok_or_else(|| format!("one of {pointers:?} must be a string").into())
-}
-
 fn string_or(value: &Value, pointer: &str, default: &str) -> String {
     value.pointer(pointer).and_then(Value::as_str).unwrap_or(default).to_owned()
 }
@@ -917,25 +908,11 @@ fn bool_at(value: &Value, pointer: &str) -> Result<bool, Box<dyn Error>> {
         .ok_or_else(|| format!("{pointer} must be a bool").into())
 }
 
-fn bool_at_any(value: &Value, pointers: &[&str]) -> Result<bool, Box<dyn Error>> {
-    pointers
-        .iter()
-        .find_map(|pointer| value.pointer(pointer).and_then(Value::as_bool))
-        .ok_or_else(|| format!("one of {pointers:?} must be a bool").into())
-}
-
 fn u64_at(value: &Value, pointer: &str) -> Result<u64, Box<dyn Error>> {
     value
         .pointer(pointer)
         .and_then(Value::as_u64)
         .ok_or_else(|| format!("{pointer} must be an unsigned integer").into())
-}
-
-fn u64_at_any(value: &Value, pointers: &[&str]) -> Result<u64, Box<dyn Error>> {
-    pointers
-        .iter()
-        .find_map(|pointer| value.pointer(pointer).and_then(Value::as_u64))
-        .ok_or_else(|| format!("one of {pointers:?} must be an unsigned integer").into())
 }
 
 fn number_at(value: &Value, pointer: &str) -> Result<f64, Box<dyn Error>> {

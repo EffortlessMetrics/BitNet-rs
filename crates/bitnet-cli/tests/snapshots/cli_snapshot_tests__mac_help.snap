@@ -8,35 +8,40 @@ Mac-oriented SLM check, ask, validate, and receipt-check wrappers
 Usage: bitnet mac [OPTIONS] <COMMAND>
 
 Commands:
-  models                List Apple M4 model states, cache status, and selection guidance
-  status                Summarize Apple M4 dense SLM, BitNet, disk/cache, receipt, and command readiness
-  evidence              Summarize committed M4 evidence, cache/disk state, regressions, and next command
-  report-refresh        Generate a model-free advisory/nightly Apple M4 report refresh manifest
-  regression-dashboard  Build a model-free dense SLM and BitNet regression dashboard from committed reports
-  check                 Check the cached Apple M4 SLM model artifact and routing boundary
-  ask                   Ask one question through the Rust-native Apple M4 CPU/NEON SLM path
-  smoke                 Run a compact Apple M4 model-family health smoke with cache and receipt checks
-  bitnet-warm           Run BitNet prompts in one warm Apple M4 CPU/NEON process without enabling chat
-  bitnet-chat-gate      Evaluate the receipt-backed gate for future BitNet Mac chat without enabling chat
-  bitnet-serve-gate     Evaluate the receipt-backed gate for future BitNet Mac serve
-  bitnet-benchmark      Benchmark BitNet one-shot ask and fixed warm paths without enabling chat or serve
-  doctor                Run one local health verdict for the supported Apple M4 dense-SLM path
-  serve                 Serve local M4 health and readiness endpoints plus completions
-  serve-check           Check a running M4 local server readiness and optional completion/receipt export
-  chat                  Run multiple prompts in one resident Apple M4 CPU/NEON SLM session
-  chat-smoke            Run a fixed dense SLM resident chat conformance smoke and write a receipt
-  validate              Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session
-  eval                  Dry-run supported Apple M4 eval suites and write receipt-backed summaries
-  benchmark             Run release-mode dense SLM benchmark profiles for v2 M4 receipts
-  benchmark-preflight   Record benchmark environment preflight evidence without running model inference
-  bitnet-proof          Validate M4 BitNet proof inputs without enabling BitNet chat/serve routing
-  receipts-check        Check Apple M4 SLM answer/warm-session receipts for hidden fallback or overclaims
-  regression            Compare Apple M4 dense-SLM or BitNet receipts against a stored local envelope
-  help                  Print this message or the help of the given subcommand(s)
+  models                    List Apple M4 model states, cache status, and selection guidance
+  status                    Summarize Apple M4 dense SLM, BitNet, disk/cache, receipt, and command readiness
+  evidence                  Summarize committed M4 evidence, cache/disk state, regressions, and next command
+  workload                  Build a receipt-backed M4 operator workload suite manifest over enabled route states
+  report-refresh            Generate a model-free advisory/nightly Apple M4 report refresh manifest
+  regression-dashboard      Build a model-free dense SLM and BitNet regression dashboard from committed reports
+  reliability-drill         Write bounded M4 recovery-drill coverage and retry-guidance receipts
+  check                     Check the cached Apple M4 SLM model artifact and routing boundary
+  ask                       Ask one question through the Rust-native Apple M4 CPU/NEON SLM path
+  smoke                     Run a compact Apple M4 model-family health smoke with cache and receipt checks
+  bitnet-warm               Run BitNet prompts in one warm Apple M4 CPU/NEON process without enabling chat
+  bitnet-chat-gate          Evaluate the receipt-backed gate for future BitNet Mac chat without enabling chat
+  bitnet-serve-gate         Evaluate the receipt-backed gate for future BitNet Mac serve
+  bitnet-benchmark          Benchmark BitNet one-shot ask and fixed warm paths without enabling chat or serve
+  doctor                    Run one local health verdict for the supported Apple M4 dense-SLM path
+  serve                     Serve local M4 health and readiness endpoints plus completions
+  serve-check               Check a running M4 local server readiness and optional completion/receipt export
+  serve-smoke               Run an in-process dense M4 local-server conformance smoke and write one aggregate receipt
+  serve-failure-smoke       Run an in-process dense M4 local-server timeout/cancellation/failure semantics smoke
+  serve-backpressure-smoke  Run an in-process dense M4 local-server queue/backpressure smoke
+  chat                      Run multiple prompts in one resident Apple M4 CPU/NEON SLM session
+  chat-smoke                Run a fixed dense SLM resident chat conformance smoke and write a receipt
+  validate                  Run the supported SLM quality corpus in one warm Apple M4 CPU/NEON session
+  eval                      Run supported Apple M4 eval suites and write receipt-backed summaries
+  benchmark                 Run release-mode dense SLM benchmark profiles for v2 M4 receipts
+  benchmark-preflight       Record benchmark environment preflight evidence without running model inference
+  bitnet-proof              Validate M4 BitNet proof inputs without enabling BitNet chat/serve routing
+  receipts-check            Check Apple M4 SLM answer/warm-session receipts for hidden fallback or overclaims
+  regression                Compare Apple M4 dense-SLM or BitNet receipts against a stored local envelope
+  help                      Print this message or the help of the given subcommand(s)
 
 Options:
   -c, --config <PATH>      Configuration file path
-  -d, --device <DEVICE>    Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
+  -d, --device <DEVICE>    Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, intel-a770-opencl, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
       --log-level <LEVEL>  Log level (trace, debug, info, warn, error)
       --threads <N>        Number of CPU threads
       --batch-size <SIZE>  Batch size for processing

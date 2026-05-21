@@ -197,8 +197,8 @@ use commands::{
     DenseGgufNormFixtureCommand, DenseGgufOneLayerCpuReferenceCommand,
     DenseGgufOneLayerCudaParityCommand, DenseGgufOneLayerPlanCommand,
     DenseGgufQwenOneTokenStrictCudaCommand, DenseGgufQwenShortDecodeStrictCudaCommand,
-    DenseGgufQwenWarmSessionStrictCudaCommand, DenseGgufRopeCudaParityCommand,
-    DenseGgufSamplingPolicyCommand, DenseQwenCudaAskOptions,
+    DenseGgufQwenWarmDecodeStrictCudaCommand, DenseGgufQwenWarmSessionStrictCudaCommand,
+    DenseGgufRopeCudaParityCommand, DenseGgufSamplingPolicyCommand, DenseQwenCudaAskOptions,
     ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
     InspectCommand, LunarLakeAction, LunarLakeCommand, OutputHeadLogitsAuditCommand,
     ReceiptsCommand, ReferenceCompareCommand, ServeCommand, SupportCommand,
@@ -739,6 +739,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Run dense Qwen short-decode strict CUDA proof and emit a governed receipt
     DenseGgufQwenShortDecodeStrictCuda(Box<DenseGgufQwenShortDecodeStrictCudaCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Run Qwen3 warm-context decode strict CUDA proof and emit a governed receipt
+    DenseGgufQwenWarmDecodeStrictCuda(Box<DenseGgufQwenWarmDecodeStrictCudaCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Run dense Qwen warm-session strict CUDA proof and emit a governed receipt
@@ -1643,6 +1647,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufQwenOneTokenStrictCuda(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufQwenShortDecodeStrictCuda(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufQwenWarmDecodeStrictCuda(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufQwenWarmSessionStrictCuda(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]

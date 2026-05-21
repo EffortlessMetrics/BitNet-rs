@@ -472,6 +472,28 @@ generated tokens, and there is no distinct warm-decode source receipt for the
 128-token warm-context profile. CUDA-MODEL-017 must remain blocked until that
 gap is closed.
 
+Implemented source-capture surface:
+
+```bash
+cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- \
+  dense-gguf-qwen-short-decode-strict-cuda \
+  --model <qwen3-0.6b-instruct-q8_0.gguf> \
+  --capture-profile qwen3-short-decode-32 \
+  --max-new-tokens 32 \
+  --json-out <short-decode-32.json>
+
+cargo run --locked -p bitnet-cli --no-default-features --features cpu,cuda,full-cli -- \
+  dense-gguf-qwen-warm-decode-strict-cuda \
+  --model <qwen3-0.6b-instruct-q8_0.gguf> \
+  --max-new-tokens 128 \
+  --json-out <decode-128-from-warm-context.json>
+```
+
+The 128-token warm-context profile emits
+`dense_gguf_qwen_warm_decode_strict_cuda_proof` and the aggregate repeated
+comparator contract requires that artifact for
+`decode_128_from_warm_context`.
+
 ### Non-goals
 
 No hardware source receipts, aggregate repeated comparator receipt, speedup

@@ -13,7 +13,7 @@ Arguments:
 Options:
   -c, --config <PATH>               Configuration file path
       --regression-baseline <PATH>  Compare Apple M4 dense-SLM or BitNet receipts against a published baseline receipt
-  -d, --device <DEVICE>             Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
+  -d, --device <DEVICE>             Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, intel-a770-opencl, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
       --json                        Emit JSON instead of text
       --log-level <LEVEL>           Log level (trace, debug, info, warn, error)
       --threads <N>                 Number of CPU threads

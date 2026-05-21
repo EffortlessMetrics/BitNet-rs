@@ -3090,7 +3090,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "CUDA-MODEL-017A"
-status = "ready"
+status = "in_progress"
 branch = "codex/nvidia-5070ti/CUDA-MODEL-017A-qwen3-capture-tooling"
 stackable = false
 review_mode = "codex_premerge"
@@ -3127,8 +3127,8 @@ forbidden_paths = [
   ".github/workflows/**",
 ]
 may_claim = [
-  "CUDA-MODEL-017A tracks the source-capture tooling prerequisite required before CUDA-MODEL-017 hardware receipts can be collected.",
-  "Current source must produce unambiguous Qwen3 short_decode_32 and decode_128_from_warm_context receipts before the repeated comparator aggregate can be claimed.",
+  "CUDA-MODEL-017A adds the source-capture tooling prerequisite required before CUDA-MODEL-017 hardware receipts can be collected.",
+  "Current source can emit and validate unambiguous Qwen3 short_decode_32 and decode_128_from_warm_context source receipts without changing product ask/chat token bounds.",
   "The capture-tooling prerequisite preserves Qwen3-specific dense_regular_llm_cuda proof boundaries.",
 ]
 must_not_claim = [

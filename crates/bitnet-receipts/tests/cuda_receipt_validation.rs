@@ -29,6 +29,7 @@ use bitnet_receipts::{
     validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
+    validate_dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json,
     validate_dense_gguf_rope_cuda_parity_receipt_json,
     validate_dense_gguf_sampling_policy_receipt_json,
@@ -235,13 +236,13 @@ fn remove_nested_field(receipt: &mut Value, object_field: &str, field: &str) {
 }
 
 #[test]
-fn committed_cuda_smoke_receipt_validates() {
+fn committed_cuda_smoke_receipt_validates() -> Result<(), Box<dyn std::error::Error>> {
     let receipt: Value = serde_json::from_str(include_str!(
         "../../../ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/cuda-smoke.json"
-    ))
-    .unwrap();
+    ))?;
 
-    validate_cuda_smoke_receipt_json(&receipt).unwrap();
+    validate_cuda_smoke_receipt_json(&receipt)?;
+    Ok(())
 }
 
 #[test]
@@ -1928,6 +1929,52 @@ fn dense_gguf_qwen_short_decode_accepts_qwen3_06b_model_identity()
     receipt["parity"]["fixture_id"] = json!("qwen3-0.6b-instruct-q8_0-short-decode-greedy");
 
     validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)?;
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_accepts_qwen3_32_capture_profile()
+-> Result<(), Box<dyn std::error::Error>> {
+    let receipt = valid_dense_gguf_qwen_short_decode_32_capture_receipt();
+
+    validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)?;
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_short_decode_rejects_32_tokens_without_qwen3_capture_profile() {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_32_capture_receipt();
+    receipt["short_decode_proof"]["profile_id"] = json!("short_decode");
+    receipt["short_decode_proof"]["proof_scope"] = json!("qwen_strict_short_decode_greedy");
+
+    let err = validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("qwen3_short_decode_32"), "unexpected error: {err}");
+}
+
+#[test]
+fn dense_gguf_qwen_warm_decode_128_receipt_validates() -> Result<(), Box<dyn std::error::Error>> {
+    let receipt = valid_dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt()?;
+
+    validate_dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt_json(&receipt)?;
+    validate_dense_regular_llm_cuda_receipt_json(&receipt).unwrap_err();
+    reject_dense_regular_llm_as_bitnet_packed_cuda_proof(&receipt).unwrap_err();
+    Ok(())
+}
+
+#[test]
+fn dense_gguf_qwen_warm_decode_128_requires_warm_context_reuse()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt()?;
+    receipt["warm_context_proof"]["warm_context_reused"] = json!(false);
+
+    let err = validate_dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt_json(&receipt)
+        .unwrap_err()
+        .to_string();
+
+    assert!(err.contains("warm_context_reused"), "unexpected error: {err}");
     Ok(())
 }
 
@@ -4649,6 +4696,194 @@ fn valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt() -> Value {
     });
     receipt["claim_boundary"]["qwen_short_decode_cuda_claimed"] = json!(true);
     receipt
+}
+
+fn retarget_receipt_to_qwen3(receipt: &mut Value) {
+    receipt["model"]["id"] = json!("qwen3-0.6b-instruct-q8_0");
+    receipt["model"]["file"] = json!("Qwen3-0.6B-Q8_0.gguf");
+    receipt["model"]["architecture"] = json!("qwen3");
+    receipt["model"]["sha256"] =
+        json!("9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031");
+}
+
+fn update_single_decode_token_count(receipt: &mut Value, count: usize) {
+    let token_ids = (0..count).map(|idx| 1000_u64 + idx as u64).collect::<Vec<_>>();
+    let steps = token_ids
+        .iter()
+        .enumerate()
+        .map(|(index, token)| {
+            json!({
+                "index": index as u64,
+                "cpu_selected_token_id": *token,
+                "cuda_selected_token_id": *token,
+                "selected_token_match": true,
+                "cpu_logits_top_k_sha256": format!("{:064x}", 500 + index),
+                "cuda_logits_top_k_sha256": format!("{:064x}", 500 + index),
+                "cpu_logits_sha256": format!("{:064x}", 700 + index),
+                "cuda_logits_sha256": format!("{:064x}", 900 + index),
+                "logits_vector_length": 32,
+                "cpu_top_k": [
+                    {"rank": 1, "token_id": *token, "value": 1.0},
+                    {"rank": 2, "token_id": 3, "value": 0.5}
+                ],
+                "cuda_top_k": [
+                    {"rank": 1, "token_id": *token, "value": 1.0},
+                    {"rank": 2, "token_id": 3, "value": 0.5}
+                ],
+                "top_k_match": true,
+                "top_k_max_abs_error": 0.0,
+                "top_k_mean_abs_error": 0.0,
+                "cuda_step_timing": {
+                    "embed_ms": 0.5,
+                    "forward_ms": 3.0,
+                    "logits_ms": 0.75,
+                    "logits_download_ms": 0.4,
+                    "decode_ms": 4.25,
+                    "logits_device_is_cuda": true
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+    let count_u64 = count as u64;
+    let transfer_bytes = count_u64 * 128;
+    let transformer_invocations = count_u64 * 31;
+    let total_invocations = transformer_invocations + count_u64 + count_u64;
+
+    receipt["short_decode_proof"]["requested_new_tokens"] = json!(count_u64);
+    receipt["short_decode_proof"]["generated_tokens_count"] = json!(count_u64);
+    receipt["short_decode_proof"]["cpu_generated_token_ids"] = json!(token_ids.clone());
+    receipt["short_decode_proof"]["cuda_generated_token_ids"] = json!(token_ids);
+    receipt["short_decode_proof"]["cpu_generated_token_ids_sha256"] =
+        json!(format!("{:064x}", 444));
+    receipt["short_decode_proof"]["cuda_generated_token_ids_sha256"] =
+        json!(format!("{:064x}", 444));
+    receipt["short_decode_proof"]["steps"] = json!(steps);
+    receipt["logits_transfer_reduction"]["generated_tokens_count"] = json!(count_u64);
+    receipt["logits_transfer_reduction"]["full_logits_download_bytes"] = json!(transfer_bytes);
+    receipt["logits_transfer_reduction"]["actual_device_to_host_bytes"] = json!(transfer_bytes);
+    receipt["logits_transfer_reduction"]["top_k_result_bytes_total_floor"] = json!(count_u64 * 24);
+    receipt["logits_transfer_reduction"]["selected_token_bytes_total_floor"] = json!(count_u64 * 4);
+    receipt["kernel_stats"][0]["invocations"] = json!(transformer_invocations);
+    receipt["kernel_stats"][0]["kernel_launches"] = json!(transformer_invocations);
+    receipt["kernel_stats"][0]["device_to_host_bytes"] = json!(transfer_bytes);
+    receipt["kernel_stats"][1]["invocations"] = json!(count_u64);
+    receipt["kernel_stats"][1]["kernel_launches"] = json!(count_u64);
+    receipt["kernel_stats"][2]["invocations"] = json!(count_u64);
+    receipt["kernel_stats"][2]["kernel_launches"] = json!(count_u64);
+    receipt["kernel_coverage"]["dense_kernel_invocations"] = json!(total_invocations);
+    receipt["kernel_coverage"]["dense_kernel_launches"] = json!(total_invocations);
+    receipt["timing"]["generated_tokens_count"] = json!(count_u64);
+    receipt["timing"]["device_to_host_bytes"] = json!(transfer_bytes);
+    receipt["timing"]["device_to_host_ms"] = json!(count_u64 as f64 * 0.4);
+    receipt["timing"]["kernel_invocations"] = json!(total_invocations);
+    receipt["timing"]["kernel_launches"] = json!(total_invocations);
+    receipt["tensor_residency"]["transfer_accounting"]["device_to_host_bytes"] =
+        json!(transfer_bytes);
+    receipt["tensor_residency"]["transfer_accounting"]["device_to_host_ms"] =
+        json!(count_u64 as f64 * 0.4);
+    receipt["tensor_residency"]["transfer_accounting"]["kernel_invocations"] =
+        json!(total_invocations);
+    receipt["tensor_residency"]["transfer_accounting"]["kernel_launches"] =
+        json!(total_invocations);
+}
+
+fn valid_dense_gguf_qwen_short_decode_32_capture_receipt() -> Value {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt();
+    retarget_receipt_to_qwen3(&mut receipt);
+    update_single_decode_token_count(&mut receipt, 32);
+    receipt["short_decode_proof"]["profile_id"] = json!("qwen3_short_decode_32");
+    receipt["short_decode_proof"]["proof_scope"] = json!("qwen3_strict_short_decode_32_greedy");
+    receipt["parity"]["fixture_id"] = json!("qwen3-0.6b-instruct-q8_0-short-decode-32-greedy");
+    receipt
+}
+
+fn valid_dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt()
+-> Result<Value, Box<dyn std::error::Error>> {
+    let mut receipt = valid_dense_gguf_qwen_short_decode_32_capture_receipt();
+    update_single_decode_token_count(&mut receipt, 128);
+    receipt["artifact_kind"] = json!("dense_gguf_qwen_warm_decode_strict_cuda_proof");
+    receipt["artifact_path"] = json!("target/bitnet/receipts/dense-gguf-qwen-warm-decode.json");
+    receipt["claim"] = json!("dense_gguf_qwen_warm_decode_strict_cuda_proof_recorded");
+    receipt["execution_path"]["kernel_family"] = json!("dense_qwen_warm_decode_strict_cuda");
+    receipt["execution_path"]["quantization_family"] =
+        json!("dense_gguf_q8_0_f16_qwen_warm_decode_contract");
+    receipt["execution_plan"]["quantization"] =
+        json!("dense_gguf_q8_0_f16_qwen_warm_decode_contract");
+    let proof = receipt
+        .as_object_mut()
+        .ok_or("warm-decode fixture must be a JSON object")?
+        .remove("short_decode_proof")
+        .ok_or("warm-decode fixture must contain short_decode_proof")?;
+    receipt["warm_decode_proof"] = proof;
+    receipt["warm_decode_proof"]["proof_scope"] = json!("qwen3_strict_warm_decode_128_greedy");
+    receipt["warm_decode_proof"]["profile_id"] = json!("qwen3_warm_decode_128");
+    receipt["warm_decode_proof"]["warm_context_reused"] = json!(true);
+    receipt["warm_decode_proof"]["decode_started_from_prefilled_context"] = json!(true);
+    receipt["warm_decode_proof"]["warm_context_prompt_token_count"] = json!(4);
+    receipt["warm_decode_proof"]["qwen_warm_decode_cuda_claimed"] = json!(true);
+    receipt["warm_decode_proof"]["qwen_chat_cuda_claimed"] = json!(false);
+    receipt["warm_decode_proof"]["server_ready_claimed"] = json!(false);
+    receipt["warm_decode_proof"]["speedup_claim"] = json!(false);
+    receipt["warm_decode_proof"]["full_cuda_residency_claimed"] = json!(false);
+    receipt["quality_gate"] = json!({
+        "schema": 1,
+        "gate": "qwen_warm_decode_cuda_parity",
+        "passed": true,
+        "warm_context_decode_claimed": true,
+        "ask_claimed": false,
+        "chat_claimed": false,
+        "server_ready_claimed": false
+    });
+    receipt["warm_context_proof"] = json!({
+        "schema": 1,
+        "proof_scope": "qwen3_decode_128_from_warm_context",
+        "profile_id": "decode_128_from_warm_context",
+        "warm_context_reused": true,
+        "decode_started_from_prefilled_context": true,
+        "warm_context_prompt_token_count": 4,
+        "prompt_token_ids_sha256": receipt["tokenizer_prompt_authority"]["prompt_token_ids_sha256"].clone(),
+        "rendered_prompt_sha256": receipt["tokenizer_prompt_authority"]["rendered_prompt_sha256"].clone(),
+        "requested_new_tokens": 128,
+        "generated_tokens_count": 128,
+        "model_loaded_once": true,
+        "cuda_context_initialized_once": true,
+        "weights_uploaded_once": true,
+        "per_request_model_load": false,
+        "fallback_used": false,
+        "speedup_claim": false,
+        "server_ready_claimed": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["session_lifecycle"] = json!({
+        "schema": 1,
+        "proof_scope": "qwen3_warm_decode_strict_cuda",
+        "model_loaded_once": true,
+        "tokenizer_loaded_once": true,
+        "cuda_context_initialized_once": true,
+        "cuda_context_once": true,
+        "weights_uploaded_once": true,
+        "per_request_model_load": false,
+        "per_token_weight_upload": false,
+        "workspace_reused": true,
+        "runtime_buffers_reused": true,
+        "warm_context_reused": true,
+        "decode_started_from_prefilled_context": true,
+        "fallback_used": false,
+        "scoped_warm_context_residency_claimed": true,
+        "persistent_session_residency_claimed": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["tensor_residency"]["scope"] = json!("qwen_warm_decode_strict_cuda");
+    receipt["tensor_residency"]["warm_context_reused"] = json!(true);
+    receipt["tensor_residency"]["scoped_warm_context_residency_claimed"] = json!(true);
+    receipt["claim_boundary"]["qwen_warm_decode_cuda_claimed"] = json!(true);
+    receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(false);
+    receipt["claim_boundary"]["server_ready_claimed"] = json!(false);
+    receipt["claim_boundary"]["speedup_claim"] = json!(false);
+    receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(false);
+    receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(false);
+    receipt["parity"]["fixture_id"] = json!("qwen3-0.6b-instruct-q8_0-warm-decode-128-greedy");
+    Ok(receipt)
 }
 
 fn valid_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt() -> Value {

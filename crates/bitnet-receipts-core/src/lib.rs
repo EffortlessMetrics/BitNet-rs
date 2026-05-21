@@ -51,6 +51,7 @@ pub use artifact_kinds::{
     DENSE_GGUF_QWEN_CHAT_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+    DENSE_GGUF_QWEN_WARM_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND,
     DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND, DENSE_REGULAR_LLM_MODEL_CLASS,
@@ -5985,11 +5986,30 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
 
     let proof = object_field(receipt, "short_decode_proof")?;
     require_u64_eq(proof, "schema", 1)?;
-    require_string_eq(proof, "proof_scope", "qwen_strict_short_decode_greedy")?;
+    let proof_scope = required_string(proof, "proof_scope")?;
+    if proof_scope != "qwen_strict_short_decode_greedy"
+        && proof_scope != "qwen3_strict_short_decode_32_greedy"
+        && proof_scope != "qwen3_strict_warm_decode_128_greedy"
+    {
+        return Err(anyhow!(
+            "short_decode_proof.proof_scope must be a governed Qwen short/warm decode scope"
+        ));
+    }
     require_string_eq(proof, "model_family", "qwen")?;
     let requested = required_u64(proof, "requested_new_tokens")?;
-    if !(5..=16).contains(&requested) {
-        return Err(anyhow!("short_decode_proof.requested_new_tokens must be between 5 and 16"));
+    let model_id = required_string(model, "id")?;
+    let profile_id = proof.get("profile_id").and_then(Value::as_str).unwrap_or("short_decode");
+    let valid_requested = if (5..=16).contains(&requested) {
+        profile_id == "short_decode" || profile_id == "short_decode_8"
+    } else {
+        model_id == QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID
+            && ((requested == 32 && profile_id == "qwen3_short_decode_32")
+                || (requested == 128 && profile_id == "qwen3_warm_decode_128"))
+    };
+    if !valid_requested {
+        return Err(anyhow!(
+            "short_decode_proof.requested_new_tokens must be 5-16 for standard short decode, 32 for qwen3_short_decode_32, or 128 for qwen3_warm_decode_128"
+        ));
     }
     require_u64_eq(proof, "generated_tokens_count", requested)?;
     require_string_eq(proof, "generation_policy", "greedy")?;
@@ -6221,6 +6241,148 @@ pub fn validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
     require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
 
+    Ok(())
+}
+
+/// Validate Qwen3 warm-context 128-token strict CUDA decode source-capture evidence.
+///
+/// This validator is intentionally Qwen3-only and profile-specific. It reuses
+/// the single-decode proof invariants while requiring an explicit warm-context
+/// proof block so repeated-comparator captures cannot pass as ambiguous
+/// short-decode receipts.
+pub fn validate_dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt_json(
+    receipt: &Value,
+) -> Result<()> {
+    validate_cuda_receipt_common(
+        receipt,
+        DENSE_GGUF_QWEN_WARM_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+        "dense_gguf_qwen_warm_decode_strict_cuda_proof_recorded",
+    )?;
+
+    let model = object_field(receipt, "model")?;
+    require_string_eq(model, "model_family", "qwen")?;
+    require_string_eq(model, "id", QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID)?;
+    require_string_eq(model, "file", QWEN3_06B_INSTRUCT_Q8_0_MODEL_FILE)?;
+    require_string_eq(model, "sha256", QWEN3_06B_INSTRUCT_Q8_0_MODEL_SHA256)?;
+    require_string_eq(model, "architecture", "qwen3")?;
+
+    let execution_path = object_field(receipt, "execution_path")?;
+    require_string_eq(execution_path, "kernel_family", "dense_qwen_warm_decode_strict_cuda")?;
+    require_string_eq(
+        execution_path,
+        "quantization_family",
+        "dense_gguf_q8_0_f16_qwen_warm_decode_contract",
+    )?;
+    require_bool_eq(execution_path, "bitnet_packed_kernel_proof", false)?;
+    require_bool_eq(execution_path, "qk256_proof", false)?;
+
+    let proof = object_field(receipt, "warm_decode_proof")?;
+    require_u64_eq(proof, "schema", 1)?;
+    require_string_eq(proof, "proof_scope", "qwen3_strict_warm_decode_128_greedy")?;
+    require_string_eq(proof, "profile_id", "qwen3_warm_decode_128")?;
+    require_u64_eq(proof, "requested_new_tokens", 128)?;
+    require_u64_eq(proof, "generated_tokens_count", 128)?;
+    require_bool_eq(proof, "warm_context_reused", true)?;
+    require_bool_eq(proof, "decode_started_from_prefilled_context", true)?;
+    require_positive_u64(proof, "warm_context_prompt_token_count")?;
+    require_bool_eq(proof, "fallback_used", false)?;
+    require_bool_eq(proof, "generated_token_ids_match", true)?;
+    require_bool_eq(proof, "top_k_compared", true)?;
+    require_bool_eq(proof, "qwen_warm_decode_cuda_claimed", true)?;
+    require_bool_eq(proof, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(proof, "server_ready_claimed", false)?;
+    require_bool_eq(proof, "speedup_claim", false)?;
+    require_bool_eq(proof, "full_cuda_residency_claimed", false)?;
+
+    let warm_context = object_field(receipt, "warm_context_proof")?;
+    require_u64_eq(warm_context, "schema", 1)?;
+    require_string_eq(warm_context, "proof_scope", "qwen3_decode_128_from_warm_context")?;
+    require_string_eq(warm_context, "profile_id", "decode_128_from_warm_context")?;
+    require_bool_eq(warm_context, "warm_context_reused", true)?;
+    require_bool_eq(warm_context, "decode_started_from_prefilled_context", true)?;
+    require_positive_u64(warm_context, "warm_context_prompt_token_count")?;
+    require_sha256(warm_context, "prompt_token_ids_sha256")?;
+    require_sha256(warm_context, "rendered_prompt_sha256")?;
+    require_u64_eq(warm_context, "requested_new_tokens", 128)?;
+    require_u64_eq(warm_context, "generated_tokens_count", 128)?;
+    require_bool_eq(warm_context, "model_loaded_once", true)?;
+    require_bool_eq(warm_context, "cuda_context_initialized_once", true)?;
+    require_bool_eq(warm_context, "weights_uploaded_once", true)?;
+    require_bool_eq(warm_context, "per_request_model_load", false)?;
+    require_bool_eq(warm_context, "fallback_used", false)?;
+    require_bool_eq(warm_context, "speedup_claim", false)?;
+    require_bool_eq(warm_context, "server_ready_claimed", false)?;
+    require_bool_eq(warm_context, "full_cuda_residency_claimed", false)?;
+
+    let lifecycle = object_field(receipt, "session_lifecycle")?;
+    require_u64_eq(lifecycle, "schema", 1)?;
+    require_string_eq(lifecycle, "proof_scope", "qwen3_warm_decode_strict_cuda")?;
+    require_bool_eq(lifecycle, "model_loaded_once", true)?;
+    require_bool_eq(lifecycle, "tokenizer_loaded_once", true)?;
+    require_bool_eq(lifecycle, "cuda_context_initialized_once", true)?;
+    require_bool_eq(lifecycle, "cuda_context_once", true)?;
+    require_bool_eq(lifecycle, "weights_uploaded_once", true)?;
+    require_bool_eq(lifecycle, "per_request_model_load", false)?;
+    require_bool_eq(lifecycle, "per_token_weight_upload", false)?;
+    require_bool_eq(lifecycle, "workspace_reused", true)?;
+    require_bool_eq(lifecycle, "runtime_buffers_reused", true)?;
+    require_bool_eq(lifecycle, "warm_context_reused", true)?;
+    require_bool_eq(lifecycle, "decode_started_from_prefilled_context", true)?;
+    require_bool_eq(lifecycle, "fallback_used", false)?;
+    require_bool_eq(lifecycle, "scoped_warm_context_residency_claimed", true)?;
+    require_bool_eq(lifecycle, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(lifecycle, "full_cuda_residency_claimed", false)?;
+
+    let quality = object_field(receipt, "quality_gate")?;
+    require_string_eq(quality, "gate", "qwen_warm_decode_cuda_parity")?;
+    require_bool_eq(quality, "passed", true)?;
+    require_bool_eq(quality, "warm_context_decode_claimed", true)?;
+    require_bool_eq(quality, "ask_claimed", false)?;
+    require_bool_eq(quality, "chat_claimed", false)?;
+    require_bool_eq(quality, "server_ready_claimed", false)?;
+
+    let residency = object_field(receipt, "tensor_residency")?;
+    require_string_eq(residency, "scope", "qwen_warm_decode_strict_cuda")?;
+    require_bool_eq(residency, "warm_context_reused", true)?;
+    require_bool_eq(residency, "scoped_warm_context_residency_claimed", true)?;
+    require_bool_eq(residency, "full_cuda_residency_claimed", false)?;
+
+    let claim_boundary = object_field(receipt, "claim_boundary")?;
+    require_bool_eq(claim_boundary, "qwen_warm_decode_cuda_claimed", true)?;
+    require_bool_eq(claim_boundary, "qwen_chat_cuda_claimed", false)?;
+    require_bool_eq(claim_boundary, "server_ready_claimed", false)?;
+    require_bool_eq(claim_boundary, "speedup_claim", false)?;
+    require_bool_eq(claim_boundary, "persistent_session_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "full_cuda_residency_claimed", false)?;
+    require_bool_eq(claim_boundary, "bitnet_packed_i2s_qk256_proof", false)?;
+
+    let mut surrogate = receipt.clone();
+    surrogate["artifact_kind"] =
+        Value::String(DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND.to_owned());
+    surrogate["claim"] =
+        Value::String("dense_gguf_qwen_short_decode_strict_cuda_proof_recorded".to_owned());
+    surrogate["execution_path"]["kernel_family"] =
+        Value::String("dense_qwen_short_decode_strict_cuda".to_owned());
+    surrogate["execution_path"]["quantization_family"] =
+        Value::String("dense_gguf_q8_0_f16_qwen_short_decode_contract".to_owned());
+    surrogate["execution_plan"]["quantization"] =
+        Value::String("dense_gguf_q8_0_f16_qwen_short_decode_contract".to_owned());
+    let warm_decode_proof = surrogate
+        .as_object_mut()
+        .and_then(|object| object.remove("warm_decode_proof"))
+        .ok_or_else(|| anyhow!("warm_decode_proof must be present"))?;
+    surrogate["short_decode_proof"] = warm_decode_proof;
+    surrogate["quality_gate"] = Value::Object(Map::from_iter([
+        ("schema".to_owned(), Value::from(1_u64)),
+        ("gate".to_owned(), Value::String("qwen_short_decode_cuda_parity".to_owned())),
+        ("passed".to_owned(), Value::Bool(true)),
+        ("answer_ready_claimed".to_owned(), Value::Bool(false)),
+        ("short_decode_claimed".to_owned(), Value::Bool(true)),
+        ("chat_claimed".to_owned(), Value::Bool(false)),
+    ]));
+    surrogate["tensor_residency"]["scope"] =
+        Value::String("qwen_short_decode_strict_cuda".to_owned());
+    validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&surrogate)?;
     Ok(())
 }
 
@@ -8216,6 +8378,7 @@ pub fn reject_dense_regular_llm_as_bitnet_packed_cuda_proof(receipt: &Value) -> 
         || artifact_kind == Some(DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND)
+        || artifact_kind == Some(DENSE_GGUF_QWEN_WARM_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_QWEN_ASK_STRICT_CUDA_PROOF_ARTIFACT_KIND)
         || artifact_kind == Some(DENSE_GGUF_QWEN_CHAT_STRICT_CUDA_PROOF_ARTIFACT_KIND)
