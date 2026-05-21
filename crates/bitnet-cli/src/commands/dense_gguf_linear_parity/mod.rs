@@ -249,6 +249,28 @@ fn dense_qwen_proof_context_for_model_path(model: &Path) -> DenseQwenProofContex
     }
 }
 
+fn dense_qwen_receipts_for_proof_model(
+    proof_model: &DenseQwenProofModel,
+) -> &'static DenseQwenProofReceiptBundle {
+    if proof_model.id == QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID {
+        &QWEN3_06B_INSTRUCT_Q8_0_RECEIPTS
+    } else {
+        &QWEN25_05B_INSTRUCT_Q8_0_RECEIPTS
+    }
+}
+
+fn dense_qwen_model_default_receipt_path(
+    path: &Path,
+    qwen25_default: &str,
+    model_default: &str,
+) -> PathBuf {
+    if path == Path::new(qwen25_default) {
+        PathBuf::from(model_default)
+    } else {
+        path.to_path_buf()
+    }
+}
+
 /// Run dense GGUF single-linear CUDA parity diagnostics.
 #[derive(Args, Debug, Clone)]
 pub struct DenseGgufLinearParityCommand {
@@ -1174,12 +1196,38 @@ impl DenseGgufQwenShortDecodeStrictCudaCommand {
         let _seed = ScopedEnvVar::set("BITNET_SEED", "42");
         let _strict_cuda_backend = ScopedEnvVar::remove("BITNET_STRICT_CUDA_BACKEND");
 
-        let prerequisites = DenseQwenShortDecodePrerequisites::load(
+        let receipt_defaults = dense_qwen_receipts_for_proof_model(proof_model);
+        let all_layer_plan = dense_qwen_model_default_receipt_path(
             &self.all_layer_plan,
+            DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+            receipt_defaults.all_layer_plan,
+        );
+        let model_boundary_fixtures = dense_qwen_model_default_receipt_path(
             &self.model_boundary_fixtures,
+            DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT,
+            receipt_defaults.model_boundary_fixtures,
+        );
+        let kv_cache_policy = dense_qwen_model_default_receipt_path(
             &self.kv_cache_policy,
+            DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT,
+            receipt_defaults.kv_cache_policy,
+        );
+        let sampling_policy = dense_qwen_model_default_receipt_path(
             &self.sampling_policy,
+            DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT,
+            receipt_defaults.sampling_policy,
+        );
+        let one_token_proof = dense_qwen_model_default_receipt_path(
             &self.one_token_proof,
+            DEFAULT_DENSE_QWEN_ONE_TOKEN_PROOF_RECEIPT,
+            receipt_defaults.one_token_proof,
+        );
+        let prerequisites = DenseQwenShortDecodePrerequisites::load(
+            &all_layer_plan,
+            &model_boundary_fixtures,
+            &kv_cache_policy,
+            &sampling_policy,
+            &one_token_proof,
             proof_model,
         )?;
 
@@ -1311,31 +1359,31 @@ pub struct DenseGgufQwenWarmDecodeStrictCudaCommand {
     pub device_index: usize,
 
     /// Prerequisite all-layer execution-plan receipt.
-    #[arg(long, value_name = "PATH", default_value = DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT)]
+    #[arg(long, value_name = "PATH", default_value = DEFAULT_QWEN3_ALL_LAYER_PLAN_RECEIPT)]
     pub all_layer_plan: PathBuf,
 
     /// Prerequisite model-boundary fixtures receipt.
     #[arg(
         long,
         value_name = "PATH",
-        default_value = DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT
+        default_value = DEFAULT_QWEN3_MODEL_BOUNDARY_FIXTURES_RECEIPT
     )]
     pub model_boundary_fixtures: PathBuf,
 
     /// Prerequisite KV-cache policy receipt.
-    #[arg(long, value_name = "PATH", default_value = DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT)]
+    #[arg(long, value_name = "PATH", default_value = DEFAULT_QWEN3_KV_CACHE_POLICY_RECEIPT)]
     pub kv_cache_policy: PathBuf,
 
     /// Prerequisite sampling policy receipt.
-    #[arg(long, value_name = "PATH", default_value = DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT)]
+    #[arg(long, value_name = "PATH", default_value = DEFAULT_QWEN3_SAMPLING_POLICY_RECEIPT)]
     pub sampling_policy: PathBuf,
 
     /// Prerequisite one-token proof receipt.
-    #[arg(long, value_name = "PATH", default_value = DEFAULT_DENSE_QWEN_ONE_TOKEN_PROOF_RECEIPT)]
+    #[arg(long, value_name = "PATH", default_value = DEFAULT_QWEN3_ONE_TOKEN_PROOF_RECEIPT)]
     pub one_token_proof: PathBuf,
 
     /// Prerequisite short-decode proof receipt.
-    #[arg(long, value_name = "PATH", default_value = DEFAULT_DENSE_QWEN_SHORT_DECODE_PROOF_RECEIPT)]
+    #[arg(long, value_name = "PATH", default_value = DEFAULT_QWEN3_SHORT_DECODE_PROOF_RECEIPT)]
     pub short_decode_proof: PathBuf,
 
     /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
@@ -13818,6 +13866,38 @@ mod tests {
         assert_eq!(context.receipts.warm_session_proof, DEFAULT_QWEN3_WARM_SESSION_PROOF_RECEIPT);
         assert_eq!(dense_qwen_ask_work_item(context.proof_model), "CUDA-MODEL-010");
         assert_eq!(dense_qwen_chat_work_item(context.proof_model), "CUDA-MODEL-011");
+    }
+
+    #[test]
+    fn qwen3_capture_defaults_resolve_to_qwen3_prerequisite_receipts() {
+        let receipts = dense_qwen_receipts_for_proof_model(&QWEN3_06B_INSTRUCT_Q8_0_PROOF_MODEL);
+        let resolved = dense_qwen_model_default_receipt_path(
+            Path::new(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT),
+            DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+            receipts.all_layer_plan,
+        );
+
+        assert_eq!(resolved, PathBuf::from(DEFAULT_QWEN3_ALL_LAYER_PLAN_RECEIPT));
+
+        let explicit = dense_qwen_model_default_receipt_path(
+            Path::new("target/custom-qwen3-prereq.json"),
+            DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+            receipts.all_layer_plan,
+        );
+
+        assert_eq!(explicit, PathBuf::from("target/custom-qwen3-prereq.json"));
+    }
+
+    #[test]
+    fn qwen25_capture_defaults_stay_on_qwen25_prerequisite_receipts() {
+        let receipts = dense_qwen_receipts_for_proof_model(&QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL);
+        let resolved = dense_qwen_model_default_receipt_path(
+            Path::new(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT),
+            DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+            receipts.all_layer_plan,
+        );
+
+        assert_eq!(resolved, PathBuf::from(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT));
     }
 
     #[test]
