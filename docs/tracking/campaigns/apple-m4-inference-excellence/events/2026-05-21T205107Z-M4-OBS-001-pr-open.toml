@@ -7,6 +7,7 @@ previous_status = "in_progress"
 new_status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-OBS-001-trace-correlation"
 pr = 6169
+head_sha = "aae11515b8d902247a9846d37bc49c30a7eb9655"
 
 notes = [
   "Opened draft PR #6169 for the bounded M4 observability trace-correlation slice.",
