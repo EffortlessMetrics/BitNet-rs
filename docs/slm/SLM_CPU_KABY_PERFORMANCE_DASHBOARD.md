@@ -907,6 +907,29 @@ default_runtime_changed = false
 speedup_claim = false
 ```
 
+SLM-CPU-070 adds that prototype in the exact-tensor opt-in sidecar helper
+without promoting it to the default runtime. The implementation now walks
+contiguous Q8_0 block spans and decodes each fp16 scale once per block segment
+instead of once per individual weight. The code-level artifact is
+`ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-070-packed-q8-block-local-matvec-prototype.json`.
+
+The prototype remains a behavior-gated implementation slice, not a performance
+claim. The verified Qwen3 GGUF was not present in the development workspace for
+this slice, so the committed evidence is limited to the exact dense-linear
+reference tests. Real i5-8250U before/after receipt equivalence is still
+required before any timing interpretation or promotion decision.
+
+```text
+selected_default_path = eager_f32_candle
+opt_in_candidate_path = packed_q8_sidecar
+exact_tensor = layers.0.attention.q_proj.weight
+scale_decode = once per contiguous Q8 block segment
+code_level_reference_tests = passed
+row_split_q8_block_reference_test = passed
+real_qwen3_generated_id_receipts_regenerated = false
+speedup_claim = false
+```
+
 ## Claim Boundary
 
 This dashboard may be used to claim:
