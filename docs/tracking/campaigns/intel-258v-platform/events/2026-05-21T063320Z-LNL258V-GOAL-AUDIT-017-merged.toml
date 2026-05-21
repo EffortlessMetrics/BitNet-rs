@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T06:33:20Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-017"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 156
+head_sha = "c5d20965eebbc83be121bcec0a986c4d827cfc18"
+merge_sha = "4281f4946debe3f2ff3848d8d71d88b75f994478"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-017-post-a770-011-closeout"
+actor = "codex"
+summary = "Recorded PR #156 merge for the no-inference Lunar Lake audit refresh after A770-011 closeout #143."
+
+notes = [
+  "PR #156 refreshed the Lunar Lake excellence audit and goal artifact checklist after A770-011 closeout #143 landed on swarm main.",
+  "The merged audit records A770-011/#115 plus closeout #143 as adjacent selected-device inline-scaled QK256 OpenCL candidate evidence only.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, full BitNet accelerator claim, packed QK256 accelerator decode claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]
