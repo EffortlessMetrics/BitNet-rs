@@ -2889,7 +2889,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-075"
-status = "pr_open"
+status = "merged"
 pr = 225
 branch = "codex/slm-cpu-075-packed-q8-instrumentation-artifact"
 stackable = false
@@ -2927,6 +2927,58 @@ forbidden_paths = [
 may_claim = [
   "SLM-CPU-074 exposes aggregate instrumentation for the exact packed Q8_0 sidecar runtime hook.",
   "SLM-CPU-075 may classify exact-tensor sidecar costs or record a concrete artifact-capture blocker.",
+]
+must_not_claim = [
+  "Packed Q8_0 runtime compute is enabled by default.",
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Generated IDs, decoded text, model SHA, tokenizer authority, selected CPU backend/kernel identity, dense hook identity, or fallback=false provenance changed.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-076"
+status = "ready"
+branch = "codex/slm-cpu-076-sidecar-instrumentation-receipt-bridge"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-075"]
+acceptance = "Add the Qwen3 Q8_0 warm-session sidecar instrumentation receipt bridge identified by SLM-CPU-075. The slice must reset the `bitnet-transformer` packed Q8_0 sidecar instrumentation counters before the opt-in exact-tensor `layers.0.attention.q_proj.weight` warm-session run, snapshot them afterward, and serialize selector dispatch, input materialization, bias extraction, packed matvec compute, and output tensor construction counters into the warm-session receipt or a bounded companion diagnostic artifact. It must preserve eager_f32_candle as the default runtime, keep packed sidecar execution opt-in and exact-tensor scoped, and prove prompt IDs, generated IDs, decoded text, model SHA, tokenizer source/strictness, selected CPU backend identity, dense hook identity, and fallback_used=false remain unchanged before any counter-driven optimization or speed claim. It must not enable packed Q8_0 by default, broaden beyond the exact tensor, start Q4/Q5 runtime support, claim sustained throughput or broad answer quality, or touch server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 paths."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli slm_warm_session",
+  "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_dense_linear_reference",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-transformer/**",
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "The warm-session receipt path records packed Q8_0 sidecar instrumentation counters when the exact-tensor opt-in path is selected.",
+  "SLM-CPU-076 may produce a bounded instrumentation counter artifact or record a concrete receipt-bridge blocker.",
 ]
 must_not_claim = [
   "Packed Q8_0 runtime compute is enabled by default.",
