@@ -2611,7 +2611,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-EX-003"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-003-local-safety-defaults"
 stackable = false
 review_mode = "codex_premerge"
@@ -2619,6 +2619,7 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-SERVE-EX-001"]
 pr = 160
+merge_sha = "a1e532423efdfef125c620b861e135185cefc224"
 acceptance = "Document and test local-server safety defaults for the M4 appliance: localhost binding by default, explicit opt-in for wider binding, no telemetry, predictable CORS behavior, request-size limits, cache-path disclosure boundaries, and receipt redaction rules."
 commands = [
   "cargo test --locked -p bitnet-server -- --nocapture",

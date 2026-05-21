@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T07:44:08Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-003"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-003-local-safety-defaults"
+pr = 160
+merge_sha = "a1e532423efdfef125c620b861e135185cefc224"
+
+notes = [
+  "PR #160 merged M4 local-server safety defaults for local appliance operation.",
+  "The merged route keeps the server localhost-bound by default, requires explicit non-loopback opt-in, documents no-telemetry and CORS-disabled defaults, enforces request-size bounds, and records safety defaults in server receipts.",
+  "Closeout is tracker-only and records the already-merged PR; it does not claim production hosting, a full security audit, BitNet chat, BitNet serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon behavior.",
+]
