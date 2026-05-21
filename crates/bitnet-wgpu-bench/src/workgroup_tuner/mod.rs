@@ -1,63 +1,12 @@
 //! Workgroup size tuning grid for wgpu compute kernel dispatch.
 
-use bitnet_nvidia::NVIDIA_1D_WORKGROUP_CANDIDATES;
+mod config;
+mod grid;
+mod result;
 
-/// A candidate workgroup configuration for kernel dispatch.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkgroupConfig {
-    pub size: [u32; 3],
-    pub label: String,
-}
-
-impl WorkgroupConfig {
-    pub fn new(size: [u32; 3], label: impl Into<String>) -> Self {
-        Self { size, label: label.into() }
-    }
-
-    /// Total number of invocations per workgroup.
-    pub fn total_invocations(&self) -> u32 {
-        self.size[0] * self.size[1] * self.size[2]
-    }
-}
-
-/// The result of running a single workgroup configuration.
-#[derive(Debug, Clone)]
-pub struct TuningResult {
-    pub config: WorkgroupConfig,
-    pub elapsed_us: u64,
-    pub throughput: f64,
-}
-
-/// A search space of workgroup configurations to evaluate.
-#[derive(Debug, Clone)]
-pub struct TuningGrid {
-    pub candidates: Vec<WorkgroupConfig>,
-}
-
-impl TuningGrid {
-    pub fn new(candidates: Vec<WorkgroupConfig>) -> Self {
-        Self { candidates }
-    }
-
-    /// NVIDIA-optimized defaults: warp-aligned sizes (multiples of 32).
-    pub fn nvidia_defaults() -> Self {
-        let candidates = NVIDIA_1D_WORKGROUP_CANDIDATES
-            .iter()
-            .map(|&size| WorkgroupConfig::new([size, 1, 1], format!("nvidia_{size}")))
-            .collect();
-        Self { candidates }
-    }
-
-    /// Number of candidates in the grid.
-    pub fn len(&self) -> usize {
-        self.candidates.len()
-    }
-
-    /// Whether the grid is empty.
-    pub fn is_empty(&self) -> bool {
-        self.candidates.is_empty()
-    }
-}
+pub use config::WorkgroupConfig;
+pub use grid::TuningGrid;
+pub use result::TuningResult;
 
 #[cfg(test)]
 mod tests {
