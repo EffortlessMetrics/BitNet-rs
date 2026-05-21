@@ -44,6 +44,16 @@ Future promotions and syncs must preserve that repaired graph. Do not reset
 swarm main, squash history imports, or copy source files as a single content
 commit to make the repositories appear fresh.
 
+The active source/swarm boundary policy is recorded in:
+
+```text
+policy/repo-boundary.toml
+```
+
+Promotion packets should use that ledger for the canonical repository roles,
+forbidden history operations, release-workflow boundary, and required promotion
+inputs.
+
 ## Merge Method
 
 Promotion is a repository-boundary operation. It must preserve swarm ancestry in

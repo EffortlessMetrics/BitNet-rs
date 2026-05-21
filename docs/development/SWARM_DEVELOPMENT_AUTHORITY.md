@@ -41,6 +41,17 @@ Swarm is not a replacement source repo yet. Work that lands here is execution
 and proof input until a release-promotion or sync PR carries the selected
 content back to `BitNet-rs`.
 
+The machine-readable repository boundary ledger is:
+
+```text
+policy/repo-boundary.toml
+```
+
+It names the source-owned and swarm-owned surfaces, forbidden history
+operations, release-workflow guard, self-hosted runner boundary, shared
+surfaces, and promotion requirements. Agents should treat the ledger as the
+compact policy entrypoint before changing repository-boundary behavior.
+
 If swarm and source-repo state disagree before cutover, do not treat the
 swarm-only state as public-release truth. Resolve the difference through an
 explicit sync or promotion PR that names included commits, included PRs, proof

@@ -1,0 +1,165 @@
+schema_version = "1.0"
+policy = "repo-boundary"
+owner = "swarm/release maintainers"
+status = "active"
+updated = "2026-05-21"
+
+# Descriptive policy for the BitNet-rs source/swarm boundary. This ledger is
+# intentionally not an enforcement gate yet; it gives agents and future checks a
+# machine-readable source of truth for repository roles, promotion inputs, and
+# forbidden history operations.
+
+[source]
+repo = "EffortlessMetrics/BitNet-rs"
+branch = "main"
+role = "public source-of-truth, release, publish, signing, and user-facing canonical repository"
+owns = [
+  "public_source_of_truth",
+  "canonical_user_docs",
+  "release_history",
+  "release_notes",
+  "stable_release_branches",
+  "tags",
+  "crates_io_publish",
+  "package_metadata",
+  "signing",
+  "release_workflows",
+  "publish_workflows",
+  "emergency_release_hotfixes",
+]
+
+[swarm]
+repo = "EffortlessMetrics/bitnet-rs-swarm"
+branch = "main"
+role = "high-throughput same-repo development and proof-execution repository"
+owns = [
+  "agent_development",
+  "proof_execution",
+  "draft_productization",
+  "campaign_tracking",
+  "diagnostics",
+  "ci_economics",
+  "self_hosted_runner_routing",
+  "high_throughput_prs",
+]
+
+[history]
+required_invariants = [
+  "swarm_main_descends_from_repaired_swarm_history",
+  "swarm_main_descends_from_imported_source_main",
+  "source_main_imports_and_swarm_to_source_promotions_preserve_commit_graph",
+]
+proof_commands = [
+  "git merge-base --is-ancestor source/main origin/main",
+  "git rev-list --count source/main ^origin/main",
+]
+forbidden_operations = [
+  "hard_reset_swarm_main_to_source",
+  "squash_history_import",
+  "squash_source_to_swarm_sync",
+  "squash_swarm_to_source_promotion",
+  "copy_source_as_single_content_commit",
+  "force_push_main_for_freshness",
+]
+
+[promotion]
+direction = "swarm-to-source"
+requires = [
+  "included_swarm_prs",
+  "included_swarm_shas",
+  "proof_commands",
+  "claim_boundary",
+  "source_impact",
+  "release_workflow_guard",
+  "no_generated_dashboard_drift",
+  "excluded_work",
+  "rollback",
+]
+merge_methods = [
+  "regular_merge_commit",
+  "approved_fast_forward_direct_update",
+]
+forbidden_merge_methods = [
+  "squash",
+]
+packet_template = "docs/release/PROMOTE_TO_BITNET_RS.md"
+
+[release_workflows]
+swarm_publish_allowed = false
+source_repo_guard = "github.repository == 'EffortlessMetrics/BitNet-rs'"
+protected_workflow_classes = [
+  "release",
+  "publish",
+  "signing",
+  "deploy",
+  "secrets_heavy",
+  "model_cache",
+  "gpu_release",
+  "full_platform_matrix",
+]
+
+[ci]
+trusted_same_repo_self_hosted_allowed = true
+public_fork_self_hosted_allowed = false
+github_hosted_fallback_required = true
+normalized_result_check = "BitNet Rust Small Result"
+same_repo_guard = "github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)"
+
+[claims]
+promotion_requires_explicit_claim_boundary = true
+boundaries = [
+  "dense_cuda_does_not_prove_bitnet_qk256_cuda",
+  "bitnet_qk256_cuda_does_not_prove_dense_slm_cuda",
+  "qwen25_does_not_prove_qwen3",
+  "generic_cuda_does_not_prove_strict_rtx_5070_ti",
+  "avx512_detection_does_not_prove_avx512_execution",
+  "avx2_no_scale_f32_does_not_prove_scaled_bitnet_i2s_i8s_avx2",
+  "server_smoke_does_not_prove_broad_server_readiness",
+  "speedup_is_exact_profile_only",
+  "full_residency_requires_per_phase_proof",
+]
+
+[[shared_surface]]
+path = ".github/**"
+requires_lane = "repo-boundary"
+reason = "workflow and PR-template changes affect routing, safety, and branch-protection interpretation"
+
+[[shared_surface]]
+path = "AGENTS.md"
+requires_lane = "repo-boundary"
+reason = "agent authority changes affect all orchestrators"
+
+[[shared_surface]]
+path = "README.md"
+requires_lane = "repo-boundary"
+reason = "top-level repository role messaging affects source/swarm expectations"
+
+[[shared_surface]]
+path = "policy/**"
+requires_lane = "repo-boundary"
+reason = "policy changes can alter routing, claim, or merge interpretation"
+
+[[shared_surface]]
+path = "xtask/**"
+requires_lane = "repo-boundary"
+reason = "xtask changes can alter generated dashboards, CI plans, and policy checks"
+
+[[shared_surface]]
+path = "docs/tracking/generated/**"
+requires_lane = "repo-boundary"
+reason = "generated dashboards are derived state and must be regenerated, not hand-edited"
+
+[[shared_surface]]
+path = "ci/model-artifacts/**"
+requires_lane = "repo-boundary"
+reason = "model coverage rows own support tiers and claim booleans"
+
+[[shared_surface]]
+path = "crates/bitnet-cli/**"
+requires_lane = "lane-specific plus shared-surface declaration"
+reason = "CLI changes can affect user-facing proof and claim presentation"
+
+[[shared_surface]]
+path = "crates/bitnet-server/**"
+requires_lane = "lane-specific plus shared-surface declaration"
+reason = "server changes can affect readiness and receipt scope"

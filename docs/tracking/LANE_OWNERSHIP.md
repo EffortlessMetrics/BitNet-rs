@@ -155,11 +155,16 @@ docs/development/SWARM_DEVELOPMENT_AUTHORITY.md
 docs/development/SWARM_HISTORY_REPAIR.md
 docs/release/PROMOTE_TO_BITNET_RS.md
 docs/tracking/LANE_OWNERSHIP.md
+policy/repo-boundary.toml
 ```
 
 Changes to those files should use `lane:repo-boundary` and must preserve the
 source/swarm split, the no-hard-reset/no-squash-import rule, and the
 release/publish/signing boundary.
+
+`policy/repo-boundary.toml` is the machine-readable summary of those repository
+roles and history invariants. Keep prose docs and that ledger aligned when
+changing promotion, sync, or release-boundary behavior.
 
 A lane may edit its campaign-local `active.toml` and event files directly.
 Generated dashboards must be produced by the generator, not hand-edited as the
