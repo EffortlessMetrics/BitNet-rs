@@ -10803,10 +10803,11 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-BITNET-INTAKE-005"
-status = "pr_open"
+status = "merged"
 branch = "codex/lunar-lake/LNL258V-BITNET-INTAKE-005-closed-watchpoints"
 pr = 159
-head_sha = "6a44f409b65c15b17f25e9efc4c9d8912fcb6c3f"
+head_sha = "f12ba2e8df25872ba39f7813c6e6a310c558b70a"
+merge_sha = "6099877dcab12ff839c1a10431a038a84a1ef09e"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
