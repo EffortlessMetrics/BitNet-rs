@@ -88,32 +88,51 @@ pub fn broadcast_shape(a: &Shape, b: &Shape) -> Option<Shape> {
 /// Compute the output shape for matrix multiplication (A @ B).
 /// A: [..., M, K], B: [..., K, N] -> [..., M, N]
 pub fn matmul_shape(a: &Shape, b: &Shape) -> Option<Shape> {
-    if a.ndim() < 2 || b.ndim() < 2 {
-        return None;
+    let dims = matmul_srp::extract_dims(a, b)?;
+    let batch = matmul_srp::broadcast_batch_dims(a, b)?;
+    Some(matmul_srp::build_output_shape(batch, dims.m, dims.n))
+}
+
+mod matmul_srp {
+    use super::{Shape, broadcast_shape};
+
+    pub(super) struct MatmulDims {
+        pub(super) m: usize,
+        pub(super) n: usize,
     }
-    let m = a.0[a.ndim() - 2];
-    let k1 = a.0[a.ndim() - 1];
-    let k2 = b.0[b.ndim() - 2];
-    let n = b.0[b.ndim() - 1];
 
-    if k1 != k2 {
-        return None;
+    pub(super) fn extract_dims(a: &Shape, b: &Shape) -> Option<MatmulDims> {
+        if a.ndim() < 2 || b.ndim() < 2 {
+            return None;
+        }
+
+        let m = a.0[a.ndim() - 2];
+        let k1 = a.0[a.ndim() - 1];
+        let k2 = b.0[b.ndim() - 2];
+        let n = b.0[b.ndim() - 1];
+        if k1 != k2 {
+            return None;
+        }
+
+        Some(MatmulDims { m, n })
     }
 
-    // Broadcast batch dimensions
-    let a_batch = Shape(a.0[..a.ndim() - 2].to_vec());
-    let b_batch = Shape(b.0[..b.ndim() - 2].to_vec());
-    let batch = if a_batch.ndim() == 0 && b_batch.ndim() == 0 {
-        vec![]
-    } else {
-        let bc = broadcast_shape(&a_batch, &b_batch)?;
-        bc.0
-    };
+    pub(super) fn broadcast_batch_dims(a: &Shape, b: &Shape) -> Option<Vec<usize>> {
+        let a_batch = Shape(a.0[..a.ndim() - 2].to_vec());
+        let b_batch = Shape(b.0[..b.ndim() - 2].to_vec());
 
-    let mut result = batch;
-    result.push(m);
-    result.push(n);
-    Some(Shape(result))
+        if a_batch.ndim() == 0 && b_batch.ndim() == 0 {
+            return Some(vec![]);
+        }
+
+        broadcast_shape(&a_batch, &b_batch).map(|shape| shape.0)
+    }
+
+    pub(super) fn build_output_shape(mut batch: Vec<usize>, m: usize, n: usize) -> Shape {
+        batch.push(m);
+        batch.push(n);
+        Shape(batch)
+    }
 }
 
 /// Compute output shape for a transpose of the last two dimensions.
@@ -218,6 +237,13 @@ mod tests {
         let a = Shape::new(vec![2, 3, 4]);
         let b = Shape::new(vec![2, 4, 5]);
         assert_eq!(matmul_shape(&a, &b), Some(Shape::new(vec![2, 3, 5])));
+    }
+
+    #[test]
+    fn test_matmul_batch_broadcast() {
+        let a = Shape::new(vec![2, 1, 3, 4]);
+        let b = Shape::new(vec![1, 7, 4, 5]);
+        assert_eq!(matmul_shape(&a, &b), Some(Shape::new(vec![2, 7, 3, 5])));
     }
 
     #[test]
