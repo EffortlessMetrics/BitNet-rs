@@ -2731,8 +2731,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-072"
-status = "pr_open"
+status = "merged"
 pr = 192
+head_sha = "cc575cbd73a1deee2dfaeae073ddd23928a52123"
+merge_sha = "f40802d0c53140b2d8a24d70fd504f52a6674867"
 branch = "codex/slm-cpu-072-real-artifact-capture"
 stackable = false
 review_mode = "codex_premerge"
@@ -2772,6 +2774,54 @@ must_not_claim = [
   "Packed Q8_0 runtime compute is enabled by default.",
   "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
   "A speedup or sustained 8250U throughput claim is proven before the real before/after artifact pack is validated.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
+id = "SLM-CPU-073"
+status = "ready"
+branch = "codex/slm-cpu-073-packed-q8-regression-root-cause"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-072"]
+acceptance = "Use the SLM-CPU-072 real six-prompt i5-8250U timing evidence to localize why the opt-in exact-tensor `layers.0.attention.q_proj.weight` packed_q8_sidecar path remains slower than the default eager_f32_candle path after the SLM-CPU-070 block-local matvec prototype. The slice must preserve eager_f32_candle as the default runtime, keep packed sidecar execution opt-in and exact-tensor scoped, identify whether the next fix belongs in payload decode, packed-block matvec locality, scratch allocation, selector/dispatch overhead, tensor layout, or timing instrumentation, and emit a machine-checkable root-cause or next-target artifact. It must not change generated IDs/text, weaken strict tokenizer/backend/fallback receipts, claim speedup, enable packed Q8_0 by default, start Q4/Q5 runtime support, or touch server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 paths."
+commands = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-073 is the root-cause follow-up to the SLM-CPU-072 real six-prompt timing regression.",
+  "The artifact may identify the next exact packed-Q8 optimization target after preserving the Qwen3 Q8_0 appliance behavior oracle.",
+]
+must_not_claim = [
+  "Packed Q8_0 runtime compute is enabled by default.",
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Generated IDs, decoded text, model SHA, tokenizer authority, selected CPU backend/kernel identity, dense hook identity, or fallback=false provenance changed.",
   "Broad answer quality is proven.",
   "Q4_K_M or Q4_K_S runtime support exists.",
   "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",

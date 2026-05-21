@@ -1,0 +1,18 @@
+timestamp = "2026-05-21T12:41:37Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-072"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 192
+branch = "codex/slm-cpu-072-real-artifact-capture"
+head_sha = "cc575cbd73a1deee2dfaeae073ddd23928a52123"
+merge_sha = "f40802d0c53140b2d8a24d70fd504f52a6674867"
+summary = "Merged PR #192 with the real i5-8250U Qwen3 Q8_0 before/after warm-session artifacts for the post-SLM-CPU-071 timing gate."
+notes = [
+  "Behavior equivalence passed across six prompt runs: prompt IDs, generated IDs, decoded text, model SHA, tokenizer authority, selected CPU backend identity, and fallback=false match.",
+  "The bounded timing classification is regressed_on_bounded_six_prompt_artifact: total session changed from 220827.789 ms to 241939.114 ms (+9.56%).",
+  "The opt-in packed Q8_0 exact-tensor sidecar path remains disabled by default and is not promoted.",
+  "No speedup, sustained-throughput, broad answer-quality, Q4/Q5, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
