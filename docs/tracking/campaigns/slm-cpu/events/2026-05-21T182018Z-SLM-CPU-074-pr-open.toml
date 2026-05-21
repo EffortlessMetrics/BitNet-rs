@@ -7,7 +7,7 @@ new_status = "pr_open"
 actor = "codex"
 pr = 219
 branch = "codex/slm-cpu-074-packed-q8-sidecar-instrumentation"
-head_sha = "4a06eacbb73f01d73e0a83712cdef3336cf5c8f3"
+head_sha = "9f8b37c7e2bbd114ac32faa9089e9c3911222af1"
 summary = "Opened PR #219 with packed Q8_0 sidecar instrumentation."
 notes = [
   "The PR adds aggregate diagnostic counters for selector dispatch, input materialization, bias extraction, packed matvec compute, and output tensor construction on the exact layers.0.attention.q_proj.weight sidecar path.",

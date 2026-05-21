@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T18:36:59Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-075"
+event = "in_progress"
+previous_status = "blocked"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-075-packed-q8-instrumentation-artifact"
+summary = "Queued the packed Q8_0 sidecar instrumentation artifact slice after SLM-CPU-074."
+notes = [
+  "SLM-CPU-074 merged the aggregate instrumentation counters for the exact layers.0.attention.q_proj.weight packed Q8_0 sidecar path.",
+  "SLM-CPU-075 should consume those counters in a bounded diagnostic artifact or record a concrete verified-GGUF/hardware blocker.",
+  "The next slice must keep eager_f32_candle as default and must not claim speedup, broaden packed Q8 selection, start Q4/Q5, or touch accelerator/server/Qwen3.5/BitNet QK256 paths.",
+]
