@@ -2942,7 +2942,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-076"
-status = "ready"
+status = "pr_open"
+pr = 229
+head_sha = "d68ec056b72d90ac3c06fdd6c662c7242f46b4fe"
 branch = "codex/slm-cpu-076-sidecar-instrumentation-receipt-bridge"
 stackable = false
 review_mode = "codex_premerge"
@@ -2958,6 +2960,7 @@ commands = [
   "git diff --check",
 ]
 allowed_paths = [
+  "Cargo.lock",
   "crates/bitnet-cli/**",
   "crates/bitnet-transformer/**",
   "ci/slm-cpu/**",

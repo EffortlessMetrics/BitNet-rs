@@ -30,6 +30,7 @@ bitnet-kernels = { path = "../bitnet-kernels", version = "0.2.1-dev" }
 bitnet-qk256-dispatch = { path = "../bitnet-qk256-dispatch", version = "0.2.1-dev" }
 bitnet-quantization = { path = "../bitnet-quantization", version = "0.2.1-dev" }
 bitnet-tokenizers = { path = "../bitnet-tokenizers", version = "0.2.1-dev" }
+bitnet-transformer = { path = "../bitnet-transformer", version = "0.2.1-dev" }
 bitnet-tokenizer-discovery-core = { path = "../bitnet-tokenizer-discovery-core", version = "0.2.1-dev" }
 bitnet-prompt-templates = { path = "../bitnet-prompt-templates", version = "0.2.1-dev" }
 bitnet-repl-core = { path = "../bitnet-repl-core", version = "0.2.1-dev" }
@@ -95,6 +96,7 @@ cpu = [
   "bitnet-kernels/cpu",
   "bitnet-qk256-dispatch/cpu",
   "bitnet-device-probe/cpu",
+  "bitnet-transformer/cpu",
   "runtime-profile-core",
   "bitnet-runtime-bootstrap/runtime-profile-cpu",
 ]

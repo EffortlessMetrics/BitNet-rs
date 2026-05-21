@@ -8629,6 +8629,7 @@ async fn run_slm_warm_session(
     });
     let mut sampler_reused_prompt_count = 0usize;
     let mut sampler_recreated_prompt_count = 0usize;
+    bitnet_transformer::reset_dense_q8_sidecar_instrumentation();
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
         output.status(format!(
             "warm-session: prompt {}/{} started",
@@ -9205,6 +9206,11 @@ async fn run_slm_warm_session(
         ));
     }
     drop(allocation_audit_guard);
+    let dense_q8_sidecar_instrumentation =
+        slm_warm_session_dense_q8_sidecar_instrumentation_receipt(
+            bitnet_transformer::dense_q8_sidecar_instrumentation_snapshot(),
+            &dense_q8_hook_selection,
+        );
 
     let total_session_ms = elapsed_ms(session_start);
     let speed_summary = speed_accumulator.receipt(
@@ -9364,6 +9370,7 @@ async fn run_slm_warm_session(
             "fallback_reason": backend_identity.fallback_reason.as_deref(),
         },
         "dense_q8_hook_selection": dense_q8_hook_selection,
+        "dense_q8_sidecar_instrumentation": dense_q8_sidecar_instrumentation,
         "cpu": {
             "model": cpu_model.as_str(),
             "arch": std::env::consts::ARCH,
@@ -10447,6 +10454,77 @@ fn slm_warm_session_determinism_receipt(
         "passed": checked && passed,
         "repeated_prompt_groups": groups.len(),
         "groups": groups,
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn slm_warm_session_dense_q8_sidecar_instrumentation_receipt(
+    snapshot: bitnet_transformer::DenseQ8SidecarInstrumentationSnapshot,
+    dense_q8_hook_selection: &serde_json::Value,
+) -> serde_json::Value {
+    const EXACT_TENSOR: &str = "layers.0.attention.q_proj.weight";
+
+    let classification = if snapshot.selector_selected_calls > 0 {
+        "selected_counter_pack"
+    } else if snapshot.selector_dispatch_calls > 0 {
+        "selector_observed_without_packed_selection"
+    } else {
+        "no_sidecar_dispatch_observed"
+    };
+
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "slm_cpu_dense_q8_sidecar_instrumentation",
+        "tracking_item": "SLM-CPU-076",
+        "instrumentation_available": true,
+        "reset_before_prompt_loop": true,
+        "snapshot_after_prompt_loop": true,
+        "default_runtime": "eager_f32_candle",
+        "default_runtime_changed": false,
+        "packed_q8_sidecar_default_enabled": false,
+        "packed_q8_sidecar_scope": "opt_in_exact_tensor_only",
+        "exact_tensor": EXACT_TENSOR,
+        "dense_q8_hook_selection": dense_q8_hook_selection,
+        "classification": classification,
+        "counters": {
+            "selector_dispatch_calls": snapshot.selector_dispatch_calls,
+            "selector_selected_calls": snapshot.selector_selected_calls,
+            "selector_declined_calls": snapshot.selector_declined_calls,
+            "selector_error_calls": snapshot.selector_error_calls,
+            "selector_dispatch_ns": snapshot.selector_dispatch_ns,
+            "input_materialization_calls": snapshot.input_materialization_calls,
+            "input_materialization_ns": snapshot.input_materialization_ns,
+            "input_values_materialized": snapshot.input_values_materialized,
+            "bias_materialization_calls": snapshot.bias_materialization_calls,
+            "bias_materialization_ns": snapshot.bias_materialization_ns,
+            "bias_values_materialized": snapshot.bias_values_materialized,
+            "packed_matvec_calls": snapshot.packed_matvec_calls,
+            "packed_matvec_ns": snapshot.packed_matvec_ns,
+            "packed_matvec_input_rows": snapshot.packed_matvec_input_rows,
+            "packed_matvec_output_values": snapshot.packed_matvec_output_values,
+            "output_tensor_construction_calls": snapshot.output_tensor_construction_calls,
+            "output_tensor_construction_ns": snapshot.output_tensor_construction_ns,
+        },
+        "behavior_oracle_fields": [
+            "model.sha256",
+            "tokenizer.source",
+            "tokenizer.strict",
+            "selected_backend",
+            "fallback_used",
+            "prompts[].generated_token_ids",
+            "prompts[].text"
+        ],
+        "speedup_claim": false,
+        "claim_boundary": {
+            "no_default_enable": true,
+            "no_broaden_beyond_exact_tensor": true,
+            "no_sustained_throughput_claim": true,
+            "no_broad_answer_quality_claim": true,
+            "no_q4_q5_runtime_support": true,
+            "no_server_or_accelerator_claim": true,
+            "no_qwen35_claim": true,
+            "no_bitnet_qk256_claim": true,
+        },
     })
 }
 
@@ -13271,6 +13349,50 @@ mod tests {
         assert_eq!(determinism["passed"], false);
         assert_eq!(determinism["groups"][0]["stable_generated_token_ids"], false);
         assert_eq!(determinism["groups"][0]["stable_text"], false);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn slm_warm_session_dense_q8_sidecar_instrumentation_receipt_records_counters() {
+        let snapshot = bitnet_transformer::DenseQ8SidecarInstrumentationSnapshot {
+            selector_dispatch_calls: 2,
+            selector_selected_calls: 1,
+            selector_declined_calls: 1,
+            selector_error_calls: 0,
+            selector_dispatch_ns: 100,
+            input_materialization_calls: 1,
+            input_materialization_ns: 200,
+            input_values_materialized: 1024,
+            bias_materialization_calls: 1,
+            bias_materialization_ns: 30,
+            bias_values_materialized: 1024,
+            packed_matvec_calls: 1,
+            packed_matvec_ns: 300,
+            packed_matvec_input_rows: 1,
+            packed_matvec_output_values: 1024,
+            output_tensor_construction_calls: 1,
+            output_tensor_construction_ns: 40,
+        };
+        let selection = serde_json::json!({
+            "selected_path": "packed_q8_sidecar",
+            "selected_tensor": "layers.0.attention.q_proj.weight",
+        });
+
+        let receipt =
+            slm_warm_session_dense_q8_sidecar_instrumentation_receipt(snapshot, &selection);
+
+        assert_eq!(receipt["tracking_item"], "SLM-CPU-076");
+        assert_eq!(receipt["default_runtime"], "eager_f32_candle");
+        assert_eq!(receipt["default_runtime_changed"], false);
+        assert_eq!(receipt["packed_q8_sidecar_default_enabled"], false);
+        assert_eq!(receipt["exact_tensor"], "layers.0.attention.q_proj.weight");
+        assert_eq!(receipt["classification"], "selected_counter_pack");
+        assert_eq!(receipt["counters"]["selector_dispatch_calls"], 2);
+        assert_eq!(receipt["counters"]["packed_matvec_calls"], 1);
+        assert_eq!(receipt["counters"]["input_values_materialized"], 1024);
+        assert_eq!(receipt["dense_q8_hook_selection"]["selected_path"], "packed_q8_sidecar");
+        assert_eq!(receipt["speedup_claim"], false);
+        assert_eq!(receipt["claim_boundary"]["no_q4_q5_runtime_support"], true);
     }
 
     #[test]
