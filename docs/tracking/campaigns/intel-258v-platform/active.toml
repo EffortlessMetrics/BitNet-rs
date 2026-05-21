@@ -10497,6 +10497,63 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-GOAL-AUDIT-014"
+status = "pr_open"
+pr = 107
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-014-swarm-main-sync"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-013"]
+acceptance = "Refresh the no-inference Lunar Lake excellence audit and goal artifact checklist after swarm main absorbed BitNet-rs history import #104, CLI model-cache module-path fix #100, and Qwen3 comparator support-bundle lock #99 so source_revision points at current swarm main, these repo/support-gate updates are recorded without changing Lunar Lake route evidence, and excellent support remains not complete because POWER-006 still lacks battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage. Preserve no inference, model load, fallback, route promotion, speedup, power-advantage, battery-mode evidence, measured-temperature, native accelerator, acceleration, broad quality, stale BitNet, A770 semantic PR merged-to-main, Qwen3 Lunar Lake model promotion, or BitNet QK256/I2_S behavior-change claims."
+commands = [
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | Select-String '7c2184ccfcf655b3bf5d18aa236a76b6406b3938' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | Select-String 'swarm history import #104' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | Select-String 'Qwen3 comparator support-bundle lock #99' | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/**",
+]
+may_claim = [
+  "The no-inference completion audit now points at current swarm main after history import #104, model-cache fix #100, and Qwen3 comparator support-bundle lock #99.",
+  "The goal checklist still marks excellent support not complete while POWER-006 lacks real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage.",
+  "Qwen3 comparator support-bundle coverage is recorded as a gated support surface, not a Lunar Lake model promotion.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any model was loaded by this PR.",
+  "Any fallback behavior changed.",
+  "Any route is promoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Battery-mode low_power evidence is now available.",
+  "Measured temperature readings are now available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Any indexed A770 semantic PR has merged to main.",
+  "Current Lunar Lake BitNet evidence is stale before an indexed A770 semantic PR merges to main.",
+  "Qwen3 is promoted as a Lunar Lake route or model by this PR.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-006"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
