@@ -102,7 +102,28 @@ checks one completion and receipt export. The `/models` check records the
 recommended first model ID plus exact fetch/verify commands when disk headroom
 allows a supported model fetch.
 
-For the M4 excellence server refresh, use the dense-only in-process smoke to
+## M4-SERVE-EX-001 Dense Server Refresh
+
+The 2026-05-20 M4 dense server refresh ran the in-process `serve-smoke`
+against all supported dense SLM model identities:
+
+| Model ID | Aggregate receipt | One-shot completion | Streaming completion | Backend | Fallback |
+|---|---|---:|---:|---|---|
+| `qwen2.5-0.5b-instruct-q8_0` | `ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-0.5b-instruct-q8_0/serve-smoke.json` | pass, 8 tokens | pass, 8 tokens | `apple-m4-cpu-neon` | `false` |
+| `qwen2.5-0.5b-instruct-q4_k_m` | `ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-0.5b-instruct-q4_k_m/serve-smoke.json` | pass, 8 tokens | pass, 8 tokens | `apple-m4-cpu-neon` | `false` |
+| `qwen2.5-1.5b-instruct-q4_k_m` | `ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json` | pass, 8 tokens | pass, 8 tokens | `apple-m4-cpu-neon` | `false` |
+
+Each aggregate receipt validates as
+`bitnet_apple_m4_dense_local_server_smoke` and includes health, ready, models,
+non-streaming completion, streaming completion, per-request receipt export,
+backend/fallback fields, and claim boundaries. The in-process smoke records the
+timeout boundary as metadata-only with enforcement deferred to
+`M4-SERVE-EX-002`; it does not claim production hosting, full OpenAI
+compatibility, BitNet serve, full Metal inference, QK256, Neural Engine,
+MPSGraph, speedup, broad model quality, broad performance, or broad Apple
+Silicon behavior.
+
+To refresh or rerun the evidence, use the dense-only in-process smoke to
 exercise the same local server handlers without enabling BitNet serve:
 
 ```bash

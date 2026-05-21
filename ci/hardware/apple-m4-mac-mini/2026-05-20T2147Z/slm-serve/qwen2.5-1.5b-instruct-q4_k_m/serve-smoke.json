@@ -1,0 +1,132 @@
+{
+  "artifact_kind": "bitnet_apple_m4_dense_local_server_smoke",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/serve-smoke.json",
+  "checks": {
+    "health": {
+      "artifact_kind": "bitnet_apple_m4_local_server_health",
+      "elapsed_ms": 0.033,
+      "executed": true,
+      "generation_executed": false,
+      "passed": true,
+      "status": 200
+    },
+    "models": {
+      "artifact_kind": "bitnet_apple_m4_local_server_models",
+      "elapsed_ms": 1.633,
+      "executed": true,
+      "generation_executed": false,
+      "passed": true,
+      "status": 200
+    },
+    "one_shot_completion": {
+      "content_type": "application/json",
+      "elapsed_ms": 9880.486,
+      "executed": true,
+      "finish_reason": "length",
+      "generated_text_non_empty": true,
+      "generated_tokens": 8,
+      "passed": true,
+      "receipt_export": {
+        "artifact_kind": "bitnet_apple_m4_local_server_completion",
+        "executed": true,
+        "fallback_used": false,
+        "finish_reason": "length",
+        "generated_text_non_empty": true,
+        "generated_tokens": 8,
+        "passed": true,
+        "request_id": "m4srv-1779313711489989000",
+        "selected_backend": "apple-m4-cpu-neon",
+        "status": 200
+      },
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/receipts/m4srv-1779313711489989000.json",
+      "request_id": "m4srv-1779313711489989000",
+      "status": 200,
+      "stream": false,
+      "timeout_boundary": {
+        "configured_seconds": null,
+        "deferred_to": "M4-SERVE-EX-002",
+        "enforced": false,
+        "reached": false,
+        "status": "not_enforced_in_process_smoke"
+      }
+    },
+    "ready": {
+      "artifact_kind": "bitnet_apple_m4_local_server_ready",
+      "elapsed_ms": 0.142,
+      "executed": true,
+      "generation_executed": null,
+      "passed": true,
+      "status": 200
+    },
+    "streaming_completion": {
+      "content_type": "text/event-stream",
+      "elapsed_ms": 8564.75,
+      "executed": true,
+      "finish_reason": "length",
+      "generated_text_non_empty": true,
+      "generated_tokens": 8,
+      "passed": true,
+      "receipt_export": {
+        "artifact_kind": "bitnet_apple_m4_local_server_completion",
+        "executed": true,
+        "fallback_used": false,
+        "finish_reason": "length",
+        "generated_text_non_empty": true,
+        "generated_tokens": 8,
+        "passed": true,
+        "request_id": "m4srv-1779313721370463000",
+        "selected_backend": "apple-m4-cpu-neon",
+        "status": 200
+      },
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/receipts/m4srv-1779313721370463000.json",
+      "request_id": "m4srv-1779313721370463000",
+      "status": 200,
+      "stream": true,
+      "timeout_boundary": {
+        "configured_seconds": null,
+        "deferred_to": "M4-SERVE-EX-002",
+        "enforced": false,
+        "reached": false,
+        "status": "not_enforced_in_process_smoke"
+      }
+    }
+  },
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "bitnet_serve_claimed": false,
+    "broad_performance_claim": false,
+    "dense_slm_only": true,
+    "full_metal_inference_claimed": false,
+    "model_catalog_checked": true,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "one_shot_completion_checked": true,
+    "openai_compatibility_claimed": false,
+    "production_readiness_claimed": false,
+    "qk256_apple_claimed": false,
+    "receipt_export_checked": true,
+    "server_health_checked": true,
+    "server_readiness_checked": true,
+    "speedup_claim": false,
+    "streaming_completion_checked": true
+  },
+  "fallback_used": false,
+  "model_family": "dense-slm",
+  "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+  "operator_command": "mac serve-smoke",
+  "receipt_dir": "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/qwen2.5-1.5b-instruct-q4_k_m/receipts",
+  "requested_backend": "apple-m4-cpu-neon",
+  "result": "pass",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "timeout_boundary": {
+    "configured_seconds": null,
+    "deferred_to": "M4-SERVE-EX-002",
+    "enforced": false,
+    "reached": false,
+    "scope": "metadata_only",
+    "status": "not_enforced_in_process_smoke"
+  },
+  "timestamp": "2026-05-20T21:48:49.935191+00:00"
+}
