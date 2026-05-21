@@ -2895,9 +2895,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EVIDENCE-REPLAY-001"
-status = "pr_open"
+status = "merged"
 pr = 200
-head_sha = "a1edc85a8a1edf2589debc2e9f45d5cc476a0a4e"
+merge_sha = "04ada5d52397a1817bcac0299f1bf5c332a9d603"
 branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
 stackable = false
 review_mode = "codex_premerge"

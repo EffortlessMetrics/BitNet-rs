@@ -131,7 +131,7 @@
 | apple-m4-inference-excellence | M4-BENCH-007 | M4-BENCH-004, M4-REPRO-001 | merged |
 | apple-m4-inference-excellence | M4-ROUTE-MATRIX-001 | M4-DENSE-CHAT-001, M4-BITNET-EX-006, M4-BITNET-EX-007, M4-SERVE-EX-002, M4-OPS-SLO-001 | merged |
 | apple-m4-inference-excellence | M4-WORKLOAD-001 | M4-DENSE-CHAT-001, M4-BITNET-EX-006, M4-SERVE-EX-002, M4-ROUTE-MATRIX-001, M4-REPRO-003 | proposed |
-| apple-m4-inference-excellence | M4-EVIDENCE-REPLAY-001 | M4-RECEIPT-001, M4-CI-001, M4-REPRO-001 | pr_open |
+| apple-m4-inference-excellence | M4-EVIDENCE-REPLAY-001 | M4-RECEIPT-001, M4-CI-001, M4-REPRO-001 | merged |
 | apple-m4-inference-excellence | M4-TREND-001 | M4-CI-001, M4-BENCH-003, M4-BITNET-REG-001, M4-ACCURACY-007, M4-BITNET-EX-012 | proposed |
 | apple-m4-inference-excellence | M4-MODEL-LIFECYCLE-001 | M4-REPRO-002, M4-OPS-SLO-001, M4-CI-001 | proposed |
 | apple-m4-inference-excellence | M4-COMPAT-001 | M4-SETUP-001, M4-MODEL-LIFECYCLE-001, M4-CI-001, M4-REPRO-001 | proposed |
