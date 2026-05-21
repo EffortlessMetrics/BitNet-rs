@@ -28,6 +28,7 @@ env:
 jobs:
   determine-versions:
     name: Determine BitNet.cpp Versions to Cache
+    if: github.repository == 'EffortlessMetrics/BitNet-rs'
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     outputs:
@@ -58,6 +59,7 @@ jobs:
   build-cache:
     name: Build Cache for ${{ matrix.version }}
     needs: determine-versions
+    if: github.repository == 'EffortlessMetrics/BitNet-rs'
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     strategy:
@@ -174,7 +176,7 @@ jobs:
     needs: [determine-versions, build-cache]
     runs-on: ubuntu-22.04
     timeout-minutes: 15
-    if: always()
+    if: always() && github.repository == 'EffortlessMetrics/BitNet-rs'
 
     permissions:
       contents: read
@@ -202,7 +204,7 @@ jobs:
     needs: [determine-versions, build-cache]
     runs-on: ubuntu-22.04
     timeout-minutes: 10
-    if: success()
+    if: success() && github.repository == 'EffortlessMetrics/BitNet-rs'
 
     steps:
     - name: Checkout repository
