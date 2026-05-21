@@ -3089,14 +3089,68 @@ must_not_claim = [
 ]
 
 [[work_item]]
-id = "CUDA-MODEL-017"
+id = "CUDA-MODEL-017A"
 status = "ready"
-branch = "codex/nvidia-5070ti/CUDA-MODEL-017-qwen3-repeated-comparator"
+branch = "codex/nvidia-5070ti/CUDA-MODEL-017A-qwen3-capture-tooling"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["CUDA-MODEL-016"]
+acceptance = "Add or update governed Qwen3 source-capture tooling so current source can produce every CUDA-MODEL-017 source receipt profile: one_token, short_decode_8, short_decode_32, warm_session_3_turns, and decode_128_from_warm_context. The tooling must keep product ask/chat max-token bounds unchanged unless a separate product review changes them, must preserve exact Qwen3 0.6B Q8_0 artifact identity, selected nvidia-rtx-5070-ti-cuda backend, dense_regular_llm_cuda route, fallback_used=false, quality/parity fields, timing/transfer/VRAM/power/thermal fields, and must fail closed before emitting receipts that would be ambiguous about warm-context reuse."
+commands = [
+  "cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-bench-receipts -- --check",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli qwen",
+  "cargo test --locked -p bitnet-receipts-core --no-default-features qwen",
+  "cargo test --locked -p bitnet-bench-receipts --no-default-features qwen3",
+  "cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-receipts-core/**",
+  "crates/bitnet-bench-receipts/**",
+  "docs/reports/CUDA_MODEL_017A_QWEN3_CAPTURE_TOOLING_GAP.md",
+  "plans/native-rust-inference/dense-qwen3.md",
+  "docs/tracking/campaigns/nvidia-5070ti/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "ci/model-artifacts/model-coverage-matrix.toml",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-models/**",
+  ".github/workflows/**",
+]
+may_claim = [
+  "CUDA-MODEL-017A tracks the source-capture tooling prerequisite required before CUDA-MODEL-017 hardware receipts can be collected.",
+  "Current source must produce unambiguous Qwen3 short_decode_32 and decode_128_from_warm_context receipts before the repeated comparator aggregate can be claimed.",
+  "The capture-tooling prerequisite preserves Qwen3-specific dense_regular_llm_cuda proof boundaries.",
+]
+must_not_claim = [
+  "Qwen3 repeated comparator hardware receipts exist.",
+  "Qwen3 speedup exists.",
+  "Qwen3 benchmark-qualified speed exists.",
+  "Qwen3 full CUDA residency exists.",
+  "Qwen3 broad dense GGUF readiness exists.",
+  "Qwen3 proof inherits Qwen2.5 evidence.",
+  "Dense regular LLM CUDA proof satisfies BitNet packed I2S/QK256 proof.",
+  "Product ask/chat token bounds changed.",
+]
+
+[[work_item]]
+id = "CUDA-MODEL-017"
+status = "blocked"
+branch = "codex/nvidia-5070ti/CUDA-MODEL-017-qwen3-repeated-comparator"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CUDA-MODEL-017A"]
 acceptance = "Collect the Qwen3 repeated same-artifact CPU/CUDA hardware comparator source receipts for one_token, short_decode_8, short_decode_32, warm_session_3_turns, and decode_128_from_warm_context on Windows 9950X3D + RTX 5070 Ti, then generate and validate the qwen3_cuda_repeated_comparator aggregate. Each profile must have at least three source receipts for the exact Qwen3 0.6B Q8_0 artifact, selected nvidia-rtx-5070-ti-cuda backend, dense_regular_llm_cuda route, fallback_used=false, quality/parity pass fields, runtime performance phase fields, transfer byte/timing fields or explicit source labeling, VRAM high-water, and power/thermal context. Preserve speedup_claim=false, benchmark_qualified_speedup=false, full_cuda_residency_claimed=false, broad dense GGUF false, Qwen2.5 inheritance false, and BitNet QK256 proof false."
 commands = [
   "cargo run --locked -p bitnet-bench-receipts --no-default-features --bin qwen3_cuda_repeated_comparator_receipt -- --print-manifest",

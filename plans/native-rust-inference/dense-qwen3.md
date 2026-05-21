@@ -440,15 +440,89 @@ Remove the Qwen3 repeated comparator validator, generator, tests, report, and
 campaign tracker entries. Do not change the existing Qwen3 product CLI or
 exact-profile server-ready state.
 
-## Work item: CUDA-MODEL-017
+## Work item: CUDA-MODEL-017A
 
 Status: ready
 Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
 Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
 Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
 Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
-Blocks: CUDA-MODEL-018
+Blocks: CUDA-MODEL-017
 Blocked by: CUDA-MODEL-016
+
+### Goal
+
+Make every CUDA-MODEL-017 Qwen3 source-capture profile executable from current
+source before hardware receipts are collected.
+
+### Production delta
+
+Add or update governed Qwen3 capture tooling so operators can produce source
+receipts for:
+
+- `one_token`;
+- `short_decode_8`;
+- `short_decode_32`;
+- `warm_session_3_turns`;
+- `decode_128_from_warm_context`.
+
+The current CLI has one-token, short-decode, and warm-session source commands,
+but short-decode and warm-session receipts are still bounded to `5..=16`
+generated tokens, and there is no distinct warm-decode source receipt for the
+128-token warm-context profile. CUDA-MODEL-017 must remain blocked until that
+gap is closed.
+
+### Non-goals
+
+No hardware source receipts, aggregate repeated comparator receipt, speedup
+promotion, benchmark-qualified promotion, server promotion, full-residency
+promotion, broad dense GGUF claim, Qwen2.5 proof inheritance, BitNet QK256
+proof, runtime math change, tokenizer change, loader change, kernel change, or
+server behavior change.
+
+Product `ask`/`chat` max-token bounds must remain unchanged unless a separate
+product review explicitly changes them.
+
+### Acceptance
+
+- Current source can emit or validate a Qwen3 `short_decode_32` source receipt
+  without weakening Qwen2.5 or product ask/chat bounds.
+- Current source can emit or validate an explicit Qwen3
+  `decode_128_from_warm_context` source receipt with unambiguous warm-context
+  or session-reuse evidence.
+- The source receipts preserve exact Qwen3 model identity, selected RTX 5070 Ti
+  CUDA backend, `dense_regular_llm_cuda` route, `fallback_used=false`,
+  quality/parity fields, timing, transfer, launch, VRAM, power, and thermal
+  fields required by CUDA-MODEL-016.
+- The aggregate contract remains fail-closed if a source receipt is ambiguous
+  about profile identity or warm-context reuse.
+
+### Proof commands
+
+```bash
+cargo fmt -p bitnet-cli -p bitnet-receipts-core -p bitnet-bench-receipts -- --check
+cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli qwen
+cargo test --locked -p bitnet-receipts-core --no-default-features qwen
+cargo test --locked -p bitnet-bench-receipts --no-default-features qwen3
+cargo run --locked -p xtask --no-default-features -- campaign check nvidia-5070ti
+cargo run --locked -p xtask --no-default-features -- campaign generate --check
+git diff --check
+```
+
+### Rollback
+
+Remove the capture-tooling changes and this prerequisite work item. Keep
+CUDA-MODEL-017 blocked until an equivalent source-capture path exists.
+
+## Work item: CUDA-MODEL-017
+
+Status: blocked
+Linked proposal: `docs/proposals/BITNET-PROP-0003-native-rust-inference-product.md`
+Linked specs: `docs/specs/BITNET-SPEC-0014-runtime-performance-contract.md`
+Linked ADRs: `docs/adr/BITNET-ADR-0005-proof-families-are-not-interchangeable.md`
+Campaign: `docs/tracking/campaigns/nvidia-5070ti/active.toml`
+Blocks: CUDA-MODEL-018
+Blocked by: CUDA-MODEL-017A
 
 ### Goal
 
