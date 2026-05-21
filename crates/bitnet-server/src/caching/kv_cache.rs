@@ -261,13 +261,20 @@ impl MemoryPool {
         unsafe { self.memory.as_mut_ptr().add(offset) }
     }
 
+    #[inline]
+    fn f32_view_in_bounds(&self, offset: usize, len_f32: usize) -> bool {
+        len_f32
+            .checked_mul(core::mem::size_of::<f32>())
+            .and_then(|bytes| offset.checked_add(bytes))
+            .is_some_and(|end| end <= self.memory.len())
+    }
+
     /// Create a mutable f32 slice view into the arena.
     /// Bounds and alignment are checked; panic on misuse (transition period).
     #[inline]
     pub fn f32_slice_mut(&mut self, offset: usize, len_f32: usize) -> &mut [f32] {
-        let bytes = len_f32.checked_mul(core::mem::size_of::<f32>()).expect("f32 len overflow");
         assert!(offset.is_multiple_of(core::mem::align_of::<f32>()), "unaligned f32 slice");
-        assert!(offset.checked_add(bytes).unwrap() <= self.memory.len(), "OOB f32 slice");
+        assert!(self.f32_view_in_bounds(offset, len_f32), "OOB f32 slice");
         unsafe {
             let ptr = self.memory.as_mut_ptr().add(offset) as *mut f32;
             core::slice::from_raw_parts_mut(ptr, len_f32)
@@ -277,9 +284,8 @@ impl MemoryPool {
     /// Read-only f32 view.
     #[inline]
     pub fn f32_slice(&self, offset: usize, len_f32: usize) -> &[f32] {
-        let bytes = len_f32.checked_mul(core::mem::size_of::<f32>()).expect("f32 len overflow");
         assert!(offset.is_multiple_of(core::mem::align_of::<f32>()), "unaligned f32 slice");
-        assert!(offset.checked_add(bytes).unwrap() <= self.memory.len(), "OOB f32 slice");
+        assert!(self.f32_view_in_bounds(offset, len_f32), "OOB f32 slice");
         unsafe {
             let ptr = self.memory.as_ptr().add(offset) as *const f32;
             core::slice::from_raw_parts(ptr, len_f32)
@@ -765,6 +771,34 @@ mod tests {
         let mut pool = MemoryPool::new(1024);
         let err = pool.zero_range(1000, 100).expect_err("should be OOB");
         assert!(err.to_string().contains("zero_range out of bounds"));
+    }
+
+    #[test]
+    #[should_panic(expected = "OOB f32 slice")]
+    fn test_f32_slice_panics_on_len_overflow() {
+        let pool = MemoryPool::new(64);
+        let _ = pool.f32_slice(0, usize::MAX);
+    }
+
+    #[test]
+    #[should_panic(expected = "OOB f32 slice")]
+    fn test_f32_slice_mut_panics_on_len_overflow() {
+        let mut pool = MemoryPool::new(64);
+        let _ = pool.f32_slice_mut(0, usize::MAX);
+    }
+
+    #[test]
+    #[should_panic(expected = "OOB f32 slice")]
+    fn test_f32_slice_panics_on_offset_overflow() {
+        let pool = MemoryPool::new(64);
+        let _ = pool.f32_slice(usize::MAX - 3, 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "OOB f32 slice")]
+    fn test_f32_slice_mut_panics_on_offset_overflow() {
+        let mut pool = MemoryPool::new(64);
+        let _ = pool.f32_slice_mut(usize::MAX - 3, 2);
     }
 
     #[test]
