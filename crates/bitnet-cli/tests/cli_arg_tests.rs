@@ -9295,6 +9295,55 @@ fn answer_corpus_dry_run_accepts_rtx5070ti_cuda_lane() {
     assert_eq!(receipt["quality_summary"]["not_run"], 5);
 }
 
+/// `answer-corpus` can target the A770 OpenCL diagnostic route without promoting answer claims.
+#[cfg(feature = "full-cli")]
+#[test]
+fn answer_corpus_dry_run_accepts_a770_opencl_lane() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let out = dir.path().join("a770-answer-corpus.json");
+    let corpus = workspace_path("ci/quality/bitnet-answer-corpus.yaml");
+    let corpus_arg = corpus.to_string_lossy().into_owned();
+    let out_arg = out.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "answer-corpus",
+            "--dry-run",
+            "--device",
+            "intel-a770-opencl",
+            "--model",
+            "missing.gguf",
+            "--corpus",
+            corpus_arg.as_str(),
+            "--json-out",
+            out_arg.as_str(),
+        ])
+        .assert()
+        .success();
+
+    let receipt_bytes = std::fs::read(out)?;
+    let receipt: serde_json::Value = serde_json::from_slice(&receipt_bytes)?;
+    assert_eq!(receipt["artifact_kind"], "bitnet_a770_opencl_answer_diagnostic_corpus");
+    assert_eq!(receipt["backend"]["requested_backend"], "intel-a770-opencl");
+    assert_eq!(receipt["backend"]["selected_backend"], "intel-a770-opencl");
+    assert_eq!(receipt["backend"]["runtime_api"], "opencl");
+    assert_eq!(receipt["backend"]["fallback_used"], false);
+    assert_eq!(receipt["backend_lane"], "bitnet_a770_opencl");
+    assert_eq!(receipt["model"]["answer_ready_artifact_available"], true);
+    assert_eq!(receipt["claim_boundary"]["answer_ready_artifact_available"], true);
+    assert_eq!(receipt["claim_boundary"]["diagnostic_only_until_answer_ready_artifact"], true);
+    assert_eq!(receipt["claim_boundary"]["a770_opencl_answer_corpus"], true);
+    assert_eq!(receipt["claim_boundary"]["a770_opencl_route_diagnostic"], true);
+    assert_eq!(receipt["claim_boundary"]["strict_a770_answer_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["coherent_answer_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["full_a770_residency_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["trusted_partial_acceleration_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["a770_speedup_claimed"], false);
+    assert_eq!(receipt["speedup_claim"], false);
+    assert_eq!(receipt["quality_summary"]["not_run"], 5);
+    Ok(())
+}
+
 /// `answer-corpus` must not treat Apple Metal as the local-answer path.
 #[cfg(feature = "full-cli")]
 #[test]

@@ -18,6 +18,8 @@ use std::{
 };
 
 const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+const INTEL_A770_OPENCL: &str = "intel-a770-opencl";
+const INTEL_ARC_A770_OPENCL: &str = "intel-arc-a770-opencl";
 const ANSWER_RECEIPT_REQUIRED_CASE_FIELDS: &[&str] = &[
     "text",
     "tokens.prompt",
@@ -188,9 +190,12 @@ impl AnswerCorpusCommand {
         let corpus = AnswerCorpus::load(&self.corpus)?;
         let device =
             normalize_answer_corpus_device(self.device.as_deref().unwrap_or(default_device));
-        if !matches!(device.as_str(), "cpu" | "apple-m4-cpu-neon" | "cuda" | RTX_5070_TI_CUDA) {
+        if !matches!(
+            device.as_str(),
+            "cpu" | "apple-m4-cpu-neon" | "cuda" | RTX_5070_TI_CUDA | INTEL_A770_OPENCL
+        ) {
             anyhow::bail!(
-                "answer-corpus only accepts --device cpu, --device apple-m4-cpu-neon, --device cuda, or --device {RTX_5070_TI_CUDA}; got {device}"
+                "answer-corpus only accepts --device cpu, --device apple-m4-cpu-neon, --device cuda, --device {RTX_5070_TI_CUDA}, or --device {INTEL_A770_OPENCL}; got {device}"
             );
         }
         if self.cpu_kernel.is_some() && device != "cpu" {
@@ -332,8 +337,11 @@ impl AnswerCorpusCommand {
         let backend_quality_gate_passed =
             total > 0 && passed == total && failed == 0 && timed_out == 0 && not_run == 0;
         let bitnet_answer_path = corpus.artifact_kind == "bitnet_answer_corpus";
-        let coherent_answer_claimed =
-            bitnet_answer_path && answer_ready_artifact_available && backend_quality_gate_passed;
+        let a770_opencl_answer_corpus = is_a770_opencl_answer_corpus_device(&device);
+        let coherent_answer_claimed = bitnet_answer_path
+            && answer_ready_artifact_available
+            && backend_quality_gate_passed
+            && !a770_opencl_answer_corpus;
 
         let receipt = json!({
             "schema_version": "1.0.0",
@@ -448,13 +456,20 @@ impl AnswerCorpusCommand {
                 "local_answer_path": device.as_str() == "apple-m4-cpu-neon",
                 "answer_ready_artifact_available": answer_ready_artifact_available,
                 "backend_quality_gate_passed": backend_quality_gate_passed,
-                "diagnostic_only_until_answer_ready_artifact": (bitnet_answer_path && !answer_ready_artifact_available)
+                "diagnostic_only_until_answer_ready_artifact": a770_opencl_answer_corpus
+                    || (bitnet_answer_path && !answer_ready_artifact_available)
                     || (slm_answer_path && !bounded_slm_answer_smoke_passed),
                 "coherent_output_observed": coherent_answer_claimed,
                 "coherent_answer_claimed": coherent_answer_claimed,
                 "cuda_answer_corpus": is_cuda_answer_corpus_device(&device),
+                "a770_opencl_answer_corpus": a770_opencl_answer_corpus,
+                "a770_opencl_route_diagnostic": a770_opencl_answer_corpus,
                 "strict_cuda_answer_claimed": false,
+                "strict_a770_answer_claimed": false,
                 "full_metal_inference_claimed": false,
+                "full_a770_residency_claimed": false,
+                "trusted_partial_acceleration_claimed": false,
+                "a770_speedup_claimed": false,
                 "qk256_apple_claimed": false,
                 "neural_engine_claimed": false,
                 "broad_performance_claimed": false,
@@ -1099,6 +1114,7 @@ struct ScoringResult {
 fn normalize_answer_corpus_device(device: &str) -> String {
     match device.trim() {
         "auto" => "cpu".to_string(),
+        INTEL_ARC_A770_OPENCL | "a770-opencl" => INTEL_A770_OPENCL.to_string(),
         other => other.to_string(),
     }
 }
@@ -1107,17 +1123,28 @@ fn answer_corpus_artifact_kind(device: &str, corpus_artifact_kind: &str) -> &'st
     match (device, corpus_artifact_kind) {
         ("apple-m4-cpu-neon", _) => "bitnet_apple_m4_local_answer_corpus",
         ("cuda" | RTX_5070_TI_CUDA, _) => "bitnet_cuda_answer_diagnostic_corpus",
+        (INTEL_A770_OPENCL, _) => "bitnet_a770_opencl_answer_diagnostic_corpus",
         (_, "slm_answer_corpus") => "slm_cpu_answer_corpus",
         _ => "bitnet_cpu_answer_corpus",
     }
 }
 
 fn answer_corpus_runtime_api(device: &str) -> &'static str {
-    if is_cuda_answer_corpus_device(device) { "cuda" } else { "cpu" }
+    if is_cuda_answer_corpus_device(device) {
+        "cuda"
+    } else if is_a770_opencl_answer_corpus_device(device) {
+        "opencl"
+    } else {
+        "cpu"
+    }
 }
 
 fn is_cuda_answer_corpus_device(device: &str) -> bool {
     matches!(device, "cuda" | RTX_5070_TI_CUDA)
+}
+
+fn is_a770_opencl_answer_corpus_device(device: &str) -> bool {
+    device == INTEL_A770_OPENCL
 }
 
 fn answer_corpus_backend_lane(
@@ -1129,6 +1156,8 @@ fn answer_corpus_backend_lane(
         "dense_slm_cpu"
     } else if is_cuda_answer_corpus_device(device) {
         "bitnet_cuda"
+    } else if is_a770_opencl_answer_corpus_device(device) {
+        "bitnet_a770_opencl"
     } else if device == "apple-m4-cpu-neon" {
         "apple_m4_cpu_neon"
     } else {
@@ -2722,6 +2751,7 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
         "apple-m4-cpu-neon" => selected_backend == "apple-m4-cpu-neon",
         "cuda" => selected_backend.contains("cuda"),
         RTX_5070_TI_CUDA => selected_backend == RTX_5070_TI_CUDA,
+        INTEL_A770_OPENCL => selected_backend == INTEL_A770_OPENCL,
         _ => false,
     };
     if !selected_backend_valid {
@@ -2740,6 +2770,9 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
             &["speedup_claim"][..],
             &["claim_boundary", "speedup_claim"][..],
             &["claim_boundary", "full_metal_inference_claimed"][..],
+            &["claim_boundary", "full_a770_residency_claimed"][..],
+            &["claim_boundary", "trusted_partial_acceleration_claimed"][..],
+            &["claim_boundary", "a770_speedup_claimed"][..],
             &["claim_boundary", "broad_performance_claimed"][..],
         ],
     ) {
@@ -2993,7 +3026,7 @@ fn is_sha256_hex(value: &str) -> bool {
 }
 
 fn aggregate_execution_plan(rows: &[Value], device: &str) -> Value {
-    if !is_cuda_answer_corpus_device(device) {
+    if !is_cuda_answer_corpus_device(device) && !is_a770_opencl_answer_corpus_device(device) {
         return Value::Null;
     }
 
@@ -4358,6 +4391,21 @@ cases:
     }
 
     #[test]
+    fn a770_answer_corpus_route_is_diagnostic_opencl() {
+        assert_eq!(normalize_answer_corpus_device(INTEL_ARC_A770_OPENCL), INTEL_A770_OPENCL);
+        assert_eq!(normalize_answer_corpus_device("a770-opencl"), INTEL_A770_OPENCL);
+        assert_eq!(
+            answer_corpus_artifact_kind(INTEL_A770_OPENCL, "bitnet_answer_corpus"),
+            "bitnet_a770_opencl_answer_diagnostic_corpus"
+        );
+        assert_eq!(answer_corpus_runtime_api(INTEL_A770_OPENCL), "opencl");
+        assert_eq!(
+            answer_corpus_backend_lane(INTEL_A770_OPENCL, false, "bitnet"),
+            "bitnet_a770_opencl"
+        );
+    }
+
+    #[test]
     fn prompt_prefill_receipt_prefers_profile_data() {
         let receipt = json!({
             "tokens": {
@@ -4577,6 +4625,25 @@ cases:
         });
 
         assert!(answer_receipt_failed_rules(&receipt, RTX_5070_TI_CUDA).is_empty());
+    }
+
+    #[test]
+    fn answer_receipt_accepts_strict_a770_opencl_truth() {
+        let mut receipt = strict_answer_receipt_fixture(
+            INTEL_A770_OPENCL,
+            INTEL_A770_OPENCL,
+            "opencl",
+            "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        );
+        receipt["claim_boundary"] = json!({
+            "speedup_claim": false,
+            "full_a770_residency_claimed": false,
+            "trusted_partial_acceleration_claimed": false,
+            "a770_speedup_claimed": false,
+            "broad_performance_claimed": false
+        });
+
+        assert!(answer_receipt_failed_rules(&receipt, INTEL_A770_OPENCL).is_empty());
     }
 
     #[test]
