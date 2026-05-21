@@ -76,6 +76,23 @@ state:mergeable
 state:ci-rerun-needed
 ```
 
+Use repo-boundary and merge-method labels for merge discipline:
+
+```text
+merge:squash              # ordinary swarm PR
+merge:regular             # source-sync or promotion PR
+sync:source-to-swarm      # imports public source history/content into swarm
+promote:swarm-to-source   # exports swarm history/content into source
+repo-boundary             # crosses the source/swarm boundary
+swarm-only                # stays in bitnet-rs-swarm
+source-only               # source repo release/hotfix/publish work
+pre-sync                  # branch opened before a source-sync repair landed
+```
+
+Ordinary swarm PRs default to `merge:squash`. PRs labeled
+`sync:source-to-swarm` or `promote:swarm-to-source` must use `merge:regular` or
+an explicitly approved fast-forward/direct update that preserves ancestry.
+
 Use shared-surface labels when the PR touches collision-prone files:
 
 ```text

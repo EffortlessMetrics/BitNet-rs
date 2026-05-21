@@ -33,7 +33,7 @@ repository:
   default_branch: main
 
   allow_squash_merge: true
-  allow_merge_commit: false
+  allow_merge_commit: true
   allow_rebase_merge: false
   delete_branch_on_merge: true
 
@@ -74,3 +74,27 @@ labels:
   - name: "ai-native"
     color: "8b5cf6"
     description: "Large AI-assisted PR where size is expected — skips PR size guard"
+  - name: "merge:squash"
+    color: "bfd4f2"
+    description: "Ordinary swarm PR; squash merge is expected"
+  - name: "merge:regular"
+    color: "5319e7"
+    description: "Repository-boundary PR; regular merge commit or ancestry-preserving update required"
+  - name: "sync:source-to-swarm"
+    color: "0e8a16"
+    description: "Imports source history or source main content into swarm"
+  - name: "promote:swarm-to-source"
+    color: "fbca04"
+    description: "Promotes swarm history or content back to the public source repo"
+  - name: "repo-boundary"
+    color: "1d76db"
+    description: "Crosses the source/swarm repository boundary"
+  - name: "swarm-only"
+    color: "c2e0c6"
+    description: "Work remains in bitnet-rs-swarm"
+  - name: "source-only"
+    color: "f9d0c4"
+    description: "Work belongs to the public source/release repo only"
+  - name: "pre-sync"
+    color: "d4c5f9"
+    description: "Branch or PR predates a source-sync repair and needs update after sync"

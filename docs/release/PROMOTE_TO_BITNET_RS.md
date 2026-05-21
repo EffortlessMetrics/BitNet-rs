@@ -28,6 +28,32 @@ Swarm-only commits do not become public-release authority until a promotion or
 sync PR names the included work, proof inputs, claim boundaries, and excluded
 work.
 
+## Merge Method
+
+Promotion is a repository-boundary operation. It must preserve swarm ancestry in
+the public source repo.
+
+Do not squash swarm-to-source promotion PRs. A promotion must land by regular
+merge commit or by an explicitly approved fast-forward/direct update that keeps
+the promoted swarm commits reachable from `BitNet-rs/main`.
+
+Recommended branch shape:
+
+```bash
+git clone git@github.com:EffortlessMetrics/BitNet-rs.git bitnet-rs-promote
+cd bitnet-rs-promote
+git remote add swarm git@github.com:EffortlessMetrics/bitnet-rs-swarm.git
+git fetch origin --prune
+git fetch swarm --prune
+git switch -c promote/swarm-YYYY-MM-DD origin/main
+git merge --no-ff swarm/main -m "promote: merge bitnet-rs-swarm through <swarm_sha>"
+```
+
+The source repo may either temporarily/permanently allow merge commits for
+`promote:swarm-to-source` PRs, or an admin may perform a non-force
+fast-forward/direct update after proof. Force-push is not an accepted promotion
+method.
+
 ## Promotion Inputs
 
 Before opening a release-promotion PR against `BitNet-rs`, prepare:
@@ -50,6 +76,7 @@ approved a narrower hotfix source.
 
 The `BitNet-rs` promotion PR should include:
 
+- merge method: regular merge commit or approved fast-forward/direct update;
 - source swarm commit;
 - included swarm PRs;
 - release target and version;
@@ -97,6 +124,19 @@ The release PR must preserve:
 
 Diagnostic-only swarm receipts remain diagnostic unless the promotion proof pack
 makes them claim-grade.
+
+## Source-Owned Surfaces
+
+Do not casually overwrite source-owned release surfaces during promotion:
+
+| File type | Promotion handling |
+| --- | --- |
+| Runtime/code/docs/specs/tests | Promote when included in the promotion scope. |
+| Receipts intended for source | Promote when policy-compliant and claim-bounded. |
+| Swarm-only CI | Usually exclude. |
+| Swarm authority docs | Exclude or keep only if useful to source readers. |
+| Release/signing/publish workflows | Source-owned; do not overwrite casually. |
+| Secrets-heavy workflow changes | Source-owned; hold for explicit release/security review. |
 
 ## Excluded Work Examples
 

@@ -60,6 +60,45 @@ against `BitNet-rs` using the contract in:
 docs/release/PROMOTE_TO_BITNET_RS.md
 ```
 
+## Merge Method Boundary
+
+Normal swarm PRs into `bitnet-rs-swarm/main` use squash merge. This keeps
+high-volume agent work linear and reviewable.
+
+Repository-boundary PRs must preserve ancestry and must not be squash-merged:
+
+| PR kind | Required landing method |
+| --- | --- |
+| Ordinary swarm development PR | Squash merge |
+| Source-history repair | Regular merge commit or fast-forward/direct update preserving ancestry |
+| Source-to-swarm sync while source remains active | Regular merge commit |
+| Swarm-to-source promotion | Regular merge commit or fast-forward/direct update preserving ancestry |
+
+Never squash source-history repair, source-to-swarm sync, or swarm-to-source
+promotion PRs. A squash can copy the file tree while dropping the commit graph
+needed for contributor attribution and promotion auditability.
+
+Never force-push `main`. If a repository-boundary branch must be refreshed,
+merge or fast-forward from the current default branch and preserve both sides of
+the ancestry.
+
+Use these labels to make the required merge method explicit:
+
+```text
+merge:squash
+merge:regular
+sync:source-to-swarm
+promote:swarm-to-source
+repo-boundary
+swarm-only
+source-only
+pre-sync
+```
+
+If a PR has `sync:source-to-swarm` or `promote:swarm-to-source`, it must use
+`merge:regular` or an explicitly approved fast-forward/direct update. All other
+ordinary swarm PRs default to `merge:squash`.
+
 ## CI And Runner Boundary
 
 Trusted same-repo PRs may use routed self-hosted CI. Public fork PRs must not

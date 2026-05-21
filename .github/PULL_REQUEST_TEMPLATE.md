@@ -20,6 +20,26 @@ Shared surfaces touched:
 
 Closeout required:
 
+## Repo boundary and merge type
+
+Merge type:
+
+- [ ] squash ordinary swarm PR
+- [ ] regular merge source/sync/promotion PR
+
+Repo boundary:
+
+- [ ] swarm-only
+- [ ] source-sync
+- [ ] source-promotion
+- [ ] source-only
+
+Ancestry impact:
+
+- [ ] no ancestry impact
+- [ ] must preserve public source history
+- [ ] must preserve swarm history into source
+
 ## Source-of-truth links
 
 Proposal:

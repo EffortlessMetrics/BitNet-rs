@@ -23,6 +23,21 @@ Do not open normal development PRs in `BitNet-rs` unless explicitly directed,
 or unless the PR is a source-repo promotion, sync, release, publish, or
 emergency hotfix.
 
+## Merge Method Boundary
+
+Normal swarm PRs into `bitnet-rs-swarm/main` use squash merge.
+
+Source-history repair, source-to-swarm sync, and swarm-to-source promotion PRs
+must preserve ancestry. They must land by regular merge commit or by an
+explicitly approved fast-forward/direct update. Do not squash these
+repository-boundary PRs, because squash can copy the file tree while dropping
+the contributor and promotion history needed by the source/swarm cutover.
+
+Never force-push `main`. Release, signing, publish, secrets-heavy workflows,
+full-platform matrices, large model-cache workflows, GPU lanes, and public-fork
+self-hosted paths remain source-owned until a separate approved migration moves
+them.
+
 ## Repo Source-Of-Truth Stack
 
 BitNet-rs uses a linked source-of-truth stack:
