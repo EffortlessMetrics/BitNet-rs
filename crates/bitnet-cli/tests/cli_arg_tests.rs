@@ -1599,6 +1599,7 @@ fn mac_ask_help_documents_positional_question() {
         .stdout(predicate::str::contains("--question <QUESTION>"))
         .stdout(predicate::str::contains("--timeout-seconds <SECONDS>"))
         .stdout(predicate::str::contains("--progress"))
+        .stdout(predicate::str::contains("--trace"))
         .stdout(predicate::str::contains("--quiet"));
 }
 
@@ -3391,7 +3392,8 @@ fn mac_serve_help_documents_health_ready_surface() {
         .stdout(predicate::str::contains("--model-id <MODEL_ID>"))
         .stdout(predicate::str::contains("--host <HOST>"))
         .stdout(predicate::str::contains("--port <PORT>"))
-        .stdout(predicate::str::contains("--receipt-dir <PATH>"));
+        .stdout(predicate::str::contains("--receipt-dir <PATH>"))
+        .stdout(predicate::str::contains("--trace"));
 }
 
 #[test]

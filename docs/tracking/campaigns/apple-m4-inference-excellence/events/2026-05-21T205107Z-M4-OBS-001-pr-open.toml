@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T20:51:07Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OBS-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-OBS-001-trace-correlation"
+pr = 6169
+head_sha = "aae11515b8d902247a9846d37bc49c30a7eb9655"
+
+notes = [
+  "Opened draft PR #6169 for the bounded M4 observability trace-correlation slice.",
+  "The PR adds redacted `m4obs-*` trace IDs for `bitnet mac ask --trace` and `bitnet mac serve --trace`, links diagnostics to receipts and server metadata, and validates the M4-OBS-001 observability contract.",
+  "Local focused test linking is blocked by host disk pressure; `cargo check -p bitnet-cli --no-default-features`, `cargo fmt --all`, and `git diff --check` were run before opening.",
+]

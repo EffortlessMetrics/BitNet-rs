@@ -95,13 +95,15 @@ disabled in the claim boundary. Treat this as a narrow one-shot route proof,
 not broad BitNet chat quality or a performance envelope.
 
 When `bitnet mac ask` starts with a verified model, it prints a compact stderr
-summary covering model ID, quantization, cache root, backend, fallback status,
+summary covering model ID, quantization, redacted cache status, backend, fallback status,
 receipt path, and short SHA before generation begins.
 For slow one-shot runs, pass `--progress` to emit stderr milestones for
 tokenizer/model verification, model load, tokenizer load, prompt tokenization,
 prefill, first token, decode completion, and receipt validation while generated
-text remains on stdout. Pass `--quiet` when scripts need to suppress operator
-stderr status and progress lines.
+text remains on stdout. Pass `--trace` to attach an `m4obs-*` trace ID to
+redacted stderr diagnostics and the receipt `observability` block; trace output
+does not print prompt text or cache paths. Pass `--quiet` when scripts need to
+suppress operator stderr status and progress lines.
 If the BitNet one-shot route fails during tokenizer verification, model
 verification, or generation, it writes a `bitnet_apple_m4_mac_ask_failure`
 receipt to `--json-out` before returning the error. That receipt records the
