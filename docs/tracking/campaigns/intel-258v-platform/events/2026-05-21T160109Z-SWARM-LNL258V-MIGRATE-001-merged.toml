@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T16:01:09Z"
+event = "merged"
+item = "SWARM-LNL258V-MIGRATE-001"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 201
+head_sha = "9b47e1c9fb49c793909c59d84165f97077dda6c3"
+merge_sha = "58c697a285eca8c67cdc3c063054e45be314eb80"
+branch = "codex/lunar-lake/SWARM-LNL258V-MIGRATE-001-inventory"
+actor = "codex"
+summary = "Merged the Lunar Lake migration inventory from BitNet-rs into bitnet-rs-swarm tracker authority."
+
+notes = [
+  "PR #201 added docs/migrations/lunar-lake-from-bitnet-rs.md and ci/hardware/intel-258v/MIGRATION_MANIFEST.json as the swarm handoff ledger.",
+  "The inventory records old-repo source cutoff anchors, current swarm audit cutoff LNL258V-GOAL-AUDIT-018, carried artifacts, not-moved history, claim boundaries, and LNL258V-POWER-006 as the active blocked low_power evidence item.",
+  "This is tracker closeout only; it does not change command behavior, route policy, evidence artifacts, route promotion, speedup, power advantage, battery-mode evidence, native accelerator proof, dense-SLM-as-BitNet-proof status, or BitNet QK256/I2_S behavior.",
+]

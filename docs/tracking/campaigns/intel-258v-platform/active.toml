@@ -10925,6 +10925,59 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SWARM-LNL258V-MIGRATE-001"
+status = "merged"
+pr = 201
+head_sha = "9b47e1c9fb49c793909c59d84165f97077dda6c3"
+merge_sha = "58c697a285eca8c67cdc3c063054e45be314eb80"
+branch = "codex/lunar-lake/SWARM-LNL258V-MIGRATE-001-inventory"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-018"]
+acceptance = "Record the Lunar Lake BitNet-rs to bitnet-rs-swarm migration inventory in the Intel 258V campaign tracker after PR #201 added docs/migrations/lunar-lake-from-bitnet-rs.md and ci/hardware/intel-258v/MIGRATION_MANIFEST.json. The row must preserve the current operating state, source cutoff, moved/unmoved evidence boundaries, and active LNL258V-POWER-006 battery-mode blocker without changing route policy, evidence artifacts, command behavior, route promotion, speedup, power-advantage, native accelerator, dense-SLM-as-BitNet-proof, or BitNet QK256/I2_S behavior claims."
+commands = [
+  "python -m json.tool ci/hardware/intel-258v/MIGRATION_MANIFEST.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "ci/hardware/intel-258v/2026-05-08/**",
+]
+may_claim = [
+  "The swarm migration inventory exists and is tracked by the Intel 258V campaign.",
+  "The current swarm migration manifest records source cutoff anchors, moved artifacts, not-moved history, claim boundaries, and LNL258V-POWER-006 as the next blocked low_power evidence item.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any model was loaded by this PR.",
+  "Any fallback behavior changed.",
+  "Any route is promoted or demoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Battery-mode low_power evidence is now available.",
+  "Measured temperature readings are now available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-006"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
