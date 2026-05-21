@@ -1,0 +1,15 @@
+timestamp = "2026-05-21T07:37:00Z"
+campaign = "intel-a770"
+item = "A770-012"
+event = "merged"
+pr = 158
+head_sha = "87748ca37774bf9e4a504215a0a3c4399a4bc13c"
+merge_sha = "7d7048538c568a1b0b09353764b8993701c69264"
+branch = "codex/intel-a770/A770-012-strict-qk256-dispatch-receipt"
+actor = "codex"
+
+notes = [
+  "Merged PR #158, committing a strict selected-device A770 OpenCL QK256 dispatch receipt and wiring it into diagnostic route/kernel matrices.",
+  "The receipt records fallback_used=false, cpu_fallback_allowed=false, kernel_execution=true, qk256_dispatch=true, exact CPU parity, and selected Intel Arc A770 OpenCL device identity for the scoped inline-scaled candidate path.",
+  "The merge does not promote BitNet inference, answer quality, activation quantization residency, selected attention residency, resident KV, full A770 residency, performance speedup, trusted partial acceleration, or completion.",
+]

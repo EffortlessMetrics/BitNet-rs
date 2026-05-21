@@ -480,7 +480,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-012"
-status = "pr_open"
+status = "merged"
 pr = 158
 branch = "codex/intel-a770/A770-012-strict-qk256-dispatch-receipt"
 stackable = false
