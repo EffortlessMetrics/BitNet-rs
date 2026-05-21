@@ -2679,9 +2679,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-071"
-status = "pr_open"
+status = "merged"
 pr = 177
 head_sha = "d402440e0d17c056d1f0141bf92d1f9a199a35fb"
+merge_sha = "6f37670d3902c65dc69ba58ff70fa97ff4f8938c"
 branch = "codex/slm-cpu-071-post070-real-timing-gate"
 stackable = false
 review_mode = "codex_premerge"
