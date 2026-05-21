@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T15:33:40Z"
+campaign = "intel-a770"
+item = "A770-008"
+event = "merged"
+pr = 53
+head_sha = "62c3dd1900421889226221034be55111a839a4ea"
+merge_sha = "1a3f917fa09a130d96ac57a49a88c0da90fea222"
+branch = "codex/intel-a770/A770-008-benchmark-baseline"
+actor = "codex"
+
+notes = [
+  "Merged PR #53, adding the selected-device A770 OpenCL matmul_i2s benchmark baseline.",
+  "The baseline is diagnostic evidence only and does not promote BitNet inference, official QK256 production semantics, speedup, residency, semantic quality, or completion.",
+]

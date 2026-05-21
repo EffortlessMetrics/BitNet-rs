@@ -42,6 +42,8 @@ use bitnet_cpu_detect::avx512_available;
 use bitnet_cpu_detect::neon_available;
 use std::sync::OnceLock;
 
+#[cfg(feature = "opencl")]
+pub mod a770_opencl_runtime;
 pub mod activation_bench;
 pub mod activation_ops;
 pub mod activation_registry;

@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T21:55:27Z"
+campaign = "intel-a770"
+item = "A770-010"
+event = "merged"
+pr = 80
+head_sha = "a1149c1e8cb0c7bf058833f39db771fd17664bdd"
+merge_sha = "3718c41735634ea515fcefdca3ee6e0990df3bfa"
+branch = "codex/intel-a770/A770-010-strict-qk256-fallback-guard"
+actor = "codex"
+
+notes = [
+  "Merged PR #80, making strict A770 OpenCL QK256 requests fail closed while the runtime dispatch was not wired.",
+  "The guard preserves the no-fallback claim boundary and does not promote OpenCL production runtime, BitNet inference, transformer dispatch, speedup, residency, semantic quality, or completion.",
+]

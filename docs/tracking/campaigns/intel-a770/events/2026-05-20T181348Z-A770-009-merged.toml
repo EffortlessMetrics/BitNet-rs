@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T18:13:48Z"
+campaign = "intel-a770"
+item = "A770-009"
+event = "merged"
+pr = 62
+head_sha = "d09a3d728e75965ee2ab531c32df3f1d88d9f70a"
+merge_sha = "bdba54a436da4b66435de365dba1c69bd456e35b"
+branch = "codex/intel-a770/A770-009-qk256-scaled-opencl-fixture"
+actor = "codex"
+
+notes = [
+  "Merged PR #62, adding a selected-device A770 OpenCL grouped QK256 I2_S x prequantized I8_S scaled fixture.",
+  "The fixture does not promote official BitNet QK256 dispatch, inference, activation-quantization residency, speed, semantic quality, or completion.",
+]

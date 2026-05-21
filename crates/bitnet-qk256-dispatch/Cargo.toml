@@ -30,7 +30,12 @@ cuda = [
   "bitnet-kernels/cuda",
 ]
 metal = ["bitnet-common/metal"]
-opencl = ["bitnet-common/opencl", "bitnet-quantization/opencl"]
+opencl = [
+    "dep:bitnet-kernels",
+    "bitnet-common/opencl",
+    "bitnet-quantization/opencl",
+    "bitnet-kernels/opencl",
+]
 oneapi = ["bitnet-common/oneapi", "bitnet-quantization/oneapi", "opencl"]
 gpu = ["cuda", "metal", "opencl"]
 

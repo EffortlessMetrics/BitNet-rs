@@ -6,6 +6,10 @@
 //! QK256 kernel before falling back according to strict-mode policy.
 
 use bitnet_common::{BitNetError, Result};
+#[cfg(feature = "opencl")]
+use bitnet_kernels::a770_opencl_runtime::{
+    A770OpenClQk256ScaledGemv, run_a770_qk256_i8s_scaled_gemv,
+};
 #[cfg(feature = "cuda")]
 use bitnet_kernels::cuda::{
     CUDA_QK256_GEMV_KERNEL_ID, CudaBitnetContext, CudaBitnetLinearBackend, PackedQk256Weights,
@@ -13,6 +17,8 @@ use bitnet_kernels::cuda::{
 use bitnet_qk256_layout_core::{
     Qk256InputShape, Qk256Layout, parse_input_shape, parse_qk256_layout, validate_input_cols,
 };
+#[cfg(feature = "opencl")]
+use bitnet_quantization::i2s_qk256::quantize_row_i8_s_activation;
 use candle_core::Tensor;
 #[cfg(feature = "cuda")]
 use std::cell::RefCell;
@@ -21,8 +27,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 mod cpu_hot_path;
 
 const NOT_CLAIMED_OPENCL_QK256: &[&str] = &[
-    "a770_qk256_opencl_execution",
+    "a770_qk256_opencl_claim_grade_execution",
     "a770_qk256_opencl_performance",
+    "activation_quantization_residency",
     "selected_attention_residency",
     "resident_kv_decode",
     "attention_scores_residency",
@@ -35,8 +42,14 @@ const NOT_CLAIMED_OPENCL_QK256: &[&str] = &[
 
 static BITNET_LINEAR_TOTAL: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_ON_CUDA: AtomicU64 = AtomicU64::new(0);
+static BITNET_LINEAR_ON_A770_OPENCL: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_CPU_FALLBACK: AtomicU64 = AtomicU64::new(0);
 static BITNET_LINEAR_UNSUPPORTED: AtomicU64 = AtomicU64::new(0);
+static BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK: AtomicU64 = AtomicU64::new(0);
+static BITNET_LINEAR_A770_OPENCL_UNSUPPORTED: AtomicU64 = AtomicU64::new(0);
+static A770_OPENCL_HOST_TO_DEVICE_BYTES: AtomicU64 = AtomicU64::new(0);
+static A770_OPENCL_DEVICE_TO_HOST_BYTES: AtomicU64 = AtomicU64::new(0);
+static A770_OPENCL_KERNEL_INVOCATIONS: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_HOST_TO_DEVICE_BYTES: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_DEVICE_TO_HOST_BYTES: AtomicU64 = AtomicU64::new(0);
 static CUDA_QK256_KERNEL_TIME_MICROS: AtomicU64 = AtomicU64::new(0);
@@ -61,12 +74,25 @@ pub struct Qk256DispatchCoverageCounters {
     pub bitnet_linear_layers_total: u64,
     /// Dispatch points routed through the CUDA QK256 kernel.
     pub bitnet_linear_layers_on_cuda: u64,
+    /// Dispatch points routed through the selected-device A770 OpenCL QK256 kernel.
+    pub bitnet_linear_layers_on_a770_opencl: u64,
     /// Dispatch points that used CPU fallback while a CUDA backend was requested.
     pub bitnet_linear_layers_cpu_fallback: u64,
     /// Unsupported operations that prevent a full CUDA inference claim.
     pub unsupported_ops: Vec<String>,
     /// Human-readable claim boundary for partial routing.
     pub execution_claim: &'static str,
+}
+
+/// Aggregate A770 OpenCL QK256 runtime counters for receipt accounting.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Qk256A770OpenClRuntimeStats {
+    /// Host-to-device bytes copied for A770 OpenCL QK256 GEMV calls.
+    pub host_to_device_bytes: u64,
+    /// Device-to-host bytes copied for A770 OpenCL QK256 GEMV calls.
+    pub device_to_host_bytes: u64,
+    /// Number of selected-device A770 OpenCL QK256 kernel invocations.
+    pub kernel_invocations: u64,
 }
 
 /// Diagnostic counters for CPU QK256 hot-path reality audits.
@@ -143,18 +169,21 @@ pub struct Qk256DispatchStatus {
 pub fn qk256_dispatch_status() -> Qk256DispatchStatus {
     let compiled_opencl = cfg!(feature = "opencl");
     let compiled_oneapi = cfg!(feature = "oneapi");
-    let blocker = if compiled_oneapi {
-        Some("oneapi_qk256_runtime_not_wired")
+    let (runtime_backend, blocker) = if compiled_oneapi {
+        ("cpu_qk256_reference", Some("oneapi_qk256_runtime_not_wired"))
     } else if compiled_opencl {
-        Some("opencl_qk256_runtime_not_wired")
+        (
+            "a770_opencl_qk256_i8s_scaled_candidate",
+            Some("activation_quantization_cpu_resident_and_partial_qk256_only"),
+        )
     } else {
-        Some("cpu_qk256_dispatch_only")
+        ("cpu_qk256_reference", Some("cpu_qk256_dispatch_only"))
     };
 
     Qk256DispatchStatus {
         compiled_opencl,
         compiled_oneapi,
-        runtime_backend: "cpu_qk256_reference",
+        runtime_backend,
         accelerator_claimable: false,
         blocker,
         not_claims: NOT_CLAIMED_OPENCL_QK256,
@@ -166,9 +195,15 @@ pub fn qk256_dispatch_coverage() -> Qk256DispatchCoverageCounters {
     let cpu_fallback = BITNET_LINEAR_CPU_FALLBACK.load(Ordering::Relaxed);
     let unsupported = BITNET_LINEAR_UNSUPPORTED.load(Ordering::Relaxed);
     let on_cuda = BITNET_LINEAR_ON_CUDA.load(Ordering::Relaxed);
+    let on_a770_opencl = BITNET_LINEAR_ON_A770_OPENCL.load(Ordering::Relaxed);
+    let a770_cpu_fallback = BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK.load(Ordering::Relaxed);
+    let a770_unsupported = BITNET_LINEAR_A770_OPENCL_UNSUPPORTED.load(Ordering::Relaxed);
     let mut unsupported_ops = Vec::new();
     if cpu_fallback > 0 {
         unsupported_ops.push("qk256_cpu_fallback".to_string());
+    }
+    if a770_cpu_fallback > 0 || a770_unsupported > 0 {
+        unsupported_ops.push("qk256_a770_opencl_not_routed".to_string());
     }
     if unsupported > 0 {
         unsupported_ops.push("qk256_strict_cuda_unsupported".to_string());
@@ -177,15 +212,29 @@ pub fn qk256_dispatch_coverage() -> Qk256DispatchCoverageCounters {
     Qk256DispatchCoverageCounters {
         bitnet_linear_layers_total: BITNET_LINEAR_TOTAL.load(Ordering::Relaxed),
         bitnet_linear_layers_on_cuda: on_cuda,
+        bitnet_linear_layers_on_a770_opencl: on_a770_opencl,
         bitnet_linear_layers_cpu_fallback: cpu_fallback,
         unsupported_ops,
         execution_claim: if on_cuda > 0 {
             "cuda_inference_contribution"
+        } else if on_a770_opencl > 0 {
+            "a770_opencl_qk256_contribution"
+        } else if a770_cpu_fallback > 0 || a770_unsupported > 0 || a770_opencl_backend_requested() {
+            "a770_opencl_not_routed"
         } else if cuda_bitnet_backend_requested() {
             "cuda_bitnet_not_routed"
         } else {
             "cpu_reference"
         },
+    }
+}
+
+/// Snapshot A770 OpenCL QK256 timing and transfer counters for the current process.
+pub fn qk256_a770_opencl_runtime_stats() -> Qk256A770OpenClRuntimeStats {
+    Qk256A770OpenClRuntimeStats {
+        host_to_device_bytes: A770_OPENCL_HOST_TO_DEVICE_BYTES.load(Ordering::Relaxed),
+        device_to_host_bytes: A770_OPENCL_DEVICE_TO_HOST_BYTES.load(Ordering::Relaxed),
+        kernel_invocations: A770_OPENCL_KERNEL_INVOCATIONS.load(Ordering::Relaxed),
     }
 }
 
@@ -227,8 +276,14 @@ pub fn qk256_cpu_hot_path_counters() -> Qk256CpuHotPathCounters {
 pub fn reset_qk256_dispatch_coverage() {
     BITNET_LINEAR_TOTAL.store(0, Ordering::Relaxed);
     BITNET_LINEAR_ON_CUDA.store(0, Ordering::Relaxed);
+    BITNET_LINEAR_ON_A770_OPENCL.store(0, Ordering::Relaxed);
     BITNET_LINEAR_CPU_FALLBACK.store(0, Ordering::Relaxed);
     BITNET_LINEAR_UNSUPPORTED.store(0, Ordering::Relaxed);
+    BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK.store(0, Ordering::Relaxed);
+    BITNET_LINEAR_A770_OPENCL_UNSUPPORTED.store(0, Ordering::Relaxed);
+    A770_OPENCL_HOST_TO_DEVICE_BYTES.store(0, Ordering::Relaxed);
+    A770_OPENCL_DEVICE_TO_HOST_BYTES.store(0, Ordering::Relaxed);
+    A770_OPENCL_KERNEL_INVOCATIONS.store(0, Ordering::Relaxed);
     CUDA_QK256_HOST_TO_DEVICE_BYTES.store(0, Ordering::Relaxed);
     CUDA_QK256_DEVICE_TO_HOST_BYTES.store(0, Ordering::Relaxed);
     CUDA_QK256_KERNEL_TIME_MICROS.store(0, Ordering::Relaxed);
@@ -266,12 +321,20 @@ pub fn record_bitnet_linear_cpu_fallback() {
     if cuda_bitnet_backend_requested() {
         BITNET_LINEAR_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
     }
+    if a770_opencl_backend_requested() {
+        BITNET_LINEAR_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+        BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 /// Record a BitNet linear dispatch point that strict CUDA cannot support.
 pub fn record_bitnet_linear_unsupported() {
     BITNET_LINEAR_TOTAL.fetch_add(1, Ordering::Relaxed);
-    BITNET_LINEAR_UNSUPPORTED.fetch_add(1, Ordering::Relaxed);
+    if a770_opencl_backend_requested() {
+        BITNET_LINEAR_A770_OPENCL_UNSUPPORTED.fetch_add(1, Ordering::Relaxed);
+    } else {
+        BITNET_LINEAR_UNSUPPORTED.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 /// True when the run selected or requested the RTX 5070 Ti CUDA BitNet lane.
@@ -287,6 +350,19 @@ pub fn strict_cuda_bitnet_backend_requested() -> bool {
         || env_truthy("BITNET_STRICT_CUDA_BACKEND")
 }
 
+/// True when the run selected or requested the Intel Arc A770 OpenCL BitNet lane.
+pub fn a770_opencl_backend_requested() -> bool {
+    a770_opencl_backend_env_matches("BITNET_SELECTED_BACKEND")
+        || a770_opencl_backend_env_matches("BITNET_REQUESTED_BACKEND")
+        || a770_opencl_backend_env_matches("BITNET_BACKEND")
+}
+
+/// True when strict mode forbids CPU fallback for the A770 OpenCL BitNet lane.
+pub fn strict_a770_opencl_backend_requested() -> bool {
+    (a770_opencl_backend_requested() && env_truthy("BITNET_STRICT_MODE"))
+        || env_truthy("BITNET_STRICT_A770_OPENCL_BACKEND")
+}
+
 /// Runs I2_S QK256 forward pass for input tensor shapes [B, T, H] or [B, H].
 pub fn forward_qk256(input: &Tensor, qk256_tensor: &Tensor, weight_name: &str) -> Result<Tensor> {
     forward_qk256_with_scale(input, qk256_tensor, weight_name, None)
@@ -300,6 +376,60 @@ pub fn forward_qk256_with_scale(
     inline_scale: Option<f32>,
 ) -> Result<Tensor> {
     BITNET_LINEAR_TOTAL.fetch_add(1, Ordering::Relaxed);
+
+    if a770_opencl_backend_requested() {
+        if inline_scale.is_some() {
+            #[cfg(feature = "opencl")]
+            {
+                match forward_qk256_a770_opencl(input, qk256_tensor, weight_name, inline_scale) {
+                    Ok(output) => {
+                        BITNET_LINEAR_ON_A770_OPENCL.fetch_add(1, Ordering::Relaxed);
+                        return Ok(output);
+                    }
+                    Err(err) if strict_a770_opencl_backend_requested() => {
+                        BITNET_LINEAR_A770_OPENCL_UNSUPPORTED.fetch_add(1, Ordering::Relaxed);
+                        return Err(BitNetError::Validation(format!(
+                            "strict A770 OpenCL BitNet linear dispatch failed for {weight_name}: {err}"
+                        )));
+                    }
+                    Err(err) => {
+                        BITNET_LINEAR_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+                        BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+                        tracing::warn!(
+                            "A770 OpenCL QK256 dispatch failed for {}; using CPU fallback: {}",
+                            weight_name,
+                            err
+                        );
+                    }
+                }
+            }
+
+            #[cfg(not(feature = "opencl"))]
+            {
+                if strict_a770_opencl_backend_requested() {
+                    BITNET_LINEAR_A770_OPENCL_UNSUPPORTED.fetch_add(1, Ordering::Relaxed);
+                    return Err(BitNetError::Validation(format!(
+                        "strict A770 OpenCL BitNet linear dispatch requested for {weight_name}, but bitnet-qk256-dispatch was built without the opencl feature"
+                    )));
+                }
+                BITNET_LINEAR_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+                BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+            }
+        } else {
+            if strict_a770_opencl_backend_requested() {
+                BITNET_LINEAR_A770_OPENCL_UNSUPPORTED.fetch_add(1, Ordering::Relaxed);
+                return Err(BitNetError::Validation(format!(
+                    "strict A770 OpenCL BitNet linear dispatch requested for {weight_name}, but the OpenCL QK256 runtime currently requires an inline BitNet scale"
+                )));
+            }
+            BITNET_LINEAR_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+            BITNET_LINEAR_A770_OPENCL_CPU_FALLBACK.fetch_add(1, Ordering::Relaxed);
+            tracing::warn!(
+                "A770 OpenCL QK256 dispatch requested for {}; using CPU fallback because inline BitNet scale is absent",
+                weight_name
+            );
+        }
+    }
 
     if cuda_bitnet_backend_requested() {
         #[cfg(feature = "cuda")]
@@ -337,6 +467,55 @@ pub fn forward_qk256_with_scale(
     }
 
     forward_qk256_cpu(input, qk256_tensor, weight_name, inline_scale)
+}
+
+#[cfg(feature = "opencl")]
+fn forward_qk256_a770_opencl(
+    input: &Tensor,
+    qk256_tensor: &Tensor,
+    weight_name: &str,
+    inline_scale: Option<f32>,
+) -> Result<Tensor> {
+    let weight_scale = inline_scale.ok_or_else(|| {
+        BitNetError::Validation(
+            "A770 OpenCL QK256 dispatch requires an inline BitNet scale".to_string(),
+        )
+    })?;
+    if !weight_scale.is_finite() {
+        return Err(BitNetError::Validation(format!(
+            "QK256 inline scale is not finite: {weight_scale}"
+        )));
+    }
+
+    let prepared = prepare_qk256_forward(input, qk256_tensor, weight_name)?;
+    let output_row_count = prepared.shape.batch_size * prepared.shape.seq_len;
+    QK256_OUTPUT_ROWS_ALLOCATED_COUNT.fetch_add(output_row_count as u64, Ordering::Relaxed);
+    let mut output_rows = Vec::with_capacity(output_row_count * prepared.layout.rows);
+
+    for input_row in &prepared.input_rows {
+        let (q, activation_scale, activation_sum) =
+            quantize_row_i8_s_activation(input_row, prepared.layout.cols);
+        let result = run_a770_qk256_i8s_scaled_gemv(A770OpenClQk256ScaledGemv {
+            activations_i8: &q,
+            packed_qk256: &prepared.flat_bytes,
+            rows: prepared.layout.rows,
+            cols: prepared.layout.cols,
+            row_stride_bytes: prepared.layout.row_stride_bytes,
+            activation_sum,
+            activation_scale,
+            weight_scale,
+        })
+        .map_err(BitNetError::from)?;
+        A770_OPENCL_HOST_TO_DEVICE_BYTES
+            .fetch_add(result.host_to_device_bytes as u64, Ordering::Relaxed);
+        A770_OPENCL_DEVICE_TO_HOST_BYTES
+            .fetch_add(result.device_to_host_bytes as u64, Ordering::Relaxed);
+        A770_OPENCL_KERNEL_INVOCATIONS
+            .fetch_add(result.kernel_invocations as u64, Ordering::Relaxed);
+        output_rows.extend_from_slice(&result.output);
+    }
+
+    tensor_from_flat_output(output_rows, &prepared.shape, &prepared.layout, input)
 }
 
 fn forward_qk256_cpu(
@@ -638,6 +817,14 @@ fn record_cuda_qk256_runtime_stats(stats: &bitnet_kernels::cuda::CudaBitnetKerne
 fn backend_env_matches(name: &str) -> bool {
     std::env::var(name).is_ok_and(|value| {
         matches!(value.to_ascii_lowercase().as_str(), "nvidia-rtx-5070-ti-cuda" | "cuda")
+    })
+}
+
+fn a770_opencl_backend_env_matches(name: &str) -> bool {
+    std::env::var(name).is_ok_and(|value| {
+        let value = value.to_ascii_lowercase();
+        matches!(value.as_str(), "intel-a770-opencl" | "intel-arc-a770-opencl" | "a770-opencl")
+            || (value.contains("a770") && value.contains("opencl"))
     })
 }
 

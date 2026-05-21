@@ -34,12 +34,17 @@ Make the Intel Arc A770 a receipt-backed OpenCL-first BitNet acceleration lane. 
 | A770-003 | merged | Preserve selected-device identity after reconciliation. |
 | A770-004 | merged | Add runtime probe. |
 | A770-005 | merged | Tiny selected-device OpenCL smoke on real A770 DEV_56A0, without BitNet inference claims. |
-| A770-006 | proposed | Add CPU/OpenCL parity. |
-| A770-007 | proposed | Record receipt identity. |
+| A770-006 | merged | Add selected-device OpenCL `matmul_i2s` CPU parity. |
+| A770-007 | merged | Record receipt identity. |
+| A770-006R | merged | Refresh the `matmul_i2s` parity fixture with explicit activation and packed-weight operand ordering before benchmark-baseline work. |
+| A770-008 | merged | Record diagnostic benchmark-baseline timing for the selected-device `matmul_i2s` parity fixture without speedup or production BitNet claims. |
+| A770-009 | merged | Add selected-device A770 OpenCL parity for grouped QK256 I2_S bytes with prequantized I8_S activation scale/sum correction, still fixture-only. |
+| A770-010 | merged | Make strict A770 OpenCL QK256 dispatch requests fail closed while the production OpenCL QK256 runtime is not wired, and record non-strict A770 requests as CPU fallback/not-routed evidence. |
+| A770-011 | in progress | Wire a first inline-scaled selected-device A770 OpenCL QK256 dispatch candidate while keeping CPU activation quantization, quality, residency, speed, and full-inference claims closed. |
 
 ## Current Claim Boundary
 
-Committed A770 OpenCL proof remains diagnostic. The campaign does not currently claim full BitNet inference, trusted partial acceleration, performance speedup, support-op residency, full device residency, dense SLM support, Gemma support, or native OpenCL proof from OpenVINO GPU.
+Committed A770 OpenCL proof remains diagnostic. The campaign does not currently claim full BitNet inference, trusted partial acceleration, performance speedup, support-op residency, full device residency, dense SLM support, Gemma support, or native OpenCL proof from OpenVINO GPU. The selected-device QK256 scaled fixture and A770-011 dispatch candidate do not prove GPU-resident activation quantization, answer quality, selected attention residency, resident KV, or full BitNet inference.
 
 ## Review Policy
 
