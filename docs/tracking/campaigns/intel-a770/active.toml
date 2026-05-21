@@ -529,54 +529,6 @@ must_not_claim = [
 ]
 
 [[work_item]]
-id = "A770-017"
-status = "pr_open"
-pr = 235
-head_sha = "ee0b0fc9389b30d5cefdd1122c229f9715bb09b7"
-branch = "codex/intel-a770/A770-017-opencl-runtime-detection"
-stackable = false
-review_mode = "codex_premerge"
-merge_policy = "automerge_when_green"
-human_gate = "on_blocker_only"
-blocked_by = ["A770-016"]
-acceptance = "Align startup OpenCL runtime detection with the in-process dynamic OpenCL probe so A770 answer-corpus child runs can reach the committed diagnostic route without depending on the external clinfo tool."
-commands = [
-  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu,opencl opencl_runtime_fake_detection_remains_deterministic -- --nocapture",
-  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli a770 -- --nocapture",
-  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
-  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
-  "git diff --check",
-]
-allowed_paths = [
-  "crates/bitnet-kernels/src/device_features.rs",
-  "docs/tracking/campaigns/intel-a770/**",
-  "docs/tracking/generated/**",
-]
-forbidden_paths = [
-  "crates/bitnet-transformer/**",
-  "crates/bitnet-server/**",
-  "crates/bitnet-qk256-dispatch/**",
-  "crates/bitnet-cli/src/commands/answer_corpus.rs",
-  "ci/hardware/amd-5700x-intel-a770/**",
-]
-may_claim = [
-  "A770 startup backend selection uses the same in-process dynamic OpenCL runtime visibility probe as the hardware receipt lanes.",
-  "A770 answer-corpus child runs are no longer blocked solely by a missing external clinfo executable when OpenCL is visible through the dynamic probe.",
-]
-must_not_claim = [
-  "BitNet inference works on A770.",
-  "A770 answer quality is proven.",
-  "The A770 answer corpus has executed live model prompts.",
-  "Official BitNet QK256 production semantics are fully proven.",
-  "Activation quantization is GPU-resident.",
-  "Selected attention is resident.",
-  "Resident KV is proven.",
-  "Full A770 residency is proven.",
-  "Performance speedup is proven.",
-  "A770 trusted partial acceleration is claim-grade.",
-]
-
-[[work_item]]
 id = "A770-012"
 status = "merged"
 pr = 158
@@ -761,6 +713,55 @@ forbidden_paths = [
 may_claim = [
   "A770 answer-corpus child invocations declare the official BitNet 2B I2_S model contract and diagnostic QK256 route metadata.",
   "A770 answer-corpus receipt checks reject missing A770 model-contract or QK256 route declarations.",
+]
+must_not_claim = [
+  "BitNet inference works on A770.",
+  "A770 answer quality is proven.",
+  "The A770 answer corpus has executed live model prompts.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-017"
+status = "merged"
+pr = 235
+head_sha = "d30024cf19b2d190f115cc15ffa58d9d4e8994f5"
+merge_sha = "0651140121dbd28acaa5be5284a6f2bd4a91a4f7"
+branch = "codex/intel-a770/A770-017-opencl-runtime-detection"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-016"]
+acceptance = "Align startup OpenCL runtime detection with the in-process dynamic OpenCL probe so A770 answer-corpus child runs can reach the committed diagnostic route without depending on the external clinfo tool."
+commands = [
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu,opencl opencl_runtime_fake_detection_remains_deterministic -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli a770 -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/device_features.rs",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "ci/hardware/amd-5700x-intel-a770/**",
+]
+may_claim = [
+  "A770 startup backend selection uses the same in-process dynamic OpenCL runtime visibility probe as the hardware receipt lanes.",
+  "A770 answer-corpus child runs are no longer blocked solely by a missing external clinfo executable when OpenCL is visible through the dynamic probe.",
 ]
 must_not_claim = [
   "BitNet inference works on A770.",

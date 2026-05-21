@@ -1,0 +1,18 @@
+timestamp = "2026-05-21T22:19:15Z"
+campaign = "intel-a770"
+item = "A770-017"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex-a770"
+pr = 235
+branch = "codex/intel-a770/A770-017-opencl-runtime-detection"
+head_sha = "d30024cf19b2d190f115cc15ffa58d9d4e8994f5"
+merge_sha = "0651140121dbd28acaa5be5284a6f2bd4a91a4f7"
+summary = "Merged PR #235 with the OpenCL runtime detection alignment."
+notes = [
+  "Startup OpenCL backend availability now uses the in-process dynamic OpenCL probe instead of requiring the external clinfo executable.",
+  "The PR preserves deterministic BITNET_GPU_FAKE=opencl/none behavior outside strict mode and keeps strict mode on real runtime detection.",
+  "This closeout records the final PR head SHA after main refreshes superseded the PR-open head.",
+  "No live A770 answer-corpus execution, BitNet inference, answer quality, residency, speed, full-inference, or trusted-partial acceleration claim is promoted.",
+]
