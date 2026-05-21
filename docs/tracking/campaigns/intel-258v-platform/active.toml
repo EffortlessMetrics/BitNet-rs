@@ -11296,7 +11296,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-012"
-status = "in_progress"
+status = "merged"
+pr = 232
+head_sha = "6cc56e2b4485575c43587c69d6fb3241b033e00d"
+merge_sha = "b5b09adaa6a120c7f5f6bcdec4a480594262ddb9"
 branch = "codex/lunar-lake/LNL258V-POWER-012-low-power-sample-guard"
 stackable = false
 review_mode = "codex_premerge"

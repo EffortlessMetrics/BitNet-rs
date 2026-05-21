@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T23:24:10Z"
+event = "merged"
+item = "LNL258V-POWER-012"
+previous_status = "in_progress"
+new_status = "merged"
+branch = "codex/lunar-lake/LNL258V-POWER-012-low-power-sample-guard"
+pr = 232
+head_sha = "6cc56e2b4485575c43587c69d6fb3241b033e00d"
+merge_sha = "b5b09adaa6a120c7f5f6bcdec4a480594262ddb9"
+actor = "codex"
+summary = "Merged the low_power explicit-route sample guard so CPU/GPU/NPU battery-run samples can preserve candidate blockers while auto low_power remains promotion-gated."
+
+notes = [
+  "The PR changed only the explicit low_power sample guard, runbook wording, and tracker state; it did not add battery-mode evidence or promote low_power.",
+  "GitHub checks passed and automerge completed the PR after rebasing through concurrent main updates.",
+  "The Intel 258V lane returns to LNL258V-POWER-006 blocked until real battery-mode low_power telemetry, energy proxy, measured thermal context, and benchmark-qualified power advantage exist.",
+]
