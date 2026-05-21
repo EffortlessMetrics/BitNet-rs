@@ -30173,17 +30173,14 @@ mod tests {
                 "model": {
                     "path": state.model.path.display().to_string(),
                 },
-            }))
-            .expect("receipt json"),
-        )
-        .expect("write receipt");
+            }))?,
+        )?;
 
-        let reply = mac_serve_http_reply("GET /receipts/m4srv-test HTTP/1.1\r\n\r\n", &state)
-            .await
-            .expect("reply");
+        let reply =
+            mac_serve_http_reply("GET /receipts/m4srv-test HTTP/1.1\r\n\r\n", &state).await?;
         assert_eq!(reply.status, 200);
         assert_eq!(reply.content_type, "application/json");
-        let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
+        let body: serde_json::Value = serde_json::from_slice(&reply.body)?;
         assert_eq!(body["artifact_kind"], "bitnet_apple_m4_local_server_completion");
         assert_eq!(body["request_id"], "m4srv-test");
         assert_eq!(body["selected_backend"], APPLE_M4_CPU_NEON);
@@ -30200,21 +30197,16 @@ mod tests {
     -> Result<(), Box<dyn std::error::Error>> {
         let (_temp, state) = test_state()?;
 
-        let unsafe_reply = mac_serve_http_reply("GET /receipts/../secret HTTP/1.1\r\n\r\n", &state)
-            .await
-            .expect("unsafe reply");
+        let unsafe_reply =
+            mac_serve_http_reply("GET /receipts/../secret HTTP/1.1\r\n\r\n", &state).await?;
         assert_eq!(unsafe_reply.status, 400);
-        let unsafe_body: serde_json::Value =
-            serde_json::from_slice(&unsafe_reply.body).expect("json body");
+        let unsafe_body: serde_json::Value = serde_json::from_slice(&unsafe_reply.body)?;
         assert_eq!(unsafe_body["error"], "invalid_receipt_id");
 
         let missing_reply =
-            mac_serve_http_reply("GET /receipts/m4srv-missing HTTP/1.1\r\n\r\n", &state)
-                .await
-                .expect("missing reply");
+            mac_serve_http_reply("GET /receipts/m4srv-missing HTTP/1.1\r\n\r\n", &state).await?;
         assert_eq!(missing_reply.status, 404);
-        let missing_body: serde_json::Value =
-            serde_json::from_slice(&missing_reply.body).expect("json body");
+        let missing_body: serde_json::Value = serde_json::from_slice(&missing_reply.body)?;
         assert_eq!(missing_body["error"], "receipt_not_found");
         assert_eq!(missing_body["receipt_dir"], "redacted");
         assert_eq!(missing_body["receipt_dir_redacted"], true);
@@ -30270,10 +30262,10 @@ mod tests {
             body
         );
 
-        let reply = mac_serve_http_reply(&request, &state).await.expect("reply");
+        let reply = mac_serve_http_reply(&request, &state).await?;
         assert_eq!(reply.status, 413);
         assert_eq!(reply.reason, "Payload Too Large");
-        let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
+        let body: serde_json::Value = serde_json::from_slice(&reply.body)?;
         assert_eq!(body["error"], "request_too_large");
         assert_eq!(body["limit_bytes"], MAC_SERVE_MAX_REQUEST_BYTES);
         assert_eq!(body["claim_boundary"]["generation_executed"], false);
@@ -30289,10 +30281,10 @@ mod tests {
             MAC_SERVE_MAX_REQUEST_BYTES + 1
         );
 
-        let reply = mac_serve_http_reply(&request, &state).await.expect("reply");
+        let reply = mac_serve_http_reply(&request, &state).await?;
         assert_eq!(reply.status, 413);
         assert_eq!(reply.reason, "Payload Too Large");
-        let body: serde_json::Value = serde_json::from_slice(&reply.body).expect("json body");
+        let body: serde_json::Value = serde_json::from_slice(&reply.body)?;
         assert_eq!(body["error"], "request_too_large");
         assert_eq!(body["limit_bytes"], MAC_SERVE_MAX_REQUEST_BYTES);
         assert_eq!(body["claim_boundary"]["generation_executed"], false);
