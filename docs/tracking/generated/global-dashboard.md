@@ -13,7 +13,7 @@
 | apple-m4-continuity | M4-CONT-005 | #4270 | merged | none | This is an M4 Mac mini local campaign; do not execute MacBook artifact sweeps or MacBook receipts here. |
 | apple-m4-dense-slm-regression | M4-SLM-REG-005 | #4198 | merged | none | Do not reopen the completed apple-m4, apple-m4-slm-answer, apple-m4-productization, or apple-m4-slm-performance campaigns. |
 | apple-m4-durable-inference-evidence | M4-DURABLE-005 | #5025 | merged | none | This is an M4 Mac mini evidence-refresh campaign. |
-| apple-m4-inference-excellence | M4-SERVE-EX-004 | #178 | pr_open | M4-CI-001 | This is an M4 Mac mini inference-excellence campaign. |
+| apple-m4-inference-excellence | M4-CI-001 | TBD | proposed | M4-ROUTE-MATRIX-001 | This is an M4 Mac mini inference-excellence campaign. |
 | apple-m4-inference-ops | M4-INF-OPS-004 | #4969 | merged | none | This is an M4 Mac mini operations campaign. |
 | apple-m4-local-answer | M4-BITNET-WARM-002 | #4705 | merged | none | Do not reopen the completed apple-m4 or apple-m4-operational campaigns. |
 | apple-m4-local-server | M4-SERVE-005 | #4374 | merged | none | This is an M4 Mac mini dense SLM service campaign. |
