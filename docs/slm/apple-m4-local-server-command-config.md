@@ -22,7 +22,8 @@ bitnet mac serve \
   --port 8080 \
   --strict \
   --stream \
-  --receipt-dir ~/.local/state/bitnet-rs/receipts/apple-m4-local-server
+  --receipt-dir ~/.local/state/bitnet-rs/receipts/apple-m4-local-server \
+  --trace
 ```
 
 `bitnet mac serve` is the Mac appliance wrapper. It should resolve the supported
@@ -56,6 +57,7 @@ bitnet serve \
 | `cache_dir` | existing Mac model cache default | Override with `--cache-dir` or config. |
 | `receipt_dir` | local user state receipt directory | Override with `--receipt-dir`. |
 | `receipt_mode` | `per_request` | Aggregate session receipts can be added later. |
+| `trace` | `false` | Override with `--trace` to emit an `m4obs-*` correlation ID in redacted diagnostics and receipts. |
 
 The supported non-default dense model can be selected explicitly:
 
@@ -189,7 +191,9 @@ include_memory = true
 
 CLI flags should override config-file values. Startup must print or record the
 resolved config in the server receipt context without leaking prompt content
-outside request receipts.
+outside request receipts. When `--trace` is enabled, startup diagnostics,
+completion responses, and per-request receipts share a trace ID while prompt
+text, secret values, and cache paths remain redacted from trace output.
 
 ## Startup Checks
 
@@ -278,6 +282,9 @@ Every completed generation request should be able to export a receipt with:
 - time to first token, decode timing, total request timing, and memory;
 - streaming enabled/disabled status;
 - cache verification status;
+- optional `trace_id` plus an `observability` block that links server logs,
+  response metadata, and per-request receipts under the M4-OBS-001 redaction
+  policy;
 - claim-boundary fields stating that dense SLM server success does not prove
   BitNet, QK256, Neural Engine, MPSGraph, full Metal inference, or broad M4
   performance.

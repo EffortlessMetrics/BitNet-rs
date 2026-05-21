@@ -11,7 +11,10 @@ use std::io::{self, BufRead, IsTerminal, Read, Write};
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+};
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -714,6 +717,10 @@ enum MacAction {
         #[arg(long, default_value_t = false)]
         progress: bool,
 
+        /// Emit redacted trace correlation metadata linking diagnostics and receipts.
+        #[arg(long, default_value_t = false)]
+        trace: bool,
+
         /// Suppress Mac ask status/progress lines; generated text still uses stdout.
         #[arg(long, default_value_t = false)]
         quiet: bool,
@@ -1018,6 +1025,10 @@ enum MacAction {
         /// Directory where later request receipts will be exported.
         #[arg(long, value_name = "PATH", default_value = MAC_SERVE_DEFAULT_RECEIPT_DIR)]
         receipt_dir: PathBuf,
+
+        /// Emit redacted trace IDs for startup diagnostics and per-request receipts.
+        #[arg(long, default_value_t = false)]
+        trace: bool,
     },
 
     /// Check a running M4 local server readiness and optional completion/receipt export.
@@ -1544,6 +1555,7 @@ impl MacCommand {
                 timeout_seconds,
                 json_out,
                 progress,
+                trace,
                 quiet,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac ask")?;
@@ -1565,6 +1577,7 @@ impl MacCommand {
                     timeout_seconds,
                     json_out,
                     progress,
+                    trace,
                     quiet,
                 )
                 .await
@@ -1732,6 +1745,7 @@ impl MacCommand {
                 repetition_penalty,
                 seed,
                 receipt_dir,
+                trace,
             } => {
                 ensure_supported_mac_serve_device(explicit_device_label)?;
                 let model_id = if model_family == MacServeModelFamily::Bitnet
@@ -1763,6 +1777,7 @@ impl MacCommand {
                     stream,
                     defaults,
                     receipt_dir,
+                    trace,
                 )
                 .await
             }
@@ -1865,6 +1880,7 @@ impl MacCommand {
                         ),
                         estimated_prompt_tokens,
                         max_new_tokens,
+                        None,
                     )?;
                     let chat = run_bitnet_chat_session(BitnetChatRun {
                         model_id: &model_id,
@@ -1910,6 +1926,7 @@ impl MacCommand {
                     ),
                     estimated_prompt_tokens,
                     max_new_tokens,
+                    None,
                 )?;
                 let chat = run_chat_session(
                     &model_id,
@@ -6332,8 +6349,16 @@ async fn run_ask(
     timeout_seconds: Option<u64>,
     json_out: PathBuf,
     progress: bool,
+    trace: bool,
     quiet: bool,
 ) -> Result<()> {
+    let trace_context = MacTraceContext::new(trace, "mac ask", "mac ask");
+    trace_context.log("start", || {
+        format!(
+            "model_id={model_id} receipt={} cache_path=redacted prompt=redacted",
+            json_out.display()
+        )
+    });
     if model_cache::is_apple_m4_bitnet_artifact_id(model_id) {
         return run_bitnet_ask(
             model_id,
@@ -6352,6 +6377,7 @@ async fn run_ask(
             timeout_seconds,
             json_out,
             progress,
+            trace_context,
             quiet,
         )
         .await;
@@ -6374,6 +6400,7 @@ async fn run_ask(
         mac_context_prompt_sha256s([Some(question.as_str()), system_prompt.as_deref()]),
         mac_context_estimated_prompt_tokens([Some(question.as_str()), system_prompt.as_deref()]),
         max_new_tokens,
+        Some(&trace_context),
     )?;
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     let progress_enabled = progress && !quiet;
@@ -6394,8 +6421,12 @@ async fn run_ask(
         json_out,
         "mac ask",
         progress_enabled,
+        &trace_context,
     )
     .await?;
+    trace_context.log("receipt_validated", || {
+        "operator_command=mac ask cache_path=redacted prompt=redacted".to_string()
+    });
     Ok(())
 }
 
@@ -6417,10 +6448,11 @@ async fn run_bitnet_ask(
     timeout_seconds: Option<u64>,
     json_out: PathBuf,
     progress: bool,
+    trace_context: MacTraceContext,
     quiet: bool,
 ) -> Result<()> {
     let started_at = std::time::Instant::now();
-    let progress_enabled = progress && !quiet;
+    let progress_enabled = (progress || trace_context.enabled) && !quiet;
     if temperature != 0.0 || top_p != 1.0 {
         anyhow::bail!(
             "BitNet Mac ask is currently scoped to deterministic greedy proof settings; use --temperature 0.0 --top-p 1.0"
@@ -6437,6 +6469,7 @@ async fn run_bitnet_ask(
         mac_context_prompt_sha256s([Some(question.as_str()), system_prompt.as_deref()]),
         mac_context_estimated_prompt_tokens([Some(question.as_str()), system_prompt.as_deref()]),
         max_new_tokens,
+        Some(&trace_context),
     )?;
     let failure_context = BitNetMacAskFailureContext {
         model_id: model_id.to_string(),
@@ -6449,6 +6482,7 @@ async fn run_bitnet_ask(
         timeout_seconds,
         progress_enabled,
         started_at,
+        trace: trace_context.clone(),
     };
     let tokenizer = match tokenizer {
         Some(tokenizer) => tokenizer,
@@ -6462,7 +6496,7 @@ async fn run_bitnet_ask(
             );
         }
     };
-    mac_ask_progress(progress_enabled, "tokenizer_verify_start", || {
+    mac_ask_progress(progress_enabled, &trace_context, "tokenizer_verify_start", || {
         format!("path={}", tokenizer.display())
     });
     if !tokenizer.exists() {
@@ -6495,10 +6529,12 @@ async fn run_bitnet_ask(
             );
         }
     };
-    mac_ask_progress(progress_enabled, "tokenizer_verify_complete", || {
+    mac_ask_progress(progress_enabled, &trace_context, "tokenizer_verify_complete", || {
         format!("sha256={}...", short_sha(&tokenizer_sha256))
     });
-    mac_ask_progress(progress_enabled, "model_verify_start", || format!("model_id={model_id}"));
+    mac_ask_progress(progress_enabled, &trace_context, "model_verify_start", || {
+        format!("model_id={model_id}")
+    });
     let model = match model_cache::verified_apple_m4_bitnet_model(model_id, cache_dir, model_path) {
         Ok(model) => model,
         Err(error) => {
@@ -6514,7 +6550,7 @@ async fn run_bitnet_ask(
             );
         }
     };
-    mac_ask_progress(progress_enabled, "model_verify_complete", || {
+    mac_ask_progress(progress_enabled, &trace_context, "model_verify_complete", || {
         format!("path={} sha256={}...", model.path.display(), short_sha(&model.sha256))
     });
     if !quiet {
@@ -6523,7 +6559,7 @@ async fn run_bitnet_ask(
             mac_bitnet_ask_operator_summary_line(&model, &tokenizer, &tokenizer_sha256, &json_out)
         );
     }
-    mac_ask_progress(progress_enabled, "generation_start", || {
+    mac_ask_progress(progress_enabled, &trace_context, "generation_start", || {
         format!(
             "max_new_tokens={max_new_tokens} receipt={} timing_fields=model_load_ms,tokenizer_load_ms,prefill_ms,first_token_ms,decode_total_ms",
             json_out.display()
@@ -6606,8 +6642,14 @@ async fn run_bitnet_ask(
             false,
         );
     }
-    annotate_and_validate_bitnet_mac_ask_receipt(&json_out, &model, &tokenizer, &tokenizer_sha256)?;
-    mac_ask_progress(progress_enabled, "receipt_validated", || {
+    annotate_and_validate_bitnet_mac_ask_receipt(
+        &json_out,
+        &model,
+        &tokenizer,
+        &tokenizer_sha256,
+        Some(&trace_context),
+    )?;
+    mac_ask_progress(progress_enabled, &trace_context, "receipt_validated", || {
         format!("path={} chat=false serve=false", json_out.display())
     });
     Ok(())
@@ -6625,6 +6667,7 @@ struct BitNetMacAskFailureContext {
     timeout_seconds: Option<u64>,
     progress_enabled: bool,
     started_at: std::time::Instant,
+    trace: MacTraceContext,
 }
 
 fn fail_bitnet_mac_ask_with_receipt(
@@ -6662,7 +6705,20 @@ fn write_bitnet_mac_ask_failure_receipt(
 ) -> Result<()> {
     let elapsed_ms = context.started_at.elapsed().as_secs_f64() * 1000.0;
     let timeout_enforced = context.timeout_seconds.is_some();
-    let receipt = serde_json::json!({
+    let observability = context.trace.observability_json(
+        &MAC_ASK_TRACE_STAGES,
+        serde_json::json!({
+            "progress_events_include_trace_id": context.trace.enabled,
+            "logs_include_trace_id": context.trace.enabled,
+            "receipt_trace_id_matches": context.trace.enabled,
+            "failure_receipt_linked": true,
+            "timeout_stage_linked": timeout_enforced,
+            "cancellation_stage_linked": false,
+            "per_request_receipts_linked": false,
+        }),
+    );
+    let trace_id = context.trace.id().map(str::to_string);
+    let mut receipt = serde_json::json!({
         "schema_version": "1.0.0",
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "artifact_kind": "bitnet_apple_m4_mac_ask_failure",
@@ -6739,6 +6795,13 @@ fn write_bitnet_mac_ask_failure_receipt(
         "bitnet_quality_claimed": false,
         "memory": memory_receipt_json(),
     });
+    if let Some(trace_id) = trace_id {
+        receipt["trace_id"] = serde_json::Value::String(trace_id);
+    }
+    if let Some(observability) = observability {
+        receipt["observability"] = observability;
+    }
+    validate_mac_receipt_value(path, &receipt)?;
     write_json_receipt(path, &receipt)
 }
 
@@ -6857,12 +6920,19 @@ fn bitnet_mac_ask_stage_taxonomy() -> Vec<&'static str> {
     ]
 }
 
-fn mac_ask_progress<F>(enabled: bool, stage: &str, details: F)
+fn mac_ask_progress<F>(enabled: bool, trace: &MacTraceContext, stage: &str, details: F)
 where
     F: FnOnce() -> String,
 {
     if enabled {
-        eprintln!("mac ask progress: {stage} {}", details());
+        if trace.enabled {
+            eprintln!(
+                "mac ask progress: trace_id={} stage={stage} details=redacted cache_path=redacted prompt=redacted",
+                trace.trace_id
+            );
+        } else {
+            eprintln!("mac ask progress: {stage} {}", details());
+        }
     }
 }
 
@@ -6874,6 +6944,119 @@ fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     format!("{:x}", hasher.finalize())
+}
+
+static MAC_TRACE_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+const MAC_ASK_TRACE_STAGES: &[&str] = &[
+    "start",
+    "context_guardrail",
+    "tokenizer_verify_start",
+    "tokenizer_verify_complete",
+    "model_verify_start",
+    "model_verify_complete",
+    "generation_start",
+    "receipt_validated",
+    "failure",
+];
+const MAC_SERVE_TRACE_STAGES: &[&str] = &[
+    "startup",
+    "health",
+    "ready",
+    "request_received",
+    "context_guardrail",
+    "generation_start",
+    "streaming",
+    "receipt_written",
+    "timeout",
+    "cancellation",
+    "failure",
+];
+
+#[derive(Clone, Debug)]
+struct MacTraceContext {
+    enabled: bool,
+    trace_id: String,
+    route: &'static str,
+    operator_command: &'static str,
+}
+
+impl MacTraceContext {
+    fn new(enabled: bool, route: &'static str, operator_command: &'static str) -> Self {
+        let trace_id = if enabled {
+            let nonce = MAC_TRACE_COUNTER.fetch_add(1, Ordering::Relaxed);
+            let seed = format!(
+                "{}:{}:{}:{}",
+                chrono::Utc::now().to_rfc3339(),
+                std::process::id(),
+                route,
+                nonce
+            );
+            format!("m4obs-{}", &sha256_hex(seed.as_bytes())[..24])
+        } else {
+            String::new()
+        };
+        Self { enabled, trace_id, route, operator_command }
+    }
+
+    fn disabled(route: &'static str, operator_command: &'static str) -> Self {
+        Self::new(false, route, operator_command)
+    }
+
+    fn id(&self) -> Option<&str> {
+        self.enabled.then_some(self.trace_id.as_str())
+    }
+
+    fn log<F>(&self, stage: &str, details: F)
+    where
+        F: FnOnce() -> String,
+    {
+        if self.enabled {
+            eprintln!(
+                "mac trace: trace_id={} route={} stage={} {}",
+                self.trace_id,
+                self.route,
+                stage,
+                details()
+            );
+        }
+    }
+
+    fn observability_json(
+        &self,
+        stage_taxonomy: &[&str],
+        correlation: serde_json::Value,
+    ) -> Option<serde_json::Value> {
+        self.enabled.then(|| {
+            serde_json::json!({
+                "work_item": "M4-OBS-001",
+                "trace_enabled": true,
+                "trace_id": self.trace_id.as_str(),
+                "route": self.route,
+                "operator_command": self.operator_command,
+                "correlation": correlation,
+                "event_schema": {
+                    "stage_taxonomy": stage_taxonomy,
+                    "stderr_fields": ["trace_id", "route", "stage", "receipt_id", "request_id"],
+                    "receipt_fields": ["trace_id", "observability.trace_id", "observability.correlation"],
+                    "timeout_stage_field": "timeout_boundary.stage",
+                    "cancellation_stage_field": "observability.correlation.cancellation_stage_linked"
+                },
+                "redaction_policy": {
+                    "prompt_text_redacted": true,
+                    "prompt_hashes_allowed": true,
+                    "cache_paths_redacted": true,
+                    "model_paths_redacted_from_trace": true,
+                    "tokenizer_paths_redacted_from_trace": true,
+                    "receipt_paths_allowed": true,
+                    "secret_values_redacted": true
+                },
+                "diagnostics": {
+                    "operator_message": "Use trace_id to correlate stderr diagnostics, receipts, and failure stages; trace output redacts prompt text and cache paths."
+                }
+            })
+        })
+    }
 }
 
 fn mac_context_estimated_prompt_tokens<'a>(
@@ -7036,8 +7219,28 @@ fn write_mac_context_guardrail_receipt(
     model_id: &str,
     prompt_sha256s: Vec<String>,
     context_envelope: serde_json::Value,
+    trace: Option<&MacTraceContext>,
 ) -> Result<()> {
-    let receipt = serde_json::json!({
+    let trace_context = trace.filter(|trace| trace.enabled);
+    let observability = trace_context.and_then(|trace| {
+        trace.observability_json(
+            if route == MacContextRoute::Serve {
+                MAC_SERVE_TRACE_STAGES
+            } else {
+                MAC_ASK_TRACE_STAGES
+            },
+            serde_json::json!({
+                "progress_events_include_trace_id": trace.enabled,
+                "logs_include_trace_id": trace.enabled,
+                "receipt_trace_id_matches": trace.enabled,
+                "failure_receipt_linked": true,
+                "timeout_stage_linked": false,
+                "cancellation_stage_linked": false,
+                "per_request_receipts_linked": route == MacContextRoute::Serve,
+            }),
+        )
+    });
+    let mut receipt = serde_json::json!({
         "schema_version": "1.0.0",
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "artifact_kind": "apple_m4_context_guardrail",
@@ -7073,6 +7276,13 @@ fn write_mac_context_guardrail_receipt(
             "speedup_claim": false,
         },
     });
+    if let Some(trace) = trace_context {
+        receipt["trace_id"] = serde_json::Value::String(trace.trace_id.clone());
+    }
+    if let Some(observability) = observability {
+        receipt["observability"] = observability;
+    }
+    validate_mac_receipt_value(path, &receipt)?;
     write_json_receipt(path, &receipt)
 }
 
@@ -7084,6 +7294,7 @@ fn ensure_mac_context_estimate_allowed(
     prompt_sha256s: Vec<String>,
     estimated_prompt_tokens: usize,
     max_new_tokens: usize,
+    trace: Option<&MacTraceContext>,
 ) -> Result<()> {
     let context_envelope = mac_context_envelope_json(
         family,
@@ -7103,6 +7314,7 @@ fn ensure_mac_context_estimate_allowed(
         model_id,
         prompt_sha256s,
         context_envelope.clone(),
+        trace,
     )?;
     let status = context_envelope["status"].as_str().unwrap_or("context_guardrail_blocked");
     let reason = context_envelope["reason"].as_str().unwrap_or("context guardrail blocked");
@@ -7241,10 +7453,9 @@ fn command_output_trimmed(program: &str, args: &[&str]) -> Option<String> {
 fn mac_ask_operator_summary_line(model: &VerifiedCachedModel, json_out: &Path) -> String {
     let sha = model.sha256.get(..12).unwrap_or(&model.sha256);
     format!(
-        "mac ask: model={} quant={} cache=verified cache_root={} backend={} fallback=false receipt={} sha256={}...",
+        "mac ask: model={} quant={} cache=verified cache_path=redacted backend={} fallback=false receipt={} sha256={}...",
         model.id,
         model.quantization,
-        model.cache_root.display(),
         APPLE_M4_CPU_NEON,
         json_out.display(),
         sha
@@ -7259,12 +7470,11 @@ fn mac_bitnet_ask_operator_summary_line(
 ) -> String {
     let sha = model.sha256.get(..12).unwrap_or(&model.sha256);
     let tokenizer_sha = tokenizer_sha256.get(..12).unwrap_or(tokenizer_sha256);
+    let _ = tokenizer;
     format!(
-        "mac ask bitnet: model={} quant={} model_path={} tokenizer={} tokenizer_sha256={}... backend={} fallback=false receipt={} sha256={}... chat=false serve=false",
+        "mac ask bitnet: model={} quant={} model_path=redacted tokenizer=redacted tokenizer_sha256={}... backend={} fallback=false receipt={} sha256={}... chat=false serve=false",
         model.id,
         model.quantization,
-        model.path.display(),
-        tokenizer.display(),
         tokenizer_sha,
         APPLE_M4_CPU_NEON,
         json_out.display(),
@@ -7313,6 +7523,7 @@ async fn run_one_shot_mac_answer(
     json_out: PathBuf,
     operator_command: &str,
     progress: bool,
+    trace: &MacTraceContext,
 ) -> Result<ReceiptCheckSummary> {
     crate::run_simple_generation(
         APPLE_M4_CPU_NEON,
@@ -7357,7 +7568,7 @@ async fn run_one_shot_mac_answer(
         progress,
     )
     .await?;
-    annotate_and_validate_mac_receipt(&json_out, model, operator_command)?;
+    annotate_and_validate_mac_receipt_with_trace(&json_out, model, operator_command, Some(trace))?;
     let receipt = read_json_receipt(&json_out)?;
     validate_mac_receipt_value(&json_out, &receipt)
 }
@@ -7419,6 +7630,7 @@ async fn run_smoke(
         answer_receipt_path.clone(),
         "mac smoke",
         false,
+        &MacTraceContext::disabled("mac smoke", "mac smoke"),
     )
     .await?;
     let answer_receipt = read_json_receipt(&answer_receipt_path)?;
@@ -7679,6 +7891,7 @@ async fn run_bitnet_warm(request: BitnetWarmRun<'_>) -> Result<()> {
         mac_context_prompt_sha256s(prompt_refs),
         estimated_prompt_tokens,
         max_new_tokens,
+        None,
     )?;
     let mut failure_context = BitNetWarmFailureContext {
         model_id: model_id.to_string(),
@@ -9390,6 +9603,7 @@ async fn run_mac_serve(
     stream: bool,
     defaults: MacServeGenerationDefaults,
     receipt_dir: PathBuf,
+    trace: bool,
 ) -> Result<()> {
     let MacServeEndpoint { host, port } = endpoint;
     if !strict {
@@ -9457,6 +9671,7 @@ async fn run_mac_serve(
         let generator = MacServeGenerator::load_dense(&model)?;
         (model, cache_status, generator, None)
     };
+    let trace_context = MacTraceContext::new(trace, "mac serve", "mac serve");
     let state = Arc::new(MacServeState::new_with_route(
         model,
         effective_model_family,
@@ -9468,6 +9683,7 @@ async fn run_mac_serve(
         defaults,
         receipt_dir,
         Some(generator),
+        trace_context.clone(),
     ));
     let address = format!("{host}:{port}");
     if !mac_serve_host_is_loopback(&host) {
@@ -9481,6 +9697,12 @@ async fn run_mac_serve(
     let local_addr =
         listener.local_addr().map(|addr| addr.to_string()).unwrap_or_else(|_| address.clone());
     eprintln!("{}", mac_serve_listening_line(&local_addr));
+    trace_context.log("startup", || {
+        format!(
+            "model_id={} endpoint=http://{} receipt_dir=provided cache_path=redacted",
+            state.model.id, local_addr
+        )
+    });
     loop {
         tokio::select! {
             accepted = listener.accept() => {
@@ -9515,6 +9737,7 @@ struct MacServeState {
     stream: bool,
     defaults: MacServeGenerationDefaults,
     receipt_dir: PathBuf,
+    trace: MacTraceContext,
     generator: Option<tokio::sync::Mutex<MacServeGenerator>>,
 }
 
@@ -9541,6 +9764,7 @@ impl MacServeState {
             defaults,
             receipt_dir,
             generator,
+            MacTraceContext::disabled("mac serve", "mac serve"),
         )
     }
 
@@ -9556,6 +9780,7 @@ impl MacServeState {
         defaults: MacServeGenerationDefaults,
         receipt_dir: PathBuf,
         generator: Option<MacServeGenerator>,
+        trace: MacTraceContext,
     ) -> Self {
         let disk = disk_health_json(&model.cache_root, model.bytes);
         let (bitnet_serve_gate, bitnet_tokenizer_sha256) = bitnet_gate
@@ -9575,6 +9800,7 @@ impl MacServeState {
             stream,
             defaults,
             receipt_dir,
+            trace,
             generator: generator.map(tokio::sync::Mutex::new),
         }
     }
@@ -9677,6 +9903,12 @@ impl MacServeGenerator {
 
         let request_id = mac_serve_request_id();
         let receipt_path = state.receipt_dir.join(format!("{request_id}.json"));
+        state.trace.log("request_received", || {
+            format!(
+                "request_id={request_id} receipt={} prompt=redacted cache_path=redacted",
+                receipt_path.display()
+            )
+        });
         let prompt = request.prompt_text()?;
         let system_prompt = request.system_prompt();
         let max_new_tokens =
@@ -9699,6 +9931,11 @@ impl MacServeGenerator {
         let request_started = std::time::Instant::now();
         let formatted_prompt = self.prompt_template.apply(&prompt, system_prompt.as_deref());
         let rendered_prompt_sha256 = sha256_hex(formatted_prompt.as_bytes());
+        state.trace.log("generation_start", || {
+            format!(
+                "request_id={request_id} max_new_tokens={max_new_tokens} prompt=redacted cache_path=redacted"
+            )
+        });
 
         let mut all_stop_sequences = self.stop_sequences.clone();
         for template_stop in self.prompt_template.default_stop_sequences() {
@@ -9779,6 +10016,7 @@ impl MacServeGenerator {
                 &state.model.id,
                 mac_context_prompt_sha256s([Some(prompt.as_str()), system_prompt.as_deref()]),
                 context_envelope.clone(),
+                Some(&state.trace),
             )?;
             let status = context_envelope["status"].as_str().unwrap_or("context_guardrail_blocked");
             let reason = context_envelope["reason"].as_str().unwrap_or("context guardrail blocked");
@@ -9899,11 +10137,11 @@ impl MacServeGenerator {
                 "speedup_claim": false,
             })
         });
-        let receipt = serde_json::json!({
+        let mut receipt = serde_json::json!({
             "schema_version": "1.0.0",
             "artifact_kind": artifact_kind,
             "timestamp": chrono::Utc::now().to_rfc3339(),
-            "request_id": request_id,
+            "request_id": request_id.as_str(),
             "artifact_path": receipt_path.display().to_string(),
             "requested_backend": APPLE_M4_CPU_NEON,
             "selected_backend": APPLE_M4_CPU_NEON,
@@ -9998,7 +10236,33 @@ impl MacServeGenerator {
             },
             "mac_bitnet_claim_boundary": mac_bitnet_claim_boundary,
         });
+        let trace_id = state.trace.id().map(str::to_string);
+        if let Some(trace_id) = trace_id.as_deref() {
+            receipt["trace_id"] = serde_json::json!(trace_id);
+        }
+        if let Some(observability) = state.trace.observability_json(
+            MAC_SERVE_TRACE_STAGES,
+            serde_json::json!({
+                "request_id": request_id.as_str(),
+                "progress_events_include_trace_id": false,
+                "logs_include_trace_id": state.trace.enabled,
+                "receipt_trace_id_matches": state.trace.enabled,
+                "failure_receipt_linked": false,
+                "timeout_stage_linked": false,
+                "cancellation_stage_linked": false,
+                "per_request_receipts_linked": true,
+            }),
+        ) {
+            receipt["observability"] = observability;
+        }
+        validate_mac_receipt_value(&receipt_path, &receipt)?;
         write_json_receipt(&receipt_path, &receipt)?;
+        state.trace.log("receipt_written", || {
+            format!(
+                "request_id={request_id} receipt={} prompt=redacted cache_path=redacted",
+                receipt_path.display()
+            )
+        });
         Ok(MacServeCompletion {
             request_id,
             model_id: state.model.id.clone(),
@@ -10023,6 +10287,7 @@ impl MacServeGenerator {
                 .unwrap_or("length")
                 .to_string(),
             stream,
+            trace_id,
             receipt_path,
             receipt,
         })
@@ -10038,6 +10303,7 @@ struct MacServeCompletion {
     generated_token_ids: Vec<u32>,
     finish_reason: String,
     stream: bool,
+    trace_id: Option<String>,
     receipt_path: PathBuf,
     receipt: serde_json::Value,
 }
@@ -10145,6 +10411,12 @@ impl MacServeHttpReply {
             content_type: "text/event-stream",
             body: body.into_bytes(),
         }
+    }
+}
+
+fn mac_serve_attach_trace_id(body: &mut serde_json::Value, trace: &MacTraceContext) {
+    if let Some(trace_id) = trace.id() {
+        body["trace_id"] = serde_json::json!(trace_id);
     }
 }
 
@@ -10526,6 +10798,7 @@ async fn run_mac_serve_smoke(
         defaults,
         receipt_dir.clone(),
         Some(generator),
+        MacTraceContext::disabled("mac serve-smoke", "mac serve-smoke"),
     );
 
     let health = mac_serve_smoke_json_endpoint(
@@ -10981,33 +11254,29 @@ async fn mac_serve_completion_http_reply(
     let completion_request: MacServeCompletionRequest = match serde_json::from_str(body) {
         Ok(request) => request,
         Err(error) => {
-            return MacServeHttpReply::json(
-                400,
-                "Bad Request",
-                serde_json::json!({
-                    "status": "error",
-                    "error": "invalid_completion_request",
-                    "message": error.to_string(),
-                }),
-            );
+            let mut body = serde_json::json!({
+                "status": "error",
+                "error": "invalid_completion_request",
+                "message": error.to_string(),
+            });
+            mac_serve_attach_trace_id(&mut body, &state.trace);
+            return MacServeHttpReply::json(400, "Bad Request", body);
         }
     };
     if let Some(requested_model) = completion_request.model.as_deref().map(str::trim)
         && !requested_model.is_empty()
         && requested_model != state.model.id
     {
-        return MacServeHttpReply::json(
-            400,
-            "Bad Request",
-            serde_json::json!({
+        let mut body = serde_json::json!({
                 "status": "error",
                 "error": "unsupported_model",
                 "message": format!(
                     "mac serve has resident model {}; request asked for {requested_model}",
                     state.model.id
                 ),
-            }),
-        );
+        });
+        mac_serve_attach_trace_id(&mut body, &state.trace);
+        return MacServeHttpReply::json(400, "Bad Request", body);
     }
     if let Ok(prompt) = completion_request.prompt_text() {
         let system_prompt = completion_request.system_prompt();
@@ -11040,37 +11309,34 @@ async fn mac_serve_completion_http_reply(
                 &state.model.id,
                 mac_context_prompt_sha256s([Some(prompt.as_str()), system_prompt.as_deref()]),
                 context_envelope.clone(),
+                Some(&state.trace),
             )?;
-            return MacServeHttpReply::json(
-                413,
-                "Payload Too Large",
-                serde_json::json!({
-                    "status": "error",
-                    "error": "context_guardrail_blocked",
-                    "request_id": request_id,
-                    "receipt_path": receipt_path.display().to_string(),
-                    "context_envelope": context_envelope,
-                    "claim_boundary": {
-                        "guardrail_only": true,
-                        "new_context_quality_claim": false,
-                        "unsupported_context_supported": false,
-                        "openai_compatibility_claimed": false,
-                        "production_readiness_claimed": false,
-                    },
-                }),
-            );
+            let mut body = serde_json::json!({
+                "status": "error",
+                "error": "context_guardrail_blocked",
+                "request_id": request_id,
+                "receipt_path": receipt_path.display().to_string(),
+                "context_envelope": context_envelope,
+                "claim_boundary": {
+                    "guardrail_only": true,
+                    "new_context_quality_claim": false,
+                    "unsupported_context_supported": false,
+                    "openai_compatibility_claimed": false,
+                    "production_readiness_claimed": false,
+                },
+            });
+            mac_serve_attach_trace_id(&mut body, &state.trace);
+            return MacServeHttpReply::json(413, "Payload Too Large", body);
         }
     }
     let Some(generator) = state.generator.as_ref() else {
-        return MacServeHttpReply::json(
-            503,
-            "Service Unavailable",
-            serde_json::json!({
+        let mut body = serde_json::json!({
                 "status": "error",
                 "error": "generation_unavailable",
                 "reason": "M4 local server state was created without a resident generator",
-            }),
-        );
+        });
+        mac_serve_attach_trace_id(&mut body, &state.trace);
+        return MacServeHttpReply::json(503, "Service Unavailable", body);
     };
     let completion = {
         let generator = generator.lock().await;
@@ -11080,10 +11346,7 @@ async fn mac_serve_completion_http_reply(
                 if let Some(reply) = mac_serve_context_guardrail_error_reply(&error)? {
                     return Ok(reply);
                 }
-                return MacServeHttpReply::json(
-                    500,
-                    "Internal Server Error",
-                    serde_json::json!({
+                let mut body = serde_json::json!({
                         "status": "error",
                         "error": "completion_failed",
                         "message": error.to_string(),
@@ -11093,8 +11356,9 @@ async fn mac_serve_completion_http_reply(
                             "bitnet_quality_claimed": false,
                             "full_metal_inference_claimed": false,
                         },
-                    }),
-                );
+                });
+                mac_serve_attach_trace_id(&mut body, &state.trace);
+                return MacServeHttpReply::json(500, "Internal Server Error", body);
             }
         }
     };
@@ -11132,6 +11396,8 @@ fn mac_serve_context_guardrail_error_reply(
         .as_ref()
         .map(|receipt| receipt["context_envelope"].clone())
         .filter(|envelope| !envelope.is_null());
+    let trace_id =
+        receipt.as_ref().and_then(|receipt| receipt["trace_id"].as_str()).map(str::to_string);
 
     let mut body = serde_json::json!({
         "status": "error",
@@ -11154,6 +11420,9 @@ fn mac_serve_context_guardrail_error_reply(
     if let Some(context_envelope) = context_envelope {
         body["context_envelope"] = context_envelope;
     }
+    if let Some(trace_id) = trace_id {
+        body["trace_id"] = serde_json::Value::String(trace_id);
+    }
 
     Ok(Some(MacServeHttpReply::json(413, "Payload Too Large", body)?))
 }
@@ -11174,7 +11443,7 @@ fn mac_serve_http_body(request: &str) -> &str {
 }
 
 fn mac_serve_completion_json(completion: &MacServeCompletion) -> serde_json::Value {
-    serde_json::json!({
+    let mut body = serde_json::json!({
         "id": completion.request_id,
         "object": "chat.completion",
         "model": completion.model_id,
@@ -11197,7 +11466,11 @@ fn mac_serve_completion_json(completion: &MacServeCompletion) -> serde_json::Val
             "openai_compatibility_claimed": false,
             "production_readiness_claimed": false,
         },
-    })
+    });
+    if let Some(trace_id) = completion.trace_id.as_deref() {
+        body["trace_id"] = serde_json::json!(trace_id);
+    }
+    body
 }
 
 fn mac_serve_completion_sse(completion: &MacServeCompletion) -> Result<String> {
@@ -11210,6 +11483,7 @@ fn mac_serve_completion_sse(completion: &MacServeCompletion) -> Result<String> {
         "model": completion.model_id,
         "receipt_path": completion.receipt_path,
         "generated_token_ids": completion.generated_token_ids,
+        "trace_id": completion.trace_id.as_deref(),
         "claim_boundary": {
             "openai_compatibility_claimed": false,
             "production_readiness_claimed": false,
@@ -11369,14 +11643,19 @@ fn mac_serve_ready_json(state: &MacServeState) -> serde_json::Value {
 }
 
 fn mac_serve_server_json(state: &MacServeState) -> serde_json::Value {
-    serde_json::json!({
+    let mut server = serde_json::json!({
         "host": &state.host,
         "port": state.port,
         "started_at": &state.started_at_utc,
         "streaming_default": state.stream,
         "receipt_dir": &state.receipt_dir,
         "model_family": mac_serve_model_family_label(state.model_family),
-    })
+        "trace_enabled": state.trace.enabled,
+    });
+    if let Some(trace_id) = state.trace.id() {
+        server["trace_id"] = serde_json::json!(trace_id);
+    }
+    server
 }
 
 fn mac_serve_model_family_label(model_family: MacServeModelFamily) -> &'static str {
@@ -11857,6 +12136,7 @@ async fn run_chat_session(
         mac_context_prompt_sha256s(prompt_refs.chain(std::iter::once(system_prompt.as_deref()))),
         estimated_prompt_tokens,
         max_new_tokens,
+        None,
     )?;
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir)?;
     if progress && !quiet {
@@ -11951,6 +12231,7 @@ async fn run_chat_smoke(
         ),
         estimated_prompt_tokens,
         max_new_tokens,
+        None,
     )?;
     let model = model_cache::verified_apple_m4_slm_model(model_id, cache_dir.clone())?;
     let smoke = run_chat_session(
@@ -15014,7 +15295,17 @@ fn annotate_and_validate_mac_receipt(
     model: &VerifiedCachedModel,
     operator_command: &str,
 ) -> Result<()> {
-    let summary = annotate_and_validate_mac_receipt_silent(path, model, operator_command)?;
+    annotate_and_validate_mac_receipt_with_trace(path, model, operator_command, None)
+}
+
+fn annotate_and_validate_mac_receipt_with_trace(
+    path: &Path,
+    model: &VerifiedCachedModel,
+    operator_command: &str,
+    trace: Option<&MacTraceContext>,
+) -> Result<()> {
+    let summary =
+        annotate_and_validate_mac_receipt_silent_with_trace(path, model, operator_command, trace)?;
     println!(
         "Mac receipt checked: {} ({}, generated_tokens={:?})",
         path.display(),
@@ -15047,6 +15338,15 @@ fn annotate_and_validate_mac_receipt_silent(
     path: &Path,
     model: &VerifiedCachedModel,
     operator_command: &str,
+) -> Result<ReceiptCheckSummary> {
+    annotate_and_validate_mac_receipt_silent_with_trace(path, model, operator_command, None)
+}
+
+fn annotate_and_validate_mac_receipt_silent_with_trace(
+    path: &Path,
+    model: &VerifiedCachedModel,
+    operator_command: &str,
+    trace: Option<&MacTraceContext>,
 ) -> Result<ReceiptCheckSummary> {
     let bytes = std::fs::read(path)
         .with_context(|| format!("failed to read Mac receipt {}", path.display()))?;
@@ -15104,6 +15404,23 @@ fn annotate_and_validate_mac_receipt_silent(
     );
     if let Some(context_envelope) = context_envelope {
         object.insert("context_envelope".to_string(), context_envelope);
+    }
+    if let Some(trace) = trace.filter(|trace| trace.enabled) {
+        object.insert("trace_id".to_string(), serde_json::json!(trace.trace_id.as_str()));
+        if let Some(observability) = trace.observability_json(
+            MAC_ASK_TRACE_STAGES,
+            serde_json::json!({
+                "progress_events_include_trace_id": false,
+                "logs_include_trace_id": trace.enabled,
+                "receipt_trace_id_matches": trace.enabled,
+                "failure_receipt_linked": false,
+                "timeout_stage_linked": false,
+                "cancellation_stage_linked": false,
+                "per_request_receipts_linked": false,
+            }),
+        ) {
+            object.insert("observability".to_string(), observability);
+        }
     }
     object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
     let summary = validate_mac_receipt_value(path, &receipt)?;
@@ -15233,6 +15550,7 @@ fn annotate_and_validate_bitnet_mac_ask_receipt(
     model: &VerifiedCachedModel,
     tokenizer: &Path,
     tokenizer_sha256: &str,
+    trace: Option<&MacTraceContext>,
 ) -> Result<()> {
     let bytes = std::fs::read(path)
         .with_context(|| format!("failed to read BitNet Mac ask receipt {}", path.display()))?;
@@ -15309,6 +15627,23 @@ fn annotate_and_validate_bitnet_mac_ask_receipt(
     );
     if let Some(context_envelope) = context_envelope {
         object.insert("context_envelope".to_string(), context_envelope);
+    }
+    if let Some(trace) = trace.filter(|trace| trace.enabled) {
+        object.insert("trace_id".to_string(), serde_json::json!(trace.trace_id.as_str()));
+        if let Some(observability) = trace.observability_json(
+            MAC_ASK_TRACE_STAGES,
+            serde_json::json!({
+                "progress_events_include_trace_id": trace.enabled,
+                "logs_include_trace_id": trace.enabled,
+                "receipt_trace_id_matches": trace.enabled,
+                "failure_receipt_linked": false,
+                "timeout_stage_linked": false,
+                "cancellation_stage_linked": false,
+                "per_request_receipts_linked": false,
+            }),
+        ) {
+            object.insert("observability".to_string(), observability);
+        }
     }
     object.entry("bitnet_quality_claimed".to_string()).or_insert(serde_json::json!(false));
     object.entry("memory".to_string()).or_insert_with(memory_receipt_json);
@@ -19347,6 +19682,7 @@ fn validate_mac_receipt_value(
             );
         }
     }
+    validate_m4_observability_contract(path, receipt)?;
 
     let (prompt_count, generated_tokens) = if artifact_kind == "slm_apple_m4_warm_session"
         || artifact_kind == "slm_apple_m3_air_warm_session"
@@ -19414,6 +19750,8 @@ fn validate_mac_receipt_value(
         validate_bitnet_serve_failure_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_serve_completion" {
         validate_bitnet_serve_completion_receipt(path, receipt)?
+    } else if artifact_kind == "bitnet_apple_m4_local_server_completion" {
+        validate_dense_local_server_completion_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_dense_local_server_smoke" {
         validate_dense_local_server_smoke_receipt(path, receipt)?
     } else if artifact_kind == "bitnet_apple_m4_local_server_check" {
@@ -19450,6 +19788,63 @@ fn validate_mac_receipt_value(
         passed: true,
         regression: None,
     })
+}
+
+fn validate_m4_observability_contract(path: &Path, receipt: &serde_json::Value) -> Result<()> {
+    let top_level_trace_id = receipt["trace_id"].as_str();
+    if receipt["observability"].is_null() {
+        if top_level_trace_id.is_some() {
+            anyhow::bail!("{} records trace_id without an observability contract", path.display());
+        }
+        return Ok(());
+    }
+
+    let observability = &receipt["observability"];
+    require_exact_string_at(path, observability, &["work_item"], "M4-OBS-001")?;
+    require_bool_at(path, observability, &["trace_enabled"], true)?;
+    let trace_id = require_non_empty_string_at(path, observability, &["trace_id"])?;
+    if !trace_id.starts_with("m4obs-") {
+        anyhow::bail!("{} observability.trace_id must start with m4obs-", path.display());
+    }
+    if top_level_trace_id != Some(trace_id) {
+        anyhow::bail!("{} top-level trace_id must match observability.trace_id", path.display());
+    }
+    require_non_empty_string_at(path, observability, &["route"])?;
+    require_non_empty_string_at(path, observability, &["operator_command"])?;
+
+    let stages = observability["event_schema"]["stage_taxonomy"].as_array().ok_or_else(|| {
+        anyhow!("{} observability.event_schema.stage_taxonomy must be an array", path.display())
+    })?;
+    if stages.is_empty() {
+        anyhow::bail!(
+            "{} observability.event_schema.stage_taxonomy must not be empty",
+            path.display()
+        );
+    }
+
+    for field in [
+        "progress_events_include_trace_id",
+        "logs_include_trace_id",
+        "receipt_trace_id_matches",
+        "failure_receipt_linked",
+        "timeout_stage_linked",
+        "cancellation_stage_linked",
+        "per_request_receipts_linked",
+    ] {
+        require_bool_value_at(path, observability, &["correlation", field])?;
+    }
+    for field in [
+        "prompt_text_redacted",
+        "prompt_hashes_allowed",
+        "cache_paths_redacted",
+        "model_paths_redacted_from_trace",
+        "tokenizer_paths_redacted_from_trace",
+        "receipt_paths_allowed",
+        "secret_values_redacted",
+    ] {
+        require_bool_at(path, observability, &["redaction_policy", field], true)?;
+    }
+    Ok(())
 }
 
 fn validate_prompt_generation_identity_contract(
@@ -20998,6 +21393,54 @@ fn validate_bitnet_serve_completion_receipt(
         false,
     )?;
     require_bool_at(path, receipt, &["mac_bitnet_claim_boundary", "speedup_claim"], false)?;
+    Ok((Some(prompt_tokens as usize), Some(generated_tokens as usize)))
+}
+
+fn validate_dense_local_server_completion_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    require_exact_string_at(path, receipt, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["artifact_kind"],
+        "bitnet_apple_m4_local_server_completion",
+    )?;
+    require_exact_string_at(path, receipt, &["model_family"], "dense-slm")?;
+    require_non_empty_string_at(path, receipt, &["request_id"])?;
+    require_non_empty_string_at(path, receipt, &["model", "id"])?;
+    require_non_empty_string_at(path, receipt, &["model", "sha256"])?;
+    require_bool_at(path, receipt, &["tokenizer", "strict"], true)?;
+    require_non_empty_string_at(path, receipt, &["tokenizer", "pretokenizer_authority"])?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["tokenizer", "prompt_template"],
+        QWEN_PROMPT_TEMPLATE,
+    )?;
+    require_non_empty_string_at(path, receipt, &["generation", "text"])?;
+    let prompt_tokens = require_u64_at(path, receipt, &["generation", "prompt_tokens"], true)?;
+    let generated_tokens =
+        require_u64_at(path, receipt, &["generation", "generated_tokens"], true)?;
+    if receipt["generation"]["generated_token_ids"]
+        .as_array()
+        .is_none_or(|ids| ids.len() != generated_tokens as usize)
+    {
+        anyhow::bail!(
+            "{} dense local server completion generated_token_ids length must match generated_tokens",
+            path.display()
+        );
+    }
+    require_bool_at(path, receipt, &["session_reuse", "model_loaded_at_startup"], true)?;
+    require_bool_at(path, receipt, &["session_reuse", "tokenizer_loaded_at_startup"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "local_server_completion_endpoint"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "openai_compatibility_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "production_readiness_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
     Ok((Some(prompt_tokens as usize), Some(generated_tokens as usize)))
 }
 
@@ -29059,6 +29502,7 @@ mod tests {
             timeout_seconds: None,
             progress_enabled: false,
             started_at: std::time::Instant::now(),
+            trace: MacTraceContext::disabled("mac ask", "mac ask"),
         };
 
         let guidance =
@@ -29123,6 +29567,96 @@ mod tests {
     }
 
     #[test]
+    fn mac_observability_contract_accepts_trace_receipt() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let trace = MacTraceContext::new(true, "mac ask", "mac ask");
+        let trace_id = trace.id().ok_or("missing trace id")?;
+        let receipt_path = Path::new("trace-answer.json");
+        let receipt = serde_json::json!({
+            "artifact_kind": "apple_m4_slm_answer",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "trace_id": trace_id,
+            "observability": trace.observability_json(
+                MAC_ASK_TRACE_STAGES,
+                serde_json::json!({
+                    "progress_events_include_trace_id": true,
+                    "logs_include_trace_id": true,
+                    "receipt_trace_id_matches": true,
+                    "failure_receipt_linked": false,
+                    "timeout_stage_linked": false,
+                    "cancellation_stage_linked": false,
+                    "per_request_receipts_linked": false,
+                }),
+            ),
+            "text": "four",
+            "tokens": {
+                "generated": 1,
+                "generated_ids": [4],
+            },
+            "model": {
+                "sha256": "a".repeat(64),
+            },
+            "tokenizer": {
+                "source": "test-tokenizer",
+            },
+        });
+
+        let summary = validate_mac_receipt_value(receipt_path, &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_slm_answer");
+        assert_eq!(summary.generated_tokens, Some(1));
+        Ok(())
+    }
+
+    #[test]
+    fn mac_observability_contract_rejects_unredacted_cache_policy()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let trace = MacTraceContext::new(true, "mac ask", "mac ask");
+        let trace_id = trace.id().ok_or("missing trace id")?;
+        let mut receipt = serde_json::json!({
+            "artifact_kind": "apple_m4_slm_answer",
+            "requested_backend": APPLE_M4_CPU_NEON,
+            "selected_backend": APPLE_M4_CPU_NEON,
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "trace_id": trace_id,
+            "observability": trace.observability_json(
+                MAC_ASK_TRACE_STAGES,
+                serde_json::json!({
+                    "progress_events_include_trace_id": true,
+                    "logs_include_trace_id": true,
+                    "receipt_trace_id_matches": true,
+                    "failure_receipt_linked": false,
+                    "timeout_stage_linked": false,
+                    "cancellation_stage_linked": false,
+                    "per_request_receipts_linked": false,
+                }),
+            ),
+            "text": "four",
+            "tokens": {
+                "generated": 1,
+                "generated_ids": [4],
+            },
+            "model": {
+                "sha256": "a".repeat(64),
+            },
+            "tokenizer": {
+                "source": "test-tokenizer",
+            },
+        });
+        receipt["observability"]["redaction_policy"]["cache_paths_redacted"] =
+            serde_json::json!(false);
+
+        let err = validate_mac_receipt_value(Path::new("trace-answer.json"), &receipt).unwrap_err();
+
+        assert!(err.to_string().contains("cache_paths_redacted"));
+        Ok(())
+    }
+
+    #[test]
     fn bitnet_mac_ask_model_failure_guidance_includes_explicit_model_verify_command()
     -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
@@ -29138,6 +29672,7 @@ mod tests {
             timeout_seconds: None,
             progress_enabled: false,
             started_at: std::time::Instant::now(),
+            trace: MacTraceContext::disabled("mac ask", "mac ask"),
         };
 
         let guidance =
@@ -29166,6 +29701,7 @@ mod tests {
             timeout_seconds: Some(1),
             progress_enabled: true,
             started_at: std::time::Instant::now(),
+            trace: MacTraceContext::disabled("mac ask", "mac ask"),
         };
         let guidance = bitnet_mac_ask_failure_repair_guidance("generation_timeout", &context, true);
 
@@ -29371,7 +29907,8 @@ mod tests {
         assert!(summary.contains("mac ask: model=qwen2.5-0.5b-instruct-q8_0"));
         assert!(summary.contains("quant=Q8_0"));
         assert!(summary.contains("cache=verified"));
-        assert!(summary.contains(&format!("cache_root={}", temp.path().display())));
+        assert!(summary.contains("cache_path=redacted"));
+        assert!(!summary.contains(&format!("cache_root={}", temp.path().display())));
         assert!(summary.contains("backend=apple-m4-cpu-neon"));
         assert!(summary.contains("fallback=false"));
         assert!(summary.contains(&format!("receipt={}", receipt.display())));

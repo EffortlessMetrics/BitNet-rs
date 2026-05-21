@@ -1,0 +1,13 @@
+timestamp = "2026-05-21T20:39:23Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OBS-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-OBS-001-trace-correlation"
+
+notes = [
+  "Started the bounded M4 observability trace-correlation slice for `bitnet mac ask --trace` and `bitnet mac serve --trace`.",
+  "The implementation scope is trace IDs and redacted diagnostic/receipt correlation for CLI and server routes; it does not claim quality, performance, unsupported backends, or broader service readiness.",
+]
