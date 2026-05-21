@@ -47,30 +47,16 @@ impl OpPool {
     /// Acquire a buffer with the given shape and dtype.
     pub fn acquire(&mut self, shape: &[usize], dtype: &str, bytes_per_element: usize) -> Vec<u8> {
         let key = BufferKey::new(shape, dtype);
-        let needed = key.elements() * bytes_per_element;
+        let needed = self.needed_bytes(&key, bytes_per_element);
 
-        if let Some(buffers) = self.buffers.get_mut(&key)
-            && let Some(buf) = buffers.iter_mut().find(|b| !b.in_use)
-        {
-            buf.in_use = true;
+        if let Some(buffer) = self.acquire_existing_buffer(&key) {
             self.hits += 1;
-            return buf.data.clone();
+            return buffer;
         }
 
         self.misses += 1;
-        if self.total_allocated + needed > self.max_bytes {
-            self.evict_lru();
-        }
-
-        let data = vec![0u8; needed];
-        self.total_allocated += needed;
-        let entry = self.buffers.entry(key).or_default();
-        entry.push(PooledBuffer {
-            key: BufferKey::new(shape, dtype),
-            data: data.clone(),
-            in_use: true,
-        });
-        data
+        self.ensure_capacity(needed);
+        self.allocate_new_buffer(key, shape, dtype, needed)
     }
 
     /// Release a buffer back to the pool.
@@ -95,6 +81,41 @@ impl OpPool {
                 }
             });
         }
+    }
+
+    fn needed_bytes(&self, key: &BufferKey, bytes_per_element: usize) -> usize {
+        key.elements() * bytes_per_element
+    }
+
+    fn acquire_existing_buffer(&mut self, key: &BufferKey) -> Option<Vec<u8>> {
+        let buffers = self.buffers.get_mut(key)?;
+        let buf = buffers.iter_mut().find(|b| !b.in_use)?;
+        buf.in_use = true;
+        Some(buf.data.clone())
+    }
+
+    fn ensure_capacity(&mut self, needed: usize) {
+        if self.total_allocated + needed > self.max_bytes {
+            self.evict_lru();
+        }
+    }
+
+    fn allocate_new_buffer(
+        &mut self,
+        key: BufferKey,
+        shape: &[usize],
+        dtype: &str,
+        needed: usize,
+    ) -> Vec<u8> {
+        let data = vec![0u8; needed];
+        self.total_allocated += needed;
+        let entry = self.buffers.entry(key).or_default();
+        entry.push(PooledBuffer {
+            key: BufferKey::new(shape, dtype),
+            data: data.clone(),
+            in_use: true,
+        });
+        data
     }
 
     pub fn total_allocated(&self) -> usize {
