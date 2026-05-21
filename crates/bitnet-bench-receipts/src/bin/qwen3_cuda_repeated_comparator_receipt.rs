@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 
 const DEFAULT_RECEIPT_OUT: &str =
     "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-0_6b-repeated-comparator.json";
+const CAMPAIGN_ITEM: &str = "CUDA-MODEL-017";
 const CONTRACT_AUTHORITY: &str = "contract_authoritative";
 const QWEN3_PROMPT_TEMPLATE: &str = "qwen-chat-raw-deterministic";
 
@@ -48,6 +49,16 @@ struct Args {
     warm_session_3_runs: Vec<PathBuf>,
     decode_128_runs: Vec<PathBuf>,
     receipt_out: PathBuf,
+    manifest_out: Option<PathBuf>,
+    print_manifest: bool,
+}
+
+#[derive(Debug)]
+struct ProfileInputGroup<'a> {
+    profile: &'static str,
+    flag: &'static str,
+    expected_generated_tokens: u64,
+    paths: &'a [PathBuf],
 }
 
 #[derive(Debug)]
@@ -61,6 +72,22 @@ struct ProfileRuns {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = parse_args()?;
+    if args.print_manifest || args.manifest_out.is_some() {
+        let manifest = source_manifest(&args);
+        let manifest_json = serde_json::to_string_pretty(&manifest)?;
+        if args.print_manifest {
+            println!("{manifest_json}");
+        }
+        if let Some(path) = &args.manifest_out {
+            if let Some(parent) = path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::write(path, manifest_json)?;
+        }
+        return Ok(());
+    }
+
+    assert_input_paths_exist(&args)?;
     let runs = ProfileRuns {
         one_token: read_runs(&args.one_token_runs)?,
         short_decode_8: read_runs(&args.short_decode_8_runs)?,
@@ -87,6 +114,8 @@ fn parse_args() -> Result<Args, Box<dyn Error>> {
     let mut warm_session_3_runs = DEFAULT_WARM_SESSION_3_RUNS.iter().map(PathBuf::from).collect();
     let mut decode_128_runs = DEFAULT_DECODE_128_RUNS.iter().map(PathBuf::from).collect();
     let mut receipt_out = PathBuf::from(DEFAULT_RECEIPT_OUT);
+    let mut manifest_out = None;
+    let mut print_manifest = false;
     let mut iter = env::args().skip(1);
 
     let mut one_token_overridden = false;
@@ -123,6 +152,8 @@ fn parse_args() -> Result<Args, Box<dyn Error>> {
                 next_value(&mut iter, &arg)?,
             ),
             "--receipt-out" => receipt_out = PathBuf::from(next_value(&mut iter, &arg)?),
+            "--manifest-out" => manifest_out = Some(PathBuf::from(next_value(&mut iter, &arg)?)),
+            "--print-manifest" => print_manifest = true,
             "--help" | "-h" => {
                 print_help();
                 std::process::exit(0);
@@ -138,6 +169,8 @@ fn parse_args() -> Result<Args, Box<dyn Error>> {
         warm_session_3_runs,
         decode_128_runs,
         receipt_out,
+        manifest_out,
+        print_manifest,
     })
 }
 
@@ -158,8 +191,148 @@ fn next_value(
 
 fn print_help() {
     println!(
-        "Usage: qwen3_cuda_repeated_comparator_receipt [--one-token-run PATH ...] [--short-decode-8-run PATH ...] [--short-decode-32-run PATH ...] [--warm-session-3-run PATH ...] [--decode-128-from-warm-context-run PATH ...] [--receipt-out PATH]"
+        "Usage: qwen3_cuda_repeated_comparator_receipt [--one-token-run PATH ...] [--short-decode-8-run PATH ...] [--short-decode-32-run PATH ...] [--warm-session-3-run PATH ...] [--decode-128-from-warm-context-run PATH ...] [--receipt-out PATH] [--manifest-out PATH] [--print-manifest]"
     );
+}
+
+fn input_groups(args: &Args) -> Vec<ProfileInputGroup<'_>> {
+    vec![
+        ProfileInputGroup {
+            profile: "one_token",
+            flag: "--one-token-run",
+            expected_generated_tokens: 1,
+            paths: &args.one_token_runs,
+        },
+        ProfileInputGroup {
+            profile: "short_decode_8",
+            flag: "--short-decode-8-run",
+            expected_generated_tokens: 8,
+            paths: &args.short_decode_8_runs,
+        },
+        ProfileInputGroup {
+            profile: "short_decode_32",
+            flag: "--short-decode-32-run",
+            expected_generated_tokens: 32,
+            paths: &args.short_decode_32_runs,
+        },
+        ProfileInputGroup {
+            profile: "warm_session_3_turns",
+            flag: "--warm-session-3-run",
+            expected_generated_tokens: 24,
+            paths: &args.warm_session_3_runs,
+        },
+        ProfileInputGroup {
+            profile: "decode_128_from_warm_context",
+            flag: "--decode-128-from-warm-context-run",
+            expected_generated_tokens: 128,
+            paths: &args.decode_128_runs,
+        },
+    ]
+}
+
+fn source_manifest(args: &Args) -> Value {
+    let profiles = input_groups(args)
+        .into_iter()
+        .map(|group| {
+            json!({
+                "profile": group.profile,
+                "run_flag": group.flag,
+                "min_runs": 3,
+                "expected_generated_tokens": group.expected_generated_tokens,
+                "source_paths": group.paths.iter().map(|path| path_label(path)).collect::<Vec<_>>()
+            })
+        })
+        .collect::<Vec<_>>();
+
+    json!({
+        "schema": 1,
+        "artifact_kind": "qwen3_cuda_repeated_comparator_source_manifest",
+        "campaign_item": CAMPAIGN_ITEM,
+        "aggregate_artifact_kind": "qwen3_cuda_repeated_comparator",
+        "aggregate_receipt_out": path_label(&args.receipt_out),
+        "machine_id": "windows-9950x3d-rtx5070ti",
+        "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+        "requested_backend": "nvidia-rtx-5070-ti-cuda",
+        "selected_backend": "nvidia-rtx-5070-ti-cuda",
+        "reference_backend": "amd-9950x3d-cpu-avx512",
+        "runtime_api": "cuda",
+        "selected_route": "dense_regular_llm_cuda",
+        "min_runs_per_profile": 3,
+        "profiles": profiles,
+        "model": {
+            "id": "qwen3-0.6b-instruct-q8_0",
+            "file": "Qwen3-0.6B-Q8_0.gguf",
+            "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+        },
+        "tokenizer_prompt_authority": {
+            "tokenizer_authority": CONTRACT_AUTHORITY,
+            "prompt_authority": CONTRACT_AUTHORITY,
+            "prompt_template": QWEN3_PROMPT_TEMPLATE
+        },
+        "required_source_fields": [
+            "/artifact_kind",
+            "/model/id",
+            "/model/sha256",
+            "/selected_backend",
+            "/execution_plan/selected_route",
+            "/fallback_used",
+            "/quality_gate/passed",
+            "/parity/passed",
+            "/timing/model_load_ms",
+            "/timing/tokenizer_load_ms",
+            "/timing/prompt_render_ms",
+            "/timing/tokenize_ms",
+            "/timing/cuda_context_init_ms",
+            "/timing/weight_upload_ms",
+            "/timing/prefill_ms",
+            "/timing/first_token_ms",
+            "/timing/decode_total_ms",
+            "/timing/kernel_time_ms",
+            "/timing/kernel_launches",
+            "/timing/host_to_device_bytes",
+            "/timing/device_to_host_bytes",
+            "/cuda/vram_bytes",
+            "/cuda/power_draw_watts",
+            "/cuda/temperature_c"
+        ],
+        "accepted_optional_source_fields": [
+            "/timing/decode_ms may substitute for /timing/decode_total_ms",
+            "/timing/host_to_device_ms may be absent if /timing/host_to_device_ms_source explains the source",
+            "/timing/device_to_host_ms may be absent if /timing/device_to_host_ms_source explains the source"
+        ],
+        "claim_boundaries": [
+            "source manifest is not a receipt and does not prove hardware execution",
+            "speedup_claim=false until a separate exact-profile review accepts a profile",
+            "benchmark_qualified_speedup=false until CUDA-MODEL-018",
+            "full_cuda_residency_claimed=false until every required phase proves residency",
+            "Qwen3 dense CUDA evidence cannot inherit Qwen2.5 evidence",
+            "dense_regular_llm_cuda evidence cannot satisfy BitNet packed I2_S/QK256 proof"
+        ]
+    })
+}
+
+fn assert_input_paths_exist(args: &Args) -> Result<(), Box<dyn Error>> {
+    let missing = input_groups(args)
+        .into_iter()
+        .flat_map(|group| {
+            group.paths.iter().filter_map(move |path| {
+                if path.is_file() {
+                    None
+                } else {
+                    Some(format!("{}: {}", group.profile, path_label(path)))
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "missing CUDA-MODEL-017 Qwen3 source receipts:\n  - {}\nrun with --print-manifest or --manifest-out PATH to inspect the expected capture set",
+        missing.join("\n  - ")
+    )
+    .into())
 }
 
 fn read_runs(paths: &[PathBuf]) -> Result<Vec<(PathBuf, Value)>, Box<dyn Error>> {
@@ -782,4 +955,79 @@ fn optional_number(value: &Value, pointer: &str) -> Option<f64> {
 
 fn u64_value(value: &Value, field: &str) -> u64 {
     value.get(field).and_then(Value::as_u64).unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args_with_prefix(prefix: &str) -> Args {
+        Args {
+            one_token_runs: vec![PathBuf::from(format!("{prefix}/one-token.json"))],
+            short_decode_8_runs: vec![PathBuf::from(format!("{prefix}/short-decode-8.json"))],
+            short_decode_32_runs: vec![PathBuf::from(format!("{prefix}/short-decode-32.json"))],
+            warm_session_3_runs: vec![PathBuf::from(format!("{prefix}/warm-session-3.json"))],
+            decode_128_runs: vec![PathBuf::from(format!(
+                "{prefix}/decode-128-from-warm-context.json"
+            ))],
+            receipt_out: PathBuf::from(format!("{prefix}/aggregate.json")),
+            manifest_out: None,
+            print_manifest: false,
+        }
+    }
+
+    #[test]
+    fn source_manifest_names_profiles_and_claim_boundaries() {
+        let args = args_with_prefix("target/qwen3");
+        let manifest = source_manifest(&args);
+
+        assert_eq!(manifest["artifact_kind"], "qwen3_cuda_repeated_comparator_source_manifest");
+        assert_eq!(manifest["campaign_item"], CAMPAIGN_ITEM);
+        assert_eq!(manifest["aggregate_artifact_kind"], "qwen3_cuda_repeated_comparator");
+        assert_eq!(manifest["selected_backend"], "nvidia-rtx-5070-ti-cuda");
+        assert_eq!(manifest["selected_route"], "dense_regular_llm_cuda");
+        assert_eq!(manifest["model"]["id"], "qwen3-0.6b-instruct-q8_0");
+
+        let profiles = manifest["profiles"].as_array().expect("profiles");
+        assert_eq!(profiles.len(), 5);
+        assert!(profiles.iter().any(|profile| {
+            profile["profile"] == "decode_128_from_warm_context"
+                && profile["expected_generated_tokens"] == 128
+                && profile["run_flag"] == "--decode-128-from-warm-context-run"
+        }));
+        assert!(
+            manifest["accepted_optional_source_fields"]
+                .as_array()
+                .expect("accepted_optional_source_fields")
+                .iter()
+                .any(|field| field
+                    .as_str()
+                    .is_some_and(|text| text.contains("host_to_device_ms_source")))
+        );
+        assert!(manifest["claim_boundaries"].as_array().expect("claim_boundaries").iter().any(
+            |boundary| {
+                boundary
+                    .as_str()
+                    .is_some_and(|text| text.contains("does not prove hardware execution"))
+            }
+        ));
+    }
+
+    #[test]
+    fn preflight_reports_all_missing_profile_inputs() {
+        let args = args_with_prefix("target/qwen3/missing");
+        let err = assert_input_paths_exist(&args).expect_err("missing inputs should fail");
+        let message = err.to_string();
+
+        for profile in [
+            "one_token",
+            "short_decode_8",
+            "short_decode_32",
+            "warm_session_3_turns",
+            "decode_128_from_warm_context",
+        ] {
+            assert!(message.contains(profile), "missing {profile} in {message}");
+        }
+        assert!(message.contains("--print-manifest"), "missing manifest hint in {message}");
+    }
 }

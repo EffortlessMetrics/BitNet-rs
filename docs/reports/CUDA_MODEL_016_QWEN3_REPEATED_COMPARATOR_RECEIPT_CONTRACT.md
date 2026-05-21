@@ -80,6 +80,24 @@ Each run flag may be repeated. The generator requires at least three source
 receipts per profile and validates the generated aggregate receipt before
 writing it.
 
+For CUDA-MODEL-017 capture planning, the same binary can emit a manifest without
+claiming proof:
+
+```bash
+cargo run --locked -p bitnet-bench-receipts --no-default-features --bin qwen3_cuda_repeated_comparator_receipt -- \
+  --print-manifest
+```
+
+Use `--manifest-out <PATH>` to write that manifest for a hardware operator. The
+manifest lists the expected profile inputs, model identity, selected backend,
+selected route, required source fields, accepted optional timing-source fields,
+and claim boundaries. It is not a receipt and does not prove hardware
+execution.
+
+If the aggregate command is run before all source receipts exist, it now reports
+every missing source path grouped by profile and points the operator back to the
+manifest command.
+
 ## Next Proof
 
 The receipt contract and generator are landed. The next hardware step is to
