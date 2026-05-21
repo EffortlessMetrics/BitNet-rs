@@ -2525,7 +2525,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-SERVE-EX-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-closeout"
 stackable = false
 review_mode = "codex_premerge"

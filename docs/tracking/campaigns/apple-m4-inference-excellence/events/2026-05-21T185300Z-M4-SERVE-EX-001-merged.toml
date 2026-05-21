@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T18:53:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-closeout"
+pr = 6165
+merge_sha = "0359a662d8b3945598f6fc5ba86bb71116b202df"
+
+notes = [
+  "PR #6165 merged the live M4 dense serve-smoke receipt evidence collected after the PR #6162 harness landed.",
+  "The merged evidence covers qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m under ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve/.",
+  "The receipts preserve health, ready, models, non-streaming completion, streaming completion, per-request receipt export, selected_backend=apple-m4-cpu-neon, runtime_api=cpu, and fallback_used=false context for dense local-server conformance.",
+  "Closeout records dense SLM local-server evidence only; it does not enable BitNet serve or claim service production readiness, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon support.",
+]
