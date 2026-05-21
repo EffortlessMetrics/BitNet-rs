@@ -1,0 +1,19 @@
+timestamp = "2026-05-21T02:50:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-067"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 109
+head_sha = "fbad3de113db4e25140874e48a6d159b08741bbe"
+merge_sha = "ec2145727cf48dcb5ea47da35acf85d5e427c8d4"
+branch = "codex/slm-cpu-067-exact-tensor-q8-runtime-hook"
+summary = "Merged the exact-tensor packed Q8_0 runtime hook candidate."
+notes = [
+  "The runtime hook remains opt-in and exact-tensor scoped to layers.0.attention.q_proj.weight / blk.0.attn_q.weight.",
+  "The default runtime path remains eager F32 Candle unless the payload and runtime environment gates both name the exact tensor.",
+  "The committed before/after warm-session receipts preserve prompt IDs, generated IDs, decoded text, model SHA, strict GGUF tokenizer authority, selected CPU backend, and fallback_used=false.",
+  "No default packed Q8_0 execution, broad speedup, sustained throughput, Q4/Q5 runtime support, server/GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]
+

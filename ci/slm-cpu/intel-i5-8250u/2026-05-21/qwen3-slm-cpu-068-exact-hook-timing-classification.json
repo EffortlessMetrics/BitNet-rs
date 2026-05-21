@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_dense_q8_exact_hook_timing_classification",
+  "work_item": "SLM-CPU-068",
+  "claim": "bounded_exact_tensor_runtime_hook_timing_classification",
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "broad_answer_quality_claim": false,
+  "default_runtime_changed": false,
+  "model": {
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3"
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "strict": true
+  },
+  "host": {
+    "cpu": "Intel Core i5-8250U",
+    "threads": 4,
+    "thermal": "not sampled in this exact-hook artifact",
+    "power": "not sampled in this exact-hook artifact"
+  },
+  "hook": {
+    "tensor": "layers.0.attention.q_proj.weight",
+    "source_tensor": "blk.0.attn_q.weight",
+    "scope": "exact_tensor_only",
+    "default_selected_path": "eager_f32_candle",
+    "opt_in_selected_path": "packed_q8_sidecar",
+    "opt_in_selected_kernel": "dense-q8-sidecar-linear",
+    "runtime_compute_enabled_by_default": false
+  },
+  "inputs": {
+    "before_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-067-before-warm-session.json",
+    "after_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-067-after-warm-session.json",
+    "equivalence_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-067-runtime-hook-equivalence.json"
+  },
+  "behavior_equivalence": {
+    "prompt_count": 2,
+    "prompt_ids_match": true,
+    "generated_ids_match": true,
+    "decoded_text_match": true,
+    "model_sha_match": true,
+    "tokenizer_source_match": true,
+    "selected_backend_match": true,
+    "fallback_false_before_after": true,
+    "passed": true
+  },
+  "timing": {
+    "classification": "regressed_on_bounded_two_prompt_artifact",
+    "before": {
+      "selected_path": "eager_f32_candle",
+      "selected_kernel": "dense-f32-candle-linear",
+      "runtime_compute_enabled": false,
+      "total_session_ms": 118266.381,
+      "warm_prompt_wall_ms": 41085.124,
+      "decode_total_ms": 1633.293,
+      "first_token_mean_ms": 20541.5,
+      "decode_generated_tok_s": 1.225,
+      "warm_prompt_generated_tok_s": 0.049,
+      "cold_session_generated_tok_s": 0.017
+    },
+    "after": {
+      "selected_path": "packed_q8_sidecar",
+      "selected_kernel": "dense-q8-sidecar-linear",
+      "runtime_compute_enabled": true,
+      "total_session_ms": 138900.052,
+      "warm_prompt_wall_ms": 57917.182,
+      "decode_total_ms": 2092.256,
+      "first_token_mean_ms": 28957.5,
+      "decode_generated_tok_s": 0.956,
+      "warm_prompt_generated_tok_s": 0.035,
+      "cold_session_generated_tok_s": 0.014
+    },
+    "delta": {
+      "total_session_ms": 20633.671,
+      "total_session_percent": 17.446,
+      "warm_prompt_wall_ms": 16832.058,
+      "warm_prompt_wall_percent": 40.966,
+      "decode_total_ms": 458.963,
+      "decode_total_percent": 28.1,
+      "first_token_mean_ms": 8416.0,
+      "first_token_mean_percent": 40.971,
+      "decode_generated_tok_s": -0.269,
+      "decode_generated_tok_s_percent": -21.959,
+      "warm_prompt_generated_tok_s": -0.014,
+      "cold_session_generated_tok_s": -0.003
+    }
+  },
+  "decision": {
+    "runtime_promotion_recommended": false,
+    "default_runtime_should_remain": "eager_f32_candle",
+    "next_safe_step": "Treat the exact-tensor packed Q8_0 hook as a correctness-preserving but timing-regressing implementation boundary; use it for further locality/kernel work only after improving the packed sidecar matvec path and revalidating generated IDs and decoded text.",
+    "reason": "The opt-in packed sidecar path preserves behavior but is slower than eager F32 Candle on total session, warm prompt wall time, first-token mean, and decode throughput for the bounded two-prompt 4-thread receipt."
+  },
+  "claim_boundary": [
+    "This artifact classifies only the committed SLM-CPU-067 two-prompt 4-thread i5-8250U receipts.",
+    "The exact-tensor packed Q8_0 hook is not enabled by default.",
+    "Behavior equivalence is preserved for the compared receipts.",
+    "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made."
+  ]
+}

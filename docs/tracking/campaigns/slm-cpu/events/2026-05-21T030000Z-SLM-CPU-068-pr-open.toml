@@ -1,0 +1,15 @@
+timestamp = "2026-05-21T03:00:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-068"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+actor = "codex"
+pr = 120
+branch = "codex/slm-cpu-068-exact-hook-timing-classification"
+summary = "Opened the exact-tensor runtime hook timing classification PR."
+notes = [
+  "PR #120 classifies the SLM-CPU-067 exact-tensor packed Q8_0 hook timing evidence without broadening the runtime claim.",
+  "The committed artifact records behavior equivalence but a timing regression for the opt-in packed sidecar path on the bounded two-prompt 4-thread receipt.",
+  "The default runtime remains eager F32 Candle and no speedup, sustained throughput, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

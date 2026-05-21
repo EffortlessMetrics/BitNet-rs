@@ -850,6 +850,39 @@ execution to all dense tensors, and does not claim speedup, sustained
 throughput, broad answer quality, Q4/Q5 runtime support, accelerator execution,
 Qwen3.5 support, or BitNet QK256 changes.
 
+SLM-CPU-068 classifies the timing evidence from that exact same artifact pack.
+The result is intentionally conservative: the hook preserved generated IDs and
+decoded text, but the opt-in packed sidecar path regressed on the bounded
+two-prompt 4-thread receipt.
+
+```text
+classification = regressed_on_bounded_two_prompt_artifact
+before_selected_path = eager_f32_candle
+after_selected_path = packed_q8_sidecar
+behavior_equivalence.passed = true
+runtime_promotion_recommended = false
+speedup_claim = false
+
+before.total_session_ms = 118266.381
+after.total_session_ms = 138900.052
+delta.total_session_ms = +20633.671 (+17.446%)
+
+before.warm_prompt_wall_ms = 41085.124
+after.warm_prompt_wall_ms = 57917.182
+delta.warm_prompt_wall_ms = +16832.058 (+40.966%)
+
+before.decode_generated_tok_s = 1.225
+after.decode_generated_tok_s = 0.956
+delta.decode_generated_tok_s = -0.269 (-21.959%)
+```
+
+The timing classification artifact is
+`ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-068-exact-hook-timing-classification.json`.
+The default runtime should remain `eager_f32_candle`. The packed sidecar hook is
+still useful as a correctness-preserving implementation boundary for further
+locality and kernel work, but it is not a promotion candidate in its current
+form.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:
