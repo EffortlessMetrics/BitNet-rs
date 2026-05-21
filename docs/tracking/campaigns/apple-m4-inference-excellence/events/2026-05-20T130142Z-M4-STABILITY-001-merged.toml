@@ -1,0 +1,17 @@
+timestamp = "2026-05-20T13:01:42Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-001-mixed-model-soak"
+pr = 6134
+merge_sha = "7832622eb2d10921f549d677ad594db88caeb1cc"
+
+notes = [
+  "Merged PR #6134, publishing the live M4 mixed dense-model switch soak evidence for the three supported dense Qwen identities.",
+  "The merged aggregate receipt records `ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch.json`, `apple-m4-cpu-neon`, `runtime_api=cpu`, `fallback_used=false`, 75 prompts, 607 generated tokens, and release-mode build identity.",
+  "The evidence keeps child resident_25 summaries and per-prompt receipts separate for `qwen2.5-0.5b-instruct-q8_0`, `qwen2.5-0.5b-instruct-q4_k_m`, and `qwen2.5-1.5b-instruct-q4_k_m`.",
+  "No BitNet behavior, BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup, broad model quality, broad performance, or broad Apple Silicon performance claim was made.",
+]

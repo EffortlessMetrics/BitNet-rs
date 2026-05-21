@@ -22,8 +22,7 @@ Common selected blocking lanes map to these upstream checks:
 * **`compatibility-msrv`** -> **Route MSRV Compatibility** and
   **Minimum Supported Rust Version**.
 * **`gpu-native`** -> the five **`native-check (...)`** GPU-matrix compile
-  checks when GPU paths are changed and a `gpu`, `gpu-ci`, or `full-ci` label
-  makes `gpu-ci-matrix.yml` emit those PR jobs.
+  checks.
 * **`always-on-guards`** -> **Guards** and **Check PR Size**. If the PR has
   `mechanical-change` or `ai-native`, **PR Size Guard** intentionally skips
   **Check PR Size**; in that acknowledged-large-PR case, **PR Gate Success**
@@ -32,8 +31,9 @@ Common selected blocking lanes map to these upstream checks:
 Lanes that are **not** required by `PR Gate Success`:
 
 * `ripr static exposure` (advisory static mutation-exposure analysis)
-* All macOS, GPU Docker, Coverage, Crossval, Property, and Model-validation
-  lanes (label- or path-gated; opting in is the PR author's decision)
+* All macOS / GPU / Docker / Coverage / Crossval / Property /
+  Model-validation lanes (label- or path-gated; opting in is the
+  PR author's decision)
 * Any deep / nightly / labelled lane
 
 This list is intentional. Making the long-tail lanes required

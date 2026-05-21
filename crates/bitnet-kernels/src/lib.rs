@@ -42,7 +42,6 @@ use bitnet_cpu_detect::avx512_available;
 use bitnet_cpu_detect::neon_available;
 use std::sync::OnceLock;
 
-pub mod a770_opencl_fixture;
 pub mod activation_bench;
 pub mod activation_ops;
 pub mod activation_registry;

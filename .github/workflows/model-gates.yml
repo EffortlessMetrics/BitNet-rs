@@ -7,8 +7,15 @@ name: Model Gates (CPU Receipt Verification)
 
 on:
   pull_request:
-    types: [labeled]
+    types: [opened, reopened, synchronize, labeled, ready_for_review]
     branches: [main]
+    paths:
+      - "crates/bitnet-inference/**"
+      - "crates/bitnet-kernels/**"
+      - "crates/bitnet-models/**"
+      - "crates/bitnet-cli/**"
+      - "xtask/**"
+      - ".github/workflows/model-gates.yml"
   workflow_dispatch: {}
   schedule:
     # Run nightly at 4 AM UTC for strict validation
@@ -161,11 +168,7 @@ jobs:
   gate-summary:
     name: Receipt Gate Summary
     needs: cpu-receipt-gate
-    if: >-
-      always() &&
-      (github.event_name != 'pull_request' ||
-       contains(github.event.pull_request.labels.*.name, 'receipts') ||
-       contains(github.event.pull_request.labels.*.name, 'full-ci'))
+    if: always()
     # Same gating as the main job, so we don't surface red on PRs without the label.
     # Note: The outer if: always() ensures this runs even if cpu-receipt-gate is skipped.
     runs-on: ubuntu-22.04

@@ -1,3 +1,9 @@
+> Claim boundary: this baseline records a dated local timing run. Throughput,
+> SIMD, AVX, and bottleneck wording here must not be read as current product
+> support, backend execution, or exact-profile speed claims. Current performance
+> claims require active receipts, benchmark review, status docs, specs, and
+> claim gates.
+
 === Timing Summary ===
 Model: models/microsoft-bitnet-b1.58-2B-4T-gguf/ggml-model-i2_s.gguf
 Date: 2025-10-22T07:01:37Z

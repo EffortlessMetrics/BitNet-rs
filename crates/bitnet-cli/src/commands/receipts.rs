@@ -597,37 +597,24 @@ fn claim_limits_explanation(receipt: &Value) -> ClaimLimitsExplanation {
 }
 
 fn benchmark_qualification_explanation(receipt: &Value) -> BenchmarkQualificationExplanation {
-    let mut accepted_profiles =
-        string_array_at(receipt, &["qualification_decision", "accepted_profiles"]);
-    if accepted_profiles.is_empty() {
-        accepted_profiles =
-            string_array_at(receipt, &["comparator_summary", "accepted_speedup_profiles"]);
-    }
-    let mut blocked_profiles =
-        string_array_at(receipt, &["qualification_decision", "blocked_profiles"]);
-    if blocked_profiles.is_empty() {
-        blocked_profiles = blocked_comparator_profiles(receipt);
-    }
-
     BenchmarkQualificationExplanation {
-        status: string_at(receipt, &["qualification_decision", "status"])
-            .or_else(|| string_at(receipt, &["comparator_summary", "status"])),
+        status: string_at(receipt, &["qualification_decision", "status"]),
         benchmark_qualified_speedup: bool_at(
             receipt,
             &["qualification_decision", "benchmark_qualified_speedup"],
         )
         .or_else(|| bool_at(receipt, &["benchmark_qualified_speedup"]))
-        .or_else(|| bool_at(receipt, &["claim_boundary", "benchmark_qualified_speedup"]))
-        .or_else(|| bool_at(receipt, &["comparator_summary", "benchmark_qualified_speedup"])),
-        accepted_profiles,
-        blocked_profiles,
+        .or_else(|| bool_at(receipt, &["claim_boundary", "benchmark_qualified_speedup"])),
+        accepted_profiles: string_array_at(
+            receipt,
+            &["qualification_decision", "accepted_profiles"],
+        ),
+        blocked_profiles: string_array_at(receipt, &["qualification_decision", "blocked_profiles"]),
         speedup_claim_allowed: bool_at(
             receipt,
             &["qualification_decision", "speedup_claim_allowed"],
-        )
-        .or_else(|| bool_at(receipt, &["comparator_summary", "speedup_claim_allowed"])),
-        transfer_timing_status: string_at(receipt, &["transfer_timing_review", "status"])
-            .or_else(|| string_at(receipt, &["transfer_timing", "status"])),
+        ),
+        transfer_timing_status: string_at(receipt, &["transfer_timing_review", "status"]),
         host_to_device_source: string_at(
             receipt,
             &["transfer_timing_review", "host_to_device_source"],
@@ -643,128 +630,56 @@ fn benchmark_qualification_explanation(receipt: &Value) -> BenchmarkQualificatio
         pure_host_to_device_timing_recorded: bool_at(
             receipt,
             &["transfer_timing_review", "host_to_device_pure_transfer_timing_recorded"],
-        )
-        .or_else(|| bool_at(receipt, &["transfer_timing", "pure_host_to_device_timing_recorded"])),
+        ),
         device_to_host_timing_recorded: bool_at(
             receipt,
             &["transfer_timing_review", "device_to_host_timing_recorded"],
-        )
-        .or_else(|| bool_at(receipt, &["transfer_timing", "device_to_host_timing_recorded"])),
+        ),
         profile_reviews: benchmark_profile_reviews(receipt),
     }
 }
 
-fn blocked_comparator_profiles(receipt: &Value) -> Vec<String> {
-    if !is_repeated_comparator_receipt(receipt) {
-        return Vec::new();
-    }
-    if bool_at(receipt, &["comparator_summary", "benchmark_qualified_speedup"]) == Some(true) {
-        return Vec::new();
-    }
-    receipt
-        .get("profiles")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(|profile| string_at(profile, &["profile"]))
-        .collect()
-}
-
 fn benchmark_profile_reviews(receipt: &Value) -> Vec<BenchmarkProfileExplanation> {
-    if let Some(reviews) = receipt.get("profile_reviews").and_then(Value::as_array) {
-        return reviews
-            .iter()
-            .filter_map(|review| {
-                let profile = string_at(review, &["profile"])?;
-                Some(BenchmarkProfileExplanation {
-                    profile,
-                    decision: string_at(review, &["decision"]),
-                    benchmark_qualified_speedup: bool_at(review, &["benchmark_qualified_speedup"]),
-                    speedup_claim_allowed: bool_at(review, &["speedup_claim_allowed"]),
-                    fallback_free: bool_at(review, &["fallback_free"]),
-                    quality_passed: bool_at(review, &["quality_passed"]),
-                    generated_token_ids_match: bool_at(review, &["generated_token_ids_match"]),
-                    cpu_total_ms_mean: f64_at(review, &["cpu_total_ms_mean"]),
-                    cuda_total_ms_mean: f64_at(review, &["cuda_total_ms_mean"]),
-                    observed_cpu_total_ms_div_cuda_total_ms: f64_at(
-                        review,
-                        &["observed_cpu_total_ms_div_cuda_total_ms"],
-                    )
-                    .or_else(|| {
-                        f64_at(review, &["observed_median_cpu_total_ms_div_cuda_total_ms"])
-                    }),
-                    host_to_device_ms: f64_at(review, &["host_to_device_ms"]),
-                    host_to_device_ms_source: string_at(review, &["host_to_device_ms_source"]),
-                    host_to_device_ms_scope: string_at(review, &["host_to_device_ms_scope"]),
-                    host_to_device_ms_includes_non_transfer_overhead: bool_at(
-                        review,
-                        &["host_to_device_ms_includes_non_transfer_overhead"],
-                    ),
-                    pure_host_to_device_ms_source: string_at(
-                        review,
-                        &["pure_host_to_device_ms_source"],
-                    ),
-                    device_to_host_ms: f64_at(review, &["device_to_host_ms"]),
-                    device_to_host_ms_source: string_at(review, &["device_to_host_ms_source"]),
-                    blockers: string_array_at(review, &["blockers"]),
-                })
-            })
-            .collect();
-    }
-
-    if !is_repeated_comparator_receipt(receipt) {
+    let Some(reviews) = receipt.get("profile_reviews").and_then(Value::as_array) else {
         return Vec::new();
-    }
+    };
 
-    receipt
-        .get("profiles")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(|profile_receipt| {
-            let profile = string_at(profile_receipt, &["profile"])?;
+    reviews
+        .iter()
+        .filter_map(|review| {
+            let profile = string_at(review, &["profile"])?;
             Some(BenchmarkProfileExplanation {
                 profile,
-                decision: string_at(profile_receipt, &["status"]),
-                benchmark_qualified_speedup: bool_at(
-                    profile_receipt,
-                    &["benchmark_qualified_speedup"],
-                ),
-                speedup_claim_allowed: bool_at(profile_receipt, &["speedup_claim"]),
-                fallback_free: bool_at(profile_receipt, &["fallback_free"]),
-                quality_passed: bool_at(profile_receipt, &["generated_token_ids_match"]),
-                generated_token_ids_match: bool_at(profile_receipt, &["generated_token_ids_match"]),
-                cpu_total_ms_mean: f64_at(profile_receipt, &["cpu_total_ms", "mean"]),
-                cuda_total_ms_mean: f64_at(profile_receipt, &["cuda_total_ms", "mean"]),
-                observed_cpu_total_ms_div_cuda_total_ms: comparator_speed_ratio(profile_receipt),
-                host_to_device_ms: f64_at(profile_receipt, &["host_to_device_ms", "mean"]),
-                host_to_device_ms_source: None,
-                host_to_device_ms_scope: None,
+                decision: string_at(review, &["decision"]),
+                benchmark_qualified_speedup: bool_at(review, &["benchmark_qualified_speedup"]),
+                speedup_claim_allowed: bool_at(review, &["speedup_claim_allowed"]),
+                fallback_free: bool_at(review, &["fallback_free"]),
+                quality_passed: bool_at(review, &["quality_passed"]),
+                generated_token_ids_match: bool_at(review, &["generated_token_ids_match"]),
+                cpu_total_ms_mean: f64_at(review, &["cpu_total_ms_mean"]),
+                cuda_total_ms_mean: f64_at(review, &["cuda_total_ms_mean"]),
+                observed_cpu_total_ms_div_cuda_total_ms: f64_at(
+                    review,
+                    &["observed_cpu_total_ms_div_cuda_total_ms"],
+                )
+                .or_else(|| f64_at(review, &["observed_median_cpu_total_ms_div_cuda_total_ms"])),
+                host_to_device_ms: f64_at(review, &["host_to_device_ms"]),
+                host_to_device_ms_source: string_at(review, &["host_to_device_ms_source"]),
+                host_to_device_ms_scope: string_at(review, &["host_to_device_ms_scope"]),
                 host_to_device_ms_includes_non_transfer_overhead: bool_at(
-                    profile_receipt,
+                    review,
                     &["host_to_device_ms_includes_non_transfer_overhead"],
                 ),
-                pure_host_to_device_ms_source: None,
-                device_to_host_ms: f64_at(profile_receipt, &["device_to_host_ms", "mean"]),
-                device_to_host_ms_source: None,
-                blockers: Vec::new(),
+                pure_host_to_device_ms_source: string_at(
+                    review,
+                    &["pure_host_to_device_ms_source"],
+                ),
+                device_to_host_ms: f64_at(review, &["device_to_host_ms"]),
+                device_to_host_ms_source: string_at(review, &["device_to_host_ms_source"]),
+                blockers: string_array_at(review, &["blockers"]),
             })
         })
         .collect()
-}
-
-fn is_repeated_comparator_receipt(receipt: &Value) -> bool {
-    receipt.get("comparator_summary").is_some()
-        || string_at(receipt, &["artifact_kind"]).is_some_and(|kind| {
-            kind == "qwen3_cuda_repeated_comparator"
-                || kind == "dense_gguf_qwen_repeated_comparator"
-        })
-}
-
-fn comparator_speed_ratio(profile: &Value) -> Option<f64> {
-    let cpu = f64_at(profile, &["cpu_total_ms", "mean"])?;
-    let cuda = f64_at(profile, &["cuda_total_ms", "mean"])?;
-    (cuda > 0.0).then_some(cpu / cuda)
 }
 
 fn openvino_explanation(receipt: &Value) -> OpenVinoExplanation {
@@ -2540,219 +2455,6 @@ mod tests {
     }
 
     #[test]
-    fn receipts_explain_surfaces_qwen3_repeated_comparator_profiles() -> Result<()> {
-        let profiles = vec![
-            qwen3_repeated_comparator_profile("one_token", 1200.0, 1800.0),
-            qwen3_repeated_comparator_profile("short_decode_8", 8200.0, 9700.0),
-            qwen3_repeated_comparator_profile("short_decode_32", 31200.0, 35600.0),
-            qwen3_repeated_comparator_profile("warm_session_3_turns", 24500.0, 29200.0),
-            qwen3_repeated_comparator_profile("decode_128_from_warm_context", 105000.0, 117000.0),
-        ];
-        let receipt = json!({
-            "schema": 1,
-            "artifact_kind": "qwen3_cuda_repeated_comparator",
-            "machine_id": "windows-9950x3d-rtx5070ti",
-            "hardware_lane": "nvidia_rtx_5070_ti_cuda",
-            "requested_backend": "nvidia-rtx-5070-ti-cuda",
-            "selected_backend": "nvidia-rtx-5070-ti-cuda",
-            "reference_backend": "amd-9950x3d-cpu-avx512",
-            "runtime_api": "cuda",
-            "selected_route": "dense_regular_llm_cuda",
-            "claim": "qwen3_cuda_repeated_comparator",
-            "fallback_used": false,
-            "speedup_claim": false,
-            "benchmark_qualified_speedup": false,
-            "full_cuda_residency_claimed": false,
-            "dense_gguf_inference_claimed": false,
-            "broad_dense_gguf_ready_claimed": false,
-            "qwen25_proof_inherited": false,
-            "server_ready_claimed": false,
-            "bitnet_packed_i2s_qk256_proof": false,
-            "claim_boundary": {
-                "qwen3_cuda_repeated_comparator_claimed": true,
-                "qwen_one_token_cuda_claimed": true,
-                "qwen_short_decode_cuda_claimed": true,
-                "qwen_warm_session_cuda_claimed": true,
-                "qwen_chat_cuda_claimed": true,
-                "server_ready_claimed": false,
-                "speedup_claim": false,
-                "benchmark_qualified_speedup": false,
-                "full_cuda_residency_claimed": false,
-                "broad_dense_gguf_ready_claimed": false,
-                "qwen25_proof_inherited": false,
-                "bitnet_packed_i2s_qk256_proof": false
-            },
-            "model": {
-                "id": "qwen3-0.6b-instruct-q8_0",
-                "architecture": "qwen3",
-                "model_family": "qwen",
-                "artifact_kind": "dense_gguf",
-                "file": "Qwen3-0.6B-Q8_0.gguf",
-                "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
-            },
-            "execution_plan": {
-                "model_family": "qwen",
-                "quantization": "dense_gguf_q8_0_qwen3_product_contract",
-                "selected_route": "dense_regular_llm_cuda",
-                "requested_backend": "nvidia-rtx-5070-ti-cuda",
-                "selected_backend": "nvidia-rtx-5070-ti-cuda",
-                "runtime_api": "cuda",
-                "strict_fallback_policy": "reject",
-                "dense_regular_llm_cuda": true,
-                "bitnet_packed_qk256_cuda": false,
-                "fallback_used": false,
-                "strict_cuda_ready": true,
-                "speedup_claim": false,
-                "full_cuda_residency_claimed": false,
-                "cuda_dense_regular_llm_ops": 8112,
-                "cuda_bitnet_qk256_ops": 0,
-                "cpu_fallback_ops": 0,
-                "unsupported_ops": 0
-            },
-            "profiles": profiles,
-            "comparator_summary": {
-                "status": "repeated_comparator_only",
-                "profiles_recorded": 5,
-                "min_runs_per_backend": 3,
-                "total_cpu_runs": 15,
-                "total_cuda_runs": 15,
-                "fallback_free": true,
-                "same_artifact_sha": true,
-                "same_tokenizer_prompt_policy": true,
-                "deterministic_generation_policy": true,
-                "generated_tokens_compared": true,
-                "speedup_claim_allowed": false,
-                "benchmark_qualified_speedup": false,
-                "accepted_speedup_profiles": [],
-                "remaining_qualification_blockers": [
-                    "profile-specific speedup thresholds remain unreviewed",
-                    "pure host-to-device timing remains separated from the model-load envelope"
-                ]
-            },
-            "transfer_timing": {
-                "status": "host_to_device_model_load_envelope_device_to_host_measured",
-                "host_to_device_bytes_recorded": true,
-                "device_to_host_bytes_recorded": true,
-                "host_to_device_timing_recorded": true,
-                "device_to_host_timing_recorded": true,
-                "pure_host_to_device_timing_recorded": false
-            }
-        });
-
-        let explanation = explain_receipt(Path::new("qwen3-repeated-comparator.json"), &receipt);
-
-        assert_eq!(explanation.model_coverage_row.as_deref(), Some("dense_qwen3_06b_q8_candidate"));
-        assert_eq!(explanation.current_tier.as_deref(), Some("product_cli_ready"));
-        assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
-        assert_eq!(explanation.selected_route.as_deref(), Some("dense_regular_llm_cuda"));
-        assert_eq!(explanation.fallback_used, Some(false));
-        assert_eq!(explanation.product_cli_ready, Some(true));
-        assert_eq!(explanation.server_ready, Some(true));
-        assert_eq!(explanation.server_ready_scope.as_deref(), Some("exact_profile"));
-        assert_eq!(explanation.speedup_claim, Some(false));
-        assert_eq!(explanation.full_residency_claim, Some(false));
-        assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(false));
-        assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(true));
-
-        let qualification = &explanation.benchmark_qualification;
-        assert_eq!(qualification.status.as_deref(), Some("repeated_comparator_only"));
-        assert_eq!(qualification.benchmark_qualified_speedup, Some(false));
-        assert_eq!(qualification.speedup_claim_allowed, Some(false));
-        assert!(qualification.accepted_profiles.is_empty());
-        assert_eq!(
-            qualification.blocked_profiles,
-            vec![
-                "one_token",
-                "short_decode_8",
-                "short_decode_32",
-                "warm_session_3_turns",
-                "decode_128_from_warm_context"
-            ]
-        );
-        assert_eq!(
-            qualification.transfer_timing_status.as_deref(),
-            Some("host_to_device_model_load_envelope_device_to_host_measured")
-        );
-        assert_eq!(qualification.pure_host_to_device_timing_recorded, Some(false));
-        assert_eq!(qualification.device_to_host_timing_recorded, Some(true));
-        assert_eq!(qualification.profile_reviews.len(), 5);
-
-        let short_decode = qualification
-            .profile_reviews
-            .iter()
-            .find(|profile| profile.profile == "short_decode_32")
-            .ok_or_else(|| anyhow!("short_decode_32 comparator profile missing"))?;
-        assert_eq!(
-            short_decode.decision.as_deref(),
-            Some("repeated_same_artifact_cpu_cuda_comparator")
-        );
-        assert_eq!(short_decode.benchmark_qualified_speedup, Some(false));
-        assert_eq!(short_decode.speedup_claim_allowed, Some(false));
-        assert_eq!(short_decode.fallback_free, Some(true));
-        assert_eq!(short_decode.quality_passed, Some(true));
-        assert_eq!(short_decode.generated_token_ids_match, Some(true));
-        assert_eq!(short_decode.cpu_total_ms_mean, Some(31200.0));
-        assert_eq!(short_decode.cuda_total_ms_mean, Some(35600.0));
-        assert_eq!(short_decode.host_to_device_ms, Some(8.0));
-        assert_eq!(short_decode.device_to_host_ms, Some(0.5));
-        Ok(())
-    }
-
-    fn qwen3_repeated_comparator_profile(
-        profile: &str,
-        cpu_total_ms_mean: f64,
-        cuda_total_ms_mean: f64,
-    ) -> Value {
-        json!({
-            "profile": profile,
-            "status": "repeated_same_artifact_cpu_cuda_comparator",
-            "cpu_reference_backend": "amd-9950x3d-cpu-avx512",
-            "cuda_backend": "nvidia-rtx-5070-ti-cuda",
-            "runtime_api": "cuda",
-            "selected_route": "dense_regular_llm_cuda",
-            "run_count": 3,
-            "cpu_runs": 3,
-            "cuda_runs": 3,
-            "min_runs_per_backend": 3,
-            "fallback_free": true,
-            "same_artifact_sha": true,
-            "same_tokenizer_prompt_policy": true,
-            "deterministic_generation_policy": true,
-            "generated_token_ids_match": true,
-            "speedup_claim": false,
-            "benchmark_qualified_speedup": false,
-            "bitnet_packed_i2s_qk256_proof": false,
-            "full_cuda_residency_claimed": false,
-            "server_ready_claimed": false,
-            "transfer_timing_status": "host_to_device_model_load_envelope_device_to_host_measured",
-            "cpu_total_ms": {
-                "count": 3,
-                "min": cpu_total_ms_mean,
-                "mean": cpu_total_ms_mean,
-                "max": cpu_total_ms_mean
-            },
-            "cuda_total_ms": {
-                "count": 3,
-                "min": cuda_total_ms_mean,
-                "mean": cuda_total_ms_mean,
-                "max": cuda_total_ms_mean
-            },
-            "host_to_device_ms": {
-                "count": 3,
-                "min": 8.0,
-                "mean": 8.0,
-                "max": 8.0
-            },
-            "device_to_host_ms": {
-                "count": 3,
-                "min": 0.5,
-                "mean": 0.5,
-                "max": 0.5
-            }
-        })
-    }
-
-    #[test]
     fn receipts_explain_links_server_smoke_receipt_to_dense_qwen_coverage() {
         let receipt = json!({
             "receipt_kind": "server_shared_engine_chat_completion",
@@ -3055,143 +2757,6 @@ mod tests {
                 .iter()
                 .any(|blocker| { blocker == "pure host-to-device transfer timing is unmeasured" })
         );
-    }
-
-    #[test]
-    fn explain_receipt_extracts_bitnet_perf005_profile_matrix() -> Result<()> {
-        let perf005_profiles = vec![
-            "one_token",
-            "short_decode_8",
-            "short_decode_32",
-            "prefill_128_decode_16",
-            "prefill_512_decode_32",
-            "warm_session_3_turns",
-            "warm_session_10_turns",
-            "decode_128_from_warm_context",
-        ];
-        let profile_reviews: Vec<Value> = perf005_profiles
-            .iter()
-            .map(|profile| {
-                if *profile == "short_decode_8" {
-                    json!({
-                        "benchmark_qualified_speedup": false,
-                        "blockers": [
-                            "profile is not repeated",
-                            "transfer timing is incomplete",
-                            "no profile-specific speedup threshold has been accepted"
-                        ],
-                        "cpu_total_ms_mean": 147593.0,
-                        "cuda_total_ms_mean": 1866.0,
-                        "decision": "not_accepted",
-                        "fallback_free": true,
-                        "host_to_device_ms": 0.0,
-                        "device_to_host_ms": 0.0,
-                        "profile": profile,
-                        "quality_passed": true,
-                        "speedup_claim_allowed": false
-                    })
-                } else {
-                    json!({
-                        "benchmark_qualified_speedup": false,
-                        "blockers": ["profile receipt missing"],
-                        "decision": "not_accepted",
-                        "fallback_free": false,
-                        "profile": profile,
-                        "quality_passed": false,
-                        "speedup_claim_allowed": false
-                    })
-                }
-            })
-            .collect();
-        let receipt = json!({
-            "artifact_kind": "strict_cuda_benchmark_qualification_review",
-            "claim": "strict_cuda_benchmark_qualification_review",
-            "benchmark_qualified_speedup": false,
-            "speedup_claim": false,
-            "full_cuda_residency_claimed": false,
-            "selected_backend": "nvidia-rtx-5070-ti-cuda",
-            "selected_route": "bitnet_qk256_cuda",
-            "runtime_api": "cuda",
-            "fallback_used": false,
-            "model": {
-                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
-                "file": "ggml-model-i2_s.gguf",
-                "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
-                "loader_mode": "strict_real_gguf",
-                "fallback_loader_used": false
-            },
-            "qualification_decision": {
-                "accepted_profiles": [],
-                "benchmark_qualified_speedup": false,
-                "blocked_profiles": perf005_profiles,
-                "speedup_claim_allowed": false,
-                "status": "not_accepted"
-            },
-            "profile_matrix_id": "cuda-bitnet-perf-005",
-            "target_profiles": [
-                "one_token",
-                "short_decode_8",
-                "short_decode_32",
-                "prefill_128_decode_16",
-                "prefill_512_decode_32",
-                "warm_session_3_turns",
-                "warm_session_10_turns",
-                "decode_128_from_warm_context"
-            ],
-            "profile_reviews": profile_reviews,
-            "claim_boundary": {
-                "benchmark_qualified_speedup": false,
-                "full_cuda_residency_claimed": false,
-                "bitnet_packed_i2s_qk256_proof": true,
-                "dense_regular_llm_cuda_proof": false
-            }
-        });
-
-        let explanation = explain_receipt(Path::new("cuda-bitnet-perf-005.json"), &receipt);
-
-        assert_eq!(explanation.selected_backend.as_deref(), Some("nvidia-rtx-5070-ti-cuda"));
-        assert_eq!(explanation.selected_route.as_deref(), Some("bitnet_qk256_cuda"));
-        assert_eq!(explanation.fallback_used, Some(false));
-        assert_eq!(explanation.speedup_claim, Some(false));
-        assert_eq!(explanation.full_residency_claim, Some(false));
-        assert_eq!(explanation.bitnet_packed_i2s_qk256_proof, Some(true));
-        assert_eq!(explanation.dense_regular_llm_cuda_proof, Some(false));
-
-        let qualification = &explanation.benchmark_qualification;
-        assert_eq!(qualification.status.as_deref(), Some("not_accepted"));
-        assert_eq!(qualification.benchmark_qualified_speedup, Some(false));
-        assert_eq!(qualification.speedup_claim_allowed, Some(false));
-        assert!(qualification.accepted_profiles.is_empty());
-        assert_eq!(qualification.blocked_profiles, perf005_profiles);
-        assert_eq!(qualification.profile_reviews.len(), 8);
-        let profile_names: Vec<&str> =
-            qualification.profile_reviews.iter().map(|profile| profile.profile.as_str()).collect();
-        assert_eq!(profile_names, perf005_profiles);
-
-        let short_decode = qualification
-            .profile_reviews
-            .iter()
-            .find(|profile| profile.profile == "short_decode_8")
-            .ok_or_else(|| anyhow!("short_decode_8 profile missing"))?;
-        assert_eq!(short_decode.decision.as_deref(), Some("not_accepted"));
-        assert_eq!(short_decode.benchmark_qualified_speedup, Some(false));
-        assert_eq!(short_decode.speedup_claim_allowed, Some(false));
-        assert_eq!(short_decode.fallback_free, Some(true));
-        assert_eq!(short_decode.quality_passed, Some(true));
-        assert_eq!(short_decode.cpu_total_ms_mean, Some(147593.0));
-        assert_eq!(short_decode.cuda_total_ms_mean, Some(1866.0));
-
-        let warm_context = qualification
-            .profile_reviews
-            .iter()
-            .find(|profile| profile.profile == "decode_128_from_warm_context")
-            .ok_or_else(|| anyhow!("decode_128_from_warm_context profile missing"))?;
-        assert_eq!(warm_context.decision.as_deref(), Some("not_accepted"));
-        assert_eq!(warm_context.benchmark_qualified_speedup, Some(false));
-        assert_eq!(warm_context.fallback_free, Some(false));
-        assert_eq!(warm_context.quality_passed, Some(false));
-        assert_eq!(warm_context.blockers, vec!["profile receipt missing"]);
-        Ok(())
     }
 
     #[test]

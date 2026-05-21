@@ -1,5 +1,11 @@
 # Comprehensive Validation Summary
 
+> Claim boundary: this is a historical validation summary from an older branch.
+> Ready-for-integration, performance, AVX2, receipt, correctness, and
+> inference-working wording records that dated context only. Current support,
+> speed, backend execution, quality, and product-readiness claims must come
+> from active receipts, model coverage, status docs, specs, and claim gates.
+
 **Status:** ✅ **ALL VALIDATIONS PASSED**
 **Date:** 2025-10-24
 **Branch:** `feat/comprehensive-integration-qk256-envguard-receipts-strict-avx2`

@@ -1,3 +1,12 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
+> Historical CI artifact only. This file records a past PR, gate, check run,
+> review, or agent handoff and must not be read as a current BitNet-rs support,
+> speedup, CUDA/GPU, server-readiness, residency, reference-parity, quality,
+> or product-readiness claim. Current claims must come from active model
+> coverage, receipts, specs, status docs, and claim gates.
+
 # Ripgrep Patterns in BitNet-rs CI & Hooks
 
 Complete reference for all ripgrep (`rg`) usage in CI/CD pipeline and git hooks.

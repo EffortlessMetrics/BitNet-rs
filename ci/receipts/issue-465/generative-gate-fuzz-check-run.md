@@ -1,3 +1,10 @@
+> Historical CI receipt artifact only: this file is an archived issue receipt
+> from an older generated-validation or review-gate packet. Production-ready,
+> throughput, tok/s, GPU/CUDA/OpenCL/A770, AVX, receipt, quality,
+> and release-readiness wording here is historical context only and is not a
+> current support, speed, backend, quality, or release claim. Current claims
+> must come from active receipts, model coverage, status docs, specs, and claim gates.
+
 # Fuzz Testing Gate - Issue #465: CPU Path Followup
 
 **Flow:** Generative

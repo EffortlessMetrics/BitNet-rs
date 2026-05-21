@@ -18,24 +18,6 @@ const QWEN3_REPEATED_COMPARATOR_PROFILES: &[&str] = &[
     "warm_session_3_turns",
     "decode_128_from_warm_context",
 ];
-const STRICT_CUDA_PRODUCT_PROFILES_V1: &[&str] = &[
-    "one_token",
-    "short_decode_8",
-    "short_decode_32",
-    "warm_session_3_turns",
-    "warm_session_10_turns",
-];
-const STRICT_CUDA_PERF_005_PROFILE_MATRIX_ID: &str = "cuda-bitnet-perf-005";
-const STRICT_CUDA_PERF_005_PROFILES: &[&str] = &[
-    "one_token",
-    "short_decode_8",
-    "short_decode_32",
-    "prefill_128_decode_16",
-    "prefill_512_decode_32",
-    "warm_session_3_turns",
-    "warm_session_10_turns",
-    "decode_128_from_warm_context",
-];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum DenseQwenBenchmarkModel {
@@ -2144,13 +2126,19 @@ fn validate_strict_cuda_product_qualification_profiles(
     profile_reviews: &[serde_json::Value],
     evidence: &serde_json::Value,
 ) -> Result<(), ReceiptError> {
-    let expected_profiles = strict_cuda_expected_product_profiles(receipt)?;
+    const EXPECTED: [&str; 5] = [
+        "one_token",
+        "short_decode_8",
+        "short_decode_32",
+        "warm_session_3_turns",
+        "warm_session_10_turns",
+    ];
 
     let target_profiles = require_array(receipt, "target_profiles")?;
-    if target_profiles.len() != expected_profiles.len() {
+    if target_profiles.len() != EXPECTED.len() {
         return Err(validation_error(format!(
             "target_profiles must contain exactly {} profiles",
-            expected_profiles.len()
+            EXPECTED.len()
         )));
     }
 
@@ -2159,7 +2147,7 @@ fn validate_strict_cuda_product_qualification_profiles(
         let Some(profile) = value.as_str() else {
             return Err(validation_error("target_profiles entries must be strings"));
         };
-        if !expected_profiles.contains(&profile) {
+        if !EXPECTED.contains(&profile) {
             return Err(validation_error(format!("unexpected target profile {profile}")));
         }
         if !seen.insert(profile.to_string()) {
@@ -2167,18 +2155,18 @@ fn validate_strict_cuda_product_qualification_profiles(
         }
     }
 
-    if profile_reviews.len() != expected_profiles.len() {
+    if profile_reviews.len() != EXPECTED.len() {
         return Err(validation_error(format!(
             "profile_reviews must contain exactly {} product profiles",
-            expected_profiles.len()
+            EXPECTED.len()
         )));
     }
 
     let blocked_profiles = require_array(decision, "blocked_profiles")?;
-    if blocked_profiles.len() != expected_profiles.len() {
+    if blocked_profiles.len() != EXPECTED.len() {
         return Err(validation_error(format!(
             "blocked_profiles must contain exactly {} product profiles",
-            expected_profiles.len()
+            EXPECTED.len()
         )));
     }
 
@@ -2187,7 +2175,7 @@ fn validate_strict_cuda_product_qualification_profiles(
         let Some(profile) = value.as_str() else {
             return Err(validation_error("blocked_profiles entries must be strings"));
         };
-        if !expected_profiles.contains(&profile) {
+        if !EXPECTED.contains(&profile) {
             return Err(validation_error(format!("unexpected blocked profile {profile}")));
         }
         if !seen_blocked.insert(profile.to_string()) {
@@ -2214,7 +2202,7 @@ fn validate_strict_cuda_product_qualification_profiles(
     require_non_negative_number(warm_session, "cuda_median_total_session_ms")?;
     require_bool_eq(warm_session, "speedup_claim", false)?;
 
-    for &expected in expected_profiles {
+    for expected in EXPECTED {
         require_string_array_contains(blocked_profiles, expected, "blocked_profiles")?;
 
         let review = find_object_by_string_field(profile_reviews, "profile", expected)
@@ -2260,16 +2248,6 @@ fn validate_strict_cuda_product_qualification_profiles(
     require_bool_eq(policy, "bitnet_packed_i2s_qk256_only", true)?;
 
     Ok(())
-}
-
-fn strict_cuda_expected_product_profiles(
-    receipt: &serde_json::Value,
-) -> Result<&'static [&'static str], ReceiptError> {
-    match receipt.get("profile_matrix_id").and_then(serde_json::Value::as_str) {
-        Some(STRICT_CUDA_PERF_005_PROFILE_MATRIX_ID) => Ok(STRICT_CUDA_PERF_005_PROFILES),
-        Some(other) => Err(validation_error(format!("unsupported profile_matrix_id {other}"))),
-        None => Ok(STRICT_CUDA_PRODUCT_PROFILES_V1),
-    }
 }
 
 fn validate_dense_qwen_qualification_profile_review(

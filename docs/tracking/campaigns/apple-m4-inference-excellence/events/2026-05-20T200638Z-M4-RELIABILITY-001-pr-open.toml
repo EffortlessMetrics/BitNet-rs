@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T20:06:38Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-RELIABILITY-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6154
+head_sha = "f64e3d55207bc67c5f33341d747e70ae059075e5"
+branch = "codex/apple-m4-inference-excellence/M4-RELIABILITY-001-recovery-drills"
+
+notes = [
+  "Opened PR #6154 for M4-RELIABILITY-001 recovery-drill receipts.",
+  "`bitnet mac reliability-drill` writes an `apple_m4_reliability_drills` receipt covering interrupted generation, client cancellation, timeout, interrupted receipt write, missing cache, corrupt cache, low disk, process restart, and retry guidance across dense SLM, BitNet one-shot ask, and BitNet warm route families.",
+  "The committed receipt is model-free and validates with receipts-check; it records `fallback_used=false`, no live model run, and explicit boundaries against BitNet chat/serve, service production readiness, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, or broad performance claims.",
+]

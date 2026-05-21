@@ -1,4 +1,13 @@
+<!-- markdownlint-disable -->
+<!-- Historical CI artifact formatting intentionally preserved. -->
+
 # Security Validation Report - Issue #453
+
+> Historical CI artifact only. This report records a 2025 issue/gate decision
+> and must not be read as a current BitNet-rs support, speedup, CUDA/GPU,
+> server-readiness, residency, reference-parity, quality, or product-readiness
+> claim. Current claims must come from active model coverage, receipts, specs,
+> status docs, and claim gates.
 
 **Date:** 2025-10-14
 **Branch:** feat/issue-453-strict-quantization-guards

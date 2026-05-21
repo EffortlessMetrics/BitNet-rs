@@ -32,6 +32,17 @@
 > answer quality is still under validation, so generated BitNet text should be
 > treated as diagnostic output until a strict proof lane accepts it.
 
+## Development Intake Has Moved
+
+Active feature, hardware, performance, diagnostic, and refactor work now happens
+in
+[`EffortlessMetrics/bitnet-rs-swarm`](https://github.com/EffortlessMetrics/bitnet-rs-swarm).
+This repository is the release and publish repository for BitNet-rs. Open normal
+development PRs in `bitnet-rs-swarm`; PRs here are limited to release promotion,
+versioning, changelog, packaging, signing, publish, emergency security or
+release-blocking hotfixes, and documentation corrections needed for released
+artifacts.
+
 ## What This Repo Is For
 
 BitNet-rs is moving toward a Rust-native local model runner with strict proof

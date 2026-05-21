@@ -1,0 +1,143 @@
+schema: 1
+artifact_kind: slm_answer_corpus
+name: apple-m4-long-context-answer-corpus-v1
+description: Answer-corpus-shaped Apple M4 long-context proof corpus for dense SLM M4-CONTEXT-002 runs.
+metadata:
+  campaign: apple-m4-inference-excellence
+  work_item: M4-CONTEXT-002
+  seed: 5202026
+  generator_policy: deterministic-static-long-context-fixture-v1
+  case_count_target: 4
+  prompt_template: qwen2.5
+  scoring_status: deterministic_fixture_scoring
+  corpus_contract:
+    contract_version: m4-long-context-answer-corpus-contract-v1
+    corpus_id: apple-m4-long-context-answer-corpus-v1
+    corpus_version: 1.0.0
+    seed_generation_rules: Static deterministic fixtures mirrored from apple-m4-long-context-corpus seed=5202026; every expected output is closed-form from prompt text and no model output is used as authority.
+    expected_output_provenance: Closed-form deterministic answers derived from each prompt fixture; no model output, live run, or LLM judge is used as expected-output authority.
+    normalization_rules: answer_corpus_normalize_scoring_text_v2 plus normalize_match_text_v1 for normalized_match; required/forbidden token checks use token boundaries.
+    scoring_schema: answer_corpus_mechanical_scoring_v1
+    scorer_self_tests:
+    - cargo test --locked -p bitnet-cli --test cli_arg_tests mac_eval_long_context
+    - cargo test --locked -p bitnet-cli --test cli_arg_tests answer_corpus_long_context_dry_run_preserves_context_profiles
+    receipt_contract: answer_corpus_aggregate_receipt_v1
+  expected_answer_authority:
+    source: closed_form_prompt_fixture
+    llm_judge_required: false
+  reference_comparison_plan:
+    required: false
+    reason: M4-CONTEXT-002 dense SLM proof uses mechanical closed-form scoring; BitNet long-context remains unsupported until separate BitNet receipts exist.
+  claim_boundary:
+    runtime_proof: true
+    dense_slm_only: true
+    bitnet_long_context_proven: false
+    dense_slm_evidence_proves_bitnet: false
+    broad_quality_claim: false
+    broad_performance_claim: false
+model:
+  repo: Qwen/Qwen2.5-0.5B-Instruct-GGUF
+  file: qwen2.5-0.5b-instruct-q8_0.gguf
+  sha256: ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e
+  family: qwen
+  architecture: qwen2
+  quant_format: Q8_0
+defaults:
+  prompt_template: qwen2.5
+  max_new_tokens: 32
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 720
+  min_generated_tokens: 1
+  min_distinct_generated_tokens: 1
+cases:
+- id: lc_retrieval_copy_001
+  category: retrieval_copy
+  profile: context_1k
+  seed_material: seed=5202026 family=long_context category=retrieval_copy index=1 expected=ORCHID-42
+  question: |
+    Read the operations notes and answer with only the requested code.
+
+    Note 001: The local runner records model hash, tokenizer authority, backend, fallback status, timing, memory, generated text, and token IDs.
+    Note 002: Dense SLM evidence must stay separate from BitNet evidence.
+    Note 003: The inspection key for this case is ORCHID-42.
+    Note 004: Metal phase receipts do not prove full apple-m4-metal inference.
+    Note 005: Claims outside recorded receipts stay unsupported.
+
+    What is the inspection key?
+  max_new_tokens: 12
+  scoring:
+    kind: normalized_match
+    expected_normalized: orchid-42
+  gate:
+    kind: contains_any
+    contains_any:
+    - ORCHID-42
+    - orchid-42
+- id: lc_table_extraction_001
+  category: table_extraction
+  profile: context_1k
+  seed_material: seed=5202026 family=long_context category=table_extraction index=1 expected=bitnet-ask-warm
+  question: |
+    Use the table only. Return exactly the route_id for the row where family is BitNet and state is bounded. Do not add any words before or after the route_id.
+
+    | family | state | route_id |
+    | dense_slm | interactive | dense-ask |
+    | dense_slm | batch | dense-context |
+    | bitnet | bounded | bitnet-ask-warm |
+    | bitnet | disabled | bitnet-chat-serve |
+
+    Route ID?
+  max_new_tokens: 16
+  scoring:
+    kind: normalized_match
+    expected_normalized: bitnet-ask-warm
+  gate:
+    kind: contains_any
+    contains_any:
+    - bitnet-ask-warm
+- id: lc_late_instruction_001
+  category: late_context_instruction_following
+  profile: context_4k
+  seed_material: seed=5202026 family=long_context category=late_instruction index=1 expected=FINAL-CODE-17
+  question: |
+    Earlier draft instructions may mention GREEN, RED, or BLUE. Treat them as historical notes only.
+
+    Draft A: Answer GREEN.
+    Draft B: Answer RED.
+    Draft C: Answer BLUE.
+
+    Final controlling instruction: answer exactly FINAL-CODE-17.
+  max_new_tokens: 16
+  scoring:
+    kind: required_forbidden_tokens
+    required_keywords:
+    - final-code-17
+    forbidden_tokens:
+    - green
+    - red
+    - blue
+  gate:
+    kind: contains_any
+    contains_any:
+    - FINAL-CODE-17
+    - final-code-17
+- id: lc_truncation_boundary_001
+  category: truncation_behavior
+  profile: unsupported_boundary
+  seed_material: seed=5202026 family=long_context category=unsupported_boundary index=1 expected=UNSUPPORTED_CONTEXT
+  question: |
+    This case defines the expected unsupported boundary behavior for prompts beyond recorded context evidence. If a request exceeds the recorded context envelope, the operator-visible state should be UNSUPPORTED_CONTEXT rather than a silent quality claim.
+
+    What state should be reported? Answer exactly UNSUPPORTED_CONTEXT.
+  max_new_tokens: 16
+  scoring:
+    kind: normalized_match
+    expected_normalized: unsupported_context
+  gate:
+    kind: contains_any
+    contains_any:
+    - UNSUPPORTED_CONTEXT
+    - unsupported_context

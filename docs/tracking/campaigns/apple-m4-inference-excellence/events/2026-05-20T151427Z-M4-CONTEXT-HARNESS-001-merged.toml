@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T15:14:27Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CONTEXT-HARNESS-001"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 6137
+head_sha = "9c04e76f4f4ef5a12f7a862ba7fa491f3dac44bd"
+merge_sha = "1280d5b06715954d5980bc8812b1bb873effd485"
+summary = "Merge the M4 long-context command contract and context benchmark alias."
+notes = [
+  "PR #6137 registered the m4-long-context dry-run corpus contract and receipt-checkable summary.",
+  "The PR added the context benchmark profile alias without creating a new benchmark contract profile.",
+  "No live M4 long-context quality receipt, timing receipt, BitNet long-context proof, Metal, QK256, Neural Engine, MPSGraph, speedup, broad model quality, or broad Apple Silicon performance claim was made.",
+]

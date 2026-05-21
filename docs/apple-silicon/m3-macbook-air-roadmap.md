@@ -354,16 +354,6 @@ completion posture: preflight before expensive work, selected runs allowed to
 finish, phase evidence retained, and timeout caps based on successful completed
 runs plus cushion.
 
-`M3MBA-023` extends that staged workflow with an explicit `performance` profile
-shape. The profile records cold-load sample count, warm prompt sample count,
-token budget, storage state, power/thermal host context, and timeout-cap
-provenance in the retained artifact bundle before any timing value can be used.
-The cap provenance names completed healthy run evidence plus cushion; timed-out
-or cancelled attempts remain cap-failure actuals and are excluded from healthy
-runtime samples. A performance run may report timing only for the selected M3
-MacBook Air receipt it produced, not for M4 Mac mini, broad Apple Silicon,
-Metal, MPSGraph, Neural Engine, QK256, or BitNet answer-quality claims.
-
 If these rules make a live M3 job too expensive for ordinary PR CI, the correct
 design is to route it to a manual, labeled, scheduled, release, or campaign lane.
 It is not correct to start the job and cap it just short of receipt emission.
@@ -911,15 +901,12 @@ execution queue.
 
 ## Post-Handoff Near-Term Order
 
-1. `M3MBA-019` is merged; keep the roadmap, campaign prose, and generated
-   tracker aligned with the post-handoff state.
-2. `M3MBA-020` and `M3MBA-021` are merged, and `M3MBA-026` is the active
-   device-model hardening follow-up. It is limited to server shared-engine
-   receipt backend labeling so CPU/NEON, Metal, and MPSGraph M3 Air identities
-   remain distinct from generic active-model devices and M4 proof labels even
-   when the active model reports CUDA metadata.
-3. Use `M3MBA-022` as the merged accuracy comparison baseline around bounded
-   dense SLM receipts
+1. Merge `M3MBA-019` so the roadmap, campaign prose, and generated tracker agree
+   with the post-handoff state.
+2. Create the next device-model hardening item only around concrete M3 Air
+   receipt, help, or rejection behavior that keeps CPU/NEON, Metal, and MPSGraph
+   labels distinct.
+3. Create the next accuracy comparison item around bounded dense SLM receipts
    with exact prompt IDs, generated IDs, tokenizer authority, backend identity,
    fallback state, and comparable/non-comparable decisions.
 4. Create the next M3 performance item only from completed-run actuals with

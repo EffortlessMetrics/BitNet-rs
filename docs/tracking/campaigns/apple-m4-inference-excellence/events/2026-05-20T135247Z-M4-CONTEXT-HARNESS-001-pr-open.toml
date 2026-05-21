@@ -1,0 +1,16 @@
+timestamp = "2026-05-20T13:52:47Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CONTEXT-HARNESS-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-HARNESS-001-long-context-command-contract"
+pr = 6137
+head_sha = "6b4e9c5d9ddc853c0f5c516b2ca61e2eb799a1c1"
+
+notes = [
+  "Opened PR #6137 to add the M4 long-context command contract needed before the live M4-CONTEXT-002 proof run.",
+  "The PR registers the `m4-long-context` dry-run eval contract, adds a receipt-checkable deterministic long-context corpus, and makes `bitnet mac benchmark --profile context` expand to `context_1k` and `context_4k`.",
+  "M4-CONTEXT-002 remains proposed and blocked on this harness item; no live M4 long-context quality receipt, timing receipt, BitNet long-context proof, full Metal, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup, broad model quality, broad performance, or broad Apple Silicon performance claim is in scope.",
+]

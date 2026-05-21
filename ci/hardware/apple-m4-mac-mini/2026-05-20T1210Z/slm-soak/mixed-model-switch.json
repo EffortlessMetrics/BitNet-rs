@@ -1,0 +1,271 @@
+{
+  "artifact_kind": "apple_m4_slm_mixed_model_switch_soak_v1",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch.json",
+  "build": {
+    "profile": "release",
+    "release_mode": true
+  },
+  "child_profile_id": "resident_25",
+  "comparison_readiness": {
+    "can_compare_timing": true,
+    "invalid_comparison_reasons": [],
+    "status": "comparable"
+  },
+  "evidence": {
+    "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+    "child_summary_receipts": [
+      "ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch-runs/01-qwen2.5-0.5b-instruct-q8_0/summary.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch-runs/02-qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+      "ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch-runs/03-qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+    ],
+    "generated_text_recorded": true,
+    "generated_token_ids_recorded": true,
+    "operator_command": "mac benchmark"
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generated_tokens": 607,
+  "invalid_comparison_reasons": [],
+  "mac_claim_boundary": {
+    "bitnet_performance_claimed": false,
+    "bitnet_quality_claimed": false,
+    "bounded_benchmark_profiles_only": true,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dense_slm_only": true,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence": false,
+    "mixed_model_switch_soak": true,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false
+  },
+  "memory": {
+    "child_peak_memory_mb": {
+      "count": 3,
+      "max": 6416.563,
+      "min": 3615.313,
+      "p50": 3756.375,
+      "p90": 6416.563,
+      "p99": 6416.563,
+      "samples": [
+        3756.375,
+        3615.313,
+        6416.563
+      ]
+    },
+    "end_peak_memory_mb": 15.375,
+    "process_peak_drift_mb": 1.922,
+    "source": "parent getrusage plus child apple_m4_slm_benchmark_v2 summaries",
+    "start_peak_memory_mb": 13.453
+  },
+  "model_cache_set": [
+    {
+      "architecture": "qwen2",
+      "bytes": 675710816,
+      "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+      "chat_template": true,
+      "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+      "id": "qwen2.5-0.5b-instruct-q8_0",
+      "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+      "quantization": "Q8_0",
+      "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+      "support_note": "Rust-native Apple M4 CPU/NEON SLM baseline artifact; RTX 5070 Ti dense CUDA ask is bounded to the CUDA-UX-003 receipt gate.",
+      "tokenizer_model": "gpt2",
+      "tokenizer_pre": "qwen2"
+    },
+    {
+      "architecture": "qwen2",
+      "bytes": 491400032,
+      "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+      "chat_template": true,
+      "display_name": "Qwen2.5 0.5B Instruct Q4_K_M",
+      "id": "qwen2.5-0.5b-instruct-q4_k_m",
+      "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q4_k_m/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+      "quantization": "Q4_K_M",
+      "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+      "support_note": "Rust-native Apple M4 CPU/NEON storage-conscious SLM artifact.",
+      "tokenizer_model": "gpt2",
+      "tokenizer_pre": "qwen2"
+    },
+    {
+      "architecture": "qwen2",
+      "bytes": 1117320736,
+      "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+      "chat_template": true,
+      "display_name": "Qwen2.5 1.5B Instruct Q4_K_M",
+      "id": "qwen2.5-1.5b-instruct-q4_k_m",
+      "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-1.5b-instruct-q4_k_m/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "quantization": "Q4_K_M",
+      "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+      "support_note": "Rust-native Apple M4 CPU/NEON larger Qwen-class SLM artifact; non-default.",
+      "tokenizer_model": "gpt2",
+      "tokenizer_pre": "qwen2"
+    }
+  ],
+  "profile_id": "mixed_model_switch",
+  "profile_set": "slm-mixed-model-switch-v1",
+  "prompt_count": 75,
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "sequence_model_ids": [
+    "qwen2.5-0.5b-instruct-q8_0",
+    "qwen2.5-0.5b-instruct-q4_k_m",
+    "qwen2.5-1.5b-instruct-q4_k_m"
+  ],
+  "speedup_claim": false,
+  "supported_model_ids": [
+    "qwen2.5-0.5b-instruct-q8_0",
+    "qwen2.5-0.5b-instruct-q4_k_m",
+    "qwen2.5-1.5b-instruct-q4_k_m"
+  ],
+  "switch_contract": {
+    "child_artifact_kind": "apple_m4_slm_benchmark_v2",
+    "child_profile_id": "resident_25",
+    "contract_version": "1.0.0",
+    "dense_slm_only": true,
+    "model_cache_reuse": "verified cached GGUF identities are reused from the local filesystem cache before each child run",
+    "model_unload_reload_boundary": "each model identity is run through an isolated benchmark summary; child warm-session processes exit between profile/model identities",
+    "profile_execution_model": "one resident_25 benchmark summary per supported dense model identity",
+    "receipt_separation_per_model_identity": true,
+    "scope": "Apple M4 Mac mini mixed dense SLM model switch soak"
+  },
+  "switches": [
+    {
+      "child_profile_receipts": [
+        "ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch-runs/01-qwen2.5-0.5b-instruct-q8_0/summary-profiles/resident_25.json"
+      ],
+      "child_summary_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch-runs/01-qwen2.5-0.5b-instruct-q8_0/summary.json",
+      "comparison_readiness": {
+        "can_compare_timing": true,
+        "invalid_comparison_reasons": [],
+        "status": "comparable"
+      },
+      "fallback_used": false,
+      "generated_tokens": 195,
+      "invalid_comparison_reasons": [],
+      "memory": {
+        "end_peak_memory_mb": 15.156,
+        "memory_drift_mb_p50": 0.0,
+        "memory_drift_mb_p90": 0.0,
+        "memory_drift_mb_p99": 0.0,
+        "peak_memory_mb_p50": 3756.375,
+        "peak_memory_mb_p90": 3756.375,
+        "peak_memory_mb_p99": 3756.375,
+        "process_peak_drift_mb": 1.672,
+        "source": "getrusage.ru_maxrss process peak delta",
+        "start_peak_memory_mb": 13.484
+      },
+      "model_cache": {
+        "architecture": "qwen2",
+        "bytes": 675710816,
+        "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+        "chat_template": true,
+        "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+        "id": "qwen2.5-0.5b-instruct-q8_0",
+        "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+        "quantization": "Q8_0",
+        "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+        "support_note": "Rust-native Apple M4 CPU/NEON SLM baseline artifact; RTX 5070 Ti dense CUDA ask is bounded to the CUDA-UX-003 receipt gate.",
+        "tokenizer_model": "gpt2",
+        "tokenizer_pre": "qwen2"
+      },
+      "profile_id": "resident_25",
+      "prompt_count": 25,
+      "sequence_index": 1,
+      "status": "completed"
+    },
+    {
+      "child_profile_receipts": [
+        "ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch-runs/02-qwen2.5-0.5b-instruct-q4_k_m/summary-profiles/resident_25.json"
+      ],
+      "child_summary_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch-runs/02-qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+      "comparison_readiness": {
+        "can_compare_timing": true,
+        "invalid_comparison_reasons": [],
+        "status": "comparable"
+      },
+      "fallback_used": false,
+      "generated_tokens": 217,
+      "invalid_comparison_reasons": [],
+      "memory": {
+        "end_peak_memory_mb": 15.344,
+        "memory_drift_mb_p50": 0.0,
+        "memory_drift_mb_p90": 0.0,
+        "memory_drift_mb_p99": 0.0,
+        "peak_memory_mb_p50": 3615.313,
+        "peak_memory_mb_p90": 3615.313,
+        "peak_memory_mb_p99": 3615.313,
+        "process_peak_drift_mb": 0.047,
+        "source": "getrusage.ru_maxrss process peak delta",
+        "start_peak_memory_mb": 15.297
+      },
+      "model_cache": {
+        "architecture": "qwen2",
+        "bytes": 491400032,
+        "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+        "chat_template": true,
+        "display_name": "Qwen2.5 0.5B Instruct Q4_K_M",
+        "id": "qwen2.5-0.5b-instruct-q4_k_m",
+        "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q4_k_m/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        "quantization": "Q4_K_M",
+        "sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+        "support_note": "Rust-native Apple M4 CPU/NEON storage-conscious SLM artifact.",
+        "tokenizer_model": "gpt2",
+        "tokenizer_pre": "qwen2"
+      },
+      "profile_id": "resident_25",
+      "prompt_count": 25,
+      "sequence_index": 2,
+      "status": "completed"
+    },
+    {
+      "child_profile_receipts": [
+        "ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch-runs/03-qwen2.5-1.5b-instruct-q4_k_m/summary-profiles/resident_25.json"
+      ],
+      "child_summary_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch-runs/03-qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+      "comparison_readiness": {
+        "can_compare_timing": true,
+        "invalid_comparison_reasons": [],
+        "status": "comparable"
+      },
+      "fallback_used": false,
+      "generated_tokens": 195,
+      "invalid_comparison_reasons": [],
+      "memory": {
+        "end_peak_memory_mb": 15.375,
+        "memory_drift_mb_p50": 0.0,
+        "memory_drift_mb_p90": 0.0,
+        "memory_drift_mb_p99": 0.0,
+        "peak_memory_mb_p50": 6416.563,
+        "peak_memory_mb_p90": 6416.563,
+        "peak_memory_mb_p99": 6416.563,
+        "process_peak_drift_mb": 0.016,
+        "source": "getrusage.ru_maxrss process peak delta",
+        "start_peak_memory_mb": 15.359
+      },
+      "model_cache": {
+        "architecture": "qwen2",
+        "bytes": 1117320736,
+        "cache_root": "/Users/steven/Library/Caches/bitnet-rs/models",
+        "chat_template": true,
+        "display_name": "Qwen2.5 1.5B Instruct Q4_K_M",
+        "id": "qwen2.5-1.5b-instruct-q4_k_m",
+        "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-1.5b-instruct-q4_k_m/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        "quantization": "Q4_K_M",
+        "sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+        "support_note": "Rust-native Apple M4 CPU/NEON larger Qwen-class SLM artifact; non-default.",
+        "tokenizer_model": "gpt2",
+        "tokenizer_pre": "qwen2"
+      },
+      "profile_id": "resident_25",
+      "prompt_count": 25,
+      "sequence_index": 3,
+      "status": "completed"
+    }
+  ],
+  "timestamp": "2026-05-20T12:38:30.894235+00:00"
+}

@@ -1,3 +1,9 @@
+> Historical CI artifact only: this file is an archived exploration note from an
+> older CI/PR investigation. Production-ready, performance, AVX, GPU, CUDA,
+> receipt, strict-mode, and merge-readiness wording here is historical context
+> only and is not a current support, speed, backend, quality, or release claim.
+> Current claims must come from active receipts, model coverage, status docs,
+> specs, and claim gates.
 # Markdownlint Formatting Issues Analysis: MERGE_READY_SUMMARY.md
 
 **Analysis Date**: 2025-10-22

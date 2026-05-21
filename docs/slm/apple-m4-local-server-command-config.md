@@ -102,6 +102,21 @@ checks one completion and receipt export. The `/models` check records the
 recommended first model ID plus exact fetch/verify commands when disk headroom
 allows a supported model fetch.
 
+For the M4 excellence server refresh, use the dense-only in-process smoke to
+exercise the same local server handlers without enabling BitNet serve:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac serve-smoke \
+  --model-id qwen2.5-0.5b-instruct-q8_0 \
+  --receipt-dir ci/hardware/apple-m4-mac-mini/<date>/slm-serve/qwen2.5-0.5b-instruct-q8_0/receipts \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-serve/qwen2.5-0.5b-instruct-q8_0/serve-smoke.json
+```
+
+`serve-smoke` verifies health, ready, models, non-streaming completion,
+streaming completion, per-request receipt export, backend/fallback fields, and
+claim boundaries. It remains a local conformance receipt, not production
+hosting, broad OpenAI compatibility, BitNet serve readiness, or Metal evidence.
+
 ## Config File Shape
 
 The server should accept an optional config file equivalent to the command-line
@@ -216,7 +231,7 @@ directory. Missing or invalid cache still prevents startup.
 
 Every completed generation request should be able to export a receipt with:
 
-- `artifact_kind = "bitnet_apple_m4_local_server_request"`;
+- `artifact_kind = "bitnet_apple_m4_local_server_completion"`;
 - `server.host`, `server.port`, `server.endpoint`, and `server.request_id`;
 - model ID, source, size, SHA256, and SHA256 source;
 - tokenizer authority and prompt template;

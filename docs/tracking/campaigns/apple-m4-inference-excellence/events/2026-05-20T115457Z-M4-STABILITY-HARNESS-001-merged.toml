@@ -1,0 +1,18 @@
+timestamp = "2026-05-20T11:54:57Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-STABILITY-HARNESS-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6131
+head_sha = "6dcf19ce033000e42628ead5ea6aa05e50c6d847"
+merge_sha = "17288cc07e2f78e724b3a76d166cf493a9ed9a3b"
+branch = "codex/apple-m4-inference-excellence/M4-STABILITY-HARNESS-001-mixed-model-profile"
+
+notes = [
+  "Merged PR #6131, adding the mixed dense-model switch benchmark harness and receipt validator needed before live M4 stability evidence.",
+  "`bitnet mac benchmark --profile mixed_model_switch` now aggregates one resident_25 child benchmark summary per supported dense M4 model identity while preserving per-model child receipts, cache identity, backend, fallback, memory, and claim-boundary checks.",
+  "This is harness-only closeout; it does not publish a live mixed-model switch soak or prove M4-STABILITY-001 evidence.",
+  "No BitNet behavior, BitNet chat or serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup, broad quality, or broad Apple Silicon performance claim was made.",
+]

@@ -1,4 +1,13 @@
+<!-- markdownlint-disable -->
+<!-- Historical artifact formatting intentionally preserved. -->
+
 # PR #473 Post-Merge Finalization Evidence
+
+> Historical validation artifact only. This report records the 2025 PR #473
+> post-merge finalization decision and must not be read as a current BitNet-rs
+> support, AVX2 speedup, CUDA/GPU, server-readiness, residency, or
+> product-readiness claim. Current claims must come from active receipts and
+> claim gates.
 
 **Document**: Post-merge verification and finalization report
 **Date**: 2025-10-22T04:30:00Z
@@ -80,16 +89,18 @@ Architecture: Comprehensive and up-to-date
 
 ### Inference Performance
 - **Throughput**: 2.8 seconds (well within 10-second SLO)
-- **Status**: Performance target maintained
+- **Status**: Historical performance target recorded for this gate
 - **Quantization Accuracy**: >99% for I2S, TL1, TL2 vs FP32 reference
 - **Cross-Validation**: Rust vs C++ parity within 1e-5 tolerance
 
 ### Feature Validation
-- **QK256 AVX2**: ~1.2× speedup with runtime dispatch (scalar fallback)
+- **QK256 AVX2**: historical gate recorded ~1.2x speedup with runtime dispatch
+  and scalar fallback; not a current accepted speedup claim
 - **Stop Token Lookup**: O(1) implementation (HashSet, from binary search)
 - **Receipt Schema**: v1.0.0 with compute_path enforcement
 - **Health Endpoints**: <200ms SLO compliance
-- **GPU Compatibility**: CUDA kernels validated where applicable
+- **GPU Compatibility**: historical CUDA validation note; not a current CUDA
+  support promotion
 
 ## Post-Merge Actions Completed
 
@@ -140,7 +151,8 @@ Architecture: Comprehensive and up-to-date
 
 **Version**: v0.1.0-qna-mvp
 **Release Date**: 2025-10-22 (via PR #473 merge)
-**Status**: Production-ready MVP
+**Status**: Historical MVP baseline record; not a current product-readiness
+claim
 
 ### Validated Features
 - CPU inference with SIMD optimization (AVX2/AVX-512/NEON)
@@ -154,7 +166,8 @@ Architecture: Comprehensive and up-to-date
 
 ### Known Limitations
 - QK256 scalar kernels: ~0.1 tok/s baseline (SIMD planned)
-- AVX2 speedup: ~1.2× (target ≥3× post-MVP)
+- AVX2 speedup: historical ~1.2x gate note; current speed claims require
+  exact-profile receipts and claim review
 - Model quality: microsoft-bitnet-b1.58 has known issues
 - Test scaffolding: ~70 intentionally ignored tests (TDD)
 - Fixtures: Pending Issue #254 resolution

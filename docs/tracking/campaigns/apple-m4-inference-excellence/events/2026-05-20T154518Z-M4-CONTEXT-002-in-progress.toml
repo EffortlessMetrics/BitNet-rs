@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T15:45:18Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CONTEXT-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-CONTEXT-002-long-context-proof"
+
+notes = [
+  "Started M4-CONTEXT-002 after M4-CONTEXT-HARNESS-001 merged and campaign next selected the live long-context proof item.",
+  "First implementation step wires the long-context suite toward release answer-corpus receipts and preserves the existing dry-run contract surface.",
+  "No live long-context quality or timing proof is claimed until M4 CPU/NEON answer-corpus and context benchmark receipts are produced and checked.",
+]

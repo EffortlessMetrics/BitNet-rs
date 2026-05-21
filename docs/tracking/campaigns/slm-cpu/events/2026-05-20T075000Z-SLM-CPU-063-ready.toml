@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T07:50:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-063"
+event = "in_progress"
+previous_status = "none"
+new_status = "ready"
+actor = "codex"
+summary = "Add SLM-CPU-063 as the BitNet-rs release-surface intake gate for audited Kaby SLM artifacts produced by bitnet-rs-swarm."
+notes = [
+  "SLM-CPU-062 closed the BitNet-rs release-surface handoff checkpoint.",
+  "SLM-CPU-063 keeps the SLM CPU dashboard pointed at a live release-surface intake gate instead of an already-merged implementation slice.",
+  "Returned artifacts must preserve model SHA, strict GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU backend/kernel identity, dense hook-selection identity, and fallback_used=false before promotion.",
+  "This is tracker and documentation scope only; no runtime, receipt schema, model artifact, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, Q4/Q5, throughput, or BitNet QK256 claim is made.",
+]

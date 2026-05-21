@@ -3,7 +3,18 @@ name: Apple M4 SLM Eval Tier 0
 on:
   pull_request:
     branches: [main]
-    types: [labeled]
+    paths:
+      - '.github/workflows/apple-m4-slm-eval-tier0.yml'
+      - 'ci/quality/apple-m4-slm-eval-seeded-corpus.yaml'
+      - 'ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml'
+      - 'ci/hardware/apple-m4-mac-mini/**/slm-eval/**/summary.json'
+      - 'ci/hardware/apple-m4-mac-mini/**/slm-eval-v2/**/summary.json'
+      - 'ci/hardware/apple-m4-mac-mini/**/slm-benchmark-v2/**/summary.json'
+      - 'crates/bitnet-cli/**'
+      - 'docs/slm/apple-m4-slm-eval-and-proof.md'
+      - 'docs/slm/apple-m4-slm-eval-v2.md'
+      - 'docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**'
+      - 'docs/tracking/campaigns/apple-m4-slm-eval-v2/**'
   push:
     branches: [main]
     paths:
@@ -41,11 +52,6 @@ env:
 jobs:
   tier0:
     name: Parser, Schema, And Report Checks
-    if: >-
-      github.event_name != 'pull_request' ||
-      contains(github.event.pull_request.labels.*.name, 'apple-m4') ||
-      contains(github.event.pull_request.labels.*.name, 'm4-slm-eval') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:

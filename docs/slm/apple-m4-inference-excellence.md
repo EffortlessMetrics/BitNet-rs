@@ -1125,6 +1125,192 @@ scheduled trend retention
 stale-identity aging
 ```
 
+`M4-STABILITY-001` records the first live mixed dense-model switch soak:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T1210Z/slm-soak/mixed-model-switch.json
+```
+
+The release-mode run exercises the three supported dense Qwen M4 identities in
+sequence with `resident_25` child summaries per model:
+
+| Model | Prompts | Generated tokens | Peak memory |
+|---|---:|---:|---:|
+| `qwen2.5-0.5b-instruct-q8_0` | 25 | 195 | 3756.375 MB |
+| `qwen2.5-0.5b-instruct-q4_k_m` | 25 | 217 | 3615.313 MB |
+| `qwen2.5-1.5b-instruct-q4_k_m` | 25 | 195 | 6416.563 MB |
+
+The aggregate receipt validates with `bitnet mac receipts-check`, records
+`prompt_count=75`, `generated_tokens=607`,
+`requested_backend=selected_backend=apple-m4-cpu-neon`, `runtime_api=cpu`,
+`fallback_used=false`, child receipt separation for each model identity, and
+parent process peak drift of `1.922 MB`. This is bounded dense SLM stability
+evidence for the recorded identities only. It is not BitNet evidence, not a
+broad benchmark, and not a Metal, QK256, Neural Engine, MPSGraph, MacBook,
+speedup, broad quality, or broad performance claim.
+
+`M4-STABILITY-003` defines the scheduled trend-retention policy for committed
+M4 dense SLM and BitNet evidence. The policy keeps trend claims tied to
+receipts that can still be compared by identity, while letting dashboard and
+operator summaries be regenerated from those retained receipts.
+
+`M4-RELIABILITY-001` adds a bounded model-free recovery-drill receipt:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T194116Z/reliability-drills/summary.json
+```
+
+The receipt records eight required drill classes across dense SLM, BitNet
+one-shot ask, and BitNet warm routes:
+
+```text
+interrupted_generation
+client_cancellation
+timeout
+interrupted_receipt_write
+missing_cache
+corrupt_cache
+low_disk
+process_restart
+```
+
+Each drill records the expected failure receipt obligations, `fallback_used=false`,
+operator-visible stage and elapsed-time requirements, and retry guidance. This
+is recovery-diagnostics and receipt-contract evidence only. It does not execute
+fresh live model interruption, enable BitNet chat or serve, prove service
+production readiness, claim full Metal, QK256, Neural Engine, MPSGraph,
+MacBook evidence, speedup, broad quality, or broad performance.
+
+Retain these committed receipt families for each current supported M4 identity:
+
+```text
+dense SLM eval-v2 aggregate reports and per-model summaries
+dense SLM benchmark-v2 summaries and profile timeout receipts
+dense SLM chat, smoke, context, and stability receipts used by route classes
+BitNet eval aggregate reports, including repaired-corpus summaries
+BitNet benchmark, variance, one-shot, and warm-session receipts
+BitNet gate receipts for any enabled chat or serve route
+setup, doctor, status, prune dry-run, and cache-repair receipts used by the envelope
+```
+
+For trend comparison, at least the current report and the previous matching
+baseline must remain committed for each dashboard group. Large child receipts
+may be retained only when the accepted evidence bundle needs them for receipt
+validation, generated text/token-ID audit, or failure taxonomy; otherwise the
+committed aggregate must preserve the child count, identity, scoring totals,
+failure categories, timing, memory, and receipt-validation status needed to
+reproduce the dashboard decision. Model binaries, local cache copies, and
+intermediate `target/` artifacts are not retention targets.
+
+Regenerate these summaries from retained receipts instead of treating them as
+source evidence:
+
+```text
+report-refresh manifest
+regression-dashboard JSON and Markdown
+operator evidence summary
+status tables and open-target explanations
+generated campaign status
+operator envelope class tables
+```
+
+Generated summaries should land in `target/apple-m4-inference-excellence/`
+during local refreshes unless the work item explicitly requires committing a
+summary or generated tracking file. A regenerated summary can change operator
+classification only when the retained source receipts support the same claim
+boundary.
+
+An identity becomes stale for current operator claims when any comparison
+identity field changes or is missing:
+
+```text
+model ID or model SHA256
+tokenizer authority or tokenizer SHA256
+prompt template, stop criteria, or generation identity
+corpus or benchmark profile version
+selected backend, runtime API, fallback state, or machine ID
+route gate receipt consumed by chat or serve
+receipt schema required for the dashboard group
+```
+
+Stale identities are not deleted, but they become historical evidence. They
+must not be described as current trends after either a newer accepted identity
+has two matching refreshes, the supported-model matrix removes or deprecates the
+identity, or the identity misses two scheduled M4 refresh cycles while the
+operator envelope still depends on it. A stale identity can return to current
+status only through a fresh matching-history pair and a dashboard status that is
+ready or explicitly accepted with documented warnings.
+
+Refresh the operator envelope when any of these changes:
+
+```text
+default dense model or supported-model state
+accepted BitNet artifact, tokenizer, prompt, stop, or generation identity
+route state for ask, chat, warm session, serve, or streaming
+quality, timeout, timing, or memory threshold result
+context guardrail, long-context profile, or benchmark timeout boundary
+dashboard status for a current evidence group
+disk/cache readiness floor or repair guidance
+stale identity aging that changes the current operator class
+claim-boundary wording or newly supported backend surface
+```
+
+This policy is evidence-retention and operator-refresh guidance only. It does
+not run a model, prove new dense SLM or BitNet quality, enable BitNet chat or
+serve, or widen Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad
+quality, or broad performance claims.
+
+`M4-CONTEXT-001` implements long-context guardrails for the M4 operator routes.
+Dense SLM `mac ask`, dense `mac chat`, dense `mac chat-smoke`, and dense
+`mac serve` classify requests against the recorded short, `context_1k`, and
+`context_4k` evidence envelopes. Requests beyond the recorded dense
+`context_4k` envelope fail closed with an `apple_m4_context_guardrail` receipt
+instead of falling through to cache lookup or generation. BitNet `mac ask`,
+`mac bitnet-warm`, and gated BitNet chat/serve routes classify requests against
+the bounded accepted-artifact ask/warm prompt evidence and fail closed beyond
+that boundary.
+
+The guardrail receipt records `context_envelope` fields for route, model family,
+model id, operator class, status, prompt-token count, exact-vs-estimated token
+authority, max-new-token budget, recorded evidence profile, and claim boundary.
+This is a routing and overclaim-prevention contract only; it does not prove new
+long-context quality, enable unsupported contexts, enable BitNet chat or serve,
+or widen Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality,
+or broad performance claims.
+
+`M4-CONTEXT-002` publishes the first live long-context proof receipt through the
+release `bitnet mac eval --suite m4-long-context` route:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T1611Z/context/answer-corpus.json
+```
+
+The receipt validates as `apple_m4_long_context_answer_corpus` and covers the
+default dense SLM identity `qwen2.5-0.5b-instruct-q8_0` on
+`apple-m4-cpu-neon` with `fallback_used=false`. The four mechanical cases pass:
+retrieval/copy, table extraction, late-context instruction following, and the
+explicit unsupported-context boundary. The same evidence records Qwen prompt
+template identity, stop/generation identity, generated token counts, model SHA,
+and the claim boundary that dense SLM long-context evidence does not prove
+BitNet long-context behavior.
+
+The matching release `bitnet mac benchmark --profile context` receipt is:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-20T1611Z/context/benchmark.json
+```
+
+It validates as `apple_m4_slm_benchmark_v2` with `fallback_used=false`.
+`context_1k` completes as a warm-session profile with 3 prompts and 48
+generated tokens. `context_4k` reaches the calibrated 720 second timeout and is
+recorded as `apple_m4_slm_benchmark_profile_timeout` with
+`status=invalid_for_comparison`, so the aggregate is timing evidence with an
+explicit timeout boundary, not a comparable performance envelope. This proof is
+for the tested dense identity only. It does not claim non-default dense SLM
+long-context quality, BitNet long-context behavior, BitNet chat or serve, full
+Metal inference, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup,
+broad quality, or broad performance.
+
 CLI proof is route-specific. Dense SLM ask/chat conformance needs bounded
 multi-turn history, timeout/cancel behavior, per-turn receipts, generated text,
 token IDs, backend, fallback state, and model/tokenizer identity before the CLI
@@ -1222,6 +1408,15 @@ batch
 disabled
 unsupported
 ```
+
+`M4-OPS-SLO-001` publishes those classes in
+`docs/slm/apple-m4-operator-envelope-v3.md`. The class map ties each dense Qwen
+ask/chat route, dense local-server route, BitNet one-shot/warm route, gated
+BitNet chat/serve route, and unsupported Apple backend route to the exact
+committed evidence identity, max context or profile guidance, timing
+expectation, and memory/disk posture. The map is an operator expectation layer
+only; it does not enable a disabled route or turn bounded receipts into broad
+quality or performance claims.
 
 ## Release Gates
 

@@ -2,6 +2,11 @@
 
 This guide shows how to deploy the BitNet-rs production inference server using Docker containers for both CPU and GPU environments.
 
+> Claim boundary: this guide is deployment guidance, not proof that any current
+> model/backend combination is server-ready, CUDA-ready, speed-qualified, or
+> residency-qualified. Treat GPU and production examples as configuration
+> patterns until an exact receipt and model coverage row prove the claim.
+
 ## Prerequisites
 
 Before deploying, ensure you have:

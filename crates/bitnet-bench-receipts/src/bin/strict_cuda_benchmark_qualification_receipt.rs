@@ -14,17 +14,8 @@ use std::path::{Path, PathBuf};
 const DEFAULT_PREVIOUS_QUALIFICATION: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-08/cuda-bitnet-perf-004-benchmark-qualification.json";
 const DEFAULT_SHORT_DECODE_BENCHMARK: &str =
     "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-06/strict-bitnet-cuda-benchmark.json";
-const DEFAULT_RECEIPT_OUT: &str = "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-20/cuda-bitnet-perf-005-profile-matrix-contract.json";
-const PERF_005_PROFILES: &[&str] = &[
-    "one_token",
-    "short_decode_8",
-    "short_decode_32",
-    "prefill_128_decode_16",
-    "prefill_512_decode_32",
-    "warm_session_3_turns",
-    "warm_session_10_turns",
-    "decode_128_from_warm_context",
-];
+const DEFAULT_RECEIPT_OUT: &str =
+    "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-13/cuda-prod-010-benchmark-qualification.json";
 
 #[derive(Debug)]
 struct Args {
@@ -116,8 +107,13 @@ fn build_receipt(
         "speedup_claim": false,
         "benchmark_qualified_speedup": false,
         "full_cuda_residency_claimed": false,
-        "profile_matrix_id": "cuda-bitnet-perf-005",
-        "target_profiles": PERF_005_PROFILES,
+        "target_profiles": [
+            "one_token",
+            "short_decode_8",
+            "short_decode_32",
+            "warm_session_3_turns",
+            "warm_session_10_turns"
+        ],
         "benchmark_policy": {
             "profile_specific_decisions_only": true,
             "global_speedup_claim": false,
@@ -151,11 +147,8 @@ fn build_receipt(
                 "one_token",
                 "short_decode_8",
                 "short_decode_32",
-                "prefill_128_decode_16",
-                "prefill_512_decode_32",
                 "warm_session_3_turns",
-                "warm_session_10_turns",
-                "decode_128_from_warm_context"
+                "warm_session_10_turns"
             ],
             "reason": "The official BitNet I2_S/QK256 CUDA path has strong strict-execution evidence, but the product benchmark profile set is not yet governed enough to accept any speedup claim."
         },
@@ -178,9 +171,9 @@ fn build_receipt(
             },
             {
                 "id": "target_profile_coverage",
-                "description": "All CUDA-BITNET-PERF-005 profiles are covered: one_token, short_decode_8, short_decode_32, prefill_128_decode_16, prefill_512_decode_32, warm_session_3_turns, warm_session_10_turns, and decode_128_from_warm_context.",
+                "description": "one_token, short_decode_8, short_decode_32, warm_session_3_turns, and warm_session_10_turns are all covered.",
                 "status": "blocked",
-                "blocker": "one_token, short_decode_32, prefill_128_decode_16, prefill_512_decode_32, warm_session_3_turns, warm_session_10_turns, and decode_128_from_warm_context product benchmark receipts are not committed."
+                "blocker": "one_token, short_decode_32, warm_session_3_turns, and warm_session_10_turns product benchmark receipts are not committed."
             },
             {
                 "id": "transfer_timing",
@@ -199,11 +192,8 @@ fn build_receipt(
             missing_profile_review("one_token"),
             short_decode_profile_review(cpu_total_ms, cuda_total_ms, ratio),
             missing_profile_review("short_decode_32"),
-            missing_profile_review("prefill_128_decode_16"),
-            missing_profile_review("prefill_512_decode_32"),
             missing_profile_review("warm_session_3_turns"),
-            missing_profile_review("warm_session_10_turns"),
-            missing_profile_review("decode_128_from_warm_context")
+            missing_profile_review("warm_session_10_turns")
         ],
         "evidence_summary": {
             "strict_ask_math_8": previous
@@ -235,11 +225,8 @@ fn build_receipt(
                 ]
             },
             "short_decode_32": missing_profile_evidence("short_decode_32"),
-            "prefill_128_decode_16": missing_profile_evidence("prefill_128_decode_16"),
-            "prefill_512_decode_32": missing_profile_evidence("prefill_512_decode_32"),
             "warm_session_3_turns": missing_profile_evidence("warm_session_3_turns"),
-            "warm_session_10_turns": missing_profile_evidence("warm_session_10_turns"),
-            "decode_128_from_warm_context": missing_profile_evidence("decode_128_from_warm_context")
+            "warm_session_10_turns": missing_profile_evidence("warm_session_10_turns")
         },
         "cuda": previous.pointer("/cuda").cloned().ok_or("previous cuda missing")?,
         "claim_boundaries": [

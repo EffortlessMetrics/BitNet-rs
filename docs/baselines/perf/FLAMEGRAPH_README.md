@@ -1,5 +1,11 @@
 # Flamegraph Performance Baselines
 
+> Claim boundary: this baseline guide describes profiling workflow and local
+> baseline comparison. Flamegraph, throughput, and optimization wording here
+> must not be read as current product support or exact-profile speed claims.
+> Current performance claims require active receipts, benchmark review, status
+> docs, specs, and claim gates.
+
 This directory contains flamegraph-based performance baselines for BitNet-rs inference operations. Flamegraphs provide detailed CPU time visualization to identify performance bottlenecks and validate optimization efforts.
 
 ## 📊 Overview

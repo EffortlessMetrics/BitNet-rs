@@ -14,15 +14,8 @@ const WORK_ITEM_STATUSES: &[&str] =
     &["proposed", "ready", "in_progress", "pr_open", "blocked", "merged", "superseded"];
 
 const CAMPAIGN_STATUSES: &[&str] = &["proposed", "active", "blocked", "complete", "archived"];
-const EVENT_TYPES: &[&str] = &[
-    "in_progress",
-    "pr_open",
-    "blocked",
-    "superseded",
-    "merged",
-    "closeout",
-    "migrated_from_bitnet_rs",
-];
+const EVENT_TYPES: &[&str] =
+    &["in_progress", "pr_open", "blocked", "superseded", "merged", "closeout"];
 const REVIEW_MODES: &[&str] = &["codex_premerge", "human_required", "external_required", "none"];
 const MERGE_POLICIES: &[&str] =
     &["automerge_when_green", "codex_merge_when_green", "manual_only", "no_merge"];
@@ -602,15 +595,6 @@ fn validate_campaign(campaign: &LoadedCampaign) -> Vec<Problem> {
             if event.merge_sha.as_deref().unwrap_or("").trim().is_empty() {
                 problems.push(Problem::error(format!(
                     "merged event for `{}` is missing merge_sha",
-                    event.item
-                )));
-            }
-            merged_events.insert(event.item.as_str());
-        }
-        if event.event == "migrated_from_bitnet_rs" {
-            if event.merge_sha.as_deref().unwrap_or("").trim().is_empty() {
-                problems.push(Problem::error(format!(
-                    "migrated_from_bitnet_rs event for `{}` is missing source merge_sha",
                     event.item
                 )));
             }

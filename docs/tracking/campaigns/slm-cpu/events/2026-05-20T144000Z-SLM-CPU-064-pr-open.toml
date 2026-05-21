@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T14:40:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-064"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+pr = 6138
+head_sha = "6fcc31b25"
+summary = "Open the BitNet-rs release-surface review PR for the first Kaby SLM package returned from bitnet-rs-swarm."
+notes = [
+  "PR #6138 commits the SLM-CPU-062 package under ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-062-swarm-export.",
+  "The review artifact accepts the package as release-surface evidence only because behavior is preserved and speedup is not claimed.",
+  "Runtime promotion remains a separate follow-up item and packed Q8_0 runtime compute remains disabled.",
+]

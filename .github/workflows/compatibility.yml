@@ -12,8 +12,7 @@ on:
       - '.github/workflows/compatibility.yml'
   pull_request:
     branches: [main]
-    types: [labeled]
-  workflow_dispatch:
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

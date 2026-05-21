@@ -195,8 +195,7 @@ fn build_first_token_divergence_receipt(
                 "The receipt classifies the first available evidence boundary between external BitNet reference text and 258V scalar/AVX2 CPU receipts.",
                 "When the external reference supplies direct generated-token IDs, the receipt classifies first-generated-token matches or mismatches against the local CPU receipts.",
                 "Scalar-vs-AVX2 agreement can be kept separate from missing external generated-token/logit evidence.",
-                "Prompt-token comparisons distinguish exact matches from local BOS-prefix policy deltas.",
-                "Direct reference artifacts can supply expected_prompt_token_ids_without_local_bos as the canonical prompt-token comparison boundary while preserving raw reference prompt IDs."
+                "Prompt-token comparisons distinguish exact matches from local BOS-prefix policy deltas."
             ],
             "must_not_claim": [
                 "first-token logits parity",
@@ -343,9 +342,7 @@ fn classify_case(reference_case: &Value, scalar: &Value, avx2: &Value, bos_id: u
     let case_id = reference_case["case_id"].as_str().unwrap_or_default();
     let scalar_case = find_case(scalar, case_id);
     let avx2_case = find_case(avx2, case_id);
-    let raw_reference_prompt_ids = ids(&reference_case["prompt_token_ids"]).unwrap_or_default();
-    let comparison_prompt = reference_prompt_ids_for_comparison(reference_case);
-    let reference_prompt_ids = comparison_prompt.ids;
+    let reference_prompt_ids = ids(&reference_case["prompt_token_ids"]).unwrap_or_default();
     let scalar_prompt_ids = scalar_case.and_then(local_prompt_ids).unwrap_or_default();
     let avx2_prompt_ids = avx2_case.and_then(local_prompt_ids).unwrap_or_default();
     let scalar_generated_ids = scalar_case.and_then(local_generated_ids).unwrap_or_default();
@@ -390,8 +387,6 @@ fn classify_case(reference_case: &Value, scalar: &Value, avx2: &Value, bos_id: u
         "reference": {
             "prompt": reference_case["reference_prompt"].clone(),
             "prompt_token_ids": reference_prompt_ids,
-            "prompt_token_ids_source": comparison_prompt.source,
-            "raw_prompt_token_ids": raw_reference_prompt_ids,
             "generated_text": reference_case["reference_generated_text"].clone(),
             "first_generated_token_id": reference_case["first_generated_token_id"].clone(),
             "derived_first_generated_token_id": reference_first_token,
@@ -556,24 +551,6 @@ fn ids(value: &Value) -> Option<Vec<u64>> {
 
 fn reference_first_token_topk(case: &Value) -> Option<&Value> {
     case.get("first_token_top_k_logits").or_else(|| case.get("first_token_topk_logits"))
-}
-
-struct PromptComparisonIds {
-    ids: Vec<u64>,
-    source: &'static str,
-}
-
-fn reference_prompt_ids_for_comparison(case: &Value) -> PromptComparisonIds {
-    if let Some(ids) =
-        ids(case.get("expected_prompt_token_ids_without_local_bos").unwrap_or(&Value::Null))
-            .filter(|ids| !ids.is_empty())
-    {
-        return PromptComparisonIds { ids, source: "expected_prompt_token_ids_without_local_bos" };
-    }
-    PromptComparisonIds {
-        ids: ids(case.get("prompt_token_ids").unwrap_or(&Value::Null)).unwrap_or_default(),
-        source: "prompt_token_ids",
-    }
 }
 
 fn has_local_bos_prefix(reference: &[u64], local: &[u64], bos_id: u64) -> bool {
@@ -903,47 +880,6 @@ mod tests {
         assert_eq!(receipt["validation"]["passed"], true);
         assert_eq!(receipt["summary"]["reference_generated_token_ids_available"], true);
         assert_eq!(receipt["summary"]["reference_logits_available"], true);
-        assert_eq!(
-            receipt["summary"]["first_divergence"]["classification"],
-            "no_divergence_at_first_generated_token"
-        );
-    }
-
-    #[test]
-    fn direct_reference_can_compare_expected_prompt_ids_without_local_bos() {
-        let mut reference = external(&[128000, 1502, 25], "4");
-        reference["artifact_kind"] = json!("bitnet_external_reference_direct_token_boundary");
-        reference["reference"]["runner"] = json!("Microsoft BitNet.cpp / llama-server");
-        reference["reference"]["generated_token_ids_available"] = json!(true);
-        reference["reference"]["logits_available"] = json!(true);
-        reference["cases"][0]["prompt_token_ids"] = json!([128000, 1502, 25]);
-        reference["cases"][0]["expected_prompt_token_ids_without_local_bos"] = json!([1502, 25]);
-        reference["cases"][0]["generated_token_ids"] = json!([19, 128009]);
-        reference["cases"][0]["first_generated_token_id"] = json!(19);
-        reference["cases"][0]["first_token_top_k_logits"] = json!([
-            {"token_id": 19, "token_text": "4", "logit": 20.0, "probability": 0.99}
-        ]);
-        let scalar = corpus("math", &[1502, 25], &[19, 128009], "4", "i2_s-scalar-reference");
-        let avx2 = corpus("math", &[1502, 25], &[19, 128009], "4", "i2_s-avx2-reference");
-
-        let receipt = build_first_token_divergence_receipt(
-            &inputs(),
-            &reference,
-            &prompt_audit(),
-            &scalar,
-            &avx2,
-            &parity(),
-        );
-
-        assert_eq!(
-            receipt["cases"][0]["reference"]["prompt_token_ids_source"],
-            "expected_prompt_token_ids_without_local_bos"
-        );
-        assert_eq!(
-            receipt["cases"][0]["reference"]["raw_prompt_token_ids"],
-            json!([128000, 1502, 25])
-        );
-        assert_eq!(receipt["summary"]["prompt_token_exact_matches"], 1);
         assert_eq!(
             receipt["summary"]["first_divergence"]["classification"],
             "no_divergence_at_first_generated_token"

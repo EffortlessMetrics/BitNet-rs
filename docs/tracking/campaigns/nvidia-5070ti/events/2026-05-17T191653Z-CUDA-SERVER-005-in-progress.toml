@@ -19,3 +19,4 @@ notes = [
   "The promotion is exact-profile only for Qwen2.5 0.5B Q8_0 on the RTX 5070 Ti shared-engine non-streaming chat-completions path.",
   "Speedup, full CUDA residency, global dense server readiness, production deployment readiness, and BitNet packed I2_S/QK256 proof remain false/non-claims.",
 ]
+

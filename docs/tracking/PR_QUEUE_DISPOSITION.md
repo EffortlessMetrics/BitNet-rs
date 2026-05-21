@@ -75,3 +75,4 @@ Use `n/a` only when a field does not apply. Do not leave `reason`,
 - Any future work has a live successor PR or tracking issue.
 - Diagnostic content was classified as durable or transient.
 - The close comment records the disposition in a form future agents can audit.
+

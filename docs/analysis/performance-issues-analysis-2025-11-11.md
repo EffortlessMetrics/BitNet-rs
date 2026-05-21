@@ -1,5 +1,11 @@
 # BitNet-rs Performance Issues Analysis - November 11, 2025
 
+> Claim boundary: this is a historical analysis snapshot. Performance,
+> production-ready, GPU/CUDA, throughput, issue-status, and optimization-target
+> wording records that older analysis context only. Current support, speed,
+> backend, quality, and readiness claims must come from active receipts, model
+> coverage, status docs, specs, and claim gates.
+
 ## Executive Summary
 
 This document analyzes all open performance-related issues in the BitNet-rs repository following the completion of PR #475 (GPU/CPU feature gate unification) and the recent guardrail wave. The analysis focuses on:

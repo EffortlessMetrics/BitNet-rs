@@ -17,7 +17,6 @@ on:
           - smoke
           - accuracy
           - operator
-          - performance
       model_id:
         description: "Supported dense SLM model cache id."
         required: true
@@ -38,31 +37,6 @@ on:
         required: true
         type: string
         default: "32"
-      performance_cold_load_runs:
-        description: "Cold model-load samples for the performance profile."
-        required: true
-        type: string
-        default: "1"
-      performance_warm_prompt_runs:
-        description: "Warm prompt timing samples for the performance profile."
-        required: true
-        type: string
-        default: "3"
-      timeout_cap_source:
-        description: "Completed healthy run ids or report path used to size the selected timeout cap."
-        required: true
-        type: string
-        default: "none-recorded-yet"
-      timeout_cap_completed_minutes:
-        description: "Healthy completed-runtime p95 or selected completed-run minutes used for cap sizing."
-        required: true
-        type: string
-        default: "150"
-      timeout_cap_cushion_minutes:
-        description: "Cushion minutes added to completed healthy runtime evidence."
-        required: true
-        type: string
-        default: "30"
       min_free_gb:
         description: "Minimum free disk required before model fetch and receipt generation."
         required: true
@@ -151,20 +125,6 @@ jobs:
             echo "  \"min_required_kb\": $MIN_FREE_KB,"
             echo "  \"profile_set\": \"${{ inputs.profile_set }}\","
             echo "  \"model_id\": \"${{ inputs.model_id }}\","
-            echo "  \"token_budget\": {"
-            echo "    \"max_new_tokens\": \"${{ inputs.max_new_tokens }}\","
-            echo "    \"corpus_repeat_runs\": \"${{ inputs.corpus_repeat_runs }}\","
-            echo "    \"performance_cold_load_runs\": \"${{ inputs.performance_cold_load_runs }}\","
-            echo "    \"performance_warm_prompt_runs\": \"${{ inputs.performance_warm_prompt_runs }}\""
-            echo "  },"
-            echo "  \"timeout_cap_provenance\": {"
-            echo "    \"basis\": \"completed_healthy_runs_plus_cushion\","
-            echo "    \"source\": \"${{ inputs.timeout_cap_source }}\","
-            echo "    \"completed_minutes\": \"${{ inputs.timeout_cap_completed_minutes }}\","
-            echo "    \"cushion_minutes\": \"${{ inputs.timeout_cap_cushion_minutes }}\","
-            echo "    \"configured_timeout_minutes\": 180,"
-            echo "    \"timeouts_or_cancellations_are_healthy_samples\": false"
-            echo "  },"
             echo "  \"branch\": \"${GITHUB_REF_NAME}\","
             echo "  \"commit\": \"${GITHUB_SHA}\","
             echo "  \"report_pr\": \"${{ inputs.report_pr }}\""
@@ -184,14 +144,7 @@ jobs:
             echo "{"
             echo "  \"artifact_kind\": \"apple_m3_air_dense_slm_host_context\","
             echo "  \"sw_vers\": $(sw_vers | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),"
-            echo "  \"hardware\": $(system_profiler SPHardwareDataType SPPowerDataType | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),"
-            echo "  \"storage\": $(df -Pk \"$BITNET_MODEL_CACHE_DIR\" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),"
-            echo "  \"thermal_state\": $( (pmset -g therm 2>/dev/null || true) | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'),"
-            echo "  \"claim_boundary\": {"
-            echo "    \"performance_claim_allowed\": false,"
-            echo "    \"m4_mac_mini_claim_allowed\": false,"
-            echo "    \"broad_apple_silicon_claim_allowed\": false"
-            echo "  }"
+            echo "  \"hardware\": $(system_profiler SPHardwareDataType SPPowerDataType | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')"
             echo "}"
           } > "$M3_AIR_ARTIFACT_ROOT/host-context.json"
 
@@ -243,7 +196,7 @@ jobs:
         run: |
           set -euo pipefail
           EXTRA_FLAGS=""
-          if [ "${{ inputs.profile_set }}" = "operator" ] || [ "${{ inputs.profile_set }}" = "performance" ]; then
+          if [ "${{ inputs.profile_set }}" = "operator" ]; then
             EXTRA_FLAGS="--allocation-audit"
           fi
           cargo run --release --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- \
@@ -278,14 +231,8 @@ jobs:
             echo "- Artifact root: \`$M3_AIR_ARTIFACT_ROOT\`"
             echo "- Model id: \`${{ inputs.model_id }}\`"
             echo "- Profile set: \`${{ inputs.profile_set }}\`"
-            echo "- Max new tokens: \`${{ inputs.max_new_tokens }}\`"
-            echo "- Performance cold load runs: \`${{ inputs.performance_cold_load_runs }}\`"
-            echo "- Performance warm prompt runs: \`${{ inputs.performance_warm_prompt_runs }}\`"
-            echo "- Timeout cap source: \`${{ inputs.timeout_cap_source }}\`"
-            echo "- Timeout cap completed minutes: \`${{ inputs.timeout_cap_completed_minutes }}\`"
-            echo "- Timeout cap cushion minutes: \`${{ inputs.timeout_cap_cushion_minutes }}\`"
             echo
-            echo "The run records M3 MacBook Air dense Qwen Apple CPU/NEON evidence only. Performance-profile timing remains bounded to this selected M3 Air run and its committed receipts. Timeout caps are hang guards sized from completed healthy runs plus cushion; they are not performance evidence. This workflow does not claim BitNet answer quality, M4 Mac mini performance, full Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad Apple Silicon performance."
+            echo "The run records M3 MacBook Air dense Qwen Apple CPU/NEON evidence only. It does not claim BitNet answer quality, M4 Mac mini performance, full Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad Apple Silicon performance."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload M3 Air dense SLM evidence

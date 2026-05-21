@@ -1,0 +1,13 @@
+timestamp = "2026-05-20T15:05:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-065"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+summary = "Start the BitNet-rs release-surface runtime-promotion gate for the accepted single-tensor packed Q8_0 sidecar candidate."
+notes = [
+  "The accepted candidate is limited to layers.0.attention.q_proj.weight from the SLM-CPU-062 bitnet-rs-swarm export package.",
+  "The release-surface gate records a blocked promotion unless an exact-tensor packed-Q8 runtime receipt proves unchanged model SHA, tokenizer authority, generated IDs, decoded text, backend/kernel identity, dense hook-selection identity, and fallback_used=false.",
+  "No speedup, sustained throughput, broad answer-quality, Q4/Q5 runtime support, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is allowed.",
+]

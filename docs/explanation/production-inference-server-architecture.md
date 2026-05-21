@@ -2,6 +2,11 @@
 
 Understanding the design principles and architectural decisions behind the BitNet-rs production inference server for enterprise neural network deployments.
 
+> Claim boundary: this is an architecture/design explanation, not a current
+> server-readiness proof. Current server readiness, backend route, fallback,
+> speed, residency, and product-readiness claims must come from active receipts,
+> model coverage, status docs, specs, and claim gates.
+
 ## Overview
 
 The BitNet-rs production inference server is designed as a comprehensive solution for deploying 1-bit neural network models in production environments. The architecture prioritizes **reliability, performance, and scalability** while maintaining **quantization accuracy** and **operational simplicity**.

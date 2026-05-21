@@ -1,5 +1,11 @@
 # QK256 Dequantization Benchmark
 
+> Claim boundary: this benchmark document records local microbenchmark targets
+> and interpretation guidance. Throughput, speedup, and AVX2 wording here must
+> not be read as current product support or exact-profile speed claims. Current
+> performance claims require active receipts, benchmark review, status docs,
+> specs, and claim gates.
+
 ## Overview
 
 This benchmark measures the performance improvement of AVX2-accelerated QK256 dequantization compared to the scalar reference implementation.

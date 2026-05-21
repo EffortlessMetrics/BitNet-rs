@@ -1,4 +1,12 @@
+<!-- markdownlint-disable -->
+<!-- Historical artifact formatting intentionally preserved. -->
+
 # T5 Policy Validation - PR #473
+
+> Historical validation artifact only. This report records the 2025 PR #473
+> policy-gate decision and must not be read as a current BitNet-rs support,
+> speedup, CUDA/GPU, server-readiness, residency, or product-readiness claim.
+> Current claims must come from active receipts and claim gates.
 
 **Date**: 2025-10-22T02:00:00Z
 **PR**: #473 (feat/mvp-finalization)
@@ -177,7 +185,8 @@ Inference Performance:
 - Token throughput: 45.2 tokens/sec (maintained)
 - SLO: ≤10s for 128 tokens (satisfied: 128/45.2 = 2.8s)
 - Memory overhead: <10% (security measures compatible with performance)
-- AVX2 optimization: ~1.2× speedup (QK256 dequantization)
+- AVX2 optimization: historically reported ~1.2x speedup for QK256
+  dequantization in this gate; not a current accepted speedup claim
 ```
 
 **Compliance Assessment**: ✅ FULL COMPLIANCE
@@ -262,7 +271,8 @@ Category Breakdown:
 
 **Policy Compliance**:
 - ✅ All unsafe blocks documented with safety guarantees
-- ✅ GPU memory safety validated (CUDA context management)
+- ✅ Historical GPU memory safety gate recorded CUDA context management; not a
+  current CUDA support promotion
 - ✅ FFI bridge safety confirmed (null checks, error handling)
 - ✅ SIMD kernels guarded by target features
 - ✅ No buffer overflows detected
@@ -273,7 +283,7 @@ Category Breakdown:
 **Compliance Assessment**: ✅ FULL COMPLIANCE
 - All unsafe code follows Rust safety patterns
 - Neural network operations (quantization, inference) memory-safe
-- GPU resource management validated
+- Historical GPU resource management gate recorded validation
 
 ### 3.3 Supply Chain Security
 
@@ -586,7 +596,8 @@ policy: cargo deny check (licenses ok, sources ok, bans ok);
 - Revalidate with fuzz-tester after fix
 
 **Performance Monitoring**:
-- Ensure AVX2 optimizations maintain performance gains (~1.2×)
+- Treat the historical ~1.2x AVX2 measurement as non-promotional unless a
+  current exact-profile receipt and claim review accept it
 - Verify no regression from safety validation overhead (<10% acceptable)
 - Validate receipt generation doesn't exceed latency budget
 

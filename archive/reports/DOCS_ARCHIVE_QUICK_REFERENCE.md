@@ -1,3 +1,11 @@
+> **Archived CI/docs report claim boundary**
+>
+> This file is a historical CI/docs report from active development. Status,
+> ready, validated, merge, production, backend, performance, and publication
+> wording below is historical context only and is not a current project,
+> support, CI, quality, release, backend, performance, or publication claim.
+> Current claims must come from active docs, trackers, receipts, specs, and
+> claim gates.
 # Docs/Reports Archive Migration - Quick Reference
 
 **Status**: Ready to Execute  

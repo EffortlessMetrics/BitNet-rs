@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_runtime_promotion_gate",
+  "work_item": "SLM-CPU-065",
+  "created_utc": "2026-05-20T15:05:00Z",
+  "release_surface": "EffortlessMetrics/BitNet-rs",
+  "source_repository": "EffortlessMetrics/bitnet-rs-swarm",
+  "source_work_item": "SLM-CPU-062",
+  "source_package_path": "ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-062-swarm-export",
+  "intake_review": "ci/slm-cpu/intel-i5-8250u/2026-05-20/slm-cpu-064-swarm-intake-review.json",
+  "accepted_by_release_surface": true,
+  "target": {
+    "tensor": "layers.0.attention.q_proj.weight",
+    "role": "AttentionQ",
+    "payload_sha256": "a8e16a232ea8c19a5c5d2eb5f21bfdf5c297eba0ac90e74b0afc052577179c24",
+    "scope": "single_tensor_only"
+  },
+  "oracle": {
+    "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "model_family": "qwen",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0",
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true,
+    "selected_backend": "cpu-rust",
+    "selected_path": "eager_f32_candle",
+    "selected_kernel": "dense-f32-candle-linear",
+    "fallback_used": false,
+    "prompt_ids_match": true,
+    "generated_ids_match": true,
+    "decoded_text_match": true
+  },
+  "runtime_promotion_decision": {
+    "status": "blocked",
+    "selected_path": "eager_f32_candle",
+    "selected_kernel": "dense-f32-candle-linear",
+    "runtime_compute_enabled": false,
+    "dense_runtime_replaced": false,
+    "fallback_used": false,
+    "speedup_claim": false,
+    "reason": "The release surface has accepted the single-tensor packed Q8_0 sidecar as evidence, but it has not produced a strict before/after receipt where packed sidecar compute is selected for this exact tensor and behavior remains identical."
+  },
+  "blockers": [
+    "release_surface_runtime_compute_hook_not_enabled",
+    "no_after_runtime_receipt_with_dense_q8_sidecar_selected",
+    "packed_q8_sidecar_compute_kernel_not_enabled_for_release_surface"
+  ],
+  "claim_boundary": {
+    "runtime_code_changed": false,
+    "packed_q8_runtime_compute_enabled": false,
+    "dense_runtime_replaced": false,
+    "speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "broad_answer_quality_claim": false,
+    "q4_q5_runtime_support_claim": false,
+    "server_claim": false,
+    "gpu_npu_openvino_uhd620_claim": false,
+    "qwen35_claim": false,
+    "bitnet_qk256_changed": false
+  },
+  "next_safe_step": "Implement an exact-tensor opt-in packed Q8_0 runtime hook only after it can emit before/after strict CPU receipts proving unchanged model SHA, GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected backend/kernel identity, dense hook-selection identity, and fallback_used=false."
+}

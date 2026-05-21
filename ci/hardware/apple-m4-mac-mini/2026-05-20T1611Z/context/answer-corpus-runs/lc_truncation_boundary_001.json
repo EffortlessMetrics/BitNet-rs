@@ -1,0 +1,658 @@
+{
+  "apple": {
+    "machine_id": "apple-m4-mac-mini",
+    "macos": {
+      "build": "25E253",
+      "native_or_virtualized": "native-macos",
+      "version": "26.4.1"
+    },
+    "metal_visible": true,
+    "resolved_device": {
+      "chip": "Apple M4",
+      "cpu_cores": 10,
+      "gpu_cores": 10,
+      "unified_memory": true,
+      "unified_memory_bytes": 17179869184
+    }
+  },
+  "artifact_kind": "inference_result",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-20T1611Z/context/answer-corpus-runs/lc_truncation_boundary_001.json",
+  "counts": {
+    "n_kv": 26,
+    "n_tensors": 291,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "aarch64",
+    "features": [
+      "neon"
+    ],
+    "model": "unknown-cpu",
+    "threads": 1
+  },
+  "dense_slm": {
+    "architecture": "qwen2",
+    "claim_scope": "strict dense SLM CPU answer smoke only",
+    "execution_phase": "decode",
+    "kernel_family": "dense_qwen",
+    "kernel_id": "dense-qwen-cpu-reference",
+    "layout": "gguf_dense_q8_0",
+    "layout_source": "gguf_dense_q8_0_reference",
+    "model_family": "qwen",
+    "provenance": "dense_slm_gguf_cpu_reference",
+    "quant_format": "Q8_0"
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 6,
+    "phase": "decode",
+    "prompt_tokens": 87,
+    "requested_backend": "apple-m4-cpu-neon",
+    "runtime_api": "cpu",
+    "selected_backend": "apple-m4-cpu-neon",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "dense_slm_layers_on_cpu": null,
+    "dense_slm_layers_total": null,
+    "execution_claim": "dense_slm_cpu_reference_answer_smoke",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": true,
+    "explicit_bos_requested": false,
+    "greedy": true,
+    "max_new_tokens": 16,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
+    "seed": 0,
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": true,
+    "family": "dense_qwen",
+    "implementation": "cpu-reference",
+    "kernel_id": "dense-qwen-cpu-reference",
+    "layout": "gguf_dense_q8_0"
+  },
+  "latency": {
+    "cmd_to_first_ms": 19575,
+    "decode_first_ms": 19575,
+    "total_ms": 21142
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "gguf_metadata"
+  },
+  "logits_dump": null,
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 151936,
+    "expected_logits_vector_length_source": "tokenizer_vocab_size",
+    "first_step_logits_vector_length": null,
+    "observed_logits_vector_length": null,
+    "observed_logits_vector_length_source": "not_available"
+  },
+  "machine_id": "apple-m4-mac-mini",
+  "model": {
+    "architecture": "qwen2",
+    "context_length": 32768,
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "output.weight",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quant_format": "Q8_0",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "tie_word_embeddings": false,
+    "tokenizer": "gguf_metadata",
+    "vocab_size": 151936
+  },
+  "not_claims": [
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion"
+  ],
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 6,
+        "max_ms": 0.006,
+        "mean_ms": 0.004,
+        "min_ms": 0.004,
+        "p50_ms": 0.004,
+        "p95_ms": 0.006,
+        "total_ms": 0.027
+      },
+      "first_token_decode_ms": 313.124,
+      "forward_ms": {
+        "count": 6,
+        "max_ms": 228.7,
+        "mean_ms": 228.366,
+        "min_ms": 227.955,
+        "p50_ms": 228.408,
+        "p95_ms": 228.7,
+        "total_ms": 1370.195
+      },
+      "generated_tokens": 6,
+      "logits_ms": {
+        "count": 6,
+        "max_ms": 82.025,
+        "mean_ms": 81.899,
+        "min_ms": 81.755,
+        "p50_ms": 81.901,
+        "p95_ms": 82.025,
+        "total_ms": 491.393
+      },
+      "per_token_ms": {
+        "count": 6,
+        "max_ms": 313.423,
+        "mean_ms": 313.227,
+        "min_ms": 313.037,
+        "p50_ms": 313.235,
+        "p95_ms": 313.423,
+        "total_ms": 1879.359
+      },
+      "sample_ms": {
+        "count": 6,
+        "max_ms": 2.499,
+        "mean_ms": 2.397,
+        "min_ms": 2.331,
+        "p50_ms": 2.386,
+        "p95_ms": 2.499,
+        "total_ms": 14.385
+      },
+      "steady_per_token_ms": {
+        "count": 5,
+        "max_ms": 313.423,
+        "mean_ms": 313.247,
+        "min_ms": 313.037,
+        "p50_ms": 313.244,
+        "p95_ms": 313.423,
+        "total_ms": 1566.235
+      },
+      "steady_state_tok_s": 3.192,
+      "steady_state_tokens": 5,
+      "token_decode_ms": {
+        "count": 6,
+        "max_ms": 0.045,
+        "mean_ms": 0.01,
+        "min_ms": 0.003,
+        "p50_ms": 0.003,
+        "p95_ms": 0.045,
+        "total_ms": 0.061
+      },
+      "warmup_tokens": 1
+    },
+    "id": "default",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 19936.036,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 19262.227,
+      "per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "tokens": 86
+    },
+    "prompt_tokenize_ms": 195.174,
+    "requested": false,
+    "tokenizer_load_ms": 214.299
+  },
+  "prompt": "This case defines the expected unsupported boundary behavior for prompts beyond recorded context evidence. If a request exceeds the recorded context envelope, the operator-visible state should be UNSUPPORTED_CONTEXT rather than a silent quality claim.\n\nWhat state should be reported? Answer exactly UNSUPPORTED_CONTEXT.\n",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 16,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "5d337a15a41db8a891e99f4ea468644539b1e03a8924831e66c260c9336f4bf1",
+    "identity_sha256": "c21b83cb7feb447b2bd94a7abe5213f0d3e7c42ad891bf3294fd7b6f908148c9",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        151645,
+        151644
+      ]
+    },
+    "stop_criteria_sha256": "51dbd89eb1b858882b35fc2340257e0c109c8261500f46ba8b5b6cd2687948ca",
+    "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+    "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+    "template": {
+      "family": "qwen25-chat",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "qwen25-chat",
+    "template_sha256": "be829f95ac1a95f9fd9b9641a7df864186594cde3285438f6f8fdddc89c428e3",
+    "tokenizer_authority": {
+      "authority": "present",
+      "sha256": null,
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
+  "prompt_identity": {
+    "bos_policy": false,
+    "parse_special": true,
+    "prompt_token_count": 87,
+    "prompt_token_ids_sha256": "082c2ae6682141523aff7bc85bab825752fbd3562fc24fbcd6aaf025a511cf2e",
+    "rendered_prompt_sha256": "ebb0a7ac226eae3abd9a3240a49ff4d81846c37ebe04364aa25d85b8865aefd4",
+    "template": "qwen25-chat"
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "rendered_sha256": "ebb0a7ac226eae3abd9a3240a49ff4d81846c37ebe04364aa25d85b8865aefd4",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nThis case defines the expected unsupported boundary behavior for prompts beyond recorded context evidence. If a request exceeds the recorded context envelope, the operator-visible state should be UNSUPPORTED_CONTEXT rather than a silent quality claim.\n\nWhat state should be reported? Answer exactly UNSUPPORTED_CONTEXT.\n<|im_end|>\n<|im_start|>assistant\n",
+    "stop_sequences": [
+      "<|im_end|>",
+      "<|im_start|>"
+    ],
+    "stop_token_ids": [
+      151645,
+      151644
+    ],
+    "template_family": "qwen25-chat"
+  },
+  "proof_summary": {
+    "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
+    "claim_level": "diagnostic_cli_run",
+    "execution_backend": "apple-m4-cpu-neon",
+    "execution_backend_matched": true,
+    "fallback_used": false,
+    "kernel_route": {
+      "claimable": false,
+      "diagnostic_only": true,
+      "route_declared": false,
+      "route_id": null
+    },
+    "loader_fallback_used": false,
+    "model_contract": null,
+    "model_contract_declared": false,
+    "not_claims": [
+      "selected_attention_residency",
+      "resident_kv_decode",
+      "attention_scores_residency",
+      "softmax_residency",
+      "attention_value_mix_residency",
+      "full_support_op_residency",
+      "full_device_residency",
+      "completion"
+    ],
+    "requested_backend": "apple-m4-cpu-neon",
+    "requested_device": "apple-m4-cpu-neon",
+    "route_declared": false,
+    "selected_backend": "apple-m4-cpu-neon",
+    "strict_backend": true,
+    "tokenizer_fallback_used": false
+  },
+  "requested_backend": "apple-m4-cpu-neon",
+  "resolved_device": {
+    "chip": "Apple M4",
+    "cpu_cores": 10,
+    "gpu_cores": 10,
+    "unified_memory": true,
+    "unified_memory_bytes": 17179869184
+  },
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "strict_provenance": {
+    "cpu_features": [
+      "neon"
+    ],
+    "cpu_model": "unknown-cpu",
+    "decode_tokens": 6,
+    "decode_tps": 0.2837952889982026,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "qwen",
+    "phase": "decode",
+    "prompt_tokens": 87,
+    "provenance": "dense_slm_gguf_cpu_reference",
+    "quant_format": "Q8_0",
+    "requested_backend": "apple-m4-cpu-neon",
+    "requested_kernel": "dense-qwen-cpu-reference",
+    "selected_backend": "apple-m4-cpu-neon",
+    "selected_kernel": "dense-qwen-cpu-reference",
+    "thread_count": 1,
+    "tokenizer_source": "gguf_metadata",
+    "tokenizer_strict": true
+  },
+  "text": "UNSUPPORTED_CONTEXT",
+  "throughput": {
+    "decoded_tokens": 6,
+    "tokens_per_second": 0.2837952889982026
+  },
+  "timestamp": "2026-05-20T17:25:58.534181+00:00",
+  "timing": {
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 3.192,
+    "decode_total_ms": 1879.359,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 313.124,
+    "first_token_ms": 19575,
+    "host_to_device_bytes": null,
+    "model_load_ms": 19936.036,
+    "prefill_ms": 19262.227,
+    "sampling_ms_per_token": 2.397,
+    "tokenize_ms": 195.174,
+    "tokenizer_load_ms": 214.299
+  },
+  "tokenizer": {
+    "bos": 151643,
+    "eos": 151645,
+    "model_family": "gguf_metadata",
+    "origin": "embedded",
+    "pretokenizer_authority": "present",
+    "source": "gguf_metadata",
+    "strict": true,
+    "type": "gguf_metadata"
+  },
+  "tokens": {
+    "generated": 6,
+    "generated_ids": [
+      1861,
+      50,
+      61140,
+      62,
+      98365,
+      151645
+    ],
+    "ids": [
+      1861,
+      50,
+      61140,
+      62,
+      98365,
+      151645
+    ],
+    "prompt": 87,
+    "prompt_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      1207,
+      16948,
+      11,
+      3465,
+      553,
+      54364,
+      14817,
+      13,
+      1446,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      1986,
+      1142,
+      18653,
+      279,
+      3601,
+      40409,
+      18732,
+      7709,
+      369,
+      50932,
+      7797,
+      12433,
+      2266,
+      5904,
+      13,
+      1416,
+      264,
+      1681,
+      35275,
+      279,
+      12433,
+      2266,
+      34398,
+      11,
+      279,
+      5675,
+      12,
+      12601,
+      1584,
+      1265,
+      387,
+      45983,
+      61140,
+      62,
+      98365,
+      4751,
+      1091,
+      264,
+      21059,
+      4271,
+      3717,
+      13,
+      198,
+      198,
+      3838,
+      1584,
+      1265,
+      387,
+      4961,
+      30,
+      21806,
+      6896,
+      45983,
+      61140,
+      62,
+      98365,
+      13,
+      198,
+      151645,
+      198,
+      151644,
+      77091,
+      198
+    ],
+    "total": 93
+  }
+}

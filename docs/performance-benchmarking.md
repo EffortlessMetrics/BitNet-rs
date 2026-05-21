@@ -1,5 +1,10 @@
 # Performance Benchmarking and Regression Detection
 
+> Claim boundary: benchmark infrastructure and historical example numbers do
+> not prove current speedup, CUDA/GPU readiness, server readiness, residency, or
+> product readiness. Current performance claims require exact-profile receipts,
+> model coverage, status docs, specs, and claim gates.
+
 BitNet-rs includes a comprehensive performance benchmarking infrastructure designed to detect performance regressions, track improvements, and ensure consistent performance across platforms.
 
 ## 🚀 Quick Start
