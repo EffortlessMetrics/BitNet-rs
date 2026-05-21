@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_low_power_battery_plan",
   "proof_stage": "low_power_battery_operator_plan_no_evidence_no_promotion_change",
-  "created_utc": "2026-05-21T02:09:26Z",
+  "created_utc": "2026-05-21T18:45:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
@@ -21,7 +21,9 @@
   ],
   "required_artifacts": [
     "lunar-lake-low-power-battery-before.json",
-    "battery-mode low_power route/profile receipts for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate",
+    "lunar-lake-operator-ask-battery-low-power-cpu.json",
+    "lunar-lake-operator-ask-battery-low-power-gpu.json",
+    "lunar-lake-operator-ask-battery-low-power-npu.json",
     "lunar-lake-low-power-battery-after.json",
     "lunar-lake-low-power-energy-proxy.json",
     "lunar-lake-power-profile-evidence.json",
@@ -64,10 +66,15 @@
       "step": "route_profile_samples",
       "purpose": "Run the battery-mode low_power route/profile matrix without hidden fallback.",
       "command": [
-        "run low_power samples for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate with fallback_used=false receipts"
+        "target/debug/bitnet.exe lunar-lake ask --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --promotion-ledger lunar-lake-route-promotion.json --route-profile-comparison lunar-lake-route-profile-comparison.json --profile low_power --route dense_slm_default_cpu --device cpu --prompt \"What is 2+2? Answer with just the number.\" --expect-contains 4 --max-new-tokens 8 --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-cpu.json",
+        "target/debug/bitnet.exe lunar-lake ask --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --promotion-ledger lunar-lake-route-promotion.json --route-profile-comparison lunar-lake-route-profile-comparison.json --profile low_power --route dense_slm_openvino_gpu_candidate --device gpu --prompt \"What is 2+2? Answer with just the number.\" --expect-contains 4 --max-new-tokens 8 --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-gpu.json",
+        "target/debug/bitnet.exe lunar-lake ask --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --promotion-ledger lunar-lake-route-promotion.json --route-profile-comparison lunar-lake-route-profile-comparison.json --profile low_power --route dense_slm_openvino_npu_candidate --device openvino-npu --prompt \"What is 2+2? Answer with just the number.\" --expect-contains 4 --max-new-tokens 8 --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-npu.json"
       ],
       "continue_if": [
-        "each sampled route records answer gate, route identity, timing, memory, power, and thermal context"
+        "each sampled route records answer gate, route identity, timing, memory, power, and thermal context",
+        "CPU receipt path lunar-lake-operator-ask-battery-low-power-cpu.json records selected_route=dense_slm_default_cpu and fallback_used=false",
+        "GPU receipt path lunar-lake-operator-ask-battery-low-power-gpu.json records selected_route=dense_slm_openvino_gpu_candidate and fallback_used=false",
+        "NPU receipt path lunar-lake-operator-ask-battery-low-power-npu.json records selected_route=dense_slm_openvino_npu_candidate and fallback_used=false"
       ],
       "stop_if": [
         "a route falls back, cannot run, or loses route identity; preserve that receipt as blocker evidence"

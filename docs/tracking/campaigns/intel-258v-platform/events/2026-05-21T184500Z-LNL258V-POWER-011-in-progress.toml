@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T18:45:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-011"
+previous_status = "planned"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-POWER-011-low-power-sample-plan"
+actor = "codex"
+summary = "Started a no-inference low_power battery-run plan refinement so POWER-006 has exact CPU/GPU/NPU sample ask commands."
+
+notes = [
+  "The current machine still reports AC power, so LNL258V-POWER-006 remains blocked for real battery-mode telemetry and energy-proxy evidence.",
+  "This prep item replaces the low_power route/profile sample placeholder with exact explicit-route ask commands and receipt paths for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate.",
+  "No inference, model load, fallback behavior change, route promotion, speedup, power-advantage, battery-mode evidence, measured-temperature, native accelerator, acceleration, broad quality, model-binary, or BitNet QK256/I2_S behavior-change claim is made.",
+]

@@ -90,11 +90,66 @@ Run the low-power route/profile matrix on battery for these route identities:
 | `dense_slm_openvino_npu_candidate` | `openvino-npu` | candidate for `low_power` |
 
 Each route sample must keep `fallback_used=false`, preserve the route identity,
-and record answer-gate, timing, memory, power, and thermal context. If a route
-falls back or cannot run on battery, keep the failure as blocker evidence.
+and record answer-gate, timing, memory, power, and thermal context. The expected
+sample receipts are:
+
+- `lunar-lake-operator-ask-battery-low-power-cpu.json`
+- `lunar-lake-operator-ask-battery-low-power-gpu.json`
+- `lunar-lake-operator-ask-battery-low-power-npu.json`
+
+If a route falls back or cannot run on battery, keep the failure as blocker
+evidence.
 
 Do not use the already committed AC-only low-power corpus/profile receipts as
 battery evidence. They can remain comparison context only.
+
+Use explicit routes for the battery samples. Do not use `--route auto` for
+`low_power` until the promotion ledger has a promoted low-power route:
+
+```powershell
+target/debug/bitnet.exe lunar-lake ask `
+  --artifact-root ci/hardware/intel-258v/2026-05-08 `
+  --operator-receipt lunar-lake-operator-readiness.json `
+  --promotion-ledger lunar-lake-route-promotion.json `
+  --route-profile-comparison lunar-lake-route-profile-comparison.json `
+  --profile low_power `
+  --route dense_slm_default_cpu `
+  --device cpu `
+  --prompt "What is 2+2? Answer with just the number." `
+  --expect-contains 4 `
+  --max-new-tokens 8 `
+  --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-cpu.json
+
+target/debug/bitnet.exe lunar-lake ask `
+  --artifact-root ci/hardware/intel-258v/2026-05-08 `
+  --operator-receipt lunar-lake-operator-readiness.json `
+  --promotion-ledger lunar-lake-route-promotion.json `
+  --route-profile-comparison lunar-lake-route-profile-comparison.json `
+  --profile low_power `
+  --route dense_slm_openvino_gpu_candidate `
+  --device gpu `
+  --prompt "What is 2+2? Answer with just the number." `
+  --expect-contains 4 `
+  --max-new-tokens 8 `
+  --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-gpu.json
+
+target/debug/bitnet.exe lunar-lake ask `
+  --artifact-root ci/hardware/intel-258v/2026-05-08 `
+  --operator-receipt lunar-lake-operator-readiness.json `
+  --promotion-ledger lunar-lake-route-promotion.json `
+  --route-profile-comparison lunar-lake-route-profile-comparison.json `
+  --profile low_power `
+  --route dense_slm_openvino_npu_candidate `
+  --device openvino-npu `
+  --prompt "What is 2+2? Answer with just the number." `
+  --expect-contains 4 `
+  --max-new-tokens 8 `
+  --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-npu.json
+```
+
+The three receipts are still sample evidence. They do not promote `low_power`
+unless the later power-profile, regression, and operator comparison refreshes
+qualify the same decision.
 
 ## Battery End Receipt
 
