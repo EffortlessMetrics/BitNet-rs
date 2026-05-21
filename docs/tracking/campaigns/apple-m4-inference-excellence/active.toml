@@ -2855,9 +2855,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-WORKLOAD-001"
-status = "pr_open"
+status = "merged"
 pr = 213
-head_sha = "f199820623b6f1e94c732881acbdf45a7b71b258"
+head_sha = "38316ba48266898c974c197fd8c810379f1a301d"
+merge_sha = "c192699c106e7d3af8026ab6d8fcefaad96dd6a2"
 branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-operator-suite"
 stackable = false
 review_mode = "codex_premerge"
