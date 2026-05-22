@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T10:40:17Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-RELEASE-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-RELEASE-001-go-no-go"
+pr = 6192
+head_sha = "2c1ff052e2c91bbf00f3e7f2571a3defe2b3d2e1"
+
+notes = [
+  "Opened PR #6192 for the M4 release go/no-go matrix.",
+  "The PR maps dense SLM, BitNet, benchmark, stability, service, operator, CI, and claim-boundary gates to release-envelope no-go triggers.",
+  "The PR is documentation and tracker state only; it does not run live inference, publish fresh quality or timing evidence, enable BitNet chat or serve, prove full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, broad performance, or speedup claims.",
+]

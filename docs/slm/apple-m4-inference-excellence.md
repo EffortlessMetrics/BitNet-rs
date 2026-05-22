@@ -1535,10 +1535,11 @@ local artifacts. See `docs/slm/apple-m4-evidence-replay.md`.
 
 ## Release Gates
 
-Before the public M4 expectation envelope changes, a go/no-go matrix should say
-which dense SLM, BitNet, benchmark, stability, service, operator, and
-claim-boundary gates passed. A missing BitNet chat or serve gate remains a
-missing feature, not a documentation issue.
+Before the public M4 expectation envelope changes, the go/no-go matrix in
+`docs/slm/apple-m4-release-go-no-go.md` says which dense SLM, BitNet,
+benchmark, stability, service, operator, and claim-boundary gates must pass. A
+missing BitNet chat or serve gate remains a missing feature, not a documentation
+issue.
 
 `M4-CLAIM-LINT-001` adds static publication hygiene for M4 docs, generated
 status, operator envelope text, and operator-facing command strings. It should
