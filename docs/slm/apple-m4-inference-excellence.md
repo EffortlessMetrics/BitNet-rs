@@ -1261,6 +1261,37 @@ not run a model, prove new dense SLM or BitNet quality, enable BitNet chat or
 serve, or widen Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad
 quality, or broad performance claims.
 
+`M4-TREND-001` publishes the first seven-day matching-history summary derived
+from retained receipts:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-22T0530Z/trend/seven-day-history.json
+ci/hardware/apple-m4-mac-mini/2026-05-22T0530Z/trend/seven-day-history.md
+```
+
+The summary covers the five current dashboard families from
+`2026-05-15T00:00:00Z` through `2026-05-22T00:00:00Z`: dense SLM eval-v2,
+dense SLM benchmark-v2, BitNet eval, BitNet benchmark, and BitNet variable warm.
+It records nine matching dashboard groups, all with `ready` history. Dense SLM
+eval and benchmark groups remain within the published threshold envelope for
+their retained latest-vs-baseline pairs. BitNet eval and benchmark also remain
+within threshold for their retained pairs.
+
+The only advisory trend issue is BitNet variable-warm resident memory: the
+retained latest run increased resident memory from `2140225536` bytes to
+`2688778240` bytes, a `25.63%` increase against the existing `10%`
+higher-is-worse advisory threshold. Timing improved and quality remained
+passing, so this is an operator follow-up, not a BitNet chat or serve enablement
+signal.
+
+Skipped-day reasons are explicit in the trend artifact. Later receipts in the
+window, including BitNet repaired 250-case eval, setup, variance, context,
+reliability, and serve failure-semantics evidence, remain separate route or
+context baselines unless a second matching receipt makes them trend-comparable.
+The trend summary does not replace per-run receipts, run live inference, prove
+future performance, or widen Metal, QK256, Neural Engine, MPSGraph, MacBook,
+speedup, broad quality, or broad performance claims.
+
 `M4-CONTEXT-001` implements long-context guardrails for the M4 operator routes.
 Dense SLM `mac ask`, dense `mac chat`, dense `mac chat-smoke`, and dense
 `mac serve` classify requests against the recorded short, `context_1k`, and
