@@ -246,3 +246,1117 @@ must_not_claim = [
   "Full A770 residency is proven.",
   "Performance speedup is proven.",
 ]
+
+[[work_item]]
+id = "A770-006R"
+status = "merged"
+branch = "codex/intel-a770/A770-006R-matmul-i2s-operand-contract"
+pr = 43
+head_sha = "332ba423c87305c36c303c6a14097078125cce3d"
+merge_sha = "655a9af009cb1ededadf2befca232942c6234eea"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-007"]
+acceptance = "Refresh the selected-device OpenCL matmul_i2s parity harness so operand A is explicit int8 activations and operand B is explicit packed I2_S weights, without promoting benchmark, QK256, or inference claims."
+commands = [
+  "cargo test --locked -p bitnet-kernels --no-default-features --features opencl a770_opencl_fixture -- --nocapture",
+  "cargo run --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity -- --receipt ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-parity.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/a770_opencl_fixture.rs",
+  "crates/bitnet-kernels/src/bin/a770_opencl_parity.rs",
+  "crates/bitnet-kernels/src/kernels.rs",
+  "crates/bitnet-kernels/src/lib.rs",
+  "ci/hardware/amd-5700x-intel-a770/**",
+  "docs/tracking/campaigns/intel-a770/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "The selected-device A770 OpenCL matmul_i2s parity fixture uses explicit kernel operand ordering.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are proven.",
+  "BitNet inference works on A770.",
+  "A770 trusted partial acceleration is claim-grade.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+]
+
+[[work_item]]
+id = "A770-008"
+status = "merged"
+pr = 53
+head_sha = "62c3dd1900421889226221034be55111a839a4ea"
+merge_sha = "1a3f917fa09a130d96ac57a49a88c0da90fea222"
+branch = "codex/intel-a770/A770-008-benchmark-baseline"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-006R"]
+acceptance = "Record a diagnostic benchmark baseline for the selected-device A770 OpenCL matmul_i2s parity fixture without promoting speedup, official QK256, BitNet inference, or residency claims."
+commands = [
+  "cargo test --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity",
+  "cargo run --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity -- --benchmark --iterations 30 --warmup 5 --receipt ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-matmul-i2s-benchmark-baseline.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/bin/a770_opencl_parity.rs",
+  "ci/hardware/amd-5700x-intel-a770/**",
+  "docs/tracking/campaigns/intel-a770/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A diagnostic benchmark baseline exists for the selected-device A770 OpenCL matmul_i2s parity fixture.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are proven.",
+  "BitNet inference works on A770.",
+  "A770 trusted partial acceleration is claim-grade.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "The diagnostic toy fixture proves production answer quality.",
+]
+
+[[work_item]]
+id = "A770-009"
+status = "merged"
+pr = 62
+head_sha = "d09a3d728e75965ee2ab531c32df3f1d88d9f70a"
+merge_sha = "bdba54a436da4b66435de365dba1c69bd456e35b"
+branch = "codex/intel-a770/A770-009-qk256-scaled-opencl-fixture"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-008"]
+acceptance = "Add selected-device A770 OpenCL parity for a grouped QK256 I2_S x prequantized I8_S scaled fixture, without promoting official BitNet QK256 dispatch, inference, activation-quantization residency, speed, or residency claims."
+commands = [
+  "cargo test --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity qk256 -- --nocapture",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features opencl a770_qk256 -- --nocapture",
+  "cargo run --locked -p bitnet-kernels --no-default-features --features opencl --bin a770-opencl-parity -- --fixture qk256-i8s-scaled --receipt ci/hardware/amd-5700x-intel-a770/2026-05-20/a770-opencl-qk256-i8s-scaled-fixture.json",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/a770_opencl_fixture.rs",
+  "crates/bitnet-kernels/src/bin/a770_opencl_parity.rs",
+  "crates/bitnet-kernels/src/kernels.rs",
+  "ci/hardware/amd-5700x-intel-a770/**",
+  "docs/specs/intel-arc-a770-gpu-roadmap.md",
+  "docs/tracking/campaigns/intel-a770/**",
+]
+forbidden_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "A selected-device A770 OpenCL fixture matches CPU for grouped QK256 I2_S bytes with prequantized I8_S activation scale/sum correction.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are fully proven.",
+  "BitNet inference works on A770.",
+  "Activation quantization is GPU-resident.",
+  "Transformer QK256 dispatch is wired to OpenCL.",
+  "A770 trusted partial acceleration is claim-grade.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+]
+
+[[work_item]]
+id = "A770-010"
+status = "merged"
+pr = 80
+head_sha = "a1149c1e8cb0c7bf058833f39db771fd17664bdd"
+merge_sha = "3718c41735634ea515fcefdca3ee6e0990df3bfa"
+branch = "codex/intel-a770/A770-010-strict-qk256-fallback-guard"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-009"]
+acceptance = "Make strict Intel Arc A770 OpenCL QK256 requests fail closed while the OpenCL QK256 runtime is not wired, and record non-strict A770 requests as CPU fallback/not-routed evidence without promoting inference or performance claims."
+commands = [
+  "cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features opencl --test cuda_coverage -- --nocapture",
+  "cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features opencl --test forward_qk256 -- --nocapture",
+  "cargo fmt -p bitnet-qk256-dispatch -- --check",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-server/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-kernels/src/a770_opencl_fixture.rs",
+  "crates/bitnet-kernels/src/bin/a770_opencl_parity.rs",
+]
+may_claim = [
+  "Strict A770 OpenCL QK256 dispatch requests fail closed instead of silently using CPU while the OpenCL runtime is not wired.",
+  "Non-strict A770 OpenCL QK256 requests record CPU fallback/not-routed evidence.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are fully proven.",
+  "BitNet inference works on A770.",
+  "Transformer QK256 dispatch is wired to OpenCL.",
+  "A770 trusted partial acceleration is claim-grade.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+]
+
+[[work_item]]
+id = "A770-011"
+status = "merged"
+pr = 115
+head_sha = "20233b19da70772529135e750e8d90e8550351a8"
+merge_sha = "40b2ef2f857ab477fdbfd1f9aef33f368b2cfb7a"
+branch = "codex/intel-a770/A770-011-qk256-opencl-dispatch-candidate"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-010"]
+acceptance = "Wire a first selected-device A770 OpenCL QK256 dispatch candidate for inline-scaled BitNet I2_S x I8_S GEMV, preserving CPU activation quantization and closing quality, residency, speed, and full-inference claims."
+commands = [
+  "cargo check --locked -p bitnet-qk256-dispatch --no-default-features --features opencl",
+  "cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features opencl --test forward_qk256 -- --nocapture",
+  "cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features opencl --test cuda_coverage -- --nocapture",
+  "BITNET_RUN_A770_OPENCL_DISPATCH=1 cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features opencl opt_in_strict_a770_opencl_inline_scale_routes_qk256_without_cpu_fallback -- --nocapture",
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,full-cli",
+  "cargo check --locked -p bitnet-server --no-default-features --features cpu,server",
+  "rustfmt --edition 2024 --check crates/bitnet-kernels/src/a770_opencl_runtime.rs crates/bitnet-kernels/src/lib.rs crates/bitnet-qk256-dispatch/src/lib.rs crates/bitnet-qk256-dispatch/tests/cuda_coverage.rs crates/bitnet-qk256-dispatch/tests/forward_qk256.rs crates/bitnet-quantization/src/i2s_qk256.rs crates/bitnet-cli/src/main.rs crates/bitnet-server/src/lib.rs",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/a770_opencl_runtime.rs",
+  "crates/bitnet-kernels/src/lib.rs",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-quantization/src/i2s_qk256.rs",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-server/src/lib.rs",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/src/request_utils.rs",
+  "crates/bitnet-kernels/src/bin/a770_opencl_parity.rs",
+]
+may_claim = [
+  "Strict inline-scaled A770 OpenCL QK256 dispatch can use the selected-device OpenCL GEMV candidate when the A770 device is available.",
+  "CPU activation quantization remains explicit in the A770 QK256 dispatch path.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are fully proven.",
+  "BitNet inference works on A770.",
+  "A770 answer quality is proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-015"
+status = "merged"
+pr = 211
+head_sha = "2f3432808bdee40d885fbb2f9f0a9cb9c5c5a9ae"
+merge_sha = "9937635290165206100644ddfde27065efa75c54"
+branch = "codex/intel-a770/A770-015-answer-corpus-route-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-014"]
+acceptance = "Add a diagnostic-only A770 OpenCL answer-corpus route contract so seeded answer evidence can target the committed A770 route without promoting BitNet answer quality, full inference, residency, performance, or trusted-partial acceleration."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_corpus_dry_run_accepts_a770_opencl_lane -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli a770 -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "ci/hardware/amd-5700x-intel-a770/**",
+]
+may_claim = [
+  "The answer-corpus dry-run route can stamp Intel Arc A770 OpenCL as a diagnostic backend lane.",
+  "The A770 answer-corpus aggregate receipt keeps speed, quality, residency, full inference, and trusted-partial acceleration claims closed.",
+]
+must_not_claim = [
+  "BitNet inference works on A770.",
+  "A770 answer quality is proven.",
+  "The A770 answer corpus has executed live model prompts.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-012"
+status = "merged"
+pr = 158
+branch = "codex/intel-a770/A770-012-strict-qk256-dispatch-receipt"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-011"]
+acceptance = "Commit a strict selected-device A770 OpenCL QK256 dispatch receipt and wire it into the diagnostic route/kernel matrices without promoting BitNet inference, quality, residency, speed, or trusted-partial acceleration."
+commands = [
+  "cargo check --locked -p bitnet-qk256-dispatch --no-default-features --features opencl",
+  "BITNET_RUN_A770_OPENCL_DISPATCH=1 BITNET_A770_OPENCL_DISPATCH_RECEIPT=ci/hardware/amd-5700x-intel-a770/2026-05-21/a770-opencl-qk256-strict-dispatch.json cargo test --locked -p bitnet-qk256-dispatch --no-default-features --features opencl opt_in_strict_a770_opencl_inline_scale_routes_qk256_without_cpu_fallback -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-qk256-dispatch/**",
+  "ci/hardware/device-kernel-routing.toml",
+  "ci/hardware/amd-5700x-intel-a770/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-cli/**",
+  "crates/bitnet-kernels/src/bin/a770_opencl_parity.rs",
+]
+may_claim = [
+  "A committed strict selected-device A770 OpenCL QK256 dispatch receipt exists for the inline-scaled candidate path.",
+  "The QK256 diagnostic route matrix names the strict dispatch receipt while staying non-promoting.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are fully proven.",
+  "BitNet inference works on A770.",
+  "A770 answer quality is proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-013"
+status = "merged"
+pr = 176
+branch = "codex/intel-a770/A770-013-cli-opencl-route-receipts"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-012"]
+acceptance = "Wire the CLI OpenCL feature into the real BitNet model/QK256 dispatch stack and add strict A770 OpenCL QK256 route receipt fields without promoting BitNet inference, quality, residency, speed, or trusted-partial acceleration."
+commands = [
+  "cargo check --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli a770_opencl -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/Cargo.toml",
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/simple_generation/backend.rs",
+  "crates/bitnet-cli/src/simple_generation/environment.rs",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "ci/hardware/amd-5700x-intel-a770/**",
+]
+may_claim = [
+  "The CLI OpenCL feature now compiles the real BitNet model/QK256 dispatch stack needed to exercise the selected-device A770 QK256 candidate from a strict CLI route.",
+  "Strict A770 CLI receipts can record QK256 A770 OpenCL contribution counters and runtime bytes while staying diagnostic-only.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are fully proven.",
+  "BitNet inference works on A770.",
+  "A770 answer quality is proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-014"
+status = "merged"
+pr = 198
+head_sha = "cc6232aa70d8493dc6523a4d28041c9ccfe524ed"
+merge_sha = "fb95daeaa6861bb0d1c63af49b42108caee5000e"
+branch = "codex/intel-a770/A770-014-model-contract-route-alignment"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-013"]
+acceptance = "Align the official BitNet 2B I2_S model contract registry and model-artifact matrix with the committed diagnostic A770 OpenCL QK256 route, preserving diagnostic-only status and forbidding answer quality, residency, speed, full inference, or trusted-partial claims."
+commands = [
+  "cargo test --locked -p bitnet-models --lib --no-default-features model_contracts -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli verify_model_includes_bitnet_contract_summary -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- model-contract lint --contract-dir docs/model-contracts --format json --allow-missing-assets",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign check model-artifacts",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/model-artifacts/bitnet-model-contracts.toml",
+  "crates/bitnet-models/src/model_contracts.rs",
+  "crates/bitnet-cli/src/model_cache.rs",
+  "docs/bitnet/BITNET_MODEL_CONTRACT.md",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "ci/hardware/amd-5700x-intel-a770/**",
+]
+may_claim = [
+  "The official BitNet 2B I2_S model contract lists the Intel Arc A770 OpenCL QK256 route as diagnostic route-receipt-only.",
+  "The A770 route matrix, committed diagnostic route receipt scaffold, and model contract now agree that A770 QK256 evidence is still diagnostic.",
+]
+must_not_claim = [
+  "Official BitNet QK256 production semantics are fully proven.",
+  "BitNet inference works on A770.",
+  "A770 answer quality is proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-016"
+status = "merged"
+pr = 220
+head_sha = "c7d527692a0c754f50f6a097244ea0501d2039f9"
+merge_sha = "8f7a8774c4fc9825f9cb4421eb3f28446537ad70"
+branch = "codex/intel-a770/A770-016-answer-corpus-proof-route"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-015"]
+acceptance = "Bind A770 OpenCL answer-corpus child runs to the committed BitNet model contract and diagnostic QK256 route metadata without promoting live answer quality, residency, performance, or full-inference claims."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli a770 -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_corpus_dry_run_accepts_a770_opencl_lane -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/tests/cli_arg_tests.rs",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "ci/hardware/amd-5700x-intel-a770/**",
+]
+may_claim = [
+  "A770 answer-corpus child invocations declare the official BitNet 2B I2_S model contract and diagnostic QK256 route metadata.",
+  "A770 answer-corpus receipt checks reject missing A770 model-contract or QK256 route declarations.",
+]
+must_not_claim = [
+  "BitNet inference works on A770.",
+  "A770 answer quality is proven.",
+  "The A770 answer corpus has executed live model prompts.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-017"
+status = "merged"
+pr = 235
+head_sha = "d30024cf19b2d190f115cc15ffa58d9d4e8994f5"
+merge_sha = "0651140121dbd28acaa5be5284a6f2bd4a91a4f7"
+branch = "codex/intel-a770/A770-017-opencl-runtime-detection"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-016"]
+acceptance = "Align startup OpenCL runtime detection with the in-process dynamic OpenCL probe so A770 answer-corpus child runs can reach the committed diagnostic route without depending on the external clinfo tool."
+commands = [
+  "cargo test --locked -p bitnet-kernels --no-default-features --features cpu,opencl opencl_runtime_fake_detection_remains_deterministic -- --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli a770 -- --nocapture",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/device_features.rs",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "ci/hardware/amd-5700x-intel-a770/**",
+]
+may_claim = [
+  "A770 startup backend selection uses the same in-process dynamic OpenCL runtime visibility probe as the hardware receipt lanes.",
+  "A770 answer-corpus child runs are no longer blocked solely by a missing external clinfo executable when OpenCL is visible through the dynamic probe.",
+]
+must_not_claim = [
+  "BitNet inference works on A770.",
+  "A770 answer quality is proven.",
+  "The A770 answer corpus has executed live model prompts.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-018"
+status = "merged"
+pr = 242
+head_sha = "0e9219c49337f1d4f853fdae412df39efe9a1a43"
+merge_sha = "03c7bbd54e5ba4a62efe40d53225cf9ee28f24ba"
+branch = "codex/intel-a770/A770-018-live-answer-corpus-diagnostic"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-017"]
+acceptance = "Record the first committed live five-case A770 OpenCL answer-corpus diagnostic receipt for the official BitNet 2B I2_S model, with selected_backend=intel-a770-opencl, runtime_api=opencl, fallback_used=false, all five fixed-corpus cases passed, and reference parity, broad answer quality, residency, speed, trusted-partial, and strict answer-readiness claims kept closed."
+commands = [
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli",
+  "target/debug/bitnet.exe answer-corpus --corpus ci/quality/bitnet-answer-corpus.yaml --model <official BitNet 2B I2_S GGUF> --tokenizer <official tokenizer.json> --device intel-a770-opencl --json-out ci/hardware/amd-5700x-intel-a770/2026-05-21/a770-answer-corpus/answer-corpus.json --per-prompt-timeout-seconds 300 --fail-on-quality",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/amd-5700x-intel-a770/2026-05-21/a770-answer-corpus/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+]
+may_claim = [
+  "The fixed five-case answer-corpus executed locally against the official BitNet 2B I2_S model with selected_backend=intel-a770-opencl, runtime_api=opencl, and fallback_used=false.",
+  "The committed diagnostic receipt records five passed narrow quality gates and A770 OpenCL kernel invocation counts for the bounded corpus.",
+]
+must_not_claim = [
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-019"
+status = "merged"
+pr = 257
+head_sha = "e50899b56fbad1cd89f4319f96326eb60e5c4876"
+merge_sha = "fef585e5b8278b45ec9a3126b96976b99bb5f7c5"
+branch = "codex/intel-a770/A770-019-opencl-runtime-probe-build-fix"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-018"]
+acceptance = "Restore the OpenCL runtime availability build by matching the selected-device runtime probe wrapper type, keeping A770 answer quality, parity, residency, speed, and completion claims closed."
+commands = [
+  "cargo check --locked -p bitnet-kernels --no-default-features --features opencl",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features opencl --lib opencl_runtime_probe_requires_gpu_device -- --nocapture",
+  "cargo build --locked -p bitnet-cli --release --no-default-features --features cpu,opencl,full-cli",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-kernels/src/device_features.rs",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "ci/hardware/amd-5700x-intel-a770/**",
+]
+may_claim = [
+  "The OpenCL runtime availability helper compiles against the selected-device runtime probe wrapper and continues to require at least one reported GPU device.",
+]
+must_not_claim = [
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-020"
+status = "merged"
+pr = 265
+head_sha = "241819a0a621f83c8a9cbddc8e57b4e90728db61"
+merge_sha = "54d93900c47ef920507f035be737eb4829a4d8f2"
+branch = "codex/intel-a770/A770-020-cpu-a770-answer-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-019"]
+acceptance = "Record same-box AMD 5700X AVX2 CPU and Intel A770 OpenCL answer-corpus receipts with one-step top-k logits for the official BitNet 2B I2_S model, compare them with the answer-parity tool, and preserve the first CPU/A770 logits divergence without claiming exact parity, broad answer quality, speed, residency, trusted-partial acceleration, or full BitNet inference."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli generic_parity_accepts_matching_cpu_and_a770_answer_corpus_receipts -- --nocapture",
+  "cargo build --locked -p bitnet-cli --release --no-default-features --features cpu,opencl,full-cli",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/bitnet-answer-corpus.yaml --model <official BitNet 2B I2_S GGUF> --tokenizer <official tokenizer.json> --device cpu --cpu-kernel avx2 --threads 8 --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/cpu-avx2-answer-corpus.json --per-prompt-timeout-seconds 300 --fail-on-quality",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/bitnet-answer-corpus.yaml --model <official BitNet 2B I2_S GGUF> --tokenizer <official tokenizer.json> --device intel-a770-opencl --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/a770-opencl-answer-corpus.json --per-prompt-timeout-seconds 300 --fail-on-quality",
+  "target/release/bitnet.exe answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/cpu-avx2-answer-corpus.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/a770-opencl-answer-corpus.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/cpu-avx2-vs-a770-answer-parity.json # expected nonzero while CPU/A770 parity remains divergent",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+]
+may_claim = [
+  "The same fixed five-case answer corpus executed locally against the official BitNet 2B I2_S model on AMD 5700X AVX2 CPU and Intel A770 OpenCL, with fallback_used=false on both receipts.",
+  "Both receipts passed the narrow committed prompt quality gates and captured one-step top-k logits.",
+  "The answer-parity comparator accepts the committed A770 diagnostic answer-corpus artifact kind and records a clean shared contract with CPU/A770 logits divergence.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-021"
+status = "merged"
+pr = 278
+head_sha = "88430ab9283d97f9507783ff2179ef66474746eb"
+merge_sha = "91e36faeed8c184771f07ba2adb1ae3976edb380"
+branch = "codex/intel-a770/A770-021-logits-topk-frontier"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-020"]
+acceptance = "Add a compact logits top-k frontier to the CPU/A770 answer-parity receipt so the committed A770-020 divergences are classified as same-output top-k drift versus generated-output drift, without changing runtime math or promoting CPU/A770 answer parity."
+commands = [
+  "rustfmt --edition 2024 --check crates/bitnet-cli/src/commands/answer_parity.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_parity -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli -- answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/cpu-avx2-answer-corpus.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/a770-opencl-answer-corpus.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/cpu-avx2-vs-a770-answer-parity.json # expected nonzero while CPU/A770 parity remains divergent",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+]
+may_claim = [
+  "The answer-parity comparator records a compact logits top-k frontier for the committed CPU/A770 answer-corpus receipt.",
+  "The committed A770-020 receipt now separates same-output top-k drift from generated-output drift.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-022"
+status = "merged"
+pr = 287
+head_sha = "4db5f1c0d7c1a1f277da3e629bb9f007f307cf96"
+merge_sha = "b01c5223d9b56b0e617959173a412aa371809baa"
+branch = "codex/intel-a770/A770-022-multistep-answer-parity"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-021"]
+acceptance = "Record a focused multi-step CPU/A770 answer-parity diagnostic for the generated-output divergent yes_no_water case, classify whether the first generated token mismatch has dumped logit context, and keep CPU/A770 parity, answer quality, speed, residency, trusted-partial acceleration, and full BitNet inference claims closed."
+commands = [
+  "rustfmt --edition 2024 --check crates/bitnet-cli/src/commands/answer_parity.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_parity -- --nocapture",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/bitnet-answer-corpus.yaml --model <official BitNet 2B I2_S GGUF> --tokenizer <official tokenizer.json> --device cpu --cpu-kernel avx2 --threads 8 --case-id yes_no_water --dump-logit-steps 4 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/cpu-avx2-yes-no-water.json --per-prompt-timeout-seconds 300 --fail-on-quality",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/bitnet-answer-corpus.yaml --model <official BitNet 2B I2_S GGUF> --tokenizer <official tokenizer.json> --device intel-a770-opencl --case-id yes_no_water --dump-logit-steps 4 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/a770-opencl-yes-no-water.json --per-prompt-timeout-seconds 300 --fail-on-quality",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli -- answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/cpu-avx2-yes-no-water.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/a770-opencl-yes-no-water.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/cpu-avx2-vs-a770-yes-no-water-parity.json # expected nonzero while CPU/A770 parity remains divergent",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+]
+may_claim = [
+  "The yes_no_water CPU/A770 generated-output divergence is covered by four dumped logit steps on both lanes.",
+  "The first generated token mismatch is at generated index 2 with logit context and different chosen IDs.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-023"
+status = "merged"
+pr = 300
+head_sha = "6a123a822a42a3379bfd5e94e39a8c1e5e41c438"
+merge_sha = "46680a5efe29918991c6e81d9adb781ee189a2ca"
+branch = "codex/intel-a770/A770-023-first-mismatch-logit-margin"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-022"]
+acceptance = "Add a compact first-mismatch cross-chosen logit-margin frontier to the CPU/A770 answer-parity receipt so the generated-output divergent yes_no_water case reports whether both chosen-token logits are available, whether the lanes have opposite argmax choices, and whether the A770-side chosen-token margin is a near tie, without changing runtime math or promoting CPU/A770 parity."
+commands = [
+  "rustfmt --edition 2024 --check crates/bitnet-cli/src/commands/answer_parity.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_parity -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli -- answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/cpu-avx2-yes-no-water.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/a770-opencl-yes-no-water.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/cpu-avx2-vs-a770-yes-no-water-parity.json # expected nonzero while CPU/A770 parity remains divergent",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+]
+may_claim = [
+  "The yes_no_water first generated-token mismatch has compact cross-chosen logit-margin evidence for both CPU AVX2 and Intel A770 OpenCL.",
+  "The committed diagnostic receipt classifies the first mismatch as opposite argmax with an A770-side near-tie chosen-token margin.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-024"
+status = "merged"
+pr = 314
+branch = "codex/intel-a770/A770-024-seeded-answer-readiness-contract"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-023"]
+acceptance = "Add an A770-specific seeded BitNet answer-readiness corpus contract and queue the live CPU AVX2 versus Intel A770 OpenCL run against the official BitNet 2B I2_S artifact, without changing runtime math or promoting broad answer quality, strict answer readiness, CPU/A770 parity, residency, speed, trusted-partial acceleration, or full BitNet inference."
+commands = [
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_corpus -- --nocapture",
+  "target/debug/bitnet.exe answer-corpus --dry-run --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model <official BitNet 2B I2_S GGUF> --device cpu --json-out target/a770-answer-readiness-corpus-dry-run.json",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model <official BitNet 2B I2_S GGUF> --tokenizer <official tokenizer.json> --device cpu --cpu-kernel avx2 --threads 8 --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-answer-readiness.json --per-prompt-timeout-seconds 300 --fail-on-quality # live hardware/model proof command, not run by this contract PR",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model <official BitNet 2B I2_S GGUF> --tokenizer <official tokenizer.json> --device intel-a770-opencl --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/a770-opencl-answer-readiness.json --per-prompt-timeout-seconds 300 --fail-on-quality # live hardware/model proof command, not run by this contract PR",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli -- answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-answer-readiness.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/a770-opencl-answer-readiness.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-vs-a770-answer-readiness-parity.json # future live comparison; nonzero allowed until parity is proven",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/a770-bitnet-answer-readiness-corpus.yaml",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+]
+may_claim = [
+  "The Intel A770 campaign has a committed seeded BitNet answer-readiness corpus contract for future CPU AVX2 and Intel A770 OpenCL runs.",
+  "The corpus contract records model, tokenizer, deterministic prompt, scoring, and claim-boundary metadata for the official Microsoft BitNet 2B I2_S artifact.",
+]
+must_not_claim = [
+  "The A770 seeded answer-readiness corpus has been run live.",
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-025"
+status = "merged"
+pr = 329
+branch = "codex/intel-a770/A770-025-live-answer-readiness-run"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-024"]
+acceptance = "Record the live seeded CPU AVX2 versus Intel A770 OpenCL answer-readiness run against the official BitNet 2B I2_S artifact, including quality failures and CPU/A770 parity divergence, while keeping strict answer readiness, broad answer quality, CPU/A770 parity, residency, speed, trusted-partial acceleration, and full BitNet inference claims closed."
+commands = [
+  "cargo build --locked -p bitnet-cli --release --no-default-features --features cpu,opencl,full-cli",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --cpu-kernel avx2 --threads 8 --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-answer-readiness.json --per-prompt-timeout-seconds 300 --fail-on-quality # expected nonzero while seeded answer-readiness quality remains incomplete",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device intel-a770-opencl --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/a770-opencl-answer-readiness.json --per-prompt-timeout-seconds 300 --fail-on-quality # expected nonzero while seeded answer-readiness quality remains incomplete",
+  "target/release/bitnet.exe answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-answer-readiness.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/a770-opencl-answer-readiness.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-vs-a770-answer-readiness-parity.json # expected nonzero while CPU/A770 parity remains divergent",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+]
+may_claim = [
+  "The seeded A770 BitNet answer-readiness corpus ran live on AMD 5700X AVX2 CPU and Intel A770 OpenCL against the official BitNet 2B I2_S artifact.",
+  "Both live receipts used fallback_used=false and recorded the current seeded readiness quality result.",
+  "The CPU/A770 answer-readiness parity comparator records the current logits/output divergence frontier.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-026"
+status = "merged"
+pr = 336
+branch = "codex/intel-a770/A770-026-answer-readiness-failure-frontier"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-025"]
+acceptance = "Classify the committed A770-025 seeded answer-readiness failures and CPU/A770 parity frontier so shared prompt/model/scoring quality failures stay separate from OpenCL logits/output drift, without changing runtime math or promoting readiness, parity, residency, speed, trusted-partial acceleration, or full BitNet inference."
+commands = [
+  "pwsh -NoProfile -Command \"Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-answer-readiness.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/a770-opencl-answer-readiness.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-vs-a770-answer-readiness-parity.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/reports/A770_026_ANSWER_READINESS_FAILURE_FRONTIER.md",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+]
+may_claim = [
+  "The committed A770-025 seeded answer-readiness receipts have a compact failure-frontier classification.",
+  "The 12 quality failures are shared by CPU AVX2 and Intel A770 OpenCL and therefore are not A770-only evidence.",
+  "The CPU/A770 parity frontier remains divergent at top-k logits for all 20 cases, with 18 matching generated outputs and 2 generated-output divergences.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-027"
+status = "merged"
+pr = 344
+head_sha = "272d15b2e4c709a3997df9eed3e3f88678b0662d"
+merge_sha = "4ba74839e45b3006e37775720c63fd66864fa2f3"
+branch = "codex/intel-a770/A770-027-readiness-divergence-logit-context"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-026"]
+acceptance = "Record focused multi-step CPU AVX2 and Intel A770 OpenCL logits for the two A770-025 generated-output divergent readiness cases, classify the first-mismatch logit-margin frontier, and keep CPU/A770 parity, strict answer readiness, broad answer quality, residency, speed, trusted-partial acceleration, and full BitNet inference claims closed."
+commands = [
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --cpu-kernel avx2 --threads 8 --case-id a770_summary_seed770024_keywords_014 --case-id a770_yes_no_seed770024_water_015 --dump-logit-steps 24 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-readiness-divergent-cases.json --per-prompt-timeout-seconds 300",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device intel-a770-opencl --case-id a770_summary_seed770024_keywords_014 --case-id a770_yes_no_seed770024_water_015 --dump-logit-steps 24 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/a770-opencl-readiness-divergent-cases.json --per-prompt-timeout-seconds 300",
+  "target/release/bitnet.exe answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-readiness-divergent-cases.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/a770-opencl-readiness-divergent-cases.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-vs-a770-readiness-divergent-cases-parity.json # expected nonzero while the focused generated-output divergences remain",
+  "pwsh -NoProfile -Command \"Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-readiness-divergent-cases.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/a770-opencl-readiness-divergent-cases.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-vs-a770-readiness-divergent-cases-parity.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/**",
+  "docs/reports/A770_027_READINESS_DIVERGENCE_LOGIT_CONTEXT.md",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+]
+may_claim = [
+  "The two A770-025 generated-output divergent readiness cases now have focused CPU AVX2 and Intel A770 OpenCL receipts with first-mismatch logit context.",
+  "The focused parity receipt classifies both first mismatches as opposite argmax, with one A770-side near-tie margin.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-028"
+status = "merged"
+pr = 362
+head_sha = "07b933e090c44b52f66b185c7cc69b07ecff3731"
+merge_sha = "89378b4e48fe80a454cf1d9569cb23b765bbe419"
+branch = "codex/intel-a770/A770-028-readiness-normalization-scoring"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-027"]
+acceptance = "Normalize only the A770 seeded answer-readiness corpus cases whose committed A770-025 receipts classified shared CPU/A770 failures as punctuation/casing normalization, rerun CPU AVX2 and Intel A770 OpenCL readiness receipts, and keep remaining content failures, CPU/A770 parity divergence, residency, speed, trusted-partial acceleration, and full BitNet inference claims closed."
+commands = [
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --cpu-kernel avx2 --threads 8 --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-answer-readiness-normalized-scoring.json --per-prompt-timeout-seconds 300 --fail-on-quality # expected nonzero while content failures remain",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device intel-a770-opencl --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/a770-opencl-answer-readiness-normalized-scoring.json --per-prompt-timeout-seconds 300 --fail-on-quality # expected nonzero while content failures remain",
+  "target/release/bitnet.exe answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-answer-readiness-normalized-scoring.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/a770-opencl-answer-readiness-normalized-scoring.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-vs-a770-answer-readiness-normalized-scoring-parity.json # expected nonzero while CPU/A770 parity remains divergent",
+  "pwsh -NoProfile -Command \"Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-answer-readiness-normalized-scoring.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/a770-opencl-answer-readiness-normalized-scoring.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-vs-a770-answer-readiness-normalized-scoring-parity.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/a770-bitnet-answer-readiness-corpus.yaml",
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/**",
+  "docs/reports/A770_028_READINESS_NORMALIZATION_SCORING.md",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+]
+may_claim = [
+  "The A770 seeded answer-readiness corpus v1.0.1 adds normalized matching for the seven label-like cases whose committed CPU and A770 receipts were normalization-only failures.",
+  "Fresh CPU AVX2 and Intel A770 OpenCL receipts record the current quality and parity result under the normalized scoring contract.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]

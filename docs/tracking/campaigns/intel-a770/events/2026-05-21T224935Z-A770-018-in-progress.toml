@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T22:49:35Z"
+campaign = "intel-a770"
+item = "A770-018"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-018-live-answer-corpus-diagnostic"
+summary = "Started the live A770 answer-corpus diagnostic receipt preservation slice."
+notes = [
+  "A770-017 removed the external clinfo startup blocker by aligning runtime detection with the in-process dynamic OpenCL probe.",
+  "A live local five-case answer-corpus run against the official BitNet 2B I2_S GGUF selected intel-a770-opencl, used runtime_api=opencl, reported fallback_used=false, and passed the fixed corpus quality gates.",
+  "This slice records that receipt as diagnostic evidence only and does not promote reference parity, broad answer quality, residency, speed, trusted-partial acceleration, or full BitNet inference claims.",
+]

@@ -1,0 +1,2746 @@
+{
+  "artifact_kind": "bitnet_answer_corpus_parity",
+  "backend": {
+    "fallback_used": false,
+    "lanes": {
+      "left": {
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "label": "amd-5700x-cpu-avx2"
+      },
+      "right": {
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "label": "intel-a770-opencl"
+      }
+    },
+    "requested_backend": "mixed",
+    "runtime_api": "mixed",
+    "selected_backend": "mixed"
+  },
+  "cases": [
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_classify_seed770024_negative_011",
+      "left": {
+        "answer": "Negative",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          39589,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3308,
+          1463,
+          279,
+          27065,
+          439,
+          6928,
+          477,
+          8389,
+          25,
+          578,
+          44854,
+          11721,
+          11102,
+          13,
+          22559,
+          449,
+          832,
+          2440,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "Negative",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          39589,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3308,
+          1463,
+          279,
+          27065,
+          439,
+          6928,
+          477,
+          8389,
+          25,
+          578,
+          44854,
+          11721,
+          11102,
+          13,
+          22559,
+          449,
+          832,
+          2440,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_classify_seed770024_positive_010",
+      "left": {
+        "answer": "Positive",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          36590,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3308,
+          1463,
+          279,
+          27065,
+          439,
+          6928,
+          477,
+          8389,
+          25,
+          578,
+          25637,
+          574,
+          7318,
+          389,
+          892,
+          13,
+          22559,
+          449,
+          832,
+          2440,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "Positive",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          36590,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3308,
+          1463,
+          279,
+          27065,
+          439,
+          6928,
+          477,
+          8389,
+          25,
+          578,
+          25637,
+          574,
+          7318,
+          389,
+          892,
+          13,
+          22559,
+          449,
+          832,
+          2440,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_context_seed770024_password_019",
+      "left": {
+        "answer": "Tulip",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          51,
+          360,
+          575,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          763,
+          420,
+          11914,
+          11,
+          279,
+          3636,
+          374,
+          62036,
+          575,
+          13,
+          3639,
+          374,
+          279,
+          3636,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "Tulip",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          51,
+          360,
+          575,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          763,
+          420,
+          11914,
+          11,
+          279,
+          3636,
+          374,
+          62036,
+          575,
+          13,
+          3639,
+          374,
+          279,
+          3636,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_extract_seed770024_code_009",
+      "left": {
+        "answer": "```R\npackage(code = \"R",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          74694,
+          49,
+          198,
+          1757,
+          16221,
+          284,
+          330,
+          49
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          23673,
+          279,
+          2875,
+          2082,
+          505,
+          420,
+          5296,
+          25,
+          6462,
+          2082,
+          432,
+          12,
+          2983,
+          374,
+          5644,
+          13,
+          22559,
+          449,
+          1193,
+          279,
+          2082,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "gate_contains_any",
+          "scoring_normalized_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "```R\npackage(code = \"R",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          74694,
+          49,
+          198,
+          1757,
+          16221,
+          284,
+          330,
+          49
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          23673,
+          279,
+          2875,
+          2082,
+          505,
+          420,
+          5296,
+          25,
+          6462,
+          2082,
+          432,
+          12,
+          2983,
+          374,
+          5644,
+          13,
+          22559,
+          449,
+          1193,
+          279,
+          2082,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "gate_contains_any",
+          "scoring_normalized_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "quality_failed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_extract_seed770024_owner_008",
+      "left": {
+        "answer": "Mira",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          44,
+          9008,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          23673,
+          279,
+          6506,
+          836,
+          505,
+          420,
+          5296,
+          25,
+          29497,
+          41811,
+          12,
+          1114,
+          6506,
+          374,
+          386,
+          9008,
+          26,
+          4245,
+          2457,
+          374,
+          6740,
+          13,
+          22559,
+          449,
+          1193,
+          279,
+          6506,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "Mira",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          44,
+          9008,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          23673,
+          279,
+          6506,
+          836,
+          505,
+          420,
+          5296,
+          25,
+          29497,
+          41811,
+          12,
+          1114,
+          6506,
+          374,
+          386,
+          9008,
+          26,
+          4245,
+          2457,
+          374,
+          6740,
+          13,
+          22559,
+          449,
+          1193,
+          279,
+          6506,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_fact_seed770024_capital_018",
+      "left": {
+        "answer": "Paris",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          60704,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "Paris",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          60704,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          279,
+          6864,
+          315,
+          9822,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_json_seed770024_status_017",
+      "left": {
+        "answer": "```json\n{\n  \"status\": \"ready\"\n}\n```",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          74694,
+          2285,
+          198,
+          517,
+          220,
+          330,
+          2899,
+          794,
+          330,
+          2359,
+          702,
+          534,
+          74694,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3494,
+          17251,
+          4823,
+          449,
+          7041,
+          832,
+          1401,
+          7086,
+          2704,
+          323,
+          907,
+          5644,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "```json\n{\n  \"status\": \"ready\"\n}\n```",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          74694,
+          2285,
+          198,
+          517,
+          220,
+          330,
+          2899,
+          794,
+          330,
+          2359,
+          702,
+          534,
+          74694,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3494,
+          17251,
+          4823,
+          449,
+          7041,
+          832,
+          1401,
+          7086,
+          2704,
+          323,
+          907,
+          5644,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_math_seed770024_add_001",
+      "left": {
+        "answer": "42",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          2983,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          23426,
+          220,
+          1114,
+          489,
+          220,
+          914,
+          13,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "42",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          2983,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          23426,
+          220,
+          1114,
+          489,
+          220,
+          914,
+          13,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_math_seed770024_mul_003",
+      "left": {
+        "answer": "54",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          4370,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          23426,
+          220,
+          24,
+          865,
+          220,
+          21,
+          13,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "54",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          4370,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          23426,
+          220,
+          24,
+          865,
+          220,
+          21,
+          13,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_math_seed770024_sub_002",
+      "left": {
+        "answer": "45",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          1774,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          23426,
+          220,
+          1227,
+          482,
+          220,
+          777,
+          13,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "45",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          1774,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          23426,
+          220,
+          1227,
+          482,
+          220,
+          777,
+          13,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_numeric_seed770024_half_004",
+      "left": {
+        "answer": "19",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          777,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          4376,
+          315,
+          220,
+          1987,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "19",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          777,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          3639,
+          374,
+          4376,
+          315,
+          220,
+          1987,
+          30,
+          22559,
+          449,
+          1193,
+          279,
+          1396,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_repeat_seed770024_phrase_007",
+      "left": {
+        "answer": "red blue green",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          1171,
+          6437,
+          6307,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "red blue green",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          1171,
+          6437,
+          6307,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          45901,
+          7041,
+          25,
+          2579,
+          6437,
+          6307,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_required_seed770024_ready_013",
+      "left": {
+        "answer": "The materials are ready for distribution.",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          791,
+          7384,
+          527,
+          5644,
+          369,
+          8141,
+          13,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          449,
+          279,
+          3492,
+          5644,
+          13,
+          3234,
+          539,
+          1005,
+          279,
+          3492,
+          7344,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "The materials are ready for distribution.",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          791,
+          7384,
+          527,
+          5644,
+          369,
+          8141,
+          13,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          449,
+          279,
+          3492,
+          5644,
+          13,
+          3234,
+          539,
+          1005,
+          279,
+          3492,
+          7344,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_sort_seed770024_words_012",
+      "left": {
+        "answer": "ant, dog, cat",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          519,
+          11,
+          5679,
+          11,
+          8415,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          16347,
+          1521,
+          4339,
+          28890,
+          2740,
+          323,
+          8821,
+          1124,
+          449,
+          77702,
+          25,
+          5679,
+          11,
+          3276,
+          11,
+          8415,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "gate_contains_any",
+          "scoring_normalized_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "ant, dog, cat",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          519,
+          11,
+          5679,
+          11,
+          8415,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          16347,
+          1521,
+          4339,
+          28890,
+          2740,
+          323,
+          8821,
+          1124,
+          449,
+          77702,
+          25,
+          5679,
+          11,
+          3276,
+          11,
+          8415,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "gate_contains_any",
+          "scoring_normalized_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "quality_failed"
+      }
+    },
+    {
+      "failed_rules": [
+        "generated_token_ids",
+        "decoded_text",
+        "logits_topk"
+      ],
+      "id": "a770_summary_seed770024_keywords_014",
+      "left": {
+        "answer": "Rust enables fast and safe software development by eliminating null pointer exceptions and memory leaks.",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          49,
+          592,
+          20682,
+          5043,
+          323,
+          6220,
+          3241,
+          4500,
+          555,
+          40599,
+          854,
+          7597,
+          20157,
+          323,
+          5044,
+          37796,
+          13,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          8279,
+          5730,
+          553,
+          304,
+          832,
+          2875,
+          11914,
+          323,
+          2997,
+          279,
+          4339,
+          5043,
+          323,
+          6220,
+          25,
+          34889,
+          8779,
+          7411,
+          1977,
+          15062,
+          6067,
+          3241,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "Rust enables fast and safe software development by preventing common programming errors.",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          49,
+          592,
+          20682,
+          5043,
+          323,
+          6220,
+          3241,
+          4500,
+          555,
+          27252,
+          4279,
+          15840,
+          6103,
+          13,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          8279,
+          5730,
+          553,
+          304,
+          832,
+          2875,
+          11914,
+          323,
+          2997,
+          279,
+          4339,
+          5043,
+          323,
+          6220,
+          25,
+          34889,
+          8779,
+          7411,
+          1977,
+          15062,
+          6067,
+          3241,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_table_seed770024_code_006",
+      "left": {
+        "answer": "Delta",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          20892,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          5560,
+          420,
+          19128,
+          25,
+          1229,
+          18,
+          28,
+          7288,
+          11,
+          1229,
+          22,
+          28,
+          20869,
+          11,
+          1229,
+          24,
+          28,
+          33796,
+          13,
+          3639,
+          907,
+          17623,
+          311,
+          1229,
+          22,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "Delta",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          20892,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          5560,
+          420,
+          19128,
+          25,
+          1229,
+          18,
+          28,
+          7288,
+          11,
+          1229,
+          22,
+          28,
+          20869,
+          11,
+          1229,
+          24,
+          28,
+          33796,
+          13,
+          3639,
+          907,
+          17623,
+          311,
+          1229,
+          22,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_table_seed770024_color_005",
+      "left": {
+        "answer": "Blue",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          10544,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          5560,
+          420,
+          2007,
+          25,
+          20548,
+          17043,
+          28,
+          13553,
+          11,
+          1077,
+          263,
+          28,
+          12481,
+          11,
+          99384,
+          28,
+          1171,
+          13,
+          3639,
+          1933,
+          374,
+          1077,
+          263,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "Blue",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          10544,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          5560,
+          420,
+          2007,
+          25,
+          20548,
+          17043,
+          28,
+          13553,
+          11,
+          1077,
+          263,
+          28,
+          12481,
+          11,
+          99384,
+          28,
+          1171,
+          13,
+          3639,
+          1933,
+          374,
+          1077,
+          263,
+          30,
+          22559,
+          449,
+          832,
+          3492,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_unknown_seed770024_unknown_020",
+      "left": {
+        "answer": "The note \"Nova owns the ticket\"",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          791,
+          5296,
+          330,
+          77869,
+          25241,
+          279,
+          11989,
+          1
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          578,
+          5296,
+          2795,
+          25,
+          35741,
+          25241,
+          279,
+          11989,
+          13,
+          3639,
+          1933,
+          374,
+          279,
+          11989,
+          30,
+          1442,
+          279,
+          1933,
+          374,
+          539,
+          11224,
+          11,
+          4320,
+          9987,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "gate_contains_any",
+          "scoring_exact_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "The note \"Nova owns the ticket\"",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          791,
+          5296,
+          330,
+          77869,
+          25241,
+          279,
+          11989,
+          1
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          578,
+          5296,
+          2795,
+          25,
+          35741,
+          25241,
+          279,
+          11989,
+          13,
+          3639,
+          1933,
+          374,
+          279,
+          11989,
+          30,
+          1442,
+          279,
+          1933,
+          374,
+          539,
+          11224,
+          11,
+          4320,
+          9987,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "gate_contains_any",
+          "scoring_exact_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "quality_failed"
+      }
+    },
+    {
+      "failed_rules": [
+        "logits_topk"
+      ],
+      "id": "a770_yes_no_seed770024_sky_016",
+      "left": {
+        "answer": "No. The daytime",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          2822,
+          13,
+          578,
+          62182
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          279,
+          62182,
+          13180,
+          6118,
+          6307,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "scoring_exact_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "No. The daytime",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          2822,
+          13,
+          578,
+          62182
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          279,
+          62182,
+          13180,
+          6118,
+          6307,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "scoring_exact_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "quality_failed"
+      }
+    },
+    {
+      "failed_rules": [
+        "generated_token_ids",
+        "decoded_text",
+        "logits_topk"
+      ],
+      "id": "a770_yes_no_seed770024_water_015",
+      "left": {
+        "answer": "No. N/A",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          2822,
+          13,
+          452,
+          10576
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "gate_starts_with_any",
+          "scoring_exact_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "No. .",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          2822,
+          13,
+          662,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 1,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "gate_starts_with_any",
+          "scoring_exact_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "quality_failed"
+      }
+    }
+  ],
+  "claim": "full_decode_answer_parity_diagnostic",
+  "fallback_used": false,
+  "generated_output_frontier": {
+    "case_count": 20,
+    "classification": "generated_output_frontier_first_mismatch_missing_logit_context",
+    "decoded_text_mismatch_count": 2,
+    "generated_output_mismatch_count": 2,
+    "left_label": "amd-5700x-cpu-avx2",
+    "mismatch_with_logit_context_count": 0,
+    "missing_context_count": 0,
+    "missing_logit_context_count": 2,
+    "right_label": "intel-a770-opencl",
+    "row_limit": 16,
+    "rows": [
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "generated_output_first_mismatch_missing_logit_context",
+        "decoded_text_match": false,
+        "first_different_rank_at_first_mismatch": null,
+        "first_mismatch_index": 9,
+        "has_logit_context_at_first_mismatch": false,
+        "left_chosen_id_at_first_mismatch": null,
+        "left_generated_len": 18,
+        "left_logits_step_count": 1,
+        "left_token_id": 40599,
+        "right_chosen_id_at_first_mismatch": null,
+        "right_generated_len": 15,
+        "right_logits_step_count": 1,
+        "right_token_id": 27252,
+        "same_chosen_id_at_first_mismatch": null
+      },
+      {
+        "case_id": "a770_yes_no_seed770024_water_015",
+        "classification": "generated_output_first_mismatch_missing_logit_context",
+        "decoded_text_match": false,
+        "first_different_rank_at_first_mismatch": null,
+        "first_mismatch_index": 2,
+        "has_logit_context_at_first_mismatch": false,
+        "left_chosen_id_at_first_mismatch": null,
+        "left_generated_len": 4,
+        "left_logits_step_count": 1,
+        "left_token_id": 452,
+        "right_chosen_id_at_first_mismatch": null,
+        "right_generated_len": 4,
+        "right_logits_step_count": 1,
+        "right_token_id": 662,
+        "same_chosen_id_at_first_mismatch": null
+      }
+    ],
+    "rows_truncated": false
+  },
+  "generated_output_logit_margin_frontier": {
+    "case_count": 20,
+    "classification": "generated_output_logit_margin_frontier_missing_context",
+    "generated_output_mismatch_count": 2,
+    "left_label": "amd-5700x-cpu-avx2",
+    "margin_available_count": 0,
+    "missing_context_count": 2,
+    "missing_cross_chosen_logit_count": 0,
+    "near_tie_abs_logit_delta_threshold": 0.01,
+    "opposite_argmax_count": 0,
+    "right_label": "intel-a770-opencl",
+    "right_near_tie_count": 0,
+    "row_limit": 16,
+    "rows": [
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "generated_output_logit_margin_missing_context",
+        "first_mismatch_index": 9,
+        "left_logits_step_count": 1,
+        "reason": "left_logits_step_missing",
+        "right_logits_step_count": 1
+      },
+      {
+        "case_id": "a770_yes_no_seed770024_water_015",
+        "classification": "generated_output_logit_margin_missing_context",
+        "first_mismatch_index": 2,
+        "left_logits_step_count": 1,
+        "reason": "left_logits_step_missing",
+        "right_logits_step_count": 1
+      }
+    ],
+    "rows_truncated": false
+  },
+  "inputs": {
+    "left_label": "amd-5700x-cpu-avx2",
+    "left_receipt_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-answer-readiness-normalized-scoring.json",
+    "right_label": "intel-a770-opencl",
+    "right_receipt_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/a770-opencl-answer-readiness-normalized-scoring.json"
+  },
+  "kernel": {
+    "left_label": "amd-5700x-cpu-avx2",
+    "left_selected_kernels": [
+      "i2_s-avx2-reference"
+    ],
+    "right_label": "intel-a770-opencl",
+    "right_selected_kernels": [
+      "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate"
+    ]
+  },
+  "logits_topk_frontier": {
+    "case_count": 20,
+    "classification": "logits_topk_frontier_generated_output_divergence",
+    "compared_step_count": 20,
+    "different_chosen_token_count": 0,
+    "generated_output_divergence_count": 2,
+    "left_label": "amd-5700x-cpu-avx2",
+    "logits_topk_mismatch_count": 20,
+    "max_common_token_abs_delta": 1.0213394165039027,
+    "missing_context_count": 0,
+    "right_label": "intel-a770-opencl",
+    "row_limit": 16,
+    "rows": [
+      {
+        "case_id": "a770_classify_seed770024_negative_011",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 20,
+        "decoded_text_match": true,
+        "first_different_rank": 8,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 39589,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.3296976089477539,
+        "right_chosen_id": 39589,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_classify_seed770024_positive_010",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 20,
+        "decoded_text_match": true,
+        "first_different_rank": 2,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 36590,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.606974601745609,
+        "right_chosen_id": 36590,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_context_seed770024_password_019",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 20,
+        "decoded_text_match": true,
+        "first_different_rank": 5,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 51,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.48278141021728516,
+        "right_chosen_id": 51,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_extract_seed770024_code_009",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 19,
+        "decoded_text_match": true,
+        "first_different_rank": 1,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 74694,
+        "left_only_top_token_ids": [
+          475
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.8007783889770526,
+        "right_chosen_id": 74694,
+        "right_only_top_token_ids": [
+          40
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_extract_seed770024_owner_008",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 18,
+        "decoded_text_match": true,
+        "first_different_rank": 6,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 44,
+        "left_only_top_token_ids": [
+          1267,
+          50329
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.8900527954101562,
+        "right_chosen_id": 44,
+        "right_only_top_token_ids": [
+          12,
+          1502
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_fact_seed770024_capital_018",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 20,
+        "decoded_text_match": true,
+        "first_different_rank": 6,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 60704,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.37689781188964844,
+        "right_chosen_id": 60704,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_json_seed770024_status_017",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 20,
+        "decoded_text_match": true,
+        "first_different_rank": 8,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 74694,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.33823966979980646,
+        "right_chosen_id": 74694,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_math_seed770024_add_001",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 20,
+        "decoded_text_match": true,
+        "first_different_rank": 6,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 2983,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.5427436828613281,
+        "right_chosen_id": 2983,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_math_seed770024_mul_003",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 19,
+        "decoded_text_match": true,
+        "first_different_rank": 5,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 4370,
+        "left_only_top_token_ids": [
+          17048
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.49723720550537287,
+        "right_chosen_id": 4370,
+        "right_only_top_token_ids": [
+          21
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_math_seed770024_sub_002",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 19,
+        "decoded_text_match": true,
+        "first_different_rank": 1,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 1774,
+        "left_only_top_token_ids": [
+          22926
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.8687219619751012,
+        "right_chosen_id": 1774,
+        "right_only_top_token_ids": [
+          1271
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_numeric_seed770024_half_004",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 18,
+        "decoded_text_match": true,
+        "first_different_rank": 5,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 777,
+        "left_only_top_token_ids": [
+          59,
+          5538
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.5313959121704102,
+        "right_chosen_id": 777,
+        "right_only_top_token_ids": [
+          508,
+          16533
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_repeat_seed770024_phrase_007",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 20,
+        "decoded_text_match": true,
+        "first_different_rank": 5,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 1171,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.2744321823120117,
+        "right_chosen_id": 1171,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_required_seed770024_ready_013",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 20,
+        "decoded_text_match": true,
+        "first_different_rank": 5,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 791,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.6255836486816406,
+        "right_chosen_id": 791,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_sort_seed770024_words_012",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 19,
+        "decoded_text_match": true,
+        "first_different_rank": 3,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 519,
+        "left_only_top_token_ids": [
+          67
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.3054542541503906,
+        "right_chosen_id": 519,
+        "right_only_top_token_ids": [
+          96556
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 19,
+        "decoded_text_match": false,
+        "first_different_rank": 7,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 49,
+        "left_only_top_token_ids": [
+          34
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 1.0213394165039027,
+        "right_chosen_id": 49,
+        "right_only_top_token_ids": [
+          33
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_table_seed770024_code_006",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 19,
+        "decoded_text_match": true,
+        "first_different_rank": 6,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 20892,
+        "left_only_top_token_ids": [
+          26002
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.5121612548828125,
+        "right_chosen_id": 20892,
+        "right_only_top_token_ids": [
+          791
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      }
+    ],
+    "rows_truncated": true,
+    "same_chosen_token_count": 20,
+    "same_generated_output_count": 18
+  },
+  "machine": {
+    "cpu": null,
+    "machine_id": "amd-5700x-intel-a770",
+    "memory": null,
+    "platform_artifact": null,
+    "power": null
+  },
+  "may_claim": [
+    "Full-decode answer parity can be audited for the compared receipts.",
+    "First divergence evidence can separate backend issues from shared prompt, tokenizer, logits, sampler, or text decoding issues."
+  ],
+  "must_not_claim": [
+    "General chat quality is proven.",
+    "Sustained throughput is proven.",
+    "Server inference is complete.",
+    "A backend is answer-ready when the compared model artifact is not answer-ready."
+  ],
+  "proof_stage": "full_decode_parity_compared",
+  "requested_backend": "mixed",
+  "runtime_api": "mixed",
+  "schema_version": "1.0.0",
+  "selected_backend": "mixed",
+  "shared_contract": {
+    "failed_rules": [],
+    "same_greedy_settings": true,
+    "same_prompt_template": true,
+    "same_real_gguf": true,
+    "same_tokenizer": true
+  },
+  "speedup_claim": false,
+  "summary": {
+    "failed": 20,
+    "first_divergence": {
+      "case_id": "a770_classify_seed770024_negative_011",
+      "kind": "logits_topk",
+      "left": {
+        "chosen_id": 39589,
+        "logits_vector_length": 128256,
+        "step": 0,
+        "top_logits": [
+          {
+            "logit": 20.826251983642575,
+            "token_id": 39589
+          },
+          {
+            "logit": 16.912063598632812,
+            "token_id": 43324
+          },
+          {
+            "logit": 11.435632705688477,
+            "token_id": 791
+          },
+          {
+            "logit": 10.80722427368164,
+            "token_id": 12
+          },
+          {
+            "logit": 10.48505401611328,
+            "token_id": 2535
+          },
+          {
+            "logit": 9.82077407836914,
+            "token_id": 62035
+          },
+          {
+            "logit": 9.626307487487791,
+            "token_id": 36590
+          },
+          {
+            "logit": 9.230243682861328,
+            "token_id": 60765
+          },
+          {
+            "logit": 9.202911376953123,
+            "token_id": 15410
+          },
+          {
+            "logit": 9.15150260925293,
+            "token_id": 51957
+          },
+          {
+            "logit": 8.613603591918945,
+            "token_id": 54965
+          },
+          {
+            "logit": 8.24421501159668,
+            "token_id": 8389
+          },
+          {
+            "logit": 8.240425109863281,
+            "token_id": 98227
+          },
+          {
+            "logit": 8.207670211791992,
+            "token_id": 2688
+          },
+          {
+            "logit": 8.205625534057617,
+            "token_id": 1271
+          },
+          {
+            "logit": 7.933188438415527,
+            "token_id": 40
+          },
+          {
+            "logit": 7.920283794403076,
+            "token_id": 48900
+          },
+          {
+            "logit": 7.880608081817627,
+            "token_id": 16533
+          },
+          {
+            "logit": 7.875555992126465,
+            "token_id": 2028
+          },
+          {
+            "logit": 7.74037504196167,
+            "token_id": 32458
+          }
+        ]
+      },
+      "left_label": "amd-5700x-cpu-avx2",
+      "right": {
+        "chosen_id": 39589,
+        "logits_vector_length": 128256,
+        "step": 0,
+        "top_logits": [
+          {
+            "logit": 20.755126953125,
+            "token_id": 39589
+          },
+          {
+            "logit": 16.995479583740234,
+            "token_id": 43324
+          },
+          {
+            "logit": 11.278581619262695,
+            "token_id": 791
+          },
+          {
+            "logit": 11.08468246459961,
+            "token_id": 12
+          },
+          {
+            "logit": 10.458208084106444,
+            "token_id": 2535
+          },
+          {
+            "logit": 9.940835952758787,
+            "token_id": 62035
+          },
+          {
+            "logit": 9.622310638427734,
+            "token_id": 36590
+          },
+          {
+            "logit": 9.308792114257812,
+            "token_id": 60765
+          },
+          {
+            "logit": 9.26329231262207,
+            "token_id": 51957
+          },
+          {
+            "logit": 9.230844497680664,
+            "token_id": 15410
+          },
+          {
+            "logit": 8.780218124389648,
+            "token_id": 54965
+          },
+          {
+            "logit": 8.39120101928711,
+            "token_id": 98227
+          },
+          {
+            "logit": 8.376251220703125,
+            "token_id": 8389
+          },
+          {
+            "logit": 8.066164016723633,
+            "token_id": 1271
+          },
+          {
+            "logit": 8.04445743560791,
+            "token_id": 48900
+          },
+          {
+            "logit": 7.877972602844238,
+            "token_id": 2688
+          },
+          {
+            "logit": 7.865534782409668,
+            "token_id": 16533
+          },
+          {
+            "logit": 7.751373767852783,
+            "token_id": 40
+          },
+          {
+            "logit": 7.66978120803833,
+            "token_id": 32458
+          },
+          {
+            "logit": 7.643364906311035,
+            "token_id": 2028
+          }
+        ]
+      },
+      "right_label": "intel-a770-opencl",
+      "scope": "logits_or_kernel",
+      "step": 0
+    },
+    "passed": 0,
+    "total": 20
+  },
+  "timestamp": "2026-05-22T18:00:03.500610600+00:00"
+}

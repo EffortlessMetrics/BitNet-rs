@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T15:29:18Z"
+campaign = "intel-a770"
+item = "A770-014"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 198
+branch = "codex/intel-a770/A770-014-model-contract-route-alignment"
+head_sha = "cc6232aa70d8493dc6523a4d28041c9ccfe524ed"
+merge_sha = "fb95daeaa6861bb0d1c63af49b42108caee5000e"
+summary = "Merged PR #198 with the A770 diagnostic QK256 model-contract route alignment."
+notes = [
+  "The official BitNet 2B I2_S model contract now lists the Intel Arc A770 OpenCL QK256 route as diagnostic route-receipt-only.",
+  "The route matrix, committed diagnostic route receipt scaffold, and model contract agree that A770 QK256 evidence remains diagnostic.",
+  "No BitNet inference, answer quality, activation quantization residency, selected attention residency, resident KV, full residency, performance speedup, trusted-partial acceleration, or completion claim is promoted.",
+]

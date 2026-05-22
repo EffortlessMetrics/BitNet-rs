@@ -1,0 +1,15 @@
+timestamp = "2026-05-21T12:05:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-072"
+event = "in_progress"
+previous_status = "none"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-072-post071-artifact-capture"
+summary = "Queue the real post-SLM-CPU-071 i5-8250U Qwen3 Q8_0 before/after timing artifact capture."
+notes = [
+  "SLM-CPU-071 merged the timing gate definition, but the verified Qwen3 GGUF was not present locally and no qwen3-slm-cpu-071 before/after receipts are committed.",
+  "The next slice must capture or ingest the real 4-thread default eager_f32_candle versus exact-tensor packed_q8_sidecar warm-session receipts before timing is classified.",
+  "Behavior equivalence, strict GGUF tokenizer authority, selected CPU backend/kernel identity, dense hook identity, model SHA, and fallback=false must match before any timing interpretation.",
+  "No default packed-Q8 enablement, sustained-throughput, broad quality, Q4/Q5, accelerator, server, Qwen3.5, or BitNet QK256 claim is added.",
+]

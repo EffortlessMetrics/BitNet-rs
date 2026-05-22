@@ -1,0 +1,251 @@
+# Promote To BitNet-rs
+
+Status: active
+Owner: release maintainers
+Created: 2026-05-20
+Linked proposal: n/a
+Linked specs: n/a
+Linked ADRs: n/a
+Linked plan: n/a
+Linked issues: n/a
+Linked PRs: n/a
+Support-tier impact: release promotion only
+Policy impact: defines swarm-to-release handoff
+
+## Purpose
+
+This document defines how selected work moves from
+`EffortlessMetrics/bitnet-rs-swarm` to the public source-of-truth and release
+repository, `EffortlessMetrics/BitNet-rs`.
+
+During migration, swarm owns high-throughput same-repo execution and proof
+work. `BitNet-rs` remains the public source-of-truth until an explicit
+sync/cutover says otherwise, and it owns release history, tags, crates.io
+publication, release notes, stable release branches, package metadata, and
+release-blocking hotfixes.
+
+Swarm-only commits do not become public-release authority until a promotion or
+sync PR names the included work, proof inputs, claim boundaries, and excluded
+work.
+
+Source-to-swarm syncs are the opposite direction from release promotion. They
+keep `bitnet-rs-swarm` current with public source while source remains
+canonical. They do not make swarm the release repo, do not move publish or
+signing authority, and do not promote swarm-only evidence back to source.
+
+## History Repair Baseline
+
+The one-time swarm history repair is recorded in:
+
+```text
+docs/development/SWARM_HISTORY_REPAIR.md
+```
+
+That closeout records the real import merge, imported source SHA, old swarm
+ancestor, current source reachability proof, release-workflow guard boundary,
+and open swarm PR snapshot at repair closeout.
+
+Future promotions and syncs must preserve that repaired graph. Do not reset
+swarm main, squash history imports, or copy source files as a single content
+commit to make the repositories appear fresh.
+
+Do not transform a source checkout into a swarm checkout, or a swarm checkout
+into a source checkout, by hard reset, branch replacement, or tree-copy import.
+Use side-by-side clones and history-preserving sync or promotion branches.
+
+The active source/swarm boundary policy is recorded in:
+
+```text
+policy/repo-boundary.toml
+```
+
+Promotion packets should use that ledger for the canonical repository roles,
+forbidden history operations, release-workflow boundary, and required promotion
+inputs.
+
+The latest source-to-swarm sync checkpoint is also recorded in
+`docs/development/SWARM_HISTORY_REPAIR.md`. Use it to identify the last known
+source commit reachable from swarm before preparing another sync or promotion.
+Always verify live refs; the checkpoint is evidence, not a substitute for
+current ancestry checks.
+
+## Merge Method
+
+Promotion is a repository-boundary operation. It must preserve swarm ancestry in
+the public source repo.
+
+Do not squash swarm-to-source promotion PRs. A promotion must land by regular
+merge commit or by an explicitly approved fast-forward/direct update that keeps
+the promoted swarm commits reachable from `BitNet-rs/main`.
+
+Recommended branch shape:
+
+```bash
+git clone git@github.com:EffortlessMetrics/BitNet-rs.git bitnet-rs-promote
+cd bitnet-rs-promote
+git remote add swarm git@github.com:EffortlessMetrics/bitnet-rs-swarm.git
+git fetch origin --prune
+git fetch swarm --prune
+git switch -c promote/swarm-YYYY-MM-DD origin/main
+git merge --no-ff swarm/main -m "promote: merge bitnet-rs-swarm through <swarm_sha>"
+```
+
+This clone is separate from the active swarm checkout. Machines should keep the
+source and swarm clones side by side so release/publish work and swarm execution
+work cannot accidentally reuse the wrong remote.
+
+The source repo may either temporarily/permanently allow merge commits for
+`promote:swarm-to-source` PRs, or an admin may perform a non-force
+fast-forward/direct update after proof. Force-push is not an accepted promotion
+method.
+
+## Promotion Inputs
+
+Before opening a release-promotion PR against `BitNet-rs`, prepare:
+
+```text
+source_repo = EffortlessMetrics/bitnet-rs-swarm
+source_commit = <swarm main sha>
+source_prs = [<included swarm PR numbers>]
+release_target = patch | minor | prerelease
+version = <x.y.z or prerelease version>
+changelog = <summary or changelog path>
+proof_pack = <receipt or manifest path>
+excluded_work = <known swarm work intentionally not promoted>
+```
+
+The source commit should be on swarm `main` unless the release manager has
+approved a narrower hotfix source.
+
+## Promotion Packet
+
+A promotion packet is required before opening a source-repo promotion PR. It can
+live under `target/promotion/` for a dry run, or under a committed
+`docs/release/promotion-packets/` path when the promotion itself needs a durable
+review artifact.
+
+Generate the first draft from the swarm checkout with:
+
+```bash
+cargo run --locked -p xtask --no-default-features -- promote-to-source \
+  --from <last-source-sync-or-promotion-sha> \
+  --to HEAD \
+  --out target/promotion/packet.md
+```
+
+The generator is a conservative local classifier. It records the range,
+changed files, touched crates, campaign and policy surfaces, generated dashboard
+touches, release-sensitive workflow touches, and placeholder proof/receipt
+sections. The generated packet is not release approval; fill in proof commands,
+receipts, excluded work, and claim boundaries before opening a source PR.
+
+Use this shape:
+
+```text
+Promotion id:
+Source repo:
+Target repo:
+Swarm range:
+Included swarm PRs:
+Included swarm SHAs:
+Source impact:
+Changed files:
+Touched crates:
+Campaigns touched:
+Policy files touched:
+Generated dashboard status:
+Proof commands:
+Receipts:
+Claim boundary:
+What this does not claim:
+Release/publish/signing impact:
+Excluded swarm work:
+Rollback:
+```
+
+The packet should be conservative. If it cannot prove that a hardware, model,
+quality, speed, residency, server, or release claim is allowed, the packet must
+say that the claim is not promoted.
+
+## Promotion PR Body
+
+The `BitNet-rs` promotion PR should include:
+
+- merge method: regular merge commit or approved fast-forward/direct update;
+- source swarm commit;
+- included swarm PRs;
+- release target and version;
+- changelog summary;
+- proof manifest or receipt pack;
+- package/publish checks;
+- excluded swarm work;
+- explicit claim boundary.
+
+It should link the promotion packet and summarize only the parts that matter
+for source review.
+
+For hardware, model, quality, performance, or residency claims, include the
+exact receipt paths and claim ledgers that allow the claim. If a receipt is
+missing, leave the claim out.
+
+## Release Checks
+
+Release PRs run package and publish gates instead of re-running every swarm
+hardware lane by default.
+
+Expected checks:
+
+```text
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace --all-targets
+cargo package --workspace --allow-dirty
+cargo publish --dry-run, when applicable
+```
+
+If a command cannot run, record why, substitute evidence if available, and
+whether the gap blocks release.
+
+## Claim Boundary
+
+Do not broaden claims during promotion.
+
+The release PR must preserve:
+
+- selected backend and device identity for hardware claims;
+- model and tokenizer identity for model claims;
+- fallback status;
+- behavior or quality gate;
+- benchmark profile for performance claims;
+- explicit not-claims;
+- excluded work.
+
+Diagnostic-only swarm receipts remain diagnostic unless the promotion proof pack
+makes them claim-grade.
+
+## Source-Owned Surfaces
+
+Do not casually overwrite source-owned release surfaces during promotion:
+
+| File type | Promotion handling |
+| --- | --- |
+| Runtime/code/docs/specs/tests | Promote when included in the promotion scope. |
+| Receipts intended for source | Promote when policy-compliant and claim-bounded. |
+| Swarm-only CI | Usually exclude. |
+| Swarm authority docs | Exclude or keep only if useful to source readers. |
+| Release/signing/publish workflows | Source-owned; do not overwrite casually. |
+| Secrets-heavy workflow changes | Source-owned; hold for explicit release/security review. |
+
+## Excluded Work Examples
+
+Promotion PRs should list work that remains in swarm:
+
+- draft or proof-gated PRs;
+- diagnostic-only receipts;
+- old PRs without content disposition;
+- hardware lanes without quality gates;
+- performance candidates without behavior-backed benchmarks;
+- broad model-family expansion not covered by the release.
+
+Excluded work remains open or tracked in swarm. Do not close it in `BitNet-rs`
+because a release was promoted.

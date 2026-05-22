@@ -68,6 +68,55 @@ Record these before moving any 258V hardware lane beyond `scaffold`:
 | Shared memory pressure | 32GB LPDDR5X is shared by CPU/GPU/NPU. |
 | Power mode / thermal profile | Laptop results depend heavily on power policy. |
 
+## Local Ask Model Prerequisites
+
+`bitnet lunar-lake ask` does not commit or download model binaries. Before using
+the executable ask routes, make the model path explicit or install the local
+cache expected by the route:
+
+| Route family | Model shape | Local path or override |
+|---|---|---|
+| Dense Qwen CPU | Qwen2.5-0.5B-Instruct Q8_0 GGUF | Pass `--model <path-to-qwen2.5-0.5b-instruct-q8_0.gguf>`, or keep the GGUF in the local CLI cache. |
+| OpenVINO GPU / NPU | Qwen2.5-0.5B-Instruct OpenVINO IR INT4_SYM directory | Pass `--model <OpenVINO IR directory>` or set `BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR=<OpenVINO IR directory>`. |
+
+On Windows, the CPU cache path is typically:
+
+```text
+%LOCALAPPDATA%\bitnet-rs\models\qwen2.5-0.5b-instruct-q8_0\qwen2.5-0.5b-instruct-q8_0.gguf
+```
+
+The committed evidence may name example paths such as
+`models/slm/qwen2.5-0.5b-instruct-q8_0.gguf` or
+`models/openvino/qwen2.5-0.5b-instruct-int4-sym`, but those paths are local
+operator prerequisites, not committed artifacts. If a promoted route cannot
+resolve its required model path, `ask` must fail closed instead of selecting a
+different route or using hidden fallback.
+
+Examples:
+
+```powershell
+target/debug/bitnet.exe lunar-lake ask `
+  --profile regression_tiny `
+  --route auto `
+  --device auto `
+  --prompt "What is 2+2? Answer briefly." `
+  --expect-contains 4 `
+  --max-new-tokens 8 `
+  --json-out target/tmp/lunar-lake-ask-auto-regression-tiny.json
+```
+
+```powershell
+$env:BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR = "C:\Models\qwen2.5-0.5b-instruct-int4-sym"
+target/debug/bitnet.exe lunar-lake ask `
+  --profile ask_short `
+  --route auto `
+  --device auto `
+  --prompt "What is 2+2? Answer briefly." `
+  --expect-contains 4 `
+  --max-new-tokens 16 `
+  --json-out target/tmp/lunar-lake-ask-auto-gpu-ask-short.json
+```
+
 ## Low-Power Battery Runbook
 
 The current `low_power` route-policy blocker is real battery-mode telemetry and

@@ -1,0 +1,13 @@
+timestamp = "2026-05-22T17:12:45Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-017"
+event = "in_progress"
+actor = "codex"
+summary = "Recorded CUDA-MODEL-017M normal Qwen3 source-capture timeout before any repeated-comparator source receipt was emitted."
+
+notes = [
+  "The qwen3_cuda_repeated_comparator manifest preflight passed and confirmed the required 3x source receipt set for one_token, short_decode_8, short_decode_32, warm_session_3_turns, and decode_128_from_warm_context.",
+  "No qwen3-perf-016 source receipts are committed under ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19.",
+  "A normal strict Qwen3 one-token CUDA source-capture attempt timed out after 15 minutes with no JSON receipt emitted, leaving CUDA-MODEL-017 blocked on source receipt capture rather than aggregate generation.",
+  "Do not promote Qwen3 speedup, benchmark-qualified speed, full CUDA residency, broad dense GGUF readiness, Qwen2.5 inheritance, BitNet packed I2_S/QK256 proof, server readiness, or qwen3_cuda_repeated_comparator availability from this diagnostic event.",
+]

@@ -6,7 +6,7 @@ Created: 2026-05-20
 Linked proposal: n/a
 Linked specs: n/a
 Linked ADRs: n/a
-Linked plan: `docs/release/SWARM_PROMOTION.md`
+Linked plan: `docs/release/PROMOTE_TO_BITNET_RS.md`
 Linked issues: n/a
 Linked PRs: n/a
 Support-tier impact: release and publish intake only

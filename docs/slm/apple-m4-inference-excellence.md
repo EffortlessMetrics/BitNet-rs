@@ -253,8 +253,7 @@ kind of run:
 The first schema-`1.2.0` model-free operator receipts using the contract are
 `apple_m4_inference_status`, `apple_m4_operator_evidence_summary`,
 `apple_m4_report_refresh_manifest`, and `apple_m4_regression_dashboard`.
-`bitnet mac receipts-check` validates `run_identity` for schema `1.2.0` and
-`1.3.0`
+`bitnet mac receipts-check` validates `run_identity` for schema `1.2.0`
 receipts and for any receipt that includes `run_identity_sha256`.
 
 Older committed M4 receipts remain valid with their existing schemas while
@@ -1264,6 +1263,28 @@ summary or generated tracking file. A regenerated summary can change operator
 classification only when the retained source receipts support the same claim
 boundary.
 
+`M4-TREND-001` is the first committed rolling trend summary. It adds
+`--since 7d` to `bitnet mac report-refresh` and
+`bitnet mac regression-dashboard`, then records the model-free outputs under:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/report-refresh.json
+ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.json
+ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.md
+```
+
+The window covers `2026-05-15` through `2026-05-21` from committed receipts
+only. The dashboard records 29 reports across 7 families, 13
+matching-identity groups, and 10 comparable groups. Each family or group carries
+skipped-day reasons, a threshold outcome, and operator-envelope impact text so a
+maintainer can see whether a current route has matching history, needs another
+matching report, or should block envelope updates until receipt issues are
+repaired. These trend summaries have `prompt_count=0` and
+`generated_tokens=0`; they do not run live inference, download models, replace
+source receipts, enable BitNet chat or serve, or claim broad quality,
+performance, speedup, full Metal, QK256, Neural Engine, MPSGraph, MacBook, or
+broad Apple Silicon behavior.
+
 An identity becomes stale for current operator claims when any comparison
 identity field changes or is missing:
 
@@ -1434,13 +1455,6 @@ queue limits and backpressure
 resident model reuse
 ```
 
-`M4-SERVE-EX-004` records a model-free
-`bitnet mac serve-backpressure-smoke` contract for concurrent local requests,
-queue depth, busy and timeout responses, resident model reuse, per-request
-receipts, and failure receipts across dense SLM and gated BitNet serve routes.
-It is a receipt and protocol contract only; live runtime/model proof remains in
-the dedicated dense and BitNet evidence items.
-
 Local service claims stay bounded: local appliance operation, not production
 hosting and not broad OpenAI compatibility.
 
@@ -1460,6 +1474,7 @@ current regressions
 unsupported claims
 recommended next command
 route envelope class
+route-state matrix
 ```
 
 `bitnet mac evidence` is the operator-facing summary for that view. It reads
@@ -1468,8 +1483,6 @@ dashboard groups, then writes an `apple_m4_operator_evidence_summary` receipt
 without running live inference or downloading models. `bitnet mac status`,
 `doctor`, `report-refresh`, and `regression-dashboard` remain model-free by
 default. Live model runs belong in local, advisory, scheduled, or release lanes.
-`docs/slm/apple-m4-evidence-ci-lanes.md` defines the CI lane and artifact
-retention contract for those surfaces.
 `bitnet mac report-refresh --explain --open-targets` and
 `bitnet mac regression-dashboard --explain --open-targets` expose the same
 model-free operator contract in a more navigable form: status meanings,
@@ -1502,11 +1515,44 @@ expectation, and memory/disk posture. The map is an operator expectation layer
 only; it does not enable a disabled route or turn bounded receipts into broad
 quality or performance claims.
 
-`M4-ROUTE-MATRIX-001` turns the envelope into a machine-readable route-state
-matrix under `route_state_matrix` in `bitnet mac status --json` and
-`bitnet mac evidence --json`. These receipts use schema `1.3.0`, while older
-operator receipts remain valid without the matrix. The corresponding operator
-table is `docs/slm/apple-m4-route-state-matrix.md`.
+`M4-ROUTE-MATRIX-001` adds the model-free route-state matrix to `bitnet mac
+status --json` and `bitnet mac evidence --json`. The matrix separates dense SLM
+ask, chat, warm-session, serve, and streaming states from BitNet ask,
+warm-session, chat, serve, and streaming states. Enabled or batch-only rows name
+the exact evidence item and receipt family required for that state; disabled
+BitNet rows name the required chat or serve gate; unsupported backend rows stay
+unsupported until a separate full-route receipt exists.
+
+`M4-EVIDENCE-REPLAY-001` adds replayable evidence bundle manifests for auditing
+committed dense SLM and BitNet refreshes. The first bundle is
+`ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json`.
+It records exact model-free replay/audit commands, git and binary identity,
+dense SLM and BitNet model/tokenizer identity, receipt inputs, dashboard
+outputs, expected advisory regression result, and claim boundaries. Operators
+audit it with `bitnet mac evidence replay --bundle <manifest.json> --dry-run
+--json`; the dry-run checks the committed manifest and referenced receipts only.
+It does not execute live inference, download models, validate uncommitted
+artifacts, enable disabled BitNet routes, or create Metal, QK256, Neural Engine,
+MPSGraph, MacBook, broad quality, broad performance, speedup, or broad Apple
+Silicon claims.
+
+`M4-WORKLOAD-001` adds a model-free operator workload suite manifest:
+`ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json`.
+The `bitnet mac workload --suite m4-operator` receipt covers six operator
+workflow families: `summarize`, `extract`, `classify`, `json`, `rewrite`, and
+`table_qa`. For each workflow it records mechanical checks and route-plan entries
+over dense SLM ask/chat/warm-session/serve surfaces plus BitNet ask/warm-session
+surfaces. BitNet chat and serve remain disabled gate boundaries that name the
+missing gate families instead of enabling those routes.
+
+The committed workload receipt validates with `bitnet mac receipts-check` and
+records `prompt_count=0`, `generated_tokens=0`, `no_live_model_run=true`, and
+`workload_manifest_only=true`. It supplies exact follow-up commands for later
+live route receipts, but it does not run those commands itself. This is operator
+coverage and receipt-contract evidence only: it does not prove broad assistant
+quality, enable BitNet chat or serve, claim production server readiness, claim
+full Metal inference, QK256, Neural Engine, MPSGraph, MacBook behavior, speedup,
+broad performance, or broad Apple Silicon support.
 
 `M4-WORKLOAD-001` begins from that matrix with a model-free operator workload
 suite contract:
@@ -1551,6 +1597,14 @@ unless the wording is tied to a matching accepted receipt gate.
 `check-no-panic-family` must be clean or explicitly justified before the M4 CI
 and release-gate items are treated as ready. This is gate hygiene only; it does
 not prove runtime quality, speed, BitNet behavior, or any Apple backend support.
+
+`M4-CI-001` codifies the M4 evidence CI lane contract in
+`docs/slm/apple-m4-evidence-ci-lanes.md`. Generic PR Tier 0 remains model-free:
+parser, scorer, receipt-schema, committed-summary, self-baseline regression,
+generated-dashboard, and diff-hygiene checks only. Advisory local, scheduled M4,
+and release-gate lanes are the only lanes that may produce fresh live M4
+evidence, and hardware-only timing jobs are non-blocking for ordinary PRs unless
+a release gate explicitly opts into drift failure.
 
 `M4-STABILITY-002` keeps operator repair flows explicit and non-destructive:
 `bitnet mac doctor --json --include-bitnet` records dense SLM cache state, BitNet

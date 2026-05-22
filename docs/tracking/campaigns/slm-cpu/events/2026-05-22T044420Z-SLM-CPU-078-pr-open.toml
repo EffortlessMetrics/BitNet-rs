@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T04:44:20Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-078"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+actor = "codex"
+pr = 277
+branch = "codex/slm-cpu-078-packed-matvec-aligned-path"
+head_sha = "a5b7b8c4081a0639fd23bdf3cc6d25c26fa67e3a"
+summary = "Opened PR #277 with a guarded aligned packed Q8_0 matvec path for the exact-tensor sidecar lane."
+notes = [
+  "The implementation adds a block-aligned packed Q8_0 matvec path when matrix_cols is a multiple of the Q8 block size.",
+  "The generic row-split Q8 path remains for non-aligned matrix shapes.",
+  "The PR does not include a real i5-8250U before/after artifact, does not close SLM-CPU-078 by itself, and makes no speedup or sustained-throughput claim.",
+  "The default runtime remains eager_f32_candle; packed Q8_0 sidecar execution remains opt-in and exact-tensor scoped.",
+]

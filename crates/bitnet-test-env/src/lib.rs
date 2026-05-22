@@ -6,17 +6,13 @@
 
 #![deny(unused_must_use)]
 
-use std::{
-    env,
-    sync::{Mutex, OnceLock},
-};
+use std::env;
 
-/// Global lock to serialize environment variable modifications across threads.
-static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+mod env_lock;
+mod env_restore;
 
-fn get_env_lock() -> &'static Mutex<()> {
-    ENV_LOCK.get_or_init(|| Mutex::new(()))
-}
+use env_lock::get_env_lock;
+use env_restore::{restore_saved_value, save_original_value};
 
 /// RAII guard for safe environment variable management.
 #[derive(Debug)]
@@ -90,14 +86,14 @@ impl EnvScope {
 
     /// Set `key` to `value`, saving the original value for restoration.
     pub fn set(&mut self, key: &str, value: &str) {
-        self.saved.entry(key.to_string()).or_insert_with(|| env::var(key).ok());
+        save_original_value(&mut self.saved, key);
         // SAFETY: We hold the global ENV_LOCK mutex for the duration of this scope.
         unsafe { env::set_var(key, value) };
     }
 
     /// Remove `key` from the environment, saving the original value for restoration.
     pub fn remove(&mut self, key: &str) {
-        self.saved.entry(key.to_string()).or_insert_with(|| env::var(key).ok());
+        save_original_value(&mut self.saved, key);
         // SAFETY: We hold the global ENV_LOCK mutex for the duration of this scope.
         unsafe { env::remove_var(key) };
     }
@@ -112,13 +108,7 @@ impl Default for EnvScope {
 impl Drop for EnvScope {
     fn drop(&mut self) {
         for (key, original) in &self.saved {
-            // SAFETY: We still hold the global ENV_LOCK mutex (via self._lock).
-            unsafe {
-                match original {
-                    Some(v) => env::set_var(key, v),
-                    None => env::remove_var(key),
-                }
-            }
+            restore_saved_value(key, original);
         }
     }
 }

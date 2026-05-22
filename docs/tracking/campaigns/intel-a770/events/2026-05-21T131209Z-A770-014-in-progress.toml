@@ -1,0 +1,12 @@
+timestamp = "2026-05-21T13:12:09Z"
+campaign = "intel-a770"
+item = "A770-014"
+event = "in_progress"
+branch = "codex/intel-a770/A770-014-model-contract-route-alignment"
+actor = "codex"
+
+notes = [
+  "Started A770-014 after A770-013 landed the strict CLI A770 OpenCL route receipt scaffold.",
+  "This slice aligns the official BitNet 2B I2_S model contract route matrix with the committed diagnostic A770 OpenCL QK256 route.",
+  "No BitNet inference, answer quality, activation quantization residency, selected attention residency, resident KV, full residency, performance speedup, trusted-partial acceleration, or completion claim is promoted.",
+]

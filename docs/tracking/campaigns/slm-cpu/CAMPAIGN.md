@@ -115,7 +115,18 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-062 | merged | #6122 added the release-surface checkpoint for moving further Kaby SLM packed-Q8 compute-candidate development to bitnet-rs-swarm while BitNet-rs remains the audited release/evidence surface. |
 | SLM-CPU-063 | merged | #6127 defined the BitNet-rs release-surface intake gate for audited Kaby SLM artifacts produced by bitnet-rs-swarm. |
 | SLM-CPU-064 | merged | #6138 accepted the first audited Kaby SLM package returned from bitnet-rs-swarm as release-surface evidence only; runtime promotion remains separate. |
-| SLM-CPU-065 | ready | Open the first release-surface runtime-promotion gate for the accepted single-tensor packed Q8_0 sidecar candidate, preserving the strict Qwen3 Q8_0 oracle and keeping runtime promotion disabled by default unless before/after receipts prove identical behavior. |
+| SLM-CPU-071 | merged | #177 defined the required real i5-8250U post-SLM-CPU-070 before/after timing gate; it did not commit the actual Qwen3 artifact pack. |
+| SLM-CPU-072 | merged | #192 captured the real Qwen3 Q8_0 4-thread before/after warm-session receipts for the SLM-CPU-071 timing gate, proved behavior equivalence, and classified the opt-in packed sidecar path as regressed on the bounded artifact. |
+| SLM-CPU-073 | merged | #195 localized the SLM-CPU-072 packed Q8_0 sidecar timing regression to host tensor materialization, scalar matvec, and scratch allocation after the block-local scale-decode prototype. |
+| SLM-CPU-074 | merged | #219 added exact-tensor packed Q8_0 sidecar instrumentation for selector dispatch, input materialization, bias extraction, packed matvec compute, and output tensor construction while keeping eager F32 Candle as the default runtime. |
+| SLM-CPU-075 | merged | #225 consumed the instrumentation surface in a bounded diagnostic artifact and identified the missing warm-session receipt bridge as the next blocker before counter-driven optimization. |
+| SLM-CPU-076 | merged | #229 bridged packed Q8_0 sidecar instrumentation counters into Qwen3 Q8_0 warm-session aggregate receipts without enabling packed Q8_0 by default or claiming speedup. |
+| SLM-CPU-077 | merged | #264 captured the first real i5-8250U Qwen3 Q8_0 post-bridge warm-session receipt with serialized exact-tensor packed Q8_0 sidecar counters, behavior-equivalence proof, and next-target classification. |
+| SLM-CPU-078 | merged | #277 reduced the exact-tensor packed Q8_0 matvec path behind the opt-in sidecar boundary while keeping eager F32 Candle as the default runtime. |
+| SLM-CPU-079 | merged | #291 captured the post-aligned packed-matvec artifact and classified the bounded packed-matvec counter improvement without claiming end-to-end speedup. |
+| SLM-CPU-080 | merged | #332 refreshed the Kaby Lake Qwen3 Q8_0 performance dashboard and kept the current operator default evidence-scoped to 4 threads. |
+| SLM-CPU-081 | merged | #349 defined the repeated packed-Q8 timing gate and recorded that one baseline and one candidate receipt are not enough for an end-to-end speedup claim. |
+| SLM-CPU-082 | ready | #361 queued the repeated packed-Q8 warm-session receipt capture item after SLM-CPU-081; the required repeated receipts remain to be captured or ingested before this item can close. |
 
 ## Review Policy
 

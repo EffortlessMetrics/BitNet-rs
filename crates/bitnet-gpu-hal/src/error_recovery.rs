@@ -123,7 +123,19 @@ impl fmt::Display for ErrorCategory {
 /// rule matches, the error is classified as [`ErrorCategory::Transient`].
 #[derive(Debug, Clone)]
 pub struct ErrorClassifier {
-    rules: Vec<(String, ErrorCategory)>,
+    rules: Vec<ClassificationRule>,
+}
+
+#[derive(Debug, Clone)]
+struct ClassificationRule {
+    pattern_lower: String,
+    category: ErrorCategory,
+}
+
+impl ClassificationRule {
+    fn new(pattern: &str, category: ErrorCategory) -> Self {
+        Self { pattern_lower: pattern.to_lowercase(), category }
+    }
 }
 
 impl ErrorClassifier {
@@ -131,36 +143,36 @@ impl ErrorClassifier {
     pub fn new() -> Self {
         Self {
             rules: vec![
-                ("out of memory".into(), ErrorCategory::ResourceExhausted),
-                ("OOM".into(), ErrorCategory::ResourceExhausted),
-                ("allocation failed".into(), ErrorCategory::ResourceExhausted),
-                ("timeout".into(), ErrorCategory::Timeout),
-                ("deadline exceeded".into(), ErrorCategory::Timeout),
-                ("timed out".into(), ErrorCategory::Timeout),
-                ("ECC error".into(), ErrorCategory::Hardware),
-                ("hardware fault".into(), ErrorCategory::Hardware),
-                ("device lost".into(), ErrorCategory::Hardware),
-                ("invalid configuration".into(), ErrorCategory::Configuration),
-                ("unsupported".into(), ErrorCategory::Configuration),
-                ("invalid parameter".into(), ErrorCategory::Configuration),
-                ("not found".into(), ErrorCategory::Permanent),
-                ("permission denied".into(), ErrorCategory::Permanent),
-                ("corrupted".into(), ErrorCategory::Permanent),
+                ClassificationRule::new("out of memory", ErrorCategory::ResourceExhausted),
+                ClassificationRule::new("OOM", ErrorCategory::ResourceExhausted),
+                ClassificationRule::new("allocation failed", ErrorCategory::ResourceExhausted),
+                ClassificationRule::new("timeout", ErrorCategory::Timeout),
+                ClassificationRule::new("deadline exceeded", ErrorCategory::Timeout),
+                ClassificationRule::new("timed out", ErrorCategory::Timeout),
+                ClassificationRule::new("ECC error", ErrorCategory::Hardware),
+                ClassificationRule::new("hardware fault", ErrorCategory::Hardware),
+                ClassificationRule::new("device lost", ErrorCategory::Hardware),
+                ClassificationRule::new("invalid configuration", ErrorCategory::Configuration),
+                ClassificationRule::new("unsupported", ErrorCategory::Configuration),
+                ClassificationRule::new("invalid parameter", ErrorCategory::Configuration),
+                ClassificationRule::new("not found", ErrorCategory::Permanent),
+                ClassificationRule::new("permission denied", ErrorCategory::Permanent),
+                ClassificationRule::new("corrupted", ErrorCategory::Permanent),
             ],
         }
     }
 
     /// Add a custom classification rule.
     pub fn add_rule(&mut self, pattern: &str, category: ErrorCategory) {
-        self.rules.push((pattern.to_string(), category));
+        self.rules.push(ClassificationRule::new(pattern, category));
     }
 
     /// Classify an error message.
     pub fn classify(&self, error_msg: &str) -> ErrorCategory {
         let lower = error_msg.to_lowercase();
-        for (pattern, category) in &self.rules {
-            if lower.contains(&pattern.to_lowercase()) {
-                return *category;
+        for rule in &self.rules {
+            if lower.contains(&rule.pattern_lower) {
+                return rule.category;
             }
         }
         ErrorCategory::Transient
@@ -1143,10 +1155,7 @@ mod tests {
         let result: RetryResult<i32> =
             engine.execute_with_retry(|_| Err("transient glitch".to_string()));
         assert!(!result.is_success());
-        match result {
-            RetryResult::Exhausted { attempts, .. } => assert_eq!(attempts, 3),
-            _ => panic!("expected Exhausted"),
-        }
+        assert!(matches!(result, RetryResult::Exhausted { attempts: 3, .. }));
     }
 
     #[test]
@@ -1207,10 +1216,7 @@ mod tests {
         let mut engine = engine_with_retries(0);
         let result: RetryResult<i32> =
             engine.execute_with_retry(|_| Err("transient glitch".to_string()));
-        match result {
-            RetryResult::Exhausted { attempts, .. } => assert_eq!(attempts, 1),
-            _ => panic!("expected Exhausted"),
-        }
+        assert!(matches!(result, RetryResult::Exhausted { attempts: 1, .. }));
     }
 
     #[test]

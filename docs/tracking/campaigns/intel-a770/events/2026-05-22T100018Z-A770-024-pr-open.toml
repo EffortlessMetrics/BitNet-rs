@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T10:00:18Z"
+campaign = "intel-a770"
+item = "A770-024"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+pr = 314
+branch = "codex/intel-a770/A770-024-seeded-answer-readiness-contract"
+head_sha = "3ef8310ea184dae3bc6404f973d09b4fa2b4cb17"
+summary = "Opened PR #314 for the seeded A770 BitNet answer-readiness corpus contract."
+notes = [
+  "The PR adds a 20-case deterministic seeded answer-readiness corpus contract for future CPU AVX2 and Intel A770 OpenCL runs.",
+  "The committed change is contract and campaign metadata only; it does not run the live A770 corpus.",
+  "No CPU/A770 answer parity, reference parity, broad A770 answer quality, strict A770 answer readiness, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

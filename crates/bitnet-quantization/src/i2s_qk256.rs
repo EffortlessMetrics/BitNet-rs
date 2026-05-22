@@ -425,7 +425,11 @@ fn bitnet_nearest_int(fval: f32) -> i32 {
     (bits & 0x007f_ffff) - 0x0040_0000
 }
 
-fn quantize_row_i8_s_activation(x: &[f32], cols: usize) -> (Vec<i8>, f32, i32) {
+/// Quantize one activation row using BitNet.cpp's I8_S policy.
+///
+/// Returns the quantized row, activation scale, and activation sum used by the
+/// I2_S x I8_S scaled QK256 formula.
+pub fn quantize_row_i8_s_activation(x: &[f32], cols: usize) -> (Vec<i8>, f32, i32) {
     let mut max = 0.00001f32;
     for &value in x.iter().take(cols) {
         max = max.max(value.abs());

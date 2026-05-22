@@ -1,0 +1,54 @@
+{
+  "artifact_kind": "bitnet_apple_m4_serve_failure",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/receipts/m4srv-1779327767798655000.json",
+  "bitnet_quality_claimed": false,
+  "claim_boundary": {
+    "bitnet_serve_claimed": false,
+    "broad_performance_claim": false,
+    "dense_slm_failure_semantics": true,
+    "full_metal_inference_claimed": false,
+    "openai_compatibility_claimed": false,
+    "production_readiness_claimed": false,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false
+  },
+  "failure": {
+    "message": "bounded stream cancellation smoke stopped after the first observed token",
+    "stage": "stream_cancel",
+    "stop_reason": "client_cancelled"
+  },
+  "fallback_used": false,
+  "mac_bitnet_claim_boundary": {
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "openai_compatibility_claimed": false,
+    "production_hosting_claimed": false,
+    "qk256_apple_claimed": false,
+    "serve_enabled": false,
+    "speedup_claim": false
+  },
+  "model": {
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+  },
+  "model_family": "dense-slm",
+  "partial_generation": {
+    "generated_token_ids": [
+      16
+    ],
+    "generated_tokens": 1,
+    "source_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/receipts/m4srv-1779327762953888000.json"
+  },
+  "request_id": "m4srv-1779327767798655000",
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "timeout_boundary": {
+    "configured_seconds": 1,
+    "enforced": true,
+    "reached": false,
+    "stage": "stream_cancel"
+  },
+  "timestamp": "2026-05-21T01:42:47.798657+00:00"
+}

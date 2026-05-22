@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T21:22:12Z"
+campaign = "intel-a770"
+item = "A770-017"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-017-opencl-runtime-detection"
+pr = 235
+head_sha = "ee0b0fc9389b30d5cefdd1122c229f9715bb09b7"
+summary = "Opened the A770 OpenCL runtime detection alignment PR."
+notes = [
+  "The PR aligns startup backend selection with the in-process dynamic OpenCL probe used by the hardware receipt lanes.",
+  "The branch merged current main before opening to preserve adjacent CUDA and SLM generated-dashboard rows.",
+  "The PR remains diagnostic/route-enabling only and does not promote A770 answer quality, live answer-corpus execution, residency, speed, trusted-partial acceleration, or completion claims.",
+]

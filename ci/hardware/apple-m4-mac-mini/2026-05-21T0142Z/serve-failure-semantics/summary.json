@@ -1,0 +1,156 @@
+{
+  "artifact_kind": "bitnet_apple_m4_serve_failure_semantics",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json",
+  "bitnet_route": {
+    "disabled_reason": "M4-SERVE-EX-002 does not enable BitNet serve; BitNet serve remains gated by separate ready evidence.",
+    "serve_enabled": false,
+    "serve_gate_supplied": false
+  },
+  "checks": {
+    "health_after": {
+      "artifact_kind": "bitnet_apple_m4_local_server_health",
+      "elapsed_ms": 0.059,
+      "executed": true,
+      "generation_executed": false,
+      "passed": true,
+      "status": 200
+    },
+    "health_before": {
+      "artifact_kind": "bitnet_apple_m4_local_server_health",
+      "elapsed_ms": 0.206,
+      "executed": true,
+      "generation_executed": false,
+      "passed": true,
+      "status": 200
+    },
+    "invalid_request": {
+      "elapsed_ms": 0.081,
+      "error": "invalid_completion_request",
+      "executed": true,
+      "passed": true,
+      "status": 400
+    },
+    "missing_cache": {
+      "executed": true,
+      "next_step": "First run: the supported model is missing from /var/folders/t3/p80dzx6923j3h1_n_3f7zm280000gn/T/bitnet-m4-missing-cache-m4srv-1779327762952087000/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf. Run `bitnet model fetch qwen2.5-0.5b-instruct-q8_0 --cache-dir /var/folders/t3/p80dzx6923j3h1_n_3f7zm280000gn/T/bitnet-m4-missing-cache-m4srv-1779327762952087000`. First-run model selection: run `bitnet mac models --cache-dir /var/folders/t3/p80dzx6923j3h1_n_3f7zm280000gn/T/bitnet-m4-missing-cache-m4srv-1779327762952087000` to inspect default/supported/supported-ask model states, BitNet warm-route readiness, and disk headroom. Disk guidance: Start with the default `qwen2.5-0.5b-instruct-q8_0`. Current headroom can also fetch explicit-only supported models such as `qwen2.5-1.5b-instruct-q4_k_m`.",
+      "passed": true,
+      "ready": false
+    },
+    "no_response_failure": {
+      "executed": true,
+      "partial_generated_tokens": 0,
+      "passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/receipts/m4srv-1779327767799003000.json",
+      "request_id": "m4srv-1779327767799003000",
+      "stage": "client_disconnect_before_response",
+      "stop_reason": "client_disconnected",
+      "timeout_reached": false,
+      "validation_error": null
+    },
+    "ready_after": {
+      "artifact_kind": "bitnet_apple_m4_local_server_ready",
+      "elapsed_ms": 0.347,
+      "executed": true,
+      "generation_executed": null,
+      "passed": true,
+      "status": 200
+    },
+    "ready_before": {
+      "artifact_kind": "bitnet_apple_m4_local_server_ready",
+      "elapsed_ms": 0.374,
+      "executed": true,
+      "generation_executed": null,
+      "passed": true,
+      "status": 200
+    },
+    "stream_cancel": {
+      "executed": true,
+      "partial_generated_tokens": 1,
+      "passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/receipts/m4srv-1779327767798655000.json",
+      "request_id": "m4srv-1779327767798655000",
+      "stage": "stream_cancel",
+      "stop_reason": "client_cancelled",
+      "timeout_reached": false,
+      "validation_error": null
+    },
+    "streaming_partial": {
+      "executed": true,
+      "partial_generated_tokens": 1,
+      "passed": true,
+      "receipt_export": {
+        "artifact_kind": "bitnet_apple_m4_local_server_completion",
+        "executed": true,
+        "fallback_used": false,
+        "finish_reason": "length",
+        "generated_text_non_empty": true,
+        "generated_tokens": 1,
+        "passed": true,
+        "request_id": "m4srv-1779327762953888000",
+        "selected_backend": "apple-m4-cpu-neon",
+        "status": 200
+      },
+      "source_generated_tokens": 1,
+      "source_receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/receipts/m4srv-1779327762953888000.json",
+      "source_request_id": "m4srv-1779327762953888000",
+      "stop_reason": "client_cancelled"
+    },
+    "timeout": {
+      "executed": true,
+      "partial_generated_tokens": 1,
+      "passed": true,
+      "receipt_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/receipts/m4srv-1779327767798876000.json",
+      "request_id": "m4srv-1779327767798876000",
+      "stage": "decode_timeout",
+      "stop_reason": "timeout",
+      "timeout_reached": true,
+      "validation_error": null
+    },
+    "unsupported_model": {
+      "elapsed_ms": 0.04,
+      "error": "unsupported_model",
+      "executed": true,
+      "passed": true,
+      "status": 400
+    }
+  },
+  "claim_boundary": {
+    "bitnet_chat_claimed": false,
+    "bitnet_quality_claimed": false,
+    "bitnet_serve_claimed": false,
+    "broad_performance_claim": false,
+    "dense_slm_only": true,
+    "full_metal_inference_claimed": false,
+    "invalid_request_checked": true,
+    "missing_cache_checked": true,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "no_response_failure_receipt_checked": true,
+    "openai_compatibility_claimed": false,
+    "production_readiness_claimed": false,
+    "qk256_apple_claimed": false,
+    "server_health_checked": true,
+    "server_readiness_checked": true,
+    "speedup_claim": false,
+    "stream_cancellation_checked": true,
+    "streaming_partial_checked": true,
+    "timeout_enforced": true
+  },
+  "fallback_used": false,
+  "model_family": "dense-slm",
+  "model_id": "qwen2.5-0.5b-instruct-q8_0",
+  "operator_command": "mac serve-failure-smoke",
+  "receipt_dir": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/receipts",
+  "requested_backend": "apple-m4-cpu-neon",
+  "result": "pass",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "timeout_boundary": {
+    "configured_seconds": 1,
+    "enforced": true,
+    "reached": true,
+    "stage": "decode_timeout"
+  },
+  "timestamp": "2026-05-21T01:42:47.799553+00:00"
+}

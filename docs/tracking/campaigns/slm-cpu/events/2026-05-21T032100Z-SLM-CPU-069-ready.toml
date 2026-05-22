@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T03:21:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-069"
+event = "in_progress"
+previous_status = "none"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-069-packed-q8-locality-root-cause"
+summary = "Queued the packed Q8_0 sidecar locality root-cause slice."
+notes = [
+  "SLM-CPU-069 follows the SLM-CPU-068 timing regression rather than promoting the exact-tensor packed Q8_0 hook.",
+  "The slice must localize whether the next fix belongs in packed-block decode, matvec locality, scratch allocation, selector overhead, or receipt/timing instrumentation.",
+  "The default runtime remains eager F32 Candle and packed Q8_0 sidecar execution stays opt-in and exact-tensor scoped.",
+]

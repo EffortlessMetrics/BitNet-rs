@@ -546,7 +546,7 @@ forbidden_claims = [
   "full_residency",
   "qwen2_5_proof_inheritance",
 ]
-next_proof = "Qwen3 exact-profile server readiness is promoted only for the current-source non-streaming /v1/chat/completions RTX 5070 Ti shared-engine receipt at ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json. The qwen3_cuda_repeated_comparator contract and generator exist; the next proof is a hardware aggregate receipt with at least three same-artifact CPU/CUDA runs per CUDA-MODEL-015 profile before any speed, benchmark-qualified, or full-residency review."
+next_proof = "Qwen3 exact-profile server readiness is promoted only for the current-source non-streaming /v1/chat/completions RTX 5070 Ti shared-engine receipt at ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/server-strict-dense-qwen3-q8-smoke.json. The qwen3_cuda_repeated_comparator contract and generator exist; CUDA-MODEL-017 must commit a hardware aggregate receipt with at least three same-artifact CPU/CUDA runs per CUDA-MODEL-015 profile before CUDA-MODEL-018 can review any speed, benchmark-qualified, or full-residency claim."
 claim_boundary = "Qwen3 0.6B Q8_0 is product CLI-ready for the bounded ask/chat user paths on the dense_regular_llm_cuda RTX 5070 Ti route and has exact-profile server readiness for the current-source non-streaming shared-engine /v1/chat/completions receipt only. Qwen3 does not inherit Qwen2.5 CUDA receipts, prove speed, full residency, broad dense GGUF support, benchmark-qualified speed, or BitNet QK256 behavior."
 
   [entry.claims]

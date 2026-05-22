@@ -1,0 +1,2559 @@
+{
+  "artifact_kind": "apple_m4_regression_dashboard",
+  "claim_boundary": {
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "broad_apple_silicon_claim": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dashboard_only": true,
+    "dense_slm_and_bitnet_evidence_separated": true,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence": false,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "no_live_model_run": true,
+    "no_model_download": true,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false
+  },
+  "comparable_group_count": 10,
+  "dashboard_contract": {
+    "committed_reports_only": true,
+    "matching_requires_fallback_false": true,
+    "matching_requires_same_artifact_kind": true,
+    "matching_requires_same_backend": true,
+    "matching_requires_same_evidence_family": true,
+    "matching_requires_same_model_id": true,
+    "matching_requires_same_model_sha256": true,
+    "matching_requires_same_tokenizer_authority": true,
+    "model_free": true
+  },
+  "fallback_used": false,
+  "families": [
+    {
+      "claim_boundary": {
+        "bitnet_evidence": false,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": true,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "comparable_group_count": 3,
+      "evidence_family": "dense_slm",
+      "expected_artifact_kind": "apple_m4_slm_eval_summary",
+      "group_count": 3,
+      "groups": [
+        {
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "claim_boundary": {
+            "bitnet_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": true,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "ready",
+          "evidence_family": "dense_slm",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "group_key": "dense_slm_eval_v2::qwen2.5-0.5b-instruct-q4_k_m::74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db::gguf_metadata::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 4044,
+            "memory": {
+              "memory_drift_mb_p50": 0.0,
+              "peak_memory_mb_p50": 4013.844,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 500,
+            "quality": {
+              "cases_passed": 297,
+              "cases_total": 500,
+              "failed": 203,
+              "quality_passed": true
+            },
+            "speed": {
+              "decode_tok_s_p50": 15.63,
+              "input_tok_s_p50": 21.989,
+              "output_tok_s_p50": 2.243,
+              "total_wall_ms_p50": 2646.0,
+              "ttft_ms_p50": 2201.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "model_sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+          "open_targets": {
+            "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json"
+          },
+          "operator_status": "comparable",
+          "operator_status_reason": "3 matching reports share this evidence identity; the emitted regression command can compare latest against baseline.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "report_count": 3,
+          "reports": [
+            {
+              "artifact_kind": "apple_m4_slm_eval_summary",
+              "date": "2026-05-16T0240Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_eval_summary",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+                "model_sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+                "prompt_template": "qwen2.5",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "gguf_metadata"
+              },
+              "metrics": {
+                "generated_tokens": 942,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 4013.844,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 120,
+                "quality": {
+                  "cases_passed": 66,
+                  "cases_total": 120,
+                  "failed": 54,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 11.912,
+                  "input_tok_s_p50": 18.445,
+                  "output_tok_s_p50": 1.803,
+                  "total_wall_ms_p50": 3549.0,
+                  "ttft_ms_p50": 2916.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json"
+            },
+            {
+              "artifact_kind": "apple_m4_slm_eval_summary",
+              "date": "2026-05-16T1711Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_eval_summary",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+                "model_sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+                "prompt_template": "qwen2.5",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "gguf_metadata"
+              },
+              "metrics": {
+                "generated_tokens": 4044,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 4013.844,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 500,
+                "quality": {
+                  "cases_passed": 297,
+                  "cases_total": 500,
+                  "failed": 203,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 15.626,
+                  "input_tok_s_p50": 21.988,
+                  "output_tok_s_p50": 2.237,
+                  "total_wall_ms_p50": 2648.0,
+                  "ttft_ms_p50": 2202.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json"
+            },
+            {
+              "artifact_kind": "apple_m4_slm_eval_summary",
+              "date": "2026-05-17T0045Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_eval_summary",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+                "model_sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+                "prompt_template": "qwen2.5",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "gguf_metadata"
+              },
+              "metrics": {
+                "generated_tokens": 4044,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 4013.844,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 500,
+                "quality": {
+                  "cases_passed": 297,
+                  "cases_total": 500,
+                  "failed": 203,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 15.63,
+                  "input_tok_s_p50": 21.989,
+                  "output_tok_s_p50": 2.243,
+                  "total_wall_ms_p50": 2646.0,
+                  "ttft_ms_p50": 2201.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "gguf_metadata",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+            "report_dates": [
+              "2026-05-16T0240Z",
+              "2026-05-16T1711Z",
+              "2026-05-17T0045Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-15",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-19",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "ready_for_matching_identity_regression"
+          }
+        },
+        {
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "claim_boundary": {
+            "bitnet_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": true,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "ready",
+          "evidence_family": "dense_slm",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "group_key": "dense_slm_eval_v2::qwen2.5-0.5b-instruct-q8_0::ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e::gguf_metadata::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 4071,
+            "memory": {
+              "memory_drift_mb_p50": 0.0,
+              "peak_memory_mb_p50": 4012.047,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 500,
+            "quality": {
+              "cases_passed": 299,
+              "cases_total": 500,
+              "failed": 201,
+              "quality_passed": true
+            },
+            "speed": {
+              "decode_tok_s_p50": 15.628,
+              "input_tok_s_p50": 22.01,
+              "output_tok_s_p50": 2.206,
+              "total_wall_ms_p50": 2649.0,
+              "ttft_ms_p50": 2203.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+          "open_targets": {
+            "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json"
+          },
+          "operator_status": "comparable",
+          "operator_status_reason": "3 matching reports share this evidence identity; the emitted regression command can compare latest against baseline.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "report_count": 3,
+          "reports": [
+            {
+              "artifact_kind": "apple_m4_slm_eval_summary",
+              "date": "2026-05-16T0240Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_eval_summary",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                "prompt_template": "qwen2.5",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "gguf_metadata"
+              },
+              "metrics": {
+                "generated_tokens": 889,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 4012.047,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 120,
+                "quality": {
+                  "cases_passed": 62,
+                  "cases_total": 120,
+                  "failed": 58,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 9.067,
+                  "input_tok_s_p50": 13.101,
+                  "output_tok_s_p50": 1.803,
+                  "total_wall_ms_p50": 4352.0,
+                  "ttft_ms_p50": 3747.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json"
+            },
+            {
+              "artifact_kind": "apple_m4_slm_eval_summary",
+              "date": "2026-05-16T1711Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_eval_summary",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                "prompt_template": "qwen2.5",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "gguf_metadata"
+              },
+              "metrics": {
+                "generated_tokens": 4071,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 4012.047,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 500,
+                "quality": {
+                  "cases_passed": 299,
+                  "cases_total": 500,
+                  "failed": 201,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 8.957,
+                  "input_tok_s_p50": 12.298,
+                  "output_tok_s_p50": 1.095,
+                  "total_wall_ms_p50": 5180.5,
+                  "ttft_ms_p50": 4214.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json"
+            },
+            {
+              "artifact_kind": "apple_m4_slm_eval_summary",
+              "date": "2026-05-17T0045Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_eval_summary",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                "prompt_template": "qwen2.5",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "gguf_metadata"
+              },
+              "metrics": {
+                "generated_tokens": 4071,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 4012.047,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 500,
+                "quality": {
+                  "cases_passed": 299,
+                  "cases_total": 500,
+                  "failed": 201,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 15.628,
+                  "input_tok_s_p50": 22.01,
+                  "output_tok_s_p50": 2.206,
+                  "total_wall_ms_p50": 2649.0,
+                  "ttft_ms_p50": 2203.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "gguf_metadata",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+            "report_dates": [
+              "2026-05-16T0240Z",
+              "2026-05-16T1711Z",
+              "2026-05-17T0045Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-15",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-19",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "ready_for_matching_identity_regression"
+          }
+        },
+        {
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "claim_boundary": {
+            "bitnet_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": true,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "ready",
+          "evidence_family": "dense_slm",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "group_key": "dense_slm_eval_v2::qwen2.5-1.5b-instruct-q4_k_m::6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e::gguf_metadata::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 4414,
+            "memory": {
+              "memory_drift_mb_p50": 0.0,
+              "peak_memory_mb_p50": 7995.656,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 500,
+            "quality": {
+              "cases_passed": 246,
+              "cases_total": 500,
+              "failed": 255,
+              "quality_passed": true
+            },
+            "speed": {
+              "decode_tok_s_p50": 4.949,
+              "input_tok_s_p50": 5.505,
+              "output_tok_s_p50": 0.574,
+              "total_wall_ms_p50": 10210.0,
+              "ttft_ms_p50": 8809.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "open_targets": {
+            "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+          },
+          "operator_status": "comparable",
+          "operator_status_reason": "3 matching reports share this evidence identity; the emitted regression command can compare latest against baseline.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "report_count": 3,
+          "reports": [
+            {
+              "artifact_kind": "apple_m4_slm_eval_summary",
+              "date": "2026-05-16T0240Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_eval_summary",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+                "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+                "prompt_template": "qwen2.5",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "gguf_metadata"
+              },
+              "metrics": {
+                "generated_tokens": 980,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 7995.656,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 120,
+                "quality": {
+                  "cases_passed": 59,
+                  "cases_total": 120,
+                  "failed": 61,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 3.149,
+                  "input_tok_s_p50": 3.368,
+                  "output_tok_s_p50": 0.311,
+                  "total_wall_ms_p50": 15933.0,
+                  "ttft_ms_p50": 14027.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+            },
+            {
+              "artifact_kind": "apple_m4_slm_eval_summary",
+              "date": "2026-05-16T1711Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_eval_summary",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+                "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+                "prompt_template": "qwen2.5",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "gguf_metadata"
+              },
+              "metrics": {
+                "generated_tokens": 4414,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 7995.656,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 500,
+                "quality": {
+                  "cases_passed": 246,
+                  "cases_total": 500,
+                  "failed": 255,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 4.971,
+                  "input_tok_s_p50": 5.525,
+                  "output_tok_s_p50": 0.571,
+                  "total_wall_ms_p50": 10212.0,
+                  "ttft_ms_p50": 8724.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+            },
+            {
+              "artifact_kind": "apple_m4_slm_eval_summary",
+              "date": "2026-05-17T0045Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_eval_summary",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+                "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+                "prompt_template": "qwen2.5",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "gguf_metadata"
+              },
+              "metrics": {
+                "generated_tokens": 4414,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 7995.656,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 500,
+                "quality": {
+                  "cases_passed": 246,
+                  "cases_total": 500,
+                  "failed": 255,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 4.949,
+                  "input_tok_s_p50": 5.505,
+                  "output_tok_s_p50": 0.574,
+                  "total_wall_ms_p50": 10210.0,
+                  "ttft_ms_p50": 8809.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "gguf_metadata",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+            "report_dates": [
+              "2026-05-16T0240Z",
+              "2026-05-16T1711Z",
+              "2026-05-17T0045Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-15",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-19",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "ready_for_matching_identity_regression"
+          }
+        }
+      ],
+      "id": "dense_slm_eval_v2",
+      "report_count": 9
+    },
+    {
+      "claim_boundary": {
+        "bitnet_evidence": false,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": true,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "comparable_group_count": 3,
+      "evidence_family": "dense_slm",
+      "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+      "group_count": 3,
+      "groups": [
+        {
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "claim_boundary": {
+            "bitnet_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": true,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "ready",
+          "evidence_family": "dense_slm",
+          "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+          "fallback_used": false,
+          "group_key": "dense_slm_benchmark_v2::qwen2.5-0.5b-instruct-q4_k_m::74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db::qwen2::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 2543,
+            "memory": {
+              "memory_drift_mb_p50": null,
+              "peak_memory_mb_p50": null,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 201,
+            "quality": {
+              "cases_passed": null,
+              "cases_total": null,
+              "failed": null,
+              "quality_passed": null
+            },
+            "speed": {
+              "decode_tok_s_p50": 15.653,
+              "input_tok_s_p50": 21.698,
+              "output_tok_s_p50": 3.079,
+              "total_wall_ms_p50": 2599.547,
+              "ttft_ms_p50": 2150.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "model_sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+          "open_targets": {
+            "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json"
+          },
+          "operator_status": "comparable",
+          "operator_status_reason": "2 matching reports share this evidence identity; the emitted regression command can compare latest against baseline.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "report_count": 2,
+          "reports": [
+            {
+              "artifact_kind": "apple_m4_slm_benchmark_v2",
+              "date": "2026-05-15",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_benchmark_v2",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+                "model_sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "qwen2"
+              },
+              "metrics": {
+                "generated_tokens": 1615,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 101,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 8.86,
+                  "input_tok_s_p50": 12.311,
+                  "output_tok_s_p50": 1.942,
+                  "total_wall_ms_p50": 4969.953,
+                  "ttft_ms_p50": 3777.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json"
+            },
+            {
+              "artifact_kind": "apple_m4_slm_benchmark_v2",
+              "date": "2026-05-15T1845Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_benchmark_v2",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+                "model_sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "qwen2"
+              },
+              "metrics": {
+                "generated_tokens": 2543,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 201,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 15.653,
+                  "input_tok_s_p50": 21.698,
+                  "output_tok_s_p50": 3.079,
+                  "total_wall_ms_p50": 2599.547,
+                  "ttft_ms_p50": 2150.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "qwen2",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+            "report_dates": [
+              "2026-05-15",
+              "2026-05-15T1845Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-16",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-17",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-19",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "ready_for_matching_identity_regression"
+          }
+        },
+        {
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "claim_boundary": {
+            "bitnet_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": true,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "ready",
+          "evidence_family": "dense_slm",
+          "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+          "fallback_used": false,
+          "group_key": "dense_slm_benchmark_v2::qwen2.5-0.5b-instruct-q8_0::ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e::qwen2::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 2382,
+            "memory": {
+              "memory_drift_mb_p50": null,
+              "peak_memory_mb_p50": null,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 201,
+            "quality": {
+              "cases_passed": null,
+              "cases_total": null,
+              "failed": null,
+              "quality_passed": null
+            },
+            "speed": {
+              "decode_tok_s_p50": 15.652,
+              "input_tok_s_p50": 21.701,
+              "output_tok_s_p50": 1.708,
+              "total_wall_ms_p50": 2436.147,
+              "ttft_ms_p50": 2150.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+          "open_targets": {
+            "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json"
+          },
+          "operator_status": "comparable",
+          "operator_status_reason": "2 matching reports share this evidence identity; the emitted regression command can compare latest against baseline.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "report_count": 2,
+          "reports": [
+            {
+              "artifact_kind": "apple_m4_slm_benchmark_v2",
+              "date": "2026-05-15",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_benchmark_v2",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "qwen2"
+              },
+              "metrics": {
+                "generated_tokens": 1522,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 101,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 8.884,
+                  "input_tok_s_p50": 12.329,
+                  "output_tok_s_p50": 1.009,
+                  "total_wall_ms_p50": 4291.58,
+                  "ttft_ms_p50": 3770.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json"
+            },
+            {
+              "artifact_kind": "apple_m4_slm_benchmark_v2",
+              "date": "2026-05-15T1845Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_benchmark_v2",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "qwen2"
+              },
+              "metrics": {
+                "generated_tokens": 2382,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 201,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 15.652,
+                  "input_tok_s_p50": 21.701,
+                  "output_tok_s_p50": 1.708,
+                  "total_wall_ms_p50": 2436.147,
+                  "ttft_ms_p50": 2150.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "qwen2",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+            "report_dates": [
+              "2026-05-15",
+              "2026-05-15T1845Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-16",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-17",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-19",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "ready_for_matching_identity_regression"
+          }
+        },
+        {
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "claim_boundary": {
+            "bitnet_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": true,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "ready",
+          "evidence_family": "dense_slm",
+          "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+          "fallback_used": false,
+          "group_key": "dense_slm_benchmark_v2::qwen2.5-1.5b-instruct-q4_k_m::6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e::qwen2::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 2262,
+            "memory": {
+              "memory_drift_mb_p50": null,
+              "peak_memory_mb_p50": null,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 201,
+            "quality": {
+              "cases_passed": null,
+              "cases_total": null,
+              "failed": null,
+              "quality_passed": null
+            },
+            "speed": {
+              "decode_tok_s_p50": 4.808,
+              "input_tok_s_p50": 5.773,
+              "output_tok_s_p50": 0.357,
+              "total_wall_ms_p50": 9372.4,
+              "ttft_ms_p50": 8184.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "open_targets": {
+            "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+          },
+          "operator_status": "comparable",
+          "operator_status_reason": "2 matching reports share this evidence identity; the emitted regression command can compare latest against baseline.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "report_count": 2,
+          "reports": [
+            {
+              "artifact_kind": "apple_m4_slm_benchmark_v2",
+              "date": "2026-05-15",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_benchmark_v2",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+                "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "qwen2"
+              },
+              "metrics": {
+                "generated_tokens": 1458,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 101,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 2.805,
+                  "input_tok_s_p50": 3.384,
+                  "output_tok_s_p50": 0.26,
+                  "total_wall_ms_p50": 16104.403,
+                  "ttft_ms_p50": 14203.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+            },
+            {
+              "artifact_kind": "apple_m4_slm_benchmark_v2",
+              "date": "2026-05-15T1845Z",
+              "identity": {
+                "artifact_kind": "apple_m4_slm_benchmark_v2",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+                "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "qwen2"
+              },
+              "metrics": {
+                "generated_tokens": 2262,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 201,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 4.808,
+                  "input_tok_s_p50": 5.773,
+                  "output_tok_s_p50": 0.357,
+                  "total_wall_ms_p50": 9372.4,
+                  "ttft_ms_p50": 8184.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "qwen2",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+            "report_dates": [
+              "2026-05-15",
+              "2026-05-15T1845Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-16",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-17",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-19",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "ready_for_matching_identity_regression"
+          }
+        }
+      ],
+      "id": "dense_slm_benchmark_v2",
+      "report_count": 6
+    },
+    {
+      "claim_boundary": {
+        "bitnet_evidence": false,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": true,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "comparable_group_count": 0,
+      "evidence_family": "dense_slm",
+      "expected_artifact_kind": "apple_m4_benchmark_variance_v1",
+      "group_count": 3,
+      "groups": [
+        {
+          "baseline_report": null,
+          "claim_boundary": {
+            "bitnet_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": true,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "insufficient_history",
+          "evidence_family": "dense_slm",
+          "expected_artifact_kind": "apple_m4_benchmark_variance_v1",
+          "fallback_used": false,
+          "group_key": "dense_slm_benchmark_variance::qwen2.5-0.5b-instruct-q4_k_m::74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db::qwen2::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 4780,
+            "memory": {
+              "memory_drift_mb_p50": 0.0,
+              "peak_memory_mb_p50": 3543.141,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 402,
+            "quality": {
+              "cases_passed": null,
+              "cases_total": null,
+              "failed": null,
+              "quality_passed": null
+            },
+            "speed": {
+              "decode_tok_s_p50": 9.424,
+              "input_tok_s_p50": 13.179,
+              "output_tok_s_p50": 1.407,
+              "total_wall_ms_p50": 3194.655,
+              "ttft_ms_p50": 2725.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "model_sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+          "open_targets": {
+            "baseline_report": null,
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q4_k_m/summary.json"
+          },
+          "operator_status": "insufficient_history",
+          "operator_status_reason": "Only one matching report exists for this exact evidence identity.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "report_count": 1,
+          "reports": [
+            {
+              "artifact_kind": "apple_m4_benchmark_variance_v1",
+              "date": "2026-05-19T1125Z",
+              "identity": {
+                "artifact_kind": "apple_m4_benchmark_variance_v1",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+                "model_sha256": "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "qwen2"
+              },
+              "metrics": {
+                "generated_tokens": 4780,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 3543.141,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 402,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 9.424,
+                  "input_tok_s_p50": 13.179,
+                  "output_tok_s_p50": 1.407,
+                  "total_wall_ms_p50": 3194.655,
+                  "ttft_ms_p50": 2725.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q4_k_m/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "qwen2",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "no_envelope_change_without_matching_history",
+            "report_dates": [
+              "2026-05-19T1125Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-15",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-16",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-17",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "needs_second_matching_report"
+          }
+        },
+        {
+          "baseline_report": null,
+          "claim_boundary": {
+            "bitnet_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": true,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "insufficient_history",
+          "evidence_family": "dense_slm",
+          "expected_artifact_kind": "apple_m4_benchmark_variance_v1",
+          "fallback_used": false,
+          "group_key": "dense_slm_benchmark_variance::qwen2.5-0.5b-instruct-q8_0::ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e::qwen2::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 4300,
+            "memory": {
+              "memory_drift_mb_p50": 0.0,
+              "peak_memory_mb_p50": 3655.094,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 402,
+            "quality": {
+              "cases_passed": null,
+              "cases_total": null,
+              "failed": null,
+              "quality_passed": null
+            },
+            "speed": {
+              "decode_tok_s_p50": 9.102,
+              "input_tok_s_p50": 12.738,
+              "output_tok_s_p50": 0.906,
+              "total_wall_ms_p50": 3030.237,
+              "ttft_ms_p50": 2586.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+          "open_targets": {
+            "baseline_report": null,
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary.json"
+          },
+          "operator_status": "insufficient_history",
+          "operator_status_reason": "Only one matching report exists for this exact evidence identity.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "report_count": 1,
+          "reports": [
+            {
+              "artifact_kind": "apple_m4_benchmark_variance_v1",
+              "date": "2026-05-19T1125Z",
+              "identity": {
+                "artifact_kind": "apple_m4_benchmark_variance_v1",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-0.5b-instruct-q8_0",
+                "model_sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "qwen2"
+              },
+              "metrics": {
+                "generated_tokens": 4300,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 3655.094,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 402,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 9.102,
+                  "input_tok_s_p50": 12.738,
+                  "output_tok_s_p50": 0.906,
+                  "total_wall_ms_p50": 3030.237,
+                  "ttft_ms_p50": 2586.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "qwen2",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "no_envelope_change_without_matching_history",
+            "report_dates": [
+              "2026-05-19T1125Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-15",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-16",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-17",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "needs_second_matching_report"
+          }
+        },
+        {
+          "baseline_report": null,
+          "claim_boundary": {
+            "bitnet_evidence": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": true,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "insufficient_history",
+          "evidence_family": "dense_slm",
+          "expected_artifact_kind": "apple_m4_benchmark_variance_v1",
+          "fallback_used": false,
+          "group_key": "dense_slm_benchmark_variance::qwen2.5-1.5b-instruct-q4_k_m::6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e::qwen2::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 3586,
+            "memory": {
+              "memory_drift_mb_p50": 0.0,
+              "peak_memory_mb_p50": 7823.703,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 402,
+            "quality": {
+              "cases_passed": null,
+              "cases_total": null,
+              "failed": null,
+              "quality_passed": null
+            },
+            "speed": {
+              "decode_tok_s_p50": 3.237,
+              "input_tok_s_p50": 3.776,
+              "output_tok_s_p50": 0.272,
+              "total_wall_ms_p50": 13529.2,
+              "ttft_ms_p50": 11265.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+          "open_targets": {
+            "baseline_report": null,
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+          },
+          "operator_status": "insufficient_history",
+          "operator_status_reason": "Only one matching report exists for this exact evidence identity.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "report_count": 1,
+          "reports": [
+            {
+              "artifact_kind": "apple_m4_benchmark_variance_v1",
+              "date": "2026-05-19T1125Z",
+              "identity": {
+                "artifact_kind": "apple_m4_benchmark_variance_v1",
+                "evidence_family": "dense_slm",
+                "fallback_used": false,
+                "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+                "model_sha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "qwen2"
+              },
+              "metrics": {
+                "generated_tokens": 3586,
+                "memory": {
+                  "memory_drift_mb_p50": 0.0,
+                  "peak_memory_mb_p50": 7823.703,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 402,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 3.237,
+                  "input_tok_s_p50": 3.776,
+                  "output_tok_s_p50": 0.272,
+                  "total_wall_ms_p50": 13529.2,
+                  "ttft_ms_p50": 11265.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "qwen2",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "no_envelope_change_without_matching_history",
+            "report_dates": [
+              "2026-05-19T1125Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-15",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-16",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-17",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "needs_second_matching_report"
+          }
+        }
+      ],
+      "id": "dense_slm_benchmark_variance",
+      "report_count": 3
+    },
+    {
+      "claim_boundary": {
+        "bitnet_evidence": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": false,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "comparable_group_count": 1,
+      "evidence_family": "bitnet",
+      "expected_artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+      "group_count": 1,
+      "groups": [
+        {
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json",
+          "claim_boundary": {
+            "bitnet_evidence": true,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": false,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "ready",
+          "evidence_family": "bitnet",
+          "expected_artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+          "fallback_used": false,
+          "group_key": "bitnet_eval::microsoft-bitnet-b1.58-2B-4T-i2s::4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162::external_tokenizer_json:llama-bpe:e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": null,
+            "memory": {
+              "memory_drift_mb_p50": null,
+              "peak_memory_mb_p50": null,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 100,
+            "quality": {
+              "cases_passed": 79,
+              "cases_total": 100,
+              "failed": 21,
+              "quality_passed": null
+            },
+            "speed": {
+              "decode_tok_s_p50": null,
+              "input_tok_s_p50": null,
+              "output_tok_s_p50": null,
+              "total_wall_ms_p50": null,
+              "ttft_ms_p50": null
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json",
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+          "open_targets": {
+            "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json",
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json"
+          },
+          "operator_status": "comparable",
+          "operator_status_reason": "3 matching reports share this evidence identity; the emitted regression command can compare latest against baseline.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json",
+          "report_count": 3,
+          "reports": [
+            {
+              "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+              "date": "2026-05-15",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "bitnetcpp-answer",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "external_tokenizer_json:llama-bpe:e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+              },
+              "metrics": {
+                "generated_tokens": null,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 100,
+                "quality": {
+                  "cases_passed": 75,
+                  "cases_total": 100,
+                  "failed": 25,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": null,
+                  "input_tok_s_p50": null,
+                  "output_tok_s_p50": null,
+                  "total_wall_ms_p50": null,
+                  "ttft_ms_p50": null
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json"
+            },
+            {
+              "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+              "date": "2026-05-15T2214Z",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "bitnetcpp-answer",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "external_tokenizer_json:llama-bpe:e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+              },
+              "metrics": {
+                "generated_tokens": null,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 100,
+                "quality": {
+                  "cases_passed": 75,
+                  "cases_total": 100,
+                  "failed": 25,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": null,
+                  "input_tok_s_p50": null,
+                  "output_tok_s_p50": null,
+                  "total_wall_ms_p50": null,
+                  "ttft_ms_p50": null
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json"
+            },
+            {
+              "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+              "date": "2026-05-17T1417Z",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "bitnetcpp-answer",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "external_tokenizer_json:llama-bpe:e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7"
+              },
+              "metrics": {
+                "generated_tokens": null,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 100,
+                "quality": {
+                  "cases_passed": 79,
+                  "cases_total": 100,
+                  "failed": 21,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": null,
+                  "input_tok_s_p50": null,
+                  "output_tok_s_p50": null,
+                  "total_wall_ms_p50": null,
+                  "ttft_ms_p50": null
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "external_tokenizer_json:llama-bpe:e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+            "report_dates": [
+              "2026-05-15",
+              "2026-05-15T2214Z",
+              "2026-05-17T1417Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-16",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-19",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "ready_for_matching_identity_regression"
+          }
+        }
+      ],
+      "id": "bitnet_eval",
+      "report_count": 3
+    },
+    {
+      "claim_boundary": {
+        "bitnet_evidence": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": false,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "comparable_group_count": 1,
+      "evidence_family": "bitnet",
+      "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+      "group_count": 1,
+      "groups": [
+        {
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json",
+          "claim_boundary": {
+            "bitnet_evidence": true,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": false,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "ready",
+          "evidence_family": "bitnet",
+          "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "fallback_used": false,
+          "group_key": "bitnet_benchmark::microsoft-bitnet-b1.58-2B-4T-i2s::4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162::llama-bpe::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 8,
+            "memory": {
+              "memory_drift_mb_p50": null,
+              "peak_memory_mb_p50": null,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 4,
+            "quality": {
+              "cases_passed": null,
+              "cases_total": null,
+              "failed": null,
+              "quality_passed": null
+            },
+            "speed": {
+              "decode_tok_s_p50": 2.107,
+              "input_tok_s_p50": 2.468,
+              "output_tok_s_p50": 0.242,
+              "total_wall_ms_p50": 8262.911,
+              "ttft_ms_p50": 7794.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+          "open_targets": {
+            "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json",
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json"
+          },
+          "operator_status": "comparable",
+          "operator_status_reason": "3 matching reports share this evidence identity; the emitted regression command can compare latest against baseline.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json",
+          "report_count": 3,
+          "reports": [
+            {
+              "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+              "date": "2026-05-15",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "bitnetcpp-answer",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "llama-bpe"
+              },
+              "metrics": {
+                "generated_tokens": 8,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 4,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 1.411,
+                  "input_tok_s_p50": 1.625,
+                  "output_tok_s_p50": 0.158,
+                  "total_wall_ms_p50": 11489.261,
+                  "ttft_ms_p50": 10777.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json"
+            },
+            {
+              "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+              "date": "2026-05-15T2214Z",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "bitnetcpp-answer",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "llama-bpe"
+              },
+              "metrics": {
+                "generated_tokens": 8,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 4,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 2.065,
+                  "input_tok_s_p50": 2.422,
+                  "output_tok_s_p50": 0.238,
+                  "total_wall_ms_p50": 8388.46,
+                  "ttft_ms_p50": 7910.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json"
+            },
+            {
+              "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+              "date": "2026-05-17T0825Z",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "bitnetcpp-answer",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "llama-bpe"
+              },
+              "metrics": {
+                "generated_tokens": 8,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 4,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 2.107,
+                  "input_tok_s_p50": 2.468,
+                  "output_tok_s_p50": 0.242,
+                  "total_wall_ms_p50": 8262.911,
+                  "ttft_ms_p50": 7794.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "llama-bpe",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+            "report_dates": [
+              "2026-05-15",
+              "2026-05-15T2214Z",
+              "2026-05-17T0825Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-16",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-19",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "ready_for_matching_identity_regression"
+          }
+        }
+      ],
+      "id": "bitnet_benchmark",
+      "report_count": 3
+    },
+    {
+      "claim_boundary": {
+        "bitnet_evidence": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": false,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "comparable_group_count": 1,
+      "evidence_family": "bitnet",
+      "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+      "group_count": 1,
+      "groups": [
+        {
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/summary.json",
+          "claim_boundary": {
+            "bitnet_evidence": true,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": false,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "ready",
+          "evidence_family": "bitnet",
+          "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "fallback_used": false,
+          "group_key": "bitnet_benchmark_variance::microsoft-bitnet-b1.58-2B-4T-i2s::4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162::llama-bpe::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": 16,
+            "memory": {
+              "memory_drift_mb_p50": null,
+              "peak_memory_mb_p50": null,
+              "resident_memory_bytes": null
+            },
+            "prompt_count": 8,
+            "quality": {
+              "cases_passed": null,
+              "cases_total": null,
+              "failed": null,
+              "quality_passed": null
+            },
+            "speed": {
+              "decode_tok_s_p50": 2.082,
+              "input_tok_s_p50": 2.422,
+              "output_tok_s_p50": 0.251,
+              "total_wall_ms_p50": 7972.614,
+              "ttft_ms_p50": 7491.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json",
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+          "open_targets": {
+            "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/summary.json",
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/summary.json"
+          },
+          "operator_status": "comparable",
+          "operator_status_reason": "3 matching reports share this evidence identity; the emitted regression command can compare latest against baseline.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/summary.json",
+          "report_count": 3,
+          "reports": [
+            {
+              "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+              "date": "2026-05-19T2245Z",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "bitnetcpp-answer",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "llama-bpe"
+              },
+              "metrics": {
+                "generated_tokens": 8,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 4,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 2.082,
+                  "input_tok_s_p50": 2.422,
+                  "output_tok_s_p50": 0.251,
+                  "total_wall_ms_p50": 7971.945,
+                  "ttft_ms_p50": 7491.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-01/summary.json"
+            },
+            {
+              "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+              "date": "2026-05-19T2245Z",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "bitnetcpp-answer",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "llama-bpe"
+              },
+              "metrics": {
+                "generated_tokens": 8,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 4,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 2.08,
+                  "input_tok_s_p50": 2.41,
+                  "output_tok_s_p50": 0.226,
+                  "total_wall_ms_p50": 7972.614,
+                  "ttft_ms_p50": 7491.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/summary.json"
+            },
+            {
+              "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+              "date": "2026-05-19T2245Z",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "bitnetcpp-answer",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "llama-bpe"
+              },
+              "metrics": {
+                "generated_tokens": 16,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": null
+                },
+                "prompt_count": 8,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": null,
+                  "failed": null,
+                  "quality_passed": null
+                },
+                "speed": {
+                  "decode_tok_s_p50": 2.082,
+                  "input_tok_s_p50": 2.422,
+                  "output_tok_s_p50": 0.251,
+                  "total_wall_ms_p50": 7972.614,
+                  "ttft_ms_p50": 7491.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "llama-bpe",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+            "report_dates": [
+              "2026-05-19T2245Z",
+              "2026-05-19T2245Z",
+              "2026-05-19T2245Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-15",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-16",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-17",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "ready_for_matching_identity_regression"
+          }
+        }
+      ],
+      "id": "bitnet_benchmark_variance",
+      "report_count": 3
+    },
+    {
+      "claim_boundary": {
+        "bitnet_evidence": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": false,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "comparable_group_count": 1,
+      "evidence_family": "bitnet",
+      "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+      "group_count": 1,
+      "groups": [
+        {
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json",
+          "claim_boundary": {
+            "bitnet_evidence": true,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "dense_slm_evidence": false,
+            "evidence_families_mixed": false,
+            "speedup_claim": false
+          },
+          "comparison_status": "ready",
+          "evidence_family": "bitnet",
+          "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+          "fallback_used": false,
+          "group_key": "bitnet_variable_warm::microsoft-bitnet-b1.58-2B-4T-i2s::4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162::llama-bpe::apple-m4-cpu-neon",
+          "latest_metrics": {
+            "generated_tokens": null,
+            "memory": {
+              "memory_drift_mb_p50": null,
+              "peak_memory_mb_p50": null,
+              "resident_memory_bytes": 2688778240
+            },
+            "prompt_count": null,
+            "quality": {
+              "cases_passed": null,
+              "cases_total": 5,
+              "failed": null,
+              "quality_passed": true
+            },
+            "speed": {
+              "decode_tok_s_p50": 2.095,
+              "input_tok_s_p50": null,
+              "output_tok_s_p50": null,
+              "total_wall_ms_p50": 43809.341,
+              "ttft_ms_p50": 7914.0
+            }
+          },
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+          "open_targets": {
+            "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json",
+            "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+            "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json"
+          },
+          "operator_status": "comparable",
+          "operator_status_reason": "2 matching reports share this evidence identity; the emitted regression command can compare latest against baseline.",
+          "regression_command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json",
+          "report_count": 2,
+          "reports": [
+            {
+              "artifact_kind": "bitnet_apple_m4_warm_session",
+              "date": "2026-05-15",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_warm_session",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "llama-bpe"
+              },
+              "metrics": {
+                "generated_tokens": null,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": 2140225536
+                },
+                "prompt_count": null,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": 5,
+                  "failed": null,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 0.444,
+                  "input_tok_s_p50": null,
+                  "output_tok_s_p50": null,
+                  "total_wall_ms_p50": 206419.425,
+                  "ttft_ms_p50": 37318.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json"
+            },
+            {
+              "artifact_kind": "bitnet_apple_m4_warm_session",
+              "date": "2026-05-16T0626Z",
+              "identity": {
+                "artifact_kind": "bitnet_apple_m4_warm_session",
+                "evidence_family": "bitnet",
+                "fallback_used": false,
+                "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+                "model_sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "prompt_template": "<not-recorded>",
+                "runtime_api": "cpu",
+                "selected_backend": "apple-m4-cpu-neon",
+                "tokenizer_authority": "llama-bpe"
+              },
+              "metrics": {
+                "generated_tokens": null,
+                "memory": {
+                  "memory_drift_mb_p50": null,
+                  "peak_memory_mb_p50": null,
+                  "resident_memory_bytes": 2688778240
+                },
+                "prompt_count": null,
+                "quality": {
+                  "cases_passed": null,
+                  "cases_total": 5,
+                  "failed": null,
+                  "quality_passed": true
+                },
+                "speed": {
+                  "decode_tok_s_p50": 2.095,
+                  "input_tok_s_p50": null,
+                  "output_tok_s_p50": null,
+                  "total_wall_ms_p50": 43809.341,
+                  "ttft_ms_p50": 7914.0
+                }
+              },
+              "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json"
+            }
+          ],
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon",
+          "tokenizer_authority": "llama-bpe",
+          "trend": {
+            "active": true,
+            "one_off_claim": false,
+            "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+            "report_dates": [
+              "2026-05-15",
+              "2026-05-16T0626Z"
+            ],
+            "requested_since": "7d",
+            "skipped_day_reasons": [
+              {
+                "date": "2026-05-17",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-18",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-19",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-20",
+                "reason": "no committed matching report in rolling window"
+              },
+              {
+                "date": "2026-05-21",
+                "reason": "no committed matching report in rolling window"
+              }
+            ],
+            "threshold_outcome": "ready_for_matching_identity_regression"
+          }
+        }
+      ],
+      "id": "bitnet_variable_warm",
+      "report_count": 2
+    }
+  ],
+  "family_count": 7,
+  "generated_at": "2026-05-21T18:05:42.491221+00:00",
+  "group_count": 13,
+  "machine": {
+    "id": "apple-m4-mac-mini",
+    "scope": "committed report regression dashboard"
+  },
+  "markdown_path": "target/apple-m4-inference-excellence/M4-TREND-001-regression-dashboard.md",
+  "operator_affordances": {
+    "explain_command": "bitnet mac regression-dashboard --root ci/hardware/apple-m4-mac-mini --since 7d --json-out target/apple-m4-inference-excellence/M4-TREND-001-regression-dashboard.json --markdown-out target/apple-m4-inference-excellence/M4-TREND-001-regression-dashboard.md --explain",
+    "open_markdown_hint": "open target/apple-m4-inference-excellence/M4-TREND-001-regression-dashboard.md",
+    "open_receipt_hint": "open target/apple-m4-inference-excellence/M4-TREND-001-regression-dashboard.json",
+    "open_report_root_hint": "open ci/hardware/apple-m4-mac-mini",
+    "open_targets_command": "bitnet mac regression-dashboard --root ci/hardware/apple-m4-mac-mini --since 7d --json-out target/apple-m4-inference-excellence/M4-TREND-001-regression-dashboard.json --markdown-out target/apple-m4-inference-excellence/M4-TREND-001-regression-dashboard.md --open-targets"
+  },
+  "operator_command": "mac regression-dashboard",
+  "receipt_path": "target/apple-m4-inference-excellence/M4-TREND-001-regression-dashboard.json",
+  "report_count": 29,
+  "report_root": "ci/hardware/apple-m4-mac-mini",
+  "requested_backend": "apple-m4-cpu-neon",
+  "run_identity": {
+    "artifact_kind": "apple_m4_regression_dashboard",
+    "backend": {
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "binary": {
+      "binary_sha256": null,
+      "binary_sha256_status": "not_recorded_build_profile_used",
+      "build_profile": "debug",
+      "crate_version": "0.2.1-dev"
+    },
+    "command": {
+      "class": "mac regression-dashboard",
+      "live_model_run": false
+    },
+    "contract_version": "m4-run-identity-v1",
+    "evidence_family": "operator",
+    "evidence_identity": {
+      "corpus_id": "not_applicable",
+      "profile_id": "not_applicable",
+      "scope": "regression_dashboard",
+      "seed": "not_applicable"
+    },
+    "git": {
+      "commit": "bce0d2932ccbeb83340cf2f5fad5df39eeb2cb0d",
+      "commit_source": "git_rev_parse"
+    },
+    "machine_id": "apple-m4-mac-mini",
+    "model": {
+      "id": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "not_applicable"
+    },
+    "os": {
+      "name": "macos",
+      "version": "26.4.1",
+      "version_source": "sw_vers"
+    },
+    "prompt_template": {
+      "id": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "243ffa2eeced1cbfa18357fe8edf03833381b9a83359bf0930ae5e8e862ab30e"
+    },
+    "soc": "apple-m4",
+    "timing": {
+      "source": "wall_clock_utc"
+    },
+    "tokenizer": {
+      "authority": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "not_applicable"
+    }
+  },
+  "run_identity_sha256": "82d08e027762b4af764cc65b573a6e2f16de216363867d0ed9f2d76bd0ffe7a0",
+  "runtime_api": "cpu",
+  "schema_version": "1.2.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "status": "ok",
+  "status_explanations": {
+    "comparable": {
+      "meaning": "At least two committed reports share the required identity fields and can be compared by the regression command.",
+      "next_action": "Run the emitted regression command or inspect the latest and baseline receipts.",
+      "why": "Same evidence family, artifact kind, model, tokenizer authority, backend, and fallback=false identity are present for the group."
+    },
+    "failed": {
+      "meaning": "The committed receipt shape violates the M4 evidence contract for this operator view.",
+      "next_action": "Do not use the group for claims; fix or replace the bad receipt and rerun receipts-check.",
+      "why": "Examples include malformed receipts, artifact-kind mismatch, fallback ambiguity, or non-CPU/NEON evidence in a strict M4 group."
+    },
+    "insufficient_history": {
+      "meaning": "The group has fewer than two matching-history reports, so trend or regression interpretation is not available yet.",
+      "next_action": "Collect a second matching report before interpreting drift.",
+      "why": "A latest report exists without a matching baseline under the required identity, or the report family is empty."
+    },
+    "warning": {
+      "meaning": "Evidence exists, but the dashboard cannot treat the group as cleanly comparable without operator review.",
+      "next_action": "Inspect the emitted latest report, repair the receipt or rerun the matching evidence lane.",
+      "why": "The group has missing identity or metric fields, parse issues, or an incomplete report family."
+    }
+  },
+  "trend_window": {
+    "active": true,
+    "committed_reports_only": true,
+    "days": 7,
+    "earliest_date": "2026-05-15",
+    "latest_date": "2026-05-21",
+    "mode": "rolling_days",
+    "model_free": true,
+    "no_live_model_run": true,
+    "requested_since": "7d"
+  }
+}

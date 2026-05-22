@@ -1,0 +1,208 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_dense_q8_packed_sidecar_regression_root_cause",
+  "work_item": "SLM-CPU-073",
+  "claim": "bounded_exact_tensor_packed_q8_remaining_regression_root_cause",
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "broad_answer_quality_claim": false,
+  "default_runtime_changed": false,
+  "runtime_promotion_recommended": false,
+  "model": {
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0"
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "strict": true
+  },
+  "host": {
+    "cpu": "Intel64 Family 6 Model 142 Stepping 10, GenuineIntel",
+    "arch": "x86_64",
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "threads": 4,
+    "thermal": "not_sampled_in_slm_cpu_warm_session",
+    "power": "not_sampled_in_slm_cpu_warm_session",
+    "storage_model_path_available_bytes": 33964851200
+  },
+  "hook": {
+    "tensor": "layers.0.attention.q_proj.weight",
+    "source_tensor": "blk.0.attn_q.weight",
+    "scope": "exact_tensor_only",
+    "matrix_rows": 2048,
+    "matrix_cols": 1024,
+    "q8_block_size": 32,
+    "q8_block_count": 65536,
+    "payload_bytes": 2228224,
+    "payload_sha256": "a8e16a232ea8c19a5c5d2eb5f21bfdf5c297eba0ac90e74b0afc052577179c24",
+    "default_selected_path": "eager_f32_candle",
+    "default_selected_kernel": "dense-f32-candle-linear",
+    "opt_in_selected_path": "packed_q8_sidecar",
+    "opt_in_selected_kernel": "dense-q8-sidecar-linear",
+    "runtime_compute_enabled_by_default": false,
+    "opt_in_requires_payload_and_runtime_env": true
+  },
+  "inputs": {
+    "slm_cpu_068_timing_classification": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-068-exact-hook-timing-classification.json",
+    "slm_cpu_069_root_cause": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-069-packed-q8-locality-root-cause.json",
+    "slm_cpu_070_prototype": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-070-packed-q8-block-local-matvec-prototype.json",
+    "slm_cpu_072_before_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-before-warm-session.json",
+    "slm_cpu_072_after_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-after-warm-session.json",
+    "slm_cpu_072_equivalence_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-runtime-hook-equivalence.json",
+    "slm_cpu_072_timing_classification": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-timing-classification.json",
+    "source_inspection": "crates/bitnet-transformer/src/lib.rs::dense_q8_sidecar_linear_forward"
+  },
+  "prior_evidence": {
+    "slm_cpu_068": {
+      "classification": "regressed_on_bounded_two_prompt_artifact",
+      "behavior_equivalence_passed": true,
+      "total_session_delta_ms": 20633.671,
+      "total_session_delta_percent": 17.446,
+      "warm_prompt_wall_delta_ms": 16832.058,
+      "warm_prompt_wall_delta_percent": 40.966,
+      "decode_total_delta_ms": 458.963,
+      "decode_total_delta_percent": 28.1,
+      "first_token_mean_delta_ms": 8416.0,
+      "decode_generated_tok_s_delta_percent": -21.959
+    },
+    "slm_cpu_069": {
+      "primary_classification": "packed_block_decode_and_matvec_locality",
+      "secondary_classification": [
+        "scratch_allocation"
+      ],
+      "unlikely": [
+        "selector_overhead",
+        "receipt_timing_instrumentation"
+      ],
+      "reason": "The two-prompt regression appeared in prefill and dense forward timing while logits and sampling timing were nearly unchanged; the earlier kernel decoded Q8 block scales inside the innermost per-weight loop and materialized host input/output buffers per call."
+    },
+    "slm_cpu_070": {
+      "change": "Decode each Q8_0 block scale once per contiguous row segment instead of inside the per-weight inner loop.",
+      "behavior_gate": "code_level_dense_linear_reference_tests_only",
+      "real_qwen3_receipt_regenerated": false,
+      "remaining_promotion_blockers": [
+        "verified Qwen3-0.6B Q8_0 GGUF was not present in that workspace",
+        "no real before/after i5-8250U receipt was regenerated for that prototype",
+        "no timing artifact proved improvement"
+      ]
+    }
+  },
+  "slm_cpu_072_evidence": {
+    "behavior_equivalence": {
+      "prompt_count": 6,
+      "prompt_ids_match": true,
+      "generated_ids_match": true,
+      "decoded_text_match": true,
+      "model_sha_match": true,
+      "tokenizer_source_match": true,
+      "selected_backend_match": true,
+      "fallback_false_before_after": true,
+      "passed": true
+    },
+    "timing": {
+      "classification": "regressed_on_bounded_six_prompt_artifact",
+      "before": {
+        "selected_path": "eager_f32_candle",
+        "selected_kernel": "dense-f32-candle-linear",
+        "runtime_compute_enabled": false,
+        "total_session_ms": 220827.789,
+        "warm_prompt_wall_ms": 142710.292,
+        "prefill_ms": 101517.74,
+        "decode_total_ms": 37200.45,
+        "tokenize_ms": 3989.062,
+        "sampling_ms": 271.409,
+        "decode_generated_tok_s": 1.237
+      },
+      "after": {
+        "selected_path": "packed_q8_sidecar",
+        "selected_kernel": "dense-q8-sidecar-linear",
+        "runtime_compute_enabled": true,
+        "total_session_ms": 241939.114,
+        "warm_prompt_wall_ms": 163585.829,
+        "prefill_ms": 118223.357,
+        "decode_total_ms": 41490.017,
+        "tokenize_ms": 3869.585,
+        "sampling_ms": 266.893,
+        "decode_generated_tok_s": 1.109
+      },
+      "delta": {
+        "total_session_ms": 21111.325,
+        "total_session_percent": 9.56,
+        "warm_prompt_wall_ms": 20875.537,
+        "warm_prompt_wall_percent": 14.628,
+        "prefill_ms": 16705.617,
+        "prefill_percent": 16.456,
+        "decode_total_ms": 4289.567,
+        "decode_total_percent": 11.531,
+        "tokenize_ms": -119.477,
+        "sampling_ms": -4.516,
+        "decode_generated_tok_s": -0.128,
+        "decode_generated_tok_s_percent": -10.348
+      }
+    }
+  },
+  "implementation_observation_after_slm_cpu_070": {
+    "current_packed_sidecar_kernel": "scalar_host_matvec",
+    "scale_decode_location": "once per contiguous Q8 block segment for the current output row",
+    "scale_decode_root_cause_reduced": true,
+    "input_materialization": "input.to_dtype(F32).flatten_all().to_vec1::<f32>() per dense-linear call",
+    "bias_materialization": "bias.to_dtype(F32).to_vec1::<f32>() per dense-linear call when bias exists",
+    "output_materialization": "fresh Vec<f32> allocated for every dense-linear call",
+    "loop_order": "for each flattened input row, for each output row, for each Q8 block segment",
+    "weight_access_pattern": "one output row at a time over packed Q8 blocks",
+    "vectorization": "none in the packed sidecar kernel",
+    "parallelism": "none in the packed sidecar kernel",
+    "candle_eager_f32_path": "remains the default behavior oracle and uses the existing Candle dense-linear path"
+  },
+  "root_cause_classification": {
+    "primary": "packed_sidecar_scalar_matvec_and_memory_movement",
+    "secondary": [
+      "scratch_allocation",
+      "host_tensor_materialization",
+      "packed_block_matvec_locality"
+    ],
+    "reduced_but_not_cleared": [
+      "payload_decode"
+    ],
+    "unlikely": [
+      "selector_dispatch_overhead",
+      "receipt_timing_instrumentation",
+      "tokenizer_or_sampler_timing"
+    ],
+    "reason": "SLM-CPU-070 removed the worst repeated per-weight scale decode pattern, but the real SLM-CPU-072 six-prompt receipt still regressed in prefill and decode while tokenization and sampling were flat or slightly lower. The remaining packed sidecar path still converts Candle tensors into host Vec<f32> inputs, allocates a fresh output Vec<f32>, runs scalar non-vectorized and non-parallel matvec loops, and replaces only one exact Q projection tensor. That combination makes the opt-in sidecar slower than eager_f32_candle despite preserving generated IDs and text."
+  },
+  "next_target": {
+    "work_item": "SLM-CPU-074",
+    "title": "packed Q8 sidecar matvec instrumentation and scratch-elimination gate",
+    "recommended_fix_area": "host_tensor_materialization_and_scalar_matvec",
+    "requirements": [
+      "Keep eager_f32_candle as the default runtime.",
+      "Keep packed sidecar execution opt-in and exact-tensor scoped to layers.0.attention.q_proj.weight.",
+      "Measure or eliminate input flatten/to_vec, output Vec allocation, and bias extraction costs before adding broader packed-Q8 runtime selection.",
+      "Add per-call or aggregate timing counters around sidecar input materialization, packed matvec compute, output tensor construction, and selector dispatch so the next artifact separates memory movement from arithmetic.",
+      "Preserve identical model SHA, tokenizer source and strictness, prompt IDs, generated IDs, decoded text, selected CPU backend identity, dense hook identity, and fallback_used=false.",
+      "Do not claim speedup unless a separate bounded before/after timing artifact proves it."
+    ]
+  },
+  "decision": {
+    "runtime_promotion_recommended": false,
+    "default_runtime_should_remain": "eager_f32_candle",
+    "packed_sidecar_should_remain": "opt_in_exact_tensor_only",
+    "claim_allowed": "The exact-tensor packed Q8_0 sidecar is behavior-equivalent but slower on the bounded six-prompt 4-thread i5-8250U artifact; the next target is memory-movement and scalar-matvec instrumentation/elimination, not promotion."
+  },
+  "claim_boundary": [
+    "This artifact localizes only the committed SLM-CPU-072 six-prompt two-repeat 4-thread i5-8250U receipts after the SLM-CPU-070 block-local matvec prototype.",
+    "The exact-tensor packed Q8_0 sidecar remains opt-in and is not enabled by default.",
+    "Behavior equivalence is preserved for the compared receipts.",
+    "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made."
+  ]
+}

@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 98
 expression: help
 ---
 Fetch a supported model artifact into the local cache
@@ -12,7 +13,7 @@ Arguments:
 Options:
   -c, --config <PATH>      Configuration file path
       --cache-dir <PATH>   Override cache root. Defaults to ~/.cache/bitnet-rs/models
-  -d, --device <DEVICE>    Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
+  -d, --device <DEVICE>    Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, intel-a770-opencl, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
       --offline            Do not use the network; pass if an already verified artifact is cached
       --force              Re-download even when a verified artifact already exists
       --log-level <LEVEL>  Log level (trace, debug, info, warn, error)

@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T09:46:18Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-004"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 178
+head_sha = "978c18b1b2a17e198f07b6200c3c43d81219629f"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-004-queue-backpressure"
+
+notes = [
+  "Opened PR #178 for bounded dense M4 local-server queue/backpressure and resident-state evidence.",
+  "The PR adds queue admission controls, queue-full and queue-timeout failure receipts, aggregate serve-backpressure receipt validation, and a live M4 CPU/NEON dense smoke receipt bundle.",
+  "No BitNet serve/chat, production-hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

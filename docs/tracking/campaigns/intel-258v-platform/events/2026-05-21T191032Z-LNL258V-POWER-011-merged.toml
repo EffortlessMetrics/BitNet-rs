@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T19:10:32Z"
+event = "merged"
+item = "LNL258V-POWER-011"
+previous_status = "in_progress"
+new_status = "merged"
+pr = 223
+head_sha = "0696101ce52ff588c2658eae089acf4c3c69c797"
+merge_sha = "6fea0020926add54ef487990d115d0684dbf2e69"
+branch = "codex/lunar-lake/LNL258V-POWER-011-low-power-sample-plan"
+actor = "codex"
+summary = "Marked LNL258V-POWER-011 merged after PR #223 landed the explicit low_power battery sample plan."
+
+notes = [
+  "PR #223 replaced the low_power battery route/profile sample placeholder with exact CPU/GPU/NPU ask commands and explicit sample receipt paths.",
+  "The merged work keeps LNL258V-POWER-006 blocked until real battery-mode telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage exist.",
+  "This closeout is tracker-only and does not add inference, model load, fallback behavior change, route promotion, speedup, power-advantage, battery-mode evidence, measured-temperature, native accelerator, acceleration, broad quality, model-binary, or BitNet QK256/I2_S behavior-change claims.",
+]

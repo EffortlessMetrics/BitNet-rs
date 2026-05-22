@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T01:15:00Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-014"
+pr = 107
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-014-swarm-main-sync"
+actor = "codex"
+summary = "Opened PR #107 for the no-inference Lunar Lake completion-audit refresh after swarm main sync."
+
+notes = [
+  "The PR records current swarm main after history import #104, model-cache fix #100, and Qwen3 comparator support-bundle lock #99.",
+  "These are repo/support-gate updates, not Lunar Lake route evidence or model promotion changes.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, acceleration claim, broad quality claim, stale BitNet claim, A770 semantic PR merged-to-main claim, Qwen3 Lunar Lake model promotion claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]

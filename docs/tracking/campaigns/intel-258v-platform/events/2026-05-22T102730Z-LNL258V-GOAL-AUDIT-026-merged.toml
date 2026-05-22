@@ -1,0 +1,19 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-22T10:27:30Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-026"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-026-current-main"
+pr = 309
+head_sha = "c03bbf5c1bafc7ecdd300d638d206a99dd1ed63a"
+merge_sha = "ef6845b1144238787fbd4ba63c401e8e9a3fa9d7"
+actor = "codex"
+summary = "Merged the no-inference Lunar Lake goal audit refresh to current swarm main after adjacent A770, CUDA, and tracker closeout deltas."
+
+notes = [
+  "The audit/checklist now point at current swarm main 4afbc8a0ad5e64f980b75154e7d294d1909cc37f.",
+  "The audit/checklist record LNL258V-GOAL-AUDIT-025/#301, closeout #304, A770-023 no-panic cleanup #302, CUDA-MODEL-017F/#303, and A770-023 tracker closeout #307 as audit, tracker, A770 diagnostic cleanup, or CUDA/Qwen3 diagnostic state only.",
+  "The PR did not add inference, model load, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality, model binaries, runtime/sidecar behavior claims, semantic-intake stale claims, or BitNet QK256/I2_S behavior changes.",
+  "The Intel 258V lane returns to LNL258V-POWER-006 blocked until real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage exist.",
+]

@@ -1,0 +1,15 @@
+timestamp = "2026-05-22T18:10:19Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-082"
+event = "in_progress"
+previous_status = "none"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-082-repeated-packed-q8-receipts"
+summary = "Added SLM-CPU-082 as the repeated packed-Q8 warm-session receipt capture item after the SLM-CPU-081 timing gate."
+notes = [
+  "SLM-CPU-081 defined the evidence gate and showed only one baseline and one candidate receipt are currently available.",
+  "SLM-CPU-082 requires at least three baseline receipts and three candidate receipts for the same i5-8250U host, Qwen3 Q8_0 model SHA, GGUF tokenizer authority, 4-thread corpus run, backend identity, dense hook identity, and fallback_used=false.",
+  "The item requires prompt IDs, generated IDs, and decoded text preservation before any timing classification can be accepted.",
+  "The default runtime remains unchanged unless a later promotion item accepts repeated behavior-preserving timing evidence.",
+]

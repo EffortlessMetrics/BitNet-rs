@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T14:50:59Z"
+campaign = "intel-a770"
+item = "A770-026"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 336
+branch = "codex/intel-a770/A770-026-answer-readiness-failure-frontier"
+merge_sha = "5f4a6b5845eee89f1e2e4891b3524af7e3b37d41"
+summary = "Marked A770-026 merged after PR #336 landed the answer-readiness failure-frontier report."
+notes = [
+  "The merged report classifies the committed A770-025 CPU AVX2 and Intel A770 OpenCL answer-readiness failures as shared quality readiness failures rather than A770-only backend evidence.",
+  "The parity frontier remains separate: CPU/A770 top-k logits are divergent across the seeded corpus, with two generated-output divergences still needing focused logit context.",
+  "The closeout does not change runtime math or promote strict A770 answer readiness, broad answer quality, CPU/A770 parity, residency, speed, trusted-partial acceleration, or full BitNet inference.",
+]

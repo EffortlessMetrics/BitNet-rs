@@ -417,7 +417,32 @@
 | intel-258v-platform | LNL258V-REG-013 | LNL258V-GOAL-AUDIT-011 | merged |
 | intel-258v-platform | LNL258V-GOAL-AUDIT-012 | LNL258V-REG-013 | merged |
 | intel-258v-platform | LNL258V-GOAL-AUDIT-013 | LNL258V-GOAL-AUDIT-012 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-014 | LNL258V-GOAL-AUDIT-013 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-016 | LNL258V-GOAL-AUDIT-015 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-017 | LNL258V-GOAL-AUDIT-016 | merged |
+| intel-258v-platform | LNL258V-POWER-010 | LNL258V-GOAL-AUDIT-014, LNL258V-POWER-009 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-015 | LNL258V-POWER-010 | merged |
+| intel-258v-platform | LNL258V-BITNET-INTAKE-005 | LNL258V-BITNET-INTAKE-004, LNL258V-GOAL-AUDIT-017 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-018 | LNL258V-BITNET-INTAKE-005 | merged |
+| intel-258v-platform | SWARM-LNL258V-MIGRATE-001 | LNL258V-GOAL-AUDIT-018 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-019 | SWARM-LNL258V-MIGRATE-001 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-020 | LNL258V-GOAL-AUDIT-019 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-021 | LNL258V-GOAL-AUDIT-020, LNL258V-POWER-011 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-022 | LNL258V-GOAL-AUDIT-021, LNL258V-POWER-012 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-023 | LNL258V-GOAL-AUDIT-022 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-024 | LNL258V-GOAL-AUDIT-023 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-025 | LNL258V-GOAL-AUDIT-024 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-026 | LNL258V-GOAL-AUDIT-025 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-027 | LNL258V-GOAL-AUDIT-026 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-028 | LNL258V-GOAL-AUDIT-027 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-029 | LNL258V-GOAL-AUDIT-028 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-030 | LNL258V-GOAL-AUDIT-029 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-031 | LNL258V-GOAL-AUDIT-030 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-032 | LNL258V-GOAL-AUDIT-031 | merged |
+| intel-258v-platform | LNL258V-GOAL-AUDIT-033 | LNL258V-GOAL-AUDIT-032 | merged |
 | intel-258v-platform | LNL258V-POWER-006 | LNL258V-POWER-005 | blocked |
+| intel-258v-platform | LNL258V-POWER-011 | LNL258V-POWER-010 | merged |
+| intel-258v-platform | LNL258V-POWER-012 | LNL258V-POWER-011 | merged |
 | intel-258v-platform | LNL258V-POWER-005 | LNL258V-POWER-004, LNL258V-ASK-005 | merged |
 | intel-258v-platform | LNL258V-ASK-005 | LNL258V-ROUTE-024 | merged |
 | intel-258v-platform | LNL258V-ROUTE-024 | LNL258V-ROUTE-023, LNL258V-NPU-RESIDENT-002, LNL258V-POWER-004 | merged |
@@ -458,6 +483,28 @@
 | intel-a770 | A770-005 | A770-004 | merged |
 | intel-a770 | A770-006 | A770-005 | merged |
 | intel-a770 | A770-007 | A770-006 | merged |
+| intel-a770 | A770-006R | A770-007 | merged |
+| intel-a770 | A770-008 | A770-006R | merged |
+| intel-a770 | A770-009 | A770-008 | merged |
+| intel-a770 | A770-010 | A770-009 | merged |
+| intel-a770 | A770-011 | A770-010 | merged |
+| intel-a770 | A770-015 | A770-014 | merged |
+| intel-a770 | A770-012 | A770-011 | merged |
+| intel-a770 | A770-013 | A770-012 | merged |
+| intel-a770 | A770-014 | A770-013 | merged |
+| intel-a770 | A770-016 | A770-015 | merged |
+| intel-a770 | A770-017 | A770-016 | merged |
+| intel-a770 | A770-018 | A770-017 | merged |
+| intel-a770 | A770-019 | A770-018 | merged |
+| intel-a770 | A770-020 | A770-019 | merged |
+| intel-a770 | A770-021 | A770-020 | merged |
+| intel-a770 | A770-022 | A770-021 | merged |
+| intel-a770 | A770-023 | A770-022 | merged |
+| intel-a770 | A770-024 | A770-023 | merged |
+| intel-a770 | A770-025 | A770-024 | merged |
+| intel-a770 | A770-026 | A770-025 | merged |
+| intel-a770 | A770-027 | A770-026 | merged |
+| intel-a770 | A770-028 | A770-027 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
 | intel-npu | NPU-005 | NPU-004 | merged |
@@ -546,6 +593,9 @@
 | nvidia-5070ti | CUDA-MODEL-014B | CUDA-MODEL-013 | merged |
 | nvidia-5070ti | CUDA-MODEL-015 | CUDA-MODEL-014B | merged |
 | nvidia-5070ti | CUDA-MODEL-016 | CUDA-MODEL-015 | merged |
+| nvidia-5070ti | CUDA-MODEL-017A | CUDA-MODEL-016 | merged |
+| nvidia-5070ti | CUDA-MODEL-017 | CUDA-MODEL-017A | ready |
+| nvidia-5070ti | CUDA-MODEL-018 | CUDA-MODEL-017 | blocked |
 | nvidia-5070ti | CUDA-MODEL-SMOLLM2-001 | CUDA-MODEL-008 | merged |
 | nvidia-5070ti | CUDA-UX-009 | CUDA-PROD-010 | merged |
 | nvidia-5070ti | CUDA-UX-010 | CUDA-UX-008, CUDA-UX-009 | merged |
@@ -651,6 +701,9 @@
 | slm-cpu | SLM-CPU-018 | SLM-CPU-017 | merged |
 | slm-cpu | SLM-CPU-019 | SLM-CPU-018 | merged |
 | slm-cpu | SLM-CPU-020 | SLM-CPU-019 | merged |
+| slm-cpu | SLM-CPU-080 | SLM-CPU-079, SLM-CPU-032, SLM-CPU-035 | merged |
+| slm-cpu | SLM-CPU-081 | SLM-CPU-079, SLM-CPU-080 | merged |
+| slm-cpu | SLM-CPU-082 | SLM-CPU-081 | ready |
 | slm-cpu | SLM-CPU-059 | SLM-CPU-058 | merged |
 | slm-cpu | SLM-CPU-060 | SLM-CPU-059 | merged |
 | slm-cpu | SLM-CPU-061 | SLM-CPU-060 | merged |
@@ -658,7 +711,20 @@
 | slm-cpu | SLM-CPU-063 | SLM-CPU-062 | merged |
 | slm-cpu | SLM-CPU-064 | SLM-CPU-063 | merged |
 | slm-cpu | SLM-CPU-065 | SLM-CPU-064 | merged |
-| slm-cpu | SLM-CPU-066 | SLM-CPU-065 | ready |
+| slm-cpu | SLM-CPU-066 | SLM-CPU-065 | superseded |
+| slm-cpu | SLM-CPU-067 | SLM-CPU-066 | merged |
+| slm-cpu | SLM-CPU-068 | SLM-CPU-067 | merged |
+| slm-cpu | SLM-CPU-069 | SLM-CPU-068 | merged |
+| slm-cpu | SLM-CPU-070 | SLM-CPU-069 | merged |
+| slm-cpu | SLM-CPU-071 | SLM-CPU-070 | merged |
+| slm-cpu | SLM-CPU-072 | SLM-CPU-071 | merged |
+| slm-cpu | SLM-CPU-073 | SLM-CPU-072 | merged |
+| slm-cpu | SLM-CPU-074 | SLM-CPU-073 | merged |
+| slm-cpu | SLM-CPU-075 | SLM-CPU-074 | merged |
+| slm-cpu | SLM-CPU-076 | SLM-CPU-075 | merged |
+| slm-cpu | SLM-CPU-077 | SLM-CPU-076 | merged |
+| slm-cpu | SLM-CPU-078 | SLM-CPU-077 | merged |
+| slm-cpu | SLM-CPU-079 | SLM-CPU-078 | merged |
 | slm-cpu | SLM-CPU-033 | SLM-CPU-032 | merged |
 | slm-cpu | SLM-CPU-034 | SLM-CPU-033 | merged |
 | slm-cpu | SLM-CPU-035 | SLM-CPU-034 | merged |

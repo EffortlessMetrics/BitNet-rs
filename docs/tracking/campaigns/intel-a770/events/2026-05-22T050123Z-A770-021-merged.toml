@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T05:01:23Z"
+campaign = "intel-a770"
+item = "A770-021"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex-a770"
+pr = 278
+branch = "codex/intel-a770/A770-021-logits-topk-frontier"
+head_sha = "88430ab9283d97f9507783ff2179ef66474746eb"
+merge_sha = "91e36faeed8c184771f07ba2adb1ae3976edb380"
+summary = "Merged PR #278 for compact CPU/A770 logits top-k frontier reporting."
+notes = [
+  "The merged answer-parity receipt records logits_topk_frontier_generated_output_divergence with five top-k mismatches, four same-output rows, one generated-output divergence row, and no missing context.",
+  "The frontier rows stay compact and do not forward the full logits arrays beyond the existing first-divergence receipt.",
+  "No runtime math, CPU/A770 parity, reference parity, A770 answer quality, residency, speed, trusted-partial, or full BitNet inference claim is promoted.",
+]

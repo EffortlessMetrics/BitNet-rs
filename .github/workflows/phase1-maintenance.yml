@@ -59,7 +59,7 @@ jobs:
         run: scripts/ci/generate-phase1-artifacts.sh
 
       - name: Upload generated artifacts
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: phase1-maintenance-artifacts
           path: docs/generated/phase1

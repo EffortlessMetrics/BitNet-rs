@@ -125,10 +125,15 @@ fn qk256_dispatch_status_keeps_opencl_non_claiming() {
 
     assert_eq!(status.compiled_opencl, cfg!(feature = "opencl"));
     assert_eq!(status.compiled_oneapi, cfg!(feature = "oneapi"));
-    assert_eq!(status.runtime_backend, "cpu_qk256_reference");
+    if cfg!(all(feature = "opencl", not(feature = "oneapi"))) {
+        assert_eq!(status.runtime_backend, "a770_opencl_qk256_i8s_scaled_candidate");
+    } else {
+        assert_eq!(status.runtime_backend, "cpu_qk256_reference");
+    }
     assert!(!status.accelerator_claimable);
-    assert!(status.not_claims.contains(&"a770_qk256_opencl_execution"));
+    assert!(status.not_claims.contains(&"a770_qk256_opencl_claim_grade_execution"));
     assert!(status.not_claims.contains(&"a770_qk256_opencl_performance"));
+    assert!(status.not_claims.contains(&"activation_quantization_residency"));
 
     for not_claim in [
         "selected_attention_residency",
@@ -149,7 +154,10 @@ fn qk256_dispatch_status_keeps_opencl_non_claiming() {
     if cfg!(feature = "oneapi") {
         assert_eq!(status.blocker, Some("oneapi_qk256_runtime_not_wired"));
     } else if cfg!(feature = "opencl") {
-        assert_eq!(status.blocker, Some("opencl_qk256_runtime_not_wired"));
+        assert_eq!(
+            status.blocker,
+            Some("activation_quantization_cpu_resident_and_partial_qk256_only")
+        );
     } else {
         assert_eq!(status.blocker, Some("cpu_qk256_dispatch_only"));
     }

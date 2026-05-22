@@ -18,6 +18,10 @@ fn invalid_args(reason: impl Into<String>) -> BitNetError {
 
 // ── Configuration ──────────────────────────────────────────────────────
 
+fn checked_product(lhs: usize, rhs: usize, label: &str) -> Result<usize> {
+    lhs.checked_mul(rhs).ok_or_else(|| invalid_args(format!("{label} overflow: {lhs} * {rhs}")))
+}
+
 /// Tile-sizes and runtime knobs for [`simd_matmul`].
 #[derive(Debug, Clone, Copy)]
 pub struct MatmulConfig {
@@ -168,16 +172,19 @@ pub fn simd_matmul(
         return Err(invalid_args("dimensions must be > 0"));
     }
     cfg.validate()?;
-    if a.len() < m * k {
-        return Err(invalid_args(format!("A too small: need {}, got {}", m * k, a.len())));
+    let a_required = checked_product(m, k, "A dimensions")?;
+    let b_required = checked_product(k, n, "B dimensions")?;
+    let c_required = checked_product(m, n, "C dimensions")?;
+    if a.len() < a_required {
+        return Err(invalid_args(format!("A too small: need {}, got {}", a_required, a.len())));
     }
-    if b.len() < k * n {
-        return Err(invalid_args(format!("B too small: need {}, got {}", k * n, b.len())));
+    if b.len() < b_required {
+        return Err(invalid_args(format!("B too small: need {}, got {}", b_required, b.len())));
     }
-    if c.len() < m * n {
-        return Err(invalid_args(format!("C too small: need {}, got {}", m * n, c.len())));
+    if c.len() < c_required {
+        return Err(invalid_args(format!("C too small: need {}, got {}", c_required, c.len())));
     }
-    c[..m * n].fill(0.0);
+    c[..c_required].fill(0.0);
 
     let use_simd = cfg.use_avx2 && avx2_available();
 
@@ -227,16 +234,23 @@ pub fn simd_matmul_transposed(
         return Err(invalid_args("dimensions must be > 0"));
     }
     cfg.validate()?;
-    if a.len() < m * k {
-        return Err(invalid_args(format!("A too small: need {}, got {}", m * k, a.len())));
+    let a_required = checked_product(m, k, "A dimensions")?;
+    let b_t_required = checked_product(n, k, "B^T dimensions")?;
+    let c_required = checked_product(m, n, "C dimensions")?;
+    if a.len() < a_required {
+        return Err(invalid_args(format!("A too small: need {}, got {}", a_required, a.len())));
     }
-    if b_t.len() < n * k {
-        return Err(invalid_args(format!("B^T too small: need {}, got {}", n * k, b_t.len())));
+    if b_t.len() < b_t_required {
+        return Err(invalid_args(format!(
+            "B^T too small: need {}, got {}",
+            b_t_required,
+            b_t.len()
+        )));
     }
-    if c.len() < m * n {
-        return Err(invalid_args(format!("C too small: need {}, got {}", m * n, c.len())));
+    if c.len() < c_required {
+        return Err(invalid_args(format!("C too small: need {}, got {}", c_required, c.len())));
     }
-    c[..m * n].fill(0.0);
+    c[..c_required].fill(0.0);
 
     let use_simd = cfg.use_avx2 && avx2_available();
 
@@ -1195,6 +1209,15 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_matmul_dimension_overflow_rejected() {
+        let mut c = [0.0f32; 1];
+        assert!(
+            simd_matmul(&[1.0], &[1.0], &mut c, usize::MAX, 2, 2, &MatmulConfig::default())
+                .is_err()
+        );
+    }
+
     // ── simd_matmul_transposed ─────────────────────────────────
 
     #[test]
@@ -1253,6 +1276,23 @@ mod tests {
         assert!(
             simd_matmul_transposed(&[1.0; 4], &[1.0; 3], &mut c, 2, 2, 2, &MatmulConfig::default())
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn test_matmul_transposed_dimension_overflow_rejected() {
+        let mut c = [0.0f32; 1];
+        assert!(
+            simd_matmul_transposed(
+                &[1.0],
+                &[1.0],
+                &mut c,
+                usize::MAX,
+                2,
+                2,
+                &MatmulConfig::default()
+            )
+            .is_err()
         );
     }
 

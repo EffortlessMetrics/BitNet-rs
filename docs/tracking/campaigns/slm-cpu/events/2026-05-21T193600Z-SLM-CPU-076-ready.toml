@@ -1,0 +1,13 @@
+timestamp = "2026-05-21T19:36:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-076"
+event = "in_progress"
+previous_status = "blocked"
+new_status = "ready"
+actor = "codex"
+summary = "Queued the Qwen3 warm-session sidecar instrumentation receipt bridge after SLM-CPU-075."
+notes = [
+  "SLM-CPU-075 records that transformer-side packed Q8_0 sidecar counters exist but are not yet serialized by the warm-session receipt path.",
+  "SLM-CPU-076 should reset, snapshot, and serialize those counters for the opt-in exact-tensor Qwen3 Q8_0 path while preserving the Qwen3 appliance behavior oracle.",
+  "The item must keep eager_f32_candle as the default runtime and make no speedup, default enablement, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256 claim.",
+]

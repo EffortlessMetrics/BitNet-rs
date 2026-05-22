@@ -18,6 +18,10 @@ use std::{
 };
 
 const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+const INTEL_A770_OPENCL: &str = "intel-a770-opencl";
+const INTEL_ARC_A770_OPENCL: &str = "intel-arc-a770-opencl";
+const A770_BITNET_MODEL_CONTRACT: &str = "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml";
+const A770_BITNET_QK256_ROUTE_ID: &str = "a770.bitnet.i2s.qk256";
 const ANSWER_RECEIPT_REQUIRED_CASE_FIELDS: &[&str] = &[
     "text",
     "tokens.prompt",
@@ -83,6 +87,13 @@ const ANSWER_RECEIPT_CHECKED_RULES: &[&str] = &[
     "qk256_hot_path_recorded",
     "qk256_hot_path_invocations_positive",
     "qk256_hot_path_materialization_audited",
+    "a770_model_contract_declared",
+    "a770_model_contract_path",
+    "a770_kernel_route_declared",
+    "a770_kernel_route_id",
+    "a770_kernel_route_diagnostic_only",
+    "a770_kernel_route_claimable_false",
+    "a770_backend_claimable_false",
 ];
 const ANSWER_CORPUS_SCORING_KINDS: &[&str] = &[
     "exact_match",
@@ -188,9 +199,12 @@ impl AnswerCorpusCommand {
         let corpus = AnswerCorpus::load(&self.corpus)?;
         let device =
             normalize_answer_corpus_device(self.device.as_deref().unwrap_or(default_device));
-        if !matches!(device.as_str(), "cpu" | "apple-m4-cpu-neon" | "cuda" | RTX_5070_TI_CUDA) {
+        if !matches!(
+            device.as_str(),
+            "cpu" | "apple-m4-cpu-neon" | "cuda" | RTX_5070_TI_CUDA | INTEL_A770_OPENCL
+        ) {
             anyhow::bail!(
-                "answer-corpus only accepts --device cpu, --device apple-m4-cpu-neon, --device cuda, or --device {RTX_5070_TI_CUDA}; got {device}"
+                "answer-corpus only accepts --device cpu, --device apple-m4-cpu-neon, --device cuda, --device {RTX_5070_TI_CUDA}, or --device {INTEL_A770_OPENCL}; got {device}"
             );
         }
         if self.cpu_kernel.is_some() && device != "cpu" {
@@ -326,14 +340,18 @@ impl AnswerCorpusCommand {
                 .to_string();
         let prompt_generation_identity =
             aggregate_case_value(&rows, &["prompt_generation_identity"]).unwrap_or(Value::Null);
+        let proof_route_contract = answer_corpus_proof_route_contract(&device);
         let top_level_backend_lane =
             answer_corpus_backend_lane(&device, slm_answer_path, &top_level_model_family);
         let answer_ready_artifact_available = corpus_answer_ready_artifact_available(&corpus.model);
         let backend_quality_gate_passed =
             total > 0 && passed == total && failed == 0 && timed_out == 0 && not_run == 0;
         let bitnet_answer_path = corpus.artifact_kind == "bitnet_answer_corpus";
-        let coherent_answer_claimed =
-            bitnet_answer_path && answer_ready_artifact_available && backend_quality_gate_passed;
+        let a770_opencl_answer_corpus = is_a770_opencl_answer_corpus_device(&device);
+        let coherent_answer_claimed = bitnet_answer_path
+            && answer_ready_artifact_available
+            && backend_quality_gate_passed
+            && !a770_opencl_answer_corpus;
 
         let receipt = json!({
             "schema_version": "1.0.0",
@@ -394,6 +412,7 @@ impl AnswerCorpusCommand {
                 "fallback_used": top_level_fallback_used,
             },
             "execution_plan": aggregate_execution_plan,
+            "proof_route_contract": proof_route_contract,
             "prompt_template_policy": {
                 "family": corpus.defaults.prompt_template.as_str(),
                 "identity_sha256": prompt_generation_identity["identity_sha256"].as_str(),
@@ -448,13 +467,20 @@ impl AnswerCorpusCommand {
                 "local_answer_path": device.as_str() == "apple-m4-cpu-neon",
                 "answer_ready_artifact_available": answer_ready_artifact_available,
                 "backend_quality_gate_passed": backend_quality_gate_passed,
-                "diagnostic_only_until_answer_ready_artifact": (bitnet_answer_path && !answer_ready_artifact_available)
+                "diagnostic_only_until_answer_ready_artifact": a770_opencl_answer_corpus
+                    || (bitnet_answer_path && !answer_ready_artifact_available)
                     || (slm_answer_path && !bounded_slm_answer_smoke_passed),
                 "coherent_output_observed": coherent_answer_claimed,
                 "coherent_answer_claimed": coherent_answer_claimed,
                 "cuda_answer_corpus": is_cuda_answer_corpus_device(&device),
+                "a770_opencl_answer_corpus": a770_opencl_answer_corpus,
+                "a770_opencl_route_diagnostic": a770_opencl_answer_corpus,
                 "strict_cuda_answer_claimed": false,
+                "strict_a770_answer_claimed": false,
                 "full_metal_inference_claimed": false,
+                "full_a770_residency_claimed": false,
+                "trusted_partial_acceleration_claimed": false,
+                "a770_speedup_claimed": false,
                 "qk256_apple_claimed": false,
                 "neural_engine_claimed": false,
                 "broad_performance_claimed": false,
@@ -538,6 +564,7 @@ impl AnswerCorpusCommand {
             args.push("--strict-loader".into());
             args.push("--strict-tokenizer".into());
         }
+        args.extend(answer_corpus_child_proof_args(device));
         if let Some(steps) = self.dump_logit_steps {
             args.push("--dump-logit-steps".into());
             args.push(steps.to_string().into());
@@ -692,6 +719,7 @@ impl AnswerCorpusCommand {
             "execution_coverage": run_receipt.get("execution_coverage").cloned().unwrap_or(Value::Null),
             "qk256_hot_path": run_receipt.get("qk256_hot_path").cloned().unwrap_or(Value::Null),
             "execution_plan": run_receipt.get("execution_plan").cloned().unwrap_or(Value::Null),
+            "proof_summary": run_receipt.get("proof_summary").cloned().unwrap_or(Value::Null),
             "kernel": {
                 "selected_kernel": run_receipt["kernel"]["kernel_id"].clone(),
                 "family": run_receipt["kernel"]["family"].clone(),
@@ -1099,6 +1127,7 @@ struct ScoringResult {
 fn normalize_answer_corpus_device(device: &str) -> String {
     match device.trim() {
         "auto" => "cpu".to_string(),
+        INTEL_ARC_A770_OPENCL | "a770-opencl" => INTEL_A770_OPENCL.to_string(),
         other => other.to_string(),
     }
 }
@@ -1107,17 +1136,65 @@ fn answer_corpus_artifact_kind(device: &str, corpus_artifact_kind: &str) -> &'st
     match (device, corpus_artifact_kind) {
         ("apple-m4-cpu-neon", _) => "bitnet_apple_m4_local_answer_corpus",
         ("cuda" | RTX_5070_TI_CUDA, _) => "bitnet_cuda_answer_diagnostic_corpus",
+        (INTEL_A770_OPENCL, _) => "bitnet_a770_opencl_answer_diagnostic_corpus",
         (_, "slm_answer_corpus") => "slm_cpu_answer_corpus",
         _ => "bitnet_cpu_answer_corpus",
     }
 }
 
 fn answer_corpus_runtime_api(device: &str) -> &'static str {
-    if is_cuda_answer_corpus_device(device) { "cuda" } else { "cpu" }
+    if is_cuda_answer_corpus_device(device) {
+        "cuda"
+    } else if is_a770_opencl_answer_corpus_device(device) {
+        "opencl"
+    } else {
+        "cpu"
+    }
 }
 
 fn is_cuda_answer_corpus_device(device: &str) -> bool {
     matches!(device, "cuda" | RTX_5070_TI_CUDA)
+}
+
+fn is_a770_opencl_answer_corpus_device(device: &str) -> bool {
+    device == INTEL_A770_OPENCL
+}
+
+fn answer_corpus_child_proof_args(device: &str) -> Vec<OsString> {
+    if !is_a770_opencl_answer_corpus_device(device) {
+        return Vec::new();
+    }
+    vec![
+        "--proof-model-contract".into(),
+        A770_BITNET_MODEL_CONTRACT.into(),
+        "--proof-kernel-route".into(),
+        A770_BITNET_QK256_ROUTE_ID.into(),
+    ]
+}
+
+fn answer_corpus_proof_route_contract(device: &str) -> Value {
+    if !is_a770_opencl_answer_corpus_device(device) {
+        return Value::Null;
+    }
+    json!({
+        "enabled": true,
+        "diagnostic_only": true,
+        "claimable": false,
+        "model_contract": A770_BITNET_MODEL_CONTRACT,
+        "kernel_route": {
+            "route_id": A770_BITNET_QK256_ROUTE_ID,
+            "route_declared_in_child_runs": true,
+            "diagnostic_only": true,
+            "claimable": false,
+        },
+        "not_claims": [
+            "answer_quality",
+            "full_bitnet_inference",
+            "trusted_partial_acceleration",
+            "full_a770_residency",
+            "speedup",
+        ],
+    })
 }
 
 fn answer_corpus_backend_lane(
@@ -1129,6 +1206,8 @@ fn answer_corpus_backend_lane(
         "dense_slm_cpu"
     } else if is_cuda_answer_corpus_device(device) {
         "bitnet_cuda"
+    } else if is_a770_opencl_answer_corpus_device(device) {
+        "bitnet_a770_opencl"
     } else if device == "apple-m4-cpu-neon" {
         "apple_m4_cpu_neon"
     } else {
@@ -2722,6 +2801,7 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
         "apple-m4-cpu-neon" => selected_backend == "apple-m4-cpu-neon",
         "cuda" => selected_backend.contains("cuda"),
         RTX_5070_TI_CUDA => selected_backend == RTX_5070_TI_CUDA,
+        INTEL_A770_OPENCL => selected_backend == INTEL_A770_OPENCL,
         _ => false,
     };
     if !selected_backend_valid {
@@ -2740,6 +2820,9 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
             &["speedup_claim"][..],
             &["claim_boundary", "speedup_claim"][..],
             &["claim_boundary", "full_metal_inference_claimed"][..],
+            &["claim_boundary", "full_a770_residency_claimed"][..],
+            &["claim_boundary", "trusted_partial_acceleration_claimed"][..],
+            &["claim_boundary", "a770_speedup_claimed"][..],
             &["claim_boundary", "broad_performance_claimed"][..],
         ],
     ) {
@@ -2835,6 +2918,32 @@ fn answer_receipt_failed_rules(run_receipt: &Value, expected_backend: &str) -> V
             .into_iter()
             .map(str::to_string),
         );
+    }
+    if is_a770_opencl_answer_corpus_device(expected_backend) {
+        let proof_summary = &run_receipt["proof_summary"];
+        if proof_summary["model_contract_declared"].as_bool() != Some(true) {
+            failed.push("a770_model_contract_declared".to_string());
+        }
+        let model_contract = proof_summary["model_contract"].as_str().unwrap_or_default();
+        if !model_contract.ends_with(A770_BITNET_MODEL_CONTRACT) {
+            failed.push("a770_model_contract_path".to_string());
+        }
+        if proof_summary["route_declared"].as_bool() != Some(true) {
+            failed.push("a770_kernel_route_declared".to_string());
+        }
+        let kernel_route = &proof_summary["kernel_route"];
+        if kernel_route["route_id"].as_str() != Some(A770_BITNET_QK256_ROUTE_ID) {
+            failed.push("a770_kernel_route_id".to_string());
+        }
+        if kernel_route["diagnostic_only"].as_bool() != Some(true) {
+            failed.push("a770_kernel_route_diagnostic_only".to_string());
+        }
+        if kernel_route["claimable"].as_bool() != Some(false) {
+            failed.push("a770_kernel_route_claimable_false".to_string());
+        }
+        if proof_summary["backend_claimable"].as_bool() != Some(false) {
+            failed.push("a770_backend_claimable_false".to_string());
+        }
     }
 
     let prompt_count = u64_at(run_receipt, &["tokens", "prompt"]);
@@ -2993,7 +3102,7 @@ fn is_sha256_hex(value: &str) -> bool {
 }
 
 fn aggregate_execution_plan(rows: &[Value], device: &str) -> Value {
-    if !is_cuda_answer_corpus_device(device) {
+    if !is_cuda_answer_corpus_device(device) && !is_a770_opencl_answer_corpus_device(device) {
         return Value::Null;
     }
 
@@ -4358,6 +4467,35 @@ cases:
     }
 
     #[test]
+    fn a770_answer_corpus_route_is_diagnostic_opencl() {
+        assert_eq!(normalize_answer_corpus_device(INTEL_ARC_A770_OPENCL), INTEL_A770_OPENCL);
+        assert_eq!(normalize_answer_corpus_device("a770-opencl"), INTEL_A770_OPENCL);
+        assert_eq!(
+            answer_corpus_artifact_kind(INTEL_A770_OPENCL, "bitnet_answer_corpus"),
+            "bitnet_a770_opencl_answer_diagnostic_corpus"
+        );
+        assert_eq!(answer_corpus_runtime_api(INTEL_A770_OPENCL), "opencl");
+        assert_eq!(
+            answer_corpus_backend_lane(INTEL_A770_OPENCL, false, "bitnet"),
+            "bitnet_a770_opencl"
+        );
+        let proof_args: Vec<String> = answer_corpus_child_proof_args(INTEL_A770_OPENCL)
+            .into_iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            proof_args,
+            vec![
+                "--proof-model-contract",
+                A770_BITNET_MODEL_CONTRACT,
+                "--proof-kernel-route",
+                A770_BITNET_QK256_ROUTE_ID,
+            ]
+        );
+        assert!(answer_corpus_child_proof_args("cpu").is_empty());
+    }
+
+    #[test]
     fn prompt_prefill_receipt_prefers_profile_data() {
         let receipt = json!({
             "tokens": {
@@ -4580,6 +4718,57 @@ cases:
     }
 
     #[test]
+    fn answer_receipt_accepts_strict_a770_opencl_truth() {
+        let mut receipt = strict_answer_receipt_fixture(
+            INTEL_A770_OPENCL,
+            INTEL_A770_OPENCL,
+            "opencl",
+            "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        );
+        receipt["claim_boundary"] = json!({
+            "speedup_claim": false,
+            "full_a770_residency_claimed": false,
+            "trusted_partial_acceleration_claimed": false,
+            "a770_speedup_claimed": false,
+            "broad_performance_claimed": false
+        });
+        receipt["proof_summary"] = json!({
+            "model_contract": A770_BITNET_MODEL_CONTRACT,
+            "model_contract_declared": true,
+            "kernel_route": {
+                "route_id": A770_BITNET_QK256_ROUTE_ID,
+                "route_declared": true,
+                "diagnostic_only": true,
+                "claimable": false
+            },
+            "route_declared": true,
+            "backend_claimable": false
+        });
+
+        assert!(answer_receipt_failed_rules(&receipt, INTEL_A770_OPENCL).is_empty());
+    }
+
+    #[test]
+    fn a770_answer_receipt_requires_model_contract_and_kernel_route() {
+        let receipt = strict_answer_receipt_fixture(
+            INTEL_A770_OPENCL,
+            INTEL_A770_OPENCL,
+            "opencl",
+            "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        );
+
+        let failed = answer_receipt_failed_rules(&receipt, INTEL_A770_OPENCL);
+
+        assert!(failed.contains(&"a770_model_contract_declared".to_string()));
+        assert!(failed.contains(&"a770_model_contract_path".to_string()));
+        assert!(failed.contains(&"a770_kernel_route_declared".to_string()));
+        assert!(failed.contains(&"a770_kernel_route_id".to_string()));
+        assert!(failed.contains(&"a770_kernel_route_diagnostic_only".to_string()));
+        assert!(failed.contains(&"a770_kernel_route_claimable_false".to_string()));
+        assert!(failed.contains(&"a770_backend_claimable_false".to_string()));
+    }
+
+    #[test]
     fn cuda_answer_receipt_rejects_missing_execution_plan() {
         let mut receipt = strict_answer_receipt_fixture(
             RTX_5070_TI_CUDA,
@@ -4675,6 +4864,7 @@ cases:
             "timing_decode_total_ms_recorded",
             "fallback_false",
             "speedup_claim_false",
+            "a770_kernel_route_declared",
         ] {
             assert!(checked_rules.contains(&rule), "missing receipt quality rule `{rule}`");
         }

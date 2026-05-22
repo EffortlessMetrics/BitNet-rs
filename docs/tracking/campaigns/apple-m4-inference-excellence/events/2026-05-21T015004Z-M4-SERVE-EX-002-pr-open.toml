@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T01:50:04Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-002"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-002-streaming-failure-semantics"
+pr = 112
+head_sha = "f94f7b0b7bc51e604766b40f7eb3f3de9a2778a2"
+
+notes = [
+  "Opened PR #112 for dense M4 local-server failure semantics.",
+  "The PR adds `bitnet mac serve-failure-smoke`, validates the new aggregate `bitnet_apple_m4_serve_failure_semantics` receipt, and records live 2026-05-21T0142Z apple-m4-cpu-neon default dense SLM evidence with fallback_used=false.",
+  "After clearing the local target directory and rerunning with `CARGO_INCREMENTAL=0`, `cargo test --locked -p bitnet-server -- --nocapture` passed; focused CLI tests, receipts-check, campaign check, campaign generate --check, campaign doctor, and git diff --check also passed.",
+  "No production hosting, full OpenAI compatibility, BitNet chat, BitNet serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

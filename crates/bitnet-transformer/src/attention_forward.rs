@@ -9,11 +9,12 @@ use super::BitNetError;
 use super::{
     DenseLinearRuntimeHookRegistry, LayerKVCache, MultiHeadAttention, attention_f16_dot_input,
     attention_score_key_input, dbg_finite, dbg_stats, debug_attn_enabled, debug_attn_scale_enabled,
-    debug_gqa_enabled, debug_rope_enabled, qwen_trace_event, qwen_trace_layer_enabled,
-    qwen_trace_tensor, trace_rms_enabled,
+    debug_gqa_enabled, debug_rope_enabled, qwen_trace_event, qwen_trace_events_enabled,
+    qwen_trace_layer_enabled, qwen_trace_number, qwen_trace_tensor, trace_rms_enabled,
 };
 use bitnet_common::Result;
 use candle_core::{DType, Module, Tensor};
+use std::time::Instant;
 
 struct QkvProjections {
     q: Tensor,
@@ -41,30 +42,160 @@ impl MultiHeadAttention {
         dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
     ) -> Result<Tensor> {
         let (batch_size, seq_len, _) = x.dims3()?;
+        let trace_attention = qwen_trace_events_enabled();
+        let attention_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.forward_start", || {
+            format!(
+                "\"layer\":{},\"batch\":{},\"seq_len\":{},\"n_heads\":{},\"n_kv_heads\":{},\"head_dim\":{}",
+                self.layer_idx, batch_size, seq_len, self.n_heads, self.n_kv_heads, self.head_dim
+            )
+        });
 
+        let projection_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.qkv_projection_start", || {
+            format!("\"layer\":{}", self.layer_idx)
+        });
         let projections = self.project_qkv(x, raw_tensors, dense_linear_hooks)?;
+        qwen_attention_trace_event(trace_attention, "attention.qkv_projection_finish", || {
+            format!(
+                "\"layer\":{},\"projection_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(projection_start)
+            )
+        });
         self.trace_projection_rms_once(&projections)?;
         self.trace_q_projection(&projections.q)?;
 
+        let reshape_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.reshape_heads_start", || {
+            format!("\"layer\":{}", self.layer_idx)
+        });
         let heads = self.reshape_qkv_heads(projections, batch_size, seq_len)?;
+        qwen_attention_trace_event(trace_attention, "attention.reshape_heads_finish", || {
+            format!(
+                "\"layer\":{},\"reshape_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(reshape_start)
+            )
+        });
+        let qk_norm_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.qk_norm_start", || {
+            format!("\"layer\":{}", self.layer_idx)
+        });
         let heads = self.apply_qk_norms(heads)?;
+        qwen_attention_trace_event(trace_attention, "attention.qk_norm_finish", || {
+            format!(
+                "\"layer\":{},\"qk_norm_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(qk_norm_start)
+            )
+        });
         self.log_gqa_shapes_once(&heads)?;
 
+        let rope_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.rope_start", || {
+            format!(
+                "\"layer\":{},\"cache_seq_len\":{}",
+                self.layer_idx,
+                kv_cache.as_ref().map(|cache| cache.seq_len).unwrap_or(0)
+            )
+        });
         let heads = self.apply_rotary_embeddings(heads, kv_cache.as_ref().map(|c| c.seq_len))?;
+        qwen_attention_trace_event(trace_attention, "attention.rope_finish", || {
+            format!(
+                "\"layer\":{},\"rope_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(rope_start)
+            )
+        });
+        let kv_cache_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.kv_cache_start", || {
+            format!("\"layer\":{}", self.layer_idx)
+        });
         let (k_ctx, v_ctx) = Self::kv_context(&heads.k, &heads.v, kv_cache)?;
+        qwen_attention_trace_event(trace_attention, "attention.kv_cache_finish", || {
+            format!(
+                "\"layer\":{},\"kv_cache_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(kv_cache_start)
+            )
+        });
+        let gqa_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.gqa_expand_start", || {
+            format!("\"layer\":{}", self.layer_idx)
+        });
         let expanded = self.expand_grouped_query_kv(k_ctx, v_ctx, batch_size)?;
+        qwen_attention_trace_event(trace_attention, "attention.gqa_expand_finish", || {
+            format!(
+                "\"layer\":{},\"gqa_expand_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(gqa_start)
+            )
+        });
 
+        let scores_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.scores_start", || {
+            format!("\"layer\":{}", self.layer_idx)
+        });
         let scores = self.prepare_attention_scores(&heads.q, &expanded.k, seq_len)?;
+        qwen_attention_trace_event(trace_attention, "attention.scores_finish", || {
+            format!(
+                "\"layer\":{},\"scores_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(scores_start)
+            )
+        });
+        let softmax_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.softmax_start", || {
+            format!("\"layer\":{}", self.layer_idx)
+        });
         let attn_weights = self.softmax_attention_scores(&scores)?;
+        qwen_attention_trace_event(trace_attention, "attention.softmax_finish", || {
+            format!(
+                "\"layer\":{},\"softmax_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(softmax_start)
+            )
+        });
+        let value_mix_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.value_mix_start", || {
+            format!("\"layer\":{}", self.layer_idx)
+        });
         let output_heads = self.apply_attention_weights(&attn_weights, &expanded.v)?;
+        qwen_attention_trace_event(trace_attention, "attention.value_mix_finish", || {
+            format!(
+                "\"layer\":{},\"value_mix_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(value_mix_start)
+            )
+        });
 
-        self.project_attention_output(
+        let output_projection_start = Instant::now();
+        qwen_attention_trace_event(trace_attention, "attention.output_projection_start", || {
+            format!("\"layer\":{}", self.layer_idx)
+        });
+        let output = self.project_attention_output(
             output_heads,
             batch_size,
             seq_len,
             raw_tensors,
             dense_linear_hooks,
-        )
+        )?;
+        qwen_attention_trace_event(trace_attention, "attention.output_projection_finish", || {
+            format!(
+                "\"layer\":{},\"output_projection_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(output_projection_start)
+            )
+        });
+        qwen_attention_trace_event(trace_attention, "attention.forward_finish", || {
+            format!(
+                "\"layer\":{},\"attention_ms\":{}",
+                self.layer_idx,
+                qwen_attention_elapsed_ms(attention_start)
+            )
+        });
+        Ok(output)
     }
 
     fn project_qkv(
@@ -479,4 +610,14 @@ impl MultiHeadAttention {
         }
         Ok(projected)
     }
+}
+
+fn qwen_attention_trace_event(enabled: bool, stage: &str, fields_json: impl FnOnce() -> String) {
+    if enabled {
+        qwen_trace_event(stage, &fields_json());
+    }
+}
+
+fn qwen_attention_elapsed_ms(start: Instant) -> String {
+    qwen_trace_number(start.elapsed().as_secs_f64() * 1000.0)
 }

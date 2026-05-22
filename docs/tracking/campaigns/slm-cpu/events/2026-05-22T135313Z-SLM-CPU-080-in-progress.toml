@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T13:53:13Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-080"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/slm-cpu-080-kaby-performance-dashboard-refresh"
+summary = "Started the Kaby Lake Qwen3 Q8_0 performance dashboard refresh."
+notes = [
+  "The refresh consumes the merged KV-cache reuse, prompt-token cache, prefill attribution, and post-aligned packed-matvec evidence.",
+  "The dashboard must keep the current operator default evidence-scoped to the 4-thread operator profile and preserve the Qwen3 Q8_0 behavior oracle.",
+  "No new runtime optimization, speedup, sustained-throughput, Q4/Q5, server, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

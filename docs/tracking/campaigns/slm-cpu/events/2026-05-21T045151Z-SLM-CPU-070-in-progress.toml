@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T04:51:51Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-070"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/slm-cpu-070-packed-q8-block-local-matvec"
+summary = "Started the packed Q8_0 block-local matvec prototype slice."
+notes = [
+  "The slice consumes the SLM-CPU-069 root-cause artifact and keeps eager_f32_candle as the default runtime.",
+  "Packed Q8_0 sidecar execution remains opt-in and scoped to layers.0.attention.q_proj.weight.",
+  "The verified Qwen3 GGUF is not present in this workspace, so real i5-8250U timing and generated-ID receipt evidence remain future work.",
+]

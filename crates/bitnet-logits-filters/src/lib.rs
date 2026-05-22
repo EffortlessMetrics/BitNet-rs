@@ -107,45 +107,81 @@ pub fn apply_min_p(probs: &mut [f32], min_p: f32) {
 /// the expected surprise (entropy), until cumulative kept probability reaches
 /// `typical_p`.
 pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
-    if typical_p >= 1.0 || probs.is_empty() {
+    if typical_filter::should_skip(typical_p, probs) {
         return;
     }
 
-    // First pass: collect non-zero probabilities, accumulate entropy, and
-    // cache surprise (-p.ln()) so we don't re-evaluate ln() per element.
-    let mut entropy = 0.0f64;
-    let mut deviations: Vec<(usize, f32, f32)> = Vec::with_capacity(probs.len());
-    for (i, &p) in probs.iter().enumerate() {
-        if p > 0.0 {
-            let surprise = -p.ln();
-            entropy += f64::from(p * surprise);
-            deviations.push((i, p, surprise));
-        }
-    }
-
-    if deviations.is_empty() {
+    let Some(mut deviations) = typical_filter::collect_deviations(probs) else {
         return;
+    };
+
+    typical_filter::normalize_deviations(&mut deviations);
+    typical_filter::mask_tail_by_cumulative_probability(probs, &deviations, typical_p);
+}
+
+mod typical_filter {
+    use super::f32_ascending;
+
+    pub(super) type TypicalEntry = (usize, f32, f32);
+
+    #[inline]
+    pub(super) fn should_skip(typical_p: f32, probs: &[f32]) -> bool {
+        typical_p >= 1.0 || probs.is_empty()
     }
 
-    // Second pass: turn the cached surprise into the deviation from entropy.
-    for entry in &mut deviations {
-        entry.2 = (f64::from(entry.2) - entropy).abs() as f32;
+    pub(super) fn collect_deviations(probs: &[f32]) -> Option<Vec<TypicalEntry>> {
+        let mut entropy = 0.0f64;
+        let mut entries: Vec<TypicalEntry> = Vec::with_capacity(probs.len());
+
+        for (index, &probability) in probs.iter().enumerate() {
+            if probability <= 0.0 {
+                continue;
+            }
+
+            let surprise = -probability.ln();
+            entropy += f64::from(probability * surprise);
+            entries.push((index, probability, surprise));
+        }
+
+        if entries.is_empty() {
+            return None;
+        }
+
+        for entry in &mut entries {
+            entry.2 = (f64::from(entry.2) - entropy).abs() as f32;
+        }
+
+        Some(entries)
     }
 
-    deviations.sort_unstable_by(|a, b| f32_ascending(a.2, b.2));
+    pub(super) fn normalize_deviations(entries: &mut [TypicalEntry]) {
+        entries.sort_unstable_by(|left, right| f32_ascending(left.2, right.2));
+    }
 
-    let mut cumsum = 0.0f64;
-    let mut cutoff = deviations.len();
-    for (rank, &(_, p, _)) in deviations.iter().enumerate() {
-        cumsum += f64::from(p);
-        if cumsum >= f64::from(typical_p) {
-            cutoff = rank + 1;
-            break;
+    pub(super) fn mask_tail_by_cumulative_probability(
+        probs: &mut [f32],
+        entries: &[TypicalEntry],
+        typical_p: f32,
+    ) {
+        let cutoff = cutoff_index(entries, typical_p);
+        for &(index, _, _) in entries.iter().skip(cutoff) {
+            probs[index] = 0.0;
         }
     }
 
-    for &(idx, _, _) in deviations.iter().skip(cutoff) {
-        probs[idx] = 0.0;
+    fn cutoff_index(entries: &[TypicalEntry], typical_p: f32) -> usize {
+        let mut cumulative_sum = 0.0f64;
+        let mut cutoff = entries.len();
+
+        for (rank, &(_, probability, _)) in entries.iter().enumerate() {
+            cumulative_sum += f64::from(probability);
+            if cumulative_sum >= f64::from(typical_p) {
+                cutoff = rank + 1;
+                break;
+            }
+        }
+
+        cutoff
     }
 }
 

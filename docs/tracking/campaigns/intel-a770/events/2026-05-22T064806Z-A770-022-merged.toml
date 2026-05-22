@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T06:48:06Z"
+campaign = "intel-a770"
+item = "A770-022"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex-a770"
+pr = 287
+branch = "codex/intel-a770/A770-022-multistep-answer-parity"
+head_sha = "4db5f1c0d7c1a1f277da3e629bb9f007f307cf96"
+merge_sha = "b01c5223d9b56b0e617959173a412aa371809baa"
+summary = "Merged PR #287 for focused CPU/A770 multi-step answer-parity frontier diagnostics."
+notes = [
+  "The merged receipt records the yes_no_water generated-output divergence with four dumped logit steps on both CPU AVX2 and Intel A770 OpenCL.",
+  "The first generated-token mismatch is recorded at generated index 2 with logit context and different chosen IDs.",
+  "No CPU/A770 parity, reference parity, A770 answer quality, residency, speed, trusted-partial, or full BitNet inference claim is promoted.",
+]

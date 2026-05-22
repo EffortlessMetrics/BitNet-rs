@@ -35,6 +35,30 @@ These actions are not human gates for `codex_premerge` +
 `automerge_when_green` + `on_blocker_only` items. They are the expected agent
 workflow.
 
+## Merge And CI Authority
+
+Normal swarm PRs merge into `bitnet-rs-swarm/main` with squash merge after the
+scoped diff is reviewed, the branch is mergeable, and the required normalized
+routed result is green.
+
+Use the normalized `BitNet Rust Small Result` check as the routed Rust CI
+authority. Conditional implementation jobs such as a specific self-hosted
+runner lane or GitHub-hosted fallback may be skipped by design in a given run;
+do not treat those skips as missing proof when the normalized result is green.
+
+Repository-boundary PRs are different. Source-history repair,
+source-to-swarm sync, and swarm-to-source promotion must preserve ancestry by
+regular merge commit or by an explicitly approved fast-forward/direct update.
+Never squash those PRs, because squash can preserve the file tree while losing
+the commit graph needed for contributor attribution and promotion auditability.
+
+Release, signing, publish, secrets-heavy workflows, public-fork self-hosted
+paths, and full release authority remain source-owned until a separate approved
+migration moves them. Routine swarm agents should not move those surfaces as
+part of ordinary feature, refactor, diagnostic, tracker, or CI-economics PRs.
+See [`SWARM_DEVELOPMENT_AUTHORITY.md`](SWARM_DEVELOPMENT_AUTHORITY.md) and
+[`runner-baseline.md`](runner-baseline.md) for the durable boundary.
+
 ## Required Safeguards
 
 Before any git operation that changes state, inspect branch, status, and the

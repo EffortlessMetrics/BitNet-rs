@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T09:19:50Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-004"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-004-queue-backpressure"
+
+notes = [
+  "Started bounded local-server queue/backpressure and resident-state evidence for dense M4 local serve.",
+  "Added and validated a live M4 serve-backpressure smoke receipt under ci/hardware/apple-m4-mac-mini/2026-05-21T0851Z/serve-backpressure/summary.json with selected_backend=apple-m4-cpu-neon and fallback_used=false.",
+  "No BitNet serve/chat, production-hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

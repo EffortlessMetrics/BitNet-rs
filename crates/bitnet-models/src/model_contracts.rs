@@ -217,6 +217,11 @@ const OFFICIAL_2B_I2S_ACCEL: &[AcceleratorRoute] = &[
         route: "bitnet_qk256_cuda",
         status: "strict_receipt_lane",
     },
+    AcceleratorRoute {
+        backend: "intel-arc-a770-opencl",
+        route: "a770.bitnet.i2s.qk256",
+        status: "diagnostic_qk256_route_receipt_only",
+    },
 ];
 
 const EMPTY_ACCEL: &[AcceleratorRoute] = &[];
@@ -399,6 +404,11 @@ mod tests {
         assert!(contract.permits_claim(ContractClaim::BackendParity));
         assert!(!contract.permits_claim(ContractClaim::SpeedupQualified));
         assert!(contract.accelerator_routes.iter().any(|route| route.route == "bitnet_qk256_cuda"));
+        assert!(contract.accelerator_routes.iter().any(|route| {
+            route.backend == "intel-arc-a770-opencl"
+                && route.route == "a770.bitnet.i2s.qk256"
+                && route.status == "diagnostic_qk256_route_receipt_only"
+        }));
         assert!(contract.requires_receipt("execution_plan"));
     }
 

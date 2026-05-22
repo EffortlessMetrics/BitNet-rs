@@ -1,0 +1,15 @@
+timestamp = "2026-05-21T01:44:09Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-002-streaming-failure-semantics"
+
+notes = [
+  "Started M4-SERVE-EX-002 by adding a dense M4 local-server `mac serve-failure-smoke` harness and receipt validator for timeout, cancellation, invalid request, missing cache, no-response, and health/ready recovery semantics.",
+  "Collected a bounded live 2026-05-21T0142Z default dense SLM failure-semantics receipt on apple-m4-cpu-neon with fallback_used=false and child failure receipts for stream cancel, timeout, and no-response paths.",
+  "The evidence remains dense-only for the local server; BitNet serve stays disabled and separately gated.",
+  "No production hosting, full OpenAI compatibility, BitNet chat, BitNet serve, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

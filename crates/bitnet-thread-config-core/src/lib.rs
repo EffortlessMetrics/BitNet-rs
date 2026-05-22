@@ -88,19 +88,37 @@ impl WorkPartition {
 /// Partition `total` items across `num_threads` as evenly as possible.
 #[must_use]
 pub fn partition_work(total: usize, num_threads: usize) -> Vec<WorkPartition> {
-    let threads = num_threads.max(1);
-    let base_chunk = total / threads;
-    let remainder = total % threads;
-    let mut partitions = Vec::with_capacity(threads);
-    let mut start = 0;
+    partitioning::build_partitions(total, num_threads)
+}
 
-    for i in 0..threads {
-        let extra = if i < remainder { 1 } else { 0 };
-        let chunk = base_chunk + extra;
-        partitions.push(WorkPartition { thread_id: i, start, end: start + chunk });
-        start += chunk;
+mod partitioning {
+    use super::WorkPartition;
+
+    pub(super) fn build_partitions(total: usize, num_threads: usize) -> Vec<WorkPartition> {
+        let threads = num_threads.max(1);
+        let base_chunk = total / threads;
+        let remainder = total % threads;
+        let mut partitions = Vec::with_capacity(threads);
+        let mut start = 0;
+
+        for thread_id in 0..threads {
+            let chunk_size = chunk_size_for(thread_id, base_chunk, remainder);
+            let partition = partition_for(thread_id, start, chunk_size);
+            start = partition.end;
+            partitions.push(partition);
+        }
+
+        partitions
     }
-    partitions
+
+    fn chunk_size_for(thread_id: usize, base_chunk: usize, remainder: usize) -> usize {
+        let extra = usize::from(thread_id < remainder);
+        base_chunk + extra
+    }
+
+    fn partition_for(thread_id: usize, start: usize, chunk_size: usize) -> WorkPartition {
+        WorkPartition { thread_id, start, end: start + chunk_size }
+    }
 }
 
 /// Estimate optimal thread count for a given workload size.

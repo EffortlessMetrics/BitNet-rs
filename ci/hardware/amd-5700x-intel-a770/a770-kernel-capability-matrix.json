@@ -20,8 +20,10 @@
       ],
       "status": "diagnostic",
       "fallback_allowed_when_claimed": false,
-      "proof_receipts": [],
-      "reason": "A770 QK256 remains diagnostic: no committed claim-grade strict selected-device OpenCL QK256 receipt exists."
+      "proof_receipts": [
+        "ci/hardware/amd-5700x-intel-a770/2026-05-21/a770-opencl-qk256-strict-dispatch.json"
+      ],
+      "reason": "A770 QK256 remains diagnostic: a strict selected-device OpenCL QK256 dispatch receipt is committed, but official BitNet inference, quality, activation-quantization residency, performance, and trusted-partial acceleration remain unproven."
     },
     {
       "kernel": "embedding_lookup",

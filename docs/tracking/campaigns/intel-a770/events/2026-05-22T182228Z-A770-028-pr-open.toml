@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T18:22:28Z"
+campaign = "intel-a770"
+item = "A770-028"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+pr = 362
+branch = "codex/intel-a770/A770-028-readiness-normalization-scoring"
+head_sha = "5df7856e7f65166912c0f10081eb0c6df8b5d6e7"
+summary = "Opened PR #362 for A770-028 readiness normalization scoring."
+notes = [
+  "The PR changes exactly seven label-like A770 seeded readiness cases from exact_match to normalized_match.",
+  "Fresh CPU AVX2 and Intel A770 OpenCL receipts both record 15/20 quality passes with 5 answer_content failures.",
+  "The CPU/A770 parity receipt remains failed and no readiness, quality, parity, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

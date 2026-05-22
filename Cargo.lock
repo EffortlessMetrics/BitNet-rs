@@ -530,6 +530,7 @@ dependencies = [
  "bitnet-startup-contract-guard",
  "bitnet-tokenizer-discovery-core",
  "bitnet-tokenizers",
+ "bitnet-transformer",
  "bitnet-validation",
  "bytemuck",
  "candle-core",

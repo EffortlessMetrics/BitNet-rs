@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T02:29:04Z"
+campaign = "intel-a770"
+item = "A770-020"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-020-cpu-a770-answer-parity"
+summary = "Start same-box CPU AVX2 versus A770 OpenCL answer-parity diagnostics."
+notes = [
+  "Scope is the official BitNet 2B I2_S five-case answer corpus, one-step top-k logits, and answer-parity comparison.",
+  "The parity comparator must accept the committed A770 diagnostic answer-corpus artifact kind before the receipt can report only real CPU/A770 divergences.",
+  "No CPU/A770 parity, reference parity, A770 answer quality, residency, speed, trusted-partial, or full BitNet inference claim is promoted.",
+]

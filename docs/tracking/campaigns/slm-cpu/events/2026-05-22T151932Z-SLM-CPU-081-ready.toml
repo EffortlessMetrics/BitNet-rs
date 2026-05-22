@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T15:19:32Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-081"
+event = "in_progress"
+previous_status = "none"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-081-repeated-packed-q8-timing"
+summary = "Queue repeated packed-Q8 exact-tensor timing evidence after the SLM-CPU-079 counter improvement."
+notes = [
+  "SLM-CPU-080 refreshed the Kaby dashboard and identified two valid next-target families: prompt_prefill.forward allocation/layout work or packed_matvec_compute evidence.",
+  "This item chooses the packed-Q8 path but keeps it evidence-only: repeated before/after warm-session receipts must preserve model SHA, prompt IDs, generated IDs, decoded text, strict tokenizer authority, selected CPU backend/kernel identity, dense hook identity, and fallback=false.",
+  "The item must not enable packed_q8_sidecar by default, broaden the exact tensor scope, claim sustained throughput, start Q4/Q5 runtime support, touch server/accelerator paths, or alter BitNet QK256/I2_S kernels.",
+]

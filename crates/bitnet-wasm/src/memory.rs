@@ -69,7 +69,14 @@ impl MemoryManager {
         // Check if allocation would exceed limit
         if let Some(max_bytes) = self.max_memory_bytes {
             let current = self.current_usage();
-            if current + bytes > max_bytes {
+            let Some(projected_usage) = current.checked_add(bytes) else {
+                return Err(JsError::new(&format!(
+                    "Allocation size overflow: current usage {} + requested {} exceeds usize",
+                    current, bytes
+                )));
+            };
+
+            if projected_usage > max_bytes {
                 return Err(JsError::new(&format!(
                     "Allocation would exceed memory limit: {} + {} > {}",
                     current, bytes, max_bytes
@@ -149,10 +156,9 @@ impl MemoryManager {
     pub fn get_stats(&self) -> MemoryStats {
         let current = self.current_usage();
         let max = self.max_memory_bytes;
-        let usage_percent = if let Some(max_bytes) = max {
-            (current as f64 / max_bytes as f64) * 100.0
-        } else {
-            0.0
+        let usage_percent = match max {
+            Some(max_bytes) if max_bytes > 0 => (current as f64 / max_bytes as f64) * 100.0,
+            _ => 0.0,
         };
 
         MemoryStats {
@@ -230,7 +236,15 @@ impl WasmBuffer {
     /// Append data to the buffer
     #[wasm_bindgen]
     pub fn append(&mut self, data: &[u8]) -> Result<(), JsError> {
-        if self.data.len() + data.len() > self.max_capacity {
+        let Some(next_len) = self.data.len().checked_add(data.len()) else {
+            return Err(JsError::new(&format!(
+                "Buffer size overflow: {} + {} exceeds usize",
+                self.data.len(),
+                data.len()
+            )));
+        };
+
+        if next_len > self.max_capacity {
             return Err(JsError::new(&format!(
                 "Buffer would exceed maximum capacity: {} + {} > {}",
                 self.data.len(),
@@ -312,11 +326,21 @@ impl ProgressiveLoader {
     #[wasm_bindgen]
     pub fn load_chunk(&mut self, chunk: &[u8]) -> Result<f64, JsError> {
         self.buffer.append(chunk)?;
-        self.loaded_size += chunk.len();
+        self.loaded_size = self.loaded_size.checked_add(chunk.len()).ok_or_else(|| {
+            JsError::new(&format!(
+                "Loaded size overflow: {} + {} exceeds usize",
+                self.loaded_size,
+                chunk.len()
+            ))
+        })?;
 
         // Calculate progress
         let progress = if let Some(total) = self.total_size {
-            (self.loaded_size as f64 / total as f64).min(1.0)
+            if total == 0 {
+                1.0
+            } else {
+                (self.loaded_size as f64 / total as f64).min(1.0)
+            }
         } else {
             0.0
         };
@@ -354,7 +378,11 @@ impl ProgressiveLoader {
     #[wasm_bindgen]
     pub fn get_progress(&self) -> f64 {
         if let Some(total) = self.total_size {
-            (self.loaded_size as f64 / total as f64).min(1.0)
+            if total == 0 {
+                1.0
+            } else {
+                (self.loaded_size as f64 / total as f64).min(1.0)
+            }
         } else {
             0.0
         }
@@ -370,5 +398,48 @@ impl ProgressiveLoader {
     #[wasm_bindgen]
     pub fn get_total_size(&self) -> Option<usize> {
         self.total_size
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn track_allocation_rejects_overflow_before_limit_check() {
+        let manager = MemoryManager::new(Some(usize::MAX));
+        assert!(manager.is_ok(), "usize::MAX is a valid limit");
+        let mut manager = match manager {
+            Ok(manager) => manager,
+            Err(_) => return,
+        };
+        manager.current_usage.store(usize::MAX, Ordering::Relaxed);
+
+        let result = manager.track_allocation("overflow".to_string(), 1);
+        assert!(result.is_err(), "overflow allocation should be rejected");
+        let err_text = match result {
+            Ok(()) => String::new(),
+            Err(error) => error.to_string(),
+        };
+        assert!(err_text.contains("Allocation size overflow"));
+    }
+
+    #[test]
+    fn stats_usage_percent_is_zero_when_limit_is_zero() {
+        let manager = MemoryManager::new(Some(0));
+        assert!(manager.is_ok(), "zero limit is accepted");
+        let manager = match manager {
+            Ok(manager) => manager,
+            Err(_) => return,
+        };
+        let stats = manager.get_stats();
+        assert_eq!(stats.usage_percent(), 0.0);
+    }
+
+    #[test]
+    fn progressive_loader_zero_total_reports_complete_progress() {
+        let mut loader = ProgressiveLoader::new(8, 64);
+        loader.set_total_size(0);
+        assert_eq!(loader.get_progress(), 1.0);
     }
 }

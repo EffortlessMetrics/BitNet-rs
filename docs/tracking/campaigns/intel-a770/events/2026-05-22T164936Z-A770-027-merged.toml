@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T16:49:36Z"
+campaign = "intel-a770"
+item = "A770-027"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 344
+branch = "codex/intel-a770/A770-027-readiness-divergence-logit-context"
+head_sha = "272d15b2e4c709a3997df9eed3e3f88678b0662d"
+merge_sha = "4ba74839e45b3006e37775720c63fd66864fa2f3"
+summary = "Marked A770-027 merged after PR #344 landed focused logit context for the two generated-output divergent readiness cases."
+notes = [
+  "The merged diagnostic records focused CPU AVX2 and Intel A770 OpenCL receipts for the two A770-025 generated-output divergent readiness cases.",
+  "The focused parity receipt classifies both first mismatches as opposite argmax, with one A770-side near-tie margin and no missing first-mismatch logit context.",
+  "The closeout does not change runtime math or promote strict A770 answer readiness, broad answer quality, CPU/A770 parity, residency, speed, trusted-partial acceleration, or full BitNet inference.",
+]

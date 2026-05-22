@@ -1,74 +1,125 @@
 # Apple M4 Evidence CI Lanes
 
-`M4-CI-001` defines the M4 evidence CI and retention contract. It is a workflow
-and operations contract only: it does not add new runtime proof, fetch models by
-default, publish fresh timing, or expand the public M4 claim envelope.
+This contract keeps Apple M4 evidence repeatable without turning every PR into a
+live hardware run. It applies to dense SLM and BitNet evidence used by the M4
+operator envelope, report-refresh manifest, regression dashboard, and campaign
+status.
 
-## Lane Matrix
+The lane split is deliberately conservative:
 
-| Lane | Workflow | Trigger | Runner | PR required | Evidence produced | Retention |
-|---|---|---|---|---|---|---|
-| Generic PR SLM Tier 0 | `.github/workflows/apple-m4-slm-eval-tier0.yml` | `pull_request`, `push`, `workflow_dispatch` | GitHub Ubuntu | Routed when changed paths match | Parser/scorer tests, corpus dry-run, committed summary receipt checks, self-baseline regression checks | 7 day workflow artifact |
-| Generic PR ops Tier 0 | `.github/workflows/apple-m4-inference-ops-tier0.yml` | `pull_request`, `push`, daily `schedule`, `workflow_dispatch` | GitHub Ubuntu | Routed when changed paths match | Model-free report-refresh manifest and regression dashboard generation | 7 day workflow artifact |
-| Advisory hardware refresh | `.github/workflows/apple-m4-dense-slm-regression.yml` | `workflow_dispatch` with `enable_run=true`, `run_class=advisory` | Self-hosted `apple-m4-dense-slm` | No | Dense Qwen cache verification, smoke quality receipt, release performance receipt, advisory baseline comparison | Minimum 30 days |
-| Scheduled hardware refresh | `.github/workflows/apple-m4-dense-slm-regression.yml` | Weekly `schedule` status plus manual dispatch with `run_class=scheduled` when a runner is available | Ubuntu for staged status, self-hosted M4 for live dispatch | No | Staged status until runner availability is confirmed; live dispatch produces the same receipt bundle as advisory refresh | Minimum 45 days for live dispatch |
-| Release-gate refresh | `.github/workflows/apple-m4-dense-slm-regression.yml` | Manual dispatch with `enable_run=true`, `run_class=release_gate` before release envelope updates | Self-hosted `apple-m4-dense-slm` | No | Dense Qwen release evidence bundle with branch, commit, optional PR or release reference, baseline comparison, and claim boundary summary | Minimum 90 days |
+| Lane | Trigger | Required checks | Live M4 model run | Blocking behavior |
+|---|---|---|---|---|
+| Generic PR Tier 0 | Pull requests that touch M4 docs, corpus files, committed summaries, workflows, or tracker state | Parser tests, scorer tests, dry-run corpus shape, committed receipt schema checks, self-baseline regression checks, generated dashboard checks, diff hygiene | no | Blocks only on model-free contract failures |
+| Advisory local | After syncing `main`, changing model cache state, changing receipt schemas, or changing M4 CLI/operator code | `bitnet mac models`, `bitnet mac status`, `bitnet mac evidence`, `bitnet mac evidence replay --dry-run`, `bitnet mac report-refresh`, `bitnet mac regression-dashboard`, targeted `bitnet mac receipts-check` | no by default | Advisory; publish only when a tracker item asks for evidence |
+| Scheduled M4 refresh | Nightly or weekly on the M4 Mac mini when disk/cache preflight passes | Dense SLM eval/benchmark, BitNet eval/benchmark, BitNet variable warm, report-refresh, regression-dashboard, receipt validation | yes | Non-blocking for generic PRs; failures open repair work or block later claims |
+| Release gate | Before publishing a new M4 expectation envelope or promoting a route class | Full supported dense matrix, accepted BitNet artifact/tokenizer eval and benchmark, warm-session receipts, service conformance, dashboard refresh, operator docs | yes | Blocks the release claim when quality, timeout, fallback, identity, or required receipt validation fails |
 
-## Required Boundaries
+Generic PR Tier 0 must not fetch model binaries, run live M4 inference, run
+BitNet chat or serve, publish fresh hardware timing, or claim broad quality or
+performance. It may validate committed receipts and dry-run corpora because
+those operations are model-free.
 
-Generic PR CI is model-free. It may validate parsers, corpus shape, receipt
-schemas, report manifests, dashboards, and committed-report comparisons. It must
-not fetch model artifacts, run live M4 inference, run long resident soaks,
-create fresh hardware timing, or require Apple hardware to merge an ordinary PR.
+## Current Workflows
 
-Hardware refreshes are advisory unless a release process explicitly cites a
-green `run_class=release_gate` bundle. Hardware-only timing jobs have no
-`pull_request` trigger and are not branch-protection requirements. A failed
-advisory or scheduled hardware run is evidence to inspect, not a generic PR
-blocker.
+| Workflow | Lane | Purpose | Hardware |
+|---|---|---|---|
+| `.github/workflows/apple-m4-slm-eval-tier0.yml` | Generic PR Tier 0 | Validates seeded dense SLM corpus shape, scorer/parser behavior, committed M4 SLM eval/benchmark summaries, and model-free self-baseline regression checks | Ubuntu only |
+| `.github/workflows/apple-m4-inference-ops-tier0.yml` | Generic PR Tier 0 and scheduled model-free refresh | Generates and validates the model-free report-refresh manifest and regression dashboard from committed receipts | Ubuntu only |
+| `.github/workflows/apple-m4-dense-slm-regression.yml` | Manual hardware lane | Staged dense SLM hardware regression on a provisioned M4 runner after an explicit `enable_run=true` dispatch | Self-hosted Apple M4 only |
 
-Scheduled invocations of `apple-m4-dense-slm-regression.yml` are staged status
-runs until a provisioned runner is confirmed. To produce live scheduled
-evidence, dispatch the workflow with `enable_run=true`,
-`run_class=scheduled`, and a retention value of at least 45 days.
-
-Release-gate refreshes are explicit. Before updating a public M4 expectation
-envelope from release evidence, dispatch the hardware workflow with
-`run_class=release_gate`, `enable_run=true`, and retention of at least 90 days.
-The release evidence may support only the recorded dense Qwen Apple CPU/NEON
-context unless a separate receipt family proves more.
+The manual hardware workflow is intentionally staged. A dispatch with
+`enable_run=false` only explains the runner requirement. A dispatch with
+`enable_run=true` is an explicit hardware evidence run, not a generic PR gate.
 
 ## Artifact Retention
 
-Tier 0 artifacts are small diagnostic outputs from model-free CI and are kept
-for 7 days. They are useful for PR debugging, but committed receipts remain the
-authoritative evidence surface.
+Retain source evidence separately from generated summaries:
 
-Hardware receipt bundles are retained as workflow artifacts and must not include
-model binaries or raw cache directories. The minimum retention window is:
+| Artifact class | Example path | Retention rule |
+|---|---|---|
+| Committed source receipts | `ci/hardware/apple-m4-mac-mini/<date>/slm-eval-v2/<model-id>/summary.json` | Keep at least the current report and previous matching baseline for every current dense SLM and accepted BitNet identity |
+| Required child receipts | `ci/hardware/apple-m4-mac-mini/<date>/bitnet-eval-250-repaired/answer-corpus-runs/*.json` | Commit only when needed for receipt validation, generated text or token-ID audit, or failure taxonomy |
+| Generated dashboards | `target/apple-m4-inference-excellence/regression-dashboard.json` | Regenerate from committed receipts; do not treat as source evidence unless a tracker item explicitly asks to commit it |
+| Replay bundle manifests | `ci/hardware/apple-m4-mac-mini/<date>/evidence-replay/manifest.json` | Commit when a tracker item asks for replay/audit coverage; validate with `bitnet mac evidence replay --dry-run` and `bitnet mac receipts-check` |
+| Operator workload manifests | `ci/hardware/apple-m4-mac-mini/<date>/workload/summary.json` | Commit when a tracker item asks for workflow/route coverage; validate with `bitnet mac receipts-check`; the manifest is model-free and not a live evidence refresh |
+| Generic PR Tier 0 artifacts | `target/apple-m4-slm-eval-tier0/**`, `target/apple-m4-inference-ops-tier0/**` | Upload as short-lived CI artifacts for debugging; they are not evidence refreshes |
+| Scheduled or manual hardware artifacts | `target/apple-m4-dense-slm-regression/<run-id>/**` | Upload with the workflow retention setting and commit only the accepted receipt bundle requested by the tracker |
 
-| Run class | Minimum retention | Purpose |
-|---|---:|---|
-| `advisory` | 30 days | Developer or maintainer inspection after manual hardware refresh |
-| `scheduled` | 45 days | Trend review across routine refreshes |
-| `release_gate` | 90 days | Release-envelope review and post-release audit |
-
-If a bundle needs to become durable evidence, commit only the bounded receipt or
-summary JSON under `ci/hardware/apple-m4-mac-mini/<date>/...`; never commit
-model binaries or local cache contents.
+Model binaries, local cache copies, and intermediate `target/` build products
+are not evidence-retention targets.
 
 ## Dashboard Generation
 
-The ops Tier 0 workflow regenerates the model-free report-refresh manifest and
-regression dashboard from committed receipts. The dashboard can describe
-matching-history status, stale identities, missing history, advisory drift, and
-invalid comparisons. It cannot turn an uncommitted workflow artifact into a
-runtime claim.
+Dashboards are derived from retained receipts. The model-free refresh command
+set is:
 
-## Claim Boundaries
+```bash
+bitnet mac models
+bitnet mac status
+bitnet mac evidence \
+  --json-out target/apple-m4-inference-excellence/evidence-summary.json \
+  --json
+bitnet mac evidence replay \
+  --bundle ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
+  --dry-run \
+  --json
+bitnet mac workload \
+  --suite m4-operator \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json \
+  --json
+bitnet mac report-refresh \
+  --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json \
+  --explain \
+  --open-targets \
+  --json
+bitnet mac regression-dashboard \
+  --json-out target/apple-m4-inference-excellence/regression-dashboard.json \
+  --markdown-out target/apple-m4-inference-excellence/regression-dashboard.md \
+  --explain \
+  --open-targets \
+  --json
+bitnet mac report-refresh \
+  --since 7d \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/report-refresh.json \
+  --json
+bitnet mac regression-dashboard \
+  --since 7d \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.json \
+  --markdown-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.md \
+  --json
+bitnet mac receipts-check target/apple-m4-inference-excellence/evidence-summary.json --json
+bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json --json
+bitnet mac receipts-check target/apple-m4-inference-excellence/regression-dashboard.json --json
+bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/report-refresh.json --json
+bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.json --json
+```
 
-These lanes may claim only that the CI and retention surfaces are defined and
-that a specific workflow run produced the recorded artifacts. They must not
-claim BitNet quality from dense Qwen evidence, full `apple-m4-metal` inference,
-QK256 support, Neural Engine execution, MPSGraph inference, MacBook behavior,
-broad Apple Silicon performance, broad model quality, or speedup.
+The refresh commands do not run live inference or download models by default.
+They report missing history, stale identities, warnings, and failed groups from
+the committed evidence inventory.
+
+`M4-TREND-001` adds the rolling seven-day trend view. The committed
+`2026-05-21T1805Z/trend` receipts are model-free summaries over retained source
+receipts only: 29 reports across 7 families, 13 matching-identity groups, and
+10 comparable groups for the `2026-05-15` through `2026-05-21` window. The
+trend receipts record skipped-day reasons, threshold outcomes, and operator
+envelope impact without replacing the source receipts or making a one-off
+quality, performance, speedup, BitNet chat, BitNet serve, Metal, QK256, Neural
+Engine, MPSGraph, MacBook, or broad Apple Silicon claim.
+
+## Hardware Timing Policy
+
+Hardware-only timing jobs are non-blocking for ordinary PRs. Scheduled M4 runs
+may produce advisory timing warnings without failing generic PR CI. A release
+gate may opt into `--fail-on-drift` only when the release claim says timing or
+memory regression is a blocker for that claim.
+
+Quality, timeout, fallback, identity, and receipt-validation failures are not
+timing warnings. They block a route promotion or expectation-envelope update
+until the receipt is repaired, the baseline is intentionally reset, or the claim
+is narrowed.
+
+Dense SLM evidence and BitNet evidence remain separate. Dense Qwen receipts do
+not prove BitNet quality, BitNet chat, BitNet serve, Metal inference, QK256,
+Neural Engine, MPSGraph, MacBook behavior, broad Apple Silicon behavior,
+speedup, broad quality, or broad performance.

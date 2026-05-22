@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T17:25:19Z"
+campaign = "intel-a770"
+item = "A770-028"
+event = "in_progress"
+previous_status = "planned"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-028-readiness-normalization-scoring"
+summary = "Started A770-028 to normalize only the answer-readiness scoring cases proven by A770-025/A770-026 receipts to be shared punctuation/casing normalization failures."
+notes = [
+  "This is a scoring-contract cleanup for false strict-case failures, not a runtime math change.",
+  "The known content failures and CPU/A770 parity divergence remain blockers.",
+  "No strict answer readiness, broad answer quality, parity, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

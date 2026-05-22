@@ -21,6 +21,8 @@ The durable envelope is based on these committed evidence surfaces:
 | BitNet benchmark refresh | `ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json` | Accepted BitNet one-shot benchmark profile | comparable matching history exists |
 | BitNet variable warm refresh | `ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json` | Five prompt warm session with one exact repeated prompt | comparable matching history exists |
 | Report dashboard | `target/apple-m4-inference-excellence/regression-dashboard.json` | Model-free grouping of committed reports by matching identity | refreshed by `M4-EXCELLENCE-003`; five families, 18 reports, and nine comparable groups |
+| Evidence replay bundle | `ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json` | Exact audit commands, git/binary identity, model/tokenizer identity, receipt inputs, dashboard outputs, expected advisory regression result, and claim boundary | dry-run audit only; no live model run |
+| Operator workload suite | `ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json` | Six workflow families across dense SLM ask/chat/warm-session/serve and enabled BitNet ask/warm-session route states, with disabled BitNet chat/serve boundaries | model-free manifest only; no live model run |
 
 `M4-BENCH-002` validates the dense SLM benchmark surface above with
 `target/release/bitnet mac receipts-check ... --json` for all three supported
@@ -64,11 +66,40 @@ The current class map is:
 | Dense Qwen 0.5B `bitnet mac ask` and dense `bitnet mac chat` using `qwen2.5-0.5b-instruct-q8_0` | `interactive` for short prompts and resident sessions; `batch` for 1k/4k context profiles | Supported benchmark profiles through `resident_100`; `context_1k` and `context_4k` are recorded but not interactive | 2026-05-17 eval TTFT p50/p90 2203/2771 ms, decode p50 15.628 tok/s; 2026-05-15 `resident_100` TTFT p50/p99 2150/2246 ms; `context_1k` TTFT p50 52798 ms and `context_4k` TTFT p50 262608 ms | Dense cache 675710816 bytes; resident peak about 4.16 GiB; keep at least 10 GiB free for ordinary operation and 20 GiB before full refreshes | `qwen2.5-0.5b-instruct-q8_0`, SHA `ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e`, GGUF tokenizer authority, `qwen2.5` template, `apple-m4-cpu-neon`, `fallback_used=false`; eval `ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json`; benchmark `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json`; chat conformance `ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/` |
 | Dense Qwen 0.5B `bitnet mac ask` and dense `bitnet mac chat` using `qwen2.5-0.5b-instruct-q4_k_m` | `interactive` for short prompts and resident sessions; `batch` for 1k/4k context profiles | Supported benchmark profiles through `resident_100`; `context_1k` and `context_4k` are recorded but not interactive | 2026-05-17 eval TTFT p50/p90 2201/2784 ms, decode p50 15.630 tok/s; 2026-05-15 `resident_100` TTFT p50/p99 2151/2246 ms; `context_1k` TTFT p50 52772 ms and `context_4k` TTFT p50 262519 ms | Dense cache 491400032 bytes; resident peak about 4.16 GiB; keep the same disk floors as the dense default | `qwen2.5-0.5b-instruct-q4_k_m`, SHA `74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db`, GGUF tokenizer authority, `qwen2.5` template, `apple-m4-cpu-neon`, `fallback_used=false`; eval `ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json`; benchmark `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json`; chat conformance `ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/` |
 | Dense Qwen 1.5B `bitnet mac ask` and dense `bitnet mac chat` using `qwen2.5-1.5b-instruct-q4_k_m` | `advisory` for short prompts and resident sessions; `batch` for long/context profiles | Supported benchmark profiles through `resident_100`; long and context profiles are recorded as slow paths | 2026-05-17 eval TTFT p50/p90 8809/11336 ms, decode p50 4.949 tok/s; 2026-05-15 `resident_100` TTFT p50/p99 8078/8966 ms; `context_1k` TTFT p50 182985 ms and `context_4k` TTFT p50 822691 ms | Dense cache 1117320736 bytes; resident peak about 8.40 GiB; keep at least 10 GiB free for ordinary use and more before full refreshes | `qwen2.5-1.5b-instruct-q4_k_m`, SHA `6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e`, GGUF tokenizer authority, `qwen2.5` template, `apple-m4-cpu-neon`, `fallback_used=false`; eval `ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json`; benchmark `ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json`; chat conformance `ci/hardware/apple-m4-mac-mini/2026-05-18T1238Z/slm-chat/` |
-| Dense Qwen `bitnet mac serve` | `advisory` | Use the dense local-server contract only for local loopback operation; do not treat it as production hosting or broad OpenAI compatibility | Route timing should be read from per-request receipts; queue, backpressure, streaming, failure, and safety defaults are bounded local-appliance evidence only | Same model cache and resident memory floors as the selected dense model; server refreshes should use the 20 GiB full-refresh floor | Current implementation contract is `docs/slm/apple-m4-local-server-command-config.md`; excellence-cycle dense serve conformance is recorded by `M4-SERVE-EX-001`, `M4-SERVE-EX-002`, `M4-SERVE-EX-003`, and `M4-SERVE-EX-004` |
+| Dense Qwen `bitnet mac serve` | `advisory` | Use the dense local-server contract only for local loopback operation; do not treat it as production hosting or broad OpenAI compatibility | Route timing should be read from per-request receipts and the dense serve smoke/failure semantics receipts; use the dense ask/chat classes above as model-level expectations | Same model cache and resident memory floors as the selected dense model; server refreshes should use the 20 GiB full-refresh floor | Current implementation contract is `docs/slm/apple-m4-local-server-command-config.md`; dense serve conformance is recorded by `M4-SERVE-EX-001` and failure/streaming semantics by `M4-SERVE-EX-002` |
 | BitNet `bitnet mac ask` and fixed `bitnet mac bitnet-warm` using the accepted Microsoft I2_S artifact | `batch` | One-shot and fixed or variable warm receipts are accepted; 250-case repaired eval is valid and comparable, but the latest matching run regressed and keeps repair first | 2026-05-19 BitNet variance TTFT p50/p90/p99 7491/8486/8486 ms, output p50 0.251 tok/s, decode p50 2.082 tok/s; 2026-05-17 warm `resident_100` TTFT p50 7892 ms and total session 847724.769 ms; 2026-05-20 250-case eval wall latency p50/p90/p99 about 20.2/58.2/105.2 s | Accepted GGUF is about 1.19 GB plus external tokenizer; benchmark peak memory p50/p90 about 4322.875/4327.438 MB; warm resident memory about 2682978304 bytes; keep 20 GiB free before full BitNet refreshes | Microsoft BitNet I2_S GGUF SHA `4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162`; external tokenizer SHA `e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7`; `bitnetcpp-answer` identity SHA `8ccb3ad8cf3e3af19b5da2cf69b50a21b78cf01cd3b287de76a1497d2fbfeb3c`; `apple-m4-cpu-neon`, `fallback_used=false`; variance `ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json`; warm `ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session.json`; repaired eval `ci/hardware/apple-m4-mac-mini/2026-05-20T0133Z/bitnet-eval-250-repaired/answer-corpus.json` with quality 199/250 and scoring 202/250 versus 205/250 and 210/250 baseline |
 | BitNet `bitnet mac chat --model-family bitnet` | `disabled` unless a ready `bitnet_apple_m4_chat_gate` receipt is supplied | The route is gate-required; one-shot, benchmark, or warm receipts alone are not chat enablement | No chat timing expectation is published by this envelope | Uses the same accepted BitNet artifact/tokenizer only after the gate passes | `M4-BITNET-EX-006` defines the gate; missing or blocked gate receipts must keep the route disabled |
 | BitNet `bitnet mac serve --model-family bitnet` | `disabled` unless a ready `bitnet_apple_m4_serve_gate` receipt is supplied | The route is gate-required after chat and service evidence; dense serve receipts do not prove BitNet serve | No BitNet serve timing expectation is published by this envelope | Uses the same accepted BitNet artifact/tokenizer only after the gate passes | `M4-BITNET-EX-007` defines the gate; missing or blocked gate receipts must keep the route disabled |
 | Full `apple-m4-metal`, QK256-on-Apple, Neural Engine, MPSGraph, MacBook, and broad Apple Silicon routes | `unsupported` | No supported inference profile in this envelope | No timing expectation | No memory or disk expectation | No accepted full-route receipt in this envelope |
+
+`M4-WORKLOAD-001` translates this route-state map into an operator workload
+manifest. `bitnet mac workload --suite m4-operator` records summarize, extract,
+classify, JSON, rewrite, and table-QA workflow cases, mechanical checks, route
+evidence, and exact follow-up live commands. The receipt is validated by
+`bitnet mac receipts-check` and records zero prompts and zero generated tokens
+because it is a manifest, not a live inference run.
+
+## Route-State Matrix
+
+`M4-ROUTE-MATRIX-001` makes the route state explicit in both operator docs and
+the model-free `bitnet mac status --json` / `bitnet mac evidence --json`
+receipts. The matrix is descriptive: it does not enable a route without the
+runtime receipts and gates named below.
+
+| Family | Surface | State | Command surface | Required evidence item and receipt family | Boundary |
+|---|---|---|---|---|---|
+| Dense SLM | ask | `enabled` | `bitnet mac ask` | `M4-ACCURACY-007` / `dense_slm_eval_v2` (`apple_m4_slm_eval_summary`); `M4-BENCH-002` / `dense_slm_benchmark_v2` (`apple_m4_slm_benchmark_v2`) | Supported dense Qwen identities only; not BitNet or broad quality proof. |
+| Dense SLM | chat | `enabled` | `bitnet mac chat`; `bitnet mac chat-smoke` | `M4-DENSE-CHAT-001` / `dense_slm_chat_smoke` (`apple_m4_slm_chat_smoke`) | Dense chat conformance only; not BitNet chat or server proof. |
+| Dense SLM | warm session | `enabled` | resident multi-prompt `bitnet mac chat` | `M4-DENSE-CHAT-001` / `dense_slm_chat_smoke`; `M4-BENCH-002` / `dense_slm_benchmark_v2` resident profiles | Resident dense session reuse only; not a long soak or broad performance claim. |
+| Dense SLM | long/context profile | `batch_only` | ask/chat/serve inside recorded `context_1k` or `context_4k` envelopes | `M4-CONTEXT-002` / `dense_slm_context_eval` (`apple_m4_long_context_eval_summary`) and `dense_slm_context_benchmark` (`apple_m4_slm_benchmark_v2`) | Requests beyond the recorded envelope are `unsupported` guardrail blocks. |
+| Dense SLM | serve | `enabled` | loopback `bitnet mac serve` | `M4-SERVE-EX-001` / `dense_slm_serve_smoke` (`bitnet_apple_m4_dense_local_server_smoke`); `M4-SERVE-EX-002` / `serve_failure_semantics` (`bitnet_apple_m4_serve_failure_semantics`) | Local appliance route only; not production hosting or broad OpenAI compatibility. |
+| Dense SLM | streaming | `enabled` | dense local-server streaming completion | `M4-SERVE-EX-001` / `dense_slm_serve_smoke`; `M4-SERVE-EX-002` / `serve_failure_semantics` | Dense local-server streaming only; not BitNet serve evidence. |
+| BitNet | ask | `batch_only` | explicit `bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s ...` | `M4-BITNET-EX-003` / `bitnet_benchmark` (`bitnet_apple_m4_benchmark_v1`) | Accepted artifact/tokenizer one-shot only; not chat, serve, broad quality, or speed proof. |
+| BitNet | warm session | `batch_only` | `bitnet mac bitnet-warm` | `M4-BITNET-EX-004` / `bitnet_variable_warm` (`bitnet_apple_m4_warm_session`); `M4-BITNET-REG-001` / warm-session regression | Accepted artifact/tokenizer warm evidence only; chat and serve remain separate gated surfaces. |
+| BitNet | chat | `disabled` | `bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json>` | Gate-required by `M4-BITNET-EX-006` / `bitnet_chat_gate` (`bitnet_apple_m4_chat_gate`) | The route must refuse without a ready chat gate; one-shot, warm, or dense receipts do not enable it. |
+| BitNet | serve | `disabled` | `bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>` | Gate-required by `M4-BITNET-EX-007` / `bitnet_serve_gate` (`bitnet_apple_m4_serve_gate`) | The route must refuse without a ready serve gate; dense serve receipts do not enable it. |
+| BitNet | streaming | `disabled` | gated BitNet chat or serve streaming | Gate-required by `M4-BITNET-EX-006` and `M4-BITNET-EX-007` / `bitnet_apple_m4_chat_streaming_semantics` or `bitnet_apple_m4_serve_streaming_semantics` | BitNet streaming is part of gate evidence and is not enabled by dense streaming receipts. |
+| All | unsupported backend or machine | `unsupported` | full `apple-m4-metal`, QK256-on-Apple, Neural Engine, MPSGraph, MacBook runtime | No accepted full-route receipt | Do not route users there and do not make a support claim. |
 
 Operator shortcuts:
 
@@ -76,7 +107,7 @@ Operator shortcuts:
 default dense short ask/chat: interactive
 dense 1.5B short ask/chat: advisory
 dense long/context profiles: batch
-dense local serve: advisory local-appliance evidence
+dense local serve: advisory
 BitNet one-shot and warm: batch
 BitNet chat and serve without ready gates: disabled
 Metal/QK256/Neural Engine/MPSGraph/MacBook: unsupported
@@ -211,6 +242,10 @@ bitnet mac status
 bitnet mac evidence \
   --json-out target/apple-m4-inference-excellence/evidence-summary.json \
   --json
+bitnet mac evidence replay \
+  --bundle ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
+  --dry-run \
+  --json
 bitnet mac report-refresh \
   --json-out target/apple-m4-inference-excellence/report-refresh-manifest.json \
   --explain \
@@ -224,12 +259,25 @@ bitnet mac regression-dashboard \
   --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/regression-dashboard.json --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/evidence-summary.json --json
+bitnet mac receipts-check \
+  ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
+  --json
 ```
 
 The `--explain` and `--open-targets` flags are operator affordances only. They
 print status meanings, per-family or per-group reasons, and openable receipt,
 Markdown, latest-report, and baseline-report targets without launching live
 inference or downloading models.
+
+The evidence replay dry-run is also model-free. It checks only the committed
+bundle manifest and referenced receipt/dashboard paths, records a dry-run audit
+receipt, and leaves live dense SLM or BitNet refresh execution in the scheduled
+M4 lane.
+
+The detailed CI and artifact-retention contract is
+`docs/slm/apple-m4-evidence-ci-lanes.md`. Generic PR Tier 0 stays model-free;
+fresh live M4 dense SLM or BitNet evidence belongs only in advisory local,
+scheduled M4, or release-gate lanes.
 
 `bitnet mac status` and `bitnet mac doctor` expose dense SLM and BitNet
 readiness as separate operator states. Dense readiness is tied to supported

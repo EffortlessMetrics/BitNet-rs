@@ -1,0 +1,18 @@
+timestamp = "2026-05-22T19:35:24Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-082"
+event = "in_progress"
+previous_status = "pr_open"
+new_status = "ready"
+actor = "codex"
+pr = 361
+branch = "codex/slm-cpu-082-repeated-packed-q8-receipts"
+head_sha = "eee6b55a32e50e2cf18f06faa3ccf87547954080"
+merge_sha = "e2675bb96ca48a9f8a79dbf1bdb6249401e34fc9"
+summary = "Merged PR #361 as the tracker queue slice and returned SLM-CPU-082 to ready for real repeated receipt capture."
+notes = [
+  "The queue PR landed the SLM-CPU-082 tracker item but did not capture the required repeated baseline/candidate receipt pack.",
+  "The SLM-CPU-081 gate still records only one baseline and one candidate receipt and classifies end-to-end timing as not_claimed.",
+  "SLM-CPU-082 remains open for at least three baseline and three candidate i5-8250U Qwen3 Q8_0 warm-session receipts plus the repeated timing classification artifact.",
+  "No repeated receipt pack, runtime optimization, default packed-Q8 enablement, end-to-end speedup, sustained-throughput, Q4/Q5, server, accelerator, Qwen3.5, or BitNet QK256 claim was made.",
+]

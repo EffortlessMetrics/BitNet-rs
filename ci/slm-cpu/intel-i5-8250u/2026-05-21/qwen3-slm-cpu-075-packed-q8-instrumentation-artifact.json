@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_dense_q8_sidecar_instrumentation_artifact",
+  "work_item": "SLM-CPU-075",
+  "claim": "bounded_exact_tensor_packed_q8_instrumentation_capture_blocker",
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "broad_answer_quality_claim": false,
+  "default_runtime_changed": false,
+  "runtime_promotion_recommended": false,
+  "model": {
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0",
+    "local_artifact_present_in_capture_workspace": true
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "strict": true
+  },
+  "host": {
+    "target": "intel-i5-8250u",
+    "role": "strict CPU SLM proof appliance",
+    "required_features": [
+      "avx2",
+      "fma"
+    ],
+    "thread_profile": "bounded 4-thread Kaby appliance profile unless a receipt says otherwise",
+    "thermal": "not_sampled_by_this_instrumentation_artifact",
+    "power": "not_sampled_by_this_instrumentation_artifact"
+  },
+  "hook": {
+    "tensor": "layers.0.attention.q_proj.weight",
+    "source_tensor": "blk.0.attn_q.weight",
+    "scope": "exact_tensor_only",
+    "matrix_rows": 2048,
+    "matrix_cols": 1024,
+    "q8_block_size": 32,
+    "q8_block_count": 65536,
+    "payload_bytes": 2228224,
+    "payload_sha256": "a8e16a232ea8c19a5c5d2eb5f21bfdf5c297eba0ac90e74b0afc052577179c24",
+    "default_selected_path": "eager_f32_candle",
+    "default_selected_kernel": "dense-f32-candle-linear",
+    "opt_in_selected_path": "packed_q8_sidecar",
+    "opt_in_selected_kernel": "dense-q8-sidecar-linear",
+    "runtime_compute_enabled_by_default": false,
+    "opt_in_requires_payload_and_runtime_env": true
+  },
+  "instrumentation_api": {
+    "crate": "bitnet-transformer",
+    "snapshot_api": "dense_q8_sidecar_instrumentation_snapshot()",
+    "reset_api": "reset_dense_q8_sidecar_instrumentation()",
+    "source_file": "crates/bitnet-transformer/src/lib.rs",
+    "counters": {
+      "selector_dispatch": [
+        "selector_dispatch_calls",
+        "selector_selected_calls",
+        "selector_declined_calls",
+        "selector_error_calls",
+        "selector_dispatch_ns"
+      ],
+      "input_materialization": [
+        "input_materialization_calls",
+        "input_materialization_ns",
+        "input_values_materialized"
+      ],
+      "bias_materialization": [
+        "bias_materialization_calls",
+        "bias_materialization_ns",
+        "bias_values_materialized"
+      ],
+      "packed_matvec_compute": [
+        "packed_matvec_calls",
+        "packed_matvec_ns",
+        "packed_matvec_input_rows",
+        "packed_matvec_output_values"
+      ],
+      "output_tensor_construction": [
+        "output_tensor_construction_calls",
+        "output_tensor_construction_ns"
+      ]
+    }
+  },
+  "counter_capture": {
+    "end_to_end_qwen3_warm_session_counter_pack_available": false,
+    "end_to_end_qwen3_warm_session_counter_pack_path": null,
+    "reason": "SLM-CPU-074 exposed aggregate packed Q8 sidecar counters inside bitnet-transformer, but the current warm-session receipt path does not yet snapshot and serialize those counters around an end-to-end Qwen3 Q8_0 run.",
+    "local_gguf_presence_checked": true,
+    "local_gguf_presence_result": "models/slm/Qwen3-0.6B-Q8_0.gguf exists in this workspace",
+    "fixture_counter_coverage": {
+      "selected_exact_tensor_path": true,
+      "declined_selector_path": true,
+      "multi_block_q8_path": true,
+      "split_row_q8_path": true,
+      "commands": [
+        "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_dense_linear_reference",
+        "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_reference_across_q8_blocks",
+        "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_reference_when_rows_split_q8_blocks"
+      ]
+    }
+  },
+  "cost_classification": {
+    "selector_dispatch": {
+      "instrumented": true,
+      "classified": "counter_available_not_end_to_end_measured",
+      "promotion_blocker": false,
+      "notes": "SLM-CPU-073 classified selector overhead as unlikely from prior timing evidence, but SLM-CPU-075 does not claim a real end-to-end selector counter value."
+    },
+    "input_materialization": {
+      "instrumented": true,
+      "classified": "capture_blocked_likely_hot_boundary",
+      "promotion_blocker": true,
+      "notes": "The packed sidecar path still materializes Candle input tensors into host f32 vectors before scalar matvec. End-to-end counter values require receipt bridge wiring."
+    },
+    "bias_materialization": {
+      "instrumented": true,
+      "classified": "counter_available_may_be_zero_for_no_bias_tensors",
+      "promotion_blocker": false,
+      "notes": "The counter records bias extraction when a dense-linear bias is present. The exact Qwen3 q_proj path must not infer a nonzero cost without a real run."
+    },
+    "packed_matvec_compute": {
+      "instrumented": true,
+      "classified": "capture_blocked_likely_hot_boundary",
+      "promotion_blocker": true,
+      "notes": "Prior SLM-CPU-073 evidence identified scalar non-vectorized packed matvec and memory movement as the remaining regression family."
+    },
+    "output_tensor_construction": {
+      "instrumented": true,
+      "classified": "capture_blocked_likely_hot_boundary",
+      "promotion_blocker": true,
+      "notes": "The packed sidecar path constructs a fresh output tensor from host f32 output values. End-to-end counter values require receipt bridge wiring."
+    }
+  },
+  "behavior_oracle": {
+    "baseline_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-before-warm-session.json",
+    "opt_in_sidecar_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-after-warm-session.json",
+    "equivalence_receipt": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-runtime-hook-equivalence.json",
+    "model_sha_match": true,
+    "tokenizer_source_match": true,
+    "tokenizer_strict_match": true,
+    "prompt_ids_match": true,
+    "generated_ids_match": true,
+    "decoded_text_match": true,
+    "selected_cpu_backend_identity_preserved": true,
+    "dense_hook_identity_recorded": true,
+    "fallback_used_false": true
+  },
+  "decision": {
+    "runtime_promotion_recommended": false,
+    "default_runtime_should_remain": "eager_f32_candle",
+    "packed_sidecar_should_remain": "opt_in_exact_tensor_only",
+    "next_target": {
+      "suggested_item": "SLM-CPU-076",
+      "title": "Qwen3 warm-session sidecar instrumentation receipt bridge",
+      "required_work": [
+        "Reset dense_q8_sidecar_instrumentation_snapshot counters before the opt-in packed Q8 sidecar warm-session run.",
+        "Snapshot the counters after the bounded Qwen3 Q8_0 run.",
+        "Serialize selector dispatch, input materialization, bias extraction, packed matvec compute, and output tensor construction counters into the warm-session receipt or a companion diagnostic artifact.",
+        "Prove prompt IDs, generated IDs, decoded text, model SHA, tokenizer source/strictness, selected CPU backend identity, dense hook identity, and fallback_used=false remain unchanged before using the counters for optimization decisions."
+      ]
+    }
+  },
+  "claim_boundary": [
+    "This artifact consumes the SLM-CPU-074 instrumentation API surface and records the missing end-to-end receipt bridge as the concrete blocker.",
+    "The exact-tensor packed Q8_0 sidecar remains opt-in and is not enabled by default.",
+    "The existing SLM-CPU-072 behavior-equivalence receipts remain the behavior oracle.",
+    "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made."
+  ]
+}

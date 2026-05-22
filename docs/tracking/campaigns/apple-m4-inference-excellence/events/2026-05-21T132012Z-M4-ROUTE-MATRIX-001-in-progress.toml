@@ -1,0 +1,15 @@
+timestamp = "2026-05-21T13:20:12Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ROUTE-MATRIX-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-ROUTE-MATRIX-001-route-states"
+
+notes = [
+  "Started M4-ROUTE-MATRIX-001 after M4-CI-001 closeout PR #193 merged and campaign next selected the route-state matrix item.",
+  "Scope is model-free route-state publication for dense SLM and BitNet ask, chat, warm-session, serve, streaming, disabled, batch-only, and unsupported surfaces.",
+  "The matrix records exact evidence items and receipt families for enabled or batch-only states, and explicit gate receipt families for disabled BitNet chat, serve, and streaming states.",
+  "No live runtime run, route enablement without receipts, disabled BitNet chat or serve support, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

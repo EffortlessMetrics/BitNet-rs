@@ -15,6 +15,8 @@ use std::sync::Arc;
 pub const DENSE_GGUF_Q8_SIDECAR_REGISTRY_ARTIFACT_KIND: &str = "dense_gguf_q8_sidecar_registry";
 pub const DENSE_Q8_PAYLOAD_ENABLE_ENV: &str = "BITNET_DENSE_Q8_PAYLOAD_ENABLE";
 pub const DENSE_Q8_PAYLOAD_TENSOR_ENV: &str = "BITNET_DENSE_Q8_PAYLOAD_TENSOR";
+pub const DENSE_Q8_RUNTIME_ENABLE_ENV: &str = "BITNET_DENSE_Q8_RUNTIME_ENABLE";
+pub const DENSE_Q8_RUNTIME_TENSOR_ENV: &str = "BITNET_DENSE_Q8_RUNTIME_TENSOR";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DenseGgufQ8SidecarDescriptor {
@@ -183,6 +185,17 @@ pub fn dense_q8_payload_candidate_tensor_from_env() -> Option<String> {
         return None;
     }
     std::env::var(DENSE_Q8_PAYLOAD_TENSOR_ENV).ok().and_then(|tensor| {
+        let tensor = tensor.trim();
+        (!tensor.is_empty()).then(|| tensor.to_string())
+    })
+}
+
+pub fn dense_q8_runtime_compute_tensor_from_env() -> Option<String> {
+    let enabled = std::env::var(DENSE_Q8_RUNTIME_ENABLE_ENV).ok()?;
+    if !matches!(enabled.as_str(), "1" | "true" | "TRUE" | "yes" | "YES") {
+        return None;
+    }
+    std::env::var(DENSE_Q8_RUNTIME_TENSOR_ENV).ok().and_then(|tensor| {
         let tensor = tensor.trim();
         (!tensor.is_empty()).then(|| tensor.to_string())
     })

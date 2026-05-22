@@ -1,0 +1,14 @@
+timestamp = "2026-05-20T13:21:51Z"
+campaign = "intel-a770"
+item = "A770-006R"
+event = "merged"
+pr = 43
+head_sha = "332ba423c87305c36c303c6a14097078125cce3d"
+merge_sha = "655a9af009cb1ededadf2befca232942c6234eea"
+branch = "codex/intel-a770/A770-006R-matmul-i2s-operand-contract"
+actor = "codex"
+
+notes = [
+  "Merged PR #43, aligning the selected-device A770 matmul_i2s operand contract.",
+  "The receipt remains scoped to the diagnostic matmul_i2s path and does not promote BitNet inference, QK256 dispatch, residency, semantic quality, speed, or completion.",
+]

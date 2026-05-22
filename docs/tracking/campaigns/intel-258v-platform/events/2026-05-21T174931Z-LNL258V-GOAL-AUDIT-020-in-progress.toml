@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T17:49:31Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-020"
+previous_status = "planned"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-020-openvino-env-overrides"
+actor = "codex"
+summary = "Started a no-inference Lunar Lake audit refresh after OpenVINO ask environment overrides landed in swarm."
+
+notes = [
+  "PR #212 added BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR and BITNET_LUNAR_LAKE_OPENVINO_PYTHON for migrated OpenVINO ask runtime configuration.",
+  "The audit refresh records the env overrides as runtime configuration only, not route evidence or a promotion signal.",
+  "LNL258V-POWER-006 remains blocked on real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage.",
+  "No inference, model load, fallback change, route promotion, speedup, power advantage, native accelerator proof, broad quality, model-binary, or BitNet QK256/I2_S behavior change is claimed.",
+]

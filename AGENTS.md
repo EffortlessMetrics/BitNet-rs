@@ -7,6 +7,59 @@ branches. See
 [`docs/development/AGENTIC_PR_OPERATIONS.md`](docs/development/AGENTIC_PR_OPERATIONS.md)
 for the durable agentic PR operations reference.
 
+## Repository Role
+
+`EffortlessMetrics/BitNet-rs` remains the public source-of-truth, release, and
+publish repository until an explicit sync/cutover says otherwise.
+
+`EffortlessMetrics/bitnet-rs-swarm` is the high-throughput same-repo
+development and proof execution repository. Normal feature, hardware,
+diagnostic, performance, campaign, refactor, and agent-swarm work lands here
+first, then promotes back to `BitNet-rs` through an explicit
+release-promotion or sync PR with source swarm commits, included PRs, proof
+manifest, changelog, and excluded work.
+
+Do not open normal development PRs in `BitNet-rs` unless explicitly directed,
+or unless the PR is a source-repo promotion, sync, release, publish, or
+emergency hotfix.
+
+## Merge Method Boundary
+
+Normal swarm PRs into `bitnet-rs-swarm/main` use squash merge.
+
+Source-history repair, source-to-swarm sync, and swarm-to-source promotion PRs
+must preserve ancestry. They must land by regular merge commit or by an
+explicitly approved fast-forward/direct update. Do not squash these
+repository-boundary PRs, because squash can copy the file tree while dropping
+the contributor and promotion history needed by the source/swarm cutover.
+
+Do not hard-reset swarm main to source main, squash a history import, or copy a
+source tree as a single content commit across the repository boundary. Those
+operations make the files look fresh while losing the reachable history that
+contributors, active PRs, and promotion audits need.
+
+Never force-push `main`. Release, signing, publish, secrets-heavy workflows,
+full-platform matrices, large model-cache workflows, GPU lanes, and public-fork
+self-hosted paths remain source-owned until a separate approved migration moves
+them.
+
+## Machine Clone Boundary
+
+Machine cutover uses side-by-side clones. Do not retarget an existing
+`EffortlessMetrics/BitNet-rs` clone by editing its `origin` remote to point at
+`EffortlessMetrics/bitnet-rs-swarm`.
+
+Before moving a machine to swarm work:
+
+1. inspect and checkpoint dirty work in the source clone;
+2. commit and push any intended source-repo branch;
+3. open or update the source PR if needed;
+4. clone `EffortlessMetrics/bitnet-rs-swarm` into a separate directory;
+5. start new active development from the swarm clone.
+
+Keep the source clone available for release, publish, signing, emergency
+hotfix, and explicit promotion work.
+
 ## Repo Source-Of-Truth Stack
 
 BitNet-rs uses a linked source-of-truth stack:
@@ -63,6 +116,57 @@ Codex agents are authorized and expected to:
 Commit, push, PR creation, agent-owned PR branch refresh, CI/bot/reviewer
 repair, merge, and tracker closeout are agent responsibilities for those items.
 They are not human approval gates.
+
+## Lane Ownership and Collision Rules
+
+Every swarm PR must declare its lane, campaign, work item, orchestrator,
+branch, allowed paths, shared surfaces touched, and whether closeout is
+required. The durable contract lives in
+[`docs/tracking/LANE_OWNERSHIP.md`](docs/tracking/LANE_OWNERSHIP.md).
+
+The campaign manifest is the source of truth. GitHub labels are navigation
+metadata only.
+
+Required PR body fields:
+
+- Lane:
+- Campaign:
+- Work item:
+- Orchestrator:
+- Branch:
+- Base main SHA:
+- Allowed paths:
+- Shared surfaces touched:
+- Closeout required:
+
+Repository-boundary PRs must also name the source commit, swarm base commit,
+merge method, included PRs, release/publish/signing impact, excluded work, and
+promotion or sync packet path. Chat history is not a substitute for that
+repo-native evidence.
+
+Branch names must use:
+
+- `codex/<lane>/<work-item>-<slug>`
+- `claude/<lane>/<work-item>-<slug>`
+- `droid/<lane>/<work-item>-<slug>`
+- `dependabot/<ecosystem>/<dependency>`
+
+Hardware and runtime lanes are non-stackable by default. Do not combine A770,
+CUDA, Apple, Lunar Lake, NPU, server, model-family, and CI-routing work unless
+the campaign manifest explicitly allows the overlap.
+
+Generated dashboards are shared surfaces. Do not hand-edit them as the source
+of truth. Change the campaign-local source files, run the generator, and
+preserve other lanes' current rows when rebasing.
+
+If main moves under a PR and the only conflicts are generated dashboards, keep
+both campaign-source changes and regenerate. Do not overwrite another lane's
+state.
+
+Closing PRs is not backlog reduction. Do not close for age, stale branch,
+branch distance, old stack, or restack need. Close only when content landed,
+was clean-ported, is a true duplicate, is historical-only and ledgered, or was
+explicitly rejected after content review.
 
 ## Human Gates
 

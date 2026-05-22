@@ -1,0 +1,121 @@
+{
+  "accepted_optional_source_fields": [
+    "/timing/decode_ms may substitute for /timing/decode_total_ms",
+    "/timing/host_to_device_ms may be absent if /timing/host_to_device_ms_source explains the source",
+    "/timing/device_to_host_ms may be absent if /timing/device_to_host_ms_source explains the source"
+  ],
+  "aggregate_artifact_kind": "qwen3_cuda_repeated_comparator",
+  "aggregate_receipt_out": "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-0_6b-repeated-comparator.json",
+  "artifact_kind": "qwen3_cuda_repeated_comparator_source_manifest",
+  "campaign_item": "CUDA-MODEL-017",
+  "claim_boundaries": [
+    "source manifest is not a receipt and does not prove hardware execution",
+    "speedup_claim=false until a separate exact-profile review accepts a profile",
+    "benchmark_qualified_speedup=false until CUDA-MODEL-018",
+    "full_cuda_residency_claimed=false until every required phase proves residency",
+    "Qwen3 dense CUDA evidence cannot inherit Qwen2.5 evidence",
+    "dense_regular_llm_cuda evidence cannot satisfy BitNet packed I2_S/QK256 proof"
+  ],
+  "hardware_lane": "nvidia_rtx_5070_ti_cuda",
+  "machine_id": "windows-9950x3d-rtx5070ti",
+  "min_runs_per_profile": 3,
+  "model": {
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "id": "qwen3-0.6b-instruct-q8_0",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+  },
+  "profiles": [
+    {
+      "expected_generated_tokens": 1,
+      "min_runs": 3,
+      "profile": "one_token",
+      "run_flag": "--one-token-run",
+      "source_paths": [
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-01/qwen3-0_6b-one-token-cuda.json",
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-02/qwen3-0_6b-one-token-cuda.json",
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-03/qwen3-0_6b-one-token-cuda.json"
+      ]
+    },
+    {
+      "expected_generated_tokens": 8,
+      "min_runs": 3,
+      "profile": "short_decode_8",
+      "run_flag": "--short-decode-8-run",
+      "source_paths": [
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-01/qwen3-0_6b-short-decode-8-cuda.json",
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-02/qwen3-0_6b-short-decode-8-cuda.json",
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-03/qwen3-0_6b-short-decode-8-cuda.json"
+      ]
+    },
+    {
+      "expected_generated_tokens": 32,
+      "min_runs": 3,
+      "profile": "short_decode_32",
+      "run_flag": "--short-decode-32-run",
+      "source_paths": [
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-01/qwen3-0_6b-short-decode-32-cuda.json",
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-02/qwen3-0_6b-short-decode-32-cuda.json",
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-03/qwen3-0_6b-short-decode-32-cuda.json"
+      ]
+    },
+    {
+      "expected_generated_tokens": 24,
+      "min_runs": 3,
+      "profile": "warm_session_3_turns",
+      "run_flag": "--warm-session-3-run",
+      "source_paths": [
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-01/qwen3-0_6b-warm-session-3-cuda.json",
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-02/qwen3-0_6b-warm-session-3-cuda.json",
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-03/qwen3-0_6b-warm-session-3-cuda.json"
+      ]
+    },
+    {
+      "expected_generated_tokens": 128,
+      "min_runs": 3,
+      "profile": "decode_128_from_warm_context",
+      "run_flag": "--decode-128-from-warm-context-run",
+      "source_paths": [
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-01/qwen3-0_6b-decode-128-from-warm-context-cuda.json",
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-02/qwen3-0_6b-decode-128-from-warm-context-cuda.json",
+        "ci/hardware/windows-9950x3d-rtx5070ti/2026-05-19/qwen3-perf-016/run-03/qwen3-0_6b-decode-128-from-warm-context-cuda.json"
+      ]
+    }
+  ],
+  "reference_backend": "amd-9950x3d-cpu-avx512",
+  "requested_backend": "nvidia-rtx-5070-ti-cuda",
+  "required_source_fields": [
+    "/artifact_kind",
+    "/model/id",
+    "/model/sha256",
+    "/selected_backend",
+    "/execution_plan/selected_route",
+    "/fallback_used",
+    "/quality_gate/passed",
+    "/parity/passed",
+    "/timing/model_load_ms",
+    "/timing/tokenizer_load_ms",
+    "/timing/prompt_render_ms",
+    "/timing/tokenize_ms",
+    "/timing/cuda_context_init_ms",
+    "/timing/weight_upload_ms",
+    "/timing/prefill_ms",
+    "/timing/first_token_ms",
+    "/timing/decode_total_ms",
+    "/timing/kernel_time_ms",
+    "/timing/kernel_launches",
+    "/timing/host_to_device_bytes",
+    "/timing/device_to_host_bytes",
+    "/cuda/vram_bytes",
+    "/cuda/power_draw_watts",
+    "/cuda/temperature_c"
+  ],
+  "runtime_api": "cuda",
+  "schema": 1,
+  "selected_backend": "nvidia-rtx-5070-ti-cuda",
+  "selected_route": "dense_regular_llm_cuda",
+  "tokenizer_prompt_authority": {
+    "prompt_authority": "contract_authoritative",
+    "prompt_template": "qwen-chat-raw-deterministic",
+    "tokenizer_authority": "contract_authoritative"
+  }
+}

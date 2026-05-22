@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_dense_q8_packed_sidecar_block_local_matvec_prototype",
+  "work_item": "SLM-CPU-070",
+  "claim": "bounded_exact_tensor_block_local_matvec_prototype",
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "broad_answer_quality_claim": false,
+  "default_runtime_changed": false,
+  "model": {
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3",
+    "real_model_available_in_workspace": false
+  },
+  "tokenizer": {
+    "source": "gguf_metadata",
+    "strict": true,
+    "real_tokenizer_receipt_regenerated": false
+  },
+  "host": {
+    "cpu": "Intel Core i5-8250U",
+    "threads": 4,
+    "thermal": "not sampled in this prototype artifact",
+    "power": "not sampled in this prototype artifact"
+  },
+  "hook": {
+    "tensor": "layers.0.attention.q_proj.weight",
+    "source_tensor": "blk.0.attn_q.weight",
+    "scope": "exact_tensor_only",
+    "q8_block_size": 32,
+    "default_selected_path": "eager_f32_candle",
+    "opt_in_selected_path": "packed_q8_sidecar",
+    "opt_in_selected_kernel": "dense-q8-sidecar-linear",
+    "runtime_compute_enabled_by_default": false
+  },
+  "implementation_change": {
+    "source": "crates/bitnet-transformer/src/lib.rs::dense_q8_sidecar_linear_forward",
+    "previous_scale_decode_location": "inside the per-weight innermost column loop",
+    "new_scale_decode_location": "once per contiguous Q8 block segment for the current row",
+    "block_iteration": "block-local spans using q8_block_size and row remaining length",
+    "exact_tensor_scope_preserved": true,
+    "input_materialization_changed": false,
+    "output_materialization_changed": false,
+    "vectorization_added": false,
+    "parallelism_added": false
+  },
+  "behavior_gate": {
+    "code_level_dense_linear_reference_test": "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_dense_linear_reference",
+    "code_level_multiblock_reference_test": "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_reference_across_q8_blocks",
+    "code_level_row_split_reference_test": "cargo test --locked -p bitnet-transformer --no-default-features --features cpu exact_q8_sidecar_runtime_hook_matches_reference_when_rows_split_q8_blocks",
+    "matches_eager_f32_dense_linear_reference": true,
+    "real_qwen3_prompt_ids_compared": false,
+    "real_qwen3_generated_ids_compared": false,
+    "real_qwen3_decoded_text_compared": false,
+    "selected_backend_kernel_receipt_compared": false,
+    "fallback_false_receipt_compared": false
+  },
+  "remaining_promotion_blockers": [
+    "verified Qwen3-0.6B Q8_0 GGUF is not present in this workspace",
+    "no real before/after i5-8250U receipt was regenerated for this prototype",
+    "no timing artifact proves improvement",
+    "packed Q8_0 sidecar compute remains opt-in and exact-tensor scoped"
+  ],
+  "next_required_evidence": {
+    "before_after_receipts": "Regenerate Qwen3 Q8_0 i5-8250U strict warm-session receipts with the exact tensor hook enabled only for layers.0.attention.q_proj.weight.",
+    "must_match": [
+      "model.sha256",
+      "tokenizer.source",
+      "tokenizer.strict",
+      "prompt_ids",
+      "generated_ids",
+      "decoded_text",
+      "selected_backend",
+      "selected_kernel",
+      "dense hook-selection identity",
+      "fallback_used=false"
+    ],
+    "timing_interpretation_allowed_after_match": true,
+    "speedup_claim_allowed_by_this_artifact": false
+  },
+  "claim_boundary": [
+    "This artifact proves only a code-level block-local packed Q8_0 matvec prototype for the exact sidecar tensor.",
+    "The default runtime remains eager_f32_candle.",
+    "Packed sidecar execution remains opt-in and exact-tensor scoped.",
+    "No real Qwen3 generated-ID receipt equivalence was regenerated in this workspace.",
+    "No speedup, sustained throughput, broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made."
+  ]
+}

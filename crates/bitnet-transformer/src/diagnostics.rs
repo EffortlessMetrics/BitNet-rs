@@ -135,6 +135,10 @@ pub(crate) fn qwen_trace_event(stage: &str, fields_json: &str) {
     ));
 }
 
+pub(crate) fn qwen_trace_events_enabled() -> bool {
+    qwen_trace_enabled()
+}
+
 pub(crate) fn qwen_trace_tensor(
     stage: &str,
     layer_idx: Option<usize>,

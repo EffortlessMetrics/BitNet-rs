@@ -1,12 +1,15 @@
 #[cfg(test)]
 use bitnet_common::config::NormType;
+#[cfg(test)]
+use bitnet_common::dtype_convert::f32_to_fp16;
+use bitnet_common::dtype_convert::fp16_to_f32;
 use bitnet_common::{BitNetConfig, BitNetError, Result, config::ActivationType};
 use bitnet_qk256_dispatch::{
     forward_qk256_with_scale, record_bitnet_linear_cpu_fallback, record_bitnet_linear_unsupported,
     strict_cuda_bitnet_backend_requested,
 };
 use bitnet_rope::{build_tables as build_rope_tables, resolve_base as resolve_rope_base};
-use candle_core::{DType, Device, Module, Tensor};
+use candle_core::{D, DType, Device, Module, Tensor};
 use candle_nn::{LayerNorm, Linear, VarBuilder};
 mod attention_forward;
 
@@ -17,7 +20,8 @@ mod qk256;
 use diagnostics::{
     dbg_finite, dbg_stats, debug_attn_enabled, debug_attn_scale_enabled, debug_gqa_enabled,
     debug_mlp_enabled, debug_rmsnorm_enabled, debug_rope_enabled, qwen_trace_event,
-    qwen_trace_layer_enabled, qwen_trace_number, qwen_trace_tensor, trace_rms_enabled,
+    qwen_trace_events_enabled, qwen_trace_layer_enabled, qwen_trace_number, qwen_trace_tensor,
+    trace_rms_enabled,
 };
 #[cfg(test)]
 use layer_builders::layer_norm_with_optional_bias;
@@ -26,8 +30,310 @@ use layer_builders::{
 };
 use qk256::{TIED_EMBED_QK256_KEY, qk256_inline_scale};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Instant;
 
 pub type DenseLinearRuntimeHookRegistry = HashMap<String, DenseLinearRuntimeHookDescriptor>;
+const SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR: &str = "layers.0.attention.q_proj.weight";
+
+fn qwen_trace_device_kind(device: &Device) -> &'static str {
+    match device {
+        Device::Cpu => "cpu",
+        Device::Cuda(_) => "cuda",
+        Device::Metal(_) => "metal",
+    }
+}
+
+fn qwen_trace_elapsed_ms(start: Instant) -> String {
+    qwen_trace_number(start.elapsed().as_secs_f64() * 1000.0)
+}
+
+fn qwen_trace_model_init_event(enabled: bool, stage: &str, fields_json: impl FnOnce() -> String) {
+    if enabled {
+        qwen_trace_event(stage, &fields_json());
+    }
+}
+
+fn qwen_trace_runtime_event(enabled: bool, stage: &str, fields_json: impl FnOnce() -> String) {
+    if enabled {
+        qwen_trace_event(stage, &fields_json());
+    }
+}
+
+fn qwen_trace_dims_json(dims: &[usize]) -> String {
+    dims.iter().map(|dim| dim.to_string()).collect::<Vec<_>>().join(",")
+}
+
+fn qwen_trace_rms_norm_fused(
+    norm_input: &Tensor,
+    output_dtype: DType,
+    weight: &Tensor,
+    eps: f64,
+) -> Result<Tensor> {
+    let weight = if weight.dtype() == norm_input.dtype() {
+        weight.clone()
+    } else {
+        weight.to_dtype(norm_input.dtype())?
+    };
+    let output = candle_nn::ops::rms_norm(norm_input, &weight, eps as f32)?;
+    Ok(output.to_dtype(output_dtype)?)
+}
+
+struct LinearInitTrace<'a> {
+    enabled: bool,
+    init_start: Instant,
+    layer_idx: usize,
+    device: &'a Device,
+    scope: &'static str,
+    name: &'static str,
+}
+
+#[derive(Clone, Copy)]
+struct RopeInitTrace<'a> {
+    enabled: bool,
+    init_start: Instant,
+    layer_idx: usize,
+    device: &'a Device,
+}
+
+fn qwen_trace_linear_init_event(
+    trace: &LinearInitTrace<'_>,
+    stage: &str,
+    fields_json: impl FnOnce() -> String,
+) {
+    qwen_trace_model_init_event(trace.enabled, stage, || {
+        format!(
+            "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"scope\":\"{}\",\"linear\":\"{}\",{}",
+            qwen_trace_elapsed_ms(trace.init_start),
+            trace.layer_idx,
+            qwen_trace_device_kind(trace.device),
+            trace.scope,
+            trace.name,
+            fields_json()
+        )
+    });
+}
+
+fn linear_with_optional_bias_traced(
+    in_dim: usize,
+    out_dim: usize,
+    vb: VarBuilder,
+    trace: LinearInitTrace<'_>,
+) -> Result<Linear> {
+    qwen_trace_linear_init_event(&trace, "model_init.linear_start", || {
+        format!("\"in_dim\":{},\"out_dim\":{}", in_dim, out_dim)
+    });
+
+    let weight_start = Instant::now();
+    qwen_trace_linear_init_event(&trace, "model_init.linear_weight_start", || {
+        format!("\"in_dim\":{},\"out_dim\":{}", in_dim, out_dim)
+    });
+    let weight = match vb.get((out_dim, in_dim), "weight") {
+        Ok(weight) => {
+            qwen_trace_linear_init_event(&trace, "model_init.linear_weight_finish", || {
+                format!(
+                    "\"weight_ms\":{},\"dtype\":\"{:?}\",\"dims\":[{}]",
+                    qwen_trace_elapsed_ms(weight_start),
+                    weight.dtype(),
+                    qwen_trace_dims_json(weight.dims())
+                )
+            });
+            weight
+        }
+        Err(err) => {
+            qwen_trace_linear_init_event(&trace, "model_init.linear_weight_error", || {
+                format!("\"weight_ms\":{}", qwen_trace_elapsed_ms(weight_start))
+            });
+            return Err(BitNetError::from(err));
+        }
+    };
+
+    let bias_start = Instant::now();
+    qwen_trace_linear_init_event(&trace, "model_init.linear_bias_start", || {
+        format!("\"out_dim\":{}", out_dim)
+    });
+    let bias = match vb.get(out_dim, "bias") {
+        Ok(bias) => {
+            qwen_trace_linear_init_event(&trace, "model_init.linear_bias_finish", || {
+                format!(
+                    "\"bias_ms\":{},\"present\":true,\"dtype\":\"{:?}\",\"dims\":[{}]",
+                    qwen_trace_elapsed_ms(bias_start),
+                    bias.dtype(),
+                    qwen_trace_dims_json(bias.dims())
+                )
+            });
+            Some(bias)
+        }
+        Err(_) => {
+            tracing::debug!("Bias tensor missing for linear layer; using no-bias path [{out_dim}]");
+            qwen_trace_linear_init_event(&trace, "model_init.linear_bias_finish", || {
+                format!("\"bias_ms\":{},\"present\":false", qwen_trace_elapsed_ms(bias_start))
+            });
+            None
+        }
+    };
+
+    qwen_trace_linear_init_event(&trace, "model_init.linear_finish", || {
+        format!("\"in_dim\":{},\"out_dim\":{}", in_dim, out_dim)
+    });
+
+    Ok(Linear::new(weight, bias))
+}
+
+fn qwen_trace_rope_init_event(
+    trace: Option<RopeInitTrace<'_>>,
+    stage: &str,
+    fields_json: impl FnOnce() -> String,
+) {
+    if let Some(trace) = trace {
+        qwen_trace_model_init_event(trace.enabled, stage, || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",{}",
+                qwen_trace_elapsed_ms(trace.init_start),
+                trace.layer_idx,
+                qwen_trace_device_kind(trace.device),
+                fields_json()
+            )
+        });
+    }
+}
+
+fn rope_table_device_for_target(device: &Device) -> Device {
+    match device {
+        Device::Cuda(_) => Device::Cpu,
+        _ => device.clone(),
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct DenseQ8SidecarInstrumentationSnapshot {
+    pub selector_dispatch_calls: u64,
+    pub selector_selected_calls: u64,
+    pub selector_declined_calls: u64,
+    pub selector_error_calls: u64,
+    pub selector_dispatch_ns: u64,
+    pub input_materialization_calls: u64,
+    pub input_materialization_ns: u64,
+    pub input_values_materialized: u64,
+    pub bias_materialization_calls: u64,
+    pub bias_materialization_ns: u64,
+    pub bias_values_materialized: u64,
+    pub packed_matvec_calls: u64,
+    pub packed_matvec_ns: u64,
+    pub packed_matvec_input_rows: u64,
+    pub packed_matvec_output_values: u64,
+    pub output_tensor_construction_calls: u64,
+    pub output_tensor_construction_ns: u64,
+}
+
+struct DenseQ8SidecarInstrumentationCounters {
+    selector_dispatch_calls: AtomicU64,
+    selector_selected_calls: AtomicU64,
+    selector_declined_calls: AtomicU64,
+    selector_error_calls: AtomicU64,
+    selector_dispatch_ns: AtomicU64,
+    input_materialization_calls: AtomicU64,
+    input_materialization_ns: AtomicU64,
+    input_values_materialized: AtomicU64,
+    bias_materialization_calls: AtomicU64,
+    bias_materialization_ns: AtomicU64,
+    bias_values_materialized: AtomicU64,
+    packed_matvec_calls: AtomicU64,
+    packed_matvec_ns: AtomicU64,
+    packed_matvec_input_rows: AtomicU64,
+    packed_matvec_output_values: AtomicU64,
+    output_tensor_construction_calls: AtomicU64,
+    output_tensor_construction_ns: AtomicU64,
+}
+
+impl DenseQ8SidecarInstrumentationCounters {
+    const fn new() -> Self {
+        Self {
+            selector_dispatch_calls: AtomicU64::new(0),
+            selector_selected_calls: AtomicU64::new(0),
+            selector_declined_calls: AtomicU64::new(0),
+            selector_error_calls: AtomicU64::new(0),
+            selector_dispatch_ns: AtomicU64::new(0),
+            input_materialization_calls: AtomicU64::new(0),
+            input_materialization_ns: AtomicU64::new(0),
+            input_values_materialized: AtomicU64::new(0),
+            bias_materialization_calls: AtomicU64::new(0),
+            bias_materialization_ns: AtomicU64::new(0),
+            bias_values_materialized: AtomicU64::new(0),
+            packed_matvec_calls: AtomicU64::new(0),
+            packed_matvec_ns: AtomicU64::new(0),
+            packed_matvec_input_rows: AtomicU64::new(0),
+            packed_matvec_output_values: AtomicU64::new(0),
+            output_tensor_construction_calls: AtomicU64::new(0),
+            output_tensor_construction_ns: AtomicU64::new(0),
+        }
+    }
+
+    fn reset(&self) {
+        self.selector_dispatch_calls.store(0, Ordering::Relaxed);
+        self.selector_selected_calls.store(0, Ordering::Relaxed);
+        self.selector_declined_calls.store(0, Ordering::Relaxed);
+        self.selector_error_calls.store(0, Ordering::Relaxed);
+        self.selector_dispatch_ns.store(0, Ordering::Relaxed);
+        self.input_materialization_calls.store(0, Ordering::Relaxed);
+        self.input_materialization_ns.store(0, Ordering::Relaxed);
+        self.input_values_materialized.store(0, Ordering::Relaxed);
+        self.bias_materialization_calls.store(0, Ordering::Relaxed);
+        self.bias_materialization_ns.store(0, Ordering::Relaxed);
+        self.bias_values_materialized.store(0, Ordering::Relaxed);
+        self.packed_matvec_calls.store(0, Ordering::Relaxed);
+        self.packed_matvec_ns.store(0, Ordering::Relaxed);
+        self.packed_matvec_input_rows.store(0, Ordering::Relaxed);
+        self.packed_matvec_output_values.store(0, Ordering::Relaxed);
+        self.output_tensor_construction_calls.store(0, Ordering::Relaxed);
+        self.output_tensor_construction_ns.store(0, Ordering::Relaxed);
+    }
+
+    fn snapshot(&self) -> DenseQ8SidecarInstrumentationSnapshot {
+        DenseQ8SidecarInstrumentationSnapshot {
+            selector_dispatch_calls: self.selector_dispatch_calls.load(Ordering::Relaxed),
+            selector_selected_calls: self.selector_selected_calls.load(Ordering::Relaxed),
+            selector_declined_calls: self.selector_declined_calls.load(Ordering::Relaxed),
+            selector_error_calls: self.selector_error_calls.load(Ordering::Relaxed),
+            selector_dispatch_ns: self.selector_dispatch_ns.load(Ordering::Relaxed),
+            input_materialization_calls: self.input_materialization_calls.load(Ordering::Relaxed),
+            input_materialization_ns: self.input_materialization_ns.load(Ordering::Relaxed),
+            input_values_materialized: self.input_values_materialized.load(Ordering::Relaxed),
+            bias_materialization_calls: self.bias_materialization_calls.load(Ordering::Relaxed),
+            bias_materialization_ns: self.bias_materialization_ns.load(Ordering::Relaxed),
+            bias_values_materialized: self.bias_values_materialized.load(Ordering::Relaxed),
+            packed_matvec_calls: self.packed_matvec_calls.load(Ordering::Relaxed),
+            packed_matvec_ns: self.packed_matvec_ns.load(Ordering::Relaxed),
+            packed_matvec_input_rows: self.packed_matvec_input_rows.load(Ordering::Relaxed),
+            packed_matvec_output_values: self.packed_matvec_output_values.load(Ordering::Relaxed),
+            output_tensor_construction_calls: self
+                .output_tensor_construction_calls
+                .load(Ordering::Relaxed),
+            output_tensor_construction_ns: self
+                .output_tensor_construction_ns
+                .load(Ordering::Relaxed),
+        }
+    }
+}
+
+static DENSE_Q8_SIDECAR_INSTRUMENTATION: DenseQ8SidecarInstrumentationCounters =
+    DenseQ8SidecarInstrumentationCounters::new();
+
+fn elapsed_ns_u64(start: Instant) -> u64 {
+    start.elapsed().as_nanos().min(u128::from(u64::MAX)) as u64
+}
+
+fn add_counter(counter: &AtomicU64, value: u64) {
+    counter.fetch_add(value, Ordering::Relaxed);
+}
+
+pub fn reset_dense_q8_sidecar_instrumentation() {
+    DENSE_Q8_SIDECAR_INSTRUMENTATION.reset();
+}
+
+pub fn dense_q8_sidecar_instrumentation_snapshot() -> DenseQ8SidecarInstrumentationSnapshot {
+    DENSE_Q8_SIDECAR_INSTRUMENTATION.snapshot()
+}
 
 /// Evidence-scoped packed Q8_0 payload for a dense-linear runtime hook.
 ///
@@ -132,11 +438,28 @@ impl DenseLinearRuntimeHookBoundary {
         tensor_name: impl Into<String>,
         descriptor: &DenseLinearRuntimeHookDescriptor,
     ) -> Self {
+        let tensor_name = tensor_name.into();
         let payload = descriptor.packed_q8_payload.as_ref();
+        let payload_contract_valid = payload.is_some_and(|payload| {
+            payload.tensor_name == descriptor.tensor_name
+                && payload.shape_matches_matvec_contract()
+                && payload.payload_len_matches_contract()
+        });
+        let runtime_compute_enabled = descriptor.runtime_compute_enabled
+            && tensor_name == SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR
+            && payload_contract_valid;
         Self {
-            tensor_name: tensor_name.into(),
-            selected_path: "eager_f32_candle",
-            selected_kernel: "dense-f32-candle-linear",
+            tensor_name,
+            selected_path: if runtime_compute_enabled {
+                "packed_q8_sidecar"
+            } else {
+                "eager_f32_candle"
+            },
+            selected_kernel: if runtime_compute_enabled {
+                "dense-q8-sidecar-linear"
+            } else {
+                "dense-f32-candle-linear"
+            },
             sidecar_descriptor_present: true,
             sidecar_role: Some(descriptor.role.clone()),
             sidecar_payload_sha256: descriptor.sidecar_payload_sha256.clone(),
@@ -145,14 +468,10 @@ impl DenseLinearRuntimeHookBoundary {
             sidecar_q8_block_count: payload.map(|payload| payload.q8_block_count),
             sidecar_matrix_rows: payload.map(|payload| payload.matrix_rows),
             sidecar_matrix_cols: payload.map(|payload| payload.matrix_cols),
-            sidecar_payload_contract_valid: payload.is_some_and(|payload| {
-                payload.tensor_name == descriptor.tensor_name
-                    && payload.shape_matches_matvec_contract()
-                    && payload.payload_len_matches_contract()
-            }),
-            runtime_compute_enabled: false,
-            eager_f32_runtime_preserved: true,
-            dense_runtime_replaced: false,
+            sidecar_payload_contract_valid: payload_contract_valid,
+            runtime_compute_enabled,
+            eager_f32_runtime_preserved: !runtime_compute_enabled,
+            dense_runtime_replaced: runtime_compute_enabled,
             speedup_claim: false,
             generated_id_preservation_required_before_runtime_use: true,
             next_receipt_gate: "before_after_qwen3_q8_generated_id_text_receipts",
@@ -181,6 +500,244 @@ fn dense_linear_runtime_hook_boundary(
         .unwrap_or_else(|| DenseLinearRuntimeHookBoundary::eager_f32(tensor_name))
 }
 
+fn maybe_forward_dense_q8_sidecar_linear(
+    input: &Tensor,
+    linear: &Linear,
+    tensor_name: &str,
+    hooks: &DenseLinearRuntimeHookRegistry,
+) -> Result<Option<Tensor>> {
+    let selector_start = Instant::now();
+    let Some(descriptor) = hooks.get(tensor_name) else {
+        return Ok(None);
+    };
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_calls, 1);
+    let boundary = DenseLinearRuntimeHookBoundary::from_sidecar_descriptor(tensor_name, descriptor);
+    if !boundary.runtime_compute_enabled {
+        add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_declined_calls, 1);
+        add_counter(
+            &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+            elapsed_ns_u64(selector_start),
+        );
+        return Ok(None);
+    }
+    let Some(payload) = descriptor.packed_q8_payload.as_ref() else {
+        add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_error_calls, 1);
+        add_counter(
+            &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+            elapsed_ns_u64(selector_start),
+        );
+        return Err(BitNetError::Validation(format!(
+            "packed Q8 runtime hook for {tensor_name} was enabled without payload bytes"
+        )));
+    };
+    if tensor_name != SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR {
+        add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_error_calls, 1);
+        add_counter(
+            &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+            elapsed_ns_u64(selector_start),
+        );
+        return Err(BitNetError::Validation(format!(
+            "packed Q8 runtime hook is scoped to {SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR}, got {tensor_name}"
+        )));
+    }
+    if !payload.shape_matches_matvec_contract() || !payload.payload_len_matches_contract() {
+        add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_error_calls, 1);
+        add_counter(
+            &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+            elapsed_ns_u64(selector_start),
+        );
+        return Err(BitNetError::Validation(format!(
+            "packed Q8 runtime hook payload contract is invalid for {tensor_name}"
+        )));
+    }
+    if linear.weight().dims() != [payload.matrix_rows, payload.matrix_cols] {
+        add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_error_calls, 1);
+        add_counter(
+            &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+            elapsed_ns_u64(selector_start),
+        );
+        return Err(BitNetError::Validation(format!(
+            "packed Q8 runtime hook shape {:?} does not match Candle linear weight {:?} for {tensor_name}",
+            [payload.matrix_rows, payload.matrix_cols],
+            linear.weight().dims()
+        )));
+    }
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_selected_calls, 1);
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.selector_dispatch_ns,
+        elapsed_ns_u64(selector_start),
+    );
+
+    dense_q8_sidecar_linear_forward(input, linear.bias(), payload)
+        .map(Some)
+        .map_err(BitNetError::from)
+}
+
+fn dense_q8_sidecar_linear_forward(
+    input: &Tensor,
+    bias: Option<&Tensor>,
+    payload: &DenseLinearPackedQ8Payload,
+) -> candle_core::Result<Tensor> {
+    let dims = input.dims();
+    let Some((&input_cols, prefix)) = dims.split_last() else {
+        candle_core::bail!("packed Q8 runtime hook requires a tensor with at least one dimension");
+    };
+    if input_cols != payload.matrix_cols {
+        candle_core::bail!(
+            "packed Q8 runtime hook input cols {} do not match payload matrix cols {}",
+            input_cols,
+            payload.matrix_cols
+        );
+    }
+    let input_materialization_start = Instant::now();
+    let input_values = input.to_dtype(DType::F32)?.flatten_all()?.to_vec1::<f32>()?;
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.input_materialization_calls, 1);
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.input_materialization_ns,
+        elapsed_ns_u64(input_materialization_start),
+    );
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.input_values_materialized,
+        input_values.len() as u64,
+    );
+    if input_values.len() % payload.matrix_cols != 0 {
+        candle_core::bail!(
+            "packed Q8 runtime hook input value count {} is not divisible by cols {}",
+            input_values.len(),
+            payload.matrix_cols
+        );
+    }
+
+    let bias_materialization_start = Instant::now();
+    let bias_values = match bias {
+        Some(bias) => Some(bias.to_dtype(DType::F32)?.to_vec1::<f32>()?),
+        None => None,
+    };
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.bias_materialization_calls, 1);
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.bias_materialization_ns,
+        elapsed_ns_u64(bias_materialization_start),
+    );
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.bias_values_materialized,
+        bias_values.as_ref().map_or(0, Vec::len) as u64,
+    );
+    if let Some(bias_values) = bias_values.as_ref()
+        && bias_values.len() != payload.matrix_rows
+    {
+        candle_core::bail!(
+            "packed Q8 runtime hook bias length {} does not match rows {}",
+            bias_values.len(),
+            payload.matrix_rows
+        );
+    }
+
+    let input_rows = input_values.len().checked_div(payload.matrix_cols).unwrap_or(0);
+    let output_values = input_rows.saturating_mul(payload.matrix_rows);
+    let mut output = Vec::with_capacity(output_values);
+    let matvec_start = Instant::now();
+    if payload.matrix_cols.is_multiple_of(payload.q8_block_size) {
+        dense_q8_sidecar_matvec_block_aligned(
+            &input_values,
+            bias_values.as_deref(),
+            payload,
+            &mut output,
+        );
+    } else {
+        dense_q8_sidecar_matvec_generic(
+            &input_values,
+            bias_values.as_deref(),
+            payload,
+            &mut output,
+        );
+    }
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.packed_matvec_calls, 1);
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.packed_matvec_ns, elapsed_ns_u64(matvec_start));
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.packed_matvec_input_rows, input_rows as u64);
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.packed_matvec_output_values,
+        output_values as u64,
+    );
+
+    let mut output_shape = prefix.to_vec();
+    output_shape.push(payload.matrix_rows);
+    let output_construction_start = Instant::now();
+    let tensor = Tensor::from_vec(output, output_shape, input.device());
+    add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.output_tensor_construction_calls, 1);
+    add_counter(
+        &DENSE_Q8_SIDECAR_INSTRUMENTATION.output_tensor_construction_ns,
+        elapsed_ns_u64(output_construction_start),
+    );
+    tensor
+}
+
+fn dense_q8_sidecar_matvec_block_aligned(
+    input_values: &[f32],
+    bias_values: Option<&[f32]>,
+    payload: &DenseLinearPackedQ8Payload,
+    output: &mut Vec<f32>,
+) {
+    let block_stride = 2 + payload.q8_block_size;
+    let blocks_per_row = payload.matrix_cols / payload.q8_block_size;
+    for input_row in input_values.chunks_exact(payload.matrix_cols) {
+        for row in 0..payload.matrix_rows {
+            let mut sum = bias_values.map_or(0.0, |bias| bias[row]);
+            let row_block_start = row * blocks_per_row;
+            for block_in_row in 0..blocks_per_row {
+                let input_start = block_in_row * payload.q8_block_size;
+                let block_offset = (row_block_start + block_in_row) * block_stride;
+                let scale = dense_q8_sidecar_block_scale(&payload.packed_q8_bytes, block_offset);
+                let q_start = block_offset + 2;
+                for offset in 0..payload.q8_block_size {
+                    let q = payload.packed_q8_bytes[q_start + offset] as i8;
+                    sum += scale * f32::from(q) * input_row[input_start + offset];
+                }
+            }
+            output.push(sum);
+        }
+    }
+}
+
+fn dense_q8_sidecar_matvec_generic(
+    input_values: &[f32],
+    bias_values: Option<&[f32]>,
+    payload: &DenseLinearPackedQ8Payload,
+    output: &mut Vec<f32>,
+) {
+    let block_stride = 2 + payload.q8_block_size;
+    for input_row in input_values.chunks_exact(payload.matrix_cols) {
+        for row in 0..payload.matrix_rows {
+            let mut sum = bias_values.map_or(0.0, |bias| bias[row]);
+            let row_start = row * payload.matrix_cols;
+            let mut col = 0usize;
+            while col < payload.matrix_cols {
+                let weight_idx = row_start + col;
+                let block_idx = weight_idx / payload.q8_block_size;
+                let block_value_offset = weight_idx % payload.q8_block_size;
+                let block_offset = block_idx * block_stride;
+                let scale = dense_q8_sidecar_block_scale(&payload.packed_q8_bytes, block_offset);
+                let values_in_block = payload.q8_block_size - block_value_offset;
+                let values_in_row = payload.matrix_cols - col;
+                let values_to_process = values_in_block.min(values_in_row);
+                for offset in 0..values_to_process {
+                    let q_idx = block_offset + 2 + block_value_offset + offset;
+                    let q = payload.packed_q8_bytes[q_idx] as i8;
+                    sum += scale * f32::from(q) * input_row[col + offset];
+                }
+                col += values_to_process;
+            }
+            output.push(sum);
+        }
+    }
+}
+
+fn dense_q8_sidecar_block_scale(packed_q8_bytes: &[u8], block_offset: usize) -> f32 {
+    fp16_to_f32(u16::from_le_bytes([
+        packed_q8_bytes[block_offset],
+        packed_q8_bytes[block_offset + 1],
+    ]))
+}
+
 fn attention_f16_dot_input(tensor: &Tensor) -> Result<Tensor> {
     Ok(tensor.to_dtype(DType::F16)?.to_dtype(DType::F32)?)
 }
@@ -202,13 +759,98 @@ impl RotaryEmbedding {
         rope_theta: Option<f32>,
         device: &Device,
     ) -> Result<Self> {
+        Self::new_impl(dim, max_seq_len, rope_theta, device, None)
+    }
+
+    fn new_traced(
+        dim: usize,
+        max_seq_len: usize,
+        rope_theta: Option<f32>,
+        device: &Device,
+        trace: RopeInitTrace<'_>,
+    ) -> Result<Self> {
+        Self::new_impl(dim, max_seq_len, rope_theta, device, Some(trace))
+    }
+
+    fn new_impl(
+        dim: usize,
+        max_seq_len: usize,
+        rope_theta: Option<f32>,
+        device: &Device,
+        trace: Option<RopeInitTrace<'_>>,
+    ) -> Result<Self> {
         let theta = resolve_rope_base(rope_theta);
+        qwen_trace_rope_init_event(trace, "model_init.rope_start", || {
+            format!("\"dim\":{},\"max_seq_len\":{},\"theta\":{}", dim, max_seq_len, theta)
+        });
+        let tables_start = Instant::now();
+        qwen_trace_rope_init_event(trace, "model_init.rope_tables_start", || {
+            format!("\"dim\":{},\"max_seq_len\":{}", dim, max_seq_len)
+        });
         let tables = build_rope_tables(dim, max_seq_len, theta)
             .map_err(|err| BitNetError::Validation(format!("invalid RoPE configuration: {err}")))?;
         let bitnet_rope::RopeTables { half_dim, sin, cos } = tables;
+        qwen_trace_rope_init_event(trace, "model_init.rope_tables_finish", || {
+            format!(
+                "\"tables_ms\":{},\"half_dim\":{},\"sin_len\":{},\"cos_len\":{}",
+                qwen_trace_elapsed_ms(tables_start),
+                half_dim,
+                sin.len(),
+                cos.len()
+            )
+        });
+        let table_device = rope_table_device_for_target(device);
+        qwen_trace_rope_init_event(trace, "model_init.rope_table_storage", || {
+            format!(
+                "\"target_device\":\"{}\",\"table_device\":\"{}\",\"reason\":\"{}\"",
+                qwen_trace_device_kind(device),
+                qwen_trace_device_kind(&table_device),
+                if matches!(device, Device::Cuda(_)) {
+                    "cpu_staged_to_avoid_constructor_full_table_cuda_upload"
+                } else {
+                    "target_device_storage"
+                }
+            )
+        });
 
-        let sin = Tensor::from_vec(sin, &[max_seq_len, half_dim], device)?;
-        let cos = Tensor::from_vec(cos, &[max_seq_len, half_dim], device)?;
+        let sin_start = Instant::now();
+        qwen_trace_rope_init_event(trace, "model_init.rope_sin_tensor_start", || {
+            format!(
+                "\"rows\":{},\"cols\":{},\"table_device\":\"{}\"",
+                max_seq_len,
+                half_dim,
+                qwen_trace_device_kind(&table_device)
+            )
+        });
+        let sin = Tensor::from_vec(sin, &[max_seq_len, half_dim], &table_device)?;
+        qwen_trace_rope_init_event(trace, "model_init.rope_sin_tensor_finish", || {
+            format!(
+                "\"tensor_ms\":{},\"dtype\":\"{:?}\",\"dims\":[{}],\"table_device\":\"{}\"",
+                qwen_trace_elapsed_ms(sin_start),
+                sin.dtype(),
+                qwen_trace_dims_json(sin.dims()),
+                qwen_trace_device_kind(sin.device())
+            )
+        });
+        let cos_start = Instant::now();
+        qwen_trace_rope_init_event(trace, "model_init.rope_cos_tensor_start", || {
+            format!(
+                "\"rows\":{},\"cols\":{},\"table_device\":\"{}\"",
+                max_seq_len,
+                half_dim,
+                qwen_trace_device_kind(&table_device)
+            )
+        });
+        let cos = Tensor::from_vec(cos, &[max_seq_len, half_dim], &table_device)?;
+        qwen_trace_rope_init_event(trace, "model_init.rope_cos_tensor_finish", || {
+            format!(
+                "\"tensor_ms\":{},\"dtype\":\"{:?}\",\"dims\":[{}],\"table_device\":\"{}\"",
+                qwen_trace_elapsed_ms(cos_start),
+                cos.dtype(),
+                qwen_trace_dims_json(cos.dims()),
+                qwen_trace_device_kind(cos.device())
+            )
+        });
 
         // Log ROPE initialization parameters
         tracing::info!(
@@ -217,15 +859,30 @@ impl RotaryEmbedding {
             dim,
             max_seq_len
         );
+        qwen_trace_rope_init_event(trace, "model_init.rope_finish", || {
+            format!("\"dim\":{},\"max_seq_len\":{},\"half_dim\":{}", dim, max_seq_len, half_dim)
+        });
 
         Ok(Self { sin, cos })
     }
 
     pub fn apply(&self, x: &Tensor, position: usize) -> Result<Tensor> {
+        let trace_rope_apply = qwen_trace_events_enabled();
         // x shape: [B, H, T, D] for multi-head attention
         if x.dims().len() == 4 {
             let (batch, n_heads, seq_len, head_dim) = x.dims4()?;
             let half_dim = head_dim / 2;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_start", || {
+                format!(
+                    "\"position\":{},\"seq_len\":{},\"head_dim\":{},\"half_dim\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    seq_len,
+                    head_dim,
+                    half_dim,
+                    qwen_trace_device_kind(self.cos.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
 
             // LLaMA RoPE uses SPLIT layout: [r0,r1,...,r_{d/2-1}, i0,i1,...,i_{d/2-1}]
             // NOT interleaved [r0,i0,r1,i1,...]
@@ -233,13 +890,50 @@ impl RotaryEmbedding {
             let x1 = x.narrow(3, half_dim, half_dim)?; // Second half (imaginary)
 
             // Get cos/sin for the position
-            let cos = self.cos.narrow(0, position, seq_len)?
-                .unsqueeze(0)?  // Add batch dim
-                .unsqueeze(1)?  // Add heads dim
+            let cos_slice_start = Instant::now();
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_cos_slice_start", || {
+                format!(
+                    "\"position\":{},\"seq_len\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    seq_len,
+                    qwen_trace_device_kind(self.cos.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
+            let cos = self.cos.narrow(0, position, seq_len)?.to_device(x.device())?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_cos_slice_finish", || {
+                format!(
+                    "\"slice_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(cos_slice_start),
+                    qwen_trace_dims_json(cos.dims()),
+                    qwen_trace_device_kind(cos.device())
+                )
+            });
+            let cos = cos
+                .unsqueeze(0)? // Add batch dim
+                .unsqueeze(1)? // Add heads dim
                 .broadcast_as(&[batch, n_heads, seq_len, half_dim])?;
-            let sin = self
-                .sin
-                .narrow(0, position, seq_len)?
+
+            let sin_slice_start = Instant::now();
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_sin_slice_start", || {
+                format!(
+                    "\"position\":{},\"seq_len\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    seq_len,
+                    qwen_trace_device_kind(self.sin.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
+            let sin = self.sin.narrow(0, position, seq_len)?.to_device(x.device())?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_sin_slice_finish", || {
+                format!(
+                    "\"slice_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(sin_slice_start),
+                    qwen_trace_dims_json(sin.dims()),
+                    qwen_trace_device_kind(sin.device())
+                )
+            });
+            let sin = sin
                 .unsqueeze(0)?
                 .unsqueeze(1)?
                 .broadcast_as(&[batch, n_heads, seq_len, half_dim])?;
@@ -249,25 +943,83 @@ impl RotaryEmbedding {
 
             // Concatenate back in split layout [real, imag]
             let rotated = Tensor::cat(&[x0_rot, x1_rot], 3)?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_finish", || {
+                format!(
+                    "\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_dims_json(rotated.dims()),
+                    qwen_trace_device_kind(rotated.device())
+                )
+            });
 
             Ok(rotated)
         } else {
             // Original 3D implementation for other uses
             let (_batch, _seq, dim) = x.dims3()?;
             let half_dim = dim / 2;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_start", || {
+                format!(
+                    "\"position\":{},\"dim\":{},\"half_dim\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    dim,
+                    half_dim,
+                    qwen_trace_device_kind(self.cos.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
 
             // LLaMA RoPE uses SPLIT layout: [r0,r1,...,i0,i1,...]
             let x0 = x.narrow(2, 0, half_dim)?; // First half (real)
             let x1 = x.narrow(2, half_dim, half_dim)?; // Second half (imaginary)
 
-            let cos = self.cos.narrow(0, position, 1)?;
-            let sin = self.sin.narrow(0, position, 1)?;
+            let cos_slice_start = Instant::now();
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_cos_slice_start", || {
+                format!(
+                    "\"position\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    qwen_trace_device_kind(self.cos.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
+            let cos = self.cos.narrow(0, position, 1)?.to_device(x.device())?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_cos_slice_finish", || {
+                format!(
+                    "\"slice_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(cos_slice_start),
+                    qwen_trace_dims_json(cos.dims()),
+                    qwen_trace_device_kind(cos.device())
+                )
+            });
+            let sin_slice_start = Instant::now();
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_sin_slice_start", || {
+                format!(
+                    "\"position\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    qwen_trace_device_kind(self.sin.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
+            let sin = self.sin.narrow(0, position, 1)?.to_device(x.device())?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_sin_slice_finish", || {
+                format!(
+                    "\"slice_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(sin_slice_start),
+                    qwen_trace_dims_json(sin.dims()),
+                    qwen_trace_device_kind(sin.device())
+                )
+            });
 
             let x0_rot = (x0.mul(&cos)? - x1.mul(&sin)?)?;
             let x1_rot = (x0.mul(&sin)? + x1.mul(&cos)?)?;
 
             // Concatenate back in split layout [real, imag]
             let rotated = Tensor::cat(&[x0_rot, x1_rot], 2)?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_finish", || {
+                format!(
+                    "\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_dims_json(rotated.dims()),
+                    qwen_trace_device_kind(rotated.device())
+                )
+            });
 
             Ok(rotated)
         }
@@ -293,6 +1045,9 @@ pub struct MultiHeadAttention {
 
 impl MultiHeadAttention {
     pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
+        let init_start = Instant::now();
+        let trace_model_init = qwen_trace_events_enabled();
+        let device = vb.device().clone();
         let hidden_size = config.model.hidden_size;
         let n_heads = config.model.num_heads;
         let head_dim = config.model.attention_head_dim.unwrap_or_else(|| hidden_size / n_heads);
@@ -314,6 +1069,21 @@ impl MultiHeadAttention {
         let group_size = n_heads / n_kv_heads;
         let q_out = n_heads * head_dim;
         let kv_out = n_kv_heads * head_dim;
+
+        qwen_trace_model_init_event(trace_model_init, "model_init.attention_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"hidden_size\":{},\"n_heads\":{},\"n_kv_heads\":{},\"head_dim\":{},\"q_out\":{},\"kv_out\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
+                hidden_size,
+                n_heads,
+                n_kv_heads,
+                head_dim,
+                q_out,
+                kv_out
+            )
+        });
 
         tracing::info!(
             "layer{}: MultiHeadAttention dims: hidden={}, n_heads={}, n_kv_heads={}, head_dim={}, q_out={}, kv_out={}, group_size={}",
@@ -340,10 +1110,70 @@ impl MultiHeadAttention {
             q_out
         );
 
-        let q_proj = linear_with_optional_bias(hidden_size, q_out, vb.pp("q_proj"))?;
-        let k_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("k_proj"))?;
-        let v_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("v_proj"))?;
-        let o_proj = linear_with_optional_bias(q_out, hidden_size, vb.pp("o_proj"))?;
+        let q_proj = linear_with_optional_bias_traced(
+            hidden_size,
+            q_out,
+            vb.pp("q_proj"),
+            LinearInitTrace {
+                enabled: trace_model_init,
+                init_start,
+                layer_idx,
+                device: &device,
+                scope: "attention",
+                name: "q_proj",
+            },
+        )?;
+        let k_proj = linear_with_optional_bias_traced(
+            hidden_size,
+            kv_out,
+            vb.pp("k_proj"),
+            LinearInitTrace {
+                enabled: trace_model_init,
+                init_start,
+                layer_idx,
+                device: &device,
+                scope: "attention",
+                name: "k_proj",
+            },
+        )?;
+        let v_proj = linear_with_optional_bias_traced(
+            hidden_size,
+            kv_out,
+            vb.pp("v_proj"),
+            LinearInitTrace {
+                enabled: trace_model_init,
+                init_start,
+                layer_idx,
+                device: &device,
+                scope: "attention",
+                name: "v_proj",
+            },
+        )?;
+        let o_proj = linear_with_optional_bias_traced(
+            q_out,
+            hidden_size,
+            vb.pp("o_proj"),
+            LinearInitTrace {
+                enabled: trace_model_init,
+                init_start,
+                layer_idx,
+                device: &device,
+                scope: "attention",
+                name: "o_proj",
+            },
+        )?;
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.attention_linears_finish",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(init_start),
+                    layer_idx,
+                    qwen_trace_device_kind(&device)
+                )
+            },
+        );
         let q_norm = optional_layer_norm_with_optional_bias(
             config.model.norm_type,
             head_dim,
@@ -362,14 +1192,54 @@ impl MultiHeadAttention {
             eps_from_config(config),
             vb.pp("sub_layernorm"),
         )?;
+        qwen_trace_model_init_event(trace_model_init, "model_init.attention_norms_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"q_norm_present\":{},\"k_norm_present\":{},\"sub_layernorm_present\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
+                q_norm.is_some(),
+                k_norm.is_some(),
+                sub_layernorm.is_some()
+            )
+        });
 
-        let rope = RotaryEmbedding::new(
+        qwen_trace_model_init_event(trace_model_init, "model_init.attention_rope_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"head_dim\":{},\"max_seq_len\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
+                head_dim,
+                config.model.max_position_embeddings
+            )
+        });
+        let rope = RotaryEmbedding::new_traced(
             head_dim,
             config.model.max_position_embeddings,
             config.model.rope_theta,
             vb.device(),
+            RopeInitTrace { enabled: trace_model_init, init_start, layer_idx, device: &device },
         )
         .ok();
+        qwen_trace_model_init_event(trace_model_init, "model_init.attention_rope_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"rope_present\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
+                rope.is_some()
+            )
+        });
+        qwen_trace_model_init_event(trace_model_init, "model_init.attention_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"rope_present\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
+                rope.is_some()
+            )
+        });
 
         Ok(Self {
             n_heads,
@@ -455,6 +1325,14 @@ impl MultiHeadAttention {
             runtime_compute_enabled = hook_boundary.runtime_compute_enabled,
             "dense linear production hook boundary"
         );
+        if let Some(output) = maybe_forward_dense_q8_sidecar_linear(
+            input,
+            linear,
+            &dense_tensor_name,
+            dense_linear_hooks,
+        )? {
+            return Ok(output);
+        }
         record_bitnet_linear_cpu_fallback();
         linear.forward(input).map_err(BitNetError::from)
     }
@@ -675,6 +1553,14 @@ impl FeedForward {
             runtime_compute_enabled = hook_boundary.runtime_compute_enabled,
             "dense linear production hook boundary"
         );
+        if let Some(output) = maybe_forward_dense_q8_sidecar_linear(
+            input,
+            linear,
+            &dense_tensor_name,
+            dense_linear_hooks,
+        )? {
+            return Ok(output);
+        }
         record_bitnet_linear_cpu_fallback();
         linear.forward(input).map_err(BitNetError::from)
     }
@@ -907,28 +1793,129 @@ impl TransformerForwardWorkspace {
 
 impl TransformerBlock {
     pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
+        let block_start = Instant::now();
+        let trace_model_init = qwen_trace_events_enabled();
+        let device = vb.device().clone();
         let hidden_size = config.model.hidden_size;
         // PATCH 1: Use RMSNorm epsilon from config header for ALL norms (per-layer + final)
         let eps = eps_from_config(config);
 
         tracing::debug!("TransformerBlock using RMSNorm eps={} (from header)", eps);
 
-        Ok(Self {
-            attention: MultiHeadAttention::new(config, vb.pp("attention"), layer_idx)?,
-            feed_forward: FeedForward::new(config, vb.pp("feed_forward"), layer_idx)?,
-            attention_norm: norm_with_optional_bias(
-                config.model.norm_type,
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"hidden_size\":{},\"eps\":{}",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
                 hidden_size,
-                eps,
-                vb.pp("attention_norm"),
-            )?,
-            ffn_norm: norm_with_optional_bias(
-                config.model.norm_type,
-                hidden_size,
-                eps,
-                vb.pp("post_attention_layernorm"),
-            )?,
-        })
+                eps
+            )
+        });
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_attention_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device)
+            )
+        });
+        let attention = MultiHeadAttention::new(config, vb.pp("attention"), layer_idx)?;
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_attention_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device)
+            )
+        });
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.block_feed_forward_start",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(block_start),
+                    layer_idx,
+                    qwen_trace_device_kind(&device)
+                )
+            },
+        );
+        let feed_forward = FeedForward::new(config, vb.pp("feed_forward"), layer_idx)?;
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.block_feed_forward_finish",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(block_start),
+                    layer_idx,
+                    qwen_trace_device_kind(&device)
+                )
+            },
+        );
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.block_attention_norm_start",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(block_start),
+                    layer_idx,
+                    qwen_trace_device_kind(&device)
+                )
+            },
+        );
+        let attention_norm = norm_with_optional_bias(
+            config.model.norm_type,
+            hidden_size,
+            eps,
+            vb.pp("attention_norm"),
+        )?;
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.block_attention_norm_finish",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(block_start),
+                    layer_idx,
+                    qwen_trace_device_kind(&device)
+                )
+            },
+        );
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_ffn_norm_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device)
+            )
+        });
+        let ffn_norm = norm_with_optional_bias(
+            config.model.norm_type,
+            hidden_size,
+            eps,
+            vb.pp("post_attention_layernorm"),
+        )?;
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_ffn_norm_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device)
+            )
+        });
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device)
+            )
+        });
+
+        Ok(Self { attention, feed_forward, attention_norm, ffn_norm })
     }
 
     pub fn forward(
@@ -964,6 +1951,16 @@ impl TransformerBlock {
         dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
         mut workspace: Option<&mut TransformerForwardWorkspace>,
     ) -> Result<Tensor> {
+        let trace_forward = qwen_trace_events_enabled();
+        let block_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "block.forward_start", || {
+            format!(
+                "\"layer\":{},\"dims\":[{}],\"device\":\"{}\"",
+                self.attention.layer_idx,
+                qwen_trace_dims_json(x.dims()),
+                qwen_trace_device_kind(x.device())
+            )
+        });
         // Debug input activation norms
         if debug_attn_enabled() {
             let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
@@ -996,7 +1993,127 @@ impl TransformerBlock {
             });
         }
 
-        let x = self.attention_norm.forward(x)?;
+        let attention_norm_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "block.attention_norm_start", || {
+            format!(
+                "\"layer\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\",\"remove_mean\":{},\"bias_present\":{}",
+                self.attention.layer_idx,
+                qwen_trace_dims_json(x.dims()),
+                x.dtype(),
+                qwen_trace_device_kind(x.device()),
+                self.attention_norm.remove_mean(),
+                self.attention_norm.bias().is_some()
+            )
+        });
+        let x = if trace_forward
+            && !self.attention_norm.remove_mean()
+            && self.attention_norm.bias().is_none()
+        {
+            let x_dtype = x.dtype();
+            let internal_dtype = match x_dtype {
+                DType::F16 | DType::BF16 => DType::F32,
+                dtype => dtype,
+            };
+            let hidden_size = x.dim(D::Minus1)?;
+
+            qwen_trace_runtime_event(trace_forward, "block.attention_norm_manual_start", || {
+                format!(
+                    "\"layer\":{},\"elapsed_ms\":{},\"path\":\"rms_norm_manual_trace\",\"hidden_size\":{},\"input_dtype\":\"{:?}\",\"internal_dtype\":\"{:?}\",\"eps\":{},\"weight_dims\":[{}],\"weight_device\":\"{}\"",
+                    self.attention.layer_idx,
+                    qwen_trace_elapsed_ms(attention_norm_start),
+                    hidden_size,
+                    x_dtype,
+                    internal_dtype,
+                    qwen_trace_number(self.attention_norm.eps()),
+                    qwen_trace_dims_json(self.attention_norm.weight().dims()),
+                    qwen_trace_device_kind(self.attention_norm.weight().device())
+                )
+            });
+
+            let to_dtype_start = Instant::now();
+            qwen_trace_runtime_event(trace_forward, "block.attention_norm_to_dtype_start", || {
+                format!(
+                    "\"layer\":{},\"elapsed_ms\":{},\"from\":\"{:?}\",\"to\":\"{:?}\"",
+                    self.attention.layer_idx,
+                    qwen_trace_elapsed_ms(attention_norm_start),
+                    x_dtype,
+                    internal_dtype
+                )
+            });
+            let norm_input = x.to_dtype(internal_dtype)?;
+            qwen_trace_runtime_event(trace_forward, "block.attention_norm_to_dtype_finish", || {
+                format!(
+                    "\"layer\":{},\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    self.attention.layer_idx,
+                    qwen_trace_elapsed_ms(attention_norm_start),
+                    qwen_trace_elapsed_ms(to_dtype_start),
+                    qwen_trace_dims_json(norm_input.dims()),
+                    norm_input.dtype(),
+                    qwen_trace_device_kind(norm_input.device())
+                )
+            });
+
+            let fused_start = Instant::now();
+            qwen_trace_runtime_event(trace_forward, "block.attention_norm_fused_rms_start", || {
+                format!(
+                    "\"layer\":{},\"elapsed_ms\":{},\"path\":\"candle_ops_rms_norm\",\"hidden_size\":{},\"input_dims\":[{}],\"input_dtype\":\"{:?}\",\"weight_dims\":[{}],\"weight_dtype\":\"{:?}\",\"eps\":{},\"device\":\"{}\"",
+                    self.attention.layer_idx,
+                    qwen_trace_elapsed_ms(attention_norm_start),
+                    hidden_size,
+                    qwen_trace_dims_json(norm_input.dims()),
+                    norm_input.dtype(),
+                    qwen_trace_dims_json(self.attention_norm.weight().dims()),
+                    self.attention_norm.weight().dtype(),
+                    qwen_trace_number(self.attention_norm.eps()),
+                    qwen_trace_device_kind(norm_input.device())
+                )
+            });
+            let output = qwen_trace_rms_norm_fused(
+                &norm_input,
+                x_dtype,
+                self.attention_norm.weight(),
+                self.attention_norm.eps(),
+            )?;
+            qwen_trace_runtime_event(
+                trace_forward,
+                "block.attention_norm_fused_rms_finish",
+                || {
+                    format!(
+                        "\"layer\":{},\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                        self.attention.layer_idx,
+                        qwen_trace_elapsed_ms(attention_norm_start),
+                        qwen_trace_elapsed_ms(fused_start),
+                        qwen_trace_dims_json(output.dims()),
+                        output.dtype(),
+                        qwen_trace_device_kind(output.device())
+                    )
+                },
+            );
+            output
+        } else {
+            qwen_trace_runtime_event(
+                trace_forward,
+                "block.attention_norm_forward_call_start",
+                || {
+                    format!(
+                        "\"layer\":{},\"elapsed_ms\":{},\"path\":\"candle_layer_norm\"",
+                        self.attention.layer_idx,
+                        qwen_trace_elapsed_ms(attention_norm_start)
+                    )
+                },
+            );
+            self.attention_norm.forward(x)?
+        };
+        qwen_trace_runtime_event(trace_forward, "block.attention_norm_finish", || {
+            format!(
+                "\"layer\":{},\"norm_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                self.attention.layer_idx,
+                qwen_trace_elapsed_ms(attention_norm_start),
+                qwen_trace_dims_json(x.dims()),
+                x.dtype(),
+                qwen_trace_device_kind(x.device())
+            )
+        });
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.attention_norm", Some(self.attention.layer_idx), &x)?;
         }
@@ -1055,7 +2172,18 @@ impl TransformerBlock {
             });
         }
 
+        let attention_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "block.attention_start", || {
+            format!("\"layer\":{}", self.attention.layer_idx)
+        });
         let x = self.attention.forward(&x, kv_cache, raw_tensors, dense_linear_hooks)?;
+        qwen_trace_runtime_event(trace_forward, "block.attention_finish", || {
+            format!(
+                "\"layer\":{},\"attention_ms\":{}",
+                self.attention.layer_idx,
+                qwen_trace_elapsed_ms(attention_start)
+            )
+        });
         let x = (x + residual)?;
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.post_attention_residual", Some(self.attention.layer_idx), &x)?;
@@ -1090,7 +2218,18 @@ impl TransformerBlock {
             });
         }
 
+        let ffn_norm_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "block.ffn_norm_start", || {
+            format!("\"layer\":{}", self.attention.layer_idx)
+        });
         let x = self.ffn_norm.forward(&x)?;
+        qwen_trace_runtime_event(trace_forward, "block.ffn_norm_finish", || {
+            format!(
+                "\"layer\":{},\"norm_ms\":{}",
+                self.attention.layer_idx,
+                qwen_trace_elapsed_ms(ffn_norm_start)
+            )
+        });
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.ffn_norm", Some(self.attention.layer_idx), &x)?;
         }
@@ -1113,6 +2252,10 @@ impl TransformerBlock {
             });
         }
 
+        let feed_forward_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "block.feed_forward_start", || {
+            format!("\"layer\":{}", self.attention.layer_idx)
+        });
         let x = if let Some(workspace) = workspace.as_mut() {
             self.feed_forward.forward_with_workspace(
                 &x,
@@ -1123,6 +2266,13 @@ impl TransformerBlock {
         } else {
             self.feed_forward.forward(&x, raw_tensors, dense_linear_hooks)?
         };
+        qwen_trace_runtime_event(trace_forward, "block.feed_forward_finish", || {
+            format!(
+                "\"layer\":{},\"feed_forward_ms\":{}",
+                self.attention.layer_idx,
+                qwen_trace_elapsed_ms(feed_forward_start)
+            )
+        });
         let x = (x + residual)?;
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.output", Some(self.attention.layer_idx), &x)?;
@@ -1133,6 +2283,16 @@ impl TransformerBlock {
             let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
             eprintln!("[norm] post-ffn: {norm:.6e}");
         }
+
+        qwen_trace_runtime_event(trace_forward, "block.forward_finish", || {
+            format!(
+                "\"layer\":{},\"block_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                self.attention.layer_idx,
+                qwen_trace_elapsed_ms(block_start),
+                qwen_trace_dims_json(x.dims()),
+                qwen_trace_device_kind(x.device())
+            )
+        });
 
         Ok(x)
     }
@@ -1303,14 +2463,40 @@ impl TransformerModel {
         raw_tensors: HashMap<String, Tensor>,
         dense_linear_hooks: DenseLinearRuntimeHookRegistry,
     ) -> Result<Self> {
+        let init_start = Instant::now();
+        let trace_model_init = qwen_trace_events_enabled();
         let device = vb.device().clone();
         let vocab_size = config.model.vocab_size;
         let hidden_size = config.model.hidden_size;
         let n_layers = config.model.num_layers;
+        qwen_trace_model_init_event(trace_model_init, "model_init.start", || {
+            format!(
+                "\"vocab_size\":{},\"hidden_size\":{},\"layers\":{},\"device\":\"{}\"",
+                vocab_size,
+                hidden_size,
+                n_layers,
+                qwen_trace_device_kind(&device)
+            )
+        });
 
+        qwen_trace_model_init_event(trace_model_init, "model_init.embedding_start", || {
+            format!("\"elapsed_ms\":{}", qwen_trace_elapsed_ms(init_start))
+        });
         let embed_tokens = candle_nn::embedding(vocab_size, hidden_size, vb.pp("embed_tokens"))?;
+        qwen_trace_model_init_event(trace_model_init, "model_init.embedding_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"embedding_dims\":\"{:?}\"",
+                qwen_trace_elapsed_ms(init_start),
+                embed_tokens.embeddings().dims()
+            )
+        });
 
         // Read transpose flag for embeddings (1-element tensor)
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.embed_transposed_flag_start",
+            || format!("\"elapsed_ms\":{}", qwen_trace_elapsed_ms(init_start)),
+        );
         let embed_transposed = match vb.get((1,), "embed_tokens.transposed") {
             Ok(t) => {
                 let vals = t.to_vec1::<f32>()?;
@@ -1318,6 +2504,17 @@ impl TransformerModel {
             }
             Err(_) => false, // If flag doesn't exist, assume not transposed
         };
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.embed_transposed_flag_finish",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"embed_transposed\":{}",
+                    qwen_trace_elapsed_ms(init_start),
+                    embed_transposed
+                )
+            },
+        );
 
         if embed_transposed {
             tracing::info!(
@@ -1325,20 +2522,48 @@ impl TransformerModel {
             );
         }
 
+        qwen_trace_model_init_event(trace_model_init, "model_init.layers_start", || {
+            format!("\"elapsed_ms\":{},\"layers\":{}", qwen_trace_elapsed_ms(init_start), n_layers)
+        });
         let mut layers = Vec::with_capacity(n_layers);
         for i in 0..n_layers {
-            layers.push(TransformerBlock::new(&config, vb.pp(format!("layers.{}", i)), i)?);
+            let layer_start = Instant::now();
+            qwen_trace_model_init_event(trace_model_init, "model_init.layer_start", || {
+                format!("\"elapsed_ms\":{},\"layer\":{}", qwen_trace_elapsed_ms(init_start), i)
+            });
+            let layer = TransformerBlock::new(&config, vb.pp(format!("layers.{}", i)), i)?;
+            qwen_trace_model_init_event(trace_model_init, "model_init.layer_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"layer_ms\":{}",
+                    qwen_trace_elapsed_ms(init_start),
+                    i,
+                    qwen_trace_elapsed_ms(layer_start)
+                )
+            });
+            layers.push(layer);
         }
+        qwen_trace_model_init_event(trace_model_init, "model_init.layers_finish", || {
+            format!("\"elapsed_ms\":{},\"layers\":{}", qwen_trace_elapsed_ms(init_start), n_layers)
+        });
 
         // Use RMSNorm epsilon from config header (CRITICAL: must match per-layer norms)
         let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
         tracing::info!("Final norm using RMSNorm eps={} (from header)", eps);
 
+        qwen_trace_model_init_event(trace_model_init, "model_init.final_norm_start", || {
+            format!("\"elapsed_ms\":{},\"eps\":{}", qwen_trace_elapsed_ms(init_start), eps)
+        });
         let norm =
             norm_with_optional_bias(config.model.norm_type, hidden_size, eps, vb.pp("final_norm"))?;
+        qwen_trace_model_init_event(trace_model_init, "model_init.final_norm_finish", || {
+            format!("\"elapsed_ms\":{}", qwen_trace_elapsed_ms(init_start))
+        });
 
         // Try to load lm_head, but it's optional (can be tied to embeddings)
         // Try to create the linear layer, catching errors if weights don't exist
+        qwen_trace_model_init_event(trace_model_init, "model_init.lm_head_start", || {
+            format!("\"elapsed_ms\":{}", qwen_trace_elapsed_ms(init_start))
+        });
         let (lm_head, lm_head_weight, lm_head_transposed) = match linear_with_optional_bias(
             hidden_size,
             vocab_size,
@@ -1411,6 +2636,15 @@ impl TransformerModel {
                 },
             },
         };
+        qwen_trace_model_init_event(trace_model_init, "model_init.lm_head_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"lm_head_present\":{},\"lm_head_weight_present\":{},\"lm_head_transposed\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                lm_head.is_some(),
+                lm_head_weight.is_some(),
+                lm_head_transposed
+            )
+        });
 
         // PATCH 2: Optimize tied weights by pre-transposing embeddings once at load
         // NOTE: embed_tokens.embeddings() ALWAYS returns [V,H] (Candle's internal format)
@@ -1427,8 +2661,30 @@ impl TransformerModel {
             // Always transpose [V,H] -> [H,V] for tied weights, regardless of embed_transposed flag
             // The embed_transposed flag tells us how GGUF stored it, but Candle normalizes to [V,H]
             tracing::info!("Pre-transposing tied embeddings [V,H] -> [H,V] for logits computation");
+            qwen_trace_model_init_event(
+                trace_model_init,
+                "model_init.tied_embedding_transpose_start",
+                || {
+                    format!(
+                        "\"elapsed_ms\":{},\"embedding_dims\":\"{:?}\"",
+                        qwen_trace_elapsed_ms(init_start),
+                        embed_weight.dims()
+                    )
+                },
+            );
             let transposed_weight = embed_weight.transpose(0, 1)?; // [H, V]
             tracing::info!("Transposed weight shape: {:?}", transposed_weight.dims());
+            qwen_trace_model_init_event(
+                trace_model_init,
+                "model_init.tied_embedding_transpose_finish",
+                || {
+                    format!(
+                        "\"elapsed_ms\":{},\"transposed_dims\":\"{:?}\"",
+                        qwen_trace_elapsed_ms(init_start),
+                        transposed_weight.dims()
+                    )
+                },
+            );
             (embed_transposed, Some(transposed_weight)) // Cache transposed weight
         } else {
             // Dedicated lm_head exists, no need to optimize embeddings
@@ -1460,6 +2716,9 @@ impl TransformerModel {
                 lm_head_transposed
             ),
         );
+        qwen_trace_model_init_event(trace_model_init, "model_init.finish", || {
+            format!("\"elapsed_ms\":{}", qwen_trace_elapsed_ms(init_start))
+        });
 
         Ok(Self {
             config,
@@ -1496,7 +2755,39 @@ impl TransformerModel {
     }
 
     pub fn embed(&self, tokens: &[u32]) -> Result<Tensor> {
+        let trace_embed = qwen_trace_events_enabled();
+        let embed_start = Instant::now();
+        qwen_trace_runtime_event(trace_embed, "model.embed_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"token_count\":{},\"hidden_size\":{},\"embed_transposed\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(embed_start),
+                tokens.len(),
+                self.config.model.hidden_size,
+                self.embed_transposed,
+                qwen_trace_device_kind(&self.device)
+            )
+        });
+
+        let token_tensor_start = Instant::now();
+        qwen_trace_runtime_event(trace_embed, "model.embed_token_tensor_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"token_count\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(embed_start),
+                tokens.len(),
+                qwen_trace_device_kind(&self.device)
+            )
+        });
         let token_ids = Tensor::from_vec(tokens.to_vec(), &[1, tokens.len()], &self.device)?;
+        qwen_trace_runtime_event(trace_embed, "model.embed_token_tensor_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(embed_start),
+                qwen_trace_elapsed_ms(token_tensor_start),
+                qwen_trace_dims_json(token_ids.dims()),
+                token_ids.dtype(),
+                qwen_trace_device_kind(token_ids.device())
+            )
+        });
 
         // Get dimensions
         let batch_size = token_ids.dims()[0];
@@ -1504,32 +2795,250 @@ impl TransformerModel {
         let hidden_size = self.config.model.hidden_size;
 
         // Flatten to [B*S] for index_select
+        let flatten_start = Instant::now();
+        qwen_trace_runtime_event(trace_embed, "model.embed_flatten_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(embed_start),
+                qwen_trace_dims_json(token_ids.dims()),
+                qwen_trace_device_kind(token_ids.device())
+            )
+        });
         let flat_ids = token_ids.flatten_all()?;
+        qwen_trace_runtime_event(trace_embed, "model.embed_flatten_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(embed_start),
+                qwen_trace_elapsed_ms(flatten_start),
+                qwen_trace_dims_json(flat_ids.dims()),
+                flat_ids.dtype(),
+                qwen_trace_device_kind(flat_ids.device())
+            )
+        });
 
         if self.embed_transposed {
             // Column-gather path for [hidden, vocab] storage
             // This avoids materializing the full transpose
+            let weight_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_weight_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"column_gather\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_device_kind(&self.device)
+                )
+            });
             let weight = self.embed_tokens.embeddings();
+            qwen_trace_runtime_event(trace_embed, "model.embed_weight_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"column_gather\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(weight_start),
+                    qwen_trace_dims_json(weight.dims()),
+                    weight.dtype(),
+                    qwen_trace_device_kind(weight.device())
+                )
+            });
 
             // index_select on dim=1 gathers columns from [H, V]
             // Result: [H, B*S]
+            let index_select_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_index_select_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"column_gather\",\"dim\":1,\"weight_dims\":[{}],\"id_dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_dims_json(weight.dims()),
+                    qwen_trace_dims_json(flat_ids.dims()),
+                    qwen_trace_device_kind(weight.device())
+                )
+            });
             let cols = weight.index_select(&flat_ids, 1)?;
+            qwen_trace_runtime_event(trace_embed, "model.embed_index_select_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"column_gather\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(index_select_start),
+                    qwen_trace_dims_json(cols.dims()),
+                    cols.dtype(),
+                    qwen_trace_device_kind(cols.device())
+                )
+            });
 
             // Transpose to [B*S, H] (small transpose, only B*S elements)
+            let transpose_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_transpose_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_dims_json(cols.dims()),
+                    qwen_trace_device_kind(cols.device())
+                )
+            });
             let embeddings = cols.t()?;
+            qwen_trace_runtime_event(trace_embed, "model.embed_transpose_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(transpose_start),
+                    qwen_trace_dims_json(embeddings.dims()),
+                    embeddings.dtype(),
+                    qwen_trace_device_kind(embeddings.device())
+                )
+            });
 
             // Reshape to [B, S, H]
-            Ok(embeddings.reshape(&[batch_size, seq_len, hidden_size])?)
+            let reshape_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_reshape_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"target_dims\":[{},{},{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    batch_size,
+                    seq_len,
+                    hidden_size,
+                    qwen_trace_device_kind(embeddings.device())
+                )
+            });
+            let output = embeddings.reshape(&[batch_size, seq_len, hidden_size])?;
+            qwen_trace_runtime_event(trace_embed, "model.embed_reshape_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(reshape_start),
+                    qwen_trace_dims_json(output.dims()),
+                    output.dtype(),
+                    qwen_trace_device_kind(output.device())
+                )
+            });
+            qwen_trace_runtime_event(trace_embed, "model.embed_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"column_gather\",\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_dims_json(output.dims()),
+                    qwen_trace_device_kind(output.device())
+                )
+            });
+            Ok(output)
         } else {
             // Row-gather path for standard [vocab, hidden] storage
+            let weight_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_weight_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"row_gather\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_device_kind(&self.device)
+                )
+            });
             let weight = self.embed_tokens.embeddings();
+            qwen_trace_runtime_event(trace_embed, "model.embed_weight_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"row_gather\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(weight_start),
+                    qwen_trace_dims_json(weight.dims()),
+                    weight.dtype(),
+                    qwen_trace_device_kind(weight.device())
+                )
+            });
 
-            // index_select on dim=0 gathers rows from [V, H]
-            // Result: [B*S, H]
-            let rows = weight.index_select(&flat_ids, 0)?;
+            let rows = if tokens.len() == 1 {
+                let vocab_size = weight.dims().first().copied().ok_or_else(|| {
+                    BitNetError::Validation("embedding weight must expose a vocab dimension".into())
+                })?;
+                let token_id = tokens[0] as usize;
+                if token_id >= vocab_size {
+                    return Err(BitNetError::Validation(format!(
+                        "single-token embedding id {token_id} is outside vocab size {vocab_size}"
+                    )));
+                }
+
+                // Avoid Candle CUDA index_select for the strict one-token Qwen3 frontier.
+                let narrow_start = Instant::now();
+                qwen_trace_runtime_event(
+                    trace_embed,
+                    "model.embed_single_token_narrow_start",
+                    || {
+                        format!(
+                            "\"elapsed_ms\":{},\"path\":\"row_gather_single_token_narrow\",\"dim\":0,\"weight_dims\":[{}],\"device\":\"{}\"",
+                            qwen_trace_elapsed_ms(embed_start),
+                            qwen_trace_dims_json(weight.dims()),
+                            qwen_trace_device_kind(weight.device())
+                        )
+                    },
+                );
+                let rows = weight.narrow(0, token_id, 1)?;
+                qwen_trace_runtime_event(
+                    trace_embed,
+                    "model.embed_single_token_narrow_finish",
+                    || {
+                        format!(
+                            "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"row_gather_single_token_narrow\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                            qwen_trace_elapsed_ms(embed_start),
+                            qwen_trace_elapsed_ms(narrow_start),
+                            qwen_trace_dims_json(rows.dims()),
+                            rows.dtype(),
+                            qwen_trace_device_kind(rows.device())
+                        )
+                    },
+                );
+                rows
+            } else {
+                // index_select on dim=0 gathers rows from [V, H]
+                // Result: [B*S, H]
+                let index_select_start = Instant::now();
+                qwen_trace_runtime_event(trace_embed, "model.embed_index_select_start", || {
+                    format!(
+                        "\"elapsed_ms\":{},\"path\":\"row_gather\",\"dim\":0,\"weight_dims\":[{}],\"id_dims\":[{}],\"device\":\"{}\"",
+                        qwen_trace_elapsed_ms(embed_start),
+                        qwen_trace_dims_json(weight.dims()),
+                        qwen_trace_dims_json(flat_ids.dims()),
+                        qwen_trace_device_kind(weight.device())
+                    )
+                });
+                let rows = weight.index_select(&flat_ids, 0)?;
+                qwen_trace_runtime_event(trace_embed, "model.embed_index_select_finish", || {
+                    format!(
+                        "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"row_gather\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                        qwen_trace_elapsed_ms(embed_start),
+                        qwen_trace_elapsed_ms(index_select_start),
+                        qwen_trace_dims_json(rows.dims()),
+                        rows.dtype(),
+                        qwen_trace_device_kind(rows.device())
+                    )
+                });
+                rows
+            };
 
             // Reshape to [B, S, H]
-            Ok(rows.reshape(&[batch_size, seq_len, hidden_size])?)
+            let reshape_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_reshape_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"target_dims\":[{},{},{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    batch_size,
+                    seq_len,
+                    hidden_size,
+                    qwen_trace_device_kind(rows.device())
+                )
+            });
+            let output = rows.reshape(&[batch_size, seq_len, hidden_size])?;
+            qwen_trace_runtime_event(trace_embed, "model.embed_reshape_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(reshape_start),
+                    qwen_trace_dims_json(output.dims()),
+                    output.dtype(),
+                    qwen_trace_device_kind(output.device())
+                )
+            });
+            qwen_trace_runtime_event(trace_embed, "model.embed_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"row_gather\",\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_dims_json(output.dims()),
+                    qwen_trace_device_kind(output.device())
+                )
+            });
+            Ok(output)
         }
     }
 
@@ -1684,6 +3193,16 @@ impl TransformerModel {
         mut kv_cache: Option<&mut KVCache>,
         mut workspace: Option<&mut TransformerForwardWorkspace>,
     ) -> Result<Tensor> {
+        let trace_forward = qwen_trace_events_enabled();
+        let forward_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "model.forward_start", || {
+            format!(
+                "\"dims\":[{}],\"device\":\"{}\",\"layers\":{}",
+                qwen_trace_dims_json(hidden.dims()),
+                qwen_trace_device_kind(hidden.device()),
+                self.layers.len()
+            )
+        });
         let mut x = hidden; // Take ownership - no clone needed!
 
         // Tracepoint 1: Embeddings (incremental path - single token)
@@ -1704,6 +3223,10 @@ impl TransformerModel {
         }
 
         for (i, layer) in self.layers.iter().enumerate() {
+            let layer_start = Instant::now();
+            qwen_trace_runtime_event(trace_forward, "model.forward_layer_start", || {
+                format!("\"layer\":{},\"dims\":[{}]", i, qwen_trace_dims_json(x.dims()))
+            });
             let layer_cache = kv_cache.as_mut().and_then(|c| c.layer_mut(i));
             x = if let Some(workspace) = workspace.as_mut() {
                 layer.forward_with_workspace(
@@ -1723,15 +3246,45 @@ impl TransformerModel {
             {
                 eprintln!("[norm] layer {i}: {:.6e}", norm);
             }
+            qwen_trace_runtime_event(trace_forward, "model.forward_layer_finish", || {
+                format!(
+                    "\"layer\":{},\"layer_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    i,
+                    qwen_trace_elapsed_ms(layer_start),
+                    qwen_trace_dims_json(x.dims()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
         }
 
+        let final_norm_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "model.final_norm_start", || {
+            format!("\"dims\":[{}]", qwen_trace_dims_json(x.dims()))
+        });
         let normalized = self.norm.forward(&x)?;
+        qwen_trace_runtime_event(trace_forward, "model.final_norm_finish", || {
+            format!(
+                "\"norm_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(final_norm_start),
+                qwen_trace_dims_json(normalized.dims()),
+                qwen_trace_device_kind(normalized.device())
+            )
+        });
         qwen_trace_tensor("model.final_norm", None, &normalized)?;
         if debug_attn_enabled()
             && let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
             eprintln!("[norm] final: {:.6e}", norm);
         }
+
+        qwen_trace_runtime_event(trace_forward, "model.forward_finish", || {
+            format!(
+                "\"forward_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(forward_start),
+                qwen_trace_dims_json(normalized.dims()),
+                qwen_trace_device_kind(normalized.device())
+            )
+        });
 
         Ok(normalized)
     }
@@ -2036,6 +3589,286 @@ mod tests {
         let values = output.flatten_all()?.to_vec1::<f32>()?;
 
         assert_eq!(values, vec![1.0003, -2.0007, 3.1259, -4.2509]);
+        Ok(())
+    }
+
+    #[test]
+    fn exact_q8_sidecar_runtime_hook_matches_dense_linear_reference() -> Result<()> {
+        let device = Device::Cpu;
+        let weight = Tensor::from_slice(&[0.5f32, 1.0, 1.5, 2.0], (2, 2), &device)?;
+        let linear = Linear::new(weight, None);
+        let input = Tensor::from_slice(&[2.0f32, 3.0], (1, 1, 2), &device)?;
+
+        let mut packed = Vec::new();
+        packed.extend_from_slice(&f32_to_fp16(0.5).to_le_bytes());
+        for value in [1i8, 2, 3, 4] {
+            packed.push(value as u8);
+        }
+        packed.resize(34, 0);
+
+        let mut hooks = DenseLinearRuntimeHookRegistry::default();
+        hooks.insert(
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR.to_string(),
+            DenseLinearRuntimeHookDescriptor {
+                tensor_name: "blk.0.attn_q.weight".to_string(),
+                role: "AttentionQ".to_string(),
+                sidecar_payload_sha256: Some("sha256:test".to_string()),
+                packed_q8_payload: Some(DenseLinearPackedQ8Payload {
+                    tensor_name: "blk.0.attn_q.weight".to_string(),
+                    packed_q8_bytes: std::sync::Arc::from(packed.into_boxed_slice()),
+                    q8_block_size: 32,
+                    q8_block_count: 1,
+                    matrix_rows: 2,
+                    matrix_cols: 2,
+                }),
+                runtime_compute_enabled: true,
+            },
+        );
+
+        let instrumentation_before = dense_q8_sidecar_instrumentation_snapshot();
+        let Some(output) = maybe_forward_dense_q8_sidecar_linear(
+            &input,
+            &linear,
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR,
+            &hooks,
+        )?
+        else {
+            return Err(BitNetError::Validation(
+                "expected exact Q8 sidecar runtime hook to run".to_string(),
+            ));
+        };
+
+        assert_eq!(output.dims(), &[1, 1, 2]);
+        assert_eq!(output.flatten_all()?.to_vec1::<f32>()?, vec![4.0, 9.0]);
+        assert_eq!(
+            output.flatten_all()?.to_vec1::<f32>()?,
+            linear.forward(&input)?.flatten_all()?.to_vec1::<f32>()?
+        );
+        let instrumentation_after = dense_q8_sidecar_instrumentation_snapshot();
+        assert!(
+            instrumentation_after.selector_dispatch_calls
+                > instrumentation_before.selector_dispatch_calls
+        );
+        assert!(
+            instrumentation_after.selector_selected_calls
+                > instrumentation_before.selector_selected_calls
+        );
+        assert!(
+            instrumentation_after.input_materialization_calls
+                > instrumentation_before.input_materialization_calls
+        );
+        assert!(
+            instrumentation_after.input_values_materialized
+                >= instrumentation_before.input_values_materialized + 2
+        );
+        assert!(
+            instrumentation_after.bias_materialization_calls
+                > instrumentation_before.bias_materialization_calls
+        );
+        assert!(
+            instrumentation_after.packed_matvec_calls > instrumentation_before.packed_matvec_calls
+        );
+        assert!(
+            instrumentation_after.packed_matvec_input_rows
+                >= instrumentation_before.packed_matvec_input_rows + 1
+        );
+        assert!(
+            instrumentation_after.packed_matvec_output_values
+                >= instrumentation_before.packed_matvec_output_values + 2
+        );
+        assert!(
+            instrumentation_after.output_tensor_construction_calls
+                > instrumentation_before.output_tensor_construction_calls
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn exact_q8_sidecar_runtime_hook_records_declined_selector_path() -> Result<()> {
+        let device = Device::Cpu;
+        let weight = Tensor::from_slice(&[0.5f32, 1.0, 1.5, 2.0], (2, 2), &device)?;
+        let linear = Linear::new(weight, None);
+        let input = Tensor::from_slice(&[2.0f32, 3.0], (1, 1, 2), &device)?;
+        let mut hooks = DenseLinearRuntimeHookRegistry::default();
+        hooks.insert(
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR.to_string(),
+            DenseLinearRuntimeHookDescriptor {
+                tensor_name: "blk.0.attn_q.weight".to_string(),
+                role: "AttentionQ".to_string(),
+                sidecar_payload_sha256: Some("sha256:test".to_string()),
+                packed_q8_payload: None,
+                runtime_compute_enabled: false,
+            },
+        );
+
+        let instrumentation_before = dense_q8_sidecar_instrumentation_snapshot();
+        let output = maybe_forward_dense_q8_sidecar_linear(
+            &input,
+            &linear,
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR,
+            &hooks,
+        )?;
+
+        assert!(output.is_none());
+        let instrumentation_after = dense_q8_sidecar_instrumentation_snapshot();
+        assert!(
+            instrumentation_after.selector_dispatch_calls
+                > instrumentation_before.selector_dispatch_calls
+        );
+        assert!(
+            instrumentation_after.selector_declined_calls
+                > instrumentation_before.selector_declined_calls
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn exact_q8_sidecar_runtime_hook_matches_reference_across_q8_blocks() -> Result<()> {
+        let device = Device::Cpu;
+        let mut weight_values = Vec::new();
+        for row in 0..2 {
+            for col in 0..64 {
+                let q = if row == 0 { (col as i8) - 32 } else { 31 - (col as i8) };
+                weight_values.push(f32::from(q) * 0.25);
+            }
+        }
+        let weight = Tensor::from_vec(weight_values, (2, 64), &device)?;
+        let linear = Linear::new(weight, None);
+        let input_values: Vec<f32> = (0..64)
+            .map(|idx| match idx % 5 {
+                0 => -1.0,
+                1 => -0.5,
+                2 => 0.25,
+                3 => 0.75,
+                _ => 1.5,
+            })
+            .collect();
+        let input = Tensor::from_vec(input_values, (1, 1, 64), &device)?;
+
+        let mut packed = Vec::new();
+        for block_idx in 0..4 {
+            packed.extend_from_slice(&f32_to_fp16(0.25).to_le_bytes());
+            for offset in 0..32 {
+                let flat_idx = block_idx * 32 + offset;
+                let row = flat_idx / 64;
+                let col = flat_idx % 64;
+                let q = if row == 0 { (col as i8) - 32 } else { 31 - (col as i8) };
+                packed.push(q as u8);
+            }
+        }
+
+        let mut hooks = DenseLinearRuntimeHookRegistry::default();
+        hooks.insert(
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR.to_string(),
+            DenseLinearRuntimeHookDescriptor {
+                tensor_name: "blk.0.attn_q.weight".to_string(),
+                role: "AttentionQ".to_string(),
+                sidecar_payload_sha256: Some("sha256:test".to_string()),
+                packed_q8_payload: Some(DenseLinearPackedQ8Payload {
+                    tensor_name: "blk.0.attn_q.weight".to_string(),
+                    packed_q8_bytes: std::sync::Arc::from(packed.into_boxed_slice()),
+                    q8_block_size: 32,
+                    q8_block_count: 4,
+                    matrix_rows: 2,
+                    matrix_cols: 64,
+                }),
+                runtime_compute_enabled: true,
+            },
+        );
+
+        let Some(output) = maybe_forward_dense_q8_sidecar_linear(
+            &input,
+            &linear,
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR,
+            &hooks,
+        )?
+        else {
+            return Err(BitNetError::Validation(
+                "expected exact Q8 sidecar runtime hook to run".to_string(),
+            ));
+        };
+
+        assert_eq!(output.dims(), &[1, 1, 2]);
+        assert_eq!(
+            output.flatten_all()?.to_vec1::<f32>()?,
+            linear.forward(&input)?.flatten_all()?.to_vec1::<f32>()?
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn exact_q8_sidecar_runtime_hook_matches_reference_when_rows_split_q8_blocks() -> Result<()> {
+        let device = Device::Cpu;
+        let matrix_rows = 2;
+        let matrix_cols = 40;
+        let q8_block_size = 32;
+        let q8_block_count = 3;
+        let scales = [0.125f32, 0.25, 0.5];
+        let mut weight_values = Vec::new();
+        let mut packed = Vec::new();
+
+        for block_idx in 0..q8_block_count {
+            packed.extend_from_slice(&f32_to_fp16(scales[block_idx]).to_le_bytes());
+            for offset in 0..q8_block_size {
+                let flat_idx = block_idx * q8_block_size + offset;
+                let q = ((flat_idx % 17) as i8) - 8;
+                packed.push(q as u8);
+                if flat_idx < matrix_rows * matrix_cols {
+                    weight_values.push(scales[block_idx] * f32::from(q));
+                }
+            }
+        }
+
+        let weight = Tensor::from_vec(weight_values, (matrix_rows, matrix_cols), &device)?;
+        let linear = Linear::new(weight, None);
+        let input_values: Vec<f32> = (0..matrix_cols)
+            .map(|idx| match idx % 6 {
+                0 => -1.25,
+                1 => -0.75,
+                2 => -0.25,
+                3 => 0.25,
+                4 => 0.75,
+                _ => 1.25,
+            })
+            .collect();
+        let input = Tensor::from_vec(input_values, (1, 1, matrix_cols), &device)?;
+
+        let mut hooks = DenseLinearRuntimeHookRegistry::default();
+        hooks.insert(
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR.to_string(),
+            DenseLinearRuntimeHookDescriptor {
+                tensor_name: "blk.0.attn_q.weight".to_string(),
+                role: "AttentionQ".to_string(),
+                sidecar_payload_sha256: Some("sha256:test".to_string()),
+                packed_q8_payload: Some(DenseLinearPackedQ8Payload {
+                    tensor_name: "blk.0.attn_q.weight".to_string(),
+                    packed_q8_bytes: std::sync::Arc::from(packed.into_boxed_slice()),
+                    q8_block_size,
+                    q8_block_count,
+                    matrix_rows,
+                    matrix_cols,
+                }),
+                runtime_compute_enabled: true,
+            },
+        );
+
+        let Some(output) = maybe_forward_dense_q8_sidecar_linear(
+            &input,
+            &linear,
+            SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR,
+            &hooks,
+        )?
+        else {
+            return Err(BitNetError::Validation(
+                "expected exact Q8 sidecar runtime hook to run".to_string(),
+            ));
+        };
+
+        assert_eq!(output.dims(), &[1, 1, matrix_rows]);
+        assert_eq!(
+            output.flatten_all()?.to_vec1::<f32>()?,
+            linear.forward(&input)?.flatten_all()?.to_vec1::<f32>()?
+        );
         Ok(())
     }
 

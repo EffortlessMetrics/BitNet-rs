@@ -344,7 +344,7 @@ jobs:
           fi
       - name: Upload artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: validation-artifacts
           path: artifacts/
@@ -436,7 +436,7 @@ jobs:
           toolchain: "1.95.0"
       - name: Cache test GGUF
         id: cache-gguf
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
         with:
           path: test-model.gguf
           key: test-gguf-llama2-q2k-v1
@@ -489,7 +489,7 @@ jobs:
             --nocapture
       - name: Upload parity artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: parity-artifacts
           path: artifacts/*.jsonl
