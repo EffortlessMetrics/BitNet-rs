@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T13:49:09Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-METAL-EX-002"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-METAL-EX-002-phase-parity"
+pr = 6196
+head_sha = "c5cd207782964ef895eaa6d56ddbe618856bcd9f"
+
+notes = [
+  "Opened draft PR #6196 for the selected dense SLM Metal attention-score phase parity slice.",
+  "The PR adds the deterministic CPU reference, Metal runtime dispatch, focused phase tests, and live Apple M4 receipt at `ci/hardware/apple-m4-mac-mini/2026-05-22/slm-metal-phases/metal-dense-prefill-attention-scores.json`.",
+  "The receipt keeps this proof phase-scoped: fallback_used=false, exact score parity, CPU/NEON remainder, phase-local timing, and no full Metal, BitNet, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, broad performance, or speedup claim.",
+]

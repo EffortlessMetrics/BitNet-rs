@@ -3182,13 +3182,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-EX-002"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-METAL-EX-002-phase-parity"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-METAL-EX-001"]
+pr = 6196
+head_sha = "c5cd207782964ef895eaa6d56ddbe618856bcd9f"
 acceptance = "Implement the selected Metal phase fixture with CPU reference parity, same generated token IDs/text where required by the phase, fallback=false phase receipts, and phase-local timing only."
 commands = [
   "cargo test --locked -p bitnet-kernels --no-default-features --features metal --test metal_attention_scores_phase dense_prefill_attention_scores_fixture_matches_cpu_reference",
