@@ -145,7 +145,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-CI-001 | merged | Codify PR, advisory, scheduled, release, and retention evidence lanes. |
 | M4-SETUP-001 | proposed | Prove first-run setup, fetch or repair, cache verification, and smoke receipts. |
 | M4-BENCH-007 | proposed | Calibrate the benchmark harness before timing envelopes are interpreted. |
-| M4-ROUTE-MATRIX-001 | proposed | Publish the route-state matrix for dense SLM and BitNet command surfaces. |
+| M4-ROUTE-MATRIX-001 | in_progress | Publish the route-state matrix for dense SLM and BitNet command surfaces. |
 | M4-WORKLOAD-001 | proposed | Add end-to-end operator workload receipts across enabled M4 routes. |
 | M4-EVIDENCE-REPLAY-001 | proposed | Add replayable evidence bundles for dense SLM and BitNet refreshes. |
 | M4-TREND-001 | proposed | Publish seven-day matching-identity trend history and skipped-day reasons. |

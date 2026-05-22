@@ -3057,9 +3057,11 @@ fn apple_m4_inference_status_receipt(
         &bitnet,
         &report_inventory,
     );
+    let route_state_matrix = apple_m4_route_state_matrix_json();
     let commands = serde_json::json!({
         "models": "bitnet mac models",
         "status": "bitnet mac status",
+        "route_matrix": "bitnet mac status --json",
         "report_refresh": "bitnet mac report-refresh",
         "regression_dashboard": "bitnet mac regression-dashboard",
         "fetch_default": format!("bitnet model fetch {default_model_id}"),
@@ -3082,7 +3084,7 @@ fn apple_m4_inference_status_receipt(
     );
     let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
     serde_json::json!({
-        "schema_version": "1.2.0",
+        "schema_version": "1.3.0",
         "artifact_kind": "apple_m4_inference_status",
         "generated_at": chrono::Utc::now().to_rfc3339(),
         "operator_command": "mac status",
@@ -3131,6 +3133,7 @@ fn apple_m4_inference_status_receipt(
             "claim_boundary": bitnet_mac_ask_readiness_claim_boundary(),
         },
         "readiness": readiness,
+        "route_state_matrix": route_state_matrix,
         "report_inventory": report_inventory,
         "commands": commands,
         "claim_boundary": {
@@ -3148,6 +3151,217 @@ fn apple_m4_inference_status_receipt(
             "broad_apple_silicon_claim": false,
             "broad_performance_claim": false,
             "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_route_state_matrix_json() -> serde_json::Value {
+    let rows = vec![
+        serde_json::json!({
+            "id": "dense_slm.ask",
+            "model_family": "dense_slm",
+            "surface": "ask",
+            "state": "enabled",
+            "operator_class": "interactive_or_advisory_by_model",
+            "command": "bitnet mac ask \"What is 2+2?\"",
+            "gate": "supported dense model cache verification",
+            "evidence_items": ["M4-DENSE-CHAT-001", "M4-OPS-SLO-001", "M4-CONTEXT-001"],
+            "receipt_families": ["strict local-answer receipt", "slm_apple_m4_warm_session", "apple_m4_context_guardrail"],
+            "proof_boundary": "supported Qwen dense SLM identities on apple-m4-cpu-neon with fallback_used=false",
+        }),
+        serde_json::json!({
+            "id": "dense_slm.chat",
+            "model_family": "dense_slm",
+            "surface": "chat",
+            "state": "enabled",
+            "operator_class": "interactive_or_advisory_by_model",
+            "command": "bitnet mac chat --model-family dense-slm --prompt <turn> --prompt <turn>",
+            "gate": "supported dense model cache verification plus context guardrail",
+            "evidence_items": ["M4-DENSE-CHAT-001", "M4-OPS-SLO-001", "M4-CONTEXT-001"],
+            "receipt_families": ["apple_m4_slm_chat_smoke", "slm_apple_m4_warm_session", "apple_m4_context_guardrail"],
+            "proof_boundary": "resident dense SLM chat route only; not BitNet chat and not broad chat quality",
+        }),
+        serde_json::json!({
+            "id": "dense_slm.warm_session",
+            "model_family": "dense_slm",
+            "surface": "warm_session",
+            "state": "enabled",
+            "operator_class": "interactive_or_advisory_by_model",
+            "command": "bitnet mac chat or bitnet mac benchmark --profile resident_25|resident_50|resident_100",
+            "gate": "supported dense model cache verification plus recorded resident profile envelope",
+            "evidence_items": ["M4-DENSE-CHAT-001", "M4-BENCH-002", "M4-OPS-SLO-001"],
+            "receipt_families": ["slm_apple_m4_warm_session", "apple_m4_slm_benchmark_v2"],
+            "proof_boundary": "resident dense SLM evidence; no broad performance or full-residency claim",
+        }),
+        serde_json::json!({
+            "id": "dense_slm.serve",
+            "model_family": "dense_slm",
+            "surface": "serve",
+            "state": "enabled",
+            "operator_class": "advisory",
+            "command": "bitnet mac serve --model-family dense-slm --host 127.0.0.1 --port 8080",
+            "gate": "supported dense model cache verification plus local loopback service receipts",
+            "evidence_items": ["M4-SERVE-EX-001", "M4-SERVE-EX-002", "M4-SERVE-EX-003", "M4-SERVE-EX-004"],
+            "receipt_families": [
+                "bitnet_apple_m4_local_server_health",
+                "bitnet_apple_m4_local_server_ready",
+                "bitnet_apple_m4_local_server_completion",
+                "apple_m4_serve_failure_semantics",
+                "apple_m4_serve_backpressure_smoke"
+            ],
+            "proof_boundary": "local loopback appliance service only; not production hosting or full OpenAI compatibility",
+        }),
+        serde_json::json!({
+            "id": "dense_slm.streaming",
+            "model_family": "dense_slm",
+            "surface": "streaming",
+            "state": "enabled",
+            "operator_class": "advisory",
+            "command": "bitnet mac chat --stream or bitnet mac serve streaming completion",
+            "gate": "dense chat/server conformance and failure-semantics receipts",
+            "evidence_items": ["M4-DENSE-CHAT-001", "M4-SERVE-EX-002"],
+            "receipt_families": ["apple_m4_slm_chat_smoke", "bitnet_apple_m4_local_server_completion", "apple_m4_serve_failure_semantics"],
+            "proof_boundary": "bounded local streaming semantics; not BitNet streaming proof and not production hosting",
+        }),
+        serde_json::json!({
+            "id": "dense_slm.context_profiles",
+            "model_family": "dense_slm",
+            "surface": "long_context",
+            "state": "batch_only",
+            "operator_class": "batch",
+            "command": "bitnet mac eval --suite m4-long-context or bitnet mac benchmark --profile context",
+            "gate": "recorded context envelope and timeout-aware benchmark receipts",
+            "evidence_items": ["M4-CONTEXT-001", "M4-CONTEXT-002"],
+            "receipt_families": ["apple_m4_context_guardrail", "apple_m4_slm_eval_summary", "apple_m4_slm_benchmark_v2"],
+            "proof_boundary": "bounded dense long-context evidence; contexts beyond recorded envelope are unsupported",
+        }),
+        serde_json::json!({
+            "id": "bitnet.ask",
+            "model_family": "bitnet",
+            "surface": "ask",
+            "state": "enabled",
+            "operator_class": "batch",
+            "command": "bitnet mac ask --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted.gguf> --tokenizer <tokenizer.json> <prompt>",
+            "gate": "accepted Microsoft I2_S GGUF plus external tokenizer authority",
+            "evidence_items": ["M4-BITNET-EX-003", "M4-BITNET-EX-011", "M4-BITNET-EX-014", "M4-BITNET-EX-015"],
+            "receipt_families": ["strict_bitnet_cpu_profile", "bitnet_apple_m4_mac_ask_failure", "bitnet_apple_m4_local_answer_corpus"],
+            "proof_boundary": "accepted BitNet artifact one-shot CPU/NEON route only; dense SLM evidence does not apply",
+        }),
+        serde_json::json!({
+            "id": "bitnet.warm_session",
+            "model_family": "bitnet",
+            "surface": "warm_session",
+            "state": "enabled",
+            "operator_class": "batch",
+            "command": "bitnet mac bitnet-warm --model-id microsoft-bitnet-b1.58-2B-4T-i2s --model-path <accepted.gguf> --tokenizer <tokenizer.json>",
+            "gate": "accepted artifact/tokenizer plus variable warm-session and timeout/failure receipts",
+            "evidence_items": ["M4-BITNET-EX-004", "M4-BITNET-EX-005", "M4-BENCH-006", "M4-BITNET-EX-015"],
+            "receipt_families": ["bitnet_apple_m4_warm_session", "bitnet_apple_m4_warm_session_failure", "bitnet_apple_m4_benchmark_v1"],
+            "proof_boundary": "BitNet resident warm route only; no BitNet chat, serve, broad quality, or speedup claim",
+        }),
+        serde_json::json!({
+            "id": "bitnet.chat",
+            "model_family": "bitnet",
+            "surface": "chat",
+            "state": "disabled_without_ready_gate",
+            "operator_class": "disabled",
+            "command": "bitnet mac chat --model-family bitnet --bitnet-chat-gate-receipt <gate.json>",
+            "gate": "ready bitnet_apple_m4_chat_gate receipt",
+            "evidence_items": ["M4-BITNET-EX-006"],
+            "receipt_families": ["bitnet_apple_m4_chat_gate", "bitnet_apple_m4_chat_session"],
+            "proof_boundary": "missing or blocked gate keeps the route disabled; warm receipts alone are not chat enablement",
+        }),
+        serde_json::json!({
+            "id": "bitnet.serve",
+            "model_family": "bitnet",
+            "surface": "serve",
+            "state": "disabled_without_ready_gate",
+            "operator_class": "disabled",
+            "command": "bitnet mac serve --model-family bitnet --bitnet-serve-gate-receipt <gate.json>",
+            "gate": "ready bitnet_apple_m4_serve_gate receipt after chat and serve semantics evidence",
+            "evidence_items": ["M4-BITNET-EX-007", "M4-SERVE-EX-002", "M4-SERVE-EX-004"],
+            "receipt_families": ["bitnet_apple_m4_serve_gate", "bitnet_apple_m4_serve_completion", "apple_m4_serve_failure_semantics", "apple_m4_serve_backpressure_smoke"],
+            "proof_boundary": "dense serve receipts do not prove BitNet serve; missing or blocked gate keeps the route disabled",
+        }),
+        serde_json::json!({
+            "id": "bitnet.streaming",
+            "model_family": "bitnet",
+            "surface": "streaming",
+            "state": "disabled_without_ready_gate",
+            "operator_class": "disabled",
+            "command": "bitnet mac chat --model-family bitnet --stream or gated bitnet mac serve streaming completion",
+            "gate": "ready BitNet chat or serve gate plus streaming semantics receipt",
+            "evidence_items": ["M4-BITNET-EX-006", "M4-BITNET-EX-007", "M4-SERVE-EX-002"],
+            "receipt_families": ["bitnet_apple_m4_chat_gate", "bitnet_apple_m4_chat_session", "bitnet_apple_m4_serve_gate", "bitnet_apple_m4_serve_completion"],
+            "proof_boundary": "BitNet streaming remains gate-required and separate from dense streaming evidence",
+        }),
+        serde_json::json!({
+            "id": "bitnet.context_profiles",
+            "model_family": "bitnet",
+            "surface": "long_context",
+            "state": "batch_only",
+            "operator_class": "batch",
+            "command": "bitnet mac ask or bitnet mac bitnet-warm inside the recorded BitNet prompt envelope",
+            "gate": "accepted artifact/tokenizer plus 512-token recorded envelope",
+            "evidence_items": ["M4-CONTEXT-001", "M4-CONTEXT-002", "M4-BITNET-EX-015"],
+            "receipt_families": ["apple_m4_context_guardrail", "bitnet_apple_m4_warm_session", "bitnet_apple_m4_local_answer_corpus"],
+            "proof_boundary": "BitNet requests beyond the recorded prompt envelope are unsupported",
+        }),
+        serde_json::json!({
+            "id": "apple_m4.full_metal",
+            "model_family": "all",
+            "surface": "full_metal",
+            "state": "unsupported",
+            "operator_class": "unsupported",
+            "command": "do not use apple-m4-metal as a full inference route",
+            "gate": "future phase-scoped Metal receipt required",
+            "evidence_items": [],
+            "receipt_families": [],
+            "proof_boundary": "existing Metal evidence is phase-scoped and does not prove full apple-m4-metal inference",
+        }),
+        serde_json::json!({
+            "id": "apple_m4.unsupported_backends",
+            "model_family": "all",
+            "surface": "qk256_neural_engine_mpsgraph_macbook_broad_apple_silicon",
+            "state": "unsupported",
+            "operator_class": "unsupported",
+            "command": "do not route M4 appliance claims to QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon paths",
+            "gate": "separate receipt-backed campaign required",
+            "evidence_items": [],
+            "receipt_families": [],
+            "proof_boundary": "no accepted receipt for these routes in the M4 Mac mini appliance envelope",
+        }),
+    ];
+    serde_json::json!({
+        "work_item": "M4-ROUTE-MATRIX-001",
+        "artifact_kind": "apple_m4_route_state_matrix",
+        "model_free": true,
+        "live_model_run": false,
+        "generic_pr_ci_safe": true,
+        "state_contract": {
+            "enabled": "The route may run when its cache and gate preconditions pass.",
+            "disabled_without_ready_gate": "The route exists but must fail closed unless a ready gate receipt is supplied.",
+            "batch_only": "The route is valid but should be treated as slow or unattended based on recorded evidence.",
+            "unsupported": "No accepted M4 Mac mini appliance receipt supports this route or claim."
+        },
+        "required_surfaces": ["ask", "chat", "warm_session", "serve", "streaming", "long_context", "full_metal", "qk256_neural_engine_mpsgraph_macbook_broad_apple_silicon"],
+        "rows": rows,
+        "claim_boundary": {
+            "route_matrix_only": true,
+            "no_live_model_run": true,
+            "does_not_enable_disabled_routes": true,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "bitnet_chat_enabled_by_default": false,
+            "bitnet_serve_enabled_by_default": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false
         },
     })
 }
@@ -3380,7 +3594,7 @@ fn apple_m4_operator_evidence_receipt(
     );
     let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
     serde_json::json!({
-        "schema_version": "1.2.0",
+        "schema_version": "1.3.0",
         "artifact_kind": "apple_m4_operator_evidence_summary",
         "generated_at": chrono::Utc::now().to_rfc3339(),
         "operator_command": "mac evidence",
@@ -3435,6 +3649,7 @@ fn apple_m4_operator_evidence_receipt(
         },
         "reports": apple_m4_operator_evidence_reports(root, &report_manifest),
         "current_regressions": apple_m4_operator_regression_summary(&regression_dashboard),
+        "route_state_matrix": apple_m4_route_state_matrix_json(),
         "unsupported_claims": {
             "bitnet_chat": false,
             "bitnet_serve": false,
@@ -3453,6 +3668,7 @@ fn apple_m4_operator_evidence_receipt(
         "commands": {
             "models": "bitnet mac models",
             "status": "bitnet mac status",
+            "route_matrix": "bitnet mac evidence --json",
             "evidence": "bitnet mac evidence",
             "report_refresh": "bitnet mac report-refresh",
             "regression_dashboard": "bitnet mac regression-dashboard",
@@ -20113,7 +20329,7 @@ fn validate_mac_receipt_value(
     {
         anyhow::bail!("{} claims broad Mac performance or speedup", path.display());
     }
-    if receipt["schema_version"].as_str() == Some("1.2.0")
+    if matches!(receipt["schema_version"].as_str(), Some("1.2.0") | Some("1.3.0"))
         || !receipt["run_identity_sha256"].is_null()
     {
         bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
@@ -22099,6 +22315,10 @@ fn validate_apple_m4_inference_status_receipt(
     if m4_report_ops_has_operator_affordances(schema_version) {
         require_m4_operator_route_readiness(path, receipt, &["readiness"])?;
     }
+    if m4_report_ops_requires_route_state_matrix(schema_version) {
+        require_apple_m4_route_state_matrix(path, receipt)?;
+        require_non_empty_string_at(path, receipt, &["commands", "route_matrix"])?;
+    }
 
     for field in [
         "models",
@@ -22221,6 +22441,10 @@ fn validate_apple_m4_operator_evidence_summary_receipt(
     {
         require_non_empty_string_at(path, receipt, &["commands", field])?;
     }
+    if m4_report_ops_requires_route_state_matrix(schema_version) {
+        require_apple_m4_route_state_matrix(path, receipt)?;
+        require_non_empty_string_at(path, receipt, &["commands", "route_matrix"])?;
+    }
 
     require_bool_at(path, receipt, &["claim_boundary", "evidence_summary_only"], true)?;
     require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
@@ -22243,6 +22467,115 @@ fn validate_apple_m4_operator_evidence_summary_receipt(
     require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
     require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
     Ok((Some(0), Some(0)))
+}
+
+fn require_apple_m4_route_state_matrix(path: &Path, receipt: &serde_json::Value) -> Result<()> {
+    let matrix = &receipt["route_state_matrix"];
+    require_exact_string_at(path, matrix, &["work_item"], "M4-ROUTE-MATRIX-001")?;
+    require_exact_string_at(path, matrix, &["artifact_kind"], "apple_m4_route_state_matrix")?;
+    require_bool_at(path, matrix, &["model_free"], true)?;
+    require_bool_at(path, matrix, &["live_model_run"], false)?;
+    require_bool_at(path, matrix, &["model_download"], false)?;
+    require_bool_at(path, matrix, &["generic_pr_ci_safe"], true)?;
+    require_bool_at(path, matrix, &["claim_boundary", "route_matrix_only"], true)?;
+    require_bool_at(path, matrix, &["claim_boundary", "does_not_enable_disabled_routes"], true)?;
+    require_bool_at(
+        path,
+        matrix,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, matrix, &["claim_boundary", "bitnet_chat_enabled_by_default"], false)?;
+    require_bool_at(path, matrix, &["claim_boundary", "bitnet_serve_enabled_by_default"], false)?;
+    for state in ["enabled", "disabled_without_ready_gate", "batch_only", "unsupported"] {
+        require_non_empty_string_at(path, matrix, &["state_contract", state])?;
+    }
+    require_non_empty_string_array_at(path, matrix, &["required_surfaces"])?;
+
+    let rows = matrix["rows"]
+        .as_array()
+        .ok_or_else(|| anyhow!("{} M4 route state matrix must contain rows", path.display()))?;
+    let required_ids = [
+        "dense_slm.ask",
+        "dense_slm.chat",
+        "dense_slm.warm_session",
+        "dense_slm.serve",
+        "dense_slm.streaming",
+        "dense_slm.context_profiles",
+        "bitnet.ask",
+        "bitnet.warm_session",
+        "bitnet.chat",
+        "bitnet.serve",
+        "bitnet.streaming",
+        "bitnet.context_profiles",
+        "apple_m4.full_metal",
+        "apple_m4.unsupported_backends",
+    ];
+    for id in required_ids {
+        if !rows.iter().any(|row| row["id"].as_str() == Some(id)) {
+            anyhow::bail!("{} M4 route state matrix is missing row {id}", path.display());
+        }
+    }
+
+    for row in rows {
+        let id = require_non_empty_string_at(path, row, &["id"])?;
+        let model_family = require_non_empty_string_at(path, row, &["model_family"])?;
+        if !matches!(model_family, "dense_slm" | "bitnet" | "all") {
+            anyhow::bail!(
+                "{} M4 route state matrix row {id} has unsupported model_family {model_family}",
+                path.display()
+            );
+        }
+        require_non_empty_string_at(path, row, &["surface"])?;
+        let state = require_non_empty_string_at(path, row, &["state"])?;
+        if !matches!(
+            state,
+            "enabled" | "disabled_without_ready_gate" | "batch_only" | "unsupported"
+        ) {
+            anyhow::bail!(
+                "{} M4 route state matrix row {id} has unsupported state {state}",
+                path.display()
+            );
+        }
+        let operator_class = require_non_empty_string_at(path, row, &["operator_class"])?;
+        if !matches!(
+            operator_class,
+            "interactive_or_advisory_by_model" | "advisory" | "batch" | "disabled" | "unsupported"
+        ) {
+            anyhow::bail!(
+                "{} M4 route state matrix row {id} has unsupported operator_class {operator_class}",
+                path.display()
+            );
+        }
+        require_non_empty_string_at(path, row, &["command"])?;
+        require_non_empty_string_at(path, row, &["gate"])?;
+        require_non_empty_string_at(path, row, &["proof_boundary"])?;
+        if state == "unsupported" {
+            let evidence_items = row["evidence_items"].as_array().ok_or_else(|| {
+                anyhow!(
+                    "{} M4 route state matrix unsupported row {id} must record empty evidence arrays",
+                    path.display()
+                )
+            })?;
+            let receipt_families = row["receipt_families"].as_array().ok_or_else(|| {
+                anyhow!(
+                    "{} M4 route state matrix unsupported row {id} must record empty receipt arrays",
+                    path.display()
+                )
+            })?;
+            if !evidence_items.is_empty() || !receipt_families.is_empty() {
+                anyhow::bail!(
+                    "{} M4 route state matrix unsupported row {id} must keep evidence arrays empty",
+                    path.display()
+                );
+            }
+        } else {
+            require_non_empty_string_array_at(path, row, &["evidence_items"])?;
+            require_non_empty_string_array_at(path, row, &["receipt_families"])?;
+        }
+    }
+
+    Ok(())
 }
 
 fn validate_apple_m4_report_refresh_manifest_receipt(
@@ -23467,9 +23800,13 @@ fn require_m4_report_ops_schema_version<'a>(
     receipt: &'a serde_json::Value,
 ) -> Result<&'a str> {
     let schema_version = require_non_empty_string_at(path, receipt, &["schema_version"])?;
-    if schema_version != "1.0.0" && schema_version != "1.1.0" && schema_version != "1.2.0" {
+    if schema_version != "1.0.0"
+        && schema_version != "1.1.0"
+        && schema_version != "1.2.0"
+        && schema_version != "1.3.0"
+    {
         anyhow::bail!(
-            "{} unsupported M4 report ops schema_version {schema_version:?}; expected 1.0.0, 1.1.0, or 1.2.0",
+            "{} unsupported M4 report ops schema_version {schema_version:?}; expected 1.0.0, 1.1.0, 1.2.0, or 1.3.0",
             path.display()
         );
     }
@@ -23477,11 +23814,15 @@ fn require_m4_report_ops_schema_version<'a>(
 }
 
 fn m4_report_ops_has_operator_affordances(schema_version: &str) -> bool {
-    matches!(schema_version, "1.1.0" | "1.2.0")
+    matches!(schema_version, "1.1.0" | "1.2.0" | "1.3.0")
 }
 
 fn m4_report_ops_requires_run_identity(schema_version: &str) -> bool {
-    schema_version == "1.2.0"
+    matches!(schema_version, "1.2.0" | "1.3.0")
+}
+
+fn m4_report_ops_requires_route_state_matrix(schema_version: &str) -> bool {
+    schema_version == "1.3.0"
 }
 
 fn require_m4_operator_status_at<'a>(
@@ -30519,6 +30860,47 @@ mod tests {
                 .ok_or_else(|| std::io::Error::other("warm command"))?
                 .contains("bitnet mac bitnet-warm")
         );
+        Ok(())
+    }
+
+    #[test]
+    fn apple_m4_route_state_matrix_preserves_gates_and_claim_boundaries()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let matrix = apple_m4_route_state_matrix_json();
+        let rows =
+            matrix["rows"].as_array().ok_or_else(|| std::io::Error::other("route matrix rows"))?;
+
+        assert_eq!(matrix["work_item"], "M4-ROUTE-MATRIX-001");
+        assert_eq!(matrix["live_model_run"], false);
+        assert_eq!(matrix["claim_boundary"]["does_not_enable_disabled_routes"], true);
+        assert_eq!(matrix["claim_boundary"]["bitnet_chat_enabled_by_default"], false);
+        assert_eq!(matrix["claim_boundary"]["bitnet_serve_enabled_by_default"], false);
+        assert!(rows.iter().any(|row| {
+            row["id"] == "dense_slm.serve"
+                && row["state"] == "enabled"
+                && row["receipt_families"].as_array().is_some_and(|families| {
+                    families
+                        .iter()
+                        .any(|family| family.as_str() == Some("apple_m4_serve_backpressure_smoke"))
+                })
+        }));
+        assert!(rows.iter().any(|row| {
+            row["id"] == "bitnet.chat"
+                && row["state"] == "disabled_without_ready_gate"
+                && row["receipt_families"].as_array().is_some_and(|families| {
+                    families
+                        .iter()
+                        .any(|family| family.as_str() == Some("bitnet_apple_m4_chat_gate"))
+                })
+        }));
+        assert!(rows.iter().any(|row| {
+            row["id"] == "apple_m4.full_metal"
+                && row["state"] == "unsupported"
+                && row["evidence_items"].as_array().is_some_and(|items| items.is_empty())
+        }));
+
+        let receipt = serde_json::json!({ "route_state_matrix": matrix });
+        require_apple_m4_route_state_matrix(Path::new("route-state-matrix.json"), &receipt)?;
         Ok(())
     }
 

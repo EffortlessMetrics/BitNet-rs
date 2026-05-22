@@ -134,3 +134,7 @@ uses matching report history before describing trends.
 Live M4 model runs belong in local, advisory, scheduled, or release lanes.
 The shared M4 CI lane and artifact-retention contract is recorded in
 `docs/slm/apple-m4-evidence-ci-lanes.md`.
+
+`M4-ROUTE-MATRIX-001` adds the route-state table embedded in
+`bitnet mac status --json` and `bitnet mac evidence --json`. The documented
+operator view is `docs/slm/apple-m4-route-state-matrix.md`.
