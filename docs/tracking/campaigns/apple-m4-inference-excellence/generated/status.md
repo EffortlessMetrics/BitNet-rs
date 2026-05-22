@@ -2,7 +2,7 @@
 # Apple M4 inference excellence Campaign Status
 
 - Campaign: `apple-m4-inference-excellence`
-- State: `active`
+- State: `complete`
 - Objective: Move the M4 Mac mini from complete evidence lanes to excellent, repeatable local inference across supported dense SLMs and BitNet: deeper deterministic accuracy, fuller benchmark envelopes, enough matching-history receipts to remove important insufficient-history gaps, BitNet-specific product proof, reproducible run and artifact identity, service-surface conformance, clearer operator UX, and phase-scoped acceleration discipline without broad Apple Silicon or unsupported backend claims.
 
 ## Work Items
