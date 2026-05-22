@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T10:13:49Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CLAIM-LINT-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-CLAIM-LINT-001-claim-boundary-check"
+pr = 6190
+head_sha = "80ce088eaf72703f2189155119f3ca8f5d1617c5"
+merge_sha = "8d42d001124ee891be3f6ab3520aed7c6410e1b3"
+
+notes = [
+  "Merged PR #6190 after all named GitHub checks passed.",
+  "M4-CLAIM-LINT-001 adds static claim-boundary wording checks for M4 docs, generated tracker status, and operator-facing strings.",
+  "The merged source slice is a claim-boundary gate only; it does not run live inference, prove runtime quality or speed, enable BitNet chat or serve, or authorize unsupported Apple Silicon, MacBook, full Metal, Neural Engine, MPSGraph, QK256, dense-as-BitNet, broad quality, broad performance, or speedup claims.",
+]
