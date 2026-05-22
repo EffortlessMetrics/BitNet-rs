@@ -2,7 +2,7 @@
 
 Campaign ID: `apple-m4-inference-excellence`
 
-Status: active; tracker has 78/78 work items merged and no next item.
+Status: complete; tracker has 78/78 work items merged and no next item.
 
 ## Objective
 
@@ -93,6 +93,8 @@ Current generated state:
 - 78 merged work items.
 - `docs/tracking/generated/global-dashboard.md` reports
   `M4-METAL-EX-002` as merged with next item `none`.
+- Completion audit:
+  `ci/hardware/apple-m4-mac-mini/2026-05-22/m4-inference-excellence-completion-audit.json`.
 
 | Area | Merged tracker items |
 |---|---|

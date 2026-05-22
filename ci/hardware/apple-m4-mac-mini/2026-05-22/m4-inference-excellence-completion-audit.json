@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "apple_m4_inference_excellence_completion_audit",
+  "proof_stage": "campaign_completion_audit_no_new_inference",
+  "created_utc": "2026-05-22T16:10:07Z",
+  "machine_id": "apple-m4-mac-mini",
+  "source_revision": "982f6533406b1e834e36435eefb45170556dd09a",
+  "audited_campaign": "apple-m4-inference-excellence",
+  "audited_objective": "Make the M4 Mac mini a receipt-backed local inference appliance for supported dense SLMs and BitNet: larger deterministic evals, repeatable benchmark and regression envelopes, BitNet-specific proof, operator UX, local service receipts, release gates, and phase-scoped Metal discipline without unsupported backend or broad platform claims.",
+  "completion_decision": "complete_with_recorded_boundaries",
+  "operator_appliance_ready": true,
+  "bitnet_chat_and_serve_status": "route contracts are present, but routes remain disabled without ready gate receipts",
+  "decision_reason": "The tracker has 78/78 work items merged and campaign next reports none. Committed artifacts cover repeated dense SLM eval and benchmark evidence, BitNet-specific eval/benchmark/warm evidence, route and service conformance, operator UX, regression/trend/release gates, reproducibility, and one phase-scoped Metal receipt. Validation commands pass locally, and claim boundaries remain explicit for dense SLM vs BitNet, local service vs production hosting, and phase-scoped Metal vs full apple-m4-metal inference.",
+  "validated_this_turn": [
+    {
+      "command": "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+      "result": "passed"
+    },
+    {
+      "command": "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+      "result": "passed_before_and_after_closeout_patch"
+    },
+    {
+      "command": "cargo run --locked -p xtask --no-default-features -- claim-lint --scope apple-m4 --check",
+      "result": "passed"
+    },
+    {
+      "command": "cargo run --locked -p xtask --no-default-features -- campaign next apple-m4-inference-excellence",
+      "result": "next_item_none"
+    }
+  ],
+  "prompt_to_artifact_checklist": [
+    {
+      "id": "tracker_closeout",
+      "status": "covered",
+      "requirement": "All explicit campaign work should be merged with no hidden next item before marking the goal complete.",
+      "evidence": [
+        "docs/tracking/campaigns/apple-m4-inference-excellence/active.toml",
+        "docs/tracking/campaigns/apple-m4-inference-excellence/generated/status.md",
+        "docs/tracking/generated/global-dashboard.md"
+      ],
+      "verification": [
+        "campaign check apple-m4-inference-excellence passed",
+        "campaign next apple-m4-inference-excellence reported next_item: none"
+      ]
+    },
+    {
+      "id": "dense_slm_accuracy_depth",
+      "status": "covered",
+      "requirement": "Supported dense M4 SLM models need larger deterministic mechanical evals, task-family pass rates, generated text/token IDs, matching history, and no broad quality claim.",
+      "evidence": [
+        "ci/quality/apple-m4-slm-eval-seeded-corpus-v2.yaml",
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/task-family-pass-rates.json",
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/task-family-pass-rates.json",
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/report-refresh/report-refresh-manifest.json",
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/regression-dashboard/regression-dashboard.json"
+      ],
+      "verification": [
+        "Report-refresh status is ok with dense SLM and BitNet families separated.",
+        "Regression dashboard status is ok with 9 comparable groups."
+      ]
+    },
+    {
+      "id": "dense_slm_benchmark_envelope",
+      "status": "covered_with_timeout_boundaries",
+      "requirement": "Dense SLM benchmarks should expose load, tokenization, prefill/input throughput, TTFT, output/decode throughput, sampling overhead, total wall, peak memory, drift, percentile summaries, variance, and invalid-comparison reasons.",
+      "evidence": [
+        "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2",
+        "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance",
+        "docs/slm/apple-m4-inference-excellence.md"
+      ],
+      "verification": [
+        "Dense benchmark summaries validate as apple_m4_slm_benchmark_v2.",
+        "Variance receipts keep context-profile timeouts invalid for timing comparison instead of converting them into speed claims."
+      ]
+    },
+    {
+      "id": "bitnet_specific_evidence",
+      "status": "covered",
+      "requirement": "BitNet must have its own accepted-artifact evidence for one-shot ask, variable warm sessions, deterministic evals, benchmark variance, timeout/progress UX, chat gate, and serve gate without using dense Qwen evidence.",
+      "evidence": [
+        "ci/quality/apple-m4-bitnet-eval-seeded-corpus.yaml",
+        "ci/quality/apple-m4-bitnet-eval-seeded-corpus-250.yaml",
+        "ci/hardware/apple-m4-mac-mini/2026-05-20T0133Z/bitnet-eval-250-repaired/answer-corpus.json",
+        "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json",
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0847Z/bitnet-warm/variable-warm-session.json",
+        "docs/slm/apple-m4-inference-excellence.md"
+      ],
+      "verification": [
+        "BitNet receipts preserve accepted Microsoft I2_S artifact and external tokenizer identity.",
+        "Dense Qwen evidence is not used as BitNet proof.",
+        "The current 250-case BitNet decision remains keep-repairing, not broad BitNet quality."
+      ]
+    },
+    {
+      "id": "operator_appliance_surface",
+      "status": "covered",
+      "requirement": "A user should be able to discover models, verify cache, run ask/chat/serve/doctor/smoke/regression style commands, and get receipts with identity, tokenizer, backend, fallback, text/token IDs, timing, memory, and claim boundaries.",
+      "evidence": [
+        "docs/hardware/apple-m4-mac-mini-operator-runbook.md",
+        "docs/hardware/apple-m4-mac-mini-validation.md",
+        "docs/slm/apple-m4-operator-envelope-v3.md",
+        "docs/slm/apple-m4-route-state-matrix.md",
+        "docs/slm/apple-m4-workload-suite.md",
+        "ci/hardware/apple-m4-mac-mini/2026-05-19T040154Z/setup/summary.json"
+      ],
+      "verification": [
+        "Operator surfaces keep dense SLM and BitNet readiness separate.",
+        "Workload and replay surfaces are model-free contracts unless a lane explicitly records live evidence."
+      ]
+    },
+    {
+      "id": "service_and_reliability",
+      "status": "covered",
+      "requirement": "Dense SLM and BitNet service surfaces need health, ready, streaming, timeout, cancellation, failure, per-request receipt, queue, backpressure, and safety-default conformance before claims expand.",
+      "evidence": [
+        "ci/hardware/apple-m4-mac-mini/2026-05-20T2147Z/slm-serve",
+        "ci/hardware/apple-m4-mac-mini/2026-05-21T1915Z/serve-failure-semantics/summary.json",
+        "ci/hardware/apple-m4-mac-mini/2026-05-20T194116Z/reliability-drills/summary.json",
+        "docs/slm/apple-m4-inference-excellence.md",
+        "docs/slm/apple-m4-release-go-no-go.md"
+      ],
+      "verification": [
+        "Dense local service evidence remains local-appliance scoped.",
+        "BitNet serve remains gated by its own ready receipt and service semantics."
+      ]
+    },
+    {
+      "id": "regression_trend_release_gates",
+      "status": "covered",
+      "requirement": "Maintainers should be able to compare reports, understand accuracy/timing/memory/reliability drift, and know what gates are required before expectation-envelope changes.",
+      "evidence": [
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/report-refresh/report-refresh-manifest.json",
+        "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/regression-dashboard/regression-dashboard.json",
+        "ci/hardware/apple-m4-mac-mini/2026-05-22T0530Z/trend/seven-day-history.json",
+        "docs/slm/apple-m4-release-go-no-go.md",
+        "docs/slm/apple-m4-evidence-ci-lanes.md"
+      ],
+      "verification": [
+        "Report-refresh and regression-dashboard keep committed-report analysis model-free.",
+        "Seven-day trend keeps later unmatched receipts separate until a second matching receipt exists.",
+        "Generic PR CI remains schema/parser/fixture/receipt oriented."
+      ]
+    },
+    {
+      "id": "reproducibility_and_artifact_identity",
+      "status": "covered",
+      "requirement": "Receipts and docs should preserve machine, OS, git/build, model artifact, tokenizer authority, prompt template, backend, fallback, corpus/profile seed, and command class.",
+      "evidence": [
+        "docs/slm/apple-m4-inference-excellence.md",
+        "docs/slm/apple-m4-evidence-replay.md",
+        "ci/hardware/apple-m4-mac-mini/2026-05-22T0400Z/evidence-replay/dense-slm-q8-eval/manifest.json",
+        "docs/slm/apple-m4-mini-user-expectation-envelope.md"
+      ],
+      "verification": [
+        "Receipt-schema compatibility and replay bundles validate identity fields from committed artifacts.",
+        "Supported-model lifecycle and compatibility-refresh docs define invalidation and rollback behavior."
+      ]
+    },
+    {
+      "id": "phase_scoped_metal",
+      "status": "covered",
+      "requirement": "Metal work must stay phase-scoped with CPU reference parity, fallback-free receipts, phase-local timing, and explicit CPU/NEON remainder.",
+      "evidence": [
+        "docs/slm/apple-m4-metal-ex-phase-choice.md",
+        "ci/hardware/apple-m4-mac-mini/2026-05-22/slm-metal-phases/metal-dense-prefill-attention-scores.json",
+        "crates/bitnet-kernels/tests/metal_attention_scores_phase.rs"
+      ],
+      "verification": [
+        "The final Metal item is one dense SLM prefill attention-score phase only.",
+        "No full apple-m4-metal, BitNet Metal, QK256, Neural Engine, MPSGraph, speedup, or broad Apple Silicon claim is made."
+      ]
+    },
+    {
+      "id": "claim_boundary",
+      "status": "covered",
+      "requirement": "Unsupported broad platform, broad performance, broad quality, MacBook, full Metal, Neural Engine, MPSGraph, QK256, dense-as-BitNet, and speedup wording must be blocked unless tied to accepted receipts.",
+      "evidence": [
+        "xtask",
+        "docs/slm/apple-m4-inference-excellence.md",
+        "docs/tracking/campaigns/apple-m4-inference-excellence/generated/status.md"
+      ],
+      "verification": [
+        "claim-lint --scope apple-m4 --check passed."
+      ]
+    }
+  ],
+  "claim_boundary": {
+    "dense_slm_and_bitnet_evidence_separated": true,
+    "bitnet_chat_claim_requires_gate": true,
+    "bitnet_serve_claim_requires_gate": true,
+    "local_service_not_production_hosting": true,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "macbook_evidence_claimed": false,
+    "broad_apple_silicon_claim": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "speedup_claim": false,
+    "generic_pr_ci_live_model_run_required": false,
+    "model_binaries_committed": false
+  },
+  "residual_risks": [
+    {
+      "risk": "Some live timing receipts are invalid_for_comparison because calibrated long-context profiles timed out.",
+      "mitigation": "The invalid-comparison status is committed as evidence and does not support speed or drift claims."
+    },
+    {
+      "risk": "BitNet repaired 250-case matching history shows advisory quality regressions.",
+      "mitigation": "The campaign records keep-repairing as the next BitNet quality decision and does not claim a broad BitNet quality envelope."
+    },
+    {
+      "risk": "Future model, tokenizer, OS, binary-profile, or route-gate changes can stale current evidence.",
+      "mitigation": "Compatibility refresh, supported-model lifecycle, trend retention, and release go/no-go docs define when envelopes must be refreshed."
+    }
+  ]
+}
