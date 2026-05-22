@@ -2900,13 +2900,16 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EVIDENCE-REPLAY-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-RECEIPT-001", "M4-CI-001", "M4-REPRO-001"]
+pr = 6182
+head_sha = "22cc5eb0da30a090a7b96b41031c1354c7344724"
+merge_sha = "62a5f3a30523c619a371a536a778cc8601236938"
 acceptance = "Add replayable M4 evidence bundles that list the exact commands, git/binary identity, model/tokenizer identity, receipt inputs, dashboard outputs, expected regression result, and claim boundary so an operator can reproduce or audit a dense SLM or BitNet evidence refresh."
 commands = [
   "bitnet mac evidence replay --bundle ci/hardware/apple-m4-mac-mini/<date>/<bundle>/manifest.json --dry-run --json",
@@ -2937,7 +2940,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-TREND-001"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
 stackable = false
 review_mode = "codex_premerge"
