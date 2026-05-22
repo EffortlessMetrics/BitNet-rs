@@ -1349,3 +1349,29 @@ tensor, the dashboard must say so.
 This dashboard does not claim end-to-end speedup, sustained 8250U throughput,
 broad answer quality, Q4/Q5 runtime support, server execution, GPU/NPU/OpenVINO
 or UHD 620 execution, Qwen3.5 support, or BitNet QK256/I2_S changes.
+
+## SLM-CPU-081 Repeated Timing Gate
+
+SLM-CPU-081 records the next evidence boundary for the exact-tensor packed-Q8
+path after the SLM-CPU-079 counter improvement:
+
+```text
+artifact = ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-081-repeated-packed-q8-timing-gate.json
+classification.result = not_claimed
+minimum_receipts_per_side = 3
+current_baseline_receipts = 1
+current_candidate_receipts = 1
+```
+
+The available evidence still matters: the SLM-CPU-079 candidate preserved the
+Qwen3 Q8_0 behavior oracle and reduced the bounded `packed_matvec_ns` counter
+relative to the SLM-CPU-077 sidecar oracle. That is a counter-level result, not
+repeated end-to-end timing evidence. A future timing classification must compare
+at least three behavior-equivalent baseline receipts and three
+behavior-equivalent candidate receipts for the same host, model SHA, thread
+count, prompt corpus, tokenizer authority, backend identity, dense hook identity,
+and `fallback_used = false` boundary.
+
+The exact-tensor packed-Q8 sidecar remains opt-in, scoped to
+`layers.0.attention.q_proj.weight`, and is not promoted to the default runtime by
+this gate.

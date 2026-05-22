@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T17:03:32Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-081"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+actor = "codex"
+pr = 349
+branch = "codex/slm-cpu-081-repeated-packed-q8-timing"
+head_sha = "1c23649b9c6b62fe440ce4dcf88563fdbb25ca5a"
+summary = "Opened PR #349 with the repeated packed-Q8 timing evidence gate."
+notes = [
+  "The PR records the current SLM-CPU-077/079 packed-Q8 evidence as single-run counter evidence, not repeated end-to-end timing proof.",
+  "The gate requires repeated behavior-equivalent before/after warm-session receipts before any timing classification can move beyond not_claimed.",
+  "No default packed-Q8 enablement, end-to-end speedup, sustained-throughput, Q4/Q5, server, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

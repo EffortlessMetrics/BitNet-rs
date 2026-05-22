@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_repeated_packed_q8_timing_gate",
+  "work_item": "SLM-CPU-081",
+  "claim": "repeated_packed_q8_timing_evidence_gate",
+  "model": {
+    "repo": "Qwen/Qwen3-0.6B-GGUF",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0"
+  },
+  "host": {
+    "id": "intel-i5-8250u",
+    "cpu_model": "Intel64 Family 6 Model 142 Stepping 10, GenuineIntel",
+    "threads": 4,
+    "bounded_to_host": true
+  },
+  "runtime_boundary": {
+    "requested_backend": "cpu",
+    "selected_backend": "cpu-rust",
+    "runtime_api": "cpu",
+    "fallback_used": false,
+    "strict_tokenizer_required": true,
+    "tokenizer_source_required": "gguf_metadata",
+    "packed_q8_sidecar_default_enabled": false,
+    "packed_q8_sidecar_scope": "opt_in_exact_tensor_only",
+    "exact_tensor": "layers.0.attention.q_proj.weight",
+    "selected_path": "packed_q8_sidecar",
+    "selected_kernel": "dense-q8-sidecar-linear"
+  },
+  "available_evidence": {
+    "baseline": {
+      "work_item": "SLM-CPU-077",
+      "path": "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-077-post-bridge-packed-q8-sidecar-warm-session.json",
+      "receipt_count": 1,
+      "total_session_ms": 242814.06,
+      "packed_matvec_calls": 216,
+      "packed_matvec_ns": 19093586100,
+      "behavior_oracle_preserved": true
+    },
+    "candidate": {
+      "work_item": "SLM-CPU-079",
+      "path": "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-079-post-aligned-matvec-artifact.json",
+      "receipt_count": 1,
+      "total_session_ms": 240228.016,
+      "packed_matvec_calls": 216,
+      "packed_matvec_ns": 16289575900,
+      "behavior_oracle_preserved": true
+    },
+    "counter_classification": {
+      "path": "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-079-post-aligned-matvec-classification.json",
+      "result": "improved_bounded_packed_matvec_counter",
+      "delta_packed_matvec_ns": -2804010200,
+      "packed_matvec_reduction_percent": 14.68561319656971,
+      "speedup_claim": false,
+      "runtime_promotion_recommended": false
+    }
+  },
+  "repeated_timing_gate": {
+    "minimum_receipts_per_side": 3,
+    "required_sides": [
+      "baseline",
+      "candidate"
+    ],
+    "current_baseline_receipts": 1,
+    "current_candidate_receipts": 1,
+    "required_invariant_fields": [
+      "model.sha256",
+      "tokenizer.source",
+      "tokenizer.strict",
+      "backend.selected_backend",
+      "backend.runtime_api",
+      "backend.fallback_used",
+      "cpu.threads",
+      "corpus.path",
+      "corpus.defaults.prompt_template",
+      "corpus.defaults.qwen_no_think",
+      "prompt_ids",
+      "generated_ids",
+      "decoded_text",
+      "dense_q8_hook_selection.selected_path",
+      "dense_q8_hook_selection.selected_kernel"
+    ],
+    "timing_metrics_to_compare": [
+      "total_session_ms",
+      "model_load_ms",
+      "tokenizer_load_ms",
+      "prefill_ms",
+      "first_token_ms",
+      "decode_total_ms",
+      "steady_decode_tok_s",
+      "dense_q8_sidecar_instrumentation.counters.packed_matvec_ns"
+    ],
+    "classification_policy": "Classify end-to-end timing only after at least three behavior-equivalent baseline receipts and three behavior-equivalent candidate receipts exist for the same host, model SHA, thread count, prompt corpus, tokenizer authority, backend identity, dense hook identity, and fallback=false boundary.",
+    "allowed_results": [
+      "improved",
+      "regressed",
+      "inconclusive",
+      "not_claimed"
+    ]
+  },
+  "classification": {
+    "result": "not_claimed",
+    "reason": "Only one baseline warm-session receipt and one candidate warm-session receipt are available after the SLM-CPU-079 aligned packed-matvec counter improvement. The counter-level packed_matvec_ns reduction is useful evidence, but it is not repeated before/after end-to-end timing evidence.",
+    "end_to_end_speedup_claim": false,
+    "sustained_throughput_claim": false,
+    "runtime_promotion_recommended": false,
+    "default_runtime_changed": false
+  },
+  "next_required_artifacts": [
+    "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-081-baseline-run-01.json",
+    "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-081-baseline-run-02.json",
+    "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-081-baseline-run-03.json",
+    "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-081-candidate-run-01.json",
+    "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-081-candidate-run-02.json",
+    "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-081-candidate-run-03.json",
+    "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-081-repeated-packed-q8-timing-classification.json"
+  ],
+  "must_not_claim": [
+    "packed_q8_sidecar_enabled_by_default",
+    "packed_q8_generalized_beyond_exact_tensor",
+    "end_to_end_speedup",
+    "sustained_8250u_throughput",
+    "broad_qwen3_quality",
+    "q4_or_q5_runtime_support",
+    "server_or_accelerator_execution",
+    "qwen3_5_or_hybrid_architecture_support",
+    "bitnet_qk256_changes"
+  ]
+}
