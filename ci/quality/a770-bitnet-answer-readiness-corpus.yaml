@@ -1,0 +1,241 @@
+schema: 1
+artifact_kind: bitnet_answer_corpus
+name: a770-bitnet-answer-readiness-corpus
+description: Seeded deterministic BitNet answer-readiness corpus for Intel Arc A770 CPU/OpenCL quality and parity gates.
+metadata:
+  campaign: intel-a770
+  work_item: A770-024
+  seed: 770024
+  generator_policy: deterministic-static-fixture-a770-bitnet-v1
+  case_count_target: 20
+  prompt_template: bitnetcpp-answer
+  scoring_status: deterministic_fixture_scoring
+  corpus_contract:
+    contract_version: a770-answer-readiness-corpus-v1
+    corpus_id: a770-bitnet-answer-readiness-corpus
+    corpus_version: "1.0.0"
+    seed_generation_rules: "Static deterministic fixtures derived from seed=770024; every case records seed_material with family, operation, and fixture inputs. Prompt, expected-output, scoring, or family-count changes require a corpus_version bump."
+    expected_output_provenance: "Closed-form deterministic fixture answers derived from the prompt data in this YAML; live CPU/A770 receipts are comparison evidence, not expected-output authority."
+    normalization_rules: answer_corpus_normalize_scoring_text_v1
+    scoring_schema: answer_corpus_mechanical_scoring_v1
+    scorer_self_tests:
+      - "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_corpus -- --nocapture"
+      - "cargo run --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli -- answer-corpus --dry-run --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model <official BitNet 2B I2_S GGUF> --device cpu --json-out target/a770-answer-readiness-corpus-dry-run.json"
+    receipt_contract: answer_corpus_aggregate_receipt_v1
+  claim_boundary:
+    runtime_proof: false
+    broad_quality_claim: false
+    cpu_a770_parity_claim: false
+    strict_a770_answer_readiness_claim: false
+    speedup_claim: false
+    residency_claim: false
+model:
+  repo: microsoft/bitnet-b1.58-2B-4T-gguf
+  repo_revision: a1f2f1c765812aa8af3f6eda4a313707064bba15
+  file: ggml-model-i2_s.gguf
+  sha256: 4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162
+  bytes: 1187801280
+  family: bitnet
+  architecture: bitnet-b1.58
+  quant_format: I2_S/QK256
+  answer_ready:
+    state: answer_ready
+    gate: MODEL-ARTIFACT-007
+    manifest: ci/model-artifacts/artifact-manifest.toml
+    evidence: docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md
+  tokenizer_authority:
+    source: external_tokenizer_json
+    repo: microsoft/bitnet-b1.58-2B-4T
+    revision: 04c3b9ad9361b824064a1f25ea60a8be9599b127
+    sha256: e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7
+    ggml_pre: llama-bpe
+defaults:
+  prompt_template: bitnetcpp-answer
+  max_new_tokens: 32
+  greedy: true
+  deterministic: true
+  strict_loader: true
+  temperature: 0.0
+  per_prompt_timeout_seconds: 300
+  min_generated_tokens: 1
+  min_distinct_generated_tokens: 1
+cases:
+  - id: a770_math_seed770024_add_001
+    category: arithmetic_exact
+    profile: ask_short
+    seed_material: "seed=770024 family=arithmetic op=add index=1 a=17 b=25"
+    question: "Compute 17 + 25. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "42"}
+    gate: {kind: exact_trimmed, expected: "42"}
+
+  - id: a770_math_seed770024_sub_002
+    category: arithmetic_exact
+    profile: ask_short
+    seed_material: "seed=770024 family=arithmetic op=sub index=2 a=64 b=19"
+    question: "Compute 64 - 19. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "45"}
+    gate: {kind: exact_trimmed, expected: "45"}
+
+  - id: a770_math_seed770024_mul_003
+    category: arithmetic_exact
+    profile: ask_short
+    seed_material: "seed=770024 family=arithmetic op=mul index=3 a=9 b=6"
+    question: "Compute 9 x 6. Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "54"}
+    gate: {kind: exact_trimmed, expected: "54"}
+
+  - id: a770_numeric_seed770024_half_004
+    category: numeric_tolerance
+    profile: ask_short
+    seed_material: "seed=770024 family=numeric op=half index=4 value=38"
+    question: "What is half of 38? Answer with only the number."
+    max_new_tokens: 4
+    scoring: {kind: numeric_tolerance, expected_number: 19, numeric_tolerance: 0.01}
+    gate: {kind: contains_any, contains_any: ["19"]}
+
+  - id: a770_table_seed770024_color_005
+    category: context_table_lookup
+    profile: context_conditioned
+    seed_material: "seed=770024 family=table index=5 item=heron color=blue"
+    question: "Use this table: kiwi=green, heron=blue, ember=red. What color is heron? Answer with one word."
+    max_new_tokens: 8
+    scoring: {kind: exact_match, expected_normalized: "blue"}
+    gate: {kind: contains_any, contains_any: ["blue", "Blue"]}
+
+  - id: a770_table_seed770024_code_006
+    category: context_table_lookup
+    profile: context_conditioned
+    seed_material: "seed=770024 family=table index=6 code=Q7 value=delta"
+    question: "Use this lookup: Q3=alpha, Q7=delta, Q9=omega. What value belongs to Q7? Answer with one word."
+    max_new_tokens: 8
+    scoring: {kind: exact_match, expected_normalized: "delta"}
+    gate: {kind: contains_any, contains_any: ["delta", "Delta"]}
+
+  - id: a770_repeat_seed770024_phrase_007
+    category: copy_exact
+    profile: instruction_following
+    seed_material: "seed=770024 family=copy index=7 phrase=red blue green"
+    question: "Repeat exactly: red blue green"
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "red blue green"}
+    gate: {kind: contains_any, contains_any: ["red blue green", "Red blue green"]}
+
+  - id: a770_extract_seed770024_owner_008
+    category: synthetic_extraction
+    profile: context_conditioned
+    seed_material: "seed=770024 family=extract index=8 owner=Mira"
+    question: "Extract the owner name from this note: Ticket AX-17 owner is Mira; due date is Friday. Answer with only the owner."
+    max_new_tokens: 8
+    scoring: {kind: exact_match, expected_normalized: "mira"}
+    gate: {kind: contains_any, contains_any: ["Mira", "mira"]}
+
+  - id: a770_extract_seed770024_code_009
+    category: synthetic_extraction
+    profile: context_conditioned
+    seed_material: "seed=770024 family=extract index=9 code=R-42"
+    question: "Extract the short code from this note: package code R-42 is ready. Answer with only the code."
+    max_new_tokens: 8
+    scoring: {kind: normalized_match, expected_normalized: "r-42"}
+    gate: {kind: contains_any, contains_any: ["R-42", "r-42"]}
+
+  - id: a770_classify_seed770024_positive_010
+    category: closed_label_classification
+    profile: ask_short
+    seed_material: "seed=770024 family=classification index=10 label=positive"
+    question: "Classify the sentiment as positive or negative: The invoice was paid on time. Answer with one label."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "positive"}
+    gate: {kind: contains_any, contains_any: ["positive", "Positive"]}
+
+  - id: a770_classify_seed770024_negative_011
+    category: closed_label_classification
+    profile: ask_short
+    seed_material: "seed=770024 family=classification index=11 label=negative"
+    question: "Classify the sentiment as positive or negative: The shipment arrived broken. Answer with one label."
+    max_new_tokens: 4
+    scoring: {kind: exact_match, expected_normalized: "negative"}
+    gate: {kind: contains_any, contains_any: ["negative", "Negative"]}
+
+  - id: a770_sort_seed770024_words_012
+    category: ordering_sorting
+    profile: instruction_following
+    seed_material: "seed=770024 family=sort index=12 words=dog,ant,cat"
+    question: "Sort these words alphabetically and separate them with commas: dog, ant, cat."
+    max_new_tokens: 16
+    scoring: {kind: normalized_match, expected_normalized: "ant, cat, dog"}
+    gate: {kind: contains_any, contains_any: ["ant, cat, dog", "ant cat dog"]}
+
+  - id: a770_required_seed770024_ready_013
+    category: instruction_following_required_forbidden
+    profile: instruction_following
+    seed_material: "seed=770024 family=required_forbidden index=13 required=ready forbidden=maybe"
+    question: "Answer with the word ready. Do not use the word maybe."
+    max_new_tokens: 8
+    scoring: {kind: required_forbidden_tokens, required_keywords: ["ready"], forbidden_tokens: ["maybe"]}
+    gate: {kind: contains_any, contains_any: ["ready", "Ready"]}
+
+  - id: a770_summary_seed770024_keywords_014
+    category: constrained_summary
+    profile: ask_short
+    seed_material: "seed=770024 family=summary index=14 required=fast,safe"
+    question: "Summarize in one short sentence and include the words fast and safe: Rust helps teams build reliable systems software."
+    max_new_tokens: 24
+    scoring: {kind: required_keywords, required_keywords: ["fast", "safe"]}
+    gate: {kind: contains_any, contains_any: ["fast", "safe"]}
+
+  - id: a770_yes_no_seed770024_water_015
+    category: yes_no
+    profile: ask_short
+    seed_material: "seed=770024 family=yes_no index=15 question=water_wet"
+    question: "Answer yes or no: is water wet?"
+    max_new_tokens: 4
+    gate: {kind: starts_with_any, starts_with_any: ["yes", "no", "Yes", "No"]}
+
+  - id: a770_yes_no_seed770024_sky_016
+    category: yes_no
+    profile: ask_short
+    seed_material: "seed=770024 family=yes_no index=16 question=sky_green"
+    question: "Answer yes or no: is the daytime sky usually green?"
+    max_new_tokens: 4
+    gate: {kind: starts_with_any, starts_with_any: ["yes", "no", "Yes", "No"]}
+
+  - id: a770_json_seed770024_status_017
+    category: format_constrained_json
+    profile: format_constrained
+    seed_material: "seed=770024 family=json index=17 key=status value=ready"
+    question: "Return compact JSON with exactly one key named status and value ready."
+    max_new_tokens: 24
+    scoring:
+      kind: json_schema
+      schema: {"type":"object","required":["status"],"additionalProperties":false,"properties":{"status":{"const":"ready"}}}
+    gate: {kind: starts_with_any, starts_with_any: ["{"]}
+
+  - id: a770_fact_seed770024_capital_018
+    category: short_factual
+    profile: ask_short
+    seed_material: "seed=770024 family=factual index=18 country=France"
+    question: "What is the capital of France? Answer with one word."
+    max_new_tokens: 8
+    scoring: {kind: exact_match, expected_normalized: "paris"}
+    gate: {kind: contains_any, contains_any: ["Paris", "paris"]}
+
+  - id: a770_context_seed770024_password_019
+    category: context_conditioned
+    profile: context_conditioned
+    seed_material: "seed=770024 family=context index=19 password=tulip"
+    question: "In this sentence, the password is tulip. What is the password? Answer with one word."
+    max_new_tokens: 8
+    scoring: {kind: exact_match, expected_normalized: "tulip"}
+    gate: {kind: contains_any, contains_any: ["tulip", "Tulip"]}
+
+  - id: a770_unknown_seed770024_unknown_020
+    category: unknown_handling
+    profile: ask_short
+    seed_material: "seed=770024 family=unknown index=20 requested=not_in_prompt"
+    question: "The note says: Nova owns the ticket. What color is the ticket? If the color is not stated, answer unknown."
+    max_new_tokens: 8
+    scoring: {kind: exact_match, expected_normalized: "unknown"}
+    gate: {kind: contains_any, contains_any: ["unknown", "Unknown"]}
