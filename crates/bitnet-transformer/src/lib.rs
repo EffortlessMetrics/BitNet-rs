@@ -54,6 +54,12 @@ fn qwen_trace_model_init_event(enabled: bool, stage: &str, fields_json: impl FnO
     }
 }
 
+fn qwen_trace_runtime_event(enabled: bool, stage: &str, fields_json: impl FnOnce() -> String) {
+    if enabled {
+        qwen_trace_event(stage, &fields_json());
+    }
+}
+
 fn qwen_trace_dims_json(dims: &[usize]) -> String {
     dims.iter().map(|dim| dim.to_string()).collect::<Vec<_>>().join(",")
 }
@@ -846,10 +852,22 @@ impl RotaryEmbedding {
     }
 
     pub fn apply(&self, x: &Tensor, position: usize) -> Result<Tensor> {
+        let trace_rope_apply = qwen_trace_events_enabled();
         // x shape: [B, H, T, D] for multi-head attention
         if x.dims().len() == 4 {
             let (batch, n_heads, seq_len, head_dim) = x.dims4()?;
             let half_dim = head_dim / 2;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_start", || {
+                format!(
+                    "\"position\":{},\"seq_len\":{},\"head_dim\":{},\"half_dim\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    seq_len,
+                    head_dim,
+                    half_dim,
+                    qwen_trace_device_kind(self.cos.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
 
             // LLaMA RoPE uses SPLIT layout: [r0,r1,...,r_{d/2-1}, i0,i1,...,i_{d/2-1}]
             // NOT interleaved [r0,i0,r1,i1,...]
@@ -857,17 +875,50 @@ impl RotaryEmbedding {
             let x1 = x.narrow(3, half_dim, half_dim)?; // Second half (imaginary)
 
             // Get cos/sin for the position
-            let cos = self
-                .cos
-                .narrow(0, position, seq_len)?
-                .to_device(x.device())?
+            let cos_slice_start = Instant::now();
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_cos_slice_start", || {
+                format!(
+                    "\"position\":{},\"seq_len\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    seq_len,
+                    qwen_trace_device_kind(self.cos.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
+            let cos = self.cos.narrow(0, position, seq_len)?.to_device(x.device())?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_cos_slice_finish", || {
+                format!(
+                    "\"slice_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(cos_slice_start),
+                    qwen_trace_dims_json(cos.dims()),
+                    qwen_trace_device_kind(cos.device())
+                )
+            });
+            let cos = cos
                 .unsqueeze(0)? // Add batch dim
                 .unsqueeze(1)? // Add heads dim
                 .broadcast_as(&[batch, n_heads, seq_len, half_dim])?;
-            let sin = self
-                .sin
-                .narrow(0, position, seq_len)?
-                .to_device(x.device())?
+
+            let sin_slice_start = Instant::now();
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_sin_slice_start", || {
+                format!(
+                    "\"position\":{},\"seq_len\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    seq_len,
+                    qwen_trace_device_kind(self.sin.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
+            let sin = self.sin.narrow(0, position, seq_len)?.to_device(x.device())?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_sin_slice_finish", || {
+                format!(
+                    "\"slice_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(sin_slice_start),
+                    qwen_trace_dims_json(sin.dims()),
+                    qwen_trace_device_kind(sin.device())
+                )
+            });
+            let sin = sin
                 .unsqueeze(0)?
                 .unsqueeze(1)?
                 .broadcast_as(&[batch, n_heads, seq_len, half_dim])?;
@@ -877,25 +928,83 @@ impl RotaryEmbedding {
 
             // Concatenate back in split layout [real, imag]
             let rotated = Tensor::cat(&[x0_rot, x1_rot], 3)?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_4d_finish", || {
+                format!(
+                    "\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_dims_json(rotated.dims()),
+                    qwen_trace_device_kind(rotated.device())
+                )
+            });
 
             Ok(rotated)
         } else {
             // Original 3D implementation for other uses
             let (_batch, _seq, dim) = x.dims3()?;
             let half_dim = dim / 2;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_start", || {
+                format!(
+                    "\"position\":{},\"dim\":{},\"half_dim\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    dim,
+                    half_dim,
+                    qwen_trace_device_kind(self.cos.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
 
             // LLaMA RoPE uses SPLIT layout: [r0,r1,...,i0,i1,...]
             let x0 = x.narrow(2, 0, half_dim)?; // First half (real)
             let x1 = x.narrow(2, half_dim, half_dim)?; // Second half (imaginary)
 
+            let cos_slice_start = Instant::now();
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_cos_slice_start", || {
+                format!(
+                    "\"position\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    qwen_trace_device_kind(self.cos.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
             let cos = self.cos.narrow(0, position, 1)?.to_device(x.device())?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_cos_slice_finish", || {
+                format!(
+                    "\"slice_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(cos_slice_start),
+                    qwen_trace_dims_json(cos.dims()),
+                    qwen_trace_device_kind(cos.device())
+                )
+            });
+            let sin_slice_start = Instant::now();
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_sin_slice_start", || {
+                format!(
+                    "\"position\":{},\"table_device\":\"{}\",\"target_device\":\"{}\"",
+                    position,
+                    qwen_trace_device_kind(self.sin.device()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
             let sin = self.sin.narrow(0, position, 1)?.to_device(x.device())?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_sin_slice_finish", || {
+                format!(
+                    "\"slice_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(sin_slice_start),
+                    qwen_trace_dims_json(sin.dims()),
+                    qwen_trace_device_kind(sin.device())
+                )
+            });
 
             let x0_rot = (x0.mul(&cos)? - x1.mul(&sin)?)?;
             let x1_rot = (x0.mul(&sin)? + x1.mul(&cos)?)?;
 
             // Concatenate back in split layout [real, imag]
             let rotated = Tensor::cat(&[x0_rot, x1_rot], 2)?;
+            qwen_trace_runtime_event(trace_rope_apply, "rope.apply_3d_finish", || {
+                format!(
+                    "\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_dims_json(rotated.dims()),
+                    qwen_trace_device_kind(rotated.device())
+                )
+            });
 
             Ok(rotated)
         }
@@ -1827,6 +1936,16 @@ impl TransformerBlock {
         dense_linear_hooks: &DenseLinearRuntimeHookRegistry,
         mut workspace: Option<&mut TransformerForwardWorkspace>,
     ) -> Result<Tensor> {
+        let trace_forward = qwen_trace_events_enabled();
+        let block_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "block.forward_start", || {
+            format!(
+                "\"layer\":{},\"dims\":[{}],\"device\":\"{}\"",
+                self.attention.layer_idx,
+                qwen_trace_dims_json(x.dims()),
+                qwen_trace_device_kind(x.device())
+            )
+        });
         // Debug input activation norms
         if debug_attn_enabled() {
             let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
@@ -1859,7 +1978,18 @@ impl TransformerBlock {
             });
         }
 
+        let attention_norm_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "block.attention_norm_start", || {
+            format!("\"layer\":{}", self.attention.layer_idx)
+        });
         let x = self.attention_norm.forward(x)?;
+        qwen_trace_runtime_event(trace_forward, "block.attention_norm_finish", || {
+            format!(
+                "\"layer\":{},\"norm_ms\":{}",
+                self.attention.layer_idx,
+                qwen_trace_elapsed_ms(attention_norm_start)
+            )
+        });
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.attention_norm", Some(self.attention.layer_idx), &x)?;
         }
@@ -1918,7 +2048,18 @@ impl TransformerBlock {
             });
         }
 
+        let attention_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "block.attention_start", || {
+            format!("\"layer\":{}", self.attention.layer_idx)
+        });
         let x = self.attention.forward(&x, kv_cache, raw_tensors, dense_linear_hooks)?;
+        qwen_trace_runtime_event(trace_forward, "block.attention_finish", || {
+            format!(
+                "\"layer\":{},\"attention_ms\":{}",
+                self.attention.layer_idx,
+                qwen_trace_elapsed_ms(attention_start)
+            )
+        });
         let x = (x + residual)?;
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.post_attention_residual", Some(self.attention.layer_idx), &x)?;
@@ -1953,7 +2094,18 @@ impl TransformerBlock {
             });
         }
 
+        let ffn_norm_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "block.ffn_norm_start", || {
+            format!("\"layer\":{}", self.attention.layer_idx)
+        });
         let x = self.ffn_norm.forward(&x)?;
+        qwen_trace_runtime_event(trace_forward, "block.ffn_norm_finish", || {
+            format!(
+                "\"layer\":{},\"norm_ms\":{}",
+                self.attention.layer_idx,
+                qwen_trace_elapsed_ms(ffn_norm_start)
+            )
+        });
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.ffn_norm", Some(self.attention.layer_idx), &x)?;
         }
@@ -1976,6 +2128,10 @@ impl TransformerBlock {
             });
         }
 
+        let feed_forward_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "block.feed_forward_start", || {
+            format!("\"layer\":{}", self.attention.layer_idx)
+        });
         let x = if let Some(workspace) = workspace.as_mut() {
             self.feed_forward.forward_with_workspace(
                 &x,
@@ -1986,6 +2142,13 @@ impl TransformerBlock {
         } else {
             self.feed_forward.forward(&x, raw_tensors, dense_linear_hooks)?
         };
+        qwen_trace_runtime_event(trace_forward, "block.feed_forward_finish", || {
+            format!(
+                "\"layer\":{},\"feed_forward_ms\":{}",
+                self.attention.layer_idx,
+                qwen_trace_elapsed_ms(feed_forward_start)
+            )
+        });
         let x = (x + residual)?;
         if qwen_trace_layer_enabled(self.attention.layer_idx) {
             qwen_trace_tensor("block.output", Some(self.attention.layer_idx), &x)?;
@@ -1996,6 +2159,16 @@ impl TransformerBlock {
             let norm = x.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()?;
             eprintln!("[norm] post-ffn: {norm:.6e}");
         }
+
+        qwen_trace_runtime_event(trace_forward, "block.forward_finish", || {
+            format!(
+                "\"layer\":{},\"block_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                self.attention.layer_idx,
+                qwen_trace_elapsed_ms(block_start),
+                qwen_trace_dims_json(x.dims()),
+                qwen_trace_device_kind(x.device())
+            )
+        });
 
         Ok(x)
     }
@@ -2646,6 +2819,16 @@ impl TransformerModel {
         mut kv_cache: Option<&mut KVCache>,
         mut workspace: Option<&mut TransformerForwardWorkspace>,
     ) -> Result<Tensor> {
+        let trace_forward = qwen_trace_events_enabled();
+        let forward_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "model.forward_start", || {
+            format!(
+                "\"dims\":[{}],\"device\":\"{}\",\"layers\":{}",
+                qwen_trace_dims_json(hidden.dims()),
+                qwen_trace_device_kind(hidden.device()),
+                self.layers.len()
+            )
+        });
         let mut x = hidden; // Take ownership - no clone needed!
 
         // Tracepoint 1: Embeddings (incremental path - single token)
@@ -2666,6 +2849,10 @@ impl TransformerModel {
         }
 
         for (i, layer) in self.layers.iter().enumerate() {
+            let layer_start = Instant::now();
+            qwen_trace_runtime_event(trace_forward, "model.forward_layer_start", || {
+                format!("\"layer\":{},\"dims\":[{}]", i, qwen_trace_dims_json(x.dims()))
+            });
             let layer_cache = kv_cache.as_mut().and_then(|c| c.layer_mut(i));
             x = if let Some(workspace) = workspace.as_mut() {
                 layer.forward_with_workspace(
@@ -2685,15 +2872,45 @@ impl TransformerModel {
             {
                 eprintln!("[norm] layer {i}: {:.6e}", norm);
             }
+            qwen_trace_runtime_event(trace_forward, "model.forward_layer_finish", || {
+                format!(
+                    "\"layer\":{},\"layer_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    i,
+                    qwen_trace_elapsed_ms(layer_start),
+                    qwen_trace_dims_json(x.dims()),
+                    qwen_trace_device_kind(x.device())
+                )
+            });
         }
 
+        let final_norm_start = Instant::now();
+        qwen_trace_runtime_event(trace_forward, "model.final_norm_start", || {
+            format!("\"dims\":[{}]", qwen_trace_dims_json(x.dims()))
+        });
         let normalized = self.norm.forward(&x)?;
+        qwen_trace_runtime_event(trace_forward, "model.final_norm_finish", || {
+            format!(
+                "\"norm_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(final_norm_start),
+                qwen_trace_dims_json(normalized.dims()),
+                qwen_trace_device_kind(normalized.device())
+            )
+        });
         qwen_trace_tensor("model.final_norm", None, &normalized)?;
         if debug_attn_enabled()
             && let Ok(norm) = normalized.sqr()?.mean_all()?.sqrt()?.to_scalar::<f32>()
         {
             eprintln!("[norm] final: {:.6e}", norm);
         }
+
+        qwen_trace_runtime_event(trace_forward, "model.forward_finish", || {
+            format!(
+                "\"forward_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(forward_start),
+                qwen_trace_dims_json(normalized.dims()),
+                qwen_trace_device_kind(normalized.device())
+            )
+        });
 
         Ok(normalized)
     }

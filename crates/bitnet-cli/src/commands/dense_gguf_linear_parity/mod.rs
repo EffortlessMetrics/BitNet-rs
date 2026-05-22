@@ -4423,12 +4423,47 @@ fn run_qwen_one_token_once(
             "prefill_start",
             json!({ "prefill_tokens": (prompt_token_ids.len() - 1) as u64 }),
         )?;
-        for token in &prompt_token_ids[..prompt_token_ids.len() - 1] {
+        for (prefill_index, token) in
+            prompt_token_ids[..prompt_token_ids.len() - 1].iter().enumerate()
+        {
+            let embed_start = std::time::Instant::now();
+            phase_trace.emit(
+                phase_scope,
+                "prefill_embed_start",
+                json!({ "prefill_index": prefill_index as u64 }),
+            )?;
             let embedding = model.embed(&[*token])?;
+            phase_trace.emit(
+                phase_scope,
+                "prefill_embed_finish",
+                json!({
+                    "prefill_index": prefill_index as u64,
+                    "embed_ms": elapsed_ms_f64(embed_start),
+                    "embedding_is_cuda": concrete_tensor_is_cuda(&embedding),
+                }),
+            )?;
             if require_cuda && !concrete_tensor_is_cuda(&embedding) {
                 bail!("CUDA proof embedding tensor was not CUDA-resident during prefill");
             }
+            let forward_start = std::time::Instant::now();
+            phase_trace.emit(
+                phase_scope,
+                "prefill_forward_start",
+                json!({ "prefill_index": prefill_index as u64 }),
+            )?;
+            let trace_step = prefill_index.to_string();
+            let _trace_step =
+                ScopedEnvVar::set_os("BITNET_QWEN_TRACE_STEP", std::ffi::OsStr::new(&trace_step));
             let hidden = model.forward(&embedding, &mut cache as &mut dyn std::any::Any)?;
+            phase_trace.emit(
+                phase_scope,
+                "prefill_forward_finish",
+                json!({
+                    "prefill_index": prefill_index as u64,
+                    "forward_ms": elapsed_ms_f64(forward_start),
+                    "hidden_is_cuda": concrete_tensor_is_cuda(&hidden),
+                }),
+            )?;
             if require_cuda && !concrete_tensor_is_cuda(&hidden) {
                 bail!("CUDA proof hidden tensor was not CUDA-resident during prefill");
             }
@@ -4453,6 +4488,9 @@ fn run_qwen_one_token_once(
 
     let forward_start = std::time::Instant::now();
     phase_trace.emit(phase_scope, "decode_forward_start", json!({}))?;
+    let decode_trace_step = (prompt_token_ids.len() - 1).to_string();
+    let _decode_trace_step =
+        ScopedEnvVar::set_os("BITNET_QWEN_TRACE_STEP", std::ffi::OsStr::new(&decode_trace_step));
     let hidden = model.forward(&embedding, &mut cache as &mut dyn std::any::Any)?;
     let forward_ms = elapsed_ms_f64(forward_start);
     phase_trace.emit(phase_scope, "decode_forward_finish", json!({ "forward_ms": forward_ms }))?;
