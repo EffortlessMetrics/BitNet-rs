@@ -11,7 +11,7 @@ head_sha = "241819a0a621f83c8a9cbddc8e57b4e90728db61"
 merge_sha = "54d93900c47ef920507f035be737eb4829a4d8f2"
 summary = "Merged PR #265 for same-box CPU AVX2 versus A770 OpenCL answer-parity diagnostics."
 notes = [
-  "The merged artifacts record CPU AVX2 and A770 OpenCL answer-corpus receipts with one-step top-k logits for the official BitNet 2B I2_S model.",
-  "The answer-parity receipt records the first CPU/A770 divergence without promoting CPU/A770 exact parity.",
-  "No reference parity, A770 answer quality, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+  "The merged receipts record AMD 5700X AVX2 CPU and Intel A770 OpenCL fixed five-case answer-corpus runs against the official BitNet 2B I2_S model with fallback_used=false.",
+  "The answer-parity receipt keeps the shared contract clean while preserving CPU/A770 divergence, with first divergence at capital_france logits_topk.",
+  "No CPU/A770 answer parity, reference parity, broad A770 answer quality, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
 ]
