@@ -883,6 +883,14 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             "dense-gguf-qwen-one-token-strict-cuda",
         );
         phase_trace.reset()?;
+        let transformer_trace_path =
+            self.phase_trace_jsonl.as_deref().map(dense_qwen_transformer_trace_path);
+        let _transformer_trace_env = if let Some(path) = transformer_trace_path.as_ref() {
+            reset_qwen_transformer_trace(path)?;
+            Some(ScopedEnvVar::set_os("BITNET_QWEN_TRACE_JSONL", path.as_os_str()))
+        } else {
+            None
+        };
         phase_trace.emit(
             "command",
             "start",
@@ -893,6 +901,13 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
                 "json_out": self.json_out.as_ref().map(|path| path.display().to_string()),
             }),
         )?;
+        if let Some(path) = transformer_trace_path.as_ref() {
+            phase_trace.emit(
+                "command",
+                "transformer_trace_config",
+                json!({ "trace_path": path.display().to_string() }),
+            )?;
+        }
 
         phase_trace.emit("model_map", "start", json!({}))?;
         let data = map_model(&self.model)?;
@@ -4127,6 +4142,15 @@ impl ScopedEnvVar {
         Self { key, previous }
     }
 
+    fn set_os(key: &'static str, value: &std::ffi::OsStr) -> Self {
+        let previous = std::env::var_os(key);
+        // SAFETY: See `ScopedEnvVar::set`.
+        unsafe {
+            std::env::set_var(key, value);
+        }
+        Self { key, previous }
+    }
+
     fn remove(key: &'static str) -> Self {
         let previous = std::env::var_os(key);
         // SAFETY: See `ScopedEnvVar::set`.
@@ -4148,6 +4172,25 @@ impl Drop for ScopedEnvVar {
             }
         }
     }
+}
+
+fn dense_qwen_transformer_trace_path(phase_trace_path: &Path) -> PathBuf {
+    let mut path = phase_trace_path.to_path_buf();
+    path.set_extension("transformer.jsonl");
+    path
+}
+
+fn reset_qwen_transformer_trace(path: &Path) -> Result<()> {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent).with_context(|| {
+            format!("failed to create transformer trace directory {}", parent.display())
+        })?;
+    }
+    std::fs::File::create(path)
+        .with_context(|| format!("failed to reset transformer trace {}", path.display()))?;
+    Ok(())
 }
 
 fn read_and_validate_receipt_for_qwen_model(
@@ -14220,6 +14263,16 @@ mod tests {
         assert_eq!(event["details"]["progress"], json!(0.5));
         assert_eq!(event["details"]["message"], json!("Loading tensors..."));
         Ok(())
+    }
+
+    #[test]
+    fn qwen_one_token_transformer_trace_path_is_derived_from_phase_trace() {
+        let path = Path::new("target/cuda-model-017/qwen3-one-token-phase-trace.jsonl");
+
+        assert_eq!(
+            dense_qwen_transformer_trace_path(path),
+            PathBuf::from("target/cuda-model-017/qwen3-one-token-phase-trace.transformer.jsonl")
+        );
     }
 
     #[test]

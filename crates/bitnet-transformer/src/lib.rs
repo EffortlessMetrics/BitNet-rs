@@ -20,7 +20,8 @@ mod qk256;
 use diagnostics::{
     dbg_finite, dbg_stats, debug_attn_enabled, debug_attn_scale_enabled, debug_gqa_enabled,
     debug_mlp_enabled, debug_rmsnorm_enabled, debug_rope_enabled, qwen_trace_event,
-    qwen_trace_layer_enabled, qwen_trace_number, qwen_trace_tensor, trace_rms_enabled,
+    qwen_trace_events_enabled, qwen_trace_layer_enabled, qwen_trace_number, qwen_trace_tensor,
+    trace_rms_enabled,
 };
 #[cfg(test)]
 use layer_builders::layer_norm_with_optional_bias;
@@ -34,6 +35,24 @@ use std::time::Instant;
 
 pub type DenseLinearRuntimeHookRegistry = HashMap<String, DenseLinearRuntimeHookDescriptor>;
 const SLM_CPU_067_EXACT_Q8_RUNTIME_TENSOR: &str = "layers.0.attention.q_proj.weight";
+
+fn qwen_trace_device_kind(device: &Device) -> &'static str {
+    match device {
+        Device::Cpu => "cpu",
+        Device::Cuda(_) => "cuda",
+        Device::Metal(_) => "metal",
+    }
+}
+
+fn qwen_trace_elapsed_ms(start: Instant) -> String {
+    qwen_trace_number(start.elapsed().as_secs_f64() * 1000.0)
+}
+
+fn qwen_trace_model_init_event(enabled: bool, stage: &str, fields_json: impl FnOnce() -> String) {
+    if enabled {
+        qwen_trace_event(stage, &fields_json());
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct DenseQ8SidecarInstrumentationSnapshot {
@@ -1652,14 +1671,40 @@ impl TransformerModel {
         raw_tensors: HashMap<String, Tensor>,
         dense_linear_hooks: DenseLinearRuntimeHookRegistry,
     ) -> Result<Self> {
+        let init_start = Instant::now();
+        let trace_model_init = qwen_trace_events_enabled();
         let device = vb.device().clone();
         let vocab_size = config.model.vocab_size;
         let hidden_size = config.model.hidden_size;
         let n_layers = config.model.num_layers;
+        qwen_trace_model_init_event(trace_model_init, "model_init.start", || {
+            format!(
+                "\"vocab_size\":{},\"hidden_size\":{},\"layers\":{},\"device\":\"{}\"",
+                vocab_size,
+                hidden_size,
+                n_layers,
+                qwen_trace_device_kind(&device)
+            )
+        });
 
+        qwen_trace_model_init_event(trace_model_init, "model_init.embedding_start", || {
+            format!("\"elapsed_ms\":{}", qwen_trace_elapsed_ms(init_start))
+        });
         let embed_tokens = candle_nn::embedding(vocab_size, hidden_size, vb.pp("embed_tokens"))?;
+        qwen_trace_model_init_event(trace_model_init, "model_init.embedding_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"embedding_dims\":\"{:?}\"",
+                qwen_trace_elapsed_ms(init_start),
+                embed_tokens.embeddings().dims()
+            )
+        });
 
         // Read transpose flag for embeddings (1-element tensor)
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.embed_transposed_flag_start",
+            || format!("\"elapsed_ms\":{}", qwen_trace_elapsed_ms(init_start)),
+        );
         let embed_transposed = match vb.get((1,), "embed_tokens.transposed") {
             Ok(t) => {
                 let vals = t.to_vec1::<f32>()?;
@@ -1667,6 +1712,17 @@ impl TransformerModel {
             }
             Err(_) => false, // If flag doesn't exist, assume not transposed
         };
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.embed_transposed_flag_finish",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"embed_transposed\":{}",
+                    qwen_trace_elapsed_ms(init_start),
+                    embed_transposed
+                )
+            },
+        );
 
         if embed_transposed {
             tracing::info!(
@@ -1674,20 +1730,48 @@ impl TransformerModel {
             );
         }
 
+        qwen_trace_model_init_event(trace_model_init, "model_init.layers_start", || {
+            format!("\"elapsed_ms\":{},\"layers\":{}", qwen_trace_elapsed_ms(init_start), n_layers)
+        });
         let mut layers = Vec::with_capacity(n_layers);
         for i in 0..n_layers {
-            layers.push(TransformerBlock::new(&config, vb.pp(format!("layers.{}", i)), i)?);
+            let layer_start = Instant::now();
+            qwen_trace_model_init_event(trace_model_init, "model_init.layer_start", || {
+                format!("\"elapsed_ms\":{},\"layer\":{}", qwen_trace_elapsed_ms(init_start), i)
+            });
+            let layer = TransformerBlock::new(&config, vb.pp(format!("layers.{}", i)), i)?;
+            qwen_trace_model_init_event(trace_model_init, "model_init.layer_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"layer_ms\":{}",
+                    qwen_trace_elapsed_ms(init_start),
+                    i,
+                    qwen_trace_elapsed_ms(layer_start)
+                )
+            });
+            layers.push(layer);
         }
+        qwen_trace_model_init_event(trace_model_init, "model_init.layers_finish", || {
+            format!("\"elapsed_ms\":{},\"layers\":{}", qwen_trace_elapsed_ms(init_start), n_layers)
+        });
 
         // Use RMSNorm epsilon from config header (CRITICAL: must match per-layer norms)
         let eps = config.model.rms_norm_eps.map(|e| e as f64).unwrap_or(1e-5);
         tracing::info!("Final norm using RMSNorm eps={} (from header)", eps);
 
+        qwen_trace_model_init_event(trace_model_init, "model_init.final_norm_start", || {
+            format!("\"elapsed_ms\":{},\"eps\":{}", qwen_trace_elapsed_ms(init_start), eps)
+        });
         let norm =
             norm_with_optional_bias(config.model.norm_type, hidden_size, eps, vb.pp("final_norm"))?;
+        qwen_trace_model_init_event(trace_model_init, "model_init.final_norm_finish", || {
+            format!("\"elapsed_ms\":{}", qwen_trace_elapsed_ms(init_start))
+        });
 
         // Try to load lm_head, but it's optional (can be tied to embeddings)
         // Try to create the linear layer, catching errors if weights don't exist
+        qwen_trace_model_init_event(trace_model_init, "model_init.lm_head_start", || {
+            format!("\"elapsed_ms\":{}", qwen_trace_elapsed_ms(init_start))
+        });
         let (lm_head, lm_head_weight, lm_head_transposed) = match linear_with_optional_bias(
             hidden_size,
             vocab_size,
@@ -1760,6 +1844,15 @@ impl TransformerModel {
                 },
             },
         };
+        qwen_trace_model_init_event(trace_model_init, "model_init.lm_head_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"lm_head_present\":{},\"lm_head_weight_present\":{},\"lm_head_transposed\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                lm_head.is_some(),
+                lm_head_weight.is_some(),
+                lm_head_transposed
+            )
+        });
 
         // PATCH 2: Optimize tied weights by pre-transposing embeddings once at load
         // NOTE: embed_tokens.embeddings() ALWAYS returns [V,H] (Candle's internal format)
@@ -1776,8 +1869,30 @@ impl TransformerModel {
             // Always transpose [V,H] -> [H,V] for tied weights, regardless of embed_transposed flag
             // The embed_transposed flag tells us how GGUF stored it, but Candle normalizes to [V,H]
             tracing::info!("Pre-transposing tied embeddings [V,H] -> [H,V] for logits computation");
+            qwen_trace_model_init_event(
+                trace_model_init,
+                "model_init.tied_embedding_transpose_start",
+                || {
+                    format!(
+                        "\"elapsed_ms\":{},\"embedding_dims\":\"{:?}\"",
+                        qwen_trace_elapsed_ms(init_start),
+                        embed_weight.dims()
+                    )
+                },
+            );
             let transposed_weight = embed_weight.transpose(0, 1)?; // [H, V]
             tracing::info!("Transposed weight shape: {:?}", transposed_weight.dims());
+            qwen_trace_model_init_event(
+                trace_model_init,
+                "model_init.tied_embedding_transpose_finish",
+                || {
+                    format!(
+                        "\"elapsed_ms\":{},\"transposed_dims\":\"{:?}\"",
+                        qwen_trace_elapsed_ms(init_start),
+                        transposed_weight.dims()
+                    )
+                },
+            );
             (embed_transposed, Some(transposed_weight)) // Cache transposed weight
         } else {
             // Dedicated lm_head exists, no need to optimize embeddings
@@ -1809,6 +1924,9 @@ impl TransformerModel {
                 lm_head_transposed
             ),
         );
+        qwen_trace_model_init_event(trace_model_init, "model_init.finish", || {
+            format!("\"elapsed_ms\":{}", qwen_trace_elapsed_ms(init_start))
+        });
 
         Ok(Self {
             config,
