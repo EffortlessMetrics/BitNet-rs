@@ -20,6 +20,8 @@ OpenVINO, UHD 620, Qwen3.5, or BitNet QK256.
 | Prompt token cache | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache-validation.json` | Validates that repeated rendered prompts reuse token IDs while preserving generated IDs/text and strict provenance |
 | Prefill allocation attribution | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prefill-attribution-validation.json` | Validates that prompt prefill attribution preserves behavior and identifies `prompt_prefill.forward` as the dominant remaining allocation boundary |
 | Packed Q8_0 sidecar runtime proof gate | `ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-proof-validation.json` | Records that packed Q8_0 sidecar runtime execution remains blocked because production dispatch still preserves eager F32 and no after-execution receipts exist |
+| Post-bridge packed-Q8 counter classification | `ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-077-post-bridge-counter-classification.json` | Records real i5-8250U sidecar instrumentation counters and identifies `packed_matvec_compute` as the dominant exact-tensor sidecar cost |
+| Post-aligned packed-Q8 matvec classification | `ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-079-post-aligned-matvec-classification.json` | Preserves the Qwen3 behavior oracle while recording a bounded counter-level `packed_matvec_ns` reduction against the SLM-CPU-077 sidecar oracle |
 
 All rows use:
 
@@ -35,6 +37,30 @@ qwen_no_think = true
 temperature = 0.0
 greedy = true
 ```
+
+## Dashboard Refresh State
+
+This refresh is current through SLM-CPU-079. It does not run new inference or
+add a runtime optimization. It re-indexes the merged Kaby Lake Qwen3 Q8_0
+evidence after KV-cache reuse, prompt-token caching, prefill attribution, and
+the post-aligned exact-tensor packed-Q8 matvec artifact.
+
+The current operator default remains evidence-scoped to the recorded 4-thread
+operator profile. The default production runtime remains `eager_f32_candle`.
+The packed-Q8 sidecar path remains opt-in and exact-tensor scoped to
+`layers.0.attention.q_proj.weight` / `blk.0.attn_q.weight`.
+
+The current performance targets are:
+
+1. Allocation/layout work around `prompt_prefill.forward` and `model.forward`,
+   anchored by the SLM-CPU-035 prefill attribution receipt.
+2. Exact-tensor packed-Q8 matvec compute work, anchored by the SLM-CPU-077
+   counter pack and SLM-CPU-079 post-aligned counter classification.
+
+Both targets remain gated by the Qwen3 Q8_0 behavior oracle: model SHA, strict
+GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU
+backend/kernel identity, dense hook identity where applicable, and
+`fallback_used=false`.
 
 ## Thread Envelope
 
@@ -1291,13 +1317,15 @@ support, or BitNet QK256 changes.
 
 ## Current Next Target
 
-The current performance lane has two valid next-target families:
+The current performance lane has two valid next-target families. Neither is a
+default-runtime promotion gate by itself.
 
 1. Continue the allocation path from the SLM-CPU-035 prefill attribution and
    the SLM-CPU-038 typed transformer-forward workspace boundary by removing or
    narrowly classifying one `prompt_prefill.forward` owned-output allocation.
 2. Continue the packed Q8_0 exact-tensor path from SLM-CPU-079 by reducing the
-   `packed_matvec_compute` counter while keeping `packed_q8_sidecar` opt-in and
+   `packed_matvec_compute` counter or by collecting repeated before/after
+   warm-session timing receipts, while keeping `packed_q8_sidecar` opt-in and
    exact-tensor scoped.
 
 Both paths must use the Qwen3 Q8_0 appliance profile as the behavior oracle.
@@ -1317,3 +1345,7 @@ If a change improves a counter but changes generated IDs, decoded text, model
 identity, tokenizer source, backend/kernel identity, or fallback state, the
 change is a failed performance slice. If it helps only one model or one exact
 tensor, the dashboard must say so.
+
+This dashboard does not claim end-to-end speedup, sustained 8250U throughput,
+broad answer quality, Q4/Q5 runtime support, server execution, GPU/NPU/OpenVINO
+or UHD 620 execution, Qwen3.5 support, or BitNet QK256/I2_S changes.

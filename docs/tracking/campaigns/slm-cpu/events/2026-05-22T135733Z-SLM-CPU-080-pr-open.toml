@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T13:57:33Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-080"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+pr = 332
+branch = "codex/slm-cpu-080-kaby-performance-dashboard-refresh"
+head_sha = "b039e2eddc3d59f92f460bfc11bc45708997872d"
+summary = "Opened PR #332 with the Kaby Lake Qwen3 Q8_0 performance dashboard refresh."
+notes = [
+  "The PR refreshes the dashboard through SLM-CPU-079 and adds the SLM-CPU-077/079 packed-Q8 counter classifications to the evidence set.",
+  "The current operator default remains evidence-scoped to the recorded 4-thread operator profile, and packed-Q8 sidecar execution remains opt-in and exact-tensor scoped.",
+  "No new inference, runtime optimization, end-to-end speedup, sustained throughput, Q4/Q5 runtime, server, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]
