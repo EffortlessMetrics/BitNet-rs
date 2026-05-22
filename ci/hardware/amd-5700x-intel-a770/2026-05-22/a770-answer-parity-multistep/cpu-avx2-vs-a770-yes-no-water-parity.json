@@ -1,0 +1,331 @@
+{
+  "artifact_kind": "bitnet_answer_corpus_parity",
+  "backend": {
+    "fallback_used": false,
+    "lanes": {
+      "left": {
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "label": "amd-5700x-cpu-avx2"
+      },
+      "right": {
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "label": "intel-a770-opencl"
+      }
+    },
+    "requested_backend": "mixed",
+    "runtime_api": "mixed",
+    "selected_backend": "mixed"
+  },
+  "cases": [
+    {
+      "failed_rules": [
+        "generated_token_ids",
+        "decoded_text",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk"
+      ],
+      "id": "yes_no_water",
+      "left": {
+        "answer": "No. N/A",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          2822,
+          13,
+          452,
+          10576
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 4,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "No. .",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          2822,
+          13,
+          662,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 4,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    }
+  ],
+  "claim": "full_decode_answer_parity_diagnostic",
+  "fallback_used": false,
+  "generated_output_frontier": {
+    "case_count": 1,
+    "classification": "generated_output_frontier_first_mismatch_has_logit_context",
+    "decoded_text_mismatch_count": 1,
+    "generated_output_mismatch_count": 1,
+    "left_label": "amd-5700x-cpu-avx2",
+    "mismatch_with_logit_context_count": 1,
+    "missing_context_count": 0,
+    "missing_logit_context_count": 0,
+    "right_label": "intel-a770-opencl",
+    "row_limit": 16,
+    "rows": [
+      {
+        "case_id": "yes_no_water",
+        "classification": "generated_output_first_mismatch_has_logit_context",
+        "decoded_text_match": false,
+        "first_different_rank_at_first_mismatch": 0,
+        "first_mismatch_index": 2,
+        "has_logit_context_at_first_mismatch": true,
+        "left_chosen_id_at_first_mismatch": 452,
+        "left_generated_len": 4,
+        "left_logits_step_count": 4,
+        "left_token_id": 452,
+        "right_chosen_id_at_first_mismatch": 662,
+        "right_generated_len": 4,
+        "right_logits_step_count": 4,
+        "right_token_id": 662,
+        "same_chosen_id_at_first_mismatch": false
+      }
+    ],
+    "rows_truncated": false
+  },
+  "inputs": {
+    "left_label": "amd-5700x-cpu-avx2",
+    "left_receipt_path": "ci\\hardware\\amd-5700x-intel-a770\\2026-05-22\\a770-answer-parity-multistep\\cpu-avx2-yes-no-water.json",
+    "right_label": "intel-a770-opencl",
+    "right_receipt_path": "ci\\hardware\\amd-5700x-intel-a770\\2026-05-22\\a770-answer-parity-multistep\\a770-opencl-yes-no-water.json"
+  },
+  "kernel": {
+    "left_label": "amd-5700x-cpu-avx2",
+    "left_selected_kernels": [
+      "i2_s-avx2-reference"
+    ],
+    "right_label": "intel-a770-opencl",
+    "right_selected_kernels": [
+      "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate"
+    ]
+  },
+  "logits_topk_frontier": {
+    "case_count": 1,
+    "classification": "logits_topk_frontier_generated_output_divergence",
+    "compared_step_count": 4,
+    "different_chosen_token_count": 2,
+    "generated_output_divergence_count": 4,
+    "left_label": "amd-5700x-cpu-avx2",
+    "logits_topk_mismatch_count": 4,
+    "max_common_token_abs_delta": 0.6004700660705566,
+    "missing_context_count": 0,
+    "right_label": "intel-a770-opencl",
+    "row_limit": 16,
+    "rows": [
+      {
+        "case_id": "yes_no_water",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 19,
+        "decoded_text_match": false,
+        "first_different_rank": 6,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 2822,
+        "left_only_top_token_ids": [
+          29356
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.29613780975341797,
+        "right_chosen_id": 2822,
+        "right_only_top_token_ids": [
+          58841
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "yes_no_water",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 20,
+        "decoded_text_match": false,
+        "first_different_rank": 5,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 13,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.3087472915649414,
+        "right_chosen_id": 13,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 1
+      },
+      {
+        "case_id": "yes_no_water",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 17,
+        "decoded_text_match": false,
+        "first_different_rank": 0,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 452,
+        "left_only_top_token_ids": [
+          356,
+          578,
+          3053
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.6004700660705566,
+        "right_chosen_id": 662,
+        "right_only_top_token_ids": [
+          220,
+          358,
+          72684
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": false,
+        "step": 2
+      },
+      {
+        "case_id": "yes_no_water",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 0,
+        "decoded_text_match": false,
+        "first_different_rank": 0,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 10576,
+        "left_only_top_token_ids": [
+          12,
+          13,
+          17
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.0,
+        "right_chosen_id": 128009,
+        "right_only_top_token_ids": [
+          220,
+          320,
+          362
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": false,
+        "step": 3
+      }
+    ],
+    "rows_truncated": false,
+    "same_chosen_token_count": 2,
+    "same_generated_output_count": 0
+  },
+  "machine": {
+    "cpu": null,
+    "machine_id": "amd-5700x-intel-a770",
+    "memory": null,
+    "platform_artifact": null,
+    "power": null
+  },
+  "may_claim": [
+    "Full-decode answer parity can be audited for the compared receipts.",
+    "First divergence evidence can separate backend issues from shared prompt, tokenizer, logits, sampler, or text decoding issues."
+  ],
+  "must_not_claim": [
+    "General chat quality is proven.",
+    "Sustained throughput is proven.",
+    "Server inference is complete.",
+    "A backend is answer-ready when the compared model artifact is not answer-ready."
+  ],
+  "proof_stage": "full_decode_parity_compared",
+  "requested_backend": "mixed",
+  "runtime_api": "mixed",
+  "schema_version": "1.0.0",
+  "selected_backend": "mixed",
+  "shared_contract": {
+    "failed_rules": [],
+    "same_greedy_settings": true,
+    "same_prompt_template": true,
+    "same_real_gguf": true,
+    "same_tokenizer": true
+  },
+  "speedup_claim": false,
+  "summary": {
+    "failed": 1,
+    "first_divergence": {
+      "case_id": "yes_no_water",
+      "kind": "generated_token_ids",
+      "left": [
+        2822,
+        13,
+        452,
+        10576
+      ],
+      "left_label": "amd-5700x-cpu-avx2",
+      "right": [
+        2822,
+        13,
+        662,
+        128009
+      ],
+      "right_label": "intel-a770-opencl",
+      "scope": "decode_or_sampler",
+      "step": null
+    },
+    "passed": 0,
+    "total": 1
+  },
+  "timestamp": "2026-05-22T05:53:27.020486+00:00"
+}

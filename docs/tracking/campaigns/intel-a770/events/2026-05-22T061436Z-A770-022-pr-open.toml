@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T06:14:36Z"
+campaign = "intel-a770"
+item = "A770-022"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+pr = 287
+branch = "codex/intel-a770/A770-022-multistep-answer-parity"
+head_sha = "8e45784b8fd7e76e62cc249035ad81fcb3a54b75"
+summary = "Opened PR #287 for focused multi-step CPU/A770 answer-parity frontier reporting."
+notes = [
+  "The PR adds generated_output_frontier to the answer-parity receipt and records focused yes_no_water CPU AVX2 versus Intel A770 OpenCL receipts with four dumped logit steps.",
+  "The live result classifies the first generated token mismatch as covered by logit context at generated index 2, with CPU token 452 and A770 token 662.",
+  "No CPU/A770 answer parity, reference parity, broad A770 answer quality, strict A770 answer readiness, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]
