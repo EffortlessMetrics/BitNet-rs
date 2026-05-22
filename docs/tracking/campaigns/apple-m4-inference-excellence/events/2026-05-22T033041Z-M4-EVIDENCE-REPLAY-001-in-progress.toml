@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T03:30:41Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EVIDENCE-REPLAY-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
+
+notes = [
+  "Advanced the campaign current item after M4-WORKLOAD-001 merged.",
+  "M4-EVIDENCE-REPLAY-001 is now the active next item for replayable dense SLM and BitNet evidence bundles.",
+  "No implementation work for M4-EVIDENCE-REPLAY-001 is included in this tracker-only closeout.",
+]
