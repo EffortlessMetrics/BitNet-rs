@@ -7,6 +7,7 @@ pub const MACHINE_ID: &str = "apple-m4-mac-mini";
 pub const ARTIFACT_KIND: &str = "smoke";
 pub const PARITY_ARTIFACT_KIND: &str = "parity";
 pub const PHASE_CONTRIBUTION_ARTIFACT_KIND: &str = "phase_contribution";
+pub const SLM_APPLE_M4_METAL_PHASE_ARTIFACT_KIND: &str = "slm_apple_m4_metal_phase";
 pub const SUBGRAPH_ARTIFACT_KIND: &str = "subgraph";
 pub const REQUESTED_BACKEND: &str = "apple-m4-metal";
 pub const SELECTED_BACKEND: &str = "apple-m4-metal";
@@ -20,6 +21,8 @@ pub const I2S_METAL_PROJECTION_RESIDUAL_KERNEL_ID: &str = "tiny_metal_i2s_projec
 pub const I2S_PROJECTION_RESIDUAL_GRAPH_ID: &str = "tiny_i2s_projection_residual_subgraph";
 pub const DENSE_METAL_PREFILL_LINEAR_KERNEL_ID: &str = "tiny_metal_dense_prefill_linear_projection";
 pub const DENSE_METAL_PREFILL_QKV_KERNEL_ID: &str = "tiny_metal_dense_prefill_qkv_projection";
+pub const DENSE_METAL_PREFILL_ATTENTION_SCORES_KERNEL_ID: &str =
+    "tiny_metal_dense_prefill_attention_scores";
 pub const I2S_KERNEL_FAMILY: &str = "i2_s";
 pub const DENSE_KERNEL_FAMILY: &str = "dense_f32";
 pub const DENSE_MODEL_FAMILY: &str = "qwen2.5";
@@ -34,11 +37,19 @@ pub const DENSE_PREFILL_LINEAR_KV_CACHE_BEHAVIOR: &str = "not_exercised";
 pub const DENSE_PREFILL_QKV_EXECUTION_PHASE: &str = "prefill_qkv_projection";
 pub const DENSE_PREFILL_QKV_PHASE_SCOPE: &str = "qwen2_5_dense_prefill_qkv_projection_fixture";
 pub const DENSE_PREFILL_QKV_KV_CACHE_BEHAVIOR: &str = "not_exercised";
+pub const DENSE_PREFILL_ATTENTION_SCORES_EXECUTION_PHASE: &str = "prefill_attention_scores";
+pub const DENSE_PREFILL_ATTENTION_SCORES_PHASE_SCOPE: &str =
+    "qwen2_5_dense_prefill_attention_scores_fixture";
+pub const DENSE_PREFILL_ATTENTION_SCORES_KV_CACHE_BEHAVIOR: &str =
+    "read_only_fixture_keys_no_cache_write";
+pub const DENSE_PREFILL_ATTENTION_SCORES_LAYOUT_SOURCE: &str = "fixture_dense_f32_qk_rope_applied";
 pub const DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND: &str = "apple-m4-cpu-neon";
 pub const DENSE_PREFILL_LINEAR_TIMING_SCOPE: &str =
     "single_live_phase_dispatch_readback_vs_cpu_reference_fixture";
 pub const DENSE_PREFILL_QKV_TIMING_SCOPE: &str =
     "single_live_qkv_phase_dispatch_readback_vs_cpu_reference_fixture";
+pub const DENSE_PREFILL_ATTENTION_SCORES_TIMING_SCOPE: &str =
+    "single_live_attention_score_phase_dispatch_readback_vs_cpu_reference_fixture";
 pub const I2S_PROJECTION_RESIDUAL_EXECUTION_PHASE: &str = "parity";
 pub const I2S_PROJECTION_RESIDUAL_PHASE_SCOPE: &str = "projection_residual_subgraph";
 pub const I2S_PROJECTION_RESIDUAL_OPS: [&str; 2] = ["packed_i2_s_matmul", "residual_add"];
@@ -52,6 +63,7 @@ pub const I2S_PARITY_K: usize = 32;
 pub const I2S_PARITY_BLOCK_SIZE: usize = 32;
 pub const I2S_PREFILL_TOKENS: usize = 2;
 pub const DENSE_PREFILL_TOKENS: usize = 2;
+pub const DENSE_PREFILL_ATTENTION_SCORE_TOKENS: usize = 4;
 pub const DENSE_PREFILL_IN_FEATURES: usize = 8;
 pub const DENSE_PREFILL_OUT_FEATURES: usize = 6;
 pub const QWEN2_5_0_5B_HIDDEN_SIZE: usize = 896;
@@ -272,6 +284,42 @@ pub struct DenseMetalPrefillQkvReceipt {
     pub timing: DenseMetalPrefillQkvTiming,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseMetalPrefillAttentionScoresReceipt {
+    pub machine_id: &'static str,
+    pub artifact_kind: &'static str,
+    pub requested_backend: &'static str,
+    pub selected_backend: &'static str,
+    pub runtime_api: &'static str,
+    pub reference_backend: &'static str,
+    pub target_backend: &'static str,
+    pub rest_of_pipeline_backend: &'static str,
+    pub kernel_id: &'static str,
+    pub model_family: &'static str,
+    pub kernel_family: &'static str,
+    pub execution_phase: &'static str,
+    pub phase_scope: &'static str,
+    pub layout_source: &'static str,
+    pub transport_layout: &'static str,
+    pub kv_cache_behavior: &'static str,
+    pub fallback_used: bool,
+    pub result: &'static str,
+    pub artifact_path: String,
+    pub prefill_tokens: usize,
+    pub attention_heads: usize,
+    pub kv_heads: usize,
+    pub head_dim: usize,
+    pub score_count: usize,
+    pub scale: f32,
+    pub scores_match_cpu_reference: bool,
+    pub score_shape_matches_cpu_reference: bool,
+    pub head_mapping_matches_cpu_reference: bool,
+    pub max_abs_error: f32,
+    pub mean_abs_error: f32,
+    pub score_argmax_index: usize,
+    pub timing: DenseMetalPrefillAttentionScoresTiming,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DenseMetalPrefillLinearTiming {
     pub cpu_reference_ms: f64,
@@ -288,6 +336,16 @@ pub struct DenseMetalPrefillQkvTiming {
     pub metal_q_ms: f64,
     pub metal_k_ms: f64,
     pub metal_v_ms: f64,
+    pub dispatch_readback_ms: f64,
+    pub timing_delta_ms: f64,
+    pub timing_scope: &'static str,
+    pub speedup_claim: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DenseMetalPrefillAttentionScoresTiming {
+    pub cpu_reference_ms: f64,
+    pub metal_phase_ms: f64,
     pub dispatch_readback_ms: f64,
     pub timing_delta_ms: f64,
     pub timing_scope: &'static str,
@@ -317,6 +375,19 @@ impl DenseMetalPrefillQkvTiming {
             dispatch_readback_ms: metal_phase_ms,
             timing_delta_ms: metal_phase_ms - cpu_reference_ms,
             timing_scope: DENSE_PREFILL_QKV_TIMING_SCOPE,
+            speedup_claim: false,
+        }
+    }
+}
+
+impl DenseMetalPrefillAttentionScoresTiming {
+    pub fn measured(cpu_reference_ms: f64, metal_phase_ms: f64) -> Self {
+        Self {
+            cpu_reference_ms,
+            metal_phase_ms,
+            dispatch_readback_ms: metal_phase_ms,
+            timing_delta_ms: metal_phase_ms - cpu_reference_ms,
+            timing_scope: DENSE_PREFILL_ATTENTION_SCORES_TIMING_SCOPE,
             speedup_claim: false,
         }
     }
@@ -535,6 +606,50 @@ impl DenseMetalPrefillQkvReceipt {
     }
 }
 
+impl DenseMetalPrefillAttentionScoresReceipt {
+    pub fn passed(
+        artifact_path: impl Into<String>,
+        comparison: SmokeComparison,
+        fixture: &DenseMetalPrefillAttentionScoresFixture,
+        timing: DenseMetalPrefillAttentionScoresTiming,
+    ) -> Self {
+        Self {
+            machine_id: MACHINE_ID,
+            artifact_kind: SLM_APPLE_M4_METAL_PHASE_ARTIFACT_KIND,
+            requested_backend: REQUESTED_BACKEND,
+            selected_backend: SELECTED_BACKEND,
+            runtime_api: RUNTIME_API,
+            reference_backend: REFERENCE_BACKEND,
+            target_backend: SELECTED_BACKEND,
+            rest_of_pipeline_backend: DENSE_PREFILL_LINEAR_REST_OF_PIPELINE_BACKEND,
+            kernel_id: DENSE_METAL_PREFILL_ATTENTION_SCORES_KERNEL_ID,
+            model_family: DENSE_MODEL_FAMILY,
+            kernel_family: DENSE_KERNEL_FAMILY,
+            execution_phase: DENSE_PREFILL_ATTENTION_SCORES_EXECUTION_PHASE,
+            phase_scope: DENSE_PREFILL_ATTENTION_SCORES_PHASE_SCOPE,
+            layout_source: DENSE_PREFILL_ATTENTION_SCORES_LAYOUT_SOURCE,
+            transport_layout: DENSE_TRANSPORT_LAYOUT,
+            kv_cache_behavior: DENSE_PREFILL_ATTENTION_SCORES_KV_CACHE_BEHAVIOR,
+            fallback_used: false,
+            result: "pass",
+            artifact_path: artifact_path.into(),
+            prefill_tokens: fixture.prefill_tokens,
+            attention_heads: fixture.attention_heads,
+            kv_heads: fixture.kv_heads,
+            head_dim: fixture.head_dim,
+            score_count: fixture.expected_scores.len(),
+            scale: fixture.scale,
+            scores_match_cpu_reference: comparison.max_abs_error <= 1e-5,
+            score_shape_matches_cpu_reference: true,
+            head_mapping_matches_cpu_reference: true,
+            max_abs_error: comparison.max_abs_error,
+            mean_abs_error: comparison.mean_abs_error,
+            score_argmax_index: argmax_index(&fixture.expected_scores),
+            timing,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct I2sMetalParityFixture {
     pub activations: Vec<f32>,
@@ -586,6 +701,18 @@ pub struct DenseMetalPrefillQkvFixture {
     pub head_dim: usize,
     pub q_dim: usize,
     pub kv_dim: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DenseMetalPrefillAttentionScoresFixture {
+    pub q: Vec<f32>,
+    pub k: Vec<f32>,
+    pub expected_scores: Vec<f32>,
+    pub prefill_tokens: usize,
+    pub attention_heads: usize,
+    pub kv_heads: usize,
+    pub head_dim: usize,
+    pub scale: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -648,6 +775,12 @@ pub fn metal_dense_prefill_linear_artifact_path(date: &str) -> String {
 
 pub fn metal_dense_prefill_qkv_artifact_path(date: &str) -> String {
     format!("ci/hardware/{MACHINE_ID}/{date}/metal-dense-prefill-qkv.json")
+}
+
+pub fn metal_dense_prefill_attention_scores_artifact_path(date: &str) -> String {
+    format!(
+        "ci/hardware/{MACHINE_ID}/{date}/slm-metal-phases/metal-dense-prefill-attention-scores.json"
+    )
 }
 
 pub fn tiny_add_inputs() -> (Vec<f32>, Vec<f32>) {
@@ -797,6 +930,91 @@ pub fn dense_metal_prefill_qkv_fixture() -> DenseMetalPrefillQkvFixture {
     }
 }
 
+pub fn dense_metal_prefill_attention_scores_fixture() -> DenseMetalPrefillAttentionScoresFixture {
+    let prefill_tokens = DENSE_PREFILL_ATTENTION_SCORE_TOKENS;
+    let attention_heads = QWEN2_5_0_5B_ATTENTION_HEADS;
+    let kv_heads = QWEN2_5_0_5B_KV_HEADS;
+    let head_dim = QWEN2_5_0_5B_HEAD_DIM;
+    let scale = 1.0 / (head_dim as f32).sqrt();
+    let q = (0..prefill_tokens * attention_heads * head_dim)
+        .map(|index| {
+            let token = index / (attention_heads * head_dim);
+            let head = (index / head_dim) % attention_heads;
+            let dim = index % head_dim;
+            ((token as i32 * 17 + head as i32 * 5 + dim as i32 * 3) % 31 - 15) as f32 * 0.015625
+        })
+        .collect::<Vec<_>>();
+    let k = (0..prefill_tokens * kv_heads * head_dim)
+        .map(|index| {
+            let token = index / (kv_heads * head_dim);
+            let kv_head = (index / head_dim) % kv_heads;
+            let dim = index % head_dim;
+            ((token as i32 * 13 + kv_head as i32 * 7 + dim as i32 * 2) % 29 - 14) as f32 * 0.015625
+        })
+        .collect::<Vec<_>>();
+    let expected_scores = dense_prefill_attention_scores_expected(
+        &q,
+        &k,
+        prefill_tokens,
+        attention_heads,
+        kv_heads,
+        head_dim,
+    );
+
+    DenseMetalPrefillAttentionScoresFixture {
+        q,
+        k,
+        expected_scores,
+        prefill_tokens,
+        attention_heads,
+        kv_heads,
+        head_dim,
+        scale,
+    }
+}
+
+pub fn dense_prefill_attention_scores_expected(
+    q: &[f32],
+    k: &[f32],
+    prefill_tokens: usize,
+    attention_heads: usize,
+    kv_heads: usize,
+    head_dim: usize,
+) -> Vec<f32> {
+    assert_eq!(q.len(), prefill_tokens * attention_heads * head_dim);
+    assert_eq!(k.len(), prefill_tokens * kv_heads * head_dim);
+    assert_eq!(attention_heads % kv_heads, 0);
+
+    let scale = 1.0 / (head_dim as f32).sqrt();
+    let mut scores = vec![0.0; attention_heads * prefill_tokens * prefill_tokens];
+    for head in 0..attention_heads {
+        let kv_head = dense_prefill_attention_scores_kv_head(head, attention_heads, kv_heads);
+        for query_token in 0..prefill_tokens {
+            for key_token in 0..prefill_tokens {
+                let mut acc = 0.0_f32;
+                for dim in 0..head_dim {
+                    let q_index = ((query_token * attention_heads + head) * head_dim) + dim;
+                    let k_index = ((key_token * kv_heads + kv_head) * head_dim) + dim;
+                    acc += q[q_index] * k[k_index];
+                }
+                let score_index = (head * prefill_tokens * prefill_tokens)
+                    + (query_token * prefill_tokens)
+                    + key_token;
+                scores[score_index] = acc * scale;
+            }
+        }
+    }
+    scores
+}
+
+pub fn dense_prefill_attention_scores_kv_head(
+    attention_head: usize,
+    attention_heads: usize,
+    kv_heads: usize,
+) -> usize {
+    attention_head / (attention_heads / kv_heads)
+}
+
 fn deterministic_dense_weights(
     out_features: usize,
     in_features: usize,
@@ -912,6 +1130,17 @@ pub fn dense_prefill_qkv_shape_words(fixture: &DenseMetalPrefillQkvFixture) -> [
         fixture.hidden_size as u32,
         fixture.q_dim as u32,
         fixture.kv_dim as u32,
+        fixture.attention_heads as u32,
+        fixture.kv_heads as u32,
+        fixture.head_dim as u32,
+    ]
+}
+
+pub fn dense_prefill_attention_scores_shape_words(
+    fixture: &DenseMetalPrefillAttentionScoresFixture,
+) -> [u32; 4] {
+    [
+        fixture.prefill_tokens as u32,
         fixture.attention_heads as u32,
         fixture.kv_heads as u32,
         fixture.head_dim as u32,

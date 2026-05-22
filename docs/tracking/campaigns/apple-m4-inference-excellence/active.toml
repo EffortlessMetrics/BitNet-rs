@@ -1,6 +1,6 @@
 id = "apple-m4-inference-excellence"
 title = "Apple M4 inference excellence"
-status = "active"
+status = "complete"
 
 objective = "Move the M4 Mac mini from complete evidence lanes to excellent, repeatable local inference across supported dense SLMs and BitNet: deeper deterministic accuracy, fuller benchmark envelopes, enough matching-history receipts to remove important insufficient-history gaps, BitNet-specific product proof, reproducible run and artifact identity, service-surface conformance, clearer operator UX, and phase-scoped acceleration discipline without broad Apple Silicon or unsupported backend claims."
 
@@ -3182,21 +3182,27 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-EX-002"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-METAL-EX-002-phase-parity"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-METAL-EX-001"]
+pr = 6196
+head_sha = "614847ab5b30e746626431910559ea536c233912"
+merge_sha = "59a7c1ab0a7ec52a792a799b20f7da5d7f6601d4"
 acceptance = "Implement the selected Metal phase fixture with CPU reference parity, same generated token IDs/text where required by the phase, fallback=false phase receipts, and phase-local timing only."
 commands = [
-  "cargo test --locked -p bitnet-kernels --features metal <selected-phase-test>",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features metal --test metal_attention_scores_phase dense_prefill_attention_scores_fixture_matches_cpu_reference",
+  "cargo test --locked -p bitnet-kernels --no-default-features --features metal --test metal_attention_scores_phase dense_prefill_attention_scores_receipt_records_phase_scope_and_claim_boundary",
+  "BITNET_RUN_M4_METAL_DENSE_PREFILL_ATTENTION_SCORES=1 BITNET_M4_METAL_DENSE_PREFILL_ATTENTION_SCORES_RECEIPT=ci/hardware/apple-m4-mac-mini/<date>/slm-metal-phases/metal-dense-prefill-attention-scores.json cargo test --locked -p bitnet-kernels --no-default-features --features metal-runtime --test metal_attention_scores_phase dense_prefill_attention_scores_match_cpu_reference_when_enabled -- --nocapture",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",
 ]
 allowed_paths = [
+  "ci/hardware/apple-m4-mac-mini/**/slm-metal-phases/**",
   "crates/bitnet-kernels/src/metal/**",
   "crates/bitnet-kernels/tests/**",
   "docs/slm/**",

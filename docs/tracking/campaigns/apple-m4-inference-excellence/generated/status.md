@@ -2,7 +2,7 @@
 # Apple M4 inference excellence Campaign Status
 
 - Campaign: `apple-m4-inference-excellence`
-- State: `active`
+- State: `complete`
 - Objective: Move the M4 Mac mini from complete evidence lanes to excellent, repeatable local inference across supported dense SLMs and BitNet: deeper deterministic accuracy, fuller benchmark envelopes, enough matching-history receipts to remove important insufficient-history gaps, BitNet-specific product proof, reproducible run and artifact identity, service-surface conformance, clearer operator UX, and phase-scoped acceleration discipline without broad Apple Silicon or unsupported backend claims.
 
 ## Work Items
@@ -86,7 +86,7 @@
 | M4-CLAIM-LINT-001 | merged | #6190 | `codex/apple-m4-inference-excellence/M4-CLAIM-LINT-001-claim-boundary-check` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Add a static claim-boundary checker for M4 docs, generated tracker status, operator envelope text, and operator-facing command strings that rejects unsupported Apple Silicon, MacBook, Metal, Neural Engine, MPSGraph, QK256, dense-as-BitNet, broad quality/performance, and speedup wording unless explicitly tied to a matching accepted receipt gate. |
 | M4-RELEASE-001 | merged | #6192 | `codex/apple-m4-inference-excellence/M4-RELEASE-001-go-no-go` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Publish the M4 inference release go/no-go matrix that states which dense SLM, BitNet, benchmark, stability, service, operator, and claim-boundary gates must pass before updating the public M4 expectation envelope or marking a model family route excellent. |
 | M4-METAL-EX-001 | merged | #6194 | `codex/apple-m4-inference-excellence/M4-METAL-EX-001-phase-choice` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Choose one named future Apple M4 Metal phase from existing proof boundaries, document CPU reference parity requirements, fallback=false receipt fields, phase-local timing, and explicit CPU/NEON remainder before any code route changes. |
-| M4-METAL-EX-002 | proposed | TBD | `codex/apple-m4-inference-excellence/M4-METAL-EX-002-phase-parity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Implement the selected Metal phase fixture with CPU reference parity, same generated token IDs/text where required by the phase, fallback=false phase receipts, and phase-local timing only. |
+| M4-METAL-EX-002 | merged | #6196 | `codex/apple-m4-inference-excellence/M4-METAL-EX-002-phase-parity` | `codex_premerge` | `automerge_when_green` | `on_blocker_only` | Implement the selected Metal phase fixture with CPU reference parity, same generated token IDs/text where required by the phase, fallback=false phase receipts, and phase-local timing only. |
 
 ## Hard Constraints
 

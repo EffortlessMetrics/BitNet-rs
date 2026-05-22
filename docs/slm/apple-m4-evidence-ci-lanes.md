@@ -14,7 +14,7 @@ The lane split is deliberately conservative:
 | Scheduled M4 refresh | Nightly or weekly on the M4 Mac mini when disk/cache preflight passes | Dense SLM eval/benchmark, BitNet eval/benchmark, BitNet variable warm, report-refresh, regression-dashboard, receipt validation | yes | Non-blocking for generic PRs; failures open repair work or block later claims |
 | Release gate | Before publishing a new M4 expectation envelope or promoting a route class | Full supported dense matrix, accepted BitNet artifact/tokenizer eval and benchmark, warm-session receipts, service conformance, dashboard refresh, operator docs | yes | Blocks the release claim when quality, timeout, fallback, identity, or required receipt validation fails |
 
-Generic PR Tier 0 must never fetch model binaries, run live M4 inference, run
+Generic PR Tier 0 must not fetch model binaries, run live M4 inference, run
 BitNet chat or serve, publish fresh hardware timing, or claim broad quality or
 performance. It may validate committed receipts and dry-run corpora because
 those operations are model-free.

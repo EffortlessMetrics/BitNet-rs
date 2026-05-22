@@ -1648,3 +1648,31 @@ completed Q/K/V projection work: prefill attention-score logits with CPU
 reference parity, fallback-free phase receipts, phase-local timing, and
 CPU/NEON retained for the rest of the answer path. See
 `docs/slm/apple-m4-metal-ex-phase-choice.md`.
+
+`M4-METAL-EX-002` implements that one named phase as a dense SLM fixture and
+records the runtime receipt at:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-22/slm-metal-phases/metal-dense-prefill-attention-scores.json
+```
+
+The receipt is phase-scoped: prefill attention-score logits only, CPU reference
+parity, `fallback_used=false`, phase-local timing, and CPU/NEON retained for
+the rest of the answer path. It is not full `apple-m4-metal` inference, not a
+BitNet route, not QK256, Neural Engine, MPSGraph, MacBook evidence, speedup,
+broad quality, broad performance, or broad Apple Silicon support.
+
+## Completion Audit
+
+The campaign closeout audit is committed at:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-22/m4-inference-excellence-completion-audit.json
+```
+
+It maps the active thread objective to committed artifacts and records the
+local validation commands used at closeout. The decision is complete because
+all 78 tracker items are merged, `campaign next` reports no next item, the
+campaign and generated dashboards validate, claim lint passes for the Apple M4
+scope, and the final state keeps dense SLM evidence, BitNet evidence, service
+proof, operator UX, release gates, and Metal phase claims separated.
