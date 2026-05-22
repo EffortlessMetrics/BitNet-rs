@@ -357,6 +357,22 @@ const APPLE_M4_LIFECYCLE_STATE_ORDER: &[&str] = &[
 ];
 
 #[cfg(feature = "full-cli")]
+static APPLE_M4_REJECTED_LIFECYCLE_STATE: AppleM4LifecycleStatePolicy =
+    AppleM4LifecycleStatePolicy {
+        state: "rejected",
+        selectable: false,
+        route_scope: "failed or out-of-scope identity",
+        required_evidence: &[
+            "rejection reason covering artifact, architecture, tokenizer, quality, timing, or scope failure",
+            "new candidate item before reconsideration",
+        ],
+        cache_migration: "Do not fetch; prune any stale cache entry when it is safe and operator-approved.",
+        operator_warning: "Rejected models are not M4 answer, chat, serve, quality, or benchmark evidence.",
+        rollback_guidance: "Do not roll back into rejected rows; open a new candidate lifecycle item if new evidence appears.",
+        claim_boundary_update: "Docs may only state why the identity is rejected and which separate work would be required.",
+    };
+
+#[cfg(feature = "full-cli")]
 const APPLE_M4_LIFECYCLE_STATES: &[AppleM4LifecycleStatePolicy] = &[
     AppleM4LifecycleStatePolicy {
         state: "default",
@@ -445,19 +461,7 @@ const APPLE_M4_LIFECYCLE_STATES: &[AppleM4LifecycleStatePolicy] = &[
         rollback_guidance: "Restore only through a fresh supported-model PR with current receipts, or continue to retired after migration evidence lands.",
         claim_boundary_update: "Remove or narrow public expectation-envelope claims and generated dashboard rows for the deprecated identity.",
     },
-    AppleM4LifecycleStatePolicy {
-        state: "rejected",
-        selectable: false,
-        route_scope: "failed or out-of-scope identity",
-        required_evidence: &[
-            "rejection reason covering artifact, architecture, tokenizer, quality, timing, or scope failure",
-            "new candidate item before reconsideration",
-        ],
-        cache_migration: "Do not fetch; prune any stale cache entry when it is safe and operator-approved.",
-        operator_warning: "Rejected models are not M4 answer, chat, serve, quality, or benchmark evidence.",
-        rollback_guidance: "Do not roll back into rejected rows; open a new candidate lifecycle item if new evidence appears.",
-        claim_boundary_update: "Docs may only state why the identity is rejected and which separate work would be required.",
-    },
+    APPLE_M4_REJECTED_LIFECYCLE_STATE,
     AppleM4LifecycleStatePolicy {
         state: "retired",
         selectable: false,
@@ -2066,12 +2070,12 @@ fn apple_m4_lifecycle_policy() -> AppleM4LifecyclePolicy {
 
 #[cfg(feature = "full-cli")]
 fn apple_m4_lifecycle_state_policy(state: &str) -> &'static AppleM4LifecycleStatePolicy {
-    APPLE_M4_LIFECYCLE_STATES.iter().find(|policy| policy.state == state).unwrap_or_else(|| {
-        APPLE_M4_LIFECYCLE_STATES
-            .iter()
-            .find(|policy| policy.state == "rejected")
-            .expect("Apple M4 lifecycle rejected policy")
-    })
+    for policy in APPLE_M4_LIFECYCLE_STATES {
+        if policy.state == state {
+            return policy;
+        }
+    }
+    &APPLE_M4_REJECTED_LIFECYCLE_STATE
 }
 
 #[cfg(feature = "full-cli")]
