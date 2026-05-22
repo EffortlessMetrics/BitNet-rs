@@ -78,14 +78,34 @@ bitnet mac regression-dashboard \
   --explain \
   --open-targets \
   --json
+bitnet mac report-refresh \
+  --since 7d \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/report-refresh.json \
+  --json
+bitnet mac regression-dashboard \
+  --since 7d \
+  --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.json \
+  --markdown-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.md \
+  --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/evidence-summary.json --json
 bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json --json
 bitnet mac receipts-check target/apple-m4-inference-excellence/regression-dashboard.json --json
+bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/report-refresh.json --json
+bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.json --json
 ```
 
 The refresh commands do not run live inference or download models by default.
 They report missing history, stale identities, warnings, and failed groups from
 the committed evidence inventory.
+
+`M4-TREND-001` adds the rolling seven-day trend view. The committed
+`2026-05-21T1805Z/trend` receipts are model-free summaries over retained source
+receipts only: 29 reports across 7 families, 13 matching-identity groups, and
+10 comparable groups for the `2026-05-15` through `2026-05-21` window. The
+trend receipts record skipped-day reasons, threshold outcomes, and operator
+envelope impact without replacing the source receipts or making a one-off
+quality, performance, speedup, BitNet chat, BitNet serve, Metal, QK256, Neural
+Engine, MPSGraph, MacBook, or broad Apple Silicon claim.
 
 ## Hardware Timing Policy
 

@@ -148,7 +148,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-ROUTE-MATRIX-001 | merged | Publish the route-state matrix for dense SLM and BitNet command surfaces. |
 | M4-WORKLOAD-001 | proposed | Add end-to-end operator workload receipts across enabled M4 routes. |
 | M4-EVIDENCE-REPLAY-001 | merged | Add replayable evidence bundles for dense SLM and BitNet refreshes. |
-| M4-TREND-001 | proposed | Publish seven-day matching-identity trend history and skipped-day reasons. |
+| M4-TREND-001 | pr_open | Publish seven-day matching-identity trend history and skipped-day reasons. |
 | M4-MODEL-LIFECYCLE-001 | proposed | Define supported-model lifecycle states and claim-boundary requirements. |
 | M4-COMPAT-001 | proposed | Define compatibility refresh receipts after OS, toolchain, binary, or manifest changes. |
 | M4-RELEASE-001 | proposed | Publish the M4 inference release go/no-go matrix. |

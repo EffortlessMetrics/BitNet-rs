@@ -33,6 +33,30 @@ fn workspace_path(path: &str) -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..").join(path)
 }
 
+fn write_m4_trend_test_report(path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let source = workspace_path(
+        "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+    );
+    std::fs::copy(source, path)?;
+    Ok(())
+}
+
+fn write_m4_trend_test_reports(root: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+    let today = chrono::Utc::now().date_naive();
+    let yesterday = today - chrono::Duration::days(1);
+    let old = today - chrono::Duration::days(10);
+    for date in [today, yesterday] {
+        write_m4_trend_test_report(
+            &root.join(format!("{date}T000000Z/slm-eval-v2/qwen/summary.json")),
+        )?;
+    }
+    write_m4_trend_test_report(&root.join(format!("{old}T000000Z/slm-eval-v2/qwen/summary.json")))?;
+    Ok(())
+}
+
 fn write_bitnet_chat_streaming_semantics_receipt(
     path: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -1433,6 +1457,55 @@ fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::er
 }
 
 #[test]
+fn mac_report_refresh_since_records_rolling_trend_window() -> Result<(), Box<dyn std::error::Error>>
+{
+    let dir = tempfile::tempdir()?;
+    let report_root = dir.path().join("apple-m4-reports");
+    write_m4_trend_test_reports(&report_root)?;
+    let receipt = dir.path().join("report-refresh-manifest.json");
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "report-refresh",
+            "--root",
+            report_root_str.as_str(),
+            "--since",
+            "7d",
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"requested_since\": \"7d\""))
+        .stdout(predicate::str::contains("\"rolling_trend_window\": true"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["trend_window"]["active"], true);
+    assert_eq!(receipt_json["trend_window"]["requested_since"], "7d");
+    assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
+    let dense = receipt_json["families"]
+        .as_array()
+        .and_then(|families| families.iter().find(|family| family["id"] == "dense_slm_eval_v2"))
+        .ok_or_else(|| std::io::Error::other("dense family"))?;
+    assert_eq!(dense["report_count"], 2);
+    assert_eq!(dense["trend_window"]["report_count_before_window"], 3);
+    assert_eq!(dense["trend_window"]["report_count_outside_window"], 1);
+    assert_eq!(dense["threshold_outcome"], "ready_for_matching_identity_regression");
+    assert!(dense["skipped_day_reasons"].as_array().is_some_and(|reasons| !reasons.is_empty()));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_report_refresh_manifest"));
+    Ok(())
+}
+
+#[test]
 fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn std::error::Error>>
 {
     let dir = tempfile::tempdir()?;
@@ -1527,6 +1600,69 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
         .success()
         .stdout(predicate::str::contains("apple_m4_regression_dashboard"))
         .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_regression_dashboard_since_records_trend_status() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let report_root = dir.path().join("apple-m4-reports");
+    write_m4_trend_test_reports(&report_root)?;
+    let receipt = dir.path().join("regression-dashboard.json");
+    let markdown = dir.path().join("regression-dashboard.md");
+    let report_root_str = report_root.to_string_lossy().into_owned();
+    let receipt_str = receipt.to_string_lossy().into_owned();
+    let markdown_str = markdown.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "regression-dashboard",
+            "--root",
+            report_root_str.as_str(),
+            "--since",
+            "7d",
+            "--json-out",
+            receipt_str.as_str(),
+            "--markdown-out",
+            markdown_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"requested_since\": \"7d\""))
+        .stdout(predicate::str::contains("ready_for_matching_identity_regression"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["trend_window"]["active"], true);
+    assert_eq!(receipt_json["claim_boundary"]["dashboard_only"], true);
+    assert_eq!(receipt_json["dashboard_contract"]["matching_requires_same_evidence_family"], true);
+    let dense = receipt_json["families"]
+        .as_array()
+        .and_then(|families| families.iter().find(|family| family["id"] == "dense_slm_eval_v2"))
+        .ok_or_else(|| std::io::Error::other("dense family"))?;
+    let group = dense["groups"]
+        .as_array()
+        .and_then(|groups| groups.first())
+        .ok_or_else(|| std::io::Error::other("dense group"))?;
+    assert_eq!(group["report_count"], 2);
+    assert_eq!(group["comparison_status"], "ready");
+    assert_eq!(group["trend"]["active"], true);
+    assert_eq!(group["trend"]["threshold_outcome"], "ready_for_matching_identity_regression");
+    assert_eq!(
+        group["trend"]["operator_envelope_impact"],
+        "review_threshold_outcomes_before_envelope_update"
+    );
+    assert_eq!(group["trend"]["one_off_claim"], false);
+    assert!(
+        group["trend"]["skipped_day_reasons"].as_array().is_some_and(|reasons| !reasons.is_empty())
+    );
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_regression_dashboard"));
     Ok(())
 }
 

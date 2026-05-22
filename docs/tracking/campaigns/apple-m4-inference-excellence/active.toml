@@ -2937,7 +2937,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-TREND-001"
-status = "proposed"
+status = "pr_open"
+pr = 217
+head_sha = "f392716a84d00bb749328cdaf82997aef7ba26d9"
 branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
 stackable = false
 review_mode = "codex_premerge"
@@ -2946,8 +2948,12 @@ human_gate = "on_blocker_only"
 blocked_by = ["M4-CI-001", "M4-BENCH-003", "M4-BITNET-REG-001", "M4-ACCURACY-007", "M4-BITNET-EX-012"]
 acceptance = "Publish a seven-day M4 trend history for dense SLM and BitNet receipt families with matching identity, skipped-day reasons, dashboard status, threshold outcomes, and operator-envelope impact separated from any one-off benchmark or quality claim."
 commands = [
-  "bitnet mac report-refresh --since 7d --json",
-  "bitnet mac regression-dashboard --since 7d --json",
+  "target/debug/bitnet mac report-refresh --since 7d --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/report-refresh.json",
+  "target/debug/bitnet mac regression-dashboard --since 7d --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.json --markdown-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.md",
+  "target/debug/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/report-refresh.json --json",
+  "target/debug/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.json --json",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_report_refresh_since_records_rolling_trend_window -- --nocapture",
+  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_regression_dashboard_since_records_trend_status -- --nocapture",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",

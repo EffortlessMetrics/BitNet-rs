@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T18:06:15Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-TREND-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
+
+notes = [
+  "Started M4-TREND-001 as a model-free seven-day trend history harness and receipt refresh.",
+  "The implementation adds `--since 7d` support for `bitnet mac report-refresh` and `bitnet mac regression-dashboard`, preserving committed-report-only evidence and dense SLM/BitNet separation.",
+  "The generated trend receipts are under `ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/` and record prompt_count=0, generated_tokens=0, no live model run, no model download, no BitNet chat or serve enablement, and no broad quality, performance, speedup, Metal, QK256, Neural Engine, MPSGraph, MacBook, or broad Apple Silicon claim.",
+]

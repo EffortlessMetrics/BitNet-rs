@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T23:37:33Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-TREND-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 217
+head_sha = "f392716a84d00bb749328cdaf82997aef7ba26d9"
+branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
+
+notes = [
+  "Refreshed PR #217 onto current swarm main and recorded the missing pr_open tracker state required by campaign doctor.",
+  "Scope remains the model-free seven-day trend history harness and committed trend receipts under `ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/`.",
+  "No live model run, model download, BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

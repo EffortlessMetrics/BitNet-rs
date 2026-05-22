@@ -589,6 +589,10 @@ enum MacAction {
         #[arg(long, value_name = "PATH", default_value = APPLE_M4_REPORT_ROOT)]
         root: PathBuf,
 
+        /// Limit the trend inventory to a rolling day window such as 7d.
+        #[arg(long, value_name = "DURATION")]
+        since: Option<String>,
+
         /// Output strict report-refresh manifest receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_REPORT_REFRESH_DEFAULT_RECEIPT)]
         json_out: PathBuf,
@@ -611,6 +615,10 @@ enum MacAction {
         /// Committed Apple M4 report root to inventory.
         #[arg(long, value_name = "PATH", default_value = APPLE_M4_REPORT_ROOT)]
         root: PathBuf,
+
+        /// Limit the trend dashboard to a rolling day window such as 7d.
+        #[arg(long, value_name = "DURATION")]
+        since: Option<String>,
 
         /// Output strict regression dashboard receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_REGRESSION_DASHBOARD_DEFAULT_RECEIPT)]
@@ -1666,12 +1674,13 @@ impl MacCommand {
                 ensure_supported_mac_device(explicit_device_label, "mac workload")?;
                 run_workload(suite, root, json_out, json)
             }
-            MacAction::ReportRefresh { root, json_out, explain, open_targets, json } => {
+            MacAction::ReportRefresh { root, since, json_out, explain, open_targets, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac report-refresh")?;
-                run_report_refresh_manifest(root, json_out, explain, open_targets, json)
+                run_report_refresh_manifest(root, since, json_out, explain, open_targets, json)
             }
             MacAction::RegressionDashboard {
                 root,
+                since,
                 json_out,
                 markdown_out,
                 explain,
@@ -1679,7 +1688,15 @@ impl MacCommand {
                 json,
             } => {
                 ensure_supported_mac_device(explicit_device_label, "mac regression-dashboard")?;
-                run_regression_dashboard(root, json_out, markdown_out, explain, open_targets, json)
+                run_regression_dashboard(
+                    root,
+                    since,
+                    json_out,
+                    markdown_out,
+                    explain,
+                    open_targets,
+                    json,
+                )
             }
             MacAction::ReliabilityDrill { json_out, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac reliability-drill")?;
@@ -4398,11 +4415,13 @@ fn apple_m4_operator_evidence_receipt(
     let report_manifest = apple_m4_report_refresh_manifest_receipt(
         root,
         Path::new(MAC_REPORT_REFRESH_DEFAULT_RECEIPT),
+        None,
     );
     let regression_dashboard = apple_m4_regression_dashboard_receipt(
         root,
         Path::new(MAC_REGRESSION_DASHBOARD_DEFAULT_RECEIPT),
         Path::new(MAC_REGRESSION_DASHBOARD_DEFAULT_MARKDOWN),
+        None,
     );
     let report_inventory = apple_m4_report_inventory_for_root(root);
     let route_state_matrix = apple_m4_route_state_matrix_json(&report_inventory);
@@ -4735,14 +4754,149 @@ fn collect_matching_reports(root: &Path, segment: &str, filename: &str, out: &mu
     }
 }
 
+#[derive(Clone, Debug)]
+struct MacTrendWindow {
+    requested_since: String,
+    days: u64,
+    earliest_date: chrono::NaiveDate,
+    latest_date: chrono::NaiveDate,
+}
+
+impl MacTrendWindow {
+    fn parse(input: Option<&str>) -> Result<Option<Self>> {
+        let Some(raw) = input else {
+            return Ok(None);
+        };
+        let Some(days_text) = raw.strip_suffix('d') else {
+            anyhow::bail!("--since currently accepts rolling day windows such as 7d");
+        };
+        let days = days_text.parse::<u64>().with_context(|| {
+            format!("failed to parse --since value {raw:?}; expected a value such as 7d")
+        })?;
+        if days == 0 {
+            anyhow::bail!("--since must be at least 1d");
+        }
+        let day_offset = i64::try_from(days.saturating_sub(1))
+            .with_context(|| format!("--since value {raw:?} is too large"))?;
+        let latest_date = chrono::Utc::now().date_naive();
+        let earliest_date = latest_date
+            .checked_sub_signed(chrono::Duration::days(day_offset))
+            .ok_or_else(|| anyhow::anyhow!("--since value {raw:?} is outside supported dates"))?;
+        Ok(Some(Self { requested_since: raw.to_string(), days, earliest_date, latest_date }))
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "mode": "rolling_days",
+            "requested_since": self.requested_since,
+            "active": true,
+            "days": self.days,
+            "earliest_date": self.earliest_date.to_string(),
+            "latest_date": self.latest_date.to_string(),
+            "committed_reports_only": true,
+            "model_free": true,
+            "no_live_model_run": true,
+        })
+    }
+
+    fn filter_paths(&self, root: &Path, paths: &[PathBuf]) -> Vec<PathBuf> {
+        paths
+            .iter()
+            .filter(|path| {
+                apple_m4_report_date_as_naive(root, path)
+                    .is_some_and(|date| date >= self.earliest_date && date <= self.latest_date)
+            })
+            .cloned()
+            .collect()
+    }
+
+    fn family_json(
+        &self,
+        root: &Path,
+        all_report_paths: &[PathBuf],
+        filtered_report_paths: &[PathBuf],
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "active": true,
+            "requested_since": self.requested_since,
+            "days": self.days,
+            "earliest_date": self.earliest_date.to_string(),
+            "latest_date": self.latest_date.to_string(),
+            "report_count_before_window": all_report_paths.len(),
+            "window_report_count": filtered_report_paths.len(),
+            "report_count_outside_window": all_report_paths.len().saturating_sub(filtered_report_paths.len()),
+            "skipped_day_reasons": self.skipped_day_reasons(root, filtered_report_paths),
+            "one_off_claim": false,
+        })
+    }
+
+    fn skipped_day_reasons(&self, root: &Path, report_paths: &[PathBuf]) -> Vec<serde_json::Value> {
+        let dates = report_paths
+            .iter()
+            .filter_map(|path| apple_m4_report_date(root, path))
+            .collect::<Vec<_>>();
+        self.skipped_day_reasons_for_dates(&dates)
+    }
+
+    fn skipped_day_reasons_for_dates(&self, dates: &[String]) -> Vec<serde_json::Value> {
+        let present = dates
+            .iter()
+            .filter_map(|date| apple_m4_report_date_text_as_naive(date))
+            .collect::<std::collections::BTreeSet<_>>();
+        let mut skipped = Vec::new();
+        for offset in 0..self.days {
+            let date = self.earliest_date + chrono::Duration::days(offset as i64);
+            if !present.contains(&date) {
+                skipped.push(serde_json::json!({
+                    "date": date.to_string(),
+                    "reason": "no committed matching report in rolling window",
+                }));
+            }
+        }
+        skipped
+    }
+}
+
+fn apple_m4_report_date_as_naive(root: &Path, path: &Path) -> Option<chrono::NaiveDate> {
+    apple_m4_report_date(root, path).and_then(|date| apple_m4_report_date_text_as_naive(&date))
+}
+
+fn apple_m4_report_date_text_as_naive(date: &str) -> Option<chrono::NaiveDate> {
+    let prefix = date.get(0..10)?;
+    chrono::NaiveDate::parse_from_str(prefix, "%Y-%m-%d").ok()
+}
+
+fn apple_m4_trend_threshold_outcome(operator_status: &str, report_count: usize) -> &'static str {
+    match operator_status {
+        "comparable" => "ready_for_matching_identity_regression",
+        "failed" => "blocked_by_receipt_contract",
+        "warning" => "operator_review_required",
+        "insufficient_history" if report_count == 0 => "no_window_report",
+        "insufficient_history" => "needs_second_matching_report",
+        _ => "operator_review_required",
+    }
+}
+
+fn apple_m4_trend_operator_envelope_impact(operator_status: &str) -> &'static str {
+    match operator_status {
+        "comparable" => "review_threshold_outcomes_before_envelope_update",
+        "failed" => "do_not_update_envelope_until_receipt_contract_is_repaired",
+        "warning" => "do_not_update_envelope_without_operator_review",
+        "insufficient_history" => "no_envelope_change_without_matching_history",
+        _ => "no_envelope_change_without_operator_review",
+    }
+}
+
 fn run_report_refresh_manifest(
     root: PathBuf,
+    since: Option<String>,
     json_out: PathBuf,
     explain: bool,
     open_targets: bool,
     json: bool,
 ) -> Result<()> {
-    let receipt = apple_m4_report_refresh_manifest_receipt(&root, &json_out);
+    let trend_window = MacTrendWindow::parse(since.as_deref())?;
+    let receipt = apple_m4_report_refresh_manifest_receipt(&root, &json_out, trend_window.as_ref());
     validate_mac_receipt_value(&json_out, &receipt)?;
     write_json_receipt(&json_out, &receipt)?;
     if json {
@@ -4759,8 +4913,12 @@ fn run_report_refresh_manifest(
     Ok(())
 }
 
-fn apple_m4_report_refresh_manifest_receipt(root: &Path, json_out: &Path) -> serde_json::Value {
-    let families = apple_m4_report_refresh_families(root);
+fn apple_m4_report_refresh_manifest_receipt(
+    root: &Path,
+    json_out: &Path,
+    trend_window: Option<&MacTrendWindow>,
+) -> serde_json::Value {
+    let families = apple_m4_report_refresh_families(root, trend_window);
     let report_count =
         families.iter().filter_map(|family| family["report_count"].as_u64()).sum::<u64>();
     let complete =
@@ -4771,6 +4929,9 @@ fn apple_m4_report_refresh_manifest_receipt(root: &Path, json_out: &Path) -> ser
         "report_refresh_manifest",
     );
     let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    let since_arg = trend_window
+        .map(|window| format!(" --since {}", window.requested_since))
+        .unwrap_or_default();
     serde_json::json!({
         "schema_version": "1.2.0",
         "artifact_kind": "apple_m4_report_refresh_manifest",
@@ -4789,11 +4950,21 @@ fn apple_m4_report_refresh_manifest_receipt(root: &Path, json_out: &Path) -> ser
         "run_identity": run_identity,
         "run_identity_sha256": run_identity_sha256,
         "report_root": root,
+        "trend_window": trend_window
+            .map(MacTrendWindow::to_json)
+            .unwrap_or_else(|| serde_json::json!({
+                "mode": "all_committed_reports",
+                "requested_since": serde_json::Value::Null,
+                "active": false,
+                "committed_reports_only": true,
+                "model_free": true,
+                "no_live_model_run": true,
+            })),
         "family_count": families.len(),
         "report_count": report_count,
         "operator_affordances": {
-            "explain_command": format!("bitnet mac report-refresh --root {} --json-out {} --explain", root.display(), json_out.display()),
-            "open_targets_command": format!("bitnet mac report-refresh --root {} --json-out {} --open-targets", root.display(), json_out.display()),
+            "explain_command": format!("bitnet mac report-refresh --root {}{} --json-out {} --explain", root.display(), since_arg, json_out.display()),
+            "open_targets_command": format!("bitnet mac report-refresh --root {}{} --json-out {} --open-targets", root.display(), since_arg, json_out.display()),
             "open_receipt_hint": format!("open {}", json_out.display()),
             "open_report_root_hint": format!("open {}", root.display()),
         },
@@ -4806,10 +4977,11 @@ fn apple_m4_report_refresh_manifest_receipt(root: &Path, json_out: &Path) -> ser
             "generic_pr_ci_live_model_run": false,
             "model_downloads": false,
             "long_resident_soaks": false,
+            "rolling_trend_window": trend_window.is_some(),
         },
         "families": families,
         "validation": {
-            "manifest_command": "bitnet mac report-refresh --json",
+            "manifest_command": format!("bitnet mac report-refresh{} --json", since_arg),
             "manifest_receipt_check": "bitnet mac receipts-check target/apple-m4-inference-ops/report-refresh-manifest.json --json",
             "report_receipt_check": "bitnet mac receipts-check <report.json> --json",
             "regression_check": "bitnet mac regression <current-report.json> --baseline <baseline-report.json>",
@@ -4834,7 +5006,10 @@ fn apple_m4_report_refresh_manifest_receipt(root: &Path, json_out: &Path) -> ser
     })
 }
 
-fn apple_m4_report_refresh_families(root: &Path) -> Vec<serde_json::Value> {
+fn apple_m4_report_refresh_families(
+    root: &Path,
+    trend_window: Option<&MacTrendWindow>,
+) -> Vec<serde_json::Value> {
     [
         (
             "dense_slm_eval_v2",
@@ -4913,6 +5088,7 @@ fn apple_m4_report_refresh_families(root: &Path) -> Vec<serde_json::Value> {
         )| {
             apple_m4_report_refresh_family_json(
                 root,
+                trend_window,
                 id,
                 evidence_family,
                 path_segment,
@@ -4929,6 +5105,7 @@ fn apple_m4_report_refresh_families(root: &Path) -> Vec<serde_json::Value> {
 #[allow(clippy::too_many_arguments)]
 fn apple_m4_report_refresh_family_json(
     root: &Path,
+    trend_window: Option<&MacTrendWindow>,
     id: &str,
     evidence_family: &str,
     path_segment: &str,
@@ -4937,11 +5114,17 @@ fn apple_m4_report_refresh_family_json(
     description: &str,
     refresh_command_template: &str,
 ) -> serde_json::Value {
-    let report_paths = matching_reports(root, path_segment, summary_filename);
+    let all_report_paths = matching_reports(root, path_segment, summary_filename);
+    let report_paths = trend_window
+        .map(|window| window.filter_paths(root, &all_report_paths))
+        .unwrap_or_else(|| all_report_paths.clone());
     let reports = report_paths
         .iter()
         .map(|path| apple_m4_report_refresh_report_json(root, path, expected_artifact_kind))
         .collect::<Vec<_>>();
+    let skipped_day_reasons = trend_window
+        .map(|window| window.skipped_day_reasons(root, &report_paths))
+        .unwrap_or_default();
     let mut dates = std::collections::BTreeSet::new();
     let mut model_ids = std::collections::BTreeSet::new();
     let mut artifact_kinds = std::collections::BTreeSet::new();
@@ -4992,6 +5175,14 @@ fn apple_m4_report_refresh_family_json(
             "model_downloads": false,
         },
         "refresh_command_template": refresh_command_template,
+        "trend_window": trend_window
+            .map(|window| window.family_json(root, &all_report_paths, &report_paths))
+            .unwrap_or_else(|| serde_json::json!({
+                "active": false,
+                "report_count_before_window": 0,
+                "report_count_outside_window": 0,
+                "skipped_day_reasons": [],
+            })),
         "validation_commands": [
             "bitnet mac receipts-check <report.json> --json",
             "bitnet mac regression <current-report.json> --baseline <baseline-report.json>",
@@ -5008,6 +5199,9 @@ fn apple_m4_report_refresh_family_json(
         "fallback_free_count": fallback_free_count,
         "strict_cpu_neon_count": strict_cpu_neon_count,
         "parse_problem_count": parse_problem_count,
+        "skipped_day_reasons": skipped_day_reasons,
+        "threshold_outcome": apple_m4_trend_threshold_outcome(operator_status, reports.len()),
+        "operator_envelope_impact": apple_m4_trend_operator_envelope_impact(operator_status),
         "reports": reports,
         "claim_boundary": {
             "dense_slm_evidence": evidence_family == "dense_slm",
@@ -5167,13 +5361,20 @@ fn print_report_refresh_open_targets(receipt: &serde_json::Value) {
 
 fn run_regression_dashboard(
     root: PathBuf,
+    since: Option<String>,
     json_out: PathBuf,
     markdown_out: PathBuf,
     explain: bool,
     open_targets: bool,
     json: bool,
 ) -> Result<()> {
-    let receipt = apple_m4_regression_dashboard_receipt(&root, &json_out, &markdown_out);
+    let trend_window = MacTrendWindow::parse(since.as_deref())?;
+    let receipt = apple_m4_regression_dashboard_receipt(
+        &root,
+        &json_out,
+        &markdown_out,
+        trend_window.as_ref(),
+    );
     validate_mac_receipt_value(&json_out, &receipt)?;
     let markdown = apple_m4_regression_dashboard_markdown(&receipt);
     write_json_receipt(&json_out, &receipt)?;
@@ -5453,10 +5654,13 @@ fn apple_m4_regression_dashboard_receipt(
     root: &Path,
     json_out: &Path,
     markdown_out: &Path,
+    trend_window: Option<&MacTrendWindow>,
 ) -> serde_json::Value {
-    let manifest_families = apple_m4_report_refresh_families(root);
-    let families =
-        manifest_families.iter().map(apple_m4_regression_dashboard_family_json).collect::<Vec<_>>();
+    let manifest_families = apple_m4_report_refresh_families(root, trend_window);
+    let families = manifest_families
+        .iter()
+        .map(|family| apple_m4_regression_dashboard_family_json(family, trend_window))
+        .collect::<Vec<_>>();
     let group_count =
         families.iter().filter_map(|family| family["group_count"].as_u64()).sum::<u64>();
     let comparable_group_count =
@@ -5469,6 +5673,9 @@ fn apple_m4_regression_dashboard_receipt(
         "regression_dashboard",
     );
     let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    let since_arg = trend_window
+        .map(|window| format!(" --since {}", window.requested_since))
+        .unwrap_or_default();
     serde_json::json!({
         "schema_version": "1.2.0",
         "artifact_kind": "apple_m4_regression_dashboard",
@@ -5488,13 +5695,23 @@ fn apple_m4_regression_dashboard_receipt(
         "run_identity": run_identity,
         "run_identity_sha256": run_identity_sha256,
         "report_root": root,
+        "trend_window": trend_window
+            .map(MacTrendWindow::to_json)
+            .unwrap_or_else(|| serde_json::json!({
+                "mode": "all_committed_reports",
+                "requested_since": serde_json::Value::Null,
+                "active": false,
+                "committed_reports_only": true,
+                "model_free": true,
+                "no_live_model_run": true,
+            })),
         "report_count": report_count,
         "family_count": families.len(),
         "group_count": group_count,
         "comparable_group_count": comparable_group_count,
         "operator_affordances": {
-            "explain_command": format!("bitnet mac regression-dashboard --root {} --json-out {} --markdown-out {} --explain", root.display(), json_out.display(), markdown_out.display()),
-            "open_targets_command": format!("bitnet mac regression-dashboard --root {} --json-out {} --markdown-out {} --open-targets", root.display(), json_out.display(), markdown_out.display()),
+            "explain_command": format!("bitnet mac regression-dashboard --root {}{} --json-out {} --markdown-out {} --explain", root.display(), since_arg, json_out.display(), markdown_out.display()),
+            "open_targets_command": format!("bitnet mac regression-dashboard --root {}{} --json-out {} --markdown-out {} --open-targets", root.display(), since_arg, json_out.display(), markdown_out.display()),
             "open_receipt_hint": format!("open {}", json_out.display()),
             "open_markdown_hint": format!("open {}", markdown_out.display()),
             "open_report_root_hint": format!("open {}", root.display()),
@@ -5532,7 +5749,10 @@ fn apple_m4_regression_dashboard_receipt(
     })
 }
 
-fn apple_m4_regression_dashboard_family_json(family: &serde_json::Value) -> serde_json::Value {
+fn apple_m4_regression_dashboard_family_json(
+    family: &serde_json::Value,
+    trend_window: Option<&MacTrendWindow>,
+) -> serde_json::Value {
     let family_id = family["id"].as_str().unwrap_or("<unknown>");
     let evidence_family = family["evidence_family"].as_str().unwrap_or("<unknown>");
     let expected_artifact_kind = family["expected_artifact_kind"].as_str().unwrap_or("<unknown>");
@@ -5578,6 +5798,13 @@ fn apple_m4_regression_dashboard_family_json(family: &serde_json::Value) -> serd
         let baseline_path = baseline["path"].as_str().unwrap_or(latest_path);
         let (operator_status, operator_status_reason) =
             apple_m4_dashboard_group_operator_status(report_count, &latest, comparison_status);
+        let report_dates = reports
+            .iter()
+            .filter_map(|report| report["date"].as_str().map(ToOwned::to_owned))
+            .collect::<Vec<_>>();
+        let skipped_day_reasons = trend_window
+            .map(|window| window.skipped_day_reasons_for_dates(&report_dates))
+            .unwrap_or_default();
         dashboard_groups.push(serde_json::json!({
             "group_key": group_key,
             "evidence_family": evidence_family,
@@ -5592,6 +5819,15 @@ fn apple_m4_regression_dashboard_family_json(family: &serde_json::Value) -> serd
             "comparison_status": comparison_status,
             "operator_status": operator_status,
             "operator_status_reason": operator_status_reason,
+            "trend": {
+                "active": trend_window.is_some(),
+                "requested_since": trend_window.map(|window| window.requested_since.as_str()),
+                "report_dates": report_dates,
+                "skipped_day_reasons": skipped_day_reasons,
+                "threshold_outcome": apple_m4_trend_threshold_outcome(operator_status, report_count),
+                "operator_envelope_impact": apple_m4_trend_operator_envelope_impact(operator_status),
+                "one_off_claim": false,
+            },
             "latest_report": latest_path,
             "baseline_report": if report_count > 1 { serde_json::Value::String(baseline_path.to_string()) } else { serde_json::Value::Null },
             "regression_command": format!("bitnet mac regression {latest_path} --baseline {baseline_path}"),
@@ -24055,6 +24291,20 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
     require_exact_string_at(path, receipt, &["operator_command"], "mac report-refresh")?;
     require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
     require_non_empty_string_at(path, receipt, &["report_root"])?;
+    let trend_active = receipt["trend_window"]["active"].as_bool() == Some(true);
+    if !receipt["trend_window"].is_null() {
+        require_bool_at(path, receipt, &["trend_window", "active"], trend_active)?;
+        require_bool_at(path, receipt, &["trend_window", "committed_reports_only"], true)?;
+        require_bool_at(path, receipt, &["trend_window", "model_free"], true)?;
+        require_bool_at(path, receipt, &["trend_window", "no_live_model_run"], true)?;
+        if trend_active {
+            require_exact_string_at(path, receipt, &["trend_window", "mode"], "rolling_days")?;
+            require_non_empty_string_at(path, receipt, &["trend_window", "requested_since"])?;
+            require_u64_at(path, receipt, &["trend_window", "days"], true)?;
+            require_non_empty_string_at(path, receipt, &["trend_window", "earliest_date"])?;
+            require_non_empty_string_at(path, receipt, &["trend_window", "latest_date"])?;
+        }
+    }
     require_bool_at(path, receipt, &["refresh_modes", "advisory_manifest"], true)?;
     require_bool_at(path, receipt, &["refresh_modes", "nightly_manifest"], true)?;
     require_bool_at(path, receipt, &["refresh_modes", "release_manifest"], true)?;
@@ -24165,9 +24415,11 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
             evidence_family == "bitnet",
         )?;
 
-        let report_count = require_u64_at(path, family, &["report_count"], true)?;
+        let report_count = require_u64_at(path, family, &["report_count"], !trend_active)?;
         total_reports = total_reports.saturating_add(report_count);
-        require_non_empty_string_at(path, family, &["latest_report"])?;
+        if report_count > 0 {
+            require_non_empty_string_at(path, family, &["latest_report"])?;
+        }
         let reports = family["reports"].as_array().ok_or_else(|| {
             anyhow!(
                 "{} report refresh manifest family {id} is missing reports array",
@@ -24180,8 +24432,10 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
                 path.display()
             );
         }
-        let fallback_free_count = require_u64_at(path, family, &["fallback_free_count"], true)?;
-        let strict_cpu_neon_count = require_u64_at(path, family, &["strict_cpu_neon_count"], true)?;
+        let fallback_free_count =
+            require_u64_at(path, family, &["fallback_free_count"], !trend_active)?;
+        let strict_cpu_neon_count =
+            require_u64_at(path, family, &["strict_cpu_neon_count"], !trend_active)?;
         if require_operator_affordances {
             require_u64_at(path, family, &["parse_problem_count"], false)?;
         }
@@ -24192,7 +24446,9 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
             );
         }
         if require_operator_affordances {
-            require_non_empty_string_at(path, family, &["open_targets", "latest_report"])?;
+            if report_count > 0 {
+                require_non_empty_string_at(path, family, &["open_targets", "latest_report"])?;
+            }
             require_non_empty_string_at(path, family, &["open_targets", "report_root_segment"])?;
         }
         for report in reports {
@@ -24227,7 +24483,7 @@ fn validate_apple_m4_report_refresh_manifest_receipt(
             );
         }
     }
-    let receipt_report_count = require_u64_at(path, receipt, &["report_count"], true)?;
+    let receipt_report_count = require_u64_at(path, receipt, &["report_count"], !trend_active)?;
     if receipt_report_count != total_reports {
         anyhow::bail!(
             "{} report refresh manifest report_count must equal family report totals",
@@ -24252,6 +24508,20 @@ fn validate_apple_m4_regression_dashboard_receipt(
     require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
     require_non_empty_string_at(path, receipt, &["report_root"])?;
     require_non_empty_string_at(path, receipt, &["markdown_path"])?;
+    let trend_active = receipt["trend_window"]["active"].as_bool() == Some(true);
+    if !receipt["trend_window"].is_null() {
+        require_bool_at(path, receipt, &["trend_window", "active"], trend_active)?;
+        require_bool_at(path, receipt, &["trend_window", "committed_reports_only"], true)?;
+        require_bool_at(path, receipt, &["trend_window", "model_free"], true)?;
+        require_bool_at(path, receipt, &["trend_window", "no_live_model_run"], true)?;
+        if trend_active {
+            require_exact_string_at(path, receipt, &["trend_window", "mode"], "rolling_days")?;
+            require_non_empty_string_at(path, receipt, &["trend_window", "requested_since"])?;
+            require_u64_at(path, receipt, &["trend_window", "days"], true)?;
+            require_non_empty_string_at(path, receipt, &["trend_window", "earliest_date"])?;
+            require_non_empty_string_at(path, receipt, &["trend_window", "latest_date"])?;
+        }
+    }
     require_bool_at(path, receipt, &["dashboard_contract", "model_free"], true)?;
     require_bool_at(path, receipt, &["dashboard_contract", "committed_reports_only"], true)?;
     require_bool_at(
@@ -24377,8 +24647,8 @@ fn validate_apple_m4_regression_dashboard_receipt(
             &["claim_boundary", "bitnet_evidence"],
             evidence_family == "bitnet",
         )?;
-        let report_count = require_u64_at(path, family, &["report_count"], true)?;
-        let group_count = require_u64_at(path, family, &["group_count"], true)?;
+        let report_count = require_u64_at(path, family, &["report_count"], !trend_active)?;
+        let group_count = require_u64_at(path, family, &["group_count"], !trend_active)?;
         total_reports = total_reports.saturating_add(report_count);
         total_groups = total_groups.saturating_add(group_count);
         let groups = family["groups"].as_array().ok_or_else(|| {
@@ -24465,14 +24735,14 @@ fn validate_apple_m4_regression_dashboard_receipt(
             );
         }
     }
-    let receipt_report_count = require_u64_at(path, receipt, &["report_count"], true)?;
+    let receipt_report_count = require_u64_at(path, receipt, &["report_count"], !trend_active)?;
     if receipt_report_count != total_reports {
         anyhow::bail!(
             "{} regression dashboard report_count must equal family report totals",
             path.display()
         );
     }
-    let receipt_group_count = require_u64_at(path, receipt, &["group_count"], true)?;
+    let receipt_group_count = require_u64_at(path, receipt, &["group_count"], !trend_active)?;
     if receipt_group_count != total_groups {
         anyhow::bail!(
             "{} regression dashboard group_count must equal family group totals",

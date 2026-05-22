@@ -1220,6 +1220,28 @@ summary or generated tracking file. A regenerated summary can change operator
 classification only when the retained source receipts support the same claim
 boundary.
 
+`M4-TREND-001` is the first committed rolling trend summary. It adds
+`--since 7d` to `bitnet mac report-refresh` and
+`bitnet mac regression-dashboard`, then records the model-free outputs under:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/report-refresh.json
+ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.json
+ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.md
+```
+
+The window covers `2026-05-15` through `2026-05-21` from committed receipts
+only. The dashboard records 29 reports across 7 families, 13
+matching-identity groups, and 10 comparable groups. Each family or group carries
+skipped-day reasons, a threshold outcome, and operator-envelope impact text so a
+maintainer can see whether a current route has matching history, needs another
+matching report, or should block envelope updates until receipt issues are
+repaired. These trend summaries have `prompt_count=0` and
+`generated_tokens=0`; they do not run live inference, download models, replace
+source receipts, enable BitNet chat or serve, or claim broad quality,
+performance, speedup, full Metal, QK256, Neural Engine, MPSGraph, MacBook, or
+broad Apple Silicon behavior.
+
 An identity becomes stale for current operator claims when any comparison
 identity field changes or is missing:
 
