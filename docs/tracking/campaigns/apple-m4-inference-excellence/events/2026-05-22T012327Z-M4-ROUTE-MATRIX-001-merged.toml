@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T01:23:27Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ROUTE-MATRIX-001"
+event = "merged"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-ROUTE-MATRIX-001-route-states"
+pr = 6177
+head_sha = "998ced351da0bf94d3c365fb861f5b7cb4f2feed"
+merge_sha = "bd0a2e3fdfa740645bf2b7e6d9768d46f5f65e6f"
+
+notes = [
+  "Merged PR #6177 after all GitHub checks passed.",
+  "The merged slice adds a schema 1.3.0 route_state_matrix to bitnet mac status --json and bitnet mac evidence --json, with validator coverage for dense SLM and BitNet ask, chat, warm, serve, streaming, context, disabled, batch-only, and unsupported states.",
+  "The merge does not add runtime proof, fetch models by default, enable disabled BitNet chat or serve routes, or broaden Metal, QK256, Neural Engine, MPSGraph, MacBook, quality, speedup, performance, or broad Apple Silicon claims.",
+]
