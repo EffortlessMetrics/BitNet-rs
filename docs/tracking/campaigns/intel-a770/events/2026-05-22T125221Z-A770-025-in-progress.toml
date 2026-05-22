@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T12:52:21Z"
+campaign = "intel-a770"
+item = "A770-025"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-025-live-answer-readiness-run"
+summary = "Started the live seeded A770 answer-readiness receipt item after A770-024 and the yes/no corpus scoring correction landed."
+notes = [
+  "The work records the live CPU AVX2 and Intel A770 OpenCL seeded answer-readiness receipts and parity comparison for the official BitNet 2B I2_S artifact.",
+  "Quality failures and CPU/A770 parity divergence are expected evidence, not blockers to recording the diagnostic result.",
+  "No strict answer readiness, broad answer quality, CPU/A770 answer parity, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

@@ -1147,3 +1147,56 @@ must_not_claim = [
   "Performance speedup is proven.",
   "A770 trusted partial acceleration is claim-grade.",
 ]
+
+[[work_item]]
+id = "A770-025"
+status = "pr_open"
+pr = 329
+branch = "codex/intel-a770/A770-025-live-answer-readiness-run"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-024"]
+acceptance = "Record the live seeded CPU AVX2 versus Intel A770 OpenCL answer-readiness run against the official BitNet 2B I2_S artifact, including quality failures and CPU/A770 parity divergence, while keeping strict answer readiness, broad answer quality, CPU/A770 parity, residency, speed, trusted-partial acceleration, and full BitNet inference claims closed."
+commands = [
+  "cargo build --locked -p bitnet-cli --release --no-default-features --features cpu,opencl,full-cli",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --cpu-kernel avx2 --threads 8 --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-answer-readiness.json --per-prompt-timeout-seconds 300 --fail-on-quality # expected nonzero while seeded answer-readiness quality remains incomplete",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device intel-a770-opencl --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/a770-opencl-answer-readiness.json --per-prompt-timeout-seconds 300 --fail-on-quality # expected nonzero while seeded answer-readiness quality remains incomplete",
+  "target/release/bitnet.exe answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-answer-readiness.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/a770-opencl-answer-readiness.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-vs-a770-answer-readiness-parity.json # expected nonzero while CPU/A770 parity remains divergent",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+]
+may_claim = [
+  "The seeded A770 BitNet answer-readiness corpus ran live on AMD 5700X AVX2 CPU and Intel A770 OpenCL against the official BitNet 2B I2_S artifact.",
+  "Both live receipts used fallback_used=false and recorded the current seeded readiness quality result.",
+  "The CPU/A770 answer-readiness parity comparator records the current logits/output divergence frontier.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
