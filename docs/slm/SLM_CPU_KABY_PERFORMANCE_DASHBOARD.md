@@ -16,7 +16,9 @@ OpenVINO, UHD 620, Qwen3.5, or BitNet QK256.
 | Logits extraction isolation | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse-validation.json` | Validates that direct tensor argmax bypasses full logits Vec extraction only where the sampler fast path is exact, while preserving generated IDs/text |
 | Repetition-penalty logits reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse-validation.json` | Validates that default repetition-penalty decode steps reuse a host logits scratch buffer instead of allocating fresh logits vectors, while preserving generated IDs/text |
 | Warm-session sampler reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json` | Validates that the temperature-zero warm-session profile reuses one sampler across prompts while preserving generated IDs/text and strict provenance |
+| KV cache session reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-kv-cache-session-reuse.json` | Records one CPU KV cache reused across prompts and cleared per prompt for prompt isolation |
 | Prompt token cache | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache-validation.json` | Validates that repeated rendered prompts reuse token IDs while preserving generated IDs/text and strict provenance |
+| Prefill allocation attribution | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prefill-attribution-validation.json` | Validates that prompt prefill attribution preserves behavior and identifies `prompt_prefill.forward` as the dominant remaining allocation boundary |
 | Packed Q8_0 sidecar runtime proof gate | `ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-proof-validation.json` | Records that packed Q8_0 sidecar runtime execution remains blocked because production dispatch still preserves eager F32 and no after-execution receipts exist |
 
 All rows use:
@@ -101,23 +103,42 @@ stop_policy_precomputed_once = true
 stop_tail_buffer_reused = true
 timing_buffers_reused = true
 allocation_audit_buffers_reused = true
-kv_cache_recreated_per_prompt = true
+kv_cache_recreated_per_prompt = false
+kv_cache_reused_across_prompts = true
+kv_cache_cleared_per_prompt = true
+prompt_token_cache_enabled = true
+prompt_token_cache_policy = rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts
 sampler_recreated_per_prompt = false
 sampler_reused_across_prompts = true
-logits_buffer_reuse_claimed = false
+logits_buffer_reuse_claimed = true
 ```
 
-The next safe optimization slices should start from these known remaining costs:
+The dashboard originally identified KV cache recreation, repeated tokenization,
+and logits scratch allocation as hot-loop risks. Later receipts narrowed those
+without changing the Qwen3 Q8_0 behavior oracle:
 
-1. Reuse or isolate KV-cache buffers without changing prompt independence.
+| Slice | Evidence | Result |
+| --- | --- | --- |
+| `SLM-CPU-031` | `qwen3-kv-cache-session-reuse.json` | One session KV cache is reused across prompts and cleared per prompt; prompt isolation remains explicit. |
+| `SLM-CPU-032` | `qwen3-prompt-token-cache-validation.json` | Repeated rendered prompt IDs are cached; prompt-tokenize allocation bytes drop from `1063162466` to `531586554`; generated outputs and strict provenance match the baseline. |
+| `SLM-CPU-035` | `qwen3-prefill-attribution-validation.json` | `prompt_prefill_breakdown.embed` and `prompt_prefill_breakdown.forward` are present; first-prompt `prompt_prefill.forward` allocation is `554666438` bytes and dominates `prompt_prefill.embed` at `157108` bytes. |
+
+The next safe optimization slices should therefore start from these known
+remaining costs:
+
+1. Reduce `prompt_prefill.forward` / `model.forward` allocation and layout churn
+   using the typed transformer-forward workspace boundaries already introduced
+   after SLM-CPU-035.
 2. Continue reducing `model.logits` tensor allocation and output-head costs.
    SLM-CPU-026 removes fresh full logits Vec allocation from default
    repetition-penalty decode steps by reusing a host scratch buffer, but the
    model still produces logits tensors per token.
-3. Continue keeping sampler and stop policy work out of the per-token hot loop
+3. Continue keeping sampler, stop policy, and tokenizer work out of the hot loop
    where doing so preserves deterministic generated IDs. SLM-CPU-029 reuses one
-   sampler across prompts for the temperature-zero Qwen3 profile only; nonzero
-   temperature modes still recreate samplers to avoid RNG-state coupling.
+   sampler across prompts for the temperature-zero Qwen3 profile only, and
+   SLM-CPU-032 caches repeated rendered prompt token IDs for the bounded warm
+   session. Nonzero temperature modes still recreate samplers to avoid
+   RNG-state coupling.
 4. Improve Q8_0 dense linear locality only with before/after receipts proving
    identical prompt IDs, generated IDs, decoded text, backend identity,
    tokenizer authority, model SHA, and `fallback=false`.
@@ -1267,3 +1288,32 @@ This is a bounded counter-level classification only. SLM-CPU-079 does not
 claim end-to-end speedup, sustained 8250U throughput, broad answer quality,
 Q4/Q5 runtime support, server execution, accelerator execution, Qwen3.5
 support, or BitNet QK256 changes.
+
+## Current Next Target
+
+The current performance lane has two valid next-target families:
+
+1. Continue the allocation path from the SLM-CPU-035 prefill attribution and
+   the SLM-CPU-038 typed transformer-forward workspace boundary by removing or
+   narrowly classifying one `prompt_prefill.forward` owned-output allocation.
+2. Continue the packed Q8_0 exact-tensor path from SLM-CPU-079 by reducing the
+   `packed_matvec_compute` counter while keeping `packed_q8_sidecar` opt-in and
+   exact-tensor scoped.
+
+Both paths must use the Qwen3 Q8_0 appliance profile as the behavior oracle.
+Any before/after artifact must preserve:
+
+```text
+model SHA
+strict GGUF tokenizer authority
+prompt IDs
+generated IDs
+decoded text
+selected CPU backend/kernel identity
+fallback_used = false
+```
+
+If a change improves a counter but changes generated IDs, decoded text, model
+identity, tokenizer source, backend/kernel identity, or fallback state, the
+change is a failed performance slice. If it helps only one model or one exact
+tensor, the dashboard must say so.
