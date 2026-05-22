@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T11:27:18Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-METAL-EX-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-METAL-EX-001-phase-choice"
+pr = 6194
+head_sha = "39975086cfc704f4f4a37862d133dfaef06bc27d"
+merge_sha = "ac04c4841df1d19d2dd76d79ba3e25e9e149d486"
+
+notes = [
+  "Merged PR #6194 after all required checks passed.",
+  "The merged slice selected prefill attention-score logits as the next future dense SLM Metal phase target and kept the claim boundary to documentation and tracker state.",
+  "The merge does not add kernels, route generation, live Metal dispatch, BitNet chat or serve, full apple-m4-metal inference, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, broad performance, or speedup claims.",
+]
