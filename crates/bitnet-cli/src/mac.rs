@@ -22993,7 +22993,7 @@ fn validate_apple_m4_operator_workload_suite_receipt(
         }
     }
     for check in M4_WORKLOAD_REQUIRED_MECHANICAL_CHECKS {
-        if !seen_checks.contains(check) {
+        if !seen_checks.contains(*check) {
             anyhow::bail!(
                 "{} M4 workload suite is missing mechanical check {check}",
                 path.display()
