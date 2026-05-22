@@ -28,6 +28,9 @@ Repository-boundary PRs must also declare:
 
 ```text
 Promotion or sync packet path:
+Source commit:
+Swarm base commit:
+Merge method:
 Source impact:
 Release/publish/signing impact:
 Excluded work:
@@ -175,6 +178,12 @@ release/publish/signing boundary.
 If the PR changes promotion, source-sync, machine cutover, or branch-protection
 interpretation, it must include a promotion or sync packet field even when the
 value is `n/a` for a swarm-only documentation update.
+
+For source-to-swarm sync PRs, the PR body may be the sync packet. It must name
+the exact source commit imported, the swarm base being preserved, the merge
+method, included source PRs, validation commands, release-workflow impact, and
+excluded swarm work. Do not rely on chat transcripts or local notes as the only
+record of a repository-boundary decision.
 
 `policy/repo-boundary.toml` is the machine-readable summary of those repository
 roles and history invariants. Keep prose docs and that ledger aligned when

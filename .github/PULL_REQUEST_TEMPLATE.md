@@ -44,6 +44,8 @@ Boundary packet:
 
 Promotion or sync packet path:
 Source repo commit:
+Swarm base commit:
+Merge method:
 Swarm repo commit:
 Included PRs:
 Source impact:

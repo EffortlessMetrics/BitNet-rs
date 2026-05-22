@@ -28,6 +28,11 @@ Swarm-only commits do not become public-release authority until a promotion or
 sync PR names the included work, proof inputs, claim boundaries, and excluded
 work.
 
+Source-to-swarm syncs are the opposite direction from release promotion. They
+keep `bitnet-rs-swarm` current with public source while source remains
+canonical. They do not make swarm the release repo, do not move publish or
+signing authority, and do not promote swarm-only evidence back to source.
+
 ## History Repair Baseline
 
 The one-time swarm history repair is recorded in:
@@ -57,6 +62,12 @@ policy/repo-boundary.toml
 Promotion packets should use that ledger for the canonical repository roles,
 forbidden history operations, release-workflow boundary, and required promotion
 inputs.
+
+The latest source-to-swarm sync checkpoint is also recorded in
+`docs/development/SWARM_HISTORY_REPAIR.md`. Use it to identify the last known
+source commit reachable from swarm before preparing another sync or promotion.
+Always verify live refs; the checkpoint is evidence, not a substitute for
+current ancestry checks.
 
 ## Merge Method
 

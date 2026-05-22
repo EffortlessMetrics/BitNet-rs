@@ -69,6 +69,17 @@ swarm-only state as public-release truth. Resolve the difference through an
 explicit sync or promotion PR that names included commits, included PRs, proof
 inputs, claim boundaries, and excluded work.
 
+The latest source-to-swarm checkpoint is recorded in:
+
+```text
+docs/development/SWARM_HISTORY_REPAIR.md
+```
+
+Agents should use that checkpoint only as a starting point. Before opening or
+merging another repository-boundary PR, refresh live state and record the exact
+source commit, swarm commit, merge method, and ancestry proof in the PR body or
+promotion packet. Chat history is not repository authority.
+
 ## Development Rule
 
 New active lane work lands here first. Do not open normal feature, hardware,
@@ -104,6 +115,12 @@ The packet must name:
 
 If a promotion packet is missing, the work may remain valid swarm evidence, but
 it is not ready for source promotion.
+
+For source-to-swarm sync PRs, the packet may be embedded in the PR body, but it
+must still include the source commit imported, current swarm base, included
+source PRs, merge method, validation commands, release-workflow impact, and
+explicit excluded work. A sync PR that only says "bring source current" is not
+reviewable enough for the repaired control plane.
 
 ## Merge Method Boundary
 

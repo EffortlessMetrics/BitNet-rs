@@ -62,6 +62,39 @@ The current `source/main` includes source repo commit
 of this closeout. If a later source commit appears, do another
 history-preserving merge or promotion operation. Do not hard-reset swarm main.
 
+## Latest Source-To-Swarm Sync Checkpoint
+
+The original history repair imported the public source graph and made the old
+swarm main reachable. Later source-to-swarm sync PRs keep the repaired graph
+current while `EffortlessMetrics/BitNet-rs` remains the public source of truth.
+
+Latest verified checkpoint:
+
+| Item | SHA / PR | Notes |
+| --- | --- | --- |
+| Source main imported | `36f93356b93d9ce98bfbcb37a301bf53dd68314c` | `EffortlessMetrics/BitNet-rs#6195`, M4 Metal phase-choice tracker closeout. |
+| Swarm main before sync merge | `fdcbb124a3ad9aa8d2b4a7c78e29085d0bd20e19` | `EffortlessMetrics/bitnet-rs-swarm#320`, A770-024 yes-no corpus scoring. |
+| Source-to-swarm sync PR | `EffortlessMetrics/bitnet-rs-swarm#317` | Regular merge; auto-merge used `MERGE`, not squash. |
+| Source-to-swarm merge commit | `0ac5a1ac456717c4ac740df87fd63b5f06354ade` | Parents are current swarm main and the source-import branch head. |
+
+Verified after #317 merged:
+
+```bash
+git merge-base --is-ancestor origin/main swarm/main
+git rev-list --count origin/main ^swarm/main
+```
+
+Expected:
+
+```text
+current source/main ancestor of swarm/main: yes
+git rev-list --count origin/main ^swarm/main: 0
+```
+
+This checkpoint is still a source-to-swarm import, not a source cutover and not
+a release promotion. It imports source history into the high-throughput swarm
+workspace so active swarm PRs can continue from a current source base.
+
 ## Workflow Guard Boundary
 
 The import preserved swarm routed CI and guarded source-owned release surfaces.

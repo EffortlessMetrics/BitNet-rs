@@ -139,6 +139,11 @@ Required PR body fields:
 - Shared surfaces touched:
 - Closeout required:
 
+Repository-boundary PRs must also name the source commit, swarm base commit,
+merge method, included PRs, release/publish/signing impact, excluded work, and
+promotion or sync packet path. Chat history is not a substitute for that
+repo-native evidence.
+
 Branch names must use:
 
 - `codex/<lane>/<work-item>-<slug>`

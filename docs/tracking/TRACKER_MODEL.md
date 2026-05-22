@@ -24,9 +24,9 @@ collisions.
 Repository-boundary work is a lane, not an exception to the tracker model.
 Source-sync, swarm-to-source promotion, branch-protection interpretation, and
 machine cutover docs must declare source impact, release/publish/signing
-impact, excluded work, and promotion or sync packet status. Generated dashboards
-remain derived state; they do not decide whether swarm-only work is source
-authority.
+impact, excluded work, source commit, swarm base commit, merge method, and
+promotion or sync packet status. Generated dashboards remain derived state;
+they do not decide whether swarm-only work is source authority.
 
 Use:
 

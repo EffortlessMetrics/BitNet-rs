@@ -52,6 +52,7 @@ Agents and machines should use side-by-side clones for source and swarm work.
 Do not retarget an existing `BitNet-rs` clone to this repository. Start with
 [`AGENTS.md`](AGENTS.md),
 [`docs/development/SWARM_DEVELOPMENT_AUTHORITY.md`](docs/development/SWARM_DEVELOPMENT_AUTHORITY.md),
+[`docs/development/SWARM_HISTORY_REPAIR.md`](docs/development/SWARM_HISTORY_REPAIR.md),
 and [`docs/release/PROMOTE_TO_BITNET_RS.md`](docs/release/PROMOTE_TO_BITNET_RS.md)
 before opening repo-boundary, promotion, or release-adjacent work.
 
