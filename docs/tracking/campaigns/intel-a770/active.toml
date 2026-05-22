@@ -987,9 +987,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-022"
-status = "pr_open"
+status = "merged"
 pr = 287
-head_sha = "8e45784b8fd7e76e62cc249035ad81fcb3a54b75"
+head_sha = "4db5f1c0d7c1a1f277da3e629bb9f007f307cf96"
+merge_sha = "b01c5223d9b56b0e617959173a412aa371809baa"
 branch = "codex/intel-a770/A770-022-multistep-answer-parity"
 stackable = false
 review_mode = "codex_premerge"
