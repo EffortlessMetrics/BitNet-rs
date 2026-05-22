@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T12:25:27Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-METAL-EX-002"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-METAL-EX-002-phase-parity"
+
+notes = [
+  "Started the selected dense SLM Metal phase-parity slice after M4-METAL-EX-001 merged and chose prefill attention-score logits as the implementation target.",
+  "Scope is a deterministic Qwen-shape Q*K attention-score fixture, CPU reference parity, fallback-free phase receipt fields, and phase-local timing only.",
+  "Live Apple M4 Metal command passed: `BITNET_RUN_M4_METAL_DENSE_PREFILL_ATTENTION_SCORES=1 BITNET_M4_METAL_DENSE_PREFILL_ATTENTION_SCORES_RECEIPT=ci/hardware/apple-m4-mac-mini/2026-05-22/slm-metal-phases/metal-dense-prefill-attention-scores.json CARGO_TARGET_DIR=/tmp/bitnet-rs-metal-target CARGO_BUILD_JOBS=1 CARGO_PROFILE_DEV_DEBUG=0 cargo test --locked -p bitnet-kernels --no-default-features --features metal-runtime --test metal_attention_scores_phase dense_prefill_attention_scores_match_cpu_reference_when_enabled -- --nocapture`.",
+  "The receipt artifact `ci/hardware/apple-m4-mac-mini/2026-05-22/slm-metal-phases/metal-dense-prefill-attention-scores.json` records `artifact_kind=slm_apple_m4_metal_phase`, `execution_phase=prefill_attention_scores`, exact CPU reference score parity, 14 attention heads to 2 KV heads mapping agreement, fallback_used=false, and phase-local timing.",
+  "This item does not route generation, apply softmax or value mixing, enable BitNet chat or serve, prove full apple-m4-metal inference, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, broad performance, or speedup claims.",
+]
