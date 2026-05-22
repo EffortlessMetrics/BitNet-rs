@@ -2940,13 +2940,16 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-TREND-001"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-CI-001", "M4-BENCH-003", "M4-BITNET-REG-001", "M4-ACCURACY-007", "M4-BITNET-EX-012"]
+pr = 6184
+head_sha = "393420a13b9e8f9f788805478374e5b3c084b6cf"
+merge_sha = "8ba3057c1169662f2d0b95b71be12715cc109103"
 acceptance = "Publish a seven-day M4 trend history for dense SLM and BitNet receipt families with matching identity, skipped-day reasons, dashboard status, threshold outcomes, and operator-envelope impact separated from any one-off benchmark or quality claim."
 commands = [
   "bitnet mac report-refresh --since 7d --json",
@@ -2978,7 +2981,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-LIFECYCLE-001"
-status = "proposed"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-MODEL-LIFECYCLE-001-supported-model-policy"
 stackable = false
 review_mode = "codex_premerge"

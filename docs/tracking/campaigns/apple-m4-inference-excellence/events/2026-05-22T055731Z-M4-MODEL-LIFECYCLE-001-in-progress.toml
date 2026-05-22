@@ -1,0 +1,13 @@
+timestamp = "2026-05-22T05:57:31Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-MODEL-LIFECYCLE-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-MODEL-LIFECYCLE-001-supported-model-policy"
+
+notes = [
+  "Advanced M4-MODEL-LIFECYCLE-001 after M4-TREND-001 merged.",
+  "The next work item is policy and operator-boundary work for supported-model lifecycle states; this tracker event does not add or support a new model.",
+]
