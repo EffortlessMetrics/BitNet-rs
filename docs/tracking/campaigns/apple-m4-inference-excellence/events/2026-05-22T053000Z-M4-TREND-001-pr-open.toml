@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T05:30:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-TREND-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
+pr = 6184
+head_sha = "04e2b25ef371f3ce4eaf9b2200f33291f04db27a"
+
+notes = [
+  "Opened PR #6184 to publish a committed seven-day trend history from retained M4 Mac mini receipts.",
+  "The trend artifact covers dense SLM eval-v2, dense SLM benchmark-v2, BitNet eval, BitNet benchmark, and BitNet variable-warm dashboard families with matching identity, skipped-day reasons, dashboard status, threshold outcomes, and operator-envelope impact.",
+  "The source slice is dashboard and receipt summary only; it does not run live inference, download models, replace per-run receipts, enable BitNet chat or serve, prove future performance, or widen Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad performance, or speedup claims.",
+]

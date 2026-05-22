@@ -137,18 +137,18 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-STABILITY-002 | proposed | Add cache and disk-pressure repair receipts for operator flows. |
 | M4-STABILITY-003 | merged | Define scheduled M4 trend-retention and stale-identity policy. |
 | M4-RELIABILITY-001 | merged | Add recovery drills for cancellation, interruption, low disk, cache corruption, and restart. |
-| M4-OBS-001 | proposed | Correlate progress events, logs, receipts, and failure diagnostics. |
+| M4-OBS-001 | merged | Correlate progress events, logs, receipts, and failure diagnostics. |
 | M4-SERVE-EX-001 | pr_open | Refresh dense SLM local-server conformance receipts. |
 | M4-SERVE-EX-002 | proposed | Prove dense and BitNet streaming/failure semantics after BitNet serve is gated. |
-| M4-SERVE-EX-003 | proposed | Document and test local-server safety defaults for appliance operation. |
-| M4-SERVE-EX-004 | proposed | Add bounded server queue, backpressure, and resident-state evidence. |
-| M4-CI-001 | proposed | Codify PR, advisory, scheduled, release, and retention evidence lanes. |
+| M4-SERVE-EX-003 | merged | Document and test local-server safety defaults for appliance operation. |
+| M4-SERVE-EX-004 | merged | Add bounded server queue, backpressure, and resident-state evidence. |
+| M4-CI-001 | merged | Codify PR, advisory, scheduled, release, and retention evidence lanes. |
 | M4-SETUP-001 | proposed | Prove first-run setup, fetch or repair, cache verification, and smoke receipts. |
 | M4-BENCH-007 | proposed | Calibrate the benchmark harness before timing envelopes are interpreted. |
 | M4-ROUTE-MATRIX-001 | merged | Publish the route-state matrix for dense SLM and BitNet command surfaces. |
-| M4-WORKLOAD-001 | proposed | Add end-to-end operator workload receipts across enabled M4 routes. |
+| M4-WORKLOAD-001 | merged | Add end-to-end operator workload receipts across enabled M4 routes. |
 | M4-EVIDENCE-REPLAY-001 | merged | Add replayable evidence bundles for dense SLM and BitNet refreshes. |
-| M4-TREND-001 | merged | Publish seven-day matching-identity trend history and skipped-day reasons. |
+| M4-TREND-001 | in_progress | Publish seven-day matching-identity trend history and skipped-day reasons. |
 | M4-MODEL-LIFECYCLE-001 | proposed | Define supported-model lifecycle states and claim-boundary requirements. |
 | M4-COMPAT-001 | proposed | Define compatibility refresh receipts after OS, toolchain, binary, or manifest changes. |
 | M4-RELEASE-001 | proposed | Publish the M4 inference release go/no-go matrix. |

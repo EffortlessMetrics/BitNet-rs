@@ -1,0 +1,345 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "apple_m4_seven_day_trend_history",
+  "generated_at": "2026-05-22T05:30:00Z",
+  "campaign": "apple-m4-inference-excellence",
+  "work_item": "M4-TREND-001",
+  "machine": {
+    "id": "apple-m4-mac-mini",
+    "scope": "committed M4 Mac mini receipts only"
+  },
+  "lookback_window": {
+    "label": "7d",
+    "start": "2026-05-15T00:00:00Z",
+    "end": "2026-05-22T00:00:00Z",
+    "calendar_days": [
+      "2026-05-15",
+      "2026-05-16",
+      "2026-05-17",
+      "2026-05-18",
+      "2026-05-19",
+      "2026-05-20",
+      "2026-05-21"
+    ]
+  },
+  "source_artifacts": [
+    {
+      "kind": "report_refresh_manifest",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/report-refresh/report-refresh-manifest.json",
+      "sha256": "f573eaa03bc02239bc36c0f8a4d5fd5b1b577d9c04d311de935519d20e520ee9"
+    },
+    {
+      "kind": "regression_dashboard",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/regression-dashboard/regression-dashboard.json",
+      "sha256": "84b6b14070527a04911225aeb69896eb86b57a6398f3f38b6cacff8532015119"
+    },
+    {
+      "kind": "bitnet_repaired_eval_context_delta",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/regression-vs-2026-05-17T1903Z.json",
+      "sha256": "d4dd4c4ddcddf64c00d55b86f05ae8e38f058e0bf841a5deb1a99907b119f52a"
+    }
+  ],
+  "summary": {
+    "status": "ok",
+    "family_count": 5,
+    "matching_dashboard_groups": 9,
+    "ready_groups": 9,
+    "insufficient_history_groups": 0,
+    "advisory_warning_groups": 1,
+    "release_blocking_groups": 0,
+    "operator_envelope_impact": "No route class or public claim boundary changes. The current operator envelope remains tied to the retained matching dashboard groups; BitNet warm-session resident memory is an advisory follow-up, not a chat or serve enablement signal."
+  },
+  "families": [
+    {
+      "id": "dense_slm_eval_v2",
+      "evidence_family": "dense_slm",
+      "dashboard_status": "ready",
+      "report_count": 12,
+      "comparable_group_count": 3,
+      "groups": [
+        {
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "report_count": 4,
+          "dashboard_status": "ready",
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "threshold_outcome": {
+            "status": "within_threshold",
+            "warning_count": 0,
+            "quality": {
+              "cases_passed_delta": 0,
+              "cases_total": 500
+            },
+            "speed": {
+              "ttft_ms_p50_delta": -1.0,
+              "output_tok_s_p50_delta": 0.006
+            },
+            "memory": {
+              "peak_memory_mb_p50_delta": 0.0
+            }
+          },
+          "operator_envelope_impact": "No operator class change; retained as current dense SLM eval trend evidence for this exact identity."
+        },
+        {
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "report_count": 4,
+          "dashboard_status": "ready",
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "threshold_outcome": {
+            "status": "within_threshold",
+            "warning_count": 0,
+            "quality": {
+              "cases_passed_delta": 0,
+              "cases_total": 500
+            },
+            "speed": {
+              "ttft_ms_p50_delta": -2011.0,
+              "output_tok_s_p50_delta": 1.111
+            },
+            "memory": {
+              "peak_memory_mb_p50_delta": 0.0
+            }
+          },
+          "operator_envelope_impact": "No operator class change; retained as current dense SLM eval trend evidence for this exact identity."
+        },
+        {
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "report_count": 4,
+          "dashboard_status": "ready",
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "threshold_outcome": {
+            "status": "within_threshold",
+            "warning_count": 0,
+            "quality": {
+              "cases_passed_delta": 0,
+              "cases_total": 500
+            },
+            "speed": {
+              "ttft_ms_p50_delta": 85.0,
+              "output_tok_s_p50_delta": 0.003
+            },
+            "memory": {
+              "peak_memory_mb_p50_delta": 0.0
+            }
+          },
+          "operator_envelope_impact": "No operator class change; retained as current dense SLM eval trend evidence for this exact identity."
+        }
+      ]
+    },
+    {
+      "id": "dense_slm_benchmark_v2",
+      "evidence_family": "dense_slm",
+      "dashboard_status": "ready",
+      "report_count": 6,
+      "comparable_group_count": 3,
+      "groups": [
+        {
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "report_count": 2,
+          "dashboard_status": "ready",
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "threshold_outcome": {
+            "status": "within_threshold",
+            "warning_count": 0,
+            "speed": {
+              "ttft_ms_p50_delta": -1627.0,
+              "output_tok_s_p50_delta": 1.137
+            }
+          },
+          "operator_envelope_impact": "No operator class change; retained as current dense SLM benchmark trend evidence for this exact identity."
+        },
+        {
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "report_count": 2,
+          "dashboard_status": "ready",
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "threshold_outcome": {
+            "status": "within_threshold",
+            "warning_count": 0,
+            "speed": {
+              "ttft_ms_p50_delta": -1620.0,
+              "output_tok_s_p50_delta": 0.699
+            }
+          },
+          "operator_envelope_impact": "No operator class change; retained as current dense SLM benchmark trend evidence for this exact identity."
+        },
+        {
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "report_count": 2,
+          "dashboard_status": "ready",
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "threshold_outcome": {
+            "status": "within_threshold",
+            "warning_count": 0,
+            "speed": {
+              "ttft_ms_p50_delta": -6019.0,
+              "output_tok_s_p50_delta": 0.097
+            }
+          },
+          "operator_envelope_impact": "No operator class change; retained as current dense SLM benchmark trend evidence for this exact identity."
+        }
+      ]
+    },
+    {
+      "id": "bitnet_eval",
+      "evidence_family": "bitnet",
+      "dashboard_status": "ready",
+      "report_count": 2,
+      "comparable_group_count": 1,
+      "groups": [
+        {
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "report_count": 2,
+          "dashboard_status": "ready",
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json",
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json",
+          "threshold_outcome": {
+            "status": "within_threshold",
+            "warning_count": 0,
+            "quality": {
+              "cases_passed_delta": 0,
+              "cases_total": 100
+            }
+          },
+          "operator_envelope_impact": "No BitNet route class change. This is BitNet eval evidence only and does not enable BitNet chat or serve."
+        }
+      ]
+    },
+    {
+      "id": "bitnet_benchmark",
+      "evidence_family": "bitnet",
+      "dashboard_status": "ready",
+      "report_count": 2,
+      "comparable_group_count": 1,
+      "groups": [
+        {
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "report_count": 2,
+          "dashboard_status": "ready",
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json",
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json",
+          "threshold_outcome": {
+            "status": "within_threshold",
+            "warning_count": 0,
+            "speed": {
+              "ttft_ms_p50_delta": -2867.0,
+              "output_tok_s_p50_delta": 0.08
+            }
+          },
+          "operator_envelope_impact": "No BitNet route class change. This is BitNet benchmark evidence only and does not enable BitNet chat or serve."
+        }
+      ]
+    },
+    {
+      "id": "bitnet_variable_warm",
+      "evidence_family": "bitnet",
+      "dashboard_status": "ready_with_advisory",
+      "report_count": 2,
+      "comparable_group_count": 1,
+      "groups": [
+        {
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "report_count": 2,
+          "dashboard_status": "ready",
+          "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "baseline_report": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json",
+          "threshold_outcome": {
+            "status": "advisory_warning",
+            "warning_count": 1,
+            "quality": {
+              "quality_passed_latest": true,
+              "cases_total": 5
+            },
+            "speed": {
+              "ttft_ms_p50_delta": -29404.0,
+              "decode_tok_s_p50_delta": 1.651,
+              "total_wall_ms_p50_delta": -162610.084
+            },
+            "memory": {
+              "resident_memory_bytes_delta": 548552704,
+              "resident_memory_delta_percent": 25.63,
+              "threshold_percent": 10.0,
+              "direction": "higher_is_worse"
+            }
+          },
+          "operator_envelope_impact": "Keep BitNet warm-session evidence in advisory review for resident memory drift. This does not enable BitNet chat or serve."
+        }
+      ]
+    }
+  ],
+  "skipped_day_reasons": [
+    {
+      "date": "2026-05-15",
+      "status": "covered",
+      "reason": "Dense benchmark, BitNet eval, BitNet benchmark, and BitNet variable-warm baseline/latest receipts were retained in matching dashboard groups."
+    },
+    {
+      "date": "2026-05-16",
+      "status": "covered",
+      "reason": "Dense SLM eval-v2 and BitNet variable-warm receipts added matching-history refreshes."
+    },
+    {
+      "date": "2026-05-17",
+      "status": "covered",
+      "reason": "Dense SLM eval-v2 latest refresh and report-refresh/regression-dashboard summaries were committed; later BitNet 250-case eval evidence started a separate context."
+    },
+    {
+      "date": "2026-05-18",
+      "status": "skipped_for_matching_dashboard_trend",
+      "reason": "BitNet 250-case repaired eval was committed as a new context-only baseline with scoring-summary mismatch against the prior 250-case run; it is not a matching dashboard trend pair yet."
+    },
+    {
+      "date": "2026-05-19",
+      "status": "skipped_for_matching_dashboard_trend",
+      "reason": "Setup and benchmark-variance receipts were committed for separate operator surfaces, not as replacements for the five matching dashboard families summarized here."
+    },
+    {
+      "date": "2026-05-20",
+      "status": "skipped_for_matching_dashboard_trend",
+      "reason": "Context and reliability-drill receipts were committed for separate route and failure-mode evidence, not as matching trend refreshes for these dashboard groups."
+    },
+    {
+      "date": "2026-05-21",
+      "status": "skipped_for_matching_dashboard_trend",
+      "reason": "Serve failure-semantics evidence was committed for local-server behavior; it does not replace dense SLM or BitNet eval/benchmark/warm trend evidence."
+    }
+  ],
+  "non_trend_context": [
+    {
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-18T1806Z/bitnet-eval-250-repaired/regression-vs-2026-05-17T1903Z.json",
+      "reason": "The repaired 250-case BitNet eval changes scoring_summary.kinds, so the committed regression classifies it as context-only until a second repaired receipt exists."
+    }
+  ],
+  "claim_boundary": {
+    "dashboard_and_receipt_summary_only": true,
+    "source_receipts_remain_authoritative": true,
+    "no_live_model_run": true,
+    "no_model_download": true,
+    "does_not_replace_per_run_receipts": true,
+    "dense_slm_and_bitnet_evidence_separated": true,
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "macbook_evidence": false,
+    "broad_apple_silicon_claim": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "speedup_claim": false,
+    "future_performance_proven": false
+  },
+  "verification_limits": {
+    "derived_from_committed_receipts": true,
+    "regression_dashboard_status_used": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/regression-dashboard/regression-dashboard.json",
+    "local_live_refresh_run": false,
+    "local_cargo_or_xtask_run": false,
+    "reason_local_cargo_or_xtask_not_run": "The local checkout has about 1.0 GiB free disk; this source artifact is intentionally committed-data only."
+  }
+}

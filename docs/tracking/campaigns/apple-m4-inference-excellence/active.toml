@@ -2492,8 +2492,8 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-RECEIPT-001", "M4-RELIABILITY-001", "M4-SERVE-EX-002"]
-pr = 151
-merge_sha = "3c9dc249baa334107cc028f9e14e3391762b08e0"
+pr = 6169
+merge_sha = "911e7ce33e8f8f93f825140ce1f56e0ddfebbf85"
 acceptance = "Add M4 observability correlation for CLI and server routes: trace IDs linking progress events, logs, per-run or per-request receipts, failure receipts, cancellation/timeout stages, and operator-facing diagnostics without leaking prompts or cache paths beyond the documented redaction policy."
 commands = [
   "bitnet mac ask --trace --json-out ci/hardware/apple-m4-mac-mini/<date>/observability/ask.json <prompt>",
@@ -2528,14 +2528,13 @@ must_not_claim = [
 [[work_item]]
 id = "M4-SERVE-EX-001"
 status = "merged"
-branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-dense-serve-conformance"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-closeout"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-REPRO-001", "M4-BENCH-003"]
-pr = 94
-merge_sha = "d3e891b8b51f9af6565d18f9811a03f2e04257ed"
+pr = 6165
 acceptance = "Refresh dense SLM local-server conformance on M4 for supported model identities, including health, ready, one-shot request, streaming completion, per-request receipt export, timeout behavior, fallback=false backend fields, and service claim boundaries."
 commands = [
   "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_serve -- --nocapture",
@@ -2577,7 +2576,8 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-SERVE-EX-001", "M4-BITNET-EX-007"]
-pr = 112
+pr = 6167
+merge_sha = "3cfbaf7d051674e0080972ccbb6ed0d9d0c28b94"
 acceptance = "Prove local-server streaming and failure semantics across dense SLM and enabled BitNet serve paths: partial token streaming, client cancellation, timeout stage, invalid request, missing cache, per-request receipt export, and no-response failure receipts."
 commands = [
   "cargo test --locked -p bitnet-server -- --nocapture",
@@ -2618,8 +2618,8 @@ review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-SERVE-EX-001"]
-pr = 160
-merge_sha = "a1e532423efdfef125c620b861e135185cefc224"
+pr = 6171
+merge_sha = "c345ed7d72620903d7aeb62eb6f2d9266be0e59f"
 acceptance = "Document and test local-server safety defaults for the M4 appliance: localhost binding by default, explicit opt-in for wider binding, no telemetry, predictable CORS behavior, request-size limits, cache-path disclosure boundaries, and receipt redaction rules."
 commands = [
   "cargo test --locked -p bitnet-server -- --nocapture",
@@ -2653,13 +2653,14 @@ must_not_claim = [
 id = "M4-SERVE-EX-004"
 status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-004-queue-backpressure"
-pr = 178
-merge_sha = "119324587a3e9b119a40add402c3041fe1435a08"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-SERVE-EX-001", "M4-SERVE-EX-003", "M4-CONTEXT-001"]
+pr = 6173
+head_sha = "6eb57f141113ab1ee37c9098baaeddaf470a321e"
+merge_sha = "f22d40c3124485f51ec90d6feefb66ff801143a7"
 acceptance = "Add bounded local-server queue, backpressure, and resident-state evidence for the M4 appliance: concurrent local requests, queue limits, busy/timeout responses, resident model reuse, per-request receipts, and failure receipts without production-hosting or full OpenAI-compatibility claims."
 commands = [
   "cargo test --locked -p bitnet-server -- --nocapture",
@@ -2695,14 +2696,14 @@ must_not_claim = [
 id = "M4-CI-001"
 status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-CI-001-evidence-lanes"
-pr = 190
-head_sha = "a9b25e29ca1e0772e67ee31ce0f21f9b2ed02706"
-merge_sha = "67f83671b86eefa28325e49e58ca1c8496e3e8ea"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-GATE-HYGIENE-001", "M4-RECEIPT-001", "M4-STABILITY-003"]
+pr = 6175
+head_sha = "86156087b0923d7a682cd6c5e197fa6492508d24"
+merge_sha = "e01d5cc42dad096aee68f5bea66592b08a43256a"
 acceptance = "Codify the M4 evidence CI lanes and retention contracts: generic PR model-free checks, advisory local M4 runs, scheduled M4 refresh, release-gate M4 refresh, artifact retention, dashboard generation, and explicit non-blocking behavior for hardware-only timing jobs."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
@@ -2817,14 +2818,15 @@ must_not_claim = [
 [[work_item]]
 id = "M4-ROUTE-MATRIX-001"
 status = "merged"
-pr = 196
-merge_sha = "d86c3d1933a9a53e578f7bf19123878708bbead3"
 branch = "codex/apple-m4-inference-excellence/M4-ROUTE-MATRIX-001-route-states"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-DENSE-CHAT-001", "M4-BITNET-EX-006", "M4-BITNET-EX-007", "M4-SERVE-EX-002", "M4-OPS-SLO-001"]
+pr = 6177
+head_sha = "998ced351da0bf94d3c365fb861f5b7cb4f2feed"
+merge_sha = "bd0a2e3fdfa740645bf2b7e6d9768d46f5f65e6f"
 acceptance = "Publish a route-state matrix for M4 dense SLM and BitNet paths covering ask, chat, warm session, serve, streaming, disabled, batch-only, and unsupported states, with the exact evidence item and receipt family required for each enabled state."
 commands = [
   "bitnet mac status --json",
@@ -2856,15 +2858,15 @@ must_not_claim = [
 [[work_item]]
 id = "M4-WORKLOAD-001"
 status = "merged"
-pr = 213
-head_sha = "38316ba48266898c974c197fd8c810379f1a301d"
-merge_sha = "c192699c106e7d3af8026ab6d8fcefaad96dd6a2"
-branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-operator-suite"
+branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-source-promotion"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-DENSE-CHAT-001", "M4-BITNET-EX-006", "M4-SERVE-EX-002", "M4-ROUTE-MATRIX-001", "M4-REPRO-003"]
+pr = 6180
+head_sha = "8ab28785b39cf92263f03e1d3bbd792842c8986d"
+merge_sha = "a86d13cd9e643b54ca1b42bde75fdb214c4d1900"
 acceptance = "Add an end-to-end M4 operator workload suite across ask, chat, warm-session, and serve routes for supported dense SLMs and enabled BitNet routes, covering summarize, extract, classify, JSON, rewrite, and table-QA workflows with receipts, mechanical checks where possible, route-state boundaries, and no broad quality claim."
 commands = [
   "target/release/bitnet mac workload --suite m4-operator --json-out ci/hardware/apple-m4-mac-mini/<date>/workload/summary.json",
@@ -2899,14 +2901,15 @@ must_not_claim = [
 [[work_item]]
 id = "M4-EVIDENCE-REPLAY-001"
 status = "merged"
-pr = 200
-merge_sha = "04ada5d52397a1817bcac0299f1bf5c332a9d603"
 branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-RECEIPT-001", "M4-CI-001", "M4-REPRO-001"]
+pr = 6182
+head_sha = "22cc5eb0da30a090a7b96b41031c1354c7344724"
+merge_sha = "62a5f3a30523c619a371a536a778cc8601236938"
 acceptance = "Add replayable M4 evidence bundles that list the exact commands, git/binary identity, model/tokenizer identity, receipt inputs, dashboard outputs, expected regression result, and claim boundary so an operator can reproduce or audit a dense SLM or BitNet evidence refresh."
 commands = [
   "bitnet mac evidence replay --bundle ci/hardware/apple-m4-mac-mini/<date>/<bundle>/manifest.json --dry-run --json",
@@ -2937,10 +2940,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-TREND-001"
-status = "merged"
-pr = 217
-head_sha = "4b26ee6fe52ceb1b2e5ce35b4142537aa1baa6ef"
-merge_sha = "6f9e6411726cbd26f8f4eac2bc4c760e64cb15e9"
+status = "in_progress"
 branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
 stackable = false
 review_mode = "codex_premerge"
@@ -2949,12 +2949,8 @@ human_gate = "on_blocker_only"
 blocked_by = ["M4-CI-001", "M4-BENCH-003", "M4-BITNET-REG-001", "M4-ACCURACY-007", "M4-BITNET-EX-012"]
 acceptance = "Publish a seven-day M4 trend history for dense SLM and BitNet receipt families with matching identity, skipped-day reasons, dashboard status, threshold outcomes, and operator-envelope impact separated from any one-off benchmark or quality claim."
 commands = [
-  "target/debug/bitnet mac report-refresh --since 7d --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/report-refresh.json",
-  "target/debug/bitnet mac regression-dashboard --since 7d --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.json --markdown-out ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.md",
-  "target/debug/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/report-refresh.json --json",
-  "target/debug/bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-21T1805Z/trend/regression-dashboard.json --json",
-  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_report_refresh_since_records_rolling_trend_window -- --nocapture",
-  "cargo test --locked -p bitnet-cli --test cli_arg_tests mac_regression_dashboard_since_records_trend_status -- --nocapture",
+  "bitnet mac report-refresh --since 7d --json",
+  "bitnet mac regression-dashboard --since 7d --json",
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",

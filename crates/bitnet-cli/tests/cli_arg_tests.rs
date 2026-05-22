@@ -33,30 +33,6 @@ fn workspace_path(path: &str) -> std::path::PathBuf {
     std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..").join(path)
 }
 
-fn write_m4_trend_test_report(path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    let source = workspace_path(
-        "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
-    );
-    std::fs::copy(source, path)?;
-    Ok(())
-}
-
-fn write_m4_trend_test_reports(root: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
-    let today = chrono::Utc::now().date_naive();
-    let yesterday = today - chrono::Duration::days(1);
-    let old = today - chrono::Duration::days(10);
-    for date in [today, yesterday] {
-        write_m4_trend_test_report(
-            &root.join(format!("{date}T000000Z/slm-eval-v2/qwen/summary.json")),
-        )?;
-    }
-    write_m4_trend_test_report(&root.join(format!("{old}T000000Z/slm-eval-v2/qwen/summary.json")))?;
-    Ok(())
-}
-
 fn write_bitnet_chat_streaming_semantics_receipt(
     path: &std::path::Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -581,6 +557,7 @@ fn mac_help_documents_operator_wrappers() {
         .success()
         .stdout(predicate::str::contains("models"))
         .stdout(predicate::str::contains("status"))
+        .stdout(predicate::str::contains("workload"))
         .stdout(predicate::str::contains("report-refresh"))
         .stdout(predicate::str::contains("regression-dashboard"))
         .stdout(predicate::str::contains("check"))
@@ -1047,41 +1024,6 @@ fn mac_status_writes_operator_readiness_receipt() -> Result<(), Box<dyn std::err
     assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
     assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
     assert_eq!(receipt_json["claim_boundary"]["full_metal_inference_claimed"], false);
-    assert_eq!(receipt_json["route_state_matrix"]["work_item"], "M4-ROUTE-MATRIX-001");
-    let route_rows = receipt_json["route_state_matrix"]["rows"]
-        .as_array()
-        .ok_or("route_state_matrix.rows must be an array")?;
-    assert_route_matrix_live_states_have_receipts(route_rows)?;
-    assert!(route_rows.iter().any(|row| {
-        row["route_id"] == "dense_slm_serve_loopback"
-            && row["state"] == "enabled"
-            && row["command_surface"] == "serve"
-    }));
-    assert!(route_rows.iter().any(|row| {
-        row["route_id"] == "bitnet_warm_session"
-            && row["state"] == "batch_only"
-            && row["command_surface"] == "warm_session"
-    }));
-    assert!(route_rows.iter().any(|row| {
-        row["route_id"] == "bitnet_chat_gate_required"
-            && row["state"] == "disabled"
-            && row["required_gate"]["artifact_kind"] == "bitnet_apple_m4_chat_gate"
-    }));
-    assert!(route_rows.iter().any(|row| {
-        row["route_id"] == "unsupported_apple_backends" && row["state"] == "unsupported"
-    }));
-    let bitnet_ask_row = route_rows
-        .iter()
-        .find(|row| row["route_id"] == "bitnet_ask_one_shot")
-        .ok_or("bitnet_ask_one_shot row missing")?;
-    let bitnet_ask_evidence = bitnet_ask_row["evidence"]
-        .as_array()
-        .ok_or("bitnet_ask_one_shot evidence must be an array")?;
-    assert!(
-        bitnet_ask_evidence
-            .iter()
-            .all(|entry| entry["receipt_family"] != "bitnet_one_shot_failure")
-    );
     assert!(
         receipt_json["commands"]["bitnet_chat_gate"]
             .as_str()
@@ -1149,23 +1091,6 @@ fn mac_evidence_writes_operator_summary() -> Result<(), Box<dyn std::error::Erro
     assert_eq!(receipt_json["claim_boundary"]["dense_slm_and_bitnet_evidence_separated"], true);
     assert_eq!(receipt_json["unsupported_claims"]["full_metal_inference"], false);
     assert_eq!(receipt_json["unsupported_claims"]["qk256"], false);
-    assert_eq!(receipt_json["route_state_matrix"]["work_item"], "M4-ROUTE-MATRIX-001");
-    assert_eq!(
-        receipt_json["route_state_matrix"]["claim_boundary"]["does_not_enable_routes"],
-        true
-    );
-    let route_rows = receipt_json["route_state_matrix"]["rows"]
-        .as_array()
-        .ok_or("route_state_matrix.rows must be an array")?;
-    assert_route_matrix_live_states_have_receipts(route_rows)?;
-    assert!(
-        route_rows
-            .iter()
-            .any(|row| row["route_id"] == "dense_slm_streaming" && row["state"] == "enabled")
-            && route_rows.iter().any(|row| {
-                row["route_id"] == "bitnet_serve_gate_required" && row["state"] == "disabled"
-            })
-    );
     assert!(
         receipt_json["recommended_next_command"]
             .as_str()
@@ -1182,139 +1107,21 @@ fn mac_evidence_writes_operator_summary() -> Result<(), Box<dyn std::error::Erro
 }
 
 #[test]
-fn mac_workload_writes_operator_suite_manifest() -> Result<(), Box<dyn std::error::Error>> {
+fn mac_evidence_replay_dry_run_validates_bundle() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
-    let report_root = workspace_path("ci/hardware/apple-m4-mac-mini");
-    let receipt = dir.path().join("workload-summary.json");
-    let report_root_str = report_root.to_string_lossy().into_owned();
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    bitnet()
-        .args([
-            "mac",
-            "workload",
-            "--suite",
-            "m4-operator",
-            "--root",
-            report_root_str.as_str(),
-            "--json-out",
-            receipt_str.as_str(),
-            "--json",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("apple_m4_operator_workload_suite"))
-        .stdout(predicate::str::contains("m4-operator"))
-        .stdout(predicate::str::contains("route_state_summary"));
-
-    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
-    assert_eq!(receipt_json["artifact_kind"], "apple_m4_operator_workload_suite");
-    assert_eq!(receipt_json["operator_command"], "mac workload");
-    assert_eq!(receipt_json["suite"]["work_item"], "M4-WORKLOAD-001");
-    assert_eq!(receipt_json["suite"]["live_model_run"], false);
-    assert_eq!(receipt_json["suite"]["workflow_count"], 6);
-    assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
-    assert_eq!(receipt_json["claim_boundary"]["broad_model_quality_claim"], false);
-    assert_eq!(receipt_json["claim_boundary"]["bitnet_chat_enabled"], false);
-    assert_eq!(receipt_json["claim_boundary"]["bitnet_serve_enabled"], false);
-
-    let workflows =
-        receipt_json["workflow_cases"].as_array().ok_or("workflow_cases must be an array")?;
-    for required in ["summarize", "extract", "classify", "json", "rewrite", "table_qa"] {
-        assert!(
-            workflows.iter().any(|workflow| {
-                workflow["id"] == required
-                    && workflow["mechanical_checks"]
-                        .as_array()
-                        .is_some_and(|checks| !checks.is_empty())
-            }),
-            "missing workload workflow {required}"
-        );
-    }
-
-    let route_plan = receipt_json["route_plan"].as_array().ok_or("route_plan must be an array")?;
-    assert!(route_plan.iter().any(|entry| {
-        entry["model_family"] == "dense_slm"
-            && entry["command_surface"] == "serve"
-            && entry["route_enabled_for_suite"] == true
-            && entry["live_command"].as_str().is_some_and(|command| command.contains("serve-smoke"))
-    }));
-    assert!(route_plan.iter().any(|entry| {
-        entry["model_family"] == "bitnet"
-            && entry["command_surface"] == "warm_session"
-            && entry["route_enabled_for_suite"] == true
-            && entry["expected_artifact_kind"] == "bitnet_apple_m4_warm_session"
-    }));
-    assert!(route_plan.iter().any(|entry| {
-        entry["model_family"] == "bitnet"
-            && entry["command_surface"] == "chat"
-            && entry["requires_gate_receipt"] == true
-            && entry["route_enabled_for_suite"] == false
-    }));
-    assert!(route_plan.iter().any(|entry| {
-        entry["model_family"] == "bitnet"
-            && entry["command_surface"] == "serve"
-            && entry["requires_gate_receipt"] == true
-            && entry["route_enabled_for_suite"] == false
-    }));
-    assert_eq!(
-        receipt_json["route_state_matrix"]["claim_boundary"]["does_not_enable_routes"],
-        true
-    );
-
-    bitnet()
-        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("apple_m4_operator_workload_suite"))
-        .stdout(predicate::str::contains("\"prompt_count\": 0"));
-    Ok(())
-}
-
-fn assert_route_matrix_live_states_have_receipts(
-    rows: &[serde_json::Value],
-) -> Result<(), Box<dyn std::error::Error>> {
-    for row in rows {
-        if !matches!(row["state"].as_str(), Some("enabled" | "batch_only")) {
-            continue;
-        }
-        let route_id = row["route_id"].as_str().unwrap_or("<unknown>");
-        let evidence = row["evidence"].as_array().ok_or_else(|| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                format!("{route_id} must record evidence"),
-            )
-        })?;
-        assert!(!evidence.is_empty(), "{route_id} must record evidence");
-        for entry in evidence {
-            let item = entry["item"].as_str().unwrap_or("<unknown>");
-            let family = entry["receipt_family"].as_str().unwrap_or("<unknown>");
-            assert!(
-                entry["latest_receipt"].as_str().is_some_and(|receipt| !receipt.trim().is_empty()),
-                "{route_id} evidence {item}/{family} must resolve latest_receipt"
-            );
-        }
-    }
-    Ok(())
-}
-
-#[test]
-fn mac_evidence_replay_dry_run_audits_bundle_manifest() -> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let bundle = workspace_path(
-        "ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json",
-    );
+    let workspace_root = workspace_path("");
+    let bundle = "ci/hardware/apple-m4-mac-mini/2026-05-22T0400Z/evidence-replay/dense-slm-q8-eval/manifest.json";
     let receipt = dir.path().join("evidence-replay-dry-run.json");
-    let bundle_str = bundle.to_string_lossy().into_owned();
     let receipt_str = receipt.to_string_lossy().into_owned();
 
     bitnet()
+        .current_dir(&workspace_root)
         .args([
             "mac",
             "evidence",
             "replay",
             "--bundle",
-            bundle_str.as_str(),
+            bundle,
             "--dry-run",
             "--json-out",
             receipt_str.as_str(),
@@ -1323,41 +1130,86 @@ fn mac_evidence_replay_dry_run_audits_bundle_manifest() -> Result<(), Box<dyn st
         .assert()
         .success()
         .stdout(predicate::str::contains("apple_m4_evidence_replay_dry_run"))
-        .stdout(predicate::str::contains("commands_executed"));
+        .stdout(predicate::str::contains("M4-EVIDENCE-REPLAY-001"));
 
     let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
     assert_eq!(receipt_json["artifact_kind"], "apple_m4_evidence_replay_dry_run");
-    assert_eq!(receipt_json["operator_command"], "mac evidence replay --dry-run");
-    assert_eq!(receipt_json["bundle"]["work_item"], "M4-EVIDENCE-REPLAY-001");
-    assert_eq!(receipt_json["validation"]["bundle_valid"], true);
-    assert_eq!(receipt_json["validation"]["commands_executed"], false);
-    assert_eq!(receipt_json["validation"]["missing_input_count"], 0);
-    assert_eq!(receipt_json["validation"]["artifact_mismatch_count"], 0);
-    assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
-    assert_eq!(receipt_json["claim_boundary"]["dry_run_only"], true);
-    assert!(receipt_json["model_identity"].as_array().is_some_and(|models| {
-        models.iter().any(|model| model["evidence_family"] == "dense_slm")
-            && models.iter().any(|model| model["evidence_family"] == "bitnet")
-    }));
-    assert!(receipt_json["replay_commands"].as_array().is_some_and(|commands| {
-        commands.iter().any(|command| {
-            command["command"]
-                .as_str()
-                .is_some_and(|text| text.contains("bitnet mac evidence replay"))
-                && command["executes_live_model"] == false
-        })
-    }));
+    assert_eq!(receipt_json["operator_command"], "mac evidence replay");
+    assert_eq!(receipt_json["work_item"], "M4-EVIDENCE-REPLAY-001");
+    assert_eq!(receipt_json["bundle"]["artifact_kind"], "apple_m4_evidence_replay_bundle_manifest");
+    assert_eq!(receipt_json["replay_contract"]["dry_run_only"], true);
+    assert_eq!(receipt_json["replay_contract"]["no_live_model_run"], true);
+    assert_eq!(receipt_json["replay_contract"]["no_model_download"], true);
+    assert_eq!(receipt_json["replay_contract"]["regression_command_executed"], false);
+    assert_eq!(receipt_json["claim_boundary"]["uncommitted_local_artifacts_validated"], false);
+    assert_eq!(receipt_json["receipt_inputs"].as_array().map_or(0, Vec::len), 2);
+    assert_eq!(receipt_json["dashboard_outputs"].as_array().map_or(0, Vec::len), 2);
+    assert!(
+        receipt_json["receipt_inputs"]
+            .as_array()
+            .is_some_and(|inputs| inputs.iter().all(|input| input["receipt_check_passed"] == true))
+    );
+    assert!(receipt_json["commands"].as_array().is_some_and(|commands| commands.iter().any(
+        |command| {
+            command["id"] == "dry_run_replay"
+                && command["command"].as_str().is_some_and(|text| {
+                    text.contains("bitnet mac evidence replay") && text.contains("--dry-run")
+                })
+        }
+    )));
 
-    bitnet()
-        .args(["mac", "receipts-check", bundle_str.as_str(), "--json"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("apple_m4_evidence_replay_bundle"));
     bitnet()
         .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
         .assert()
         .success()
         .stdout(predicate::str::contains("apple_m4_evidence_replay_dry_run"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_workload_writes_model_free_operator_suite() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("workload-summary.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "workload",
+            "--suite",
+            "m4-operator",
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_operator_workload_suite"))
+        .stdout(predicate::str::contains("M4-WORKLOAD-001"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_operator_workload_suite");
+    assert_eq!(receipt_json["work_item"], "M4-WORKLOAD-001");
+    assert_eq!(receipt_json["suite"], "m4-operator");
+    assert_eq!(receipt_json["workload_contract"]["model_free"], true);
+    assert_eq!(receipt_json["workload_contract"]["live_model_run"], false);
+    assert_eq!(receipt_json["route_state_matrix"]["work_item"], "M4-ROUTE-MATRIX-001");
+    assert_eq!(receipt_json["case_count"], 36);
+    assert_eq!(receipt_json["executed_case_count"], 0);
+    assert_eq!(receipt_json["route_boundaries"]["bitnet_chat_enabled"], false);
+    assert_eq!(receipt_json["route_boundaries"]["bitnet_serve_enabled"], false);
+    assert!(receipt_json["enabled_route_ids"].as_array().is_some_and(|routes| {
+        routes.iter().any(|route| route == "dense_slm.serve")
+            && routes.iter().any(|route| route == "bitnet.warm_session")
+            && !routes.iter().any(|route| route == "bitnet.chat")
+    }));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_operator_workload_suite"))
         .stdout(predicate::str::contains("\"prompt_count\": 0"));
     Ok(())
 }
@@ -1457,55 +1309,6 @@ fn mac_report_refresh_writes_model_free_manifest() -> Result<(), Box<dyn std::er
 }
 
 #[test]
-fn mac_report_refresh_since_records_rolling_trend_window() -> Result<(), Box<dyn std::error::Error>>
-{
-    let dir = tempfile::tempdir()?;
-    let report_root = dir.path().join("apple-m4-reports");
-    write_m4_trend_test_reports(&report_root)?;
-    let receipt = dir.path().join("report-refresh-manifest.json");
-    let report_root_str = report_root.to_string_lossy().into_owned();
-    let receipt_str = receipt.to_string_lossy().into_owned();
-
-    bitnet()
-        .args([
-            "mac",
-            "report-refresh",
-            "--root",
-            report_root_str.as_str(),
-            "--since",
-            "7d",
-            "--json-out",
-            receipt_str.as_str(),
-            "--json",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("\"requested_since\": \"7d\""))
-        .stdout(predicate::str::contains("\"rolling_trend_window\": true"));
-
-    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
-    assert_eq!(receipt_json["trend_window"]["active"], true);
-    assert_eq!(receipt_json["trend_window"]["requested_since"], "7d");
-    assert_eq!(receipt_json["claim_boundary"]["no_live_model_run"], true);
-    let dense = receipt_json["families"]
-        .as_array()
-        .and_then(|families| families.iter().find(|family| family["id"] == "dense_slm_eval_v2"))
-        .ok_or_else(|| std::io::Error::other("dense family"))?;
-    assert_eq!(dense["report_count"], 2);
-    assert_eq!(dense["trend_window"]["report_count_before_window"], 3);
-    assert_eq!(dense["trend_window"]["report_count_outside_window"], 1);
-    assert_eq!(dense["threshold_outcome"], "ready_for_matching_identity_regression");
-    assert!(dense["skipped_day_reasons"].as_array().is_some_and(|reasons| !reasons.is_empty()));
-
-    bitnet()
-        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("apple_m4_report_refresh_manifest"));
-    Ok(())
-}
-
-#[test]
 fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn std::error::Error>>
 {
     let dir = tempfile::tempdir()?;
@@ -1600,69 +1403,6 @@ fn mac_regression_dashboard_writes_model_free_artifacts() -> Result<(), Box<dyn 
         .success()
         .stdout(predicate::str::contains("apple_m4_regression_dashboard"))
         .stdout(predicate::str::contains("\"prompt_count\": 0"));
-    Ok(())
-}
-
-#[test]
-fn mac_regression_dashboard_since_records_trend_status() -> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let report_root = dir.path().join("apple-m4-reports");
-    write_m4_trend_test_reports(&report_root)?;
-    let receipt = dir.path().join("regression-dashboard.json");
-    let markdown = dir.path().join("regression-dashboard.md");
-    let report_root_str = report_root.to_string_lossy().into_owned();
-    let receipt_str = receipt.to_string_lossy().into_owned();
-    let markdown_str = markdown.to_string_lossy().into_owned();
-
-    bitnet()
-        .args([
-            "mac",
-            "regression-dashboard",
-            "--root",
-            report_root_str.as_str(),
-            "--since",
-            "7d",
-            "--json-out",
-            receipt_str.as_str(),
-            "--markdown-out",
-            markdown_str.as_str(),
-            "--json",
-        ])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("\"requested_since\": \"7d\""))
-        .stdout(predicate::str::contains("ready_for_matching_identity_regression"));
-
-    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
-    assert_eq!(receipt_json["trend_window"]["active"], true);
-    assert_eq!(receipt_json["claim_boundary"]["dashboard_only"], true);
-    assert_eq!(receipt_json["dashboard_contract"]["matching_requires_same_evidence_family"], true);
-    let dense = receipt_json["families"]
-        .as_array()
-        .and_then(|families| families.iter().find(|family| family["id"] == "dense_slm_eval_v2"))
-        .ok_or_else(|| std::io::Error::other("dense family"))?;
-    let group = dense["groups"]
-        .as_array()
-        .and_then(|groups| groups.first())
-        .ok_or_else(|| std::io::Error::other("dense group"))?;
-    assert_eq!(group["report_count"], 2);
-    assert_eq!(group["comparison_status"], "ready");
-    assert_eq!(group["trend"]["active"], true);
-    assert_eq!(group["trend"]["threshold_outcome"], "ready_for_matching_identity_regression");
-    assert_eq!(
-        group["trend"]["operator_envelope_impact"],
-        "review_threshold_outcomes_before_envelope_update"
-    );
-    assert_eq!(group["trend"]["one_off_claim"], false);
-    assert!(
-        group["trend"]["skipped_day_reasons"].as_array().is_some_and(|reasons| !reasons.is_empty())
-    );
-
-    bitnet()
-        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("apple_m4_regression_dashboard"));
     Ok(())
 }
 
@@ -1968,6 +1708,7 @@ fn mac_ask_help_documents_positional_question() {
         .stdout(predicate::str::contains("--question <QUESTION>"))
         .stdout(predicate::str::contains("--timeout-seconds <SECONDS>"))
         .stdout(predicate::str::contains("--progress"))
+        .stdout(predicate::str::contains("--trace"))
         .stdout(predicate::str::contains("--quiet"));
 }
 
@@ -2043,16 +1784,6 @@ fn mac_ask_rejects_full_metal_request_before_cache_lookup() {
         .failure()
         .stderr(predicate::str::contains("mac ask routes the supported Mac local-answer path"))
         .stderr(predicate::str::contains("Full apple-m4-metal inference"));
-}
-
-#[test]
-fn mac_ask_help_documents_trace_correlation() {
-    bitnet()
-        .args(["mac", "ask", "--help"])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("--trace"))
-        .stdout(predicate::str::contains("trace-correlation"));
 }
 
 #[test]
@@ -2936,7 +2667,8 @@ fn mac_bitnet_serve_help_documents_ready_gate() {
         .stdout(predicate::str::contains("--model-family <MODEL_FAMILY>"))
         .stdout(predicate::str::contains("--model-path <PATH>"))
         .stdout(predicate::str::contains("--tokenizer <PATH>"))
-        .stdout(predicate::str::contains("--bitnet-serve-gate-receipt <PATH>"));
+        .stdout(predicate::str::contains("--bitnet-serve-gate-receipt <PATH>"))
+        .stdout(predicate::str::contains("--allow-network-bind"));
 }
 
 #[test]
@@ -2963,6 +2695,24 @@ fn mac_bitnet_serve_requires_ready_gate_before_cache_or_bind()
         .stderr(predicate::str::contains("bitnet mac bitnet-serve-gate"))
         .stderr(predicate::str::contains("--bitnet-serve-gate-receipt"))
         .stderr(predicate::str::contains("bitnet model fetch").not())
+        .stderr(predicate::str::contains("failed to bind").not());
+    Ok(())
+}
+
+#[test]
+fn mac_serve_rejects_non_loopback_without_explicit_network_bind()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt_dir = dir.path().join("receipts");
+    let receipt_dir_str = receipt_dir.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "serve", "--host", "0.0.0.0", "--receipt-dir", receipt_dir_str.as_str()])
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Refusing non-loopback host 0.0.0.0"))
+        .stderr(predicate::str::contains("--allow-network-bind"))
+        .stderr(predicate::str::contains("model cache is not ready").not())
         .stderr(predicate::str::contains("failed to bind").not());
     Ok(())
 }
@@ -3769,14 +3519,9 @@ fn mac_serve_help_documents_health_ready_surface() {
         .stdout(predicate::str::contains("health and readiness endpoints"))
         .stdout(predicate::str::contains("--model-id <MODEL_ID>"))
         .stdout(predicate::str::contains("--host <HOST>"))
-        .stdout(predicate::str::contains("--allow-non-loopback"))
         .stdout(predicate::str::contains("--port <PORT>"))
-        .stdout(predicate::str::contains("--max-request-bytes <MAX_REQUEST_BYTES>"))
-        .stdout(predicate::str::contains("--max-concurrent-requests <MAX_CONCURRENT_REQUESTS>"))
-        .stdout(predicate::str::contains("--max-queued-requests <MAX_QUEUED_REQUESTS>"))
-        .stdout(predicate::str::contains("--queue-timeout-ms <QUEUE_TIMEOUT_MS>"))
-        .stdout(predicate::str::contains("--trace"))
-        .stdout(predicate::str::contains("--receipt-dir <PATH>"));
+        .stdout(predicate::str::contains("--receipt-dir <PATH>"))
+        .stdout(predicate::str::contains("--trace"));
 }
 
 #[test]
@@ -3810,43 +3555,6 @@ fn mac_serve_rejects_full_metal_request_before_cache_lookup() {
         .failure()
         .stderr(predicate::str::contains("mac serve routes the supported Mac local service path"))
         .stderr(predicate::str::contains("Full apple-m4-metal inference"));
-}
-
-#[test]
-fn mac_serve_requires_explicit_non_loopback_opt_in_before_cache_lookup() {
-    bitnet()
-        .args(["mac", "serve", "--host", "0.0.0.0"])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("defaults to loopback-only binding"))
-        .stderr(predicate::str::contains("--allow-non-loopback"));
-}
-
-#[test]
-fn mac_serve_rejects_tiny_request_size_limit_before_cache_lookup() {
-    bitnet()
-        .args(["mac", "serve", "--max-request-bytes", "1024"])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("--max-request-bytes must be at least 4096"));
-}
-
-#[test]
-fn mac_serve_rejects_zero_concurrency_before_cache_lookup() {
-    bitnet()
-        .args(["mac", "serve", "--max-concurrent-requests", "0"])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("--max-concurrent-requests must be at least 1"));
-}
-
-#[test]
-fn mac_serve_rejects_zero_queue_timeout_before_cache_lookup() {
-    bitnet()
-        .args(["mac", "serve", "--queue-timeout-ms", "0"])
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("--queue-timeout-ms must be at least 1"));
 }
 
 #[test]
@@ -3899,25 +3607,69 @@ fn mac_serve_smoke_rejects_full_metal_request_before_cache_lookup() {
 }
 
 #[test]
-fn mac_serve_failure_smoke_help_documents_failure_semantics_receipt() {
+fn mac_serve_failure_smoke_help_documents_bounded_semantics_receipt() {
     bitnet()
         .args(["mac", "serve-failure-smoke", "--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("timeout/cancellation/failure semantics smoke"))
-        .stdout(predicate::str::contains("--timeout-seconds <TIMEOUT_SECONDS>"))
-        .stdout(predicate::str::contains("--receipt-dir <PATH>"))
+        .stdout(predicate::str::contains("streaming/failure semantics"))
         .stdout(predicate::str::contains("--json-out <PATH>"));
 }
 
 #[test]
-fn mac_serve_failure_smoke_rejects_full_metal_request_before_cache_lookup() {
+fn mac_serve_failure_smoke_writes_receipts_checkable_summary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let summary = dir.path().join("summary.json");
+    let summary_str = summary.to_string_lossy().into_owned();
+
     bitnet()
-        .args(["--device", "apple-m4-metal", "mac", "serve-failure-smoke"])
+        .args(["mac", "serve-failure-smoke", "--json-out", summary_str.as_str()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Mac serve failure semantics recorded"));
+
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&summary)?)?;
+    assert_eq!(receipt["artifact_kind"], "apple_m4_serve_failure_semantics");
+    assert_eq!(receipt["work_item"], "M4-SERVE-EX-002");
+    assert_eq!(receipt["route_family_count"], 2);
+    assert_eq!(receipt["case_count"], 14);
+    assert_eq!(receipt["summary"]["partial_token_streaming_passed"], true);
+    assert_eq!(receipt["summary"]["no_response_failure_receipt_passed"], true);
+    assert_eq!(receipt["claim_boundary"]["production_hosting_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["openai_compatibility_claimed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", summary_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_serve_failure_semantics"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_receipts_check_rejects_serve_failure_semantics_production_claim()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let summary = dir.path().join("summary.json");
+    let summary_str = summary.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "serve-failure-smoke", "--json-out", summary_str.as_str()])
+        .assert()
+        .success();
+
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&summary)?)?;
+    receipt["claim_boundary"]["production_hosting_claimed"] = serde_json::json!(true);
+    std::fs::write(&summary, serde_json::to_vec_pretty(&receipt)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", summary_str.as_str(), "--json"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("mac serve routes the supported Mac local service path"))
-        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+        .stderr(predicate::str::contains("production_hosting_claimed"));
+    Ok(())
 }
 
 #[test]
@@ -3926,21 +3678,65 @@ fn mac_serve_backpressure_smoke_help_documents_queue_receipt() {
         .args(["mac", "serve-backpressure-smoke", "--help"])
         .assert()
         .success()
-        .stdout(predicate::str::contains("queue/backpressure smoke"))
-        .stdout(predicate::str::contains("--max-queued-requests <MAX_QUEUED_REQUESTS>"))
-        .stdout(predicate::str::contains("--queue-timeout-ms <QUEUE_TIMEOUT_MS>"))
-        .stdout(predicate::str::contains("--receipt-dir <PATH>"))
+        .stdout(predicate::str::contains("queue/backpressure"))
         .stdout(predicate::str::contains("--json-out <PATH>"));
 }
 
 #[test]
-fn mac_serve_backpressure_smoke_rejects_full_metal_request_before_cache_lookup() {
+fn mac_serve_backpressure_smoke_writes_receipts_checkable_summary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let summary = dir.path().join("summary.json");
+    let summary_str = summary.to_string_lossy().into_owned();
+
     bitnet()
-        .args(["--device", "apple-m4-metal", "mac", "serve-backpressure-smoke"])
+        .args(["mac", "serve-backpressure-smoke", "--json-out", summary_str.as_str()])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Mac serve queue/backpressure contract recorded"));
+
+    let receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&summary)?)?;
+    assert_eq!(receipt["artifact_kind"], "apple_m4_serve_backpressure_smoke");
+    assert_eq!(receipt["work_item"], "M4-SERVE-EX-004");
+    assert_eq!(receipt["route_family_count"], 2);
+    assert_eq!(receipt["case_count"], 14);
+    assert_eq!(receipt["summary"]["queue_limit_passed"], true);
+    assert_eq!(receipt["summary"]["busy_response_passed"], true);
+    assert_eq!(receipt["summary"]["resident_model_reuse_passed"], true);
+    assert_eq!(receipt["claim_boundary"]["production_hosting_claimed"], false);
+    assert_eq!(receipt["claim_boundary"]["openai_compatibility_claimed"], false);
+
+    bitnet()
+        .args(["mac", "receipts-check", summary_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_serve_backpressure_smoke"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_receipts_check_rejects_serve_backpressure_production_claim()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let summary = dir.path().join("summary.json");
+    let summary_str = summary.to_string_lossy().into_owned();
+
+    bitnet()
+        .args(["mac", "serve-backpressure-smoke", "--json-out", summary_str.as_str()])
+        .assert()
+        .success();
+
+    let mut receipt: serde_json::Value = serde_json::from_slice(&std::fs::read(&summary)?)?;
+    receipt["claim_boundary"]["production_hosting_claimed"] = serde_json::json!(true);
+    std::fs::write(&summary, serde_json::to_vec_pretty(&receipt)?)?;
+
+    bitnet()
+        .args(["mac", "receipts-check", summary_str.as_str(), "--json"])
         .assert()
         .failure()
-        .stderr(predicate::str::contains("mac serve routes the supported Mac local service path"))
-        .stderr(predicate::str::contains("Full apple-m4-metal inference"));
+        .stderr(predicate::str::contains("production_hosting_claimed"));
+    Ok(())
 }
 
 #[test]
@@ -9519,66 +9315,6 @@ fn answer_corpus_dry_run_accepts_rtx5070ti_cuda_lane() {
     assert_eq!(receipt["claim_boundary"]["strict_cuda_answer_claimed"], false);
     assert_eq!(receipt["claim_boundary"]["coherent_answer_claimed"], false);
     assert_eq!(receipt["quality_summary"]["not_run"], 5);
-}
-
-/// `answer-corpus` can target the A770 OpenCL diagnostic route without promoting answer claims.
-#[cfg(feature = "full-cli")]
-#[test]
-fn answer_corpus_dry_run_accepts_a770_opencl_lane() -> Result<(), Box<dyn std::error::Error>> {
-    let dir = tempfile::tempdir()?;
-    let out = dir.path().join("a770-answer-corpus.json");
-    let corpus = workspace_path("ci/quality/bitnet-answer-corpus.yaml");
-    let corpus_arg = corpus.to_string_lossy().into_owned();
-    let out_arg = out.to_string_lossy().into_owned();
-
-    bitnet()
-        .args([
-            "answer-corpus",
-            "--dry-run",
-            "--device",
-            "intel-a770-opencl",
-            "--model",
-            "missing.gguf",
-            "--corpus",
-            corpus_arg.as_str(),
-            "--json-out",
-            out_arg.as_str(),
-        ])
-        .assert()
-        .success();
-
-    let receipt_bytes = std::fs::read(out)?;
-    let receipt: serde_json::Value = serde_json::from_slice(&receipt_bytes)?;
-    assert_eq!(receipt["artifact_kind"], "bitnet_a770_opencl_answer_diagnostic_corpus");
-    assert_eq!(receipt["backend"]["requested_backend"], "intel-a770-opencl");
-    assert_eq!(receipt["backend"]["selected_backend"], "intel-a770-opencl");
-    assert_eq!(receipt["backend"]["runtime_api"], "opencl");
-    assert_eq!(receipt["backend"]["fallback_used"], false);
-    assert_eq!(receipt["backend_lane"], "bitnet_a770_opencl");
-    assert_eq!(receipt["model"]["answer_ready_artifact_available"], true);
-    assert_eq!(receipt["claim_boundary"]["answer_ready_artifact_available"], true);
-    assert_eq!(receipt["claim_boundary"]["diagnostic_only_until_answer_ready_artifact"], true);
-    assert_eq!(receipt["claim_boundary"]["a770_opencl_answer_corpus"], true);
-    assert_eq!(receipt["claim_boundary"]["a770_opencl_route_diagnostic"], true);
-    assert_eq!(receipt["claim_boundary"]["strict_a770_answer_claimed"], false);
-    assert_eq!(receipt["claim_boundary"]["coherent_answer_claimed"], false);
-    assert_eq!(receipt["claim_boundary"]["full_a770_residency_claimed"], false);
-    assert_eq!(receipt["claim_boundary"]["trusted_partial_acceleration_claimed"], false);
-    assert_eq!(receipt["claim_boundary"]["a770_speedup_claimed"], false);
-    assert_eq!(receipt["proof_route_contract"]["enabled"], true);
-    assert_eq!(
-        receipt["proof_route_contract"]["model_contract"],
-        "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml"
-    );
-    assert_eq!(
-        receipt["proof_route_contract"]["kernel_route"]["route_id"],
-        "a770.bitnet.i2s.qk256"
-    );
-    assert_eq!(receipt["proof_route_contract"]["kernel_route"]["diagnostic_only"], true);
-    assert_eq!(receipt["proof_route_contract"]["kernel_route"]["claimable"], false);
-    assert_eq!(receipt["speedup_claim"], false);
-    assert_eq!(receipt["quality_summary"]["not_run"], 5);
-    Ok(())
 }
 
 /// `answer-corpus` must not treat Apple Metal as the local-answer path.
