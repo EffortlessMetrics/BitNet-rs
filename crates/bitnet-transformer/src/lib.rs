@@ -64,6 +64,21 @@ fn qwen_trace_dims_json(dims: &[usize]) -> String {
     dims.iter().map(|dim| dim.to_string()).collect::<Vec<_>>().join(",")
 }
 
+fn qwen_trace_rms_norm_fused(
+    norm_input: &Tensor,
+    output_dtype: DType,
+    weight: &Tensor,
+    eps: f64,
+) -> Result<Tensor> {
+    let weight = if weight.dtype() == norm_input.dtype() {
+        weight.clone()
+    } else {
+        weight.to_dtype(norm_input.dtype())?
+    };
+    let output = candle_nn::ops::rms_norm(norm_input, &weight, eps as f32)?;
+    Ok(output.to_dtype(output_dtype)?)
+}
+
 struct LinearInitTrace<'a> {
     enabled: bool,
     init_start: Instant,
@@ -2038,164 +2053,36 @@ impl TransformerBlock {
                 )
             });
 
-            let square_start = Instant::now();
-            qwen_trace_runtime_event(
-                trace_forward,
-                "block.attention_norm_square_mul_start",
-                || {
-                    format!(
-                        "\"layer\":{},\"elapsed_ms\":{},\"dims\":[{}],\"device\":\"{}\",\"method\":\"mul_self\"",
-                        self.attention.layer_idx,
-                        qwen_trace_elapsed_ms(attention_norm_start),
-                        qwen_trace_dims_json(norm_input.dims()),
-                        qwen_trace_device_kind(norm_input.device())
-                    )
-                },
-            );
-            let squared = norm_input.mul(&norm_input)?;
-            qwen_trace_runtime_event(
-                trace_forward,
-                "block.attention_norm_square_mul_finish",
-                || {
-                    format!(
-                        "\"layer\":{},\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
-                        self.attention.layer_idx,
-                        qwen_trace_elapsed_ms(attention_norm_start),
-                        qwen_trace_elapsed_ms(square_start),
-                        qwen_trace_dims_json(squared.dims()),
-                        squared.dtype(),
-                        qwen_trace_device_kind(squared.device())
-                    )
-                },
-            );
-
-            let sum_start = Instant::now();
-            qwen_trace_runtime_event(trace_forward, "block.attention_norm_sum_start", || {
+            let fused_start = Instant::now();
+            qwen_trace_runtime_event(trace_forward, "block.attention_norm_fused_rms_start", || {
                 format!(
-                    "\"layer\":{},\"elapsed_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
-                    self.attention.layer_idx,
-                    qwen_trace_elapsed_ms(attention_norm_start),
-                    qwen_trace_dims_json(squared.dims()),
-                    qwen_trace_device_kind(squared.device())
-                )
-            });
-            let summed = squared.sum_keepdim(D::Minus1)?;
-            qwen_trace_runtime_event(trace_forward, "block.attention_norm_sum_finish", || {
-                format!(
-                    "\"layer\":{},\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
-                    self.attention.layer_idx,
-                    qwen_trace_elapsed_ms(attention_norm_start),
-                    qwen_trace_elapsed_ms(sum_start),
-                    qwen_trace_dims_json(summed.dims()),
-                    summed.dtype(),
-                    qwen_trace_device_kind(summed.device())
-                )
-            });
-
-            let denom_start = Instant::now();
-            qwen_trace_runtime_event(trace_forward, "block.attention_norm_denom_start", || {
-                format!(
-                    "\"layer\":{},\"elapsed_ms\":{},\"hidden_size\":{},\"eps\":{}",
+                    "\"layer\":{},\"elapsed_ms\":{},\"path\":\"candle_ops_rms_norm\",\"hidden_size\":{},\"input_dims\":[{}],\"input_dtype\":\"{:?}\",\"weight_dims\":[{}],\"weight_dtype\":\"{:?}\",\"eps\":{},\"device\":\"{}\"",
                     self.attention.layer_idx,
                     qwen_trace_elapsed_ms(attention_norm_start),
                     hidden_size,
-                    qwen_trace_number(self.attention_norm.eps())
-                )
-            });
-            let norm_x = (summed / hidden_size as f64)?;
-            let denom = (norm_x + self.attention_norm.eps())?.sqrt()?;
-            qwen_trace_runtime_event(trace_forward, "block.attention_norm_denom_finish", || {
-                format!(
-                    "\"layer\":{},\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
-                    self.attention.layer_idx,
-                    qwen_trace_elapsed_ms(attention_norm_start),
-                    qwen_trace_elapsed_ms(denom_start),
-                    qwen_trace_dims_json(denom.dims()),
-                    denom.dtype(),
-                    qwen_trace_device_kind(denom.device())
-                )
-            });
-
-            let div_start = Instant::now();
-            qwen_trace_runtime_event(trace_forward, "block.attention_norm_div_start", || {
-                format!(
-                    "\"layer\":{},\"elapsed_ms\":{},\"input_dims\":[{}],\"denom_dims\":[{}],\"device\":\"{}\"",
-                    self.attention.layer_idx,
-                    qwen_trace_elapsed_ms(attention_norm_start),
                     qwen_trace_dims_json(norm_input.dims()),
-                    qwen_trace_dims_json(denom.dims()),
+                    norm_input.dtype(),
+                    qwen_trace_dims_json(self.attention_norm.weight().dims()),
+                    self.attention_norm.weight().dtype(),
+                    qwen_trace_number(self.attention_norm.eps()),
                     qwen_trace_device_kind(norm_input.device())
                 )
             });
-            let normed = norm_input.broadcast_div(&denom)?;
-            qwen_trace_runtime_event(trace_forward, "block.attention_norm_div_finish", || {
-                format!(
-                    "\"layer\":{},\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
-                    self.attention.layer_idx,
-                    qwen_trace_elapsed_ms(attention_norm_start),
-                    qwen_trace_elapsed_ms(div_start),
-                    qwen_trace_dims_json(normed.dims()),
-                    normed.dtype(),
-                    qwen_trace_device_kind(normed.device())
-                )
-            });
-
-            let cast_start = Instant::now();
+            let output = qwen_trace_rms_norm_fused(
+                &norm_input,
+                x_dtype,
+                self.attention_norm.weight(),
+                self.attention_norm.eps(),
+            )?;
             qwen_trace_runtime_event(
                 trace_forward,
-                "block.attention_norm_output_cast_start",
-                || {
-                    format!(
-                        "\"layer\":{},\"elapsed_ms\":{},\"from\":\"{:?}\",\"to\":\"{:?}\"",
-                        self.attention.layer_idx,
-                        qwen_trace_elapsed_ms(attention_norm_start),
-                        normed.dtype(),
-                        x_dtype
-                    )
-                },
-            );
-            let normed = normed.to_dtype(x_dtype)?;
-            qwen_trace_runtime_event(
-                trace_forward,
-                "block.attention_norm_output_cast_finish",
+                "block.attention_norm_fused_rms_finish",
                 || {
                     format!(
                         "\"layer\":{},\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
                         self.attention.layer_idx,
                         qwen_trace_elapsed_ms(attention_norm_start),
-                        qwen_trace_elapsed_ms(cast_start),
-                        qwen_trace_dims_json(normed.dims()),
-                        normed.dtype(),
-                        qwen_trace_device_kind(normed.device())
-                    )
-                },
-            );
-
-            let weight_mul_start = Instant::now();
-            qwen_trace_runtime_event(
-                trace_forward,
-                "block.attention_norm_weight_mul_start",
-                || {
-                    format!(
-                        "\"layer\":{},\"elapsed_ms\":{},\"input_dims\":[{}],\"weight_dims\":[{}],\"device\":\"{}\"",
-                        self.attention.layer_idx,
-                        qwen_trace_elapsed_ms(attention_norm_start),
-                        qwen_trace_dims_json(normed.dims()),
-                        qwen_trace_dims_json(self.attention_norm.weight().dims()),
-                        qwen_trace_device_kind(normed.device())
-                    )
-                },
-            );
-            let output = normed.broadcast_mul(self.attention_norm.weight())?;
-            qwen_trace_runtime_event(
-                trace_forward,
-                "block.attention_norm_weight_mul_finish",
-                || {
-                    format!(
-                        "\"layer\":{},\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
-                        self.attention.layer_idx,
-                        qwen_trace_elapsed_ms(attention_norm_start),
-                        qwen_trace_elapsed_ms(weight_mul_start),
+                        qwen_trace_elapsed_ms(fused_start),
                         qwen_trace_dims_json(output.dims()),
                         output.dtype(),
                         qwen_trace_device_kind(output.device())

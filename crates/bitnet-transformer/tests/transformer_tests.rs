@@ -267,18 +267,26 @@ fn rmsnorm_output_shape_preserved_3d() {
 // ── TransformerModel forward tests ────────────────────────────────────────────
 
 #[test]
-fn rmsnorm_square_mul_matches_sqr_for_trace_path() {
+fn rmsnorm_fused_ops_matches_layernorm_rmsnorm_for_trace_path() -> anyhow::Result<()> {
     let device = Device::Cpu;
-    let input =
-        Tensor::from_vec(vec![-3.0f32, -0.5, 0.0, 2.0, 4.0, 8.0], &[1, 1, 6], &device).unwrap();
+    let input = Tensor::from_vec(vec![-3.0f32, -0.5, 0.0, 2.0, 4.0, 8.0], &[1, 1, 6], &device)?;
+    let gamma = Tensor::from_vec(vec![0.25f32, 0.5, 0.75, 1.0, 1.25, 1.5], 6, &device)?;
+    let eps = 1e-6;
 
-    let by_sqr = input.sqr().unwrap();
-    let by_mul = input.mul(&input).unwrap();
+    let layer_norm = candle_nn::LayerNorm::rms_norm(gamma.clone(), eps);
+    let by_layer_norm = layer_norm.forward(&input)?;
+    let by_fused_ops = candle_nn::ops::rms_norm(&input, &gamma, eps as f32)?;
 
-    assert_eq!(by_sqr.dims(), by_mul.dims());
-    let expected: Vec<f32> = by_sqr.flatten_all().unwrap().to_vec1().unwrap();
-    let observed: Vec<f32> = by_mul.flatten_all().unwrap().to_vec1().unwrap();
-    assert_eq!(expected, observed, "x * x must match sqr() for traced RMSNorm math");
+    assert_eq!(by_layer_norm.dims(), by_fused_ops.dims());
+    let expected: Vec<f32> = by_layer_norm.flatten_all()?.to_vec1()?;
+    let observed: Vec<f32> = by_fused_ops.flatten_all()?.to_vec1()?;
+    for (idx, (expected, observed)) in expected.iter().zip(observed.iter()).enumerate() {
+        assert!(
+            (expected - observed).abs() < 1e-6,
+            "fused RMSNorm mismatch at {idx}: expected {expected}, observed {observed}"
+        );
+    }
+    Ok(())
 }
 
 #[test]
@@ -350,11 +358,12 @@ fn model_with_multi_layer_config_constructs_successfully() {
 }
 
 #[test]
-fn embed_output_shape_is_batch_seq_hidden() {
+fn embed_output_shape_is_batch_seq_hidden() -> anyhow::Result<()> {
     let (hidden, vocab, heads) = (8, 16, 2);
-    let model = make_model(hidden, vocab, heads).unwrap();
-    let out = model.embed(&[0u32, 1u32, 2u32]).unwrap();
+    let model = make_model(hidden, vocab, heads)?;
+    let out = model.embed(&[0u32, 1u32, 2u32])?;
     assert_eq!(out.dims(), &[1, 3, hidden], "embed output must be [1, seq_len, hidden]");
+    Ok(())
 }
 
 #[test]
