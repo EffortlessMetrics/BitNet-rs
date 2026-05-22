@@ -7586,7 +7586,7 @@ fn run_bitnet_proof_preflight(
     if !proof_valid {
         match (&accepted_artifact, &artifact_summary) {
             (None, _) => blockers.push(
-                "pass --accepted-artifact <receipt.json> from the MacBook/artifact sweep or --proof-receipt <answer-corpus.json>"
+                "pass --accepted-artifact <receipt.json> from the accepted BitNet artifact sweep or --proof-receipt <answer-corpus.json>"
                     .to_string(),
             ),
             (Some(_), Some(summary))
