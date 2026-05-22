@@ -153,7 +153,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-COMPAT-001 | merged | Define compatibility refresh receipts after OS, toolchain, binary, or manifest changes. |
 | M4-CLAIM-LINT-001 | merged | #6190 added static M4 claim-boundary wording checks. |
 | M4-RELEASE-001 | merged | #6192 published the M4 inference release go/no-go matrix. |
-| M4-METAL-EX-001 | pr_open | #6194 selects prefill attention-score logits as the named future Metal phase target. |
+| M4-METAL-EX-001 | merged | #6194 selected prefill attention-score logits as the named future Metal phase target. |
 | M4-METAL-EX-002 | proposed | Implement that named phase only with CPU parity and fallback-free phase receipts. |
 
 ## External Dependencies
