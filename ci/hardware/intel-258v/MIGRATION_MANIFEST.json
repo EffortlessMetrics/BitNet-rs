@@ -40,11 +40,11 @@
       }
     ],
     "current_swarm_audit_cutoff": {
-      "work_item": "LNL258V-GOAL-AUDIT-018",
-      "source_pr": 182,
-      "closeout_pr": 179,
-      "source_revision": "eed08101b169a2fcc79c755e5be0dbc8f96b22a8",
-      "summary": "Current swarm no-inference audit after LNL258V-BITNET-INTAKE-005 and closeout, with low_power still blocked on battery-mode evidence."
+      "work_item": "LNL258V-GOAL-AUDIT-023",
+      "source_pr": 253,
+      "closeout_pr": 254,
+      "source_revision": "116392b13009ef0ddae8223b345e64592d79e504",
+      "summary": "Current committed swarm no-inference audit after adjacent CUDA/Qwen3 phase-trace support PR #247, LNL258V-GOAL-AUDIT-022 closeout PR #248, and adjacent CUDA phase-trace cleanup PR #250, with LNL258V-POWER-006 still blocked on battery-mode evidence."
     }
   },
   "moved_items": [

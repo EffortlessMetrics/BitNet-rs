@@ -37,8 +37,14 @@ route, regression, telemetry, and audit receipts:
   BitNet semantic trigger.
 
 Swarm then continued the lane with later no-inference and evidence-indexing
-work. The current committed audit cutoff is `LNL258V-GOAL-AUDIT-018`, with
-`source_revision = eed08101b169a2fcc79c755e5be0dbc8f96b22a8`.
+work. The current committed Lunar Lake audit cutoff is
+`LNL258V-GOAL-AUDIT-023` from PR #253, with tracker closeout PR #254 and
+`source_revision = 116392b13009ef0ddae8223b345e64592d79e504`.
+
+That cutoff records adjacent CUDA/Qwen3 phase-trace PRs #247 and #250 plus
+`LNL258V-GOAL-AUDIT-022` closeout PR #248 as non-Lunar-Lake-route evidence.
+They do not change route policy, promotion status, inference evidence, power
+claims, or BitNet behavior.
 
 ## Carried State
 
