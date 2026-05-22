@@ -7,7 +7,7 @@ previous_status = "in_progress"
 new_status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
 pr = 6184
-head_sha = "04e2b25ef371f3ce4eaf9b2200f33291f04db27a"
+head_sha = "393420a13b9e8f9f788805478374e5b3c084b6cf"
 
 notes = [
   "Opened PR #6184 to publish a committed seven-day trend history from retained M4 Mac mini receipts.",
