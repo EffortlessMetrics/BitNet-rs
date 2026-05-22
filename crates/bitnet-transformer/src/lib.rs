@@ -177,106 +177,11 @@ fn qwen_trace_rope_init_event(
     }
 }
 
-fn qwen_trace_rope_cuda_upload_probe(
-    trace: Option<RopeInitTrace<'_>>,
-    table: &'static str,
-    data: &[f32],
-    rows: usize,
-    cols: usize,
-) -> Result<()> {
-    let Some(trace) = trace else {
-        return Ok(());
-    };
-    if !trace.enabled {
-        return Ok(());
+fn rope_table_device_for_target(device: &Device) -> Device {
+    match device {
+        Device::Cuda(_) => Device::Cpu,
+        _ => device.clone(),
     }
-    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_upload_probe_start", || {
-        format!(
-            "\"table\":\"{}\",\"rows\":{},\"cols\":{},\"elements\":{},\"bytes\":{}",
-            table,
-            rows,
-            cols,
-            data.len(),
-            std::mem::size_of_val(data)
-        )
-    });
-    qwen_trace_rope_cuda_upload_probe_impl(trace, table, data)
-}
-
-#[cfg(feature = "cuda")]
-fn qwen_trace_rope_cuda_upload_probe_impl(
-    trace: RopeInitTrace<'_>,
-    table: &'static str,
-    data: &[f32],
-) -> Result<()> {
-    let Device::Cuda(cuda) = trace.device else {
-        qwen_trace_rope_init_event(
-            Some(trace),
-            "model_init.rope_cuda_upload_probe_skipped",
-            || {
-                format!(
-                    "\"table\":\"{}\",\"reason\":\"non_cuda_device\",\"elements\":{}",
-                    table,
-                    data.len()
-                )
-            },
-        );
-        return Ok(());
-    };
-
-    let alloc_start = Instant::now();
-    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_alloc_start", || {
-        format!("\"table\":\"{}\",\"elements\":{}", table, data.len())
-    });
-    let mut device_data = unsafe { cuda.alloc::<f32>(data.len())? };
-    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_alloc_finish", || {
-        format!(
-            "\"table\":\"{}\",\"alloc_ms\":{},\"elements\":{}",
-            table,
-            qwen_trace_elapsed_ms(alloc_start),
-            data.len()
-        )
-    });
-
-    let copy_start = Instant::now();
-    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_htod_start", || {
-        format!("\"table\":\"{}\",\"bytes\":{}", table, std::mem::size_of_val(data))
-    });
-    cuda.memcpy_htod(data, &mut device_data)?;
-    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_htod_finish", || {
-        format!(
-            "\"table\":\"{}\",\"htod_ms\":{},\"bytes\":{}",
-            table,
-            qwen_trace_elapsed_ms(copy_start),
-            std::mem::size_of_val(data)
-        )
-    });
-
-    let sync_start = Instant::now();
-    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_sync_start", || {
-        format!("\"table\":\"{}\"", table)
-    });
-    trace.device.synchronize()?;
-    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_sync_finish", || {
-        format!("\"table\":\"{}\",\"sync_ms\":{}", table, qwen_trace_elapsed_ms(sync_start))
-    });
-    Ok(())
-}
-
-#[cfg(not(feature = "cuda"))]
-fn qwen_trace_rope_cuda_upload_probe_impl(
-    trace: RopeInitTrace<'_>,
-    table: &'static str,
-    data: &[f32],
-) -> Result<()> {
-    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_upload_probe_skipped", || {
-        format!(
-            "\"table\":\"{}\",\"reason\":\"cuda_feature_disabled\",\"elements\":{}",
-            table,
-            data.len()
-        )
-    });
-    Ok(())
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -873,33 +778,56 @@ impl RotaryEmbedding {
                 cos.len()
             )
         });
+        let table_device = rope_table_device_for_target(device);
+        qwen_trace_rope_init_event(trace, "model_init.rope_table_storage", || {
+            format!(
+                "\"target_device\":\"{}\",\"table_device\":\"{}\",\"reason\":\"{}\"",
+                qwen_trace_device_kind(device),
+                qwen_trace_device_kind(&table_device),
+                if matches!(device, Device::Cuda(_)) {
+                    "cpu_staged_to_avoid_constructor_full_table_cuda_upload"
+                } else {
+                    "target_device_storage"
+                }
+            )
+        });
 
         let sin_start = Instant::now();
         qwen_trace_rope_init_event(trace, "model_init.rope_sin_tensor_start", || {
-            format!("\"rows\":{},\"cols\":{}", max_seq_len, half_dim)
+            format!(
+                "\"rows\":{},\"cols\":{},\"table_device\":\"{}\"",
+                max_seq_len,
+                half_dim,
+                qwen_trace_device_kind(&table_device)
+            )
         });
-        qwen_trace_rope_cuda_upload_probe(trace, "sin", &sin, max_seq_len, half_dim)?;
-        let sin = Tensor::from_vec(sin, &[max_seq_len, half_dim], device)?;
+        let sin = Tensor::from_vec(sin, &[max_seq_len, half_dim], &table_device)?;
         qwen_trace_rope_init_event(trace, "model_init.rope_sin_tensor_finish", || {
             format!(
-                "\"tensor_ms\":{},\"dtype\":\"{:?}\",\"dims\":[{}]",
+                "\"tensor_ms\":{},\"dtype\":\"{:?}\",\"dims\":[{}],\"table_device\":\"{}\"",
                 qwen_trace_elapsed_ms(sin_start),
                 sin.dtype(),
-                qwen_trace_dims_json(sin.dims())
+                qwen_trace_dims_json(sin.dims()),
+                qwen_trace_device_kind(sin.device())
             )
         });
         let cos_start = Instant::now();
         qwen_trace_rope_init_event(trace, "model_init.rope_cos_tensor_start", || {
-            format!("\"rows\":{},\"cols\":{}", max_seq_len, half_dim)
+            format!(
+                "\"rows\":{},\"cols\":{},\"table_device\":\"{}\"",
+                max_seq_len,
+                half_dim,
+                qwen_trace_device_kind(&table_device)
+            )
         });
-        qwen_trace_rope_cuda_upload_probe(trace, "cos", &cos, max_seq_len, half_dim)?;
-        let cos = Tensor::from_vec(cos, &[max_seq_len, half_dim], device)?;
+        let cos = Tensor::from_vec(cos, &[max_seq_len, half_dim], &table_device)?;
         qwen_trace_rope_init_event(trace, "model_init.rope_cos_tensor_finish", || {
             format!(
-                "\"tensor_ms\":{},\"dtype\":\"{:?}\",\"dims\":[{}]",
+                "\"tensor_ms\":{},\"dtype\":\"{:?}\",\"dims\":[{}],\"table_device\":\"{}\"",
                 qwen_trace_elapsed_ms(cos_start),
                 cos.dtype(),
-                qwen_trace_dims_json(cos.dims())
+                qwen_trace_dims_json(cos.dims()),
+                qwen_trace_device_kind(cos.device())
             )
         });
 
@@ -929,13 +857,17 @@ impl RotaryEmbedding {
             let x1 = x.narrow(3, half_dim, half_dim)?; // Second half (imaginary)
 
             // Get cos/sin for the position
-            let cos = self.cos.narrow(0, position, seq_len)?
-                .unsqueeze(0)?  // Add batch dim
-                .unsqueeze(1)?  // Add heads dim
+            let cos = self
+                .cos
+                .narrow(0, position, seq_len)?
+                .to_device(x.device())?
+                .unsqueeze(0)? // Add batch dim
+                .unsqueeze(1)? // Add heads dim
                 .broadcast_as(&[batch, n_heads, seq_len, half_dim])?;
             let sin = self
                 .sin
                 .narrow(0, position, seq_len)?
+                .to_device(x.device())?
                 .unsqueeze(0)?
                 .unsqueeze(1)?
                 .broadcast_as(&[batch, n_heads, seq_len, half_dim])?;
@@ -956,8 +888,8 @@ impl RotaryEmbedding {
             let x0 = x.narrow(2, 0, half_dim)?; // First half (real)
             let x1 = x.narrow(2, half_dim, half_dim)?; // Second half (imaginary)
 
-            let cos = self.cos.narrow(0, position, 1)?;
-            let sin = self.sin.narrow(0, position, 1)?;
+            let cos = self.cos.narrow(0, position, 1)?.to_device(x.device())?;
+            let sin = self.sin.narrow(0, position, 1)?.to_device(x.device())?;
 
             let x0_rot = (x0.mul(&cos)? - x1.mul(&sin)?)?;
             let x1_rot = (x0.mul(&sin)? + x1.mul(&cos)?)?;
