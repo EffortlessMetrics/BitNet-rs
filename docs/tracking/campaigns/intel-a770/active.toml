@@ -1042,8 +1042,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-023"
-status = "pr_open"
+status = "merged"
 pr = 300
+head_sha = "6a123a822a42a3379bfd5e94e39a8c1e5e41c438"
+merge_sha = "46680a5efe29918991c6e81d9adb781ee189a2ca"
 branch = "codex/intel-a770/A770-023-first-mismatch-logit-margin"
 stackable = false
 review_mode = "codex_premerge"
