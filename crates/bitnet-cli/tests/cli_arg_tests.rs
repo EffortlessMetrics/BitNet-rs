@@ -1107,6 +1107,67 @@ fn mac_evidence_writes_operator_summary() -> Result<(), Box<dyn std::error::Erro
 }
 
 #[test]
+fn mac_evidence_replay_dry_run_validates_bundle() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let workspace_root = workspace_path("");
+    let bundle = "ci/hardware/apple-m4-mac-mini/2026-05-22T0400Z/evidence-replay/dense-slm-q8-eval/manifest.json";
+    let receipt = dir.path().join("evidence-replay-dry-run.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .current_dir(&workspace_root)
+        .args([
+            "mac",
+            "evidence",
+            "replay",
+            "--bundle",
+            bundle,
+            "--dry-run",
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_evidence_replay_dry_run"))
+        .stdout(predicate::str::contains("M4-EVIDENCE-REPLAY-001"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_evidence_replay_dry_run");
+    assert_eq!(receipt_json["operator_command"], "mac evidence replay");
+    assert_eq!(receipt_json["work_item"], "M4-EVIDENCE-REPLAY-001");
+    assert_eq!(receipt_json["bundle"]["artifact_kind"], "apple_m4_evidence_replay_bundle_manifest");
+    assert_eq!(receipt_json["replay_contract"]["dry_run_only"], true);
+    assert_eq!(receipt_json["replay_contract"]["no_live_model_run"], true);
+    assert_eq!(receipt_json["replay_contract"]["no_model_download"], true);
+    assert_eq!(receipt_json["replay_contract"]["regression_command_executed"], false);
+    assert_eq!(receipt_json["claim_boundary"]["uncommitted_local_artifacts_validated"], false);
+    assert_eq!(receipt_json["receipt_inputs"].as_array().map_or(0, Vec::len), 2);
+    assert_eq!(receipt_json["dashboard_outputs"].as_array().map_or(0, Vec::len), 2);
+    assert!(
+        receipt_json["receipt_inputs"]
+            .as_array()
+            .is_some_and(|inputs| inputs.iter().all(|input| input["receipt_check_passed"] == true))
+    );
+    assert!(receipt_json["commands"].as_array().is_some_and(|commands| commands.iter().any(
+        |command| {
+            command["id"] == "dry_run_replay"
+                && command["command"].as_str().is_some_and(|text| {
+                    text.contains("bitnet mac evidence replay") && text.contains("--dry-run")
+                })
+        }
+    )));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_evidence_replay_dry_run"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
 fn mac_workload_writes_model_free_operator_suite() -> Result<(), Box<dyn std::error::Error>> {
     let dir = tempfile::tempdir()?;
     let receipt = dir.path().join("workload-summary.json");

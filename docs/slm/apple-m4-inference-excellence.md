@@ -1446,6 +1446,19 @@ extract, classify, JSON/schema, rewrite, and table-QA cases across enabled dense
 SLM and BitNet routes. It is a generic-PR-safe contract only, not live workload
 proof. See `docs/slm/apple-m4-workload-suite.md`.
 
+`M4-EVIDENCE-REPLAY-001` adds dry-run replay bundles for committed evidence
+refreshes:
+
+```bash
+bitnet mac evidence replay --bundle ci/hardware/apple-m4-mac-mini/2026-05-22T0400Z/evidence-replay/dense-slm-q8-eval/manifest.json --dry-run --json
+```
+
+The replay receipt is `apple_m4_evidence_replay_dry_run`; it validates the
+bundle manifest, SHA256-pinned receipt inputs, dashboard outputs, exact command
+list, expected regression metadata, and claim boundary. It does not run a model,
+download artifacts, execute the regression command, or validate uncommitted
+local artifacts. See `docs/slm/apple-m4-evidence-replay.md`.
+
 ## Release Gates
 
 Before the public M4 expectation envelope changes, a go/no-go matrix should say

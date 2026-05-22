@@ -1,0 +1,134 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "apple_m4_evidence_replay_bundle_manifest",
+  "work_item": "M4-EVIDENCE-REPLAY-001",
+  "bundle_id": "dense-slm-q8-eval-replay-2026-05-17T0045Z",
+  "generated_at": "2026-05-22T04:00:00Z",
+  "machine": {
+    "id": "apple-m4-mac-mini",
+    "scope": "committed dense SLM eval-v2 replay bundle"
+  },
+  "replay_contract": {
+    "dry_run_only": true,
+    "committed_bundle_manifest": true,
+    "committed_receipt_inputs": true,
+    "committed_dashboard_outputs": true,
+    "no_live_model_run": true,
+    "no_model_download": true,
+    "regression_command_executed": false,
+    "model_inference_executed": false,
+    "uncommitted_local_artifacts_validated": false,
+    "dense_slm_and_bitnet_evidence_separated": true
+  },
+  "git_identity": {
+    "source_commit": "dfd1e4eff3bc40f80e2e1cb132b379575b66dd97",
+    "source_commit_command": "git rev-parse HEAD",
+    "dirty_tree_policy": "operator must record and resolve local diffs before publishing new replay receipts",
+    "repository": "EffortlessMetrics/BitNet-rs"
+  },
+  "binary_identity": {
+    "crate": "bitnet-cli",
+    "crate_version": "0.2.1-dev",
+    "version_command": "bitnet --version",
+    "build_command": "cargo build --locked -p bitnet-cli --release",
+    "binary_sha256_policy": "operator records binary hash when replaying outside generic PR CI"
+  },
+  "model_identity": {
+    "family": "dense_slm",
+    "model_id": "qwen2.5-0.5b-instruct-q8_0",
+    "repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+    "revision": "9217f5db79a29953eb74d5343926648285ec7e67",
+    "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "quantization": "Q8_0"
+  },
+  "tokenizer_identity": {
+    "authority": "gguf_metadata",
+    "identity": "gguf_metadata:qwen2",
+    "pretokenizer_authority": "qwen2",
+    "strict": true,
+    "sha256": "not_recorded_gguf_metadata_authority"
+  },
+  "commands": [
+    {
+      "id": "dry_run_replay",
+      "command": "bitnet mac evidence replay --bundle ci/hardware/apple-m4-mac-mini/2026-05-22T0400Z/evidence-replay/dense-slm-q8-eval/manifest.json --dry-run --json"
+    },
+    {
+      "id": "latest_receipt_check",
+      "command": "bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json --json"
+    },
+    {
+      "id": "baseline_receipt_check",
+      "command": "bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json --json"
+    },
+    {
+      "id": "regression_check",
+      "command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json"
+    },
+    {
+      "id": "dashboard_refresh",
+      "command": "bitnet mac regression-dashboard --root ci/hardware/apple-m4-mac-mini --json-out target/apple-m4-inference-ops/regression-dashboard.json --markdown-out target/apple-m4-inference-ops/regression-dashboard.md"
+    }
+  ],
+  "receipt_inputs": [
+    {
+      "role": "latest",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+      "artifact_kind": "apple_m4_slm_eval_summary",
+      "evidence_family": "dense_slm",
+      "sha256": "a453029b09b246f51cd54abd2fab1d2a9904596c28b69e2a5f79974d5de87a38"
+    },
+    {
+      "role": "baseline",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+      "artifact_kind": "apple_m4_slm_eval_summary",
+      "evidence_family": "dense_slm",
+      "sha256": "3fc50938b1c48ff086477a3079025d0ee6d4da0f1a29a109bb4168c1413622bc"
+    }
+  ],
+  "dashboard_outputs": [
+    {
+      "role": "regression_dashboard_json",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/regression-dashboard/regression-dashboard.json",
+      "format": "json",
+      "artifact_kind": "apple_m4_regression_dashboard",
+      "sha256": "84b6b14070527a04911225aeb69896eb86b57a6398f3f38b6cacff8532015119"
+    },
+    {
+      "role": "regression_dashboard_markdown",
+      "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/regression-dashboard/regression-dashboard.md",
+      "format": "markdown",
+      "sha256": "8507ccb878fe7dee5af74d4d897f2e51298045ce945debd8fbf8fe8d70e2c522"
+    }
+  ],
+  "expected_regression_result": {
+    "command": "bitnet mac regression ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json --baseline ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+    "latest_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+    "baseline_receipt": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+    "expected_status": "pass",
+    "expected_warning_count": 0,
+    "regression_command_executed_by_dry_run": false,
+    "no_live_model_run": true
+  },
+  "claim_boundary": {
+    "dry_run_replay_only": true,
+    "no_live_model_run": true,
+    "no_model_download": true,
+    "regression_command_executed": false,
+    "model_inference_executed": false,
+    "uncommitted_local_artifacts_validated": false,
+    "dense_slm_and_bitnet_evidence_separated": true,
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "full_metal_inference_claimed": false,
+    "qk256_apple_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "mpsgraph_inference_claimed": false,
+    "macbook_evidence": false,
+    "broad_apple_silicon_claim": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "speedup_claim": false
+  }
+}
