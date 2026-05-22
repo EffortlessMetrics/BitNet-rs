@@ -1304,3 +1304,59 @@ must_not_claim = [
   "Performance speedup is proven.",
   "A770 trusted partial acceleration is claim-grade.",
 ]
+
+[[work_item]]
+id = "A770-028"
+status = "merged"
+pr = 362
+head_sha = "07b933e090c44b52f66b185c7cc69b07ecff3731"
+merge_sha = "89378b4e48fe80a454cf1d9569cb23b765bbe419"
+branch = "codex/intel-a770/A770-028-readiness-normalization-scoring"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-027"]
+acceptance = "Normalize only the A770 seeded answer-readiness corpus cases whose committed A770-025 receipts classified shared CPU/A770 failures as punctuation/casing normalization, rerun CPU AVX2 and Intel A770 OpenCL readiness receipts, and keep remaining content failures, CPU/A770 parity divergence, residency, speed, trusted-partial acceleration, and full BitNet inference claims closed."
+commands = [
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --cpu-kernel avx2 --threads 8 --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-answer-readiness-normalized-scoring.json --per-prompt-timeout-seconds 300 --fail-on-quality # expected nonzero while content failures remain",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device intel-a770-opencl --dump-logit-steps 1 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/a770-opencl-answer-readiness-normalized-scoring.json --per-prompt-timeout-seconds 300 --fail-on-quality # expected nonzero while content failures remain",
+  "target/release/bitnet.exe answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-answer-readiness-normalized-scoring.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/a770-opencl-answer-readiness-normalized-scoring.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-vs-a770-answer-readiness-normalized-scoring-parity.json # expected nonzero while CPU/A770 parity remains divergent",
+  "pwsh -NoProfile -Command \"Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-answer-readiness-normalized-scoring.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/a770-opencl-answer-readiness-normalized-scoring.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/cpu-avx2-vs-a770-answer-readiness-normalized-scoring-parity.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/quality/a770-bitnet-answer-readiness-corpus.yaml",
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring/**",
+  "docs/reports/A770_028_READINESS_NORMALIZATION_SCORING.md",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+]
+may_claim = [
+  "The A770 seeded answer-readiness corpus v1.0.1 adds normalized matching for the seven label-like cases whose committed CPU and A770 receipts were normalization-only failures.",
+  "Fresh CPU AVX2 and Intel A770 OpenCL receipts record the current quality and parity result under the normalized scoring contract.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]

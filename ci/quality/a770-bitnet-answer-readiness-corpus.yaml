@@ -4,7 +4,7 @@ name: a770-bitnet-answer-readiness-corpus
 description: Seeded deterministic BitNet answer-readiness corpus for Intel Arc A770 CPU/OpenCL quality and parity gates.
 metadata:
   campaign: intel-a770
-  work_item: A770-024
+  work_item: A770-028
   seed: 770024
   generator_policy: deterministic-static-fixture-a770-bitnet-v1
   case_count_target: 20
@@ -13,7 +13,7 @@ metadata:
   corpus_contract:
     contract_version: a770-answer-readiness-corpus-v1
     corpus_id: a770-bitnet-answer-readiness-corpus
-    corpus_version: "1.0.0"
+    corpus_version: "1.0.1"
     seed_generation_rules: "Static deterministic fixtures derived from seed=770024; every case records seed_material with family, operation, and fixture inputs. Prompt, expected-output, scoring, or family-count changes require a corpus_version bump."
     expected_output_provenance: "Closed-form deterministic fixture answers derived from the prompt data in this YAML; live CPU/A770 receipts are comparison evidence, not expected-output authority."
     normalization_rules: answer_corpus_normalize_scoring_text_v1
@@ -102,7 +102,7 @@ cases:
     seed_material: "seed=770024 family=table index=5 item=heron color=blue"
     question: "Use this table: kiwi=green, heron=blue, ember=red. What color is heron? Answer with one word."
     max_new_tokens: 8
-    scoring: {kind: exact_match, expected_normalized: "blue"}
+    scoring: {kind: normalized_match, expected_normalized: "blue"}
     gate: {kind: contains_any, contains_any: ["blue", "Blue"]}
 
   - id: a770_table_seed770024_code_006
@@ -111,7 +111,7 @@ cases:
     seed_material: "seed=770024 family=table index=6 code=Q7 value=delta"
     question: "Use this lookup: Q3=alpha, Q7=delta, Q9=omega. What value belongs to Q7? Answer with one word."
     max_new_tokens: 8
-    scoring: {kind: exact_match, expected_normalized: "delta"}
+    scoring: {kind: normalized_match, expected_normalized: "delta"}
     gate: {kind: contains_any, contains_any: ["delta", "Delta"]}
 
   - id: a770_repeat_seed770024_phrase_007
@@ -129,7 +129,7 @@ cases:
     seed_material: "seed=770024 family=extract index=8 owner=Mira"
     question: "Extract the owner name from this note: Ticket AX-17 owner is Mira; due date is Friday. Answer with only the owner."
     max_new_tokens: 8
-    scoring: {kind: exact_match, expected_normalized: "mira"}
+    scoring: {kind: normalized_match, expected_normalized: "mira"}
     gate: {kind: contains_any, contains_any: ["Mira", "mira"]}
 
   - id: a770_extract_seed770024_code_009
@@ -147,7 +147,7 @@ cases:
     seed_material: "seed=770024 family=classification index=10 label=positive"
     question: "Classify the sentiment as positive or negative: The invoice was paid on time. Answer with one label."
     max_new_tokens: 4
-    scoring: {kind: exact_match, expected_normalized: "positive"}
+    scoring: {kind: normalized_match, expected_normalized: "positive"}
     gate: {kind: contains_any, contains_any: ["positive", "Positive"]}
 
   - id: a770_classify_seed770024_negative_011
@@ -156,7 +156,7 @@ cases:
     seed_material: "seed=770024 family=classification index=11 label=negative"
     question: "Classify the sentiment as positive or negative: The shipment arrived broken. Answer with one label."
     max_new_tokens: 4
-    scoring: {kind: exact_match, expected_normalized: "negative"}
+    scoring: {kind: normalized_match, expected_normalized: "negative"}
     gate: {kind: contains_any, contains_any: ["negative", "Negative"]}
 
   - id: a770_sort_seed770024_words_012
@@ -221,7 +221,7 @@ cases:
     seed_material: "seed=770024 family=factual index=18 country=France"
     question: "What is the capital of France? Answer with one word."
     max_new_tokens: 8
-    scoring: {kind: exact_match, expected_normalized: "paris"}
+    scoring: {kind: normalized_match, expected_normalized: "paris"}
     gate: {kind: contains_any, contains_any: ["Paris", "paris"]}
 
   - id: a770_context_seed770024_password_019
@@ -230,7 +230,7 @@ cases:
     seed_material: "seed=770024 family=context index=19 password=tulip"
     question: "In this sentence, the password is tulip. What is the password? Answer with one word."
     max_new_tokens: 8
-    scoring: {kind: exact_match, expected_normalized: "tulip"}
+    scoring: {kind: normalized_match, expected_normalized: "tulip"}
     gate: {kind: contains_any, contains_any: ["tulip", "Tulip"]}
 
   - id: a770_unknown_seed770024_unknown_020

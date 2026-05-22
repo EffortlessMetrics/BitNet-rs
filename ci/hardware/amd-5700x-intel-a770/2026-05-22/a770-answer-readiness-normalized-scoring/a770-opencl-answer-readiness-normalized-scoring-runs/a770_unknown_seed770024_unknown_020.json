@@ -1,0 +1,854 @@
+{
+  "a770_opencl": {
+    "bitnet_inference_claim": false,
+    "claim_level": "diagnostic",
+    "device_to_host_bytes": 103895040,
+    "host_to_device_bytes": 19823815680,
+    "kernel_invocations": 7980,
+    "quality_claim": false,
+    "residency_claim": false,
+    "runtime_api": "opencl",
+    "runtime_device": {
+      "device_index": 0,
+      "driver_version": "32.0.101.8801",
+      "name": "Intel(R) Arc(TM) A770 Graphics",
+      "platform_index": 0,
+      "platform_name": "Intel(R) OpenCL Graphics",
+      "vendor": "Intel(R) Corporation"
+    },
+    "speedup_claim": false
+  },
+  "a770_opencl_execution_boundary": {
+    "claim_boundary": {
+      "activation_quantization_resident": false,
+      "answer_quality_claim": false,
+      "claim_allowed": false,
+      "full_device_residency_claimed": false,
+      "full_transformer_a770_residency_claimed": false,
+      "qk256_a770_opencl_execution_observed": true,
+      "qk256_a770_residency_claimed": false,
+      "resident_kv_claimed": false,
+      "selected_attention_resident": false,
+      "speedup_claim": false,
+      "strict_a770_opencl_answer_path_claimed": false,
+      "strict_a770_opencl_cli_route_selected": true,
+      "trusted_partial_acceleration_claimed": false
+    },
+    "coverage_scope": "strict_a770_opencl_ask_or_run",
+    "execution_phase": "short_decode",
+    "host_device_transfer_accounting": {
+      "device_to_host_bytes": 103895040,
+      "host_to_device_bytes": 19823815680,
+      "kernel_time_ms": null,
+      "note": "A770 OpenCL QK256 transfer bytes are measured for the routed QK256 GEMV path only; full transformer residency, transfer timing, quality, and speed remain separate claims.",
+      "status": "qk256_measured"
+    },
+    "kv_cache": {
+      "a770_residency_claimed": false,
+      "device": "cpu",
+      "enabled": true,
+      "residency": "cpu_resident",
+      "reuse_policy": "per_run_incremental_decode"
+    },
+    "phase_residency": {
+      "activation_quantization": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident"
+      },
+      "attention_scores": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident_or_not_a770_claimed"
+      },
+      "attention_softmax": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident_or_not_a770_claimed"
+      },
+      "attention_value_mix": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident_or_not_a770_claimed"
+      },
+      "lm_head": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident_or_not_a770_claimed"
+      },
+      "relu2_activation": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident_or_not_a770_claimed"
+      },
+      "rmsnorm": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident_or_not_a770_claimed"
+      },
+      "rope": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident_or_not_a770_claimed"
+      },
+      "sampling": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident"
+      },
+      "sub_layernorm": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident_or_not_a770_claimed"
+      },
+      "token_embeddings": {
+        "a770_residency_claimed": false,
+        "residency": "cpu_resident_or_not_a770_claimed"
+      }
+    },
+    "prompt_and_decode": {
+      "generated_tokens": 8,
+      "prompt_tokens": 31
+    },
+    "qk256_bitnet_linears": {
+      "bitnet_linear_layers_cpu_fallback": 0,
+      "bitnet_linear_layers_on_a770_opencl": 7980,
+      "bitnet_linear_layers_total": 7980,
+      "boundary": "a770_opencl_qk256_compute_with_cpu_activation_quantization",
+      "fallback_used": false,
+      "kernel_id": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+      "kernel_invocations": 7980,
+      "unsupported_ops": []
+    },
+    "runtime_device": {
+      "device_index": 0,
+      "driver_version": "32.0.101.8801",
+      "name": "Intel(R) Arc(TM) A770 Graphics",
+      "platform_index": 0,
+      "platform_name": "Intel(R) OpenCL Graphics",
+      "vendor": "Intel(R) Corporation"
+    },
+    "schema_version": "1.0.0"
+  },
+  "artifact_kind": "strict_bitnet_a770_qk256_route_diagnostic",
+  "artifact_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-normalized-scoring\\a770-opencl-answer-readiness-normalized-scoring-runs\\a770_unknown_seed770024_unknown_020.json",
+  "bitnet": {
+    "activation_quantization": "A8",
+    "execution_phase": "decode",
+    "fallback_layout": null,
+    "kernel_family": "i2_s",
+    "kernel_format": "i2_s",
+    "layout_source": "gguf_packed_i2_s_reference",
+    "per_token_weight_upload": false,
+    "quantization": "W1.58A8",
+    "weight_quantization": "W1.58",
+    "weights_uploaded_once": false
+  },
+  "claim": "strict_bitnet_a770_qk256_route_diagnostic",
+  "counts": {
+    "n_kv": 24,
+    "n_tensors": 332,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "x86_64",
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "model": "unknown-windows-cpu",
+    "threads": 1
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 8,
+    "phase": "decode",
+    "prompt_tokens": 31,
+    "requested_backend": "intel-a770-opencl",
+    "runtime_api": "opencl",
+    "selected_backend": "intel-a770-opencl",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "bitnet_linear_layers_on_a770_opencl": 7980,
+    "bitnet_linear_layers_on_cuda": 0,
+    "bitnet_linear_layers_total": 7980,
+    "execution_claim": "a770_opencl_qk256_contribution",
+    "input_rows_materialized_count": 7980,
+    "output_rows_allocated_count": 7980,
+    "qk256_execution_path": "not_observed",
+    "qk256_f32_avx2_gemv_invocations": 0,
+    "qk256_f32_scalar_gemv_invocations": 0,
+    "qk256_flat_bytes_extracted_count": 7980,
+    "qk256_i8s_scaled_avx2_invocations": 0,
+    "qk256_i8s_scaled_scalar_invocations": 0,
+    "requested_kernel": null,
+    "selected_kernel": null,
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": true,
+    "explicit_bos_requested": false,
+    "greedy": true,
+    "max_new_tokens": 8,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
+    "seed": 0,
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
+  },
+  "kernel": {
+    "activation_quantization_resident": false,
+    "dequantizes_before_compute": true,
+    "family": "qk256",
+    "implementation": "a770-opencl-qk256-i8s-scaled-candidate",
+    "kernel_id": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+    "layout": "gguf_packed_i2_s"
+  },
+  "kernel_stats": [
+    {
+      "activation_quantization_resident": false,
+      "claim_level": "diagnostic",
+      "device_to_host_bytes": 103895040,
+      "fallback_invocations": 0,
+      "host_to_device_bytes": 19823815680,
+      "invocations": 7980,
+      "kernel_id": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+      "kernel_launches": 7980,
+      "kernel_time_ms": null,
+      "kernel_time_samples": null,
+      "residency_claim": false,
+      "runtime_api": "opencl",
+      "speedup_claim": false
+    }
+  ],
+  "latency": {
+    "cmd_to_first_ms": 29919,
+    "decode_first_ms": 29919,
+    "total_ms": 36966
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "explicit"
+  },
+  "logits_dump": [
+    {
+      "chosen_id": 791,
+      "logits_vector_length": 128256,
+      "step": 0,
+      "top_logits": [
+        {
+          "logit": 21.966941833496094,
+          "token_id": 791
+        },
+        {
+          "logit": 19.501710891723633,
+          "token_id": 14109
+        },
+        {
+          "logit": 18.92034912109375,
+          "token_id": 29815
+        },
+        {
+          "logit": 17.60101318359375,
+          "token_id": 12834
+        },
+        {
+          "logit": 17.181026458740234,
+          "token_id": 2746
+        },
+        {
+          "logit": 17.049551010131836,
+          "token_id": 27131
+        },
+        {
+          "logit": 15.849224090576172,
+          "token_id": 2181
+        },
+        {
+          "logit": 15.502662658691406,
+          "token_id": 3947
+        },
+        {
+          "logit": 15.362785339355469,
+          "token_id": 2170
+        },
+        {
+          "logit": 15.357555389404297,
+          "token_id": 7927
+        },
+        {
+          "logit": 14.822286605834961,
+          "token_id": 644
+        },
+        {
+          "logit": 14.821735382080078,
+          "token_id": 16476
+        },
+        {
+          "logit": 14.446932792663574,
+          "token_id": 1687
+        },
+        {
+          "logit": 14.069746971130371,
+          "token_id": 1
+        },
+        {
+          "logit": 13.87820053100586,
+          "token_id": 40
+        },
+        {
+          "logit": 13.811216354370117,
+          "token_id": 2822
+        },
+        {
+          "logit": 13.770578384399414,
+          "token_id": 19701
+        },
+        {
+          "logit": 13.636034965515137,
+          "token_id": 1271
+        },
+        {
+          "logit": 13.603496551513672,
+          "token_id": 1844
+        },
+        {
+          "logit": 13.584067344665527,
+          "token_id": 10227
+        }
+      ]
+    }
+  ],
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 128256,
+    "expected_logits_vector_length_source": "tokenizer_vocab_size",
+    "first_step_logits_vector_length": 128256,
+    "observed_logits_vector_length": 128256,
+    "observed_logits_vector_length_source": "run_receipt_logits_dump"
+  },
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "tied_token_embeddings",
+    "path": "E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tie_word_embeddings": true,
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "not_claims": [
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion"
+  ],
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "intel-a770-opencl",
+      "runtime_api": "opencl",
+      "selected_backend": "intel-a770-opencl"
+    },
+    "claim_scope": "selected backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 8,
+        "max_ms": 0.011,
+        "mean_ms": 0.007,
+        "min_ms": 0.006,
+        "p50_ms": 0.007,
+        "p95_ms": 0.011,
+        "total_ms": 0.059
+      },
+      "first_token_decode_ms": 1065.574,
+      "forward_ms": {
+        "count": 8,
+        "max_ms": 1013.487,
+        "mean_ms": 968.071,
+        "min_ms": 927.746,
+        "p50_ms": 956.119,
+        "p95_ms": 1013.487,
+        "total_ms": 7744.572
+      },
+      "generated_tokens": 8,
+      "logits_ms": {
+        "count": 8,
+        "max_ms": 45.347,
+        "mean_ms": 43.81,
+        "min_ms": 39.123,
+        "p50_ms": 44.116,
+        "p95_ms": 45.347,
+        "total_ms": 350.48
+      },
+      "per_token_ms": {
+        "count": 8,
+        "max_ms": 1065.574,
+        "mean_ms": 1013.991,
+        "min_ms": 967.216,
+        "p50_ms": 1001.572,
+        "p95_ms": 1065.574,
+        "total_ms": 8111.928
+      },
+      "sample_ms": {
+        "count": 8,
+        "max_ms": 0.23,
+        "mean_ms": 0.19,
+        "min_ms": 0.137,
+        "p50_ms": 0.184,
+        "p95_ms": 0.23,
+        "total_ms": 1.518
+      },
+      "steady_per_token_ms": {
+        "count": 7,
+        "max_ms": 1058.063,
+        "mean_ms": 1006.622,
+        "min_ms": 967.216,
+        "p50_ms": 1001.572,
+        "p95_ms": 1058.063,
+        "total_ms": 7046.354
+      },
+      "steady_state_tok_s": 0.993,
+      "steady_state_tokens": 7,
+      "token_decode_ms": {
+        "count": 8,
+        "max_ms": 0.028,
+        "mean_ms": 0.009,
+        "min_ms": 0.005,
+        "p50_ms": 0.006,
+        "p95_ms": 0.028,
+        "total_ms": 0.072
+      },
+      "warmup_tokens": 1
+    },
+    "id": "default",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 3367.683,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 28853.783,
+      "per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "tokens": 30
+    },
+    "prompt_tokenize_ms": 0.992,
+    "requested": false,
+    "tokenizer_load_ms": 578.517
+  },
+  "prompt": "The note says: Nova owns the ticket. What color is the ticket? If the color is not stated, answer unknown.",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 8,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "3e323f0d547b84415ad67df1f3c39717f1ed531fa05107348e67411eb45c2eaf",
+    "identity_sha256": "eafbef9f981f744bdc8867df7ef35d577419fafabe11b5f0038320252b1849e0",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        128009,
+        128001
+      ]
+    },
+    "stop_criteria_sha256": "e1342df3623e7e44cd79854888c249063c066138b7fa463d8b371e8bb3b4ef7e",
+    "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+    "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+    "template": {
+      "family": "bitnetcpp-answer",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "bitnetcpp-answer",
+    "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+    "tokenizer_authority": {
+      "authority": "llama-bpe",
+      "sha256": null,
+      "source": "explicit",
+      "strict": true
+    }
+  },
+  "prompt_identity": {
+    "bos_policy": false,
+    "parse_special": true,
+    "prompt_token_count": 31,
+    "prompt_token_ids_sha256": "87f9349087d48096a418ca820fde9e46d6ad1e80b5326f61e0bfc93a6443458b",
+    "rendered_prompt_sha256": "9e0c2879abcf4e5feae007bf8ebbd24d52f03cb5a04e648e3fc730b03f132160",
+    "template": "bitnetcpp-answer"
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "rendered_sha256": "9e0c2879abcf4e5feae007bf8ebbd24d52f03cb5a04e648e3fc730b03f132160",
+    "rendered_text": "User: The note says: Nova owns the ticket. What color is the ticket? If the color is not stated, answer unknown.<|eot_id|>Assistant: ",
+    "stop_sequences": [
+      "<|eot_id|>",
+      "<|end_of_text|>"
+    ],
+    "stop_token_ids": [
+      128009,
+      128001
+    ],
+    "template_family": "bitnetcpp-answer"
+  },
+  "proof_summary": {
+    "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
+    "claim_level": "diagnostic_cli_run",
+    "execution_backend": "intel-a770-opencl",
+    "execution_backend_matched": true,
+    "fallback_used": false,
+    "kernel_route": {
+      "claimable": false,
+      "diagnostic_only": true,
+      "route_declared": true,
+      "route_id": "a770.bitnet.i2s.qk256"
+    },
+    "loader_fallback_used": false,
+    "model_contract": "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml",
+    "model_contract_declared": true,
+    "not_claims": [
+      "selected_attention_residency",
+      "resident_kv_decode",
+      "attention_scores_residency",
+      "softmax_residency",
+      "attention_value_mix_residency",
+      "full_support_op_residency",
+      "full_device_residency",
+      "completion"
+    ],
+    "requested_backend": "intel-a770-opencl",
+    "requested_device": "intel-a770-opencl",
+    "route_declared": true,
+    "selected_backend": "intel-a770-opencl",
+    "strict_backend": true,
+    "tokenizer_fallback_used": false
+  },
+  "qk256_hot_path": {
+    "audited_tensor_materialization_count": 23940,
+    "counter_source": "bitnet_qk256_dispatch::qk256_cpu_hot_path_counters",
+    "input_rows_materialized_count": 7980,
+    "math_changed": false,
+    "no_scale_f32_gemv_invocations": 0,
+    "output_rows_allocated_count": 7980,
+    "qk256_execution_path": "not_observed",
+    "qk256_f32_avx2_gemv_invocations": 0,
+    "qk256_f32_scalar_gemv_invocations": 0,
+    "qk256_flat_bytes_extracted_count": 7980,
+    "qk256_i8s_scaled_avx2_invocations": 0,
+    "qk256_i8s_scaled_scalar_invocations": 0,
+    "requested_kernel": null,
+    "scaled_i2s_i8s_gemv_invocations": 0,
+    "selected_kernel": null,
+    "speedup_claim": false
+  },
+  "quality_claim": false,
+  "requested_backend": "intel-a770-opencl",
+  "residency_claim": false,
+  "runtime_api": "opencl",
+  "schema_version": "1.0.0",
+  "selected_backend": "intel-a770-opencl",
+  "speedup_claim": false,
+  "strict_provenance": {
+    "a770_opencl_kernel_invocations": 7980,
+    "cpu_features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "cpu_model": "unknown-windows-cpu",
+    "decode_tokens": 8,
+    "decode_tps": 0.21641508413136396,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "bitnet",
+    "phase": "decode",
+    "prompt_tokens": 31,
+    "quant_format": "I2_S",
+    "requested_backend": "intel-a770-opencl",
+    "requested_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+    "selected_backend": "intel-a770-opencl",
+    "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+    "thread_count": 1,
+    "tokenizer_source": "explicit",
+    "tokenizer_strict": true
+  },
+  "text": "The note \"Nova owns the ticket\"",
+  "throughput": {
+    "decoded_tokens": 8,
+    "tokens_per_second": 0.21641508413136396
+  },
+  "timestamp": "2026-05-22T17:58:41.301835500+00:00",
+  "timing": {
+    "a770_opencl_device_to_host_bytes": 103895040,
+    "a770_opencl_host_to_device_bytes": 19823815680,
+    "a770_opencl_kernel_invocations": 7980,
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 0.993,
+    "decode_total_ms": 8111.928,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 1065.574,
+    "first_token_ms": 29919,
+    "host_to_device_bytes": null,
+    "model_load_ms": 3367.683,
+    "prefill_ms": 28853.783,
+    "sampling_ms_per_token": 0.19,
+    "tokenize_ms": 0.992,
+    "tokenizer_load_ms": 578.517
+  },
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "model_family": "llama3",
+    "origin": "external",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "tokens": {
+    "generated": 8,
+    "generated_ids": [
+      791,
+      5296,
+      330,
+      77869,
+      25241,
+      279,
+      11989,
+      1
+    ],
+    "ids": [
+      791,
+      5296,
+      330,
+      77869,
+      25241,
+      279,
+      11989,
+      1
+    ],
+    "prompt": 31,
+    "prompt_ids": [
+      1502,
+      25,
+      578,
+      5296,
+      2795,
+      25,
+      35741,
+      25241,
+      279,
+      11989,
+      13,
+      3639,
+      1933,
+      374,
+      279,
+      11989,
+      30,
+      1442,
+      279,
+      1933,
+      374,
+      539,
+      11224,
+      11,
+      4320,
+      9987,
+      13,
+      128009,
+      72803,
+      25,
+      220
+    ],
+    "total": 39
+  },
+  "trusted_partial_claim": false
+}
