@@ -17,11 +17,11 @@ pub struct StatusArgs {
     #[arg(long, default_value = "policy/repo-boundary.toml")]
     policy: PathBuf,
     /// Ref that represents source main in this checkout.
-    #[arg(long, default_value = "source/main")]
-    source_ref: String,
+    #[arg(long)]
+    source_ref: Option<String>,
     /// Ref that represents the swarm side being checked.
-    #[arg(long, default_value = "HEAD")]
-    swarm_ref: String,
+    #[arg(long)]
+    swarm_ref: Option<String>,
     /// Output format.
     #[arg(long, value_enum, default_value = "text")]
     format: OutputFormat,
@@ -70,7 +70,9 @@ struct RepoBoundaryStatus {
     swarm_branch: String,
     origin_remote_url: Option<String>,
     source_remote_url: Option<String>,
+    swarm_remote_url: Option<String>,
     source_remote_configured: bool,
+    swarm_remote_configured: bool,
     source_ref: String,
     swarm_ref: String,
     source_ref_reachable_from_swarm_ref: Option<bool>,
@@ -115,27 +117,30 @@ pub fn run(cmd: RepoBoundaryCmd) -> Result<()> {
 fn status(args: StatusArgs) -> Result<()> {
     let policy = load_policy(&args.policy)?;
     let origin_remote_url = git_output(["remote", "get-url", "origin"]).ok();
-    let source_remote_url = git_output(["remote", "get-url", "source"]).ok();
+    let named_source_remote_url = git_output(["remote", "get-url", "source"]).ok();
+    let swarm_remote_url = git_output(["remote", "get-url", "swarm"]).ok();
     let current_repo =
         classify_repo(origin_remote_url.as_deref(), &policy.source.repo, &policy.swarm.repo);
+    let source_remote_url = named_source_remote_url.or_else(|| match current_repo {
+        RepoKind::Source => origin_remote_url.clone(),
+        RepoKind::Swarm | RepoKind::Unknown => None,
+    });
+    let source_ref = args.source_ref.unwrap_or_else(|| default_source_ref(&current_repo));
+    let swarm_ref = args.swarm_ref.unwrap_or_else(|| "HEAD".to_string());
 
-    let source_ref_reachable = git_status([
-        "merge-base",
-        "--is-ancestor",
-        args.source_ref.as_str(),
-        args.swarm_ref.as_str(),
-    ]);
+    let source_ref_reachable =
+        git_status(["merge-base", "--is-ancestor", source_ref.as_str(), swarm_ref.as_str()]);
     let source_missing_commits = git_count([
         "rev-list".to_string(),
         "--count".to_string(),
-        args.source_ref.clone(),
-        format!("^{}", args.swarm_ref),
+        source_ref.clone(),
+        format!("^{}", swarm_ref),
     ]);
     let swarm_only_commits = git_count([
         "rev-list".to_string(),
         "--count".to_string(),
-        args.swarm_ref.clone(),
-        format!("^{}", args.source_ref),
+        swarm_ref.clone(),
+        format!("^{}", source_ref),
     ]);
     let release_workflow_guard = scan_release_workflow_guards(
         Path::new(".github/workflows"),
@@ -148,30 +153,27 @@ fn status(args: StatusArgs) -> Result<()> {
     }
     if source_remote_url.is_none() {
         warnings.push(
-            "source remote is not configured; source reachability is less reliable".to_string(),
+            "source repo remote is not configured; source reachability is less reliable"
+                .to_string(),
         );
     }
     if source_ref_reachable == Some(false) {
-        warnings.push(format!("{} is not an ancestor of {}", args.source_ref, args.swarm_ref));
+        warnings.push(format!("{} is not an ancestor of {}", source_ref, swarm_ref));
     } else if source_ref_reachable.is_none() {
         warnings.push(format!(
             "could not verify whether {} is an ancestor of {}",
-            args.source_ref, args.swarm_ref
+            source_ref, swarm_ref
         ));
     }
     if source_missing_commits.is_some_and(|count| count > 0) {
-        warnings.push(format!("{} has commits missing from {}", args.source_ref, args.swarm_ref));
+        warnings.push(format!("{} has commits missing from {}", source_ref, swarm_ref));
     } else if source_missing_commits.is_none() {
-        warnings.push(format!(
-            "could not count commits in {} missing from {}",
-            args.source_ref, args.swarm_ref
-        ));
+        warnings
+            .push(format!("could not count commits in {} missing from {}", source_ref, swarm_ref));
     }
     if swarm_only_commits.is_none() {
-        warnings.push(format!(
-            "could not count commits in {} missing from {}",
-            args.swarm_ref, args.source_ref
-        ));
+        warnings
+            .push(format!("could not count commits in {} missing from {}", swarm_ref, source_ref));
     }
     if !release_workflow_guard.guarded {
         warnings.push(
@@ -188,6 +190,7 @@ fn status(args: StatusArgs) -> Result<()> {
     );
 
     let source_remote_configured = source_remote_url.is_some();
+    let swarm_remote_configured = swarm_remote_url.is_some();
     let report = RepoBoundaryStatus {
         current_repo,
         policy_path: args.policy.display().to_string(),
@@ -197,9 +200,11 @@ fn status(args: StatusArgs) -> Result<()> {
         swarm_branch: policy.swarm.branch,
         origin_remote_url,
         source_remote_url,
+        swarm_remote_url,
         source_remote_configured,
-        source_ref: args.source_ref,
-        swarm_ref: args.swarm_ref,
+        swarm_remote_configured,
+        source_ref,
+        swarm_ref,
         source_ref_reachable_from_swarm_ref: source_ref_reachable,
         commits_source_has_that_swarm_lacks: source_missing_commits,
         commits_swarm_has_that_source_lacks: swarm_only_commits,
@@ -240,12 +245,29 @@ fn classify_repo(origin: Option<&str>, source_repo: &str, swarm_repo: &str) -> R
     }
 }
 
+fn default_source_ref(current_repo: &RepoKind) -> String {
+    if git_ref_exists("source/main") {
+        "source/main".to_string()
+    } else if *current_repo == RepoKind::Source && git_ref_exists("origin/main") {
+        "origin/main".to_string()
+    } else {
+        "source/main".to_string()
+    }
+}
+
 fn normalize_repo_url(value: &str) -> String {
     value.trim().trim_end_matches(".git").replace(':', "/").replace('\\', "/").to_ascii_lowercase()
 }
 
 fn normalize_repo_name(value: &str) -> String {
     value.trim().trim_end_matches(".git").replace('\\', "/").to_ascii_lowercase()
+}
+
+fn git_ref_exists(ref_name: &str) -> bool {
+    Command::new("git")
+        .args(["rev-parse", "--verify", "--quiet", ref_name])
+        .output()
+        .is_ok_and(|output| output.status.success())
 }
 
 fn git_output<const N: usize>(args: [&str; N]) -> Result<String> {
@@ -353,12 +375,15 @@ fn is_release_sensitive_workflow(name: &str, raw: &str) -> bool {
     let raw = raw.to_ascii_lowercase();
     [
         "cargo publish",
-        "crates.io",
         "gh release",
         "action-gh-release",
+        "softprops/action-gh-release",
         "docker push",
         "cosign",
         "publish_image",
+        "cargo_registry_token",
+        "npm publish",
+        "twine upload",
     ]
     .iter()
     .any(|needle| raw.contains(needle))
@@ -370,6 +395,15 @@ fn print_text(report: &RepoBoundaryStatus) {
     println!("source_repo: {} ({})", report.source_repo, report.source_branch);
     println!("swarm_repo: {} ({})", report.swarm_repo, report.swarm_branch);
     println!("source_remote_configured: {}", report.source_remote_configured);
+    println!("swarm_remote_configured: {}", report.swarm_remote_configured);
+    if let Some(source_remote_url) = &report.source_remote_url {
+        println!("source_remote_url: {source_remote_url}");
+    }
+    if let Some(swarm_remote_url) = &report.swarm_remote_url {
+        println!("swarm_remote_url: {swarm_remote_url}");
+    }
+    println!("source_ref: {}", report.source_ref);
+    println!("swarm_ref: {}", report.swarm_ref);
     println!(
         "source_ref_reachable_from_swarm_ref: {}",
         option_bool(report.source_ref_reachable_from_swarm_ref)
@@ -435,7 +469,12 @@ mod tests {
             "gpu-smoke.yml",
             "run: cargo build --release --locked"
         ));
+        assert!(!is_release_sensitive_workflow(
+            "security.yml",
+            "# Check that all dependencies come from crates.io\nrun: cargo audit"
+        ));
         assert!(is_release_sensitive_workflow("release.yml", "name: Release"));
+        assert!(is_release_sensitive_workflow("security.yml", "run: cargo publish --dry-run"));
         assert!(is_release_sensitive_workflow("image.yml", "env:\n  PUBLISH_IMAGE: true"));
     }
 

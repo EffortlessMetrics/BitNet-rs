@@ -58,11 +58,33 @@ For a read-only status check, run:
 cargo run --locked -p xtask --no-default-features -- repo-boundary status
 ```
 
-The status report identifies whether the checkout is source, swarm, or unknown;
-whether the `source` remote is configured; whether `source/main` is reachable
-from the checked swarm ref; how many source commits swarm lacks; how many swarm
-commits are not yet in source; and whether release-sensitive workflow files keep
-the source-repo guard.
+The status report identifies whether the checkout origin is source, swarm, or
+unknown; whether source and swarm remotes are configured; which refs were
+checked; whether source main is reachable from the checked swarm ref; how many
+source commits swarm lacks; how many swarm commits are not yet in source; and
+whether release-sensitive workflow files keep the source-repo guard.
+
+In a normal swarm-origin clone, configure the source remote once and use the
+default command:
+
+```bash
+git remote add source git@github.com:EffortlessMetrics/BitNet-rs.git
+cargo run --locked -p xtask --no-default-features -- repo-boundary status
+```
+
+In a source-origin control-plane checkout that also has a `swarm` remote, check
+the live remote branches explicitly:
+
+```bash
+cargo run --locked -p xtask --no-default-features -- repo-boundary status \
+  --source-ref origin/main \
+  --swarm-ref swarm/main
+```
+
+When no `source/main` ref exists and `origin` points at
+`EffortlessMetrics/BitNet-rs`, the command uses `origin/main` as the default
+source ref. This keeps source-origin maintenance clones useful without requiring
+a duplicate `source` remote.
 
 If swarm and source-repo state disagree before cutover, do not treat the
 swarm-only state as public-release truth. Resolve the difference through an
