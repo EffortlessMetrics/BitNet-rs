@@ -1307,8 +1307,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-028"
-status = "pr_open"
+status = "merged"
 pr = 362
+head_sha = "07b933e090c44b52f66b185c7cc69b07ecff3731"
+merge_sha = "89378b4e48fe80a454cf1d9569cb23b765bbe419"
 branch = "codex/intel-a770/A770-028-readiness-normalization-scoring"
 stackable = false
 review_mode = "codex_premerge"
