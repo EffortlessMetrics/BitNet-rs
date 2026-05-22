@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T12:15:32Z"
+campaign = "intel-a770"
+item = "A770-024"
+event = "closeout"
+actor = "codex-a770"
+pr = 320
+branch = "codex/intel-a770/A770-024-yes-no-corpus-scoring"
+head_sha = "82ef1b55c8ce5b3afc863dec2cc5a2a6ff85bdc6"
+merge_sha = "fdcbb124a3ad9aa8d2b4a7c78e29085d0bd20e19"
+summary = "Recorded post-closeout corpus scoring correction from #320 after #319 closed A770-024."
+notes = [
+  "A770-024 was marked merged by #319 after #314 landed the corpus contract; #320 subsequently corrected the two yes/no seeded fixtures so wrong polarity is rejected.",
+  "This event does not reopen A770-024 tracker state and does not promote live seeded corpus execution, CPU/A770 parity, strict answer readiness, broad quality, residency, speed, trusted-partial acceleration, or full BitNet inference.",
+]
