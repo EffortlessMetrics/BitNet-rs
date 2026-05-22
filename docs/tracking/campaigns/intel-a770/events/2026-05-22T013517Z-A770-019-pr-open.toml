@@ -1,0 +1,15 @@
+timestamp = "2026-05-22T01:35:17Z"
+campaign = "intel-a770"
+item = "A770-019"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+pr = 257
+branch = "codex/intel-a770/A770-019-opencl-runtime-probe-build-fix"
+head_sha = "d755bb03f1cde886c8c501d3db188a5ee39393c3"
+summary = "Opened PR #257 for the A770 OpenCL runtime-probe wrapper build fix."
+notes = [
+  "The PR fixes the OpenCL runtime availability helper to consume the selected-device runtime probe wrapper returned by probe_opencl_runtime().",
+  "The PR keeps A770 answer quality, reference parity, full inference, residency, speed, trusted-partial, and completion claims closed.",
+]

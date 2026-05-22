@@ -195,9 +195,9 @@ pub fn opencl_available_runtime() -> bool {
 #[cfg(feature = "opencl")]
 #[inline]
 fn opencl_probe_has_usable_gpu(
-    probe: &bitnet_device_probe::runtimes::opencl::OpenClProbeResult,
+    probe: &bitnet_device_probe::runtimes::opencl::OpenClRuntimeProbe,
 ) -> bool {
-    probe.runtime_available && !probe.gpu_devices().is_empty()
+    probe.runtime_available && probe.devices.iter().any(|device| device.is_gpu)
 }
 
 #[cfg(not(feature = "opencl"))]
@@ -480,25 +480,40 @@ mod intel_tests {
     #[cfg(feature = "opencl")]
     #[test]
     fn opencl_runtime_probe_requires_gpu_device() {
-        use bitnet_device_probe::runtimes::opencl::{
-            OpenClDeviceType, mock_device, mock_no_opencl, mock_platform, mock_probe_result,
-        };
+        use bitnet_device_probe::runtimes::opencl::{OpenClRuntimeDevice, OpenClRuntimeProbe};
 
-        assert!(!opencl_probe_has_usable_gpu(&mock_no_opencl()));
+        assert!(!opencl_probe_has_usable_gpu(&OpenClRuntimeProbe::unavailable(
+            "mock: OpenCL not available"
+        )));
 
-        let no_devices = mock_probe_result(vec![mock_platform("OpenCL ICD", "Vendor")], vec![]);
+        let no_devices =
+            OpenClRuntimeProbe { runtime_available: true, devices: Vec::new(), error: None };
         assert!(!opencl_probe_has_usable_gpu(&no_devices));
 
-        let cpu_only = mock_probe_result(
-            vec![mock_platform("OpenCL CPU", "Vendor")],
-            vec![mock_device("CPU OpenCL", "Vendor", OpenClDeviceType::Cpu, 8, 1024)],
-        );
+        let cpu_only = OpenClRuntimeProbe {
+            runtime_available: true,
+            devices: vec![OpenClRuntimeDevice {
+                platform_name: Some("OpenCL CPU".to_owned()),
+                device_name: "CPU OpenCL".to_owned(),
+                vendor: "Vendor".to_owned(),
+                driver_version: Some("mock".to_owned()),
+                is_gpu: false,
+            }],
+            error: None,
+        };
         assert!(!opencl_probe_has_usable_gpu(&cpu_only));
 
-        let gpu = mock_probe_result(
-            vec![mock_platform("OpenCL GPU", "Vendor")],
-            vec![mock_device("GPU OpenCL", "Vendor", OpenClDeviceType::Gpu, 16, 4096)],
-        );
+        let gpu = OpenClRuntimeProbe {
+            runtime_available: true,
+            devices: vec![OpenClRuntimeDevice {
+                platform_name: Some("OpenCL GPU".to_owned()),
+                device_name: "GPU OpenCL".to_owned(),
+                vendor: "Vendor".to_owned(),
+                driver_version: Some("mock".to_owned()),
+                is_gpu: true,
+            }],
+            error: None,
+        };
         assert!(opencl_probe_has_usable_gpu(&gpu));
     }
 
