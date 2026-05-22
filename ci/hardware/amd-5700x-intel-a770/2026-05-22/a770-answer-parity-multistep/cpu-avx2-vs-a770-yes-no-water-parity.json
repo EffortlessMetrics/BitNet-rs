@@ -150,11 +150,50 @@
     ],
     "rows_truncated": false
   },
+  "generated_output_logit_margin_frontier": {
+    "case_count": 1,
+    "classification": "generated_output_logit_margin_frontier_opposite_argmax_right_near_tie",
+    "generated_output_mismatch_count": 1,
+    "left_label": "amd-5700x-cpu-avx2",
+    "margin_available_count": 1,
+    "missing_context_count": 0,
+    "missing_cross_chosen_logit_count": 0,
+    "near_tie_abs_logit_delta_threshold": 0.01,
+    "opposite_argmax_count": 1,
+    "right_label": "intel-a770-opencl",
+    "right_near_tie_count": 1,
+    "row_limit": 16,
+    "rows": [
+      {
+        "case_id": "yes_no_water",
+        "classification": "generated_output_logit_margin_first_mismatch_opposite_argmax_right_near_tie",
+        "first_mismatch_index": 2,
+        "has_cross_chosen_logits": true,
+        "left_chosen_delta_across_lanes": -0.5871915817260742,
+        "left_chosen_id": 452,
+        "left_chosen_logit_on_left": -5.939116477966309,
+        "left_chosen_logit_on_right": -6.526308059692383,
+        "left_margin_over_right_chosen_on_left": 0.4544386863708496,
+        "left_topk_count": 20,
+        "near_tie_abs_logit_delta_threshold": 0.01,
+        "opposite_argmax": true,
+        "right_chosen_delta_across_lanes": -0.12849950790405273,
+        "right_chosen_id": 662,
+        "right_chosen_logit_on_left": -6.393555164337158,
+        "right_chosen_logit_on_right": -6.522054672241211,
+        "right_margin_near_tie": true,
+        "right_margin_over_left_chosen_on_right": 0.004253387451171875,
+        "right_topk_count": 20,
+        "same_chosen_id": false
+      }
+    ],
+    "rows_truncated": false
+  },
   "inputs": {
     "left_label": "amd-5700x-cpu-avx2",
-    "left_receipt_path": "ci\\hardware\\amd-5700x-intel-a770\\2026-05-22\\a770-answer-parity-multistep\\cpu-avx2-yes-no-water.json",
+    "left_receipt_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/cpu-avx2-yes-no-water.json",
     "right_label": "intel-a770-opencl",
-    "right_receipt_path": "ci\\hardware\\amd-5700x-intel-a770\\2026-05-22\\a770-answer-parity-multistep\\a770-opencl-yes-no-water.json"
+    "right_receipt_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/a770-opencl-yes-no-water.json"
   },
   "kernel": {
     "left_label": "amd-5700x-cpu-avx2",
@@ -327,5 +366,5 @@
     "passed": 0,
     "total": 1
   },
-  "timestamp": "2026-05-22T05:53:27.020486+00:00"
+  "timestamp": "2026-05-22T08:10:40.488441400+00:00"
 }

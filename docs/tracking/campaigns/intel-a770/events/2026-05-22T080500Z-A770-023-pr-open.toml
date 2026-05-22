@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T08:05:00Z"
+campaign = "intel-a770"
+item = "A770-023"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+pr = 300
+branch = "codex/intel-a770/A770-023-first-mismatch-logit-margin"
+head_sha = "a54341512a2225a1cb2575f01f0d9d16932e7c71"
+summary = "Opened PR #300 for compact first-mismatch cross-chosen logit-margin reporting."
+notes = [
+  "The PR adds generated_output_logit_margin_frontier to the answer-parity receipt for the CPU/A770 yes_no_water generated-output divergence.",
+  "The live diagnostic receipt classifies the first mismatch as opposite argmax with an A770-side near-tie chosen-token margin.",
+  "No CPU/A770 answer parity, reference parity, broad A770 answer quality, strict A770 answer readiness, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

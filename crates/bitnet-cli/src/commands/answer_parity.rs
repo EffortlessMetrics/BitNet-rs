@@ -205,6 +205,13 @@ fn build_answer_parity_receipt(
         left_label,
         right_label,
     );
+    let generated_output_logit_margin_frontier = build_generated_output_logit_margin_frontier(
+        &case_ids,
+        &left_cases,
+        &right_cases,
+        left_label,
+        right_label,
+    );
 
     let passed = cases.iter().filter(|case| case["passed"] == true).count();
     let failed = cases.len().saturating_sub(passed) + usize::from(!shared_failures.is_empty());
@@ -295,6 +302,7 @@ fn build_answer_parity_receipt(
         },
         "logits_topk_frontier": logits_topk_frontier,
         "generated_output_frontier": generated_output_frontier,
+        "generated_output_logit_margin_frontier": generated_output_logit_margin_frontier,
         "cases": cases,
         "may_claim": may_claim,
         "must_not_claim": must_not_claim,
@@ -1510,6 +1518,263 @@ fn generated_output_frontier_row(
     })
 }
 
+fn build_generated_output_logit_margin_frontier(
+    case_ids: &BTreeSet<String>,
+    left_cases: &BTreeMap<String, &Value>,
+    right_cases: &BTreeMap<String, &Value>,
+    left_label: &str,
+    right_label: &str,
+) -> Value {
+    const ROW_LIMIT: usize = 16;
+    const NEAR_TIE_THRESHOLD: f64 = 0.01;
+
+    let mut rows = Vec::new();
+    let mut generated_output_mismatch_count = 0usize;
+    let mut margin_available_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut missing_cross_chosen_logit_count = 0usize;
+    let mut opposite_argmax_count = 0usize;
+    let mut right_near_tie_count = 0usize;
+    let mut row_candidate_count = 0usize;
+
+    for id in case_ids {
+        let Some(left_case) = left_cases.get(id).copied() else {
+            missing_context_count += 1;
+            row_candidate_count += 1;
+            push_limited_row(
+                &mut rows,
+                ROW_LIMIT,
+                generated_output_logit_margin_missing_context_row(id, "left_case_missing"),
+            );
+            continue;
+        };
+        let Some(right_case) = right_cases.get(id).copied() else {
+            missing_context_count += 1;
+            row_candidate_count += 1;
+            push_limited_row(
+                &mut rows,
+                ROW_LIMIT,
+                generated_output_logit_margin_missing_context_row(id, "right_case_missing"),
+            );
+            continue;
+        };
+
+        let Some(left_generated) = token_id_vec(&left_case["token_ids"]["generated"]) else {
+            missing_context_count += 1;
+            row_candidate_count += 1;
+            push_limited_row(
+                &mut rows,
+                ROW_LIMIT,
+                generated_output_logit_margin_missing_context_row(
+                    id,
+                    "left_generated_token_ids_missing",
+                ),
+            );
+            continue;
+        };
+        let Some(right_generated) = token_id_vec(&right_case["token_ids"]["generated"]) else {
+            missing_context_count += 1;
+            row_candidate_count += 1;
+            push_limited_row(
+                &mut rows,
+                ROW_LIMIT,
+                generated_output_logit_margin_missing_context_row(
+                    id,
+                    "right_generated_token_ids_missing",
+                ),
+            );
+            continue;
+        };
+        let Some(first_mismatch_index) =
+            first_different_token_index(&left_generated, &right_generated)
+        else {
+            continue;
+        };
+
+        generated_output_mismatch_count += 1;
+        let row = generated_output_logit_margin_row(
+            id,
+            left_case,
+            right_case,
+            first_mismatch_index,
+            NEAR_TIE_THRESHOLD,
+        );
+        match row["classification"].as_str() {
+            Some("generated_output_logit_margin_first_mismatch_margin_available")
+            | Some("generated_output_logit_margin_first_mismatch_opposite_argmax")
+            | Some("generated_output_logit_margin_first_mismatch_opposite_argmax_right_near_tie") =>
+            {
+                margin_available_count += 1;
+            }
+            Some("generated_output_logit_margin_missing_cross_chosen_logit") => {
+                missing_cross_chosen_logit_count += 1;
+            }
+            _ => {
+                missing_context_count += 1;
+            }
+        }
+        if row["opposite_argmax"].as_bool().unwrap_or(false) {
+            opposite_argmax_count += 1;
+        }
+        if row["right_margin_near_tie"].as_bool().unwrap_or(false) {
+            right_near_tie_count += 1;
+        }
+        row_candidate_count += 1;
+        push_limited_row(&mut rows, ROW_LIMIT, row);
+    }
+
+    let classification = if missing_context_count > 0 {
+        "generated_output_logit_margin_frontier_missing_context"
+    } else if missing_cross_chosen_logit_count > 0 {
+        "generated_output_logit_margin_frontier_missing_cross_chosen_logit"
+    } else if right_near_tie_count > 0 {
+        "generated_output_logit_margin_frontier_opposite_argmax_right_near_tie"
+    } else if opposite_argmax_count > 0 {
+        "generated_output_logit_margin_frontier_opposite_argmax"
+    } else if generated_output_mismatch_count > 0 {
+        "generated_output_logit_margin_frontier_margin_available"
+    } else {
+        "generated_output_logit_margin_frontier_clean"
+    };
+
+    json!({
+        "classification": classification,
+        "left_label": left_label,
+        "right_label": right_label,
+        "case_count": case_ids.len(),
+        "generated_output_mismatch_count": generated_output_mismatch_count,
+        "margin_available_count": margin_available_count,
+        "missing_cross_chosen_logit_count": missing_cross_chosen_logit_count,
+        "missing_context_count": missing_context_count,
+        "opposite_argmax_count": opposite_argmax_count,
+        "right_near_tie_count": right_near_tie_count,
+        "near_tie_abs_logit_delta_threshold": NEAR_TIE_THRESHOLD,
+        "rows_truncated": row_candidate_count > rows.len(),
+        "row_limit": ROW_LIMIT,
+        "rows": rows,
+    })
+}
+
+fn generated_output_logit_margin_missing_context_row(id: &str, reason: &str) -> Value {
+    json!({
+        "case_id": id,
+        "classification": "generated_output_logit_margin_missing_context",
+        "reason": reason,
+    })
+}
+
+fn generated_output_logit_margin_row(
+    id: &str,
+    left_case: &Value,
+    right_case: &Value,
+    first_mismatch_index: usize,
+    near_tie_threshold: f64,
+) -> Value {
+    let left_steps = left_case["logits_dump"].as_array();
+    let right_steps = right_case["logits_dump"].as_array();
+    let Some(left_step) = left_steps.and_then(|steps| steps.get(first_mismatch_index)) else {
+        return json!({
+            "case_id": id,
+            "classification": "generated_output_logit_margin_missing_context",
+            "reason": "left_logits_step_missing",
+            "first_mismatch_index": first_mismatch_index,
+            "left_logits_step_count": left_steps.map(Vec::len),
+            "right_logits_step_count": right_steps.map(Vec::len),
+        });
+    };
+    let Some(right_step) = right_steps.and_then(|steps| steps.get(first_mismatch_index)) else {
+        return json!({
+            "case_id": id,
+            "classification": "generated_output_logit_margin_missing_context",
+            "reason": "right_logits_step_missing",
+            "first_mismatch_index": first_mismatch_index,
+            "left_logits_step_count": left_steps.map(Vec::len),
+            "right_logits_step_count": right_steps.map(Vec::len),
+        });
+    };
+    let Some(left_chosen_id) = left_step["chosen_id"].as_u64() else {
+        return json!({
+            "case_id": id,
+            "classification": "generated_output_logit_margin_missing_context",
+            "reason": "left_chosen_id_missing",
+            "first_mismatch_index": first_mismatch_index,
+        });
+    };
+    let Some(right_chosen_id) = right_step["chosen_id"].as_u64() else {
+        return json!({
+            "case_id": id,
+            "classification": "generated_output_logit_margin_missing_context",
+            "reason": "right_chosen_id_missing",
+            "first_mismatch_index": first_mismatch_index,
+        });
+    };
+
+    let left_top_logits = top_logits_by_token(&left_step["top_logits"]);
+    let right_top_logits = top_logits_by_token(&right_step["top_logits"]);
+    let left_chosen_logit_on_left = left_top_logits.get(&left_chosen_id).copied();
+    let right_chosen_logit_on_left = left_top_logits.get(&right_chosen_id).copied();
+    let left_chosen_logit_on_right = right_top_logits.get(&left_chosen_id).copied();
+    let right_chosen_logit_on_right = right_top_logits.get(&right_chosen_id).copied();
+
+    let left_margin = match (left_chosen_logit_on_left, right_chosen_logit_on_left) {
+        (Some(left_chosen), Some(right_chosen)) => Some(left_chosen - right_chosen),
+        _ => None,
+    };
+    let right_margin = match (right_chosen_logit_on_right, left_chosen_logit_on_right) {
+        (Some(right_chosen), Some(left_chosen)) => Some(right_chosen - left_chosen),
+        _ => None,
+    };
+    let left_chosen_delta_across_lanes =
+        match (left_chosen_logit_on_right, left_chosen_logit_on_left) {
+            (Some(right_lane), Some(left_lane)) => Some(right_lane - left_lane),
+            _ => None,
+        };
+    let right_chosen_delta_across_lanes =
+        match (right_chosen_logit_on_right, right_chosen_logit_on_left) {
+            (Some(right_lane), Some(left_lane)) => Some(right_lane - left_lane),
+            _ => None,
+        };
+
+    let has_cross_chosen_logits = left_margin.is_some() && right_margin.is_some();
+    let opposite_argmax = left_chosen_id != right_chosen_id
+        && left_margin.is_some_and(|margin| margin > 0.0)
+        && right_margin.is_some_and(|margin| margin > 0.0);
+    let right_margin_near_tie =
+        right_margin.is_some_and(|margin| margin.abs() <= near_tie_threshold);
+    let classification = if !has_cross_chosen_logits {
+        "generated_output_logit_margin_missing_cross_chosen_logit"
+    } else if opposite_argmax && right_margin_near_tie {
+        "generated_output_logit_margin_first_mismatch_opposite_argmax_right_near_tie"
+    } else if opposite_argmax {
+        "generated_output_logit_margin_first_mismatch_opposite_argmax"
+    } else {
+        "generated_output_logit_margin_first_mismatch_margin_available"
+    };
+
+    json!({
+        "case_id": id,
+        "classification": classification,
+        "first_mismatch_index": first_mismatch_index,
+        "left_chosen_id": left_chosen_id,
+        "right_chosen_id": right_chosen_id,
+        "same_chosen_id": left_chosen_id == right_chosen_id,
+        "has_cross_chosen_logits": has_cross_chosen_logits,
+        "opposite_argmax": opposite_argmax,
+        "right_margin_near_tie": right_margin_near_tie,
+        "near_tie_abs_logit_delta_threshold": near_tie_threshold,
+        "left_chosen_logit_on_left": left_chosen_logit_on_left,
+        "right_chosen_logit_on_left": right_chosen_logit_on_left,
+        "left_margin_over_right_chosen_on_left": left_margin,
+        "right_chosen_logit_on_right": right_chosen_logit_on_right,
+        "left_chosen_logit_on_right": left_chosen_logit_on_right,
+        "right_margin_over_left_chosen_on_right": right_margin,
+        "left_chosen_delta_across_lanes": left_chosen_delta_across_lanes,
+        "right_chosen_delta_across_lanes": right_chosen_delta_across_lanes,
+        "left_topk_count": left_step["top_logits"].as_array().map(Vec::len),
+        "right_topk_count": right_step["top_logits"].as_array().map(Vec::len),
+    })
+}
+
 fn token_id_vec(value: &Value) -> Option<Vec<u64>> {
     value.as_array()?.iter().map(Value::as_u64).collect()
 }
@@ -1716,6 +1981,95 @@ mod tests {
                 })
                 .collect(),
         )
+    }
+
+    fn logits_first_mismatch_margin_left() -> Value {
+        json!([
+            {
+                "step": 0,
+                "chosen_id": 4,
+                "top_logits": [
+                    { "token_id": 4, "logit": 10.0 },
+                    { "token_id": 999, "logit": 1.0 }
+                ]
+            },
+            {
+                "step": 1,
+                "chosen_id": 5,
+                "top_logits": [
+                    { "token_id": 5, "logit": 10.0 },
+                    { "token_id": 999, "logit": 1.0 }
+                ]
+            },
+            {
+                "step": 2,
+                "chosen_id": 6,
+                "top_logits": [
+                    { "token_id": 6, "logit": 10.0 },
+                    { "token_id": 7, "logit": 9.5 },
+                    { "token_id": 999, "logit": 1.0 }
+                ]
+            }
+        ])
+    }
+
+    fn logits_first_mismatch_margin_right_near_tie() -> Value {
+        json!([
+            {
+                "step": 0,
+                "chosen_id": 4,
+                "top_logits": [
+                    { "token_id": 4, "logit": 10.0 },
+                    { "token_id": 999, "logit": 1.0 }
+                ]
+            },
+            {
+                "step": 1,
+                "chosen_id": 5,
+                "top_logits": [
+                    { "token_id": 5, "logit": 10.0 },
+                    { "token_id": 999, "logit": 1.0 }
+                ]
+            },
+            {
+                "step": 2,
+                "chosen_id": 7,
+                "top_logits": [
+                    { "token_id": 7, "logit": 9.25 },
+                    { "token_id": 6, "logit": 9.245 },
+                    { "token_id": 999, "logit": 1.0 }
+                ]
+            }
+        ])
+    }
+
+    fn logits_first_mismatch_missing_cross_chosen() -> Value {
+        json!([
+            {
+                "step": 0,
+                "chosen_id": 4,
+                "top_logits": [
+                    { "token_id": 4, "logit": 10.0 },
+                    { "token_id": 999, "logit": 1.0 }
+                ]
+            },
+            {
+                "step": 1,
+                "chosen_id": 5,
+                "top_logits": [
+                    { "token_id": 5, "logit": 10.0 },
+                    { "token_id": 999, "logit": 1.0 }
+                ]
+            },
+            {
+                "step": 2,
+                "chosen_id": 7,
+                "top_logits": [
+                    { "token_id": 7, "logit": 9.25 },
+                    { "token_id": 999, "logit": 1.0 }
+                ]
+            }
+        ])
     }
 
     fn cuda_receipt(generated: &[u64], answer: &str, logits: Value) -> Value {
@@ -1992,6 +2346,95 @@ mod tests {
             report["generated_output_frontier"]["rows"][0]["same_chosen_id_at_first_mismatch"],
             false
         );
+    }
+
+    #[test]
+    fn generic_parity_summarizes_first_mismatch_logit_margin_frontier() {
+        let scalar = receipt(
+            "i2_s-avx2-reference",
+            &[4, 5, 6],
+            "4 5 6",
+            logits_first_mismatch_margin_left(),
+        );
+        let a770 = a770_receipt(&[4, 5, 7], "4 5 7", logits_first_mismatch_margin_right_near_tie());
+
+        let report = build_generic_report(&scalar, &a770);
+
+        assert_eq!(
+            report["generated_output_logit_margin_frontier"]["classification"],
+            "generated_output_logit_margin_frontier_opposite_argmax_right_near_tie"
+        );
+        assert_eq!(
+            report["generated_output_logit_margin_frontier"]["generated_output_mismatch_count"],
+            1
+        );
+        assert_eq!(report["generated_output_logit_margin_frontier"]["margin_available_count"], 1);
+        assert_eq!(report["generated_output_logit_margin_frontier"]["right_near_tie_count"], 1);
+        let row = &report["generated_output_logit_margin_frontier"]["rows"][0];
+        assert_eq!(
+            row["classification"],
+            "generated_output_logit_margin_first_mismatch_opposite_argmax_right_near_tie"
+        );
+        assert_eq!(row["first_mismatch_index"], 2);
+        assert_eq!(row["left_chosen_id"], 6);
+        assert_eq!(row["right_chosen_id"], 7);
+        assert_eq!(row["opposite_argmax"], true);
+        assert_eq!(row["right_margin_near_tie"], true);
+        let left_margin = row["left_margin_over_right_chosen_on_left"].as_f64().unwrap();
+        let right_margin = row["right_margin_over_left_chosen_on_right"].as_f64().unwrap();
+        assert!((left_margin - 0.5).abs() < f64::EPSILON);
+        assert!((right_margin - 0.005).abs() < 1e-12);
+    }
+
+    #[test]
+    fn generic_parity_summarizes_first_mismatch_margin_missing_cross_chosen_logit() {
+        let scalar = receipt(
+            "i2_s-avx2-reference",
+            &[4, 5, 6],
+            "4 5 6",
+            logits_first_mismatch_margin_left(),
+        );
+        let a770 = a770_receipt(&[4, 5, 7], "4 5 7", logits_first_mismatch_missing_cross_chosen());
+
+        let report = build_generic_report(&scalar, &a770);
+
+        assert_eq!(
+            report["generated_output_logit_margin_frontier"]["classification"],
+            "generated_output_logit_margin_frontier_missing_cross_chosen_logit"
+        );
+        assert_eq!(report["generated_output_logit_margin_frontier"]["margin_available_count"], 0);
+        assert_eq!(
+            report["generated_output_logit_margin_frontier"]["missing_cross_chosen_logit_count"],
+            1
+        );
+        assert_eq!(
+            report["generated_output_logit_margin_frontier"]["rows"][0]["classification"],
+            "generated_output_logit_margin_missing_cross_chosen_logit"
+        );
+    }
+
+    #[test]
+    fn generic_parity_does_not_truncate_single_missing_context_logit_margin_row() {
+        let scalar = receipt(
+            "i2_s-avx2-reference",
+            &[4, 5, 6],
+            "4 5 6",
+            logits_first_mismatch_margin_left(),
+        );
+        let a770 = a770_receipt(&[4, 5, 7], "4 5 7", logits_for_chosen(&[4, 5]));
+
+        let report = build_generic_report(&scalar, &a770);
+        let frontier = &report["generated_output_logit_margin_frontier"];
+
+        assert_eq!(
+            frontier["classification"],
+            "generated_output_logit_margin_frontier_missing_context"
+        );
+        assert_eq!(frontier["generated_output_mismatch_count"], 1);
+        assert_eq!(frontier["missing_context_count"], 1);
+        assert_eq!(frontier["rows"].as_array().unwrap().len(), 1);
+        assert_eq!(frontier["rows_truncated"], false);
+        assert_eq!(frontier["rows"][0]["reason"], "right_logits_step_missing");
     }
 
     #[test]

@@ -1039,3 +1039,54 @@ must_not_claim = [
   "Performance speedup is proven.",
   "A770 trusted partial acceleration is claim-grade.",
 ]
+
+[[work_item]]
+id = "A770-023"
+status = "pr_open"
+pr = 300
+branch = "codex/intel-a770/A770-023-first-mismatch-logit-margin"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-022"]
+acceptance = "Add a compact first-mismatch cross-chosen logit-margin frontier to the CPU/A770 answer-parity receipt so the generated-output divergent yes_no_water case reports whether both chosen-token logits are available, whether the lanes have opposite argmax choices, and whether the A770-side chosen-token margin is a near tie, without changing runtime math or promoting CPU/A770 parity."
+commands = [
+  "rustfmt --edition 2024 --check crates/bitnet-cli/src/commands/answer_parity.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_parity -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli -- answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/cpu-avx2-yes-no-water.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/a770-opencl-yes-no-water.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/cpu-avx2-vs-a770-yes-no-water-parity.json # expected nonzero while CPU/A770 parity remains divergent",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity-multistep/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+]
+may_claim = [
+  "The yes_no_water first generated-token mismatch has compact cross-chosen logit-margin evidence for both CPU AVX2 and Intel A770 OpenCL.",
+  "The committed diagnostic receipt classifies the first mismatch as opposite argmax with an A770-side near-tie chosen-token margin.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
