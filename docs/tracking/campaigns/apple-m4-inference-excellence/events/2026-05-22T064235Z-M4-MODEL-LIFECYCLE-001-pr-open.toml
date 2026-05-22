@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T06:42:35Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-MODEL-LIFECYCLE-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-MODEL-LIFECYCLE-001-supported-model-policy"
+pr = 6186
+head_sha = "cc09dde973e304550a4404aa08f281420eaeb17f"
+
+notes = [
+  "Opened PR #6186 to define the M4 supported-model lifecycle policy exposed by `bitnet mac models` and `bitnet mac models --json`.",
+  "The source slice adds default, supported-non-default, supported-ask, diagnostic-only, candidate, deprecated, rejected, and retired lifecycle policy fields covering required evidence, cache migration, operator warnings, rollback guidance, and claim-boundary updates.",
+  "The policy remains a model-selection and documentation surface only; it does not add model support, change the default, enable BitNet chat or serve, or make broad Apple Silicon, Metal, QK256, Neural Engine, MPSGraph, MacBook, quality, performance, or speedup claims.",
+]
