@@ -23,13 +23,18 @@ bitnet mac regression <receipt.json> --baseline <baseline.json>
 
 `bitnet mac models` is the operator-facing model-selection view. It lists the
 default model, supported explicit-only dense models, cache state, the BitNet
-one-shot ask plus fixed warm-session row, candidate/rejected rows, and
-disk-headroom guidance without downloading artifacts. The text view also prints
-exact `Next fetch` and `Next verify` commands for the recommended first
-supported model when disk headroom is adequate. The BitNet row includes receipt
-bridge commands for validating the strict `answer-corpus` proof and the
-fixed-prompt warm-session proof. It is limited to explicit one-shot ask or
-fixed-prompt warm reuse with a verified GGUF plus external tokenizer:
+one-shot ask plus fixed warm-session row, lifecycle policy states, and
+disk-headroom guidance without downloading artifacts. Selectable states are
+`default`, `supported-non-default`, and `supported-ask` within their recorded
+scopes. `diagnostic-only`, `candidate`, `deprecated`, `rejected`, and `retired`
+rows are not selectable operator routes. The text view also prints exact
+`Next fetch` and `Next verify` commands for the recommended first supported
+model when disk headroom is adequate. The JSON view includes per-row required
+evidence, cache migration behavior, operator warnings, rollback guidance, and
+claim-boundary updates. The BitNet row includes receipt bridge commands for
+validating the strict `answer-corpus` proof and the fixed-prompt warm-session
+proof. It is limited to explicit one-shot ask or fixed-prompt warm reuse with a
+verified GGUF plus external tokenizer:
 
 `bitnet mac status` is the model-free operator summary. It writes an
 `apple_m4_inference_status` receipt with disk/cache posture, dense SLM readiness,
@@ -62,6 +67,11 @@ bitnet mac ask \
   "What is 2+2? Answer with only the number."
 ```
 
+The lifecycle policy is not a runtime proof and does not add supported models,
+change the default, enable BitNet chat or serve, or broaden Apple Silicon,
+Metal, QK256, Neural Engine, MPSGraph, MacBook, quality, performance, or
+speedup claims.
+
 BitNet serve is explicit and gate-required. `bitnet mac serve --model-family
 bitnet` fails before cache lookup or bind unless
 `--bitnet-serve-gate-receipt` points at a ready
@@ -69,8 +79,9 @@ bitnet` fails before cache lookup or bind unless
 evidence, streaming-semantics evidence, timeout/failure evidence, and a
 `mac serve-check --completion` receipt proving health/ready and per-request
 receipt export on the gated local route. If a diagnostic-only, candidate,
-rejected, or unknown model ID is passed to the dense Mac commands, the wrapper
-fails before cache repair guidance and points back to `bitnet mac models`.
+deprecated, rejected, retired, or unknown model ID is passed to the dense Mac
+commands, the wrapper fails before cache repair guidance and points back to
+`bitnet mac models`.
 
 BitNet chat is explicit and gate-required. `bitnet mac chat --model-family
 bitnet` fails before prompt collection unless `--bitnet-chat-gate-receipt`

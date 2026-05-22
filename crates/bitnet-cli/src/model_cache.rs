@@ -203,6 +203,7 @@ struct AppleM4ModelCatalog {
     cache_root: PathBuf,
     default_model_id: &'static str,
     disk: AppleM4DiskSummary,
+    lifecycle_policy: AppleM4LifecyclePolicy,
     claim_boundary: &'static str,
     rows: Vec<AppleM4ModelRow>,
 }
@@ -241,6 +242,11 @@ struct AppleM4ModelRow {
     route: String,
     selection: String,
     reason: String,
+    lifecycle_required_evidence: Vec<&'static str>,
+    cache_migration: &'static str,
+    operator_warning: &'static str,
+    rollback_guidance: &'static str,
+    claim_boundary_update: &'static str,
     mac_ask_enabled: bool,
     mac_bitnet_warm_enabled: bool,
     mac_chat_enabled: bool,
@@ -259,6 +265,28 @@ struct AppleM4ModelRow {
     verify_command: Option<String>,
     repair_command: Option<String>,
     provenance_manifest: Option<ModelProvenanceManifest>,
+}
+
+#[cfg(feature = "full-cli")]
+#[derive(Debug, Serialize)]
+struct AppleM4LifecyclePolicy {
+    schema_version: u8,
+    claim_boundary: &'static str,
+    state_order: &'static [&'static str],
+    states: &'static [AppleM4LifecycleStatePolicy],
+}
+
+#[cfg(feature = "full-cli")]
+#[derive(Debug, Serialize, Clone, Copy)]
+struct AppleM4LifecycleStatePolicy {
+    state: &'static str,
+    selectable: bool,
+    route_scope: &'static str,
+    required_evidence: &'static [&'static str],
+    cache_migration: &'static str,
+    operator_warning: &'static str,
+    rollback_guidance: &'static str,
+    claim_boundary_update: &'static str,
 }
 
 #[cfg(feature = "full-cli")]
@@ -315,6 +343,143 @@ const APPLE_M4_POLICY_MODELS: &[AppleM4PolicyModel] = &[
         reason: "artifact hygiene failure: source, revision, size, SHA256, tokenizer authority, and prompt authority are missing or ambiguous.",
     },
 ];
+
+#[cfg(feature = "full-cli")]
+const APPLE_M4_LIFECYCLE_STATE_ORDER: &[&str] = &[
+    "default",
+    "supported-non-default",
+    "supported-ask",
+    "diagnostic-only",
+    "candidate",
+    "deprecated",
+    "rejected",
+    "retired",
+];
+
+#[cfg(feature = "full-cli")]
+static APPLE_M4_REJECTED_LIFECYCLE_STATE: AppleM4LifecycleStatePolicy =
+    AppleM4LifecycleStatePolicy {
+        state: "rejected",
+        selectable: false,
+        route_scope: "failed or out-of-scope identity",
+        required_evidence: &[
+            "rejection reason covering artifact, architecture, tokenizer, quality, timing, or scope failure",
+            "new candidate item before reconsideration",
+        ],
+        cache_migration: "Do not fetch; prune any stale cache entry when it is safe and operator-approved.",
+        operator_warning: "Rejected models are not M4 answer, chat, serve, quality, or benchmark evidence.",
+        rollback_guidance: "Do not roll back into rejected rows; open a new candidate lifecycle item if new evidence appears.",
+        claim_boundary_update: "Docs may only state why the identity is rejected and which separate work would be required.",
+    };
+
+#[cfg(feature = "full-cli")]
+const APPLE_M4_LIFECYCLE_STATES: &[AppleM4LifecycleStatePolicy] = &[
+    AppleM4LifecycleStatePolicy {
+        state: "default",
+        selectable: true,
+        route_scope: "implicit dense SLM `bitnet mac ask/chat/serve` default on apple-m4-cpu-neon",
+        required_evidence: &[
+            "supported artifact provenance and cache verification",
+            "dense SLM eval-v2 and benchmark-v2 receipts for the exact identity",
+            "route-state and operator workload receipts",
+            "release-gate tracker event before replacing the default",
+        ],
+        cache_migration: "Fetch and verify the new default before changing documentation or generated status; keep the previous default cached until rollback guidance is published.",
+        operator_warning: "Default changes are release-gate changes; do not infer BitNet, Metal, MacBook, broad quality, performance, or speedup support.",
+        rollback_guidance: "Revert the default catalog row to the previous verified default, keep both cache entries until the rollback PR lands, and rerun `bitnet mac models` plus `bitnet model verify` for the restored id.",
+        claim_boundary_update: "Update the M4 operator envelope, expectation envelope, route matrix, and tracker notes before any public default claim changes.",
+    },
+    AppleM4LifecycleStatePolicy {
+        state: "supported-non-default",
+        selectable: true,
+        route_scope: "explicit dense SLM `--model-id` on apple-m4-cpu-neon only",
+        required_evidence: &[
+            "supported artifact provenance and cache verification",
+            "matching dense SLM eval-v2 and benchmark-v2 receipts",
+            "route-state row that keeps the model explicit-only",
+            "regression-dashboard history for the exact identity",
+        ],
+        cache_migration: "Add or refresh the model under its own cache id; do not replace the default cache symlink or default model id.",
+        operator_warning: "Operators must pass `--model-id`; quality and performance statements apply only to the exact non-default model identity.",
+        rollback_guidance: "Mark the row deprecated or rejected when receipts regress, leave the default unchanged, and tell operators to remove or ignore the explicit cache entry.",
+        claim_boundary_update: "Update docs and generated dashboards only for the exact supported non-default identity; do not widen dense, BitNet, or platform claims.",
+    },
+    AppleM4LifecycleStatePolicy {
+        state: "supported-ask",
+        selectable: true,
+        route_scope: "explicit BitNet one-shot ask and fixed warm-session route only",
+        required_evidence: &[
+            "accepted BitNet artifact and external tokenizer authority",
+            "BitNet one-shot ask receipt",
+            "BitNet fixed or variable warm-session receipt",
+            "route-state matrix showing chat and serve boundaries",
+        ],
+        cache_migration: "Fetch and verify the accepted BitNet artifact/tokenizer separately from dense SLM cache entries; never make it the dense default.",
+        operator_warning: "BitNet chat and serve stay disabled unless later receipts explicitly enable those surfaces.",
+        rollback_guidance: "Mark the BitNet row deprecated or rejected if artifact, tokenizer, warm-session, timeout, or route-state receipts regress; keep dense SLM defaults unchanged.",
+        claim_boundary_update: "Update only BitNet one-shot or warm-session claims until separate chat and serve receipts pass.",
+    },
+    AppleM4LifecycleStatePolicy {
+        state: "diagnostic-only",
+        selectable: false,
+        route_scope: "debugging, loader, tokenizer, or architecture diagnosis only",
+        required_evidence: &[
+            "diagnosis receipt naming the blocker",
+            "exact artifact and tokenizer identity before promotion review",
+            "separate candidate item before any user-facing route",
+        ],
+        cache_migration: "Do not recommend fetch by default; keep any local diagnostic cache outside operator first-run guidance.",
+        operator_warning: "Diagnostic-only models are not user-ready and are not selectable by dense or BitNet M4 commands.",
+        rollback_guidance: "Keep the row diagnostic-only or move it to rejected when the blocker is confirmed; do not promote without a new evidence item.",
+        claim_boundary_update: "Docs may mention diagnosis scope only; they must not claim local answer, chat, serve, quality, or performance readiness.",
+    },
+    AppleM4LifecycleStatePolicy {
+        state: "candidate",
+        selectable: false,
+        route_scope: "pinned review candidate, not an operator route",
+        required_evidence: &[
+            "exact source, revision, size, SHA256, tokenizer authority, and prompt authority",
+            "cache verification and artifact provenance manifest",
+            "deterministic eval, benchmark, canary, and route-state receipts before promotion",
+        ],
+        cache_migration: "Use an explicit experiment cache path; do not add first-run fetch guidance or default cache migration.",
+        operator_warning: "Candidate rows are not supported runtime models and cannot satisfy release or operator readiness claims.",
+        rollback_guidance: "Move to rejected when artifact, tokenizer, quality, timing, or route evidence fails; otherwise keep as candidate until all promotion gates land.",
+        claim_boundary_update: "Candidate docs must say no supported-model, default, broad quality, performance, or platform claim is created.",
+    },
+    AppleM4LifecycleStatePolicy {
+        state: "deprecated",
+        selectable: false,
+        route_scope: "transitional removal state after a regression or replacement decision",
+        required_evidence: &[
+            "replacement or regression receipt naming why the model is deprecated",
+            "operator migration warning",
+            "rollback decision before any restored support",
+        ],
+        cache_migration: "Stop recommending fetch; keep verify/prune guidance so existing operators can migrate deliberately.",
+        operator_warning: "Deprecated models are not user-ready for new work; use only when a rollback event explicitly says so.",
+        rollback_guidance: "Restore only through a fresh supported-model PR with current receipts, or continue to retired after migration evidence lands.",
+        claim_boundary_update: "Remove or narrow public expectation-envelope claims and generated dashboard rows for the deprecated identity.",
+    },
+    APPLE_M4_REJECTED_LIFECYCLE_STATE,
+    AppleM4LifecycleStatePolicy {
+        state: "retired",
+        selectable: false,
+        route_scope: "archived identity removed from operator selection",
+        required_evidence: &[
+            "retirement event naming replacement or end-of-support reason",
+            "cache cleanup guidance",
+            "documentation removal or archival note",
+        ],
+        cache_migration: "Remove from first-run and recommendation surfaces; leave explicit prune instructions for old cache entries.",
+        operator_warning: "Retired models are unsupported and should not be used for new M4 inference receipts.",
+        rollback_guidance: "A retired model can return only as a new candidate with fresh artifact, cache, eval, benchmark, and route receipts.",
+        claim_boundary_update: "Remove active support claims and keep only archival receipt references.",
+    },
+];
+
+#[cfg(feature = "full-cli")]
+const APPLE_M4_LIFECYCLE_CLAIM_BOUNDARY: &str = "The lifecycle policy defines promotion, migration, warning, rollback, and claim-boundary rules only. It does not add a supported model, change the default, enable BitNet chat or serve, prove Metal/QK256/Neural Engine/MPSGraph/MacBook behavior, or create broad quality, performance, speedup, or Apple Silicon claims.";
 
 #[cfg(feature = "full-cli")]
 const APPLE_M4_BITNET_ROUTE_BOUNDARY: &str = "BitNet answer-ready artifact authority and local Apple M4 CPU/NEON answer-corpus proof receipts exist via MODEL-ARTIFACT-007/M4-QA-001 evidence. The BitNet Mac route is limited to explicit one-shot `bitnet mac ask` and fixed-prompt `bitnet mac bitnet-warm` with a verified GGUF and external tokenizer authority; `bitnet mac chat` and `bitnet mac serve` remain disabled for BitNet, and dense SLM success must not be counted as BitNet Mac UX proof.";
@@ -1799,6 +1964,7 @@ pub(crate) fn list_apple_m4_models(cache_dir: Option<PathBuf>, json: bool) -> Re
 
     println!("Cache: {}", catalog.cache_root.display());
     println!("Default model: {}", catalog.default_model_id);
+    println!("Lifecycle policy: {}", catalog.lifecycle_policy.state_order.join(", "));
     let available = catalog.disk.available.as_deref().unwrap_or("unknown");
     let low_disk = catalog
         .disk
@@ -1886,9 +2052,30 @@ fn apple_m4_model_catalog(cache_dir: Option<PathBuf>) -> Result<AppleM4ModelCata
         cache_root,
         default_model_id: M4_SLM_RUNTIME_MODEL_ID,
         disk,
-        claim_boundary: "default/supported rows are dense Qwen Apple M4 CPU/NEON answer paths; supported-ask BitNet rows are limited to one-shot ask plus fixed-prompt warm-session proof with explicit GGUF/tokenizer authority; diagnostic-only, candidate, and rejected rows are not selectable M4 answer claims",
+        lifecycle_policy: apple_m4_lifecycle_policy(),
+        claim_boundary: "default/supported-non-default rows are dense Qwen Apple M4 CPU/NEON answer paths; supported-ask BitNet rows are limited to one-shot ask plus fixed-prompt warm-session proof with explicit GGUF/tokenizer authority; diagnostic-only, candidate, deprecated, rejected, and retired rows are not selectable M4 answer claims",
         rows,
     })
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_lifecycle_policy() -> AppleM4LifecyclePolicy {
+    AppleM4LifecyclePolicy {
+        schema_version: 1,
+        claim_boundary: APPLE_M4_LIFECYCLE_CLAIM_BOUNDARY,
+        state_order: APPLE_M4_LIFECYCLE_STATE_ORDER,
+        states: APPLE_M4_LIFECYCLE_STATES,
+    }
+}
+
+#[cfg(feature = "full-cli")]
+fn apple_m4_lifecycle_state_policy(state: &str) -> &'static AppleM4LifecycleStatePolicy {
+    for policy in APPLE_M4_LIFECYCLE_STATES {
+        if policy.state == state {
+            return policy;
+        }
+    }
+    &APPLE_M4_REJECTED_LIFECYCLE_STATE
 }
 
 #[cfg(feature = "full-cli")]
@@ -1906,7 +2093,12 @@ fn apple_m4_registered_model_row(
             model.support_note,
         )
     } else if model.apple_m4_cpu_neon_supported {
-        ("supported", "explicit --model-id only", "apple-m4-cpu-neon", model.support_note)
+        (
+            "supported-non-default",
+            "explicit --model-id only",
+            "apple-m4-cpu-neon",
+            model.support_note,
+        )
     } else if model.id == "microsoft-bitnet-b1.58-2B-4T-i2s" {
         (
             "supported-ask",
@@ -1922,7 +2114,8 @@ fn apple_m4_registered_model_row(
             "Registered artifact is not supported by the Apple M4 dense SLM answer lane.",
         )
     };
-    let selectable_m4_answer = matches!(state, "default" | "supported");
+    let lifecycle = apple_m4_lifecycle_state_policy(state);
+    let selectable_m4_answer = matches!(state, "default" | "supported-non-default");
     let bitnet_ask_only = state == "supported-ask" && model.model_contract.is_some();
     let bitnet_contract_only = bitnet_ask_only;
     let recommended_fetch_headroom_bytes = (selectable_m4_answer || bitnet_ask_only)
@@ -1977,6 +2170,11 @@ fn apple_m4_registered_model_row(
         route: route.to_string(),
         selection: selection.to_string(),
         reason: reason.to_string(),
+        lifecycle_required_evidence: lifecycle.required_evidence.to_vec(),
+        cache_migration: lifecycle.cache_migration,
+        operator_warning: lifecycle.operator_warning,
+        rollback_guidance: lifecycle.rollback_guidance,
+        claim_boundary_update: lifecycle.claim_boundary_update,
         mac_ask_enabled: selectable_m4_answer || bitnet_ask_only,
         mac_bitnet_warm_enabled: bitnet_ask_only,
         mac_chat_enabled: selectable_m4_answer,
@@ -2029,38 +2227,46 @@ const QWEN_OR_CONTRACT_PROMPT_AUTHORITY: &[(&str, &str)] = &[
 fn apple_m4_policy_rows() -> Vec<AppleM4ModelRow> {
     APPLE_M4_POLICY_MODELS
         .iter()
-        .map(|model| AppleM4ModelRow {
-            id: model.id.to_string(),
-            display_name: model.display_name.to_string(),
-            state: model.state.to_string(),
-            cache_state: None,
-            cache_path: None,
-            size_bytes: None,
-            size: "-".to_string(),
-            quantization: (model.quantization != "-").then(|| model.quantization.to_string()),
-            tokenizer_authority: None,
-            prompt_authority: None,
-            route: "none".to_string(),
-            selection: model.selection.to_string(),
-            reason: model.reason.to_string(),
-            mac_ask_enabled: false,
-            mac_bitnet_warm_enabled: false,
-            mac_chat_enabled: false,
-            mac_ask_chat_enabled: false,
-            mac_serve_enabled: false,
-            proof_status: None,
-            proof_command: None,
-            proof_receipt_path: None,
-            warm_command: None,
-            warm_receipt_path: None,
-            recommended_fetch_headroom_bytes: None,
-            recommended_fetch_headroom: None,
-            fits_current_disk: None,
-            disk_state: None,
-            fetch_command: None,
-            verify_command: None,
-            repair_command: None,
-            provenance_manifest: None,
+        .map(|model| {
+            let lifecycle = apple_m4_lifecycle_state_policy(model.state);
+            AppleM4ModelRow {
+                id: model.id.to_string(),
+                display_name: model.display_name.to_string(),
+                state: model.state.to_string(),
+                cache_state: None,
+                cache_path: None,
+                size_bytes: None,
+                size: "-".to_string(),
+                quantization: (model.quantization != "-").then(|| model.quantization.to_string()),
+                tokenizer_authority: None,
+                prompt_authority: None,
+                route: "none".to_string(),
+                selection: model.selection.to_string(),
+                reason: model.reason.to_string(),
+                lifecycle_required_evidence: lifecycle.required_evidence.to_vec(),
+                cache_migration: lifecycle.cache_migration,
+                operator_warning: lifecycle.operator_warning,
+                rollback_guidance: lifecycle.rollback_guidance,
+                claim_boundary_update: lifecycle.claim_boundary_update,
+                mac_ask_enabled: false,
+                mac_bitnet_warm_enabled: false,
+                mac_chat_enabled: false,
+                mac_ask_chat_enabled: false,
+                mac_serve_enabled: false,
+                proof_status: None,
+                proof_command: None,
+                proof_receipt_path: None,
+                warm_command: None,
+                warm_receipt_path: None,
+                recommended_fetch_headroom_bytes: None,
+                recommended_fetch_headroom: None,
+                fits_current_disk: None,
+                disk_state: None,
+                fetch_command: None,
+                verify_command: None,
+                repair_command: None,
+                provenance_manifest: None,
+            }
         })
         .collect()
 }
@@ -2173,13 +2379,15 @@ fn recommended_fetch_headroom_bytes(expected_bytes: u64) -> u64 {
 fn apple_m4_state_order(state: &str) -> u8 {
     match state {
         "default" => 0,
-        "supported" => 1,
+        "supported-non-default" => 1,
         "supported-ask" => 2,
         "blocked" => 3,
         "diagnostic-only" => 4,
         "candidate" => 5,
-        "rejected" => 6,
-        _ => 7,
+        "deprecated" => 6,
+        "rejected" => 7,
+        "retired" => 8,
+        _ => 9,
     }
 }
 
@@ -2216,7 +2424,7 @@ fn apple_m4_slm_supported_model(id: &str) -> Result<&'static SupportedModel> {
     }
 
     anyhow::bail!(
-        "unsupported Apple M4 model `{id}`. Selectable dense Apple M4 models: {}. Use `bitnet mac models` to inspect default/supported/supported-ask/candidate/rejected states.",
+        "unsupported Apple M4 model `{id}`. Selectable dense Apple M4 models: {}. Use `bitnet mac models` to inspect default/supported-non-default/supported-ask/diagnostic-only/candidate/deprecated/rejected/retired states.",
         selectable_apple_m4_model_ids()
     )
 }
@@ -2551,7 +2759,7 @@ fn apple_m4_cache_repair_guidance(cache_root: &Path, status: &CacheStatus) -> St
         });
     if cache_state_label(status) == "missing" {
         format!(
-            "{base} First-run model selection: run `{models_command}` to inspect default/supported/supported-ask model states, BitNet warm-route readiness, and disk headroom. Disk guidance: {disk_guidance}"
+            "{base} First-run model selection: run `{models_command}` to inspect default/supported-non-default/supported-ask model states, BitNet warm-route readiness, and disk headroom. Disk guidance: {disk_guidance}"
         )
     } else {
         format!(
@@ -3219,6 +3427,46 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
+    fn apple_m4_lifecycle_policy_covers_promotion_and_removal_states() {
+        let policy = apple_m4_lifecycle_policy();
+
+        assert_eq!(policy.schema_version, 1);
+        assert_eq!(
+            policy.state_order,
+            &[
+                "default",
+                "supported-non-default",
+                "supported-ask",
+                "diagnostic-only",
+                "candidate",
+                "deprecated",
+                "rejected",
+                "retired",
+            ][..]
+        );
+        assert!(
+            policy.claim_boundary.contains("does not add a supported model"),
+            "lifecycle policy must not promote support by itself"
+        );
+        for state in policy.state_order {
+            let state_policy = apple_m4_lifecycle_state_policy(state);
+            assert_eq!(state_policy.state, *state);
+            assert!(!state_policy.required_evidence.is_empty());
+            assert!(!state_policy.cache_migration.trim().is_empty());
+            assert!(!state_policy.operator_warning.trim().is_empty());
+            assert!(!state_policy.rollback_guidance.trim().is_empty());
+            assert!(!state_policy.claim_boundary_update.trim().is_empty());
+        }
+        assert!(apple_m4_lifecycle_state_policy("default").selectable);
+        assert!(apple_m4_lifecycle_state_policy("supported-non-default").selectable);
+        assert!(apple_m4_lifecycle_state_policy("supported-ask").selectable);
+        assert!(!apple_m4_lifecycle_state_policy("candidate").selectable);
+        assert!(!apple_m4_lifecycle_state_policy("deprecated").selectable);
+        assert!(!apple_m4_lifecycle_state_policy("retired").selectable);
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
     fn apple_m4_slm_supported_model_rejects_bitnet_for_dense_commands() {
         let error = apple_m4_slm_supported_model("microsoft-bitnet-b1.58-2B-4T-i2s")
             .expect_err("BitNet is not a dense SLM artifact");
@@ -3477,6 +3725,7 @@ mod tests {
             cache_root,
             default_model_id: M4_SLM_RUNTIME_MODEL_ID,
             disk,
+            lifecycle_policy: apple_m4_lifecycle_policy(),
             claim_boundary: "test",
             rows: vec![row],
         };
@@ -3517,6 +3766,7 @@ mod tests {
             cache_root,
             default_model_id: M4_SLM_RUNTIME_MODEL_ID,
             disk,
+            lifecycle_policy: apple_m4_lifecycle_policy(),
             claim_boundary: "test",
             rows: Vec::new(),
         };

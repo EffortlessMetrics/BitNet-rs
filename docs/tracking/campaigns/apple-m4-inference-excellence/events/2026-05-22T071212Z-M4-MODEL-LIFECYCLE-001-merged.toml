@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T07:12:12Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-MODEL-LIFECYCLE-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-MODEL-LIFECYCLE-001-supported-model-policy"
+pr = 6186
+head_sha = "7a898845ba20ecb79bbabba4c398a94e4f272805"
+merge_sha = "d80dd0f936339710b38237d4620ec674b7fd735c"
+
+notes = [
+  "Merged source PR #6186 after required GitHub checks passed or were intentionally skipped.",
+  "M4-MODEL-LIFECYCLE-001 defines the supported-model lifecycle states and exposes evidence, cache, warning, rollback, and claim-boundary requirements through the M4 model catalog and operator docs.",
+  "The merged source slice is a lifecycle policy and operator UX update only; it does not support a new model, make diagnostic-only or deprecated models user-ready, run live inference, enable BitNet chat or serve, or make broad quality, performance, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claims.",
+]
