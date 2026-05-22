@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_dense_q8_sidecar_counter_classification",
+  "work_item": "SLM-CPU-077",
+  "claim": "bounded_exact_tensor_post_bridge_counter_artifact",
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "broad_answer_quality_claim": false,
+  "default_runtime_changed": false,
+  "runtime_promotion_recommended": false,
+  "model": {
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0"
+  },
+  "receipt": {
+    "post_bridge_sidecar": "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-077-post-bridge-packed-q8-sidecar-warm-session.json",
+    "eager_f32_oracle": "ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-072-before-warm-session.json"
+  },
+  "host": {
+    "model": "Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz",
+    "cores": 4,
+    "threads": 8,
+    "receipt_threads": 4,
+    "role": "strict CPU SLM proof appliance"
+  },
+  "sidecar": {
+    "scope": "opt_in_exact_tensor_only",
+    "tensor": "layers.0.attention.q_proj.weight",
+    "source_tensor": "blk.0.attn_q.weight",
+    "selected_path": "packed_q8_sidecar",
+    "selected_kernel": "dense-q8-sidecar-linear",
+    "payload_sha256": "a8e16a232ea8c19a5c5d2eb5f21bfdf5c297eba0ac90e74b0afc052577179c24",
+    "default_enabled": false
+  },
+  "behavior_oracle": {
+    "prompt_count": 6,
+    "prompt_ids_match": true,
+    "generated_ids_match": true,
+    "decoded_text_match": true,
+    "model_sha_match": true,
+    "tokenizer_source_match": true,
+    "tokenizer_strict_match": true,
+    "selected_backend_match": true,
+    "fallback_false_before_after": true,
+    "passed": true
+  },
+  "instrumentation": {
+    "classification": "selected_counter_pack",
+    "selector_dispatch_calls": 42336,
+    "selector_selected_calls": 216,
+    "selector_declined_calls": 42120,
+    "selector_error_calls": 0,
+    "selector_dispatch_ns": 126918000,
+    "input_materialization_calls": 216,
+    "input_materialization_ns": 987500,
+    "input_values_materialized": 221184,
+    "bias_materialization_calls": 216,
+    "bias_materialization_ns": 41800,
+    "bias_values_materialized": 0,
+    "packed_matvec_calls": 216,
+    "packed_matvec_ns": 19093586100,
+    "packed_matvec_input_rows": 216,
+    "packed_matvec_output_values": 442368,
+    "output_tensor_construction_calls": 216,
+    "output_tensor_construction_ns": 1366700
+  },
+  "classification": {
+    "next_target": "packed_matvec_compute",
+    "reason": "The real post-bridge counter pack reports packed_matvec_ns as the dominant measured exact-tensor sidecar cost. Selector dispatch, input materialization, bias materialization, and output tensor construction are measured and much smaller in this bounded run.",
+    "secondary_targets": [
+      "selector_dispatch_overhead_after_matvec",
+      "output_tensor_construction_after_matvec",
+      "input_materialization_after_matvec"
+    ],
+    "runtime_promotion_blocker": true,
+    "recommended_next_item": "packed Q8_0 exact-tensor matvec compute cleanup before any broader sidecar runtime promotion"
+  },
+  "local_validation": {
+    "post_bridge_sidecar_run": "passed",
+    "fresh_eager_oracle_retry": "not_used",
+    "fresh_eager_oracle_retry_reason": "A same-turn eager oracle retry failed before receipt write with memory allocation of 167772160 bytes failed on the low-free-space Kaby host, so this classification compares the new post-bridge sidecar receipt to the committed SLM-CPU-072 eager_f32_candle oracle receipt.",
+    "json_validation": "pending"
+  },
+  "claim_boundary": [
+    "The packed Q8_0 sidecar remains opt-in and exact-tensor scoped.",
+    "The default runtime remains eager_f32_candle.",
+    "This artifact classifies instrumentation counters only; it does not claim speedup or sustained throughput.",
+    "No broad answer quality, Q4/Q5 runtime support, server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 claim is made."
+  ]
+}
