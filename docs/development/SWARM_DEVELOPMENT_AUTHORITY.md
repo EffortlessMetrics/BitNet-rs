@@ -71,6 +71,28 @@ against `BitNet-rs` using the contract in:
 docs/release/PROMOTE_TO_BITNET_RS.md
 ```
 
+## Promotion Packet Requirement
+
+Swarm work does not become source-repo authority just because it merged here.
+Every source-sync or swarm-to-source promotion must carry a packet that lets a
+maintainer review the boundary without reconstructing dozens of swarm PRs.
+
+The packet must name:
+
+- source and target repositories;
+- source swarm range or commit;
+- included swarm PRs and merge SHAs;
+- source-impact classification;
+- proof commands and receipt paths;
+- claim boundary and explicit not-claims;
+- generated dashboard status;
+- release, publish, signing, and secrets impact;
+- excluded swarm work;
+- rollback plan.
+
+If a promotion packet is missing, the work may remain valid swarm evidence, but
+it is not ready for source promotion.
+
 ## Merge Method Boundary
 
 Normal swarm PRs into `bitnet-rs-swarm/main` use squash merge. This keeps
@@ -88,6 +110,10 @@ Repository-boundary PRs must preserve ancestry and must not be squash-merged:
 Never squash source-history repair, source-to-swarm sync, or swarm-to-source
 promotion PRs. A squash can copy the file tree while dropping the commit graph
 needed for contributor attribution and promotion auditability.
+
+Do not hard-reset swarm main to source main, squash a history import, or copy a
+source tree as one content commit across the repository boundary. These are
+history-losing freshness shortcuts, not sync mechanisms.
 
 Never force-push `main`. If a repository-boundary branch must be refreshed,
 merge or fast-forward from the current default branch and preserve both sides of
@@ -118,6 +144,17 @@ run self-hosted runner jobs.
 Release, signing, publish, secrets-heavy workflows, full platform matrices,
 GPU/model-cache lanes, and public-fork self-hosted paths stay out of this swarm
 cutover unless a separate approved PR deliberately moves them.
+
+## Machine Clone Boundary
+
+Machines must move to swarm by cloning it side-by-side with the source repo.
+Do not edit an existing `BitNet-rs` clone's `origin` remote to point at
+`bitnet-rs-swarm`.
+
+Before starting new swarm work, checkpoint any dirty source clone, push the
+intended source branch, and open or update the source PR if needed. Keep the
+source clone for release, publish, signing, emergency hotfix, and explicit
+promotion work.
 
 ## Proof And Claim Discipline
 

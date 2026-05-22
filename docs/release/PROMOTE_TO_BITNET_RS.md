@@ -44,6 +44,10 @@ Future promotions and syncs must preserve that repaired graph. Do not reset
 swarm main, squash history imports, or copy source files as a single content
 commit to make the repositories appear fresh.
 
+Do not transform a source checkout into a swarm checkout, or a swarm checkout
+into a source checkout, by hard reset, branch replacement, or tree-copy import.
+Use side-by-side clones and history-preserving sync or promotion branches.
+
 The active source/swarm boundary policy is recorded in:
 
 ```text
@@ -75,6 +79,10 @@ git switch -c promote/swarm-YYYY-MM-DD origin/main
 git merge --no-ff swarm/main -m "promote: merge bitnet-rs-swarm through <swarm_sha>"
 ```
 
+This clone is separate from the active swarm checkout. Machines should keep the
+source and swarm clones side by side so release/publish work and swarm execution
+work cannot accidentally reuse the wrong remote.
+
 The source repo may either temporarily/permanently allow merge commits for
 `promote:swarm-to-source` PRs, or an admin may perform a non-force
 fast-forward/direct update after proof. Force-push is not an accepted promotion
@@ -98,6 +106,41 @@ excluded_work = <known swarm work intentionally not promoted>
 The source commit should be on swarm `main` unless the release manager has
 approved a narrower hotfix source.
 
+## Promotion Packet
+
+A promotion packet is required before opening a source-repo promotion PR. It can
+live under `target/promotion/` for a dry run, or under a committed
+`docs/release/promotion-packets/` path when the promotion itself needs a durable
+review artifact.
+
+Use this shape:
+
+```text
+Promotion id:
+Source repo:
+Target repo:
+Swarm range:
+Included swarm PRs:
+Included swarm SHAs:
+Source impact:
+Changed files:
+Touched crates:
+Campaigns touched:
+Policy files touched:
+Generated dashboard status:
+Proof commands:
+Receipts:
+Claim boundary:
+What this does not claim:
+Release/publish/signing impact:
+Excluded swarm work:
+Rollback:
+```
+
+The packet should be conservative. If it cannot prove that a hardware, model,
+quality, speed, residency, server, or release claim is allowed, the packet must
+say that the claim is not promoted.
+
 ## Promotion PR Body
 
 The `BitNet-rs` promotion PR should include:
@@ -111,6 +154,9 @@ The `BitNet-rs` promotion PR should include:
 - package/publish checks;
 - excluded swarm work;
 - explicit claim boundary.
+
+It should link the promotion packet and summarize only the parts that matter
+for source review.
 
 For hardware, model, quality, performance, or residency claims, include the
 exact receipt paths and claim ledgers that allow the claim. If a receipt is

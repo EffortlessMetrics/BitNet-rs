@@ -40,6 +40,17 @@ Ancestry impact:
 - [ ] must preserve public source history
 - [ ] must preserve swarm history into source
 
+Boundary packet:
+
+Promotion or sync packet path:
+Source repo commit:
+Swarm repo commit:
+Included PRs:
+Source impact:
+Release/publish/signing impact:
+Excluded work:
+Machine clone or cutover impact:
+
 ## Source-of-truth links
 
 Proposal:
@@ -67,6 +78,10 @@ Active goal or campaign manifest:
 ## Claim boundary
 
 <!-- What may be claimed after this PR, and what may not be claimed yet -->
+
+Model/hardware/proof claims added:
+Claims explicitly not promoted:
+Receipts or proof manifests:
 
 ## CI Requirements (check all that apply)
 

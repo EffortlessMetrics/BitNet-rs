@@ -33,10 +33,32 @@ explicitly approved fast-forward/direct update. Do not squash these
 repository-boundary PRs, because squash can copy the file tree while dropping
 the contributor and promotion history needed by the source/swarm cutover.
 
+Do not hard-reset swarm main to source main, squash a history import, or copy a
+source tree as a single content commit across the repository boundary. Those
+operations make the files look fresh while losing the reachable history that
+contributors, active PRs, and promotion audits need.
+
 Never force-push `main`. Release, signing, publish, secrets-heavy workflows,
 full-platform matrices, large model-cache workflows, GPU lanes, and public-fork
 self-hosted paths remain source-owned until a separate approved migration moves
 them.
+
+## Machine Clone Boundary
+
+Machine cutover uses side-by-side clones. Do not retarget an existing
+`EffortlessMetrics/BitNet-rs` clone by editing its `origin` remote to point at
+`EffortlessMetrics/bitnet-rs-swarm`.
+
+Before moving a machine to swarm work:
+
+1. inspect and checkpoint dirty work in the source clone;
+2. commit and push any intended source-repo branch;
+3. open or update the source PR if needed;
+4. clone `EffortlessMetrics/bitnet-rs-swarm` into a separate directory;
+5. start new active development from the swarm clone.
+
+Keep the source clone available for release, publish, signing, emergency
+hotfix, and explicit promotion work.
 
 ## Repo Source-Of-Truth Stack
 

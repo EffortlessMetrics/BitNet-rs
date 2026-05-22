@@ -24,6 +24,16 @@ Shared surfaces touched:
 Closeout required:
 ```
 
+Repository-boundary PRs must also declare:
+
+```text
+Promotion or sync packet path:
+Source impact:
+Release/publish/signing impact:
+Excluded work:
+Machine clone or cutover impact:
+```
+
 Example:
 
 ```text
@@ -161,6 +171,10 @@ policy/repo-boundary.toml
 Changes to those files should use `lane:repo-boundary` and must preserve the
 source/swarm split, the no-hard-reset/no-squash-import rule, and the
 release/publish/signing boundary.
+
+If the PR changes promotion, source-sync, machine cutover, or branch-protection
+interpretation, it must include a promotion or sync packet field even when the
+value is `n/a` for a swarm-only documentation update.
 
 `policy/repo-boundary.toml` is the machine-readable summary of those repository
 roles and history invariants. Keep prose docs and that ledger aligned when

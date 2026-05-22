@@ -44,8 +44,16 @@ otherwise.
 
 Public release and publish work is promoted to
 [`EffortlessMetrics/BitNet-rs`](https://github.com/EffortlessMetrics/BitNet-rs)
-through release-promotion PRs. Tags, crates.io publication, release notes, and
-stable release branches belong to `BitNet-rs`, not this swarm repository.
+through release-promotion PRs. Tags, crates.io publication, signing, release
+notes, and stable release branches belong to `BitNet-rs`, not this swarm
+repository.
+
+Agents and machines should use side-by-side clones for source and swarm work.
+Do not retarget an existing `BitNet-rs` clone to this repository. Start with
+[`AGENTS.md`](AGENTS.md),
+[`docs/development/SWARM_DEVELOPMENT_AUTHORITY.md`](docs/development/SWARM_DEVELOPMENT_AUTHORITY.md),
+and [`docs/release/PROMOTE_TO_BITNET_RS.md`](docs/release/PROMOTE_TO_BITNET_RS.md)
+before opening repo-boundary, promotion, or release-adjacent work.
 
 ## What This Repo Is For
 
