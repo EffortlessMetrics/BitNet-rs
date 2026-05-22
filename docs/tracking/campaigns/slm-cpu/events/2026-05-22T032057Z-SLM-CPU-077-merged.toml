@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T03:20:57Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-077"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 264
+branch = "codex/slm-cpu-077-post-bridge-counter-artifact"
+head_sha = "85dd24b86c0f573a12202a4011b002fe5acfd23f"
+merge_sha = "5dfdd69190930738f8edace5ef860bd2301cfefd"
+summary = "Merged PR #264 with the post-bridge packed Q8_0 sidecar counter artifact."
+notes = [
+  "The merged artifact records a real i5-8250U Qwen3 Q8_0 warm-session receipt after the SLM-CPU-076 sidecar instrumentation bridge.",
+  "The receipt serializes dense_q8_sidecar_instrumentation counters for selector dispatch, materialization, packed matvec compute, and output construction on the exact opt-in layers.0.attention.q_proj.weight path.",
+  "The companion classification preserves the no-speedup, no-default-enable, no-Q4/Q5, no-accelerator, no-Qwen3.5, no-server, and no-BitNet-QK256 claim boundary.",
+]

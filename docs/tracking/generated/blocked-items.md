@@ -485,7 +485,7 @@
 | intel-a770 | A770-016 | A770-015 | merged |
 | intel-a770 | A770-017 | A770-016 | merged |
 | intel-a770 | A770-018 | A770-017 | merged |
-| intel-a770 | A770-020 | A770-019 | pr_open |
+| intel-a770 | A770-020 | A770-019 | merged |
 | intel-a770 | A770-019 | A770-018 | merged |
 | intel-npu | NPU-003 | NPU-002 | merged |
 | intel-npu | NPU-004 | NPU-003 | merged |
@@ -701,7 +701,7 @@
 | slm-cpu | SLM-CPU-074 | SLM-CPU-073 | merged |
 | slm-cpu | SLM-CPU-075 | SLM-CPU-074 | merged |
 | slm-cpu | SLM-CPU-076 | SLM-CPU-075 | merged |
-| slm-cpu | SLM-CPU-077 | SLM-CPU-076 | pr_open |
+| slm-cpu | SLM-CPU-077 | SLM-CPU-076 | merged |
 | slm-cpu | SLM-CPU-033 | SLM-CPU-032 | merged |
 | slm-cpu | SLM-CPU-034 | SLM-CPU-033 | merged |
 | slm-cpu | SLM-CPU-035 | SLM-CPU-034 | merged |

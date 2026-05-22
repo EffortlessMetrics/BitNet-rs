@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T03:08:33Z"
+campaign = "intel-a770"
+item = "A770-020"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex-a770"
+pr = 265
+branch = "codex/intel-a770/A770-020-cpu-a770-answer-parity"
+head_sha = "a0b0de7a2d0fc941dcce2119f7572574373888bd"
+merge_sha = "54d93900c47ef920507f035be737eb4829a4d8f2"
+summary = "Merged PR #265 for same-box CPU AVX2 versus A770 OpenCL answer-parity diagnostics."
+notes = [
+  "The merged artifacts record CPU AVX2 and A770 OpenCL answer-corpus receipts with one-step top-k logits for the official BitNet 2B I2_S model.",
+  "The answer-parity receipt records the first CPU/A770 divergence without promoting CPU/A770 exact parity.",
+  "No reference parity, A770 answer quality, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

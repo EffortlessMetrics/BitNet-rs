@@ -2998,9 +2998,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-077"
-status = "pr_open"
+status = "merged"
 pr = 264
-head_sha = "8434bfa93144e3118e1ce806aafb72ae0834686e"
+head_sha = "85dd24b86c0f573a12202a4011b002fe5acfd23f"
+merge_sha = "5dfdd69190930738f8edace5ef860bd2301cfefd"
 branch = "codex/slm-cpu-077-post-bridge-counter-artifact"
 stackable = false
 review_mode = "codex_premerge"
