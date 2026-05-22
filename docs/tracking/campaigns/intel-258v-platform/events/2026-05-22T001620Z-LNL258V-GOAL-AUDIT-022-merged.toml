@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-22T00:16:20Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-022"
+previous_status = "in_progress"
+new_status = "merged"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-022-post-power012"
+pr = 246
+head_sha = "4679667f655ba85990e8617f3b6a29a15e8c1fc0"
+merge_sha = "73afe55e99b73bca6859b66c85b8c6b8e5275767"
+actor = "codex"
+summary = "Merged the no-inference Lunar Lake goal audit refresh after POWER-012/#232 and closeout #244."
+
+notes = [
+  "The audit/checklist record POWER-012 as explicit low_power sample-guard plumbing only.",
+  "The PR did not add battery-mode evidence, route promotion, speedup, power advantage, fallback behavior change, native accelerator proof, broad quality, model binaries, or BitNet QK256/I2_S behavior changes.",
+  "The Intel 258V lane returns to LNL258V-POWER-006 blocked until real battery-mode low_power telemetry, energy proxy, measured thermal context, and benchmark-qualified power advantage exist.",
+]
