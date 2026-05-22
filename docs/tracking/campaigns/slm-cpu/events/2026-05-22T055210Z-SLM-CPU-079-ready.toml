@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T05:52:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-079"
+event = "in_progress"
+previous_status = "proposed"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-079-post-aligned-matvec-artifact"
+summary = "Queued the real post-SLM-CPU-078 i5-8250U artifact gate for the aligned packed Q8_0 exact-tensor sidecar path."
+notes = [
+  "The artifact must preserve generated IDs, decoded text, strict tokenizer provenance, selected CPU backend/kernel identity, dense hook identity, and fallback_used=false.",
+  "The artifact may classify aligned packed matvec behavior but must not claim speedup without real before/after evidence.",
+  "Runtime code changes, Q4/Q5, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, and BitNet QK256 paths are out of scope.",
+]
