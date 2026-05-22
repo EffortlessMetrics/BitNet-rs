@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T04:05:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EVIDENCE-REPLAY-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
+pr = 6182
+head_sha = "96a0125c5bcccf2f9852a01fcf3aa8f8601924ed"
+
+notes = [
+  "Opened source PR #6182 for the M4-EVIDENCE-REPLAY-001 committed evidence replay bundle workflow.",
+  "The PR adds `bitnet mac evidence replay --bundle ... --dry-run`, an `apple_m4_evidence_replay_dry_run` receipt contract, validation, CLI coverage, docs, and a dense SLM q8 eval-v2 replay manifest with SHA256-pinned committed inputs.",
+  "The PR does not run live generation, fetch models, execute regression commands during replay, validate uncommitted local artifacts, enable BitNet chat or serve, or make broad quality, performance, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claims.",
+]
