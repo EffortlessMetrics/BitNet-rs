@@ -124,6 +124,21 @@ live under `target/promotion/` for a dry run, or under a committed
 `docs/release/promotion-packets/` path when the promotion itself needs a durable
 review artifact.
 
+Generate the first draft from the swarm checkout with:
+
+```bash
+cargo run --locked -p xtask --no-default-features -- promote-to-source \
+  --from <last-source-sync-or-promotion-sha> \
+  --to HEAD \
+  --out target/promotion/packet.md
+```
+
+The generator is a conservative local classifier. It records the range,
+changed files, touched crates, campaign and policy surfaces, generated dashboard
+touches, release-sensitive workflow touches, and placeholder proof/receipt
+sections. The generated packet is not release approval; fill in proof commands,
+receipts, excluded work, and claim boundaries before opening a source PR.
+
 Use this shape:
 
 ```text
