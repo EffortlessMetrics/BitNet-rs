@@ -2900,7 +2900,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-EVIDENCE-REPLAY-001"
-status = "in_progress"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
 stackable = false
 review_mode = "codex_premerge"
