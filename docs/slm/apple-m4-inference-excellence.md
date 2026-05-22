@@ -1588,3 +1588,9 @@ explicit CPU/NEON remainder
 No full `apple-m4-metal`, QK256, Neural Engine, MPSGraph, MacBook, broad Apple
 Silicon, broad quality, or speedup claim is allowed until a separate full-route
 receipt proves it.
+
+`M4-METAL-EX-001` selects the next future dense SLM phase target after the
+completed Q/K/V projection work: prefill attention-score logits with CPU
+reference parity, fallback-free phase receipts, phase-local timing, and
+CPU/NEON retained for the rest of the answer path. See
+`docs/slm/apple-m4-metal-ex-phase-choice.md`.
