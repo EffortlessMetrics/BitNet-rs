@@ -2857,13 +2857,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-WORKLOAD-001"
-status = "proposed"
-branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-operator-suite"
+status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-source-promotion"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-DENSE-CHAT-001", "M4-BITNET-EX-006", "M4-SERVE-EX-002", "M4-ROUTE-MATRIX-001", "M4-REPRO-003"]
+pr = 6180
+head_sha = "8ab28785b39cf92263f03e1d3bbd792842c8986d"
 acceptance = "Add an end-to-end M4 operator workload suite across ask, chat, warm-session, and serve routes for supported dense SLMs and enabled BitNet routes, covering summarize, extract, classify, JSON, rewrite, and table-QA workflows with receipts, mechanical checks where possible, route-state boundaries, and no broad quality claim."
 commands = [
   "target/release/bitnet mac workload --suite m4-operator --json-out ci/hardware/apple-m4-mac-mini/<date>/workload/summary.json",
