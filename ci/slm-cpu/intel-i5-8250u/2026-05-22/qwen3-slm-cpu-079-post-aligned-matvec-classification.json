@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "artifact_kind": "slm_cpu_dense_q8_aligned_matvec_classification",
+  "work_item": "SLM-CPU-079",
+  "claim": "bounded_exact_tensor_post_aligned_matvec_artifact",
+  "speedup_claim": false,
+  "sustained_throughput_claim": false,
+  "broad_answer_quality_claim": false,
+  "default_runtime_changed": false,
+  "runtime_promotion_recommended": false,
+  "model": {
+    "family": "qwen",
+    "file": "Qwen3-0.6B-Q8_0.gguf",
+    "sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+    "architecture": "qwen3",
+    "quant_format": "Q8_0"
+  },
+  "receipt": {
+    "post_aligned_sidecar": "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-079-post-aligned-matvec-artifact.json",
+    "post_bridge_sidecar_oracle": "ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-077-post-bridge-packed-q8-sidecar-warm-session.json"
+  },
+  "host": {
+    "model": "Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz",
+    "cores": 4,
+    "threads": 8,
+    "receipt_threads": 4,
+    "role": "strict CPU SLM proof appliance"
+  },
+  "sidecar": {
+    "scope": "opt_in_exact_tensor_only",
+    "tensor": "layers.0.attention.q_proj.weight",
+    "source_tensor": "blk.0.attn_q.weight",
+    "selected_path": "packed_q8_sidecar",
+    "selected_kernel": "dense-q8-sidecar-linear",
+    "payload_sha256": "a8e16a232ea8c19a5c5d2eb5f21bfdf5c297eba0ac90e74b0afc052577179c24",
+    "default_enabled": false
+  },
+  "behavior_oracle": {
+    "prompt_count": 6,
+    "prompt_ids_match": true,
+    "generated_ids_match": true,
+    "decoded_text_match": true,
+    "model_sha_match": true,
+    "tokenizer_source_match": true,
+    "tokenizer_strict_match": true,
+    "selected_backend_match": true,
+    "fallback_false_before_after": true,
+    "passed": true
+  },
+  "instrumentation": {
+    "classification": "selected_counter_pack",
+    "bias_materialization_calls": 216,
+    "bias_materialization_ns": 37800,
+    "bias_values_materialized": 0,
+    "input_materialization_calls": 216,
+    "input_materialization_ns": 998100,
+    "input_values_materialized": 221184,
+    "output_tensor_construction_calls": 216,
+    "output_tensor_construction_ns": 1431200,
+    "packed_matvec_calls": 216,
+    "packed_matvec_input_rows": 216,
+    "packed_matvec_ns": 16289575900,
+    "packed_matvec_output_values": 442368,
+    "selector_declined_calls": 42120,
+    "selector_dispatch_calls": 42336,
+    "selector_dispatch_ns": 133771200,
+    "selector_error_calls": 0,
+    "selector_selected_calls": 216
+  },
+  "counter_comparison": {
+    "baseline_work_item": "SLM-CPU-077",
+    "candidate_work_item": "SLM-CPU-079",
+    "baseline_packed_matvec_ns": 19093586100,
+    "candidate_packed_matvec_ns": 16289575900,
+    "delta_packed_matvec_ns": -2804010200,
+    "candidate_to_baseline_ratio": 0.8531438680343029,
+    "packed_matvec_reduction_percent": 14.68561319656971,
+    "baseline_packed_matvec_calls": 216,
+    "candidate_packed_matvec_calls": 216
+  },
+  "classification": {
+    "result": "improved_bounded_packed_matvec_counter",
+    "reason": "The real post-aligned SLM-CPU-079 artifact preserves prompt IDs, generated IDs, decoded text, strict tokenizer/source, selected CPU backend, and fallback=false against the SLM-CPU-077 sidecar oracle while reducing the bounded packed_matvec_ns counter for the exact tensor. This is a counter-level classification only, not an end-to-end throughput or sustained-performance claim.",
+    "next_target": "end_to_end_warm_session_timing_only_after_repeated_before_after_receipts",
+    "runtime_promotion_blocker": "single bounded counter artifact is not a default-runtime promotion gate"
+  },
+  "claim_boundary": {
+    "no_default_enable": true,
+    "no_broaden_beyond_exact_tensor": true,
+    "no_sustained_throughput_claim": true,
+    "no_broad_answer_quality_claim": true,
+    "no_q4_q5_runtime_support": true,
+    "no_server_or_accelerator_claim": true,
+    "no_qwen35_claim": true,
+    "no_bitnet_qk256_claim": true
+  }
+}

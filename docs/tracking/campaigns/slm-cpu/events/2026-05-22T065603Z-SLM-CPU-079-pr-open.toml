@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T06:56:03Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-079"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+actor = "codex"
+pr = 291
+branch = "codex/slm-cpu-079-post-aligned-matvec-artifact"
+head_sha = "a62e2d12b3c447189006e8e6ff8c3dfe56095220"
+summary = "Opened the post-aligned packed Q8_0 exact-tensor warm-session artifact slice."
+notes = [
+  "Captured a real i5-8250U Qwen3 Q8_0 warm-session artifact after the SLM-CPU-078 aligned packed matvec implementation.",
+  "The artifact preserves prompt IDs, generated IDs, decoded text, model SHA, tokenizer source/strictness, selected CPU backend identity, dense hook identity, and fallback_used=false against the SLM-CPU-077 sidecar oracle.",
+  "The companion classification records a bounded packed_matvec_ns counter reduction only and does not claim end-to-end speedup, sustained throughput, broad answer quality, Q4/Q5 support, server or accelerator execution, Qwen3.5 support, or BitNet QK256 changes.",
+]

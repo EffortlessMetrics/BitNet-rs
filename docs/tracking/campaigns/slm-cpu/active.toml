@@ -3110,7 +3110,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-079"
-status = "ready"
+status = "pr_open"
+pr = 291
 branch = "codex/slm-cpu-079-post-aligned-matvec-artifact"
 stackable = false
 review_mode = "codex_premerge"

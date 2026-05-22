@@ -1206,3 +1206,64 @@ enable packed Q8_0 by default, broaden packed sidecar execution to all dense
 tensors, claim sustained 8250U throughput, claim broad answer quality, start
 Q4/Q5 runtime support, or touch server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5,
 or BitNet QK256 paths.
+
+## SLM-CPU-079 Post-Aligned Matvec Artifact
+
+SLM-CPU-079 captures the first real i5-8250U Qwen3 Q8_0 warm-session artifact
+after the SLM-CPU-078 aligned packed Q8_0 exact-tensor matvec implementation.
+The committed artifact pack is:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-079-post-aligned-matvec-artifact.json
+ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-079-post-aligned-matvec-classification.json
+```
+
+The run keeps the packed sidecar path opt-in and exact-tensor scoped to
+`layers.0.attention.q_proj.weight` / `blk.0.attn_q.weight`. It records
+`selected_path = packed_q8_sidecar`, `selected_kernel =
+dense-q8-sidecar-linear`, strict GGUF tokenizer authority, `selected_backend =
+cpu-rust`, and `fallback_used = false`.
+
+The behavior oracle passes against the SLM-CPU-077 post-bridge sidecar oracle:
+
+```text
+prompt_ids_match = true
+generated_ids_match = true
+decoded_text_match = true
+model_sha_match = true
+tokenizer_source_match = true
+tokenizer_strict_match = true
+selected_backend_match = true
+fallback_false_before_after = true
+```
+
+The post-aligned counter pack records:
+
+```text
+selector_dispatch_calls = 42336
+selector_selected_calls = 216
+selector_declined_calls = 42120
+selector_error_calls = 0
+input_materialization_calls = 216
+bias_materialization_calls = 216
+packed_matvec_calls = 216
+output_tensor_construction_calls = 216
+packed_matvec_ns = 16289575900
+```
+
+Compared with the SLM-CPU-077 post-bridge counter pack
+(`packed_matvec_ns = 19093586100`), the classification is:
+
+```text
+result = improved_bounded_packed_matvec_counter
+delta_packed_matvec_ns = -2804010200
+packed_matvec_reduction_percent = 14.68561319656971
+runtime_promotion_recommended = false
+default_runtime_changed = false
+speedup_claim = false
+```
+
+This is a bounded counter-level classification only. SLM-CPU-079 does not
+claim end-to-end speedup, sustained 8250U throughput, broad answer quality,
+Q4/Q5 runtime support, server execution, accelerator execution, Qwen3.5
+support, or BitNet QK256 changes.
