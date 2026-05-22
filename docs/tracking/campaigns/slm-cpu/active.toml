@@ -2152,9 +2152,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-082"
-status = "pr_open"
-pr = 361
-head_sha = "f2d672744dd2b68ad5d28ee90f848ab9fda650f5"
+status = "ready"
 branch = "codex/slm-cpu-082-repeated-packed-q8-receipts"
 stackable = false
 review_mode = "codex_premerge"

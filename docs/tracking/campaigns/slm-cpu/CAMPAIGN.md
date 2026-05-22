@@ -126,7 +126,7 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-079 | merged | #291 captured the post-aligned packed-matvec artifact and classified the bounded packed-matvec counter improvement without claiming end-to-end speedup. |
 | SLM-CPU-080 | merged | #332 refreshed the Kaby Lake Qwen3 Q8_0 performance dashboard and kept the current operator default evidence-scoped to 4 threads. |
 | SLM-CPU-081 | merged | #349 defined the repeated packed-Q8 timing gate and recorded that one baseline and one candidate receipt are not enough for an end-to-end speedup claim. |
-| SLM-CPU-082 | pr_open | #361 queues at least three baseline and three candidate i5-8250U Qwen3 Q8_0 warm-session receipts for the exact-tensor packed_q8_sidecar path, preserving generated IDs and strict provenance before classifying timing as improved, regressed, inconclusive, or not_claimed. |
+| SLM-CPU-082 | ready | #361 queued the repeated packed-Q8 warm-session receipt capture item after SLM-CPU-081; the required repeated receipts remain to be captured or ingested before this item can close. |
 
 ## Review Policy
 

@@ -45,7 +45,7 @@
 | official-bitnet-2b | OFFICIAL-2B-000 | TBD | ready | OFFICIAL-2B-001 | Do not commit model binaries. |
 | qwen36 | QWEN36-DOCS-000 | #5892 | merged | none | Qwen3.6 registration is not native BitNet-rs inference support. |
 | server-real-inference | SERVER-005 | #4490 | merged | none | Do not reintroduce simulated inference. |
-| slm-cpu | SLM-CPU-082 | #361 | pr_open | none | Do not edit BitNet QK256/I2_S kernels. |
+| slm-cpu | SLM-CPU-082 | #361 | ready | none | Do not edit BitNet QK256/I2_S kernels. |
 | tl1 | TL1-PLAN-000 | TBD | ready | none | TL1 registration is not native BitNet-rs inference support. |
 | tl2 | TL2-DOCS-000 | TBD | ready | none | TL2 registration is not native BitNet-rs inference support. |
 | tracker-infra | TRACKER-003 | #3724 | merged | none | Do not touch runtime code, kernels, or dependencies for tracker infrastructure. |
