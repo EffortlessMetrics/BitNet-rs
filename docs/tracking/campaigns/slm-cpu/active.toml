@@ -2096,9 +2096,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-081"
-status = "pr_open"
+status = "merged"
 pr = 349
-head_sha = "1c23649b9c6b62fe440ce4dcf88563fdbb25ca5a"
+head_sha = "2b996d200112070d9c98d77057759810f4723fc3"
+merge_sha = "149247d66b04b8297f32d8b7d4096b401bd9f73c"
 branch = "codex/slm-cpu-081-repeated-packed-q8-timing"
 stackable = false
 review_mode = "codex_premerge"
