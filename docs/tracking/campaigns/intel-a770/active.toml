@@ -1202,7 +1202,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-026"
-status = "pr_open"
+status = "merged"
 pr = 336
 branch = "codex/intel-a770/A770-026-answer-readiness-failure-frontier"
 stackable = false
