@@ -3143,7 +3143,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-EX-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-METAL-EX-001-phase-choice"
 stackable = false
 review_mode = "codex_premerge"
@@ -3151,7 +3151,8 @@ merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-EXCELLENCE-004"]
 pr = 6194
-head_sha = "21644664b2ee0b72557915f85ad1cf8366f7e70c"
+head_sha = "39975086cfc704f4f4a37862d133dfaef06bc27d"
+merge_sha = "ac04c4841df1d19d2dd76d79ba3e25e9e149d486"
 acceptance = "Choose one named future Apple M4 Metal phase from existing proof boundaries, document CPU reference parity requirements, fallback=false receipt fields, phase-local timing, and explicit CPU/NEON remainder before any code route changes."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
