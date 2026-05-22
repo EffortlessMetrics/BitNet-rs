@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-21T19:35:00Z",
+  "created_utc": "2026-05-21T23:56:08Z",
   "machine_id": "intel-258v",
-  "source_revision": "2f34c1947b033b7950d9a0b2d71f61a379bd31ec",
+  "source_revision": "bc2d3629dc6afe4c9de0de9d98ca3f26020e9493",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
@@ -88,6 +88,22 @@
         "POWER-007 adds the no-evidence operator runbook for the physical battery-mode low_power run.",
         "POWER-008 links that runbook from the Intel 258V validation profile and campaign overview.",
         "Runbook discoverability is operational guidance only; it is not battery-mode telemetry, route/profile evidence, or a power-advantage claim."
+      ]
+    },
+    {
+      "id": "low_power_explicit_sample_guard",
+      "status": "covered_no_evidence_claim",
+      "evidence": [
+        "docs/hardware/intel-258v-low-power-battery-runbook.md",
+        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T204359Z-LNL258V-POWER-012-in-progress.toml",
+        "docs/tracking/campaigns/intel-258v-platform/events/2026-05-21T232410Z-LNL258V-POWER-012-merged.toml",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/232",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/244"
+      ],
+      "notes": [
+        "POWER-012 lets explicit low_power CPU/GPU/NPU battery-run sample asks pass route-profile guard for evidence collection while preserving candidate blockers in receipts.",
+        "--device auto remains blocked for low_power until a route is promoted for that profile.",
+        "This is sample-collection plumbing only; it is not battery-mode telemetry, route promotion, speedup, power advantage, new inference, or a BitNet behavior claim."
       ]
     },
     {
@@ -462,7 +478,9 @@
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/215",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/207",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/223",
-        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/224"
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/224",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/232",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/244"
       ],
       "notes": [
         "The platform is well instrumented and profile-aware, but not yet excellent across all requested profiles.",
@@ -483,7 +501,8 @@
         "A770 tracker closeout #214 is recorded only as adjacent non-Lunar-Lake tracker state; it does not change Lunar Lake semantic-intake freshness, route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
         "M4 tracker closeout #215 is recorded only as adjacent non-Lunar-Lake tracker state; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
         "Runner rollout plan #207 is recorded only as adjacent control-plane documentation; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
-        "POWER-011/#223 plus closeout #224 make the low_power battery sample commands explicit, but final boring support remains not complete until POWER-006 has real battery-mode telemetry and benchmark-qualified power advantage."
+        "POWER-011/#223 plus closeout #224 make the low_power battery sample commands explicit, but final boring support remains not complete until POWER-006 has real battery-mode telemetry and benchmark-qualified power advantage.",
+        "POWER-012/#232 plus closeout #244 make explicit low_power CPU/GPU/NPU sample asks pass route-profile guard for evidence collection while keeping candidate blockers in receipts and auto low_power blocked; this does not add battery-mode evidence, route promotion, speedup, power advantage, fallback behavior change, native accelerator proof, or BitNet QK256/I2_S behavior change."
       ]
     }
   ],

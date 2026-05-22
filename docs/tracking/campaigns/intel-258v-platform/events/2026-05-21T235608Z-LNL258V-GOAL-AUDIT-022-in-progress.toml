@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T23:56:08Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-022"
+previous_status = "ready"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-022-post-power012"
+actor = "codex"
+summary = "Refresh the no-inference Lunar Lake excellence audit and goal checklist after POWER-012/#232 and closeout #244."
+
+notes = [
+  "Record the explicit low_power sample guard as evidence-collection plumbing only.",
+  "Keep LNL258V-POWER-006 blocked until real battery-mode low_power telemetry, energy proxy, measured thermal context, and benchmark-qualified power advantage exist.",
+  "Preserve no inference, model load, route promotion, speedup, power advantage, battery-mode evidence, native accelerator, acceleration, broad quality, model binary, or BitNet QK256/I2_S behavior-change claim.",
+]
