@@ -35,7 +35,7 @@ const DENSE_PREFILL_ATTENTION_SCORES_ARTIFACT_PATH_ENV: &str =
 const ATTENTION_SCORE_TOLERANCE: f32 = 1e-5;
 
 #[test]
-fn dense_prefill_attention_scores_fixture_matches_cpu_reference() {
+fn dense_prefill_attention_scores_fixture_matches_cpu_reference() -> Result<(), Box<dyn Error>> {
     let fixture = dense_metal_prefill_attention_scores_fixture();
     let expected = dense_prefill_attention_scores_expected(
         &fixture.q,
@@ -67,12 +67,13 @@ fn dense_prefill_attention_scores_fixture_matches_cpu_reference() {
     assert!((fixture.scale - 0.125).abs() <= f32::EPSILON);
     assert!(fixture.expected_scores.iter().any(|value| *value != 0.0));
 
-    compare_tiny_add_outputs(&fixture.expected_scores, &expected, 0.0)
-        .expect("deterministic CPU attention-score reference must match the fixture");
+    compare_tiny_add_outputs(&fixture.expected_scores, &expected, 0.0)?;
+    Ok(())
 }
 
 #[test]
-fn dense_prefill_attention_scores_receipt_records_phase_scope_and_claim_boundary() {
+fn dense_prefill_attention_scores_receipt_records_phase_scope_and_claim_boundary()
+-> Result<(), Box<dyn Error>> {
     let fixture = dense_metal_prefill_attention_scores_fixture();
     let zero = SmokeComparison { max_abs_error: 0.0, mean_abs_error: 0.0 };
     let receipt = DenseMetalPrefillAttentionScoresReceipt::passed(
@@ -125,9 +126,8 @@ fn dense_prefill_attention_scores_receipt_records_phase_scope_and_claim_boundary
         receipt.artifact_path.clone(),
         Some(receipt.kernel_id),
         receipt.result,
-    )
-    .expect("valid Apple backend receipt");
-    extend_dense_prefill_attention_scores_metrics(&mut receipt_json, &receipt, &fixture);
+    )?;
+    extend_dense_prefill_attention_scores_metrics(&mut receipt_json, &receipt, &fixture)?;
 
     assert_eq!(
         receipt_json["metal_phase"]["execution_phase"],
@@ -141,6 +141,7 @@ fn dense_prefill_attention_scores_receipt_records_phase_scope_and_claim_boundary
     assert_eq!(receipt_json["claim_boundary"]["metal_phase_only"], true);
     assert_eq!(receipt_json["claim_boundary"]["full_metal_inference"], false);
     assert_eq!(receipt_json["claim_boundary"]["bitnet_inference"], false);
+    Ok(())
 }
 
 #[test]
@@ -210,7 +211,7 @@ fn dense_prefill_attention_scores_match_cpu_reference_when_enabled() -> Result<(
         Some(receipt.kernel_id),
         receipt.result,
     )?;
-    extend_dense_prefill_attention_scores_metrics(&mut receipt_json, &receipt, &fixture);
+    extend_dense_prefill_attention_scores_metrics(&mut receipt_json, &receipt, &fixture)?;
 
     if let Ok(path) = std::env::var(DENSE_PREFILL_ATTENTION_SCORES_RECEIPT_ENV) {
         let output_path = receipt_output_path(&path);
@@ -260,8 +261,10 @@ fn extend_dense_prefill_attention_scores_metrics(
     receipt_json: &mut serde_json::Value,
     receipt: &DenseMetalPrefillAttentionScoresReceipt,
     fixture: &DenseMetalPrefillAttentionScoresFixture,
-) {
-    let object = receipt_json.as_object_mut().expect("Apple receipt JSON is an object");
+) -> Result<(), Box<dyn Error>> {
+    let Some(object) = receipt_json.as_object_mut() else {
+        return Err(io_error("Apple receipt JSON is not an object"));
+    };
     object.insert(
         "model".to_string(),
         json!({
@@ -383,6 +386,7 @@ fn extend_dense_prefill_attention_scores_metrics(
             "speedup_claim": false
         }),
     );
+    Ok(())
 }
 
 fn receipt_output_path(path: &str) -> std::path::PathBuf {

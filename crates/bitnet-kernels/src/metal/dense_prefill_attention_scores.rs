@@ -207,7 +207,7 @@ pub async fn run_dense_prefill_attention_scores(
     let slice = staging_buffer.slice(..);
     let (tx, rx) = std::sync::mpsc::channel();
     slice.map_async(wgpu::MapMode::Read, move |result| {
-        tx.send(result).unwrap();
+        let _ = tx.send(result);
     });
     device.poll(wgpu::Maintain::Wait);
     rx.recv()
@@ -319,16 +319,17 @@ mod tests {
     }
 
     #[test]
-    fn output_validation_preserves_attention_scores() {
+    fn output_validation_preserves_attention_scores()
+    -> Result<(), DensePrefillAttentionScoresMetalError> {
         let fixture = dense_metal_prefill_attention_scores_fixture();
         let output = validate_attention_scores_output(
             &fixture,
             "test-adapter".to_string(),
             fixture.expected_scores.clone(),
-        )
-        .expect("valid attention-score output");
+        )?;
 
         assert_eq!(output.adapter_name, "test-adapter");
         assert_eq!(output.scores, fixture.expected_scores);
+        Ok(())
     }
 }
