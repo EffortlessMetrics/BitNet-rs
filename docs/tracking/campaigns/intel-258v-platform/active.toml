@@ -11495,6 +11495,74 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-GOAL-AUDIT-027"
+status = "pr_open"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-027-current-main"
+pr = 316
+head_sha = "4338130a98d2939fac14cc4be229e9c4b4337798"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-026"]
+acceptance = "Refresh the no-inference Lunar Lake excellence audit and goal artifact checklist to current swarm main after adjacent SLM-CPU-080 Kaby dashboard #308, LNL258V-GOAL-AUDIT-026/#309 plus closeout #315, M4-COMPAT-001 source sync #311, CUDA-MODEL-017G/#313, and A770-024/#314, so source_revision points at ab0469e55bd4626cf1e12f0ff5717dce81e18c34 and the audit/checklist record those changes as adjacent SLM CPU dashboard, Lunar Lake audit/tracker state, source-sync M4 compatibility state, adjacent CUDA/Qwen3 diagnostic state, or adjacent A770 answer-readiness state only. Preserve LNL258V-POWER-006 as the active blocker and preserve no inference, model load, fallback behavior change, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator, acceleration, dense-SLM-as-BitNet-proof, broad quality, model-binary, semantic-intake stale claim, runtime/sidecar behavior claim, or BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | Select-String 'ab0469e55bd4626cf1e12f0ff5717dce81e18c34' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | Select-String 'SLM-CPU-080/#308' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | Select-String 'LNL258V-GOAL-AUDIT-026/#309' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | Select-String 'M4-COMPAT-001 source sync #311' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | Select-String 'closeout #315' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | Select-String 'CUDA-MODEL-017G/#313' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | Select-String 'A770-024/#314' | Out-Null\"",
+  "target/debug/bitnet.exe lunar-lake validate --artifact-root ci/hardware/intel-258v/2026-05-08 --json-out target/tmp/lunar-lake-validate-current-audit-027.json --created-utc 2026-05-22T11:19:21Z --strict",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --json-out target/tmp/lunar-lake-regress-current-audit-027.json --created-utc 2026-05-22T11:19:21Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --regression-bundle target/tmp/lunar-lake-regress-current-audit-027.json --json-out target/tmp/lunar-lake-compare-current-audit-027.json --created-utc 2026-05-22T11:19:21Z --strict",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+]
+may_claim = [
+  "The no-inference Lunar Lake audit/checklist now records current swarm main through ab0469e55bd4626cf1e12f0ff5717dce81e18c34.",
+  "PR #308 is recorded as adjacent SLM-CPU-080 Kaby performance dashboard state, not Lunar Lake route evidence.",
+  "PR #309 and closeout #315 are recorded as Lunar Lake audit/tracker state only.",
+  "PR #311 is recorded as M4-COMPAT-001 source sync state, not Lunar Lake route evidence.",
+  "PR #313 is recorded as adjacent CUDA-MODEL-017G Qwen3 prefill-frontier diagnostic state, not Lunar Lake route evidence.",
+  "PR #314 is recorded as adjacent A770-024 seeded answer-readiness contract state, not Lunar Lake route evidence.",
+  "Excellent support remains not complete while LNL258V-POWER-006 lacks real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any model was loaded by this PR.",
+  "Any fallback behavior changed.",
+  "Any route is promoted or demoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Battery-mode low_power evidence is now available.",
+  "Measured temperature readings are now available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Runtime or sidecar behavior changed for Lunar Lake.",
+  "Model binaries are committed or required by this PR.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-006"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
