@@ -867,6 +867,10 @@ pub struct DenseGgufQwenOneTokenStrictCudaCommand {
     /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
     #[arg(long, value_name = "PATH")]
     pub json_out: Option<PathBuf>,
+
+    /// Optional diagnostic JSONL phase trace path for stalled capture attempts.
+    #[arg(long, value_name = "PATH")]
+    pub phase_trace_jsonl: Option<PathBuf>,
 }
 
 impl DenseGgufQwenOneTokenStrictCudaCommand {
@@ -874,9 +878,33 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         if self.top_k == 0 {
             bail!("dense Qwen one-token strict CUDA proof requires --top-k > 0");
         }
+        let phase_trace = DenseQwenPhaseTrace::new(
+            self.phase_trace_jsonl.as_deref(),
+            "dense-gguf-qwen-one-token-strict-cuda",
+        );
+        phase_trace.reset()?;
+        phase_trace.emit(
+            "command",
+            "start",
+            json!({
+                "model": self.model.display().to_string(),
+                "device_index": self.device_index,
+                "top_k": self.top_k,
+                "json_out": self.json_out.as_ref().map(|path| path.display().to_string()),
+            }),
+        )?;
 
+        phase_trace.emit("model_map", "start", json!({}))?;
         let data = map_model(&self.model)?;
         let model_sha256 = sha256_bytes(&data);
+        phase_trace.emit(
+            "model_map",
+            "finish",
+            json!({
+                "model_bytes": data.len() as u64,
+                "model_sha256": model_sha256,
+            }),
+        )?;
         let proof_model = dense_qwen_proof_model_for_sha256(&model_sha256).ok_or_else(|| {
             anyhow!(
                 "dense Qwen one-token strict CUDA proof is scoped to verified Qwen2.5 0.5B Q8_0 or Qwen3 0.6B Q8_0 artifacts; got sha256={model_sha256}"
@@ -892,10 +920,19 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             );
         }
 
+        phase_trace.emit("gguf_inspection", "start", json!({ "model_id": proof_model.id }))?;
         let reader = GgufReader::new(&data).with_context(|| {
             format!("failed to parse dense GGUF model {}", self.model.display())
         })?;
         let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+        phase_trace.emit(
+            "gguf_inspection",
+            "finish",
+            json!({
+                "model_family": inspection.model_family,
+                "architecture": inspection.architecture,
+            }),
+        )?;
         if inspection.model_family != "qwen" || inspection.architecture != proof_model.architecture
         {
             bail!(
@@ -907,6 +944,7 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             );
         }
 
+        phase_trace.emit("cuda_probe", "start", json!({ "device_index": self.device_index }))?;
         let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
         if !probe.available {
             bail!("CUDA-DENSE-044 requires CUDA probe success: {:?}", probe.failure_reason);
@@ -915,12 +953,22 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         if !is_rtx5070ti_device_name(device_name) {
             bail!("CUDA-DENSE-044 requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'");
         }
+        phase_trace.emit(
+            "cuda_probe",
+            "finish",
+            json!({
+                "selected_device_name": device_name,
+                "runtime_api": "cuda",
+                "fallback_used": false,
+            }),
+        )?;
 
         let _strict_mode = ScopedEnvVar::set("BITNET_STRICT_MODE", "1");
         let _deterministic = ScopedEnvVar::set("BITNET_DETERMINISTIC", "1");
         let _seed = ScopedEnvVar::set("BITNET_SEED", "42");
         let _strict_cuda_backend = ScopedEnvVar::remove("BITNET_STRICT_CUDA_BACKEND");
 
+        phase_trace.emit("prerequisites", "start", json!({ "model_id": proof_model.id }))?;
         let receipt_defaults = dense_qwen_receipts_for_proof_model(proof_model);
         let all_layer_plan = dense_qwen_model_default_receipt_path(
             &self.all_layer_plan,
@@ -949,7 +997,18 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             &sampling_policy,
             proof_model,
         )?;
+        phase_trace.emit(
+            "prerequisites",
+            "finish",
+            json!({
+                "all_layer_plan": all_layer_plan.display().to_string(),
+                "model_boundary_fixtures": model_boundary_fixtures.display().to_string(),
+                "kv_cache_policy": kv_cache_policy.display().to_string(),
+                "sampling_policy": sampling_policy.display().to_string(),
+            }),
+        )?;
 
+        phase_trace.emit("tokenizer", "start", json!({}))?;
         let tokenizer_resolution = bitnet_tokenizers::auto::resolve_tokenizer(
             &self.model,
             None,
@@ -968,6 +1027,15 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         }
         let prompt_token_ids_sha256 = sha256_u32(&prompt_token_ids);
         let rendered_prompt_sha256 = sha256_bytes(rendered_prompt.as_bytes());
+        phase_trace.emit(
+            "tokenizer",
+            "finish",
+            json!({
+                "prompt_token_count": prompt_token_ids.len() as u64,
+                "prompt_token_ids_sha256": prompt_token_ids_sha256,
+                "rendered_prompt_sha256": rendered_prompt_sha256,
+            }),
+        )?;
 
         let cpu = run_qwen_one_token_once(
             &self.model,
@@ -975,6 +1043,8 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             &prompt_token_ids,
             self.top_k,
             false,
+            &phase_trace,
+            "cpu_reference",
         )
         .with_context(|| "failed CPU reference one-token run")?;
         let cuda = run_qwen_one_token_once(
@@ -983,6 +1053,8 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             &prompt_token_ids,
             self.top_k,
             true,
+            &phase_trace,
+            "cuda_target",
         )
         .with_context(|| "failed CUDA target one-token run")?;
 
@@ -1017,6 +1089,7 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             .map(|path| path.display().to_string())
             .unwrap_or_else(|| "stdout".to_string());
         let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        phase_trace.emit("receipt", "start", json!({ "artifact_path": artifact_path }))?;
         let receipt = dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
             &inspection,
             &prerequisites,
@@ -1035,6 +1108,7 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             &decoded_token_text,
         )?;
         validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(&receipt)?;
+        phase_trace.emit("receipt", "validated", json!({ "artifact_path": artifact_path }))?;
 
         if let Some(path) = &self.json_out {
             if let Some(parent) = path.parent() {
@@ -1044,6 +1118,7 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         } else {
             println!("{}", serde_json::to_string_pretty(&receipt)?);
         }
+        phase_trace.emit("command", "finish", json!({ "artifact_path": artifact_path }))?;
 
         Ok(())
     }
@@ -4155,33 +4230,136 @@ fn dense_qwen_proof_kv_cache_config(
     Ok(scoped)
 }
 
+#[derive(Clone, Debug)]
+struct DenseQwenPhaseTrace {
+    path: Option<PathBuf>,
+    command: &'static str,
+    started_at: std::time::Instant,
+}
+
+impl DenseQwenPhaseTrace {
+    fn new(path: Option<&Path>, command: &'static str) -> Self {
+        Self { path: path.map(Path::to_path_buf), command, started_at: std::time::Instant::now() }
+    }
+
+    fn reset(&self) -> Result<()> {
+        let Some(path) = &self.path else {
+            return Ok(());
+        };
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(parent).with_context(|| {
+                format!("failed to create phase trace directory {}", parent.display())
+            })?;
+        }
+        std::fs::File::create(path)
+            .with_context(|| format!("failed to reset phase trace {}", path.display()))?;
+        Ok(())
+    }
+
+    fn emit(&self, phase: &str, state: &str, details: Value) -> Result<()> {
+        let Some(path) = &self.path else {
+            return Ok(());
+        };
+        let event = json!({
+            "schema": 1,
+            "timestamp_utc": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+            "elapsed_ms": elapsed_ms_f64(self.started_at),
+            "command": self.command,
+            "phase": phase,
+            "state": state,
+            "details": details,
+        });
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(parent).with_context(|| {
+                format!("failed to create phase trace directory {}", parent.display())
+            })?;
+        }
+        use std::io::Write as _;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .with_context(|| format!("failed to open phase trace {}", path.display()))?;
+        writeln!(file, "{}", serde_json::to_string(&event)?)
+            .with_context(|| format!("failed to write phase trace {}", path.display()))?;
+        eprintln!("qwen_one_token_phase={phase}:{state}");
+        Ok(())
+    }
+}
+
 fn run_qwen_one_token_once(
     model_path: &Path,
     device: BitNetDevice,
     prompt_token_ids: &[u32],
     top_k: usize,
     require_cuda: bool,
+    phase_trace: &DenseQwenPhaseTrace,
+    phase_scope: &'static str,
 ) -> Result<DenseQwenOneTokenRun> {
+    phase_trace.emit(
+        phase_scope,
+        "start",
+        json!({
+            "device": if require_cuda { "cuda" } else { "cpu" },
+            "prompt_token_count": prompt_token_ids.len() as u64,
+            "top_k": top_k,
+        }),
+    )?;
+    phase_trace.emit(
+        phase_scope,
+        "candle_device_start",
+        json!({ "requested_cuda": require_cuda }),
+    )?;
     let candle_device = device.to_candle()?;
     if require_cuda && !matches!(candle_device, CandleDevice::Cuda(_)) {
         bail!("CUDA one-token proof requested CUDA device but Candle did not return CUDA");
     }
+    phase_trace.emit(
+        phase_scope,
+        "candle_device_finish",
+        json!({ "is_cuda": matches!(candle_device, CandleDevice::Cuda(_)) }),
+    )?;
 
     let loader = ModelLoader::new(device);
     let load_config =
         LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
     let total_start = std::time::Instant::now();
     let load_start = std::time::Instant::now();
+    phase_trace.emit(
+        phase_scope,
+        "model_load_start",
+        json!({ "model": model_path.display().to_string() }),
+    )?;
     let model = loader
         .load_with_config(model_path, &load_config)
         .with_context(|| format!("failed to load model {}", model_path.display()))?;
     let model_load_ms = elapsed_ms_f64(load_start);
+    phase_trace.emit(
+        phase_scope,
+        "model_load_finish",
+        json!({ "model_load_ms": model_load_ms }),
+    )?;
+    phase_trace.emit(
+        phase_scope,
+        "kv_cache_start",
+        json!({ "required_seq_len": prompt_token_ids.len() as u64 }),
+    )?;
     let mut cache =
         dense_qwen_proof_kv_cache(model.as_ref(), &candle_device, prompt_token_ids.len())?;
+    phase_trace.emit(phase_scope, "kv_cache_finish", json!({}))?;
 
     let mut prefill_ms = 0.0;
     if prompt_token_ids.len() > 1 {
         let prefill_start = std::time::Instant::now();
+        phase_trace.emit(
+            phase_scope,
+            "prefill_start",
+            json!({ "prefill_tokens": (prompt_token_ids.len() - 1) as u64 }),
+        )?;
         for token in &prompt_token_ids[..prompt_token_ids.len() - 1] {
             let embedding = model.embed(&[*token])?;
             if require_cuda && !concrete_tensor_is_cuda(&embedding) {
@@ -4193,6 +4371,7 @@ fn run_qwen_one_token_once(
             }
         }
         prefill_ms = elapsed_ms_f64(prefill_start);
+        phase_trace.emit(phase_scope, "prefill_finish", json!({ "prefill_ms": prefill_ms }))?;
     }
 
     let decode_start = std::time::Instant::now();
@@ -4201,40 +4380,67 @@ fn run_qwen_one_token_once(
         .copied()
         .ok_or_else(|| anyhow!("one-token proof requires non-empty prompt tokens"))?;
     let embed_start = std::time::Instant::now();
+    phase_trace.emit(phase_scope, "decode_embed_start", json!({ "last_token": last_token }))?;
     let embedding = model.embed(&[last_token])?;
     let embed_ms = elapsed_ms_f64(embed_start);
+    phase_trace.emit(phase_scope, "decode_embed_finish", json!({ "embed_ms": embed_ms }))?;
     if require_cuda && !concrete_tensor_is_cuda(&embedding) {
         bail!("CUDA proof decode embedding tensor was not CUDA-resident");
     }
 
     let forward_start = std::time::Instant::now();
+    phase_trace.emit(phase_scope, "decode_forward_start", json!({}))?;
     let hidden = model.forward(&embedding, &mut cache as &mut dyn std::any::Any)?;
     let forward_ms = elapsed_ms_f64(forward_start);
+    phase_trace.emit(phase_scope, "decode_forward_finish", json!({ "forward_ms": forward_ms }))?;
     if require_cuda && !concrete_tensor_is_cuda(&hidden) {
         bail!("CUDA proof decode hidden tensor was not CUDA-resident");
     }
 
+    phase_trace.emit(phase_scope, "last_hidden_start", json!({}))?;
     let last_hidden = extract_last_token_hidden_local(&hidden)?;
+    phase_trace.emit(phase_scope, "last_hidden_finish", json!({}))?;
     if require_cuda && !concrete_tensor_is_cuda(&last_hidden) {
         bail!("CUDA proof last-hidden tensor was not CUDA-resident");
     }
 
     let logits_start = std::time::Instant::now();
+    phase_trace.emit(phase_scope, "logits_start", json!({}))?;
     let logits = model.logits(&last_hidden)?;
     let logits_ms = elapsed_ms_f64(logits_start);
+    phase_trace.emit(phase_scope, "logits_finish", json!({ "logits_ms": logits_ms }))?;
     let logits_device_is_cuda = concrete_tensor_is_cuda(&logits);
     if require_cuda && !logits_device_is_cuda {
         bail!("CUDA proof logits tensor was not CUDA-resident before download");
     }
     let logits_download_start = std::time::Instant::now();
+    phase_trace.emit(phase_scope, "logits_download_start", json!({}))?;
     let logits_vec = extract_logits_2d_local(&logits)?;
     let logits_download_ms = elapsed_ms_f64(logits_download_start);
+    phase_trace.emit(
+        phase_scope,
+        "logits_download_finish",
+        json!({
+            "logits_download_ms": logits_download_ms,
+            "logits_len": logits_vec.len() as u64,
+        }),
+    )?;
     let top_k_entries = dense_qwen_top_k(&logits_vec, top_k);
     let Some(selected) = top_k_entries.first().map(|entry| entry.token_id) else {
         bail!("one-token proof could not select a greedy token from logits");
     };
     let top_k_rank_sha256 = dense_qwen_top_k_rank_sha256(&top_k_entries)?;
     let logits_sha256 = sha256_f32(&logits_vec);
+    phase_trace.emit(
+        phase_scope,
+        "finish",
+        json!({
+            "selected_token_id": selected,
+            "total_ms": elapsed_ms_f64(total_start),
+            "decode_ms": elapsed_ms_f64(decode_start),
+            "logits_device_is_cuda": logits_device_is_cuda,
+        }),
+    )?;
 
     Ok(DenseQwenOneTokenRun {
         selected_token_id: selected,
@@ -13943,6 +14149,52 @@ mod tests {
         );
 
         assert_eq!(resolved, PathBuf::from(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT));
+    }
+
+    #[test]
+    fn qwen_one_token_phase_trace_writes_jsonl_events() {
+        let path = std::env::temp_dir().join(format!(
+            "bitnet-qwen-phase-trace-{}-{}.jsonl",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        let trace = DenseQwenPhaseTrace::new(Some(&path), "test-command");
+        trace.reset().expect("reset phase trace");
+
+        trace
+            .emit("cpu_reference", "model_load_start", json!({ "model": "test.gguf" }))
+            .expect("write phase trace");
+
+        let contents = std::fs::read_to_string(&path).expect("read phase trace");
+        let event: Value =
+            serde_json::from_str(contents.lines().next().expect("trace line")).expect("json line");
+        std::fs::remove_file(&path).ok();
+
+        assert_eq!(event["schema"], json!(1));
+        assert_eq!(event["command"], json!("test-command"));
+        assert_eq!(event["phase"], json!("cpu_reference"));
+        assert_eq!(event["state"], json!("model_load_start"));
+        assert_eq!(event["details"]["model"], json!("test.gguf"));
+    }
+
+    #[test]
+    fn qwen_one_token_phase_trace_reset_discards_stale_events() {
+        let path = std::env::temp_dir().join(format!(
+            "bitnet-qwen-phase-trace-reset-{}-{}.jsonl",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        std::fs::write(&path, "{\"stale\":true}\n").expect("write stale phase trace");
+        let trace = DenseQwenPhaseTrace::new(Some(&path), "test-command");
+
+        trace.reset().expect("reset phase trace");
+        trace.emit("command", "start", json!({})).expect("write phase trace");
+
+        let contents = std::fs::read_to_string(&path).expect("read phase trace");
+        std::fs::remove_file(&path).ok();
+
+        assert!(!contents.contains("stale"));
+        assert_eq!(contents.lines().count(), 1);
     }
 
     #[test]
