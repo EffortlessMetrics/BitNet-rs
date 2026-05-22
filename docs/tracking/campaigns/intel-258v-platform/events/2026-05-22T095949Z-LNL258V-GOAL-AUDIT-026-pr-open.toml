@@ -1,0 +1,20 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-22T09:59:49Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-026"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-026-current-main"
+pr = 309
+head_sha = "2a2473c756b509d9b5f242f4229a5eda9e74410a"
+actor = "codex"
+summary = "Opened PR #309 for the no-inference Lunar Lake goal audit refresh to current swarm main after adjacent A770, CUDA, and tracker closeout deltas."
+
+notes = [
+  "The PR records LNL258V-GOAL-AUDIT-025/#301 and closeout #304 as Lunar Lake audit/tracker state only.",
+  "The PR records #302 as adjacent A770 answer-parity no-panic cleanup only, not Lunar Lake route evidence.",
+  "The PR records CUDA-MODEL-017F/#303 as adjacent CUDA/Qwen3 RoPE CPU-stage diagnostic work only, not Lunar Lake route evidence.",
+  "The PR records #307 as A770-023 tracker closeout only, not Lunar Lake route evidence.",
+  "LNL258V-POWER-006 remains blocked until real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage exist.",
+  "No inference, model load, route promotion, speedup, power advantage, battery-mode evidence, native accelerator proof, broad quality, model binary, runtime/sidecar behavior, semantic-intake stale claim, or BitNet QK256/I2_S behavior change is claimed.",
+]
