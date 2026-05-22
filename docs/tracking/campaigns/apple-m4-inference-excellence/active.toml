@@ -2981,13 +2981,16 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-MODEL-LIFECYCLE-001"
-status = "in_progress"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-MODEL-LIFECYCLE-001-supported-model-policy"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-REPRO-002", "M4-OPS-SLO-001", "M4-CI-001"]
+pr = 6186
+head_sha = "7a898845ba20ecb79bbabba4c398a94e4f272805"
+merge_sha = "d80dd0f936339710b38237d4620ec674b7fd735c"
 acceptance = "Define the supported-model lifecycle for M4: candidate, diagnostic-only, supported non-default, default, deprecated, rejected, and retired states, including required evidence, cache migration behavior, operator warnings, downgrade/rollback guidance, and claim-boundary updates."
 commands = [
   "bitnet mac models --json",

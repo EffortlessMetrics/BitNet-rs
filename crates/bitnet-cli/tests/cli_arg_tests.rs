@@ -867,6 +867,9 @@ fn mac_models_lists_operator_model_states() -> Result<(), Box<dyn std::error::Er
         .stdout(predicate::str::contains("Default model: qwen2.5-0.5b-instruct-q8_0"))
         .stdout(predicate::str::contains("Disk:"))
         .stdout(predicate::str::contains("Recommendation:"))
+        .stdout(predicate::str::contains(
+            "Lifecycle policy: default, supported-non-default, supported-ask, diagnostic-only, candidate, deprecated, rejected, retired",
+        ))
         .stdout(predicate::str::contains("Next fetch: bitnet model fetch"))
         .stdout(predicate::str::contains("Next verify: bitnet model verify"))
         .stdout(predicate::str::contains("low_disk="))
@@ -874,7 +877,7 @@ fn mac_models_lists_operator_model_states() -> Result<(), Box<dyn std::error::Er
         .stdout(predicate::str::contains("default"))
         .stdout(predicate::str::contains("qwen2.5-0.5b-instruct-q4_k_m"))
         .stdout(predicate::str::contains("qwen2.5-1.5b-instruct-q4_k_m"))
-        .stdout(predicate::str::contains("supported"))
+        .stdout(predicate::str::contains("supported-non-default"))
         .stdout(predicate::str::contains("microsoft-bitnet-b1.58-2B-4T-i2s"))
         .stdout(predicate::str::contains("supported-ask"))
         .stdout(predicate::str::contains("candidate"))
@@ -914,16 +917,71 @@ fn mac_models_json_exposes_claim_boundaries_without_fetching()
     let claim_boundary =
         json["claim_boundary"].as_str().ok_or_else(|| std::io::Error::other("claim boundary"))?;
     assert!(claim_boundary.contains("fixed-prompt warm-session"));
+    assert!(claim_boundary.contains("supported-non-default"));
+    let lifecycle_policy = json["lifecycle_policy"]
+        .as_object()
+        .ok_or_else(|| std::io::Error::other("lifecycle policy"))?;
+    assert_eq!(lifecycle_policy["schema_version"], 1);
+    let lifecycle_claim_boundary = lifecycle_policy["claim_boundary"]
+        .as_str()
+        .ok_or_else(|| std::io::Error::other("lifecycle claim boundary"))?;
+    assert!(lifecycle_claim_boundary.contains("does not add a supported model"));
+    let lifecycle_states = lifecycle_policy["states"]
+        .as_array()
+        .ok_or_else(|| std::io::Error::other("lifecycle states"))?;
+    for state in [
+        "default",
+        "supported-non-default",
+        "supported-ask",
+        "diagnostic-only",
+        "candidate",
+        "deprecated",
+        "rejected",
+        "retired",
+    ] {
+        assert!(
+            lifecycle_states.iter().any(|row| row["state"] == state),
+            "missing lifecycle state {state}"
+        );
+    }
     let rows = json["rows"].as_array().ok_or_else(|| std::io::Error::other("rows"))?;
     assert!(rows.iter().any(|row| {
         row["id"] == "qwen2.5-0.5b-instruct-q8_0"
             && row["state"] == "default"
             && row["recommended_fetch_headroom_bytes"].as_u64().is_some()
     }));
-    assert!(
-        rows.iter().any(|row| {
-            row["id"] == "qwen2.5-1.5b-instruct-q4_k_m" && row["state"] == "supported"
+    let supported_non_default = rows
+        .iter()
+        .find(|row| {
+            row["id"] == "qwen2.5-1.5b-instruct-q4_k_m" && row["state"] == "supported-non-default"
         })
+        .ok_or_else(|| std::io::Error::other("supported non-default row"))?;
+    assert!(supported_non_default["lifecycle_required_evidence"].as_array().is_some_and(
+        |evidence| {
+            evidence
+                .iter()
+                .any(|item| item == "matching dense SLM eval-v2 and benchmark-v2 receipts")
+        }
+    ));
+    assert!(
+        supported_non_default["cache_migration"]
+            .as_str()
+            .is_some_and(|text| text.contains("do not replace the default cache"))
+    );
+    assert!(
+        supported_non_default["operator_warning"]
+            .as_str()
+            .is_some_and(|text| text.contains("Operators must pass `--model-id`"))
+    );
+    assert!(
+        supported_non_default["rollback_guidance"]
+            .as_str()
+            .is_some_and(|text| text.contains("default unchanged"))
+    );
+    assert!(
+        supported_non_default["claim_boundary_update"]
+            .as_str()
+            .is_some_and(|text| text.contains("do not widen dense, BitNet, or platform claims"))
     );
     assert!(rows.iter().any(|row| {
         row["id"] == "microsoft-bitnet-b1.58-2B-4T-i2s"

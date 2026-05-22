@@ -113,6 +113,36 @@ BitNet chat and serve without ready gates: disabled
 Metal/QK256/Neural Engine/MPSGraph/MacBook: unsupported
 ```
 
+The machine-readable route-state matrix for these classes is embedded under
+`route_state_matrix` in `bitnet mac status --json` and
+`bitnet mac evidence --json`; see `docs/slm/apple-m4-route-state-matrix.md`.
+
+## Supported Model Lifecycle
+
+`bitnet mac models` now exposes the M4 supported-model lifecycle used by this
+envelope. The lifecycle separates model selection from evidence claims:
+`default`, `supported-non-default`, and `supported-ask` are selectable only for
+their recorded scopes, while `diagnostic-only`, `candidate`, `deprecated`,
+`rejected`, and `retired` are not selectable operator routes.
+
+| State | Operator meaning | Required action before changing state |
+|---|---|---|
+| `default` | The implicit dense SLM M4 CPU/NEON route. | Treat as a release-gate change with exact artifact, eval, benchmark, route, cache, rollback, and envelope updates. |
+| `supported-non-default` | Explicit dense SLM `--model-id` route on the recorded M4 identity. | Keep it explicit-only, verify its cache under its own id, and update claims only for that exact model. |
+| `supported-ask` | Explicit BitNet one-shot ask and warm-session route only. | Keep BitNet chat and serve disabled until separate ready receipts enable those surfaces. |
+| `diagnostic-only` | Debugging or blocker diagnosis, not user-ready. | Record the blocker and open a separate candidate item before any promotion review. |
+| `candidate` | Pinned review identity, not a supported route. | Require artifact, tokenizer, prompt, provenance, eval, benchmark, canary, and route-state receipts before promotion. |
+| `deprecated` | Transitional removal state after regression or replacement. | Stop recommending fetch and publish migration or rollback guidance before restoring support. |
+| `rejected` | Failed or out-of-scope identity. | Do not fetch or route; reconsider only through a fresh candidate item. |
+| `retired` | Archived identity removed from active support. | Remove active support claims and return only through a fresh candidate with current receipts. |
+
+The lifecycle policy is not a live model run and does not add supported models,
+change the default, prove BitNet chat or serve, or broaden Apple Silicon,
+Metal, QK256, Neural Engine, MPSGraph, MacBook, quality, performance, or
+speedup claims. JSON output includes per-row evidence, cache-migration,
+operator-warning, rollback, and claim-boundary fields so downstream dashboards
+can preserve those limits.
+
 ## Context Guardrails
 
 `M4-CONTEXT-001` turns the class map into route-level guardrails for M4
