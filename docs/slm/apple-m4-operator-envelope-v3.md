@@ -143,6 +143,29 @@ speedup claims. JSON output includes per-row evidence, cache-migration,
 operator-warning, rollback, and claim-boundary fields so downstream dashboards
 can preserve those limits.
 
+## Compatibility Refresh
+
+`bitnet mac compat-refresh` writes the `M4-COMPAT-001` model-free contract for
+compatibility refreshes after macOS, Rust toolchain, binary build-profile, or
+supported-model manifest changes. The contract names the required follow-up
+receipts:
+
+```bash
+bitnet mac compat-refresh \
+  --json-out target/apple-m4-inference-excellence/compat/compat-refresh.json
+bitnet mac doctor --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/doctor.json
+bitnet mac smoke --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/smoke.json
+bitnet mac regression-dashboard \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/regression-dashboard.json \
+  --markdown-out ci/hardware/apple-m4-mac-mini/<date>/compat/regression-dashboard.md
+```
+
+The contract records cache repair and rollback obligations, but it is not a
+runtime or performance proof. After a compatibility trigger, timing baselines
+remain advisory until matching benchmark identities pass again, quality claims
+still require matching eval identities, and the M4 Mac mini scope does not
+extend to MacBook or broad Apple Silicon targets.
+
 ## Context Guardrails
 
 `M4-CONTEXT-001` turns the class map into route-level guardrails for M4

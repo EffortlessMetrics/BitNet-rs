@@ -54,6 +54,14 @@ evidence family, model identity, tokenizer authority, backend, and fallback
 state before offering regression commands. Groups with only one report are
 marked `insufficient_history`.
 
+`bitnet mac compat-refresh` is the model-free compatibility contract for
+macOS, Rust toolchain, binary build-profile, and supported-model manifest
+changes. It records the required follow-up `doctor`, `smoke`, and
+`regression-dashboard` receipts under
+`ci/hardware/apple-m4-mac-mini/<date>/compat/`, cache repair behavior, rollback
+guidance, and the claim boundary that compatibility refresh does not prove
+unchanged performance without matching benchmark identities.
+
 The command-to-receipt operator map lives in
 `docs/slm/apple-m4-operator-envelope-v2.md`. The durable refresh cadence,
 matching-history thresholds, `resident_100` status, and disk/cache guidance

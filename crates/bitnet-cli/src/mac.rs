@@ -46,6 +46,8 @@ const MAC_REGRESSION_DASHBOARD_DEFAULT_MARKDOWN: &str =
     "target/apple-m4-inference-ops/regression-dashboard.md";
 const MAC_RELIABILITY_DRILL_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-excellence/reliability-drills/summary.json";
+const MAC_COMPAT_REFRESH_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-inference-excellence/compat/compat-refresh.json";
 const APPLE_M4_REPORT_ROOT: &str = "ci/hardware/apple-m4-mac-mini";
 const MAC_BITNET_WARM_DEFAULT_RECEIPT: &str = "target/apple-m4-local-answer/mac-bitnet-warm.json";
 const MAC_BITNET_BENCHMARK_DEFAULT_RECEIPT: &str =
@@ -237,6 +239,18 @@ const M4_WORKLOAD_ENABLED_ROUTE_IDS: &[&str] = &[
     "bitnet.ask",
     "bitnet.warm_session",
 ];
+const M4_COMPAT_TRIGGER_CLASSES: &[&str] =
+    &["macos", "rust_toolchain", "binary_build_profile", "supported_model_manifest"];
+const M4_COMPAT_REQUIRED_RECEIPTS: &[&str] = &["doctor", "smoke", "regression_dashboard"];
+const M4_COMPAT_CACHE_REPAIR_CASES: &[&str] = &[
+    "missing_artifact",
+    "sha256_mismatch",
+    "missing_tokenizer",
+    "stale_symlink",
+    "low_disk_headroom",
+];
+const M4_COMPAT_ROLLBACK_TARGETS: &[&str] =
+    &["macos", "rust_toolchain", "binary_build_profile", "supported_model_manifest"];
 const M4_ROBUSTNESS_MODEL_FAMILIES: &[&str] = &["dense_slm", "bitnet"];
 const M4_CONTEXT_SHORT_PROMPT_TOKENS: usize = 512;
 const M4_CONTEXT_1K_PROMPT_TOKENS: usize = 1_024;
@@ -695,6 +709,17 @@ enum MacAction {
     ReliabilityDrill {
         /// Output strict M4 reliability-drill receipt.
         #[arg(long, value_name = "PATH", default_value = MAC_RELIABILITY_DRILL_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Emit JSON to stdout after writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+
+    /// Write the model-free M4 compatibility-refresh and rollback contract.
+    CompatRefresh {
+        /// Output strict M4 compatibility-refresh receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_COMPAT_REFRESH_DEFAULT_RECEIPT)]
         json_out: PathBuf,
 
         /// Emit JSON to stdout after writing --json-out.
@@ -1649,6 +1674,10 @@ impl MacCommand {
             MacAction::ReliabilityDrill { json_out, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac reliability-drill")?;
                 run_reliability_drill(json_out, json)
+            }
+            MacAction::CompatRefresh { json_out, json } => {
+                ensure_supported_mac_device(explicit_device_label, "mac compat-refresh")?;
+                run_compat_refresh(json_out, json)
             }
             MacAction::Check { model_id, cache_dir, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac check")?;
@@ -5209,6 +5238,18 @@ fn run_reliability_drill(json_out: PathBuf, json: bool) -> Result<()> {
     Ok(())
 }
 
+fn run_compat_refresh(json_out: PathBuf, json: bool) -> Result<()> {
+    let receipt = apple_m4_compat_refresh_receipt(&json_out);
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_compat_refresh_summary(&receipt, &json_out);
+    }
+    Ok(())
+}
+
 fn print_reliability_drill_summary(receipt: &serde_json::Value, json_out: &Path) {
     println!(
         "Mac reliability drills recorded: {} drills across {} route families ({})",
@@ -5218,6 +5259,18 @@ fn print_reliability_drill_summary(receipt: &serde_json::Value, json_out: &Path)
     );
     println!(
         "Claim boundary: model-free recovery-drill coverage only; no live inference, BitNet chat/serve, full Metal, or broad performance claim."
+    );
+}
+
+fn print_compat_refresh_summary(receipt: &serde_json::Value, json_out: &Path) {
+    println!(
+        "Mac compatibility refresh contract recorded: {} trigger classes, {} required receipts ({})",
+        receipt["trigger_class_count"].as_u64().unwrap_or_default(),
+        receipt["required_receipt_count"].as_u64().unwrap_or_default(),
+        json_out.display()
+    );
+    println!(
+        "Claim boundary: compatibility contract only; unchanged performance still requires matching benchmark identities."
     );
 }
 
@@ -5802,6 +5855,228 @@ fn apple_m4_reliability_drill_receipt(json_out: &Path) -> serde_json::Value {
             "broad_performance_claim": false,
             "speedup_claim": false,
         },
+    })
+}
+
+fn apple_m4_compat_refresh_receipt(json_out: &Path) -> serde_json::Value {
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_compatibility_refresh",
+        "mac compat-refresh",
+        "compatibility_refresh_receipt_contract",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    let required_receipts = apple_m4_compat_required_receipts_json();
+    let cache_repair_cases = apple_m4_compat_cache_repair_cases_json();
+    let rollback_targets = apple_m4_compat_rollback_targets_json();
+    serde_json::json!({
+        "schema_version": "1.2.0",
+        "artifact_kind": "apple_m4_compatibility_refresh",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac compat-refresh",
+        "work_item": "M4-COMPAT-001",
+        "status": "plan_ready",
+        "receipt_path": json_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "bounded compatibility refresh contract",
+        },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
+        "compat_contract": {
+            "model_free": true,
+            "live_model_run": false,
+            "model_download": false,
+            "generic_pr_ci_safe": true,
+            "compatibility_receipt_contract": true,
+            "requires_followup_live_receipts": true,
+            "routes_proven_by_this_receipt": "operator compatibility refresh obligations only",
+            "unchanged_runtime_or_performance_proof": false,
+        },
+        "trigger_classes": M4_COMPAT_TRIGGER_CLASSES,
+        "trigger_class_count": M4_COMPAT_TRIGGER_CLASSES.len(),
+        "required_receipt_ids": M4_COMPAT_REQUIRED_RECEIPTS,
+        "required_receipt_count": required_receipts.len(),
+        "required_receipts": required_receipts,
+        "invalidation_policy": {
+            "timing_baselines_advisory_until_matching_benchmark_passes": true,
+            "compat_refresh_proves_unchanged_performance": false,
+            "matching_benchmark_identity_required_for_performance_claim": true,
+            "matching_eval_identity_required_for_quality_claim": true,
+            "model_manifest_changes_invalidate_model_identity_groups": true,
+            "binary_profile_changes_invalidate_timing_groups": true,
+            "rust_toolchain_changes_invalidate_timing_groups": true,
+            "macos_changes_invalidate_timing_groups": true,
+            "regression_dashboard_status_required": true,
+        },
+        "cache_repair_case_ids": M4_COMPAT_CACHE_REPAIR_CASES,
+        "cache_repair_case_count": cache_repair_cases.len(),
+        "cache_repair_cases": cache_repair_cases,
+        "rollback_target_ids": M4_COMPAT_ROLLBACK_TARGETS,
+        "rollback_target_count": rollback_targets.len(),
+        "rollback_targets": rollback_targets,
+        "operator_commands": {
+            "run": format!(
+                "target/release/bitnet --device {APPLE_M4_CPU_NEON} mac compat-refresh --json-out {}",
+                json_out.display()
+            ),
+            "doctor": "bitnet mac doctor --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/doctor.json",
+            "smoke": "bitnet mac smoke --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/smoke.json",
+            "regression_dashboard": "bitnet mac regression-dashboard --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/regression-dashboard.json --markdown-out ci/hardware/apple-m4-mac-mini/<date>/compat/regression-dashboard.md",
+            "receipts_check": "bitnet mac receipts-check ci/hardware/apple-m4-mac-mini/<date>/compat --json",
+            "model_catalog": "bitnet mac models --json",
+            "cache_verify": "bitnet model verify <model-id>",
+            "cache_prune_preview": "bitnet model prune --dry-run --json",
+            "campaign_check": "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
+            "campaign_generate_check": "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+            "diff_check": "git diff --check",
+        },
+        "claim_boundary": {
+            "compatibility_refresh_contract_only": true,
+            "model_free": true,
+            "no_live_model_run": true,
+            "no_model_download": true,
+            "requires_followup_live_receipts": true,
+            "unchanged_runtime_or_performance_proof": false,
+            "performance_claim_requires_matching_benchmark_identity": true,
+            "quality_claim_requires_matching_eval_identity": true,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "dense_slm_evidence_proves_bitnet": false,
+            "bitnet_evidence_proves_dense_slm": false,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "service_production_readiness_claimed": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "bitnet_quality_claimed": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    })
+}
+
+fn apple_m4_compat_required_receipts_json() -> Vec<serde_json::Value> {
+    vec![
+        apple_m4_compat_required_receipt_json(
+            "doctor",
+            "apple_m4_slm_doctor",
+            "ci/hardware/apple-m4-mac-mini/<date>/compat/doctor.json",
+            "bitnet mac doctor --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/doctor.json",
+            false,
+        ),
+        apple_m4_compat_required_receipt_json(
+            "smoke",
+            "apple_m4_slm_golden_smoke",
+            "ci/hardware/apple-m4-mac-mini/<date>/compat/smoke.json",
+            "bitnet mac smoke --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/smoke.json",
+            true,
+        ),
+        apple_m4_compat_required_receipt_json(
+            "regression_dashboard",
+            "apple_m4_regression_dashboard",
+            "ci/hardware/apple-m4-mac-mini/<date>/compat/regression-dashboard.json",
+            "bitnet mac regression-dashboard --json-out ci/hardware/apple-m4-mac-mini/<date>/compat/regression-dashboard.json --markdown-out ci/hardware/apple-m4-mac-mini/<date>/compat/regression-dashboard.md",
+            false,
+        ),
+    ]
+}
+
+fn apple_m4_compat_required_receipt_json(
+    id: &str,
+    artifact_kind: &str,
+    json_out: &str,
+    command: &str,
+    fresh_runtime_proof_required: bool,
+) -> serde_json::Value {
+    serde_json::json!({
+        "id": id,
+        "artifact_kind": artifact_kind,
+        "json_out": json_out,
+        "command": command,
+        "required_after_trigger": true,
+        "claim_boundary_required": true,
+        "fresh_runtime_proof_required": fresh_runtime_proof_required,
+        "matching_identity_required_before_claims": true,
+        "fallback_used_must_remain_false": true,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+    })
+}
+
+fn apple_m4_compat_cache_repair_cases_json() -> Vec<serde_json::Value> {
+    vec![
+        apple_m4_compat_cache_repair_case_json(
+            "missing_artifact",
+            "Run `bitnet mac models --json`, fetch only the selected supported model, then rerun `bitnet model verify <model-id>` before smoke.",
+        ),
+        apple_m4_compat_cache_repair_case_json(
+            "sha256_mismatch",
+            "Preserve the failed verification receipt, replace only the mismatched cache entry, and rerun verify before compatibility smoke.",
+        ),
+        apple_m4_compat_cache_repair_case_json(
+            "missing_tokenizer",
+            "Repair the tokenizer authority for the exact model id; do not substitute another family tokenizer or use dense tokenizer proof for BitNet.",
+        ),
+        apple_m4_compat_cache_repair_case_json(
+            "stale_symlink",
+            "Repoint the cache symlink to the verified artifact path and record the resolved path in the follow-up doctor receipt.",
+        ),
+        apple_m4_compat_cache_repair_case_json(
+            "low_disk_headroom",
+            "Run `bitnet model prune --dry-run --json`; free disk or move `BITNET_MODEL_CACHE_DIR` before fetching or timing runs.",
+        ),
+    ]
+}
+
+fn apple_m4_compat_cache_repair_case_json(id: &str, operator_action: &str) -> serde_json::Value {
+    serde_json::json!({
+        "id": id,
+        "status": "defined",
+        "operator_action": operator_action,
+        "automatic_delete_allowed": false,
+        "requires_verify_after_repair": true,
+        "claim_boundary_preserved": true,
+    })
+}
+
+fn apple_m4_compat_rollback_targets_json() -> Vec<serde_json::Value> {
+    vec![
+        apple_m4_compat_rollback_target_json(
+            "macos",
+            "Restore the previously receipt-backed macOS image or mark timing baselines advisory until matching benchmark identities pass again.",
+        ),
+        apple_m4_compat_rollback_target_json(
+            "rust_toolchain",
+            "Revert `rust-toolchain.toml` or the CI image toolchain, rebuild the binary, then rerun doctor, smoke, and regression-dashboard.",
+        ),
+        apple_m4_compat_rollback_target_json(
+            "binary_build_profile",
+            "Return to the previous release/profile flags and discard timing comparisons until matching benchmark receipts exist for the restored profile.",
+        ),
+        apple_m4_compat_rollback_target_json(
+            "supported_model_manifest",
+            "Revert the affected catalog row or lifecycle state and keep the previous verified cache entry available until the rollback PR lands.",
+        ),
+    ]
+}
+
+fn apple_m4_compat_rollback_target_json(id: &str, guidance: &str) -> serde_json::Value {
+    serde_json::json!({
+        "id": id,
+        "status": "defined",
+        "guidance": guidance,
+        "rerun_required_receipts": M4_COMPAT_REQUIRED_RECEIPTS,
+        "performance_claim_allowed_before_matching_benchmark": false,
+        "broad_platform_claim_allowed": false,
     })
 }
 
@@ -21283,6 +21558,8 @@ fn validate_mac_receipt_value(
         validate_apple_m4_regression_dashboard_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_reliability_drills" {
         validate_apple_m4_reliability_drills_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_compatibility_refresh" {
+        validate_apple_m4_compatibility_refresh_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_serve_failure_semantics" {
         validate_apple_m4_serve_failure_semantics_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_serve_backpressure_smoke" {
@@ -24979,6 +25256,335 @@ fn validate_apple_m4_reliability_drills_receipt(
         &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
         true,
     )?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "service_production_readiness_claimed"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_quality_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_compatibility_refresh_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_compatibility_refresh")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac compat-refresh")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-COMPAT-001")?;
+    require_exact_string_at(path, receipt, &["status"], "plan_ready")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_bool_at(path, receipt, &["compat_contract", "model_free"], true)?;
+    require_bool_at(path, receipt, &["compat_contract", "live_model_run"], false)?;
+    require_bool_at(path, receipt, &["compat_contract", "model_download"], false)?;
+    require_bool_at(path, receipt, &["compat_contract", "generic_pr_ci_safe"], true)?;
+    require_bool_at(path, receipt, &["compat_contract", "compatibility_receipt_contract"], true)?;
+    require_bool_at(path, receipt, &["compat_contract", "requires_followup_live_receipts"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["compat_contract", "unchanged_runtime_or_performance_proof"],
+        false,
+    )?;
+    require_string_array_equals(path, receipt, &["trigger_classes"], M4_COMPAT_TRIGGER_CLASSES)?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["trigger_class_count"],
+        M4_COMPAT_TRIGGER_CLASSES.len() as u64,
+    )?;
+    require_string_array_equals(
+        path,
+        receipt,
+        &["required_receipt_ids"],
+        M4_COMPAT_REQUIRED_RECEIPTS,
+    )?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["required_receipt_count"],
+        M4_COMPAT_REQUIRED_RECEIPTS.len() as u64,
+    )?;
+
+    let required_receipts = receipt["required_receipts"].as_array().ok_or_else(|| {
+        anyhow!("{} compatibility refresh receipt is missing required_receipts", path.display())
+    })?;
+    if required_receipts.len() != M4_COMPAT_REQUIRED_RECEIPTS.len() {
+        anyhow::bail!(
+            "{} compatibility refresh receipt must contain {} required receipts, got {}",
+            path.display(),
+            M4_COMPAT_REQUIRED_RECEIPTS.len(),
+            required_receipts.len()
+        );
+    }
+    let mut seen_receipts = std::collections::BTreeSet::new();
+    for required in required_receipts {
+        let id = require_non_empty_string_at(path, required, &["id"])?;
+        if !M4_COMPAT_REQUIRED_RECEIPTS.contains(&id) {
+            anyhow::bail!(
+                "{} compatibility refresh receipt has unexpected required receipt {id:?}",
+                path.display()
+            );
+        }
+        if !seen_receipts.insert(id.to_string()) {
+            anyhow::bail!(
+                "{} compatibility refresh receipt duplicates required receipt {id:?}",
+                path.display()
+            );
+        }
+        let expected_artifact_kind = match id {
+            "doctor" => "apple_m4_slm_doctor",
+            "smoke" => "apple_m4_slm_golden_smoke",
+            "regression_dashboard" => "apple_m4_regression_dashboard",
+            _ => anyhow::bail!(
+                "{} compatibility refresh receipt has unexpected required receipt {id:?}",
+                path.display()
+            ),
+        };
+        require_exact_string_at(path, required, &["artifact_kind"], expected_artifact_kind)?;
+        require_non_empty_string_at(path, required, &["json_out"])?;
+        require_non_empty_string_at(path, required, &["command"])?;
+        require_bool_at(path, required, &["required_after_trigger"], true)?;
+        require_bool_at(path, required, &["claim_boundary_required"], true)?;
+        require_bool_at(path, required, &["matching_identity_required_before_claims"], true)?;
+        require_bool_at(path, required, &["fallback_used_must_remain_false"], true)?;
+        require_exact_string_at(path, required, &["requested_backend"], APPLE_M4_CPU_NEON)?;
+        require_exact_string_at(path, required, &["selected_backend"], APPLE_M4_CPU_NEON)?;
+        require_exact_string_at(path, required, &["runtime_api"], "cpu")?;
+        require_bool_at(path, required, &["fresh_runtime_proof_required"], id == "smoke")?;
+    }
+    for required in M4_COMPAT_REQUIRED_RECEIPTS {
+        if !seen_receipts.contains(*required) {
+            anyhow::bail!(
+                "{} compatibility refresh receipt is missing required receipt {required}",
+                path.display()
+            );
+        }
+    }
+
+    require_bool_at(
+        path,
+        receipt,
+        &["invalidation_policy", "timing_baselines_advisory_until_matching_benchmark_passes"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["invalidation_policy", "compat_refresh_proves_unchanged_performance"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["invalidation_policy", "matching_benchmark_identity_required_for_performance_claim"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["invalidation_policy", "matching_eval_identity_required_for_quality_claim"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["invalidation_policy", "model_manifest_changes_invalidate_model_identity_groups"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["invalidation_policy", "binary_profile_changes_invalidate_timing_groups"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["invalidation_policy", "rust_toolchain_changes_invalidate_timing_groups"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["invalidation_policy", "macos_changes_invalidate_timing_groups"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["invalidation_policy", "regression_dashboard_status_required"],
+        true,
+    )?;
+
+    require_string_array_equals(
+        path,
+        receipt,
+        &["cache_repair_case_ids"],
+        M4_COMPAT_CACHE_REPAIR_CASES,
+    )?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["cache_repair_case_count"],
+        M4_COMPAT_CACHE_REPAIR_CASES.len() as u64,
+    )?;
+    let cache_repair_cases = receipt["cache_repair_cases"].as_array().ok_or_else(|| {
+        anyhow!("{} compatibility refresh receipt is missing cache_repair_cases", path.display())
+    })?;
+    if cache_repair_cases.len() != M4_COMPAT_CACHE_REPAIR_CASES.len() {
+        anyhow::bail!(
+            "{} compatibility refresh receipt must contain {} cache repair cases, got {}",
+            path.display(),
+            M4_COMPAT_CACHE_REPAIR_CASES.len(),
+            cache_repair_cases.len()
+        );
+    }
+    let mut seen_cache_cases = std::collections::BTreeSet::new();
+    for case in cache_repair_cases {
+        let id = require_non_empty_string_at(path, case, &["id"])?;
+        if !M4_COMPAT_CACHE_REPAIR_CASES.contains(&id) {
+            anyhow::bail!(
+                "{} compatibility refresh receipt has unexpected cache repair case {id:?}",
+                path.display()
+            );
+        }
+        if !seen_cache_cases.insert(id.to_string()) {
+            anyhow::bail!(
+                "{} compatibility refresh receipt duplicates cache repair case {id:?}",
+                path.display()
+            );
+        }
+        require_exact_string_at(path, case, &["status"], "defined")?;
+        require_non_empty_string_at(path, case, &["operator_action"])?;
+        require_bool_at(path, case, &["automatic_delete_allowed"], false)?;
+        require_bool_at(path, case, &["requires_verify_after_repair"], true)?;
+        require_bool_at(path, case, &["claim_boundary_preserved"], true)?;
+    }
+
+    require_string_array_equals(
+        path,
+        receipt,
+        &["rollback_target_ids"],
+        M4_COMPAT_ROLLBACK_TARGETS,
+    )?;
+    require_u64_exact(
+        path,
+        receipt,
+        &["rollback_target_count"],
+        M4_COMPAT_ROLLBACK_TARGETS.len() as u64,
+    )?;
+    let rollback_targets = receipt["rollback_targets"].as_array().ok_or_else(|| {
+        anyhow!("{} compatibility refresh receipt is missing rollback_targets", path.display())
+    })?;
+    if rollback_targets.len() != M4_COMPAT_ROLLBACK_TARGETS.len() {
+        anyhow::bail!(
+            "{} compatibility refresh receipt must contain {} rollback targets, got {}",
+            path.display(),
+            M4_COMPAT_ROLLBACK_TARGETS.len(),
+            rollback_targets.len()
+        );
+    }
+    let mut seen_rollback_targets = std::collections::BTreeSet::new();
+    for target in rollback_targets {
+        let id = require_non_empty_string_at(path, target, &["id"])?;
+        if !M4_COMPAT_ROLLBACK_TARGETS.contains(&id) {
+            anyhow::bail!(
+                "{} compatibility refresh receipt has unexpected rollback target {id:?}",
+                path.display()
+            );
+        }
+        if !seen_rollback_targets.insert(id.to_string()) {
+            anyhow::bail!(
+                "{} compatibility refresh receipt duplicates rollback target {id:?}",
+                path.display()
+            );
+        }
+        require_exact_string_at(path, target, &["status"], "defined")?;
+        require_non_empty_string_at(path, target, &["guidance"])?;
+        require_string_array_equals(
+            path,
+            target,
+            &["rerun_required_receipts"],
+            M4_COMPAT_REQUIRED_RECEIPTS,
+        )?;
+        require_bool_at(
+            path,
+            target,
+            &["performance_claim_allowed_before_matching_benchmark"],
+            false,
+        )?;
+        require_bool_at(path, target, &["broad_platform_claim_allowed"], false)?;
+    }
+
+    for field in [
+        "run",
+        "doctor",
+        "smoke",
+        "regression_dashboard",
+        "receipts_check",
+        "model_catalog",
+        "cache_verify",
+        "cache_prune_preview",
+        "campaign_check",
+        "campaign_generate_check",
+        "diff_check",
+    ] {
+        require_non_empty_string_at(path, receipt, &["operator_commands", field])?;
+    }
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "compatibility_refresh_contract_only"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "model_free"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "requires_followup_live_receipts"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "unchanged_runtime_or_performance_proof"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "performance_claim_requires_matching_benchmark_identity"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "quality_claim_requires_matching_eval_identity"],
+        true,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "dense_slm_evidence_proves_bitnet"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_evidence_proves_dense_slm"], false)?;
     require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
     require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
     require_bool_at(
@@ -30627,6 +31233,58 @@ mod tests {
             Ok(summary) => {
                 return Err(format!(
                     "reliability drills without low_disk should fail, got {summary:?}"
+                )
+                .into());
+            }
+            Err(err) => err.to_string(),
+        };
+
+        assert!(err.contains("must contain"), "got: {err}");
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_accepts_compatibility_refresh() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("compat-refresh.json");
+        let receipt = apple_m4_compat_refresh_receipt(&receipt_path);
+
+        let summary = validate_mac_receipt_value(&receipt_path, &receipt)?;
+
+        assert_eq!(summary.artifact_kind, "apple_m4_compatibility_refresh");
+        assert_eq!(summary.requested_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.selected_backend, APPLE_M4_CPU_NEON);
+        assert_eq!(summary.prompt_count, Some(0));
+        assert_eq!(summary.generated_tokens, Some(0));
+        assert_eq!(receipt["work_item"], "M4-COMPAT-001");
+        assert_eq!(
+            receipt["required_receipt_count"].as_u64(),
+            Some(M4_COMPAT_REQUIRED_RECEIPTS.len() as u64)
+        );
+        assert_eq!(receipt["claim_boundary"]["unchanged_runtime_or_performance_proof"], false);
+        assert_eq!(
+            receipt["claim_boundary"]["performance_claim_requires_matching_benchmark_identity"],
+            true
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn mac_receipts_check_rejects_compatibility_refresh_missing_smoke()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let receipt_path = temp.path().join("compat-refresh.json");
+        let mut receipt = apple_m4_compat_refresh_receipt(&receipt_path);
+        receipt["required_receipts"]
+            .as_array_mut()
+            .ok_or_else(|| std::io::Error::other("required_receipts array"))?
+            .retain(|required| required["id"].as_str() != Some("smoke"));
+
+        let err = match validate_mac_receipt_value(&receipt_path, &receipt) {
+            Ok(summary) => {
+                return Err(format!(
+                    "compatibility refresh without smoke should fail, got {summary:?}"
                 )
                 .into());
             }
