@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T00:42:16Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CI-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-CI-001-evidence-lanes"
+pr = 6175
+head_sha = "86156087b0923d7a682cd6c5e197fa6492508d24"
+merge_sha = "e01d5cc42dad096aee68f5bea66592b08a43256a"
+
+notes = [
+  "Merged PR #6175 after all GitHub checks passed.",
+  "The merged slice codifies the M4 evidence CI lanes and retention contracts for model-free PR checks, advisory hardware refreshes, scheduled hardware refreshes, release-gate refreshes, artifact retention, dashboard generation, and non-blocking hardware timing behavior.",
+  "The merge does not add runtime proof, fetch models by default, publish fresh timing, or broaden dense SLM, BitNet, Metal, QK256, Neural Engine, MPSGraph, MacBook, quality, speedup, performance, or broad Apple Silicon claims.",
+]
