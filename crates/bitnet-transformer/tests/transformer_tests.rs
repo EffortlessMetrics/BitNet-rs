@@ -351,6 +351,17 @@ fn embed_single_token_shape_is_1_1_hidden() {
 }
 
 #[test]
+fn embed_single_token_out_of_vocab_errors() {
+    let (hidden, vocab, heads) = (8, 16, 2);
+    let model = make_model(hidden, vocab, heads).unwrap();
+    let err = model.embed(&[vocab as u32]).unwrap_err().to_string();
+    assert!(
+        err.contains("outside vocab size"),
+        "out-of-vocab single-token embed should fail at the embedding boundary: {err}"
+    );
+}
+
+#[test]
 fn forward_full_output_shape_is_batch_seq_vocab() {
     let (hidden, vocab, heads) = (8, 16, 2);
     let model = make_model(hidden, vocab, heads).unwrap();

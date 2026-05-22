@@ -2815,29 +2815,73 @@ impl TransformerModel {
                 )
             });
 
-            // index_select on dim=0 gathers rows from [V, H]
-            // Result: [B*S, H]
-            let index_select_start = Instant::now();
-            qwen_trace_runtime_event(trace_embed, "model.embed_index_select_start", || {
-                format!(
-                    "\"elapsed_ms\":{},\"path\":\"row_gather\",\"dim\":0,\"weight_dims\":[{}],\"id_dims\":[{}],\"device\":\"{}\"",
-                    qwen_trace_elapsed_ms(embed_start),
-                    qwen_trace_dims_json(weight.dims()),
-                    qwen_trace_dims_json(flat_ids.dims()),
-                    qwen_trace_device_kind(weight.device())
-                )
-            });
-            let rows = weight.index_select(&flat_ids, 0)?;
-            qwen_trace_runtime_event(trace_embed, "model.embed_index_select_finish", || {
-                format!(
-                    "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"row_gather\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
-                    qwen_trace_elapsed_ms(embed_start),
-                    qwen_trace_elapsed_ms(index_select_start),
-                    qwen_trace_dims_json(rows.dims()),
-                    rows.dtype(),
-                    qwen_trace_device_kind(rows.device())
-                )
-            });
+            let rows = if tokens.len() == 1 {
+                let vocab_size = weight.dims().first().copied().ok_or_else(|| {
+                    BitNetError::Validation("embedding weight must expose a vocab dimension".into())
+                })?;
+                let token_id = tokens[0] as usize;
+                if token_id >= vocab_size {
+                    return Err(BitNetError::Validation(format!(
+                        "single-token embedding id {token_id} is outside vocab size {vocab_size}"
+                    )));
+                }
+
+                // Avoid Candle CUDA index_select for the strict one-token Qwen3 frontier.
+                let narrow_start = Instant::now();
+                qwen_trace_runtime_event(
+                    trace_embed,
+                    "model.embed_single_token_narrow_start",
+                    || {
+                        format!(
+                            "\"elapsed_ms\":{},\"path\":\"row_gather_single_token_narrow\",\"dim\":0,\"weight_dims\":[{}],\"device\":\"{}\"",
+                            qwen_trace_elapsed_ms(embed_start),
+                            qwen_trace_dims_json(weight.dims()),
+                            qwen_trace_device_kind(weight.device())
+                        )
+                    },
+                );
+                let rows = weight.narrow(0, token_id, 1)?;
+                qwen_trace_runtime_event(
+                    trace_embed,
+                    "model.embed_single_token_narrow_finish",
+                    || {
+                        format!(
+                            "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"row_gather_single_token_narrow\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                            qwen_trace_elapsed_ms(embed_start),
+                            qwen_trace_elapsed_ms(narrow_start),
+                            qwen_trace_dims_json(rows.dims()),
+                            rows.dtype(),
+                            qwen_trace_device_kind(rows.device())
+                        )
+                    },
+                );
+                rows
+            } else {
+                // index_select on dim=0 gathers rows from [V, H]
+                // Result: [B*S, H]
+                let index_select_start = Instant::now();
+                qwen_trace_runtime_event(trace_embed, "model.embed_index_select_start", || {
+                    format!(
+                        "\"elapsed_ms\":{},\"path\":\"row_gather\",\"dim\":0,\"weight_dims\":[{}],\"id_dims\":[{}],\"device\":\"{}\"",
+                        qwen_trace_elapsed_ms(embed_start),
+                        qwen_trace_dims_json(weight.dims()),
+                        qwen_trace_dims_json(flat_ids.dims()),
+                        qwen_trace_device_kind(weight.device())
+                    )
+                });
+                let rows = weight.index_select(&flat_ids, 0)?;
+                qwen_trace_runtime_event(trace_embed, "model.embed_index_select_finish", || {
+                    format!(
+                        "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"row_gather\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                        qwen_trace_elapsed_ms(embed_start),
+                        qwen_trace_elapsed_ms(index_select_start),
+                        qwen_trace_dims_json(rows.dims()),
+                        rows.dtype(),
+                        qwen_trace_device_kind(rows.device())
+                    )
+                });
+                rows
+            };
 
             // Reshape to [B, S, H]
             let reshape_start = Instant::now();
