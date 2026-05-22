@@ -62,6 +62,7 @@ mod model_coverage;
 mod model_info;
 mod model_registry;
 mod policy;
+mod promotion_packet;
 mod prompt_suite;
 mod quality_gates;
 mod repo_boundary;
@@ -1240,6 +1241,10 @@ enum Cmd {
         command: repo_boundary::RepoBoundaryCmd,
     },
 
+    /// Generate a conservative swarm-to-source promotion packet from a commit range.
+    #[command(name = "promote-to-source")]
+    PromoteToSource(promotion_packet::PromotionPacketArgs),
+
     /// Regenerate public Shields endpoint badge JSON under `badges/`.
     #[command(name = "badges")]
     Badges {
@@ -2214,6 +2219,7 @@ fn real_main() -> Result<()> {
             }
         },
         Cmd::RepoBoundary { command } => repo_boundary::run(command),
+        Cmd::PromoteToSource(args) => promotion_packet::run(args),
     }
 }
 
