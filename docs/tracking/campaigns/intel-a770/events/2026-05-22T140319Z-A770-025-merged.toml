@@ -1,0 +1,20 @@
+timestamp = "2026-05-22T14:03:19Z"
+campaign = "intel-a770"
+item = "A770-025"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex-a770"
+pr = 329
+branch = "codex/intel-a770/A770-025-live-answer-readiness-run"
+head_sha = "2d8858e6adc235709adf2a0e070396055cbe9727"
+merge_sha = "fa0ec04c010cc6a1eccd42380a17ba032f2a6d0e"
+summary = "Closed A770-025 after PR #329 recorded live seeded CPU AVX2 and Intel A770 OpenCL answer-readiness receipts."
+notes = [
+  "Source PR: #329.",
+  "Head SHA: 2d8858e6adc235709adf2a0e070396055cbe9727.",
+  "Merge SHA: fa0ec04c010cc6a1eccd42380a17ba032f2a6d0e.",
+  "The live CPU AVX2 and A770 OpenCL receipts both passed 8 of 20 seeded answer-readiness cases with 12 quality failures and no timeouts.",
+  "The CPU/A770 parity receipt remains divergent: 0 of 20 passed, 20 of 20 failed top-k parity, 18 of 20 generated outputs matched, and 2 of 20 generated outputs diverged.",
+  "This closeout does not promote strict answer readiness, broad answer quality, CPU/A770 parity, residency, speed, trusted-partial acceleration, or full BitNet inference.",
+]
