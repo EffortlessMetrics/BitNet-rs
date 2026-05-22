@@ -120,7 +120,10 @@ This gate is deliberately narrow. It checks the supported dense Qwen Apple CPU/N
 .github/workflows/apple-m4-dense-slm-regression.yml
 ```
 
-The workflow is manual-dispatch only and defaults to `enable_run=false`. There is intentionally no `schedule:` trigger yet. Scheduled execution should be added only after a provisioned Apple runner is confirmed with these labels:
+The workflow has a weekly scheduled status trigger, but live hardware execution
+still requires manual dispatch with `enable_run=true`. Scheduled status runs are
+non-blocking and do not fetch models, run hardware timing, or claim fresh
+evidence until a provisioned Apple runner is confirmed with these labels:
 
 ```text
 self-hosted
@@ -143,7 +146,12 @@ records branch, commit, optional PR, model id, baseline path, and claim boundary
 
 Low disk is a hard preflight failure. The job writes a `preflight.json` receipt before exiting so the operator can see the cache root, available disk, required disk, branch, commit, and optional PR context. Receipt bundles are retained by the workflow artifact retention setting; raw model binaries remain in the runner cache and must never be uploaded or committed.
 
-The staged workflow is a shape, not an active guarantee. Until scheduled runner availability is confirmed, it proves only that the hardware regression command path and artifact contract are defined.
+The staged workflow is a shape, not an active guarantee. Until scheduled runner
+availability is confirmed, scheduled invocations prove only that the hardware
+regression command path and artifact contract are defined.
+
+The shared M4 CI lane and artifact-retention contract is recorded in
+`docs/slm/apple-m4-evidence-ci-lanes.md`.
 
 ## Compact Trend History
 

@@ -219,6 +219,9 @@ The live tiers remain separate:
 - Tier 3: release gate for full reports, regression comparison, and published
   user envelope refresh.
 
+The cross-lane CI and retention contract is recorded in
+`docs/slm/apple-m4-evidence-ci-lanes.md`.
+
 The existing staged hardware workflow remains manual until runner availability
 is confirmed:
 

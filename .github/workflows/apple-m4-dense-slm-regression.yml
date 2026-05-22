@@ -1,6 +1,8 @@
 name: Apple M4 Dense SLM Regression (staged)
 
 on:
+  schedule:
+    - cron: '20 10 * * 2'
   workflow_dispatch:
     inputs:
       enable_run:
@@ -8,6 +10,15 @@ on:
         required: true
         type: boolean
         default: false
+      run_class:
+        description: "Evidence lane class. advisory requires 30 day retention, scheduled requires 45, release_gate requires 90."
+        required: true
+        type: choice
+        default: "advisory"
+        options:
+          - advisory
+          - scheduled
+          - release_gate
       model_id:
         description: "Supported dense SLM model cache id."
         required: true
@@ -19,7 +30,7 @@ on:
         type: string
         default: "8"
       retention_days:
-        description: "Artifact retention days for receipt bundles."
+        description: "Artifact retention days for receipt bundles. Minimums: advisory=30, scheduled=45, release_gate=90."
         required: true
         type: string
         default: "30"
@@ -50,25 +61,37 @@ env:
 jobs:
   staged-message:
     name: Staged hardware workflow is not active
-    if: ${{ inputs.enable_run != true }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.enable_run != true }}
     runs-on: ubuntu-22.04
     steps:
       - name: Explain staged status
         run: |
+          RUN_CLASS="${{ inputs.run_class }}"
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+            RUN_CLASS="scheduled"
+          elif [ -z "$RUN_CLASS" ]; then
+            RUN_CLASS="advisory"
+          fi
           {
             echo "## Apple M4 Dense SLM Regression"
             echo
-            echo "This workflow is staged only. It does not run scheduled hardware regression until a provisioned Apple runner is confirmed."
+            echo "This workflow is staged unless it is manually dispatched with \`enable_run=true\` on a provisioned Apple M4 runner."
             echo
-            echo "To run manually on the Apple hardware lane, dispatch again with:"
+            echo "- Event: \`${GITHUB_EVENT_NAME}\`"
+            echo "- Run class: \`$RUN_CLASS\`"
+            echo
+            echo "Scheduled invocations intentionally emit this non-blocking status until runner availability is confirmed. They do not fetch models, run hardware timing, or block PRs."
+            echo
+            echo "To run on the Apple hardware lane, dispatch manually with:"
             echo
             echo "- enable_run=true"
+            echo "- run_class=advisory, scheduled, or release_gate"
             echo "- self-hosted runner labels: self-hosted, macOS, ARM64, apple-m4-dense-slm"
           } >> "$GITHUB_STEP_SUMMARY"
 
   apple-m4-dense-slm-regression:
     name: Apple M4 Dense SLM Receipt Regression
-    if: ${{ inputs.enable_run == true }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_run == true }}
     runs-on: [self-hosted, macOS, ARM64, apple-m4-dense-slm]
     timeout-minutes: 90
     steps:
@@ -90,6 +113,33 @@ jobs:
       - name: Prepare artifact directories and check disk
         run: |
           set -euo pipefail
+          RETENTION_DAYS="${{ inputs.retention_days }}"
+          case "$RETENTION_DAYS" in
+            ''|*[!0-9]*)
+              echo "retention_days must be a positive integer, got: $RETENTION_DAYS" >&2
+              exit 1
+              ;;
+          esac
+          RUN_CLASS="${{ inputs.run_class }}"
+          case "$RUN_CLASS" in
+            advisory)
+              MIN_RETENTION_DAYS=30
+              ;;
+            scheduled)
+              MIN_RETENTION_DAYS=45
+              ;;
+            release_gate)
+              MIN_RETENTION_DAYS=90
+              ;;
+            *)
+              echo "Unsupported run_class: $RUN_CLASS" >&2
+              exit 1
+              ;;
+          esac
+          if [ "$RETENTION_DAYS" -lt "$MIN_RETENTION_DAYS" ]; then
+            echo "run_class=$RUN_CLASS requires retention_days >= $MIN_RETENTION_DAYS, got $RETENTION_DAYS" >&2
+            exit 1
+          fi
           mkdir -p "$REGRESSION_ARTIFACT_ROOT" "$BITNET_MODEL_CACHE_DIR"
           FREE_KB="$(df -Pk "$BITNET_MODEL_CACHE_DIR" | awk 'NR == 2 { print $4 }')"
           MIN_FREE_KB="$(( ${{ inputs.min_free_gb }} * 1024 * 1024 ))"
@@ -97,6 +147,11 @@ jobs:
             echo "{"
             echo "  \"artifact_kind\": \"apple_m4_dense_slm_hardware_preflight\","
             echo "  \"machine_id\": \"apple-m4-mac-mini\","
+            echo "  \"run_class\": \"$RUN_CLASS\","
+            echo "  \"event_name\": \"${GITHUB_EVENT_NAME}\","
+            echo "  \"retention_days\": $RETENTION_DAYS,"
+            echo "  \"min_retention_days\": $MIN_RETENTION_DAYS,"
+            echo "  \"blocking_policy\": \"not_required_for_generic_pr_ci\","
             echo "  \"model_cache_root\": \"$BITNET_MODEL_CACHE_DIR\","
             echo "  \"available_kb\": $FREE_KB,"
             echo "  \"min_required_kb\": $MIN_FREE_KB,"
@@ -158,6 +213,10 @@ jobs:
             echo "- Artifact root: \`$REGRESSION_ARTIFACT_ROOT\`"
             echo "- Model id: \`${{ inputs.model_id }}\`"
             echo "- Baseline: \`$PUBLISHED_BASELINE\`"
+            echo "- Run class: \`${{ inputs.run_class }}\`"
+            echo "- Artifact retention: \`${{ inputs.retention_days }} days\`"
+            echo
+            echo "The workflow has no pull_request trigger, so hardware timing is never required for generic PR merge."
             echo
             echo "The run checks dense Qwen Apple CPU/NEON receipts only. It does not claim BitNet quality, full Metal inference, Neural Engine execution, MPSGraph model inference, QK256 support, or broad Apple Silicon performance."
           } >> "$GITHUB_STEP_SUMMARY"

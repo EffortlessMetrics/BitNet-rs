@@ -126,7 +126,7 @@
 | apple-m4-inference-excellence | M4-SERVE-EX-002 | M4-SERVE-EX-001, M4-BITNET-EX-007 | merged |
 | apple-m4-inference-excellence | M4-SERVE-EX-003 | M4-SERVE-EX-001 | merged |
 | apple-m4-inference-excellence | M4-SERVE-EX-004 | M4-SERVE-EX-001, M4-SERVE-EX-003, M4-CONTEXT-001 | merged |
-| apple-m4-inference-excellence | M4-CI-001 | M4-GATE-HYGIENE-001, M4-RECEIPT-001, M4-STABILITY-003 | proposed |
+| apple-m4-inference-excellence | M4-CI-001 | M4-GATE-HYGIENE-001, M4-RECEIPT-001, M4-STABILITY-003 | in_progress |
 | apple-m4-inference-excellence | M4-SETUP-001 | M4-REPRO-002, M4-STABILITY-002, M4-OPS-UX-003 | merged |
 | apple-m4-inference-excellence | M4-BENCH-007 | M4-BENCH-004, M4-REPRO-001 | merged |
 | apple-m4-inference-excellence | M4-ROUTE-MATRIX-001 | M4-DENSE-CHAT-001, M4-BITNET-EX-006, M4-BITNET-EX-007, M4-SERVE-EX-002, M4-OPS-SLO-001 | proposed |

@@ -48,6 +48,7 @@ env:
   RUST_BACKTRACE: "1"
   BITNET_SKIP_SLOW_TESTS: "1"
   TIER0_ARTIFACT_ROOT: target/apple-m4-slm-eval-tier0
+  TIER0_RETENTION_DAYS: "7"
 
 jobs:
   tier0:
@@ -151,5 +152,16 @@ jobs:
             echo
             echo "Tier 0 validated parser, scoring, dry-run corpus shape, committed summary receipt schemas, and model-free v2 regression comparison coverage only."
             echo
+            echo "Artifacts under \`$TIER0_ARTIFACT_ROOT\` are retained for $TIER0_RETENTION_DAYS days for PR/debug review."
+            echo
             echo "This workflow does not fetch models, run live M4 inference, run mac validate, publish performance, or claim broad model quality."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Tier 0 artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: apple-m4-slm-eval-tier0-${{ github.run_id }}
+          path: ${{ env.TIER0_ARTIFACT_ROOT }}
+          if-no-files-found: warn
+          retention-days: ${{ env.TIER0_RETENTION_DAYS }}

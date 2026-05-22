@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T00:09:34Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CI-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-CI-001-evidence-lanes"
+
+notes = [
+  "Started the M4 evidence CI lane contract after M4-SERVE-EX-004 merged and the campaign next item advanced to M4-CI-001.",
+  "Scope is limited to workflow/docs/tracker surfaces for generic PR model-free checks, staged advisory/scheduled/release hardware refreshes, artifact retention, dashboard generation, and non-blocking hardware timing behavior.",
+  "This item does not add runtime proof, fetch models by default, publish fresh timing, or broaden dense SLM, BitNet, Metal, QK256, Neural Engine, MPSGraph, MacBook, quality, speedup, or broad Apple Silicon claims.",
+]
