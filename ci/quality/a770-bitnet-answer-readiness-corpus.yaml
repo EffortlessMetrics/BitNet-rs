@@ -192,7 +192,8 @@ cases:
     seed_material: "seed=770024 family=yes_no index=15 question=water_wet"
     question: "Answer yes or no: is water wet?"
     max_new_tokens: 4
-    gate: {kind: starts_with_any, starts_with_any: ["yes", "no", "Yes", "No"]}
+    scoring: {kind: exact_match, expected_normalized: "yes"}
+    gate: {kind: starts_with_any, starts_with_any: ["yes", "Yes"]}
 
   - id: a770_yes_no_seed770024_sky_016
     category: yes_no
@@ -200,7 +201,8 @@ cases:
     seed_material: "seed=770024 family=yes_no index=16 question=sky_green"
     question: "Answer yes or no: is the daytime sky usually green?"
     max_new_tokens: 4
-    gate: {kind: starts_with_any, starts_with_any: ["yes", "no", "Yes", "No"]}
+    scoring: {kind: exact_match, expected_normalized: "no"}
+    gate: {kind: starts_with_any, starts_with_any: ["no", "No"]}
 
   - id: a770_json_seed770024_status_017
     category: format_constrained_json
