@@ -2,14 +2,14 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-22T15:13:04Z",
+  "created_utc": "2026-05-22T15:46:27Z",
   "machine_id": "intel-258v",
-  "source_revision": "64ad8f88616e4bb9b3429e12ed77c6508c2ad133",
+  "source_revision": "22723787f287886d3fa7922b08e1620e272d9f6b",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
   "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013/#6106 strict-regression-surface fields for BitNet CPU reference route evidence with closeout #6107 merged, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, and LNL258V-BITNET-INTAKE-005 refreshing the former A770 shared BitNet semantic watchpoints #4756/#4757/#4767/#4853/#5064 after live GitHub state showed all five are closed unmerged, leaving pending_shared_change_count=0 and stale_after_merged_count=0. POWER-007/POWER-008 keep the runbook discoverable for the physical battery-mode low_power run, A770-005/#6072 selected-device OpenCL smoke closeout #6079 and A770-006/#6110 selected-device OpenCL matmul_i2s CPU parity closeout #6112 remain non-semantic adjacent accelerator evidence. The current swarm main also includes main-history import #104, CLI model-cache module-path fix #100, and Qwen3 comparator support-bundle lock #99 as repo/support-gate updates that do not change Lunar Lake route evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable. POWER-010/#116 plus closeout #117 now add and close out the no-inference low_power battery-plan command and committed lunar-lake-low-power-battery-plan.json receipt. That plan makes the eventual POWER-006 physical battery run machine-readable, but it records can_collect_battery_evidence_now=false from the current AC-blocked telemetry context and does not clear low_power promotion, battery-mode, thermal, speedup, power-advantage, native accelerator, Qwen3 Lunar Lake, or BitNet behavior gaps. The current swarm main also includes SLM-CPU-067/#109 as an adjacent SLM CPU runtime-support update, not Lunar Lake route evidence, route promotion, speedup, broad quality, Qwen3 Lunar Lake promotion, or BitNet behavior proof. A770-011/#115 is now merged and A770-011 closeout #143 is on current swarm main; it is recorded here as adjacent selected-device inline-scaled QK256 OpenCL candidate evidence, not Lunar Lake inference, semantic-intake stale evidence, route promotion, speedup, power advantage, native OpenCL/NPU proof, full BitNet accelerator inference, packed QK256 accelerator decode, or BitNet QK256/I2_S behavior proof.",
-  "current_main_delta": "Current swarm main also includes the previously audited state through CUDA-MODEL-017J/#328, LNL258V-GOAL-AUDIT-028/#323 and closeout #330, A770-025/#329 and closeout #333, CUDA-MODEL-017K/#331, SLM-CPU-080/#332 and closeout #334, plus A770-026/#336 and closeout #339. #323/#330 are Lunar Lake audit/tracker state only, #329/#333 are adjacent A770 live answer-readiness state only, #331 is adjacent CUDA/Qwen3 RMSNorm-square frontier diagnostic state only, #332/#334 are adjacent Kaby SLM CPU dashboard/tracker state only, and #336/#339 are adjacent A770 answer-readiness failure-frontier state only. None changes Lunar Lake route evidence, completion status, route promotion, speedup, power advantage, native accelerator proof, broad quality, semantic-intake status, runtime/sidecar behavior, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior.",
+  "current_main_delta": "Current swarm main now includes the previously audited state through LNL258V-GOAL-AUDIT-029/#340, LNL258V-GOAL-AUDIT-029 closeout #343, and adjacent CUDA-MODEL-017L/#335. #340/#343 are Lunar Lake audit/tracker state only, and #335 is adjacent CUDA/Qwen3 RMSNorm fused-op diagnostic state only. None changes Lunar Lake route evidence, completion status, route promotion, speedup, power advantage, native accelerator proof, broad quality, semantic-intake status, runtime/sidecar behavior, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-006",
     "status": "blocked",
@@ -501,7 +501,10 @@
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/332",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/334",
         "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/336",
-        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/339"
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/339",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/335",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/340",
+        "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/343"
       ],
       "notes": [
         "The platform is well instrumented and profile-aware, but not yet excellent across all requested profiles.",
@@ -554,7 +557,9 @@
         "A770-025/#329 plus closeout #333 are recorded only as adjacent A770 live seeded answer-readiness state; they do not change Lunar Lake route evidence, completion status, route promotion, speedup, power advantage, native accelerator proof, broad quality, semantic-intake status, runtime behavior, sidecar behavior, or BitNet QK256/I2_S behavior.",
         "CUDA-MODEL-017K/#331 is recorded only as adjacent CUDA/Qwen3 RMSNorm-square frontier diagnostic state; it does not change Lunar Lake route evidence, completion status, route promotion, speedup, power advantage, native accelerator proof, broad quality, semantic-intake status, runtime behavior, sidecar behavior, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior.",
         "SLM-CPU-080/#332 plus closeout #334 are recorded only as adjacent Kaby SLM CPU dashboard/tracker state; they do not change Lunar Lake route evidence, completion status, route promotion, speedup, power advantage, native accelerator proof, broad quality, semantic-intake status, runtime behavior, sidecar behavior, or BitNet QK256/I2_S behavior.",
-        "A770-026/#336 plus closeout #339 are recorded only as adjacent A770 answer-readiness failure-frontier state; they do not change Lunar Lake route evidence, completion status, route promotion, speedup, power advantage, native accelerator proof, broad quality, semantic-intake stale status, runtime math, sidecar behavior, or BitNet QK256/I2_S behavior."
+        "A770-026/#336 plus closeout #339 are recorded only as adjacent A770 answer-readiness failure-frontier state; they do not change Lunar Lake route evidence, completion status, route promotion, speedup, power advantage, native accelerator proof, broad quality, semantic-intake stale status, runtime math, sidecar behavior, or BitNet QK256/I2_S behavior.",
+        "CUDA-MODEL-017L/#335 is recorded only as adjacent CUDA/Qwen3 RMSNorm fused-op diagnostic state; it does not change Lunar Lake route evidence, completion status, route promotion, speedup, power advantage, native accelerator proof, broad quality, semantic-intake status, runtime behavior, sidecar behavior, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior.",
+        "LNL258V-GOAL-AUDIT-029/#340 plus closeout #343 are recorded as audit and tracker state only; they do not add route evidence, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality, runtime behavior, sidecar behavior, semantic-intake stale evidence, Qwen3 Lunar Lake promotion, or BitNet behavior change."
       ]
     }
   ],
@@ -602,7 +607,7 @@
     "bitnet_qk256_or_i2s_behavior_changed": false,
     "bitnet_accelerator_full_inference_claim_added": false,
     "packed_qk256_accelerator_decode_claim_added": false,
-    "current_main_delta_scope": "Current main after the prior audited #328 state adds LNL258V-GOAL-AUDIT-028/#323 and closeout #330 as Lunar Lake audit/tracker state only, A770-025/#329 plus closeout #333 as adjacent A770 live answer-readiness state only, CUDA-MODEL-017K/#331 as adjacent CUDA/Qwen3 RMSNorm-square frontier diagnostic state only, SLM-CPU-080/#332 plus closeout #334 as adjacent Kaby SLM CPU dashboard/tracker state only, and A770-026/#336 plus closeout #339 as adjacent A770 answer-readiness failure-frontier state only. None is Lunar Lake route evidence, completion evidence, runtime/sidecar behavior evidence, semantic-intake stale evidence, Qwen3 Lunar Lake promotion evidence, or BitNet behavior evidence."
+    "current_main_delta_scope": "Current main after the prior audited #339 state adds CUDA-MODEL-017L/#335 as adjacent CUDA/Qwen3 RMSNorm fused-op diagnostic state only, LNL258V-GOAL-AUDIT-029/#340 as Lunar Lake audit state only, and closeout #343 as Lunar Lake tracker closeout state only. None is Lunar Lake route evidence, completion evidence, runtime/sidecar behavior evidence, semantic-intake stale evidence, Qwen3 Lunar Lake promotion evidence, or BitNet behavior evidence."
   },
   "adjacent_support_updates": [
     {
@@ -931,6 +936,22 @@
       "closeout_pr": 339,
       "closeout_merge_sha": "64ad8f88616e4bb9b3429e12ed77c6508c2ad133",
       "status": "adjacent_a770_answer_readiness_failure_frontier_not_lunar_lake_route_evidence",
+      "claim_boundary": "no Lunar Lake inference, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality claim, runtime behavior claim, sidecar behavior claim, semantic-intake stale claim, Qwen3 Lunar Lake model promotion, or BitNet QK256/I2_S behavior claim"
+    },
+    {
+      "id": "CUDA-MODEL-017L-RMSNORM-FUSED-OP",
+      "pr": 335,
+      "merge_sha": "fb9cd61b51ac9b21efbc15a4b6e6001935f7ccdd",
+      "status": "adjacent_cuda_qwen3_rmsnorm_fused_op_diagnostic_not_lunar_lake_route_evidence",
+      "claim_boundary": "no Lunar Lake inference, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality claim, runtime behavior claim, sidecar behavior claim, semantic-intake stale claim, Qwen3 Lunar Lake model promotion, or BitNet QK256/I2_S behavior claim"
+    },
+    {
+      "id": "LNL258V-GOAL-AUDIT-029",
+      "pr": 340,
+      "merge_sha": "e9a08dd173c3c58a0528dc6a4edef61bc7faf85a",
+      "closeout_pr": 343,
+      "closeout_merge_sha": "22723787f287886d3fa7922b08e1620e272d9f6b",
+      "status": "lunar_lake_audit_and_tracker_state_not_route_evidence",
       "claim_boundary": "no Lunar Lake inference, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality claim, runtime behavior claim, sidecar behavior claim, semantic-intake stale claim, Qwen3 Lunar Lake model promotion, or BitNet QK256/I2_S behavior claim"
     }
   ]
