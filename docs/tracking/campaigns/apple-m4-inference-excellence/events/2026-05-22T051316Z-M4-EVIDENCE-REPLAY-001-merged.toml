@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T05:13:16Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EVIDENCE-REPLAY-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
+pr = 6182
+head_sha = "22cc5eb0da30a090a7b96b41031c1354c7344724"
+merge_sha = "62a5f3a30523c619a371a536a778cc8601236938"
+
+notes = [
+  "Merged source PR #6182 after GitHub checks passed or were intentionally skipped.",
+  "M4-EVIDENCE-REPLAY-001 now has `bitnet mac evidence replay --bundle ... --dry-run`, an `apple_m4_evidence_replay_dry_run` receipt contract, CLI coverage, docs, and a dense SLM q8 eval-v2 replay manifest with SHA256-pinned committed inputs in main.",
+  "The merged source slice remains dry-run replay/audit only; it does not run live generation, fetch models, execute regression commands during replay, validate uncommitted local artifacts, enable BitNet chat or serve, or make broad quality, performance, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claims.",
+]

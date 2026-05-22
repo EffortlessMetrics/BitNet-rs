@@ -21,8 +21,6 @@ The command writes an `apple_m4_inference_status` receipt to
 - BitNet ask/warm readiness and explicit disabled chat/serve state;
 - current local report inventory for dense eval v2, dense benchmark v2, BitNet
   eval, BitNet benchmark, and variable warm-session evidence;
-- the M4 route-state matrix for dense SLM and BitNet ask, chat, warm-session,
-  serve, streaming, disabled, batch-only, and unsupported surfaces;
 - known operator commands for model fetch/verify, ask, chat, serve, doctor,
   smoke, regression, BitNet warm, and the BitNet chat gate.
 
@@ -46,92 +44,11 @@ broad_performance_claim=false
 speedup_claim=false
 ```
 
-The `route_state_matrix` field is model-free and descriptive. Enabled and
-batch-only rows point at their required evidence item and receipt family;
-disabled BitNet chat/serve/streaming rows point at the required gate receipt
-families; unsupported backend rows remain non-routable until separate full-route
-receipts exist.
-
 Validate the receipt with:
 
 ```bash
 bitnet mac receipts-check target/apple-m4-inference-ops/mac-status.json --json
 ```
-
-## Evidence Replay Bundles
-
-`M4-EVIDENCE-REPLAY-001` adds a model-free dry-run replay/audit command:
-
-```bash
-bitnet mac evidence replay \
-  --bundle ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
-  --dry-run \
-  --json
-```
-
-The committed manifest uses artifact kind `apple_m4_evidence_replay_bundle`.
-It lists exact audit commands, git and binary identity, dense SLM and BitNet
-model/tokenizer identity, receipt inputs, dashboard outputs, the expected
-advisory regression result, and the claim boundary. The dry-run command writes
-an `apple_m4_evidence_replay_dry_run` receipt to
-`target/apple-m4-inference-ops/evidence-replay-dry-run.json` by default.
-
-The replay dry-run validates only the committed manifest and referenced receipt
-paths. It does not execute replay commands, run live inference, download
-models, validate uncommitted artifacts, enable BitNet chat or serve, or make
-Metal, QK256, Neural Engine, MPSGraph, MacBook, broad quality, broad
-performance, speedup, or broad Apple Silicon claims.
-
-Validate the bundle and dry-run receipt with:
-
-```bash
-bitnet mac receipts-check \
-  ci/hardware/apple-m4-mac-mini/2026-05-21T145609Z/evidence-replay/manifest.json \
-  --json
-bitnet mac receipts-check \
-  target/apple-m4-inference-ops/evidence-replay-dry-run.json \
-  --json
-```
-
-## Operator Workload Suite
-
-`M4-WORKLOAD-001` adds a model-free workload manifest command:
-
-```bash
-bitnet mac workload \
-  --suite m4-operator \
-  --json-out ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json \
-  --json
-```
-
-The command writes an `apple_m4_operator_workload_suite` receipt. It does not
-run live inference or download models. The committed manifest covers the
-operator workflows `summarize`, `extract`, `classify`, `json`, `rewrite`, and
-`table_qa` across dense SLM ask/chat/warm-session/serve surfaces and the enabled
-BitNet ask/warm-session surfaces. BitNet chat and serve remain gate-disabled
-route boundaries in the workload plan.
-
-The receipt records:
-
-- six workflow prompts with mechanical checks, not LLM judging;
-- 48 route-plan entries covering the workflow, model family, and route-surface
-  matrix;
-- the current route-state matrix and report inventory used to explain each
-  enabled, batch-only, disabled, or unsupported route;
-- exact live commands an operator would run later for per-route receipts.
-
-Validate the committed manifest with:
-
-```bash
-bitnet mac receipts-check \
-  ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json \
-  --json
-```
-
-This is a workload plan and receipt-contract check. It is not broad assistant
-quality proof, BitNet chat or serve enablement, production hosting proof, full
-Metal inference, QK256, Neural Engine, MPSGraph, MacBook evidence, speedup, broad
-performance, or broad Apple Silicon evidence.
 
 ## Report Refresh Manifest
 
@@ -215,3 +132,13 @@ The inference-ops lane is complete when the campaign tracker marks
 uses matching report history before describing trends.
 
 Live M4 model runs belong in local, advisory, scheduled, or release lanes.
+The shared M4 CI lane and artifact-retention contract is recorded in
+`docs/slm/apple-m4-evidence-ci-lanes.md`.
+
+`M4-ROUTE-MATRIX-001` adds the route-state table embedded in
+`bitnet mac status --json` and `bitnet mac evidence --json`. The documented
+operator view is `docs/slm/apple-m4-route-state-matrix.md`.
+
+`M4-WORKLOAD-001` adds the model-free workload-suite contract:
+`bitnet mac workload --suite m4-operator`. The documented operator view is
+`docs/slm/apple-m4-workload-suite.md`.

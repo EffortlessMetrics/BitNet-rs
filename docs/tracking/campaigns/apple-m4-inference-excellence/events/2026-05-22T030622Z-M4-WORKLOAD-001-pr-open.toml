@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T03:06:22Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-WORKLOAD-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-source-promotion"
+pr = 6180
+head_sha = "8ab28785b39cf92263f03e1d3bbd792842c8986d"
+
+notes = [
+  "Opened source PR #6180 for the M4-WORKLOAD-001 model-free operator workload suite contract.",
+  "The PR adds `bitnet mac workload --suite m4-operator`, an `apple_m4_operator_workload_suite` receipt contract, validation, CLI coverage, docs, and campaign tracking.",
+  "The PR does not run live generation, fetch models, start local serve, enable BitNet chat or serve, or make broad quality, performance, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claims.",
+]

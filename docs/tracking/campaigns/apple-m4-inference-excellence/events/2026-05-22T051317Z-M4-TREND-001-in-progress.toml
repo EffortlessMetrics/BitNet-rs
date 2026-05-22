@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T05:13:17Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-TREND-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
+
+notes = [
+  "Advanced the campaign current item after M4-EVIDENCE-REPLAY-001 merged.",
+  "M4-TREND-001 is now the active next item for seven-day M4 dense SLM and BitNet trend history.",
+  "No implementation work for M4-TREND-001 is included in this tracker-only closeout.",
+]

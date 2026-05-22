@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T03:30:40Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-WORKLOAD-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-source-promotion"
+pr = 6180
+head_sha = "92b32b027836ad9f5e42489a7af2fe3ae141e807"
+merge_sha = "a86d13cd9e643b54ca1b42bde75fdb214c4d1900"
+
+notes = [
+  "Merged source PR #6180 after all GitHub checks passed or were intentionally skipped.",
+  "M4-WORKLOAD-001 now has the model-free `bitnet mac workload --suite m4-operator` command, `apple_m4_operator_workload_suite` receipt validator, CLI coverage, docs, and campaign tracking in main.",
+  "The merged source slice remains a workload-suite contract only; it does not run live generation, fetch models, start local serve, enable BitNet chat or serve, or make broad quality, performance, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claims.",
+]

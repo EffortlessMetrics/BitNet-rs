@@ -314,6 +314,22 @@ whenever stale aging changes a route class, default model, supported-model
 state, BitNet artifact/tokenizer identity, route enablement, threshold result,
 context boundary, disk/cache floor, dashboard status, or claim-boundary wording.
 
+`M4-TREND-001` records the first committed seven-day trend summary under:
+
+```text
+ci/hardware/apple-m4-mac-mini/2026-05-22T0530Z/trend/seven-day-history.json
+ci/hardware/apple-m4-mac-mini/2026-05-22T0530Z/trend/seven-day-history.md
+```
+
+The summary keeps nine dashboard groups in `ready` matching-history state for
+dense SLM eval-v2, dense SLM benchmark-v2, BitNet eval, BitNet benchmark, and
+BitNet variable warm. It also records skipped-day reasons for days that produced
+setup, variance, context, reliability, serve, or repaired-eval evidence without
+a second matching receipt for the dashboard family. The only current advisory
+impact is BitNet variable-warm resident memory growth of `25.63%` against the
+`10%` higher-is-worse advisory threshold. No route class changes and no BitNet
+chat or serve enablement follow from this trend summary.
+
 ## Regression Thresholds
 
 The dashboard may compare reports only when the identity context matches:
