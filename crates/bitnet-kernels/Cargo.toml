@@ -229,6 +229,11 @@ path = "tests/metal_tiny_smoke.rs"
 required-features = ["metal-runtime"]
 
 [[test]]
+name = "metal_attention_scores_phase"
+path = "tests/metal_attention_scores_phase.rs"
+required-features = ["metal"]
+
+[[test]]
 name = "metal_wgpu_adapter_tests"
 path = "tests/metal_wgpu_adapter_tests.rs"
 required-features = ["metal-runtime"]
