@@ -2694,13 +2694,15 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CI-001"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-CI-001-evidence-lanes"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-GATE-HYGIENE-001", "M4-RECEIPT-001", "M4-STABILITY-003"]
+pr = 6175
+head_sha = "3c0a6e43b25526fea3565975d3f0e4c8caa61dd0"
 acceptance = "Codify the M4 evidence CI lanes and retention contracts: generic PR model-free checks, advisory local M4 runs, scheduled M4 refresh, release-gate M4 refresh, artifact retention, dashboard generation, and explicit non-blocking behavior for hardware-only timing jobs."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",

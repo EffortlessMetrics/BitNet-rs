@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T00:17:42Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CI-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-CI-001-evidence-lanes"
+pr = 6175
+head_sha = "3c0a6e43b25526fea3565975d3f0e4c8caa61dd0"
+
+notes = [
+  "Opened draft PR #6175 for the M4 evidence CI lane and retention contract slice.",
+  "The PR updates workflow/docs/tracker surfaces only: model-free Tier 0 artifact retention, staged advisory/scheduled/release hardware refresh classes, dashboard generation, and non-blocking hardware timing behavior.",
+  "The PR does not add runtime proof, fetch models by default, publish fresh timing, or broaden dense SLM, BitNet, Metal, QK256, Neural Engine, MPSGraph, MacBook, quality, speedup, or broad Apple Silicon claims.",
+]

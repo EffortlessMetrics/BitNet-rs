@@ -40,6 +40,7 @@ env:
   RUST_BACKTRACE: "1"
   BITNET_SKIP_SLOW_TESTS: "1"
   OPS_TIER0_ARTIFACT_ROOT: target/apple-m4-inference-ops-tier0
+  OPS_TIER0_RETENTION_DAYS: "7"
 
 jobs:
   tier0:
@@ -97,5 +98,16 @@ jobs:
             echo
             echo "Generated and validated the model-free Apple M4 report-refresh manifest and regression dashboard from committed receipts."
             echo
+            echo "Artifacts under \`$OPS_TIER0_ARTIFACT_ROOT\` are retained for $OPS_TIER0_RETENTION_DAYS days for PR/debug review."
+            echo
             echo "This workflow does not fetch models, run live M4 inference, run BitNet chat or serve, run long resident soaks, publish new timing, or claim broad Apple Silicon performance."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Tier 0 artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: apple-m4-inference-ops-tier0-${{ github.run_id }}
+          path: ${{ env.OPS_TIER0_ARTIFACT_ROOT }}
+          if-no-files-found: warn
+          retention-days: ${{ env.OPS_TIER0_RETENTION_DAYS }}

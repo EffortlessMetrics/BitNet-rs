@@ -132,3 +132,5 @@ The inference-ops lane is complete when the campaign tracker marks
 uses matching report history before describing trends.
 
 Live M4 model runs belong in local, advisory, scheduled, or release lanes.
+The shared M4 CI lane and artifact-retention contract is recorded in
+`docs/slm/apple-m4-evidence-ci-lanes.md`.

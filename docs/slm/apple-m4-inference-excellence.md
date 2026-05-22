@@ -1393,6 +1393,8 @@ dashboard groups, then writes an `apple_m4_operator_evidence_summary` receipt
 without running live inference or downloading models. `bitnet mac status`,
 `doctor`, `report-refresh`, and `regression-dashboard` remain model-free by
 default. Live model runs belong in local, advisory, scheduled, or release lanes.
+`docs/slm/apple-m4-evidence-ci-lanes.md` defines the CI lane and artifact
+retention contract for those surfaces.
 `bitnet mac report-refresh --explain --open-targets` and
 `bitnet mac regression-dashboard --explain --open-targets` expose the same
 model-free operator contract in a more navigable form: status meanings,
