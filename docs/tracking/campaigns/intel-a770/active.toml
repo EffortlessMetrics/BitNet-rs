@@ -1096,7 +1096,7 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-024"
-status = "pr_open"
+status = "merged"
 pr = 314
 branch = "codex/intel-a770/A770-024-seeded-answer-readiness-contract"
 stackable = false
