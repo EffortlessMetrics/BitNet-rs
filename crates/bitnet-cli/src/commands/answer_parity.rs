@@ -1476,6 +1476,10 @@ fn generated_output_frontier_row(
     let has_logit_context_at_first_mismatch = left_step.is_some() && right_step.is_some();
     let left_chosen_id = left_step.and_then(|step| step["chosen_id"].as_u64());
     let right_chosen_id = right_step.and_then(|step| step["chosen_id"].as_u64());
+    let same_chosen_id_at_first_mismatch = match (left_chosen_id, right_chosen_id) {
+        (Some(left), Some(right)) => json!(left == right),
+        _ => Value::Null,
+    };
     let classification = if has_logit_context_at_first_mismatch {
         "generated_output_first_mismatch_has_logit_context"
     } else {
@@ -1496,7 +1500,7 @@ fn generated_output_frontier_row(
         "has_logit_context_at_first_mismatch": has_logit_context_at_first_mismatch,
         "left_chosen_id_at_first_mismatch": left_chosen_id,
         "right_chosen_id_at_first_mismatch": right_chosen_id,
-        "same_chosen_id_at_first_mismatch": left_chosen_id == right_chosen_id,
+        "same_chosen_id_at_first_mismatch": same_chosen_id_at_first_mismatch,
         "first_different_rank_at_first_mismatch": match (left_step, right_step) {
             (Some(left), Some(right)) => {
                 first_different_topk_rank(&left["top_logits"], &right["top_logits"])
@@ -2012,6 +2016,10 @@ mod tests {
         assert_eq!(
             report["generated_output_frontier"]["rows"][0]["has_logit_context_at_first_mismatch"],
             false
+        );
+        assert!(
+            report["generated_output_frontier"]["rows"][0]["same_chosen_id_at_first_mismatch"]
+                .is_null()
         );
     }
 
