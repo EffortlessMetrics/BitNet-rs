@@ -34,6 +34,8 @@ const MAC_SMOKE_DEFAULT_RECEIPT: &str = "target/apple-m4-continuity/mac-smoke.js
 const MAC_DOCTOR_DEFAULT_RECEIPT: &str = "target/apple-m4-slm-excellence/mac-doctor.json";
 const MAC_STATUS_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-ops/mac-status.json";
 const MAC_EVIDENCE_DEFAULT_RECEIPT: &str = "target/apple-m4-inference-ops/evidence-summary.json";
+const MAC_EVIDENCE_REPLAY_DEFAULT_RECEIPT: &str =
+    "target/apple-m4-inference-ops/evidence-replay-dry-run.json";
 const MAC_WORKLOAD_DEFAULT_RECEIPT: &str =
     "target/apple-m4-inference-excellence/workload/summary.json";
 const MAC_REPORT_REFRESH_DEFAULT_RECEIPT: &str =
@@ -599,6 +601,10 @@ enum MacAction {
 
     /// Summarize committed M4 evidence, cache/disk state, regressions, and next command.
     Evidence {
+        /// Replay/audit a committed M4 evidence bundle manifest.
+        #[command(subcommand)]
+        action: Option<MacEvidenceAction>,
+
         /// Override model cache root. Defaults to ~/.cache/bitnet-rs/models.
         #[arg(long, value_name = "PATH")]
         cache_dir: Option<PathBuf>,
@@ -1537,6 +1543,28 @@ enum MacAction {
     },
 }
 
+#[derive(Debug, Subcommand)]
+enum MacEvidenceAction {
+    /// Dry-run replay of a committed M4 evidence bundle manifest.
+    Replay {
+        /// Bundle manifest to validate.
+        #[arg(long, value_name = "PATH")]
+        bundle: PathBuf,
+
+        /// Validate the bundle without running models, downloads, or regressions.
+        #[arg(long, default_value_t = false)]
+        dry_run: bool,
+
+        /// Output strict evidence replay dry-run receipt.
+        #[arg(long, value_name = "PATH", default_value = MAC_EVIDENCE_REPLAY_DEFAULT_RECEIPT)]
+        json_out: PathBuf,
+
+        /// Emit JSON to stdout after writing --json-out.
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
+}
+
 #[derive(Debug, Serialize)]
 struct ReceiptCheckSummary {
     path: PathBuf,
@@ -1589,10 +1617,16 @@ impl MacCommand {
                 ensure_supported_mac_device(explicit_device_label, "mac status")?;
                 run_status(cache_dir, json_out, json)
             }
-            MacAction::Evidence { cache_dir, root, json_out, json } => {
-                ensure_supported_mac_device(explicit_device_label, "mac evidence")?;
-                run_evidence(cache_dir, root, json_out, json)
-            }
+            MacAction::Evidence { action, cache_dir, root, json_out, json } => match action {
+                Some(MacEvidenceAction::Replay { bundle, dry_run, json_out, json }) => {
+                    ensure_supported_mac_device(explicit_device_label, "mac evidence replay")?;
+                    run_evidence_replay(bundle, dry_run, json_out, json)
+                }
+                None => {
+                    ensure_supported_mac_device(explicit_device_label, "mac evidence")?;
+                    run_evidence(cache_dir, root, json_out, json)
+                }
+            },
             MacAction::Workload { suite, json_out, json } => {
                 ensure_supported_mac_device(explicit_device_label, "mac workload")?;
                 run_workload_suite(suite, json_out, json)
@@ -4180,6 +4214,459 @@ fn print_mac_evidence_summary(receipt: &serde_json::Value, json_out: &Path) {
     println!("Receipt: {}", json_out.display());
     println!(
         "Claim boundary: evidence summary only; no live model run, no model download, dense SLM and BitNet evidence stay separate."
+    );
+}
+
+fn run_evidence_replay(
+    bundle: PathBuf,
+    dry_run: bool,
+    json_out: PathBuf,
+    json: bool,
+) -> Result<()> {
+    if !dry_run {
+        anyhow::bail!(
+            "mac evidence replay is intentionally dry-run only; pass --dry-run to audit committed bundle inputs without running models, downloads, or regression commands"
+        );
+    }
+    let (manifest, manifest_sha256) = read_evidence_replay_json(&bundle)
+        .with_context(|| format!("failed to load replay bundle {}", bundle.display()))?;
+    let receipt =
+        apple_m4_evidence_replay_dry_run_receipt(&bundle, &manifest_sha256, &manifest, &json_out)?;
+    validate_mac_receipt_value(&json_out, &receipt)?;
+    write_json_receipt(&json_out, &receipt)?;
+    if json {
+        println!("{}", serde_json::to_string_pretty(&receipt)?);
+    } else {
+        print_evidence_replay_summary(&receipt, &json_out);
+    }
+    Ok(())
+}
+
+fn apple_m4_evidence_replay_dry_run_receipt(
+    bundle: &Path,
+    manifest_sha256: &str,
+    manifest: &serde_json::Value,
+    json_out: &Path,
+) -> Result<serde_json::Value> {
+    validate_apple_m4_evidence_replay_bundle_manifest(bundle, manifest)?;
+    let receipt_inputs = validate_evidence_replay_receipt_inputs(bundle, manifest)?;
+    let dashboard_outputs = validate_evidence_replay_dashboard_outputs(bundle, manifest)?;
+    validate_evidence_replay_expected_regression(bundle, manifest, &receipt_inputs)?;
+    let run_identity = apple_m4_model_free_run_identity_json(
+        "apple_m4_evidence_replay_dry_run",
+        "mac evidence replay",
+        "evidence_replay_bundle_dry_run",
+    );
+    let run_identity_sha256 = apple_m4_run_identity_sha256(&run_identity);
+    Ok(serde_json::json!({
+        "schema_version": "1.3.0",
+        "artifact_kind": "apple_m4_evidence_replay_dry_run",
+        "generated_at": chrono::Utc::now().to_rfc3339(),
+        "operator_command": "mac evidence replay",
+        "status": "ok",
+        "work_item": "M4-EVIDENCE-REPLAY-001",
+        "receipt_path": json_out,
+        "requested_backend": APPLE_M4_CPU_NEON,
+        "selected_backend": APPLE_M4_CPU_NEON,
+        "runtime_api": "cpu",
+        "fallback_used": false,
+        "machine": {
+            "id": "apple-m4-mac-mini",
+            "scope": "model-free dry-run audit of a committed M4 evidence replay bundle",
+        },
+        "run_identity": run_identity,
+        "run_identity_sha256": run_identity_sha256,
+        "bundle": {
+            "path": bundle,
+            "sha256": manifest_sha256,
+            "artifact_kind": manifest["artifact_kind"].clone(),
+            "bundle_id": manifest["bundle_id"].clone(),
+            "work_item": manifest["work_item"].clone(),
+        },
+        "replay_contract": manifest["replay_contract"].clone(),
+        "git_identity": manifest["git_identity"].clone(),
+        "binary_identity": manifest["binary_identity"].clone(),
+        "model_identity": manifest["model_identity"].clone(),
+        "tokenizer_identity": manifest["tokenizer_identity"].clone(),
+        "commands": manifest["commands"].clone(),
+        "receipt_inputs": receipt_inputs,
+        "dashboard_outputs": dashboard_outputs,
+        "expected_regression_result": manifest["expected_regression_result"].clone(),
+        "claim_boundary": {
+            "dry_run_replay_only": true,
+            "committed_bundle_manifest": true,
+            "committed_receipt_inputs": true,
+            "committed_dashboard_outputs": true,
+            "no_live_model_run": true,
+            "no_model_download": true,
+            "regression_command_executed": false,
+            "model_inference_executed": false,
+            "uncommitted_local_artifacts_validated": false,
+            "dense_slm_and_bitnet_evidence_separated": true,
+            "bitnet_chat_enabled": false,
+            "bitnet_serve_enabled": false,
+            "full_metal_inference_claimed": false,
+            "qk256_apple_claimed": false,
+            "neural_engine_execution_claimed": false,
+            "mpsgraph_inference_claimed": false,
+            "macbook_evidence": false,
+            "broad_apple_silicon_claim": false,
+            "broad_model_quality_claim": false,
+            "broad_performance_claim": false,
+            "speedup_claim": false,
+        },
+    }))
+}
+
+fn validate_apple_m4_evidence_replay_bundle_manifest(
+    path: &Path,
+    manifest: &serde_json::Value,
+) -> Result<()> {
+    ensure_evidence_replay_committed_path(path, "bundle manifest")?;
+    require_exact_string_at(path, manifest, &["schema_version"], "1.0.0")?;
+    require_exact_string_at(
+        path,
+        manifest,
+        &["artifact_kind"],
+        "apple_m4_evidence_replay_bundle_manifest",
+    )?;
+    require_exact_string_at(path, manifest, &["work_item"], "M4-EVIDENCE-REPLAY-001")?;
+    require_non_empty_string_at(path, manifest, &["bundle_id"])?;
+    require_exact_string_at(path, manifest, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_bool_at(path, manifest, &["replay_contract", "dry_run_only"], true)?;
+    require_bool_at(path, manifest, &["replay_contract", "committed_bundle_manifest"], true)?;
+    require_bool_at(path, manifest, &["replay_contract", "committed_receipt_inputs"], true)?;
+    require_bool_at(path, manifest, &["replay_contract", "committed_dashboard_outputs"], true)?;
+    require_bool_at(path, manifest, &["replay_contract", "no_live_model_run"], true)?;
+    require_bool_at(path, manifest, &["replay_contract", "no_model_download"], true)?;
+    require_bool_at(path, manifest, &["replay_contract", "regression_command_executed"], false)?;
+    require_bool_at(path, manifest, &["replay_contract", "model_inference_executed"], false)?;
+    require_bool_at(
+        path,
+        manifest,
+        &["replay_contract", "uncommitted_local_artifacts_validated"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        manifest,
+        &["replay_contract", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_non_empty_string_at(path, manifest, &["git_identity", "source_commit"])?;
+    require_non_empty_string_at(path, manifest, &["git_identity", "source_commit_command"])?;
+    require_non_empty_string_at(path, manifest, &["binary_identity", "crate"])?;
+    require_non_empty_string_at(path, manifest, &["binary_identity", "version_command"])?;
+    require_non_empty_string_at(path, manifest, &["model_identity", "family"])?;
+    require_non_empty_string_at(path, manifest, &["model_identity", "model_id"])?;
+    require_non_empty_string_at(path, manifest, &["model_identity", "sha256"])?;
+    require_non_empty_string_at(path, manifest, &["tokenizer_identity", "authority"])?;
+    require_non_empty_string_at(path, manifest, &["tokenizer_identity", "identity"])?;
+    validate_evidence_replay_commands(path, manifest)?;
+    require_bool_at(path, manifest, &["claim_boundary", "dry_run_replay_only"], true)?;
+    require_bool_at(path, manifest, &["claim_boundary", "no_live_model_run"], true)?;
+    require_bool_at(path, manifest, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(
+        path,
+        manifest,
+        &["claim_boundary", "uncommitted_local_artifacts_validated"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        manifest,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, manifest, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, manifest, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(path, manifest, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, manifest, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, manifest, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, manifest, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, manifest, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, manifest, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, manifest, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, manifest, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, manifest, &["claim_boundary", "speedup_claim"], false)?;
+    Ok(())
+}
+
+fn validate_evidence_replay_commands(path: &Path, manifest: &serde_json::Value) -> Result<()> {
+    let commands = manifest["commands"].as_array().ok_or_else(|| {
+        anyhow!("{} evidence replay manifest must include commands", path.display())
+    })?;
+    if commands.is_empty() {
+        anyhow::bail!("{} evidence replay manifest commands must not be empty", path.display());
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    for command in commands {
+        let id = require_non_empty_string_at(path, command, &["id"])?;
+        let command_text = require_non_empty_string_at(path, command, &["command"])?;
+        if !seen.insert(id.to_string()) {
+            anyhow::bail!("{} duplicates evidence replay command id {id}", path.display());
+        }
+        if id == "dry_run_replay"
+            && (!command_text.contains("bitnet mac evidence replay")
+                || !command_text.contains("--dry-run")
+                || !command_text.contains("--json"))
+        {
+            anyhow::bail!(
+                "{} dry_run_replay command must be the exact bitnet mac evidence replay dry-run command",
+                path.display()
+            );
+        }
+    }
+    for required in [
+        "dry_run_replay",
+        "latest_receipt_check",
+        "baseline_receipt_check",
+        "regression_check",
+        "dashboard_refresh",
+    ] {
+        if !seen.contains(required) {
+            anyhow::bail!(
+                "{} evidence replay manifest is missing command id {required}",
+                path.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn validate_evidence_replay_receipt_inputs(
+    bundle: &Path,
+    manifest: &serde_json::Value,
+) -> Result<Vec<serde_json::Value>> {
+    let inputs = manifest["receipt_inputs"].as_array().ok_or_else(|| {
+        anyhow!("{} evidence replay manifest must include receipt_inputs", bundle.display())
+    })?;
+    if inputs.is_empty() {
+        anyhow::bail!(
+            "{} evidence replay manifest receipt_inputs must not be empty",
+            bundle.display()
+        );
+    }
+    let mut validated = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for input in inputs {
+        let role = require_non_empty_string_at(bundle, input, &["role"])?;
+        let path_text = require_non_empty_string_at(bundle, input, &["path"])?;
+        let path = PathBuf::from(path_text);
+        ensure_evidence_replay_committed_path(&path, "receipt input")?;
+        if !seen.insert(path_text.to_string()) {
+            anyhow::bail!("{} duplicates receipt input path {path_text}", bundle.display());
+        }
+        let expected_artifact_kind =
+            require_non_empty_string_at(bundle, input, &["artifact_kind"])?;
+        let expected_sha256 = require_non_empty_string_at(bundle, input, &["sha256"])?;
+        if !is_sha256_hex(expected_sha256) {
+            anyhow::bail!(
+                "{} receipt input {path_text} sha256 must be a SHA256 hex digest",
+                bundle.display()
+            );
+        }
+        let evidence_family = require_non_empty_string_at(bundle, input, &["evidence_family"])?;
+        if !matches!(evidence_family, "dense_slm" | "bitnet") {
+            anyhow::bail!(
+                "{} receipt input {path_text} evidence_family must be dense_slm or bitnet",
+                bundle.display()
+            );
+        }
+        let (receipt, observed_sha256) = read_evidence_replay_json(&path)?;
+        if observed_sha256 != expected_sha256 {
+            anyhow::bail!(
+                "{} receipt input {path_text} sha256 mismatch: expected {expected_sha256}, got {observed_sha256}",
+                bundle.display()
+            );
+        }
+        if receipt["artifact_kind"].as_str() != Some(expected_artifact_kind) {
+            anyhow::bail!(
+                "{} receipt input {path_text} artifact_kind must be {expected_artifact_kind}, got {:?}",
+                bundle.display(),
+                receipt["artifact_kind"].as_str()
+            );
+        }
+        let summary = validate_mac_receipt_value(&path, &receipt)
+            .with_context(|| format!("{} failed receipt input validation", path.display()))?;
+        validated.push(serde_json::json!({
+            "role": role,
+            "path": path,
+            "artifact_kind": summary.artifact_kind.clone(),
+            "sha256": observed_sha256,
+            "evidence_family": evidence_family,
+            "model_identity": apple_m4_dashboard_report_identity_json(&receipt, evidence_family),
+            "prompt_count": summary.prompt_count,
+            "generated_tokens": summary.generated_tokens,
+            "receipt_check_passed": true,
+            "validation_status": "ok",
+        }));
+    }
+    Ok(validated)
+}
+
+fn validate_evidence_replay_dashboard_outputs(
+    bundle: &Path,
+    manifest: &serde_json::Value,
+) -> Result<Vec<serde_json::Value>> {
+    let outputs = manifest["dashboard_outputs"].as_array().ok_or_else(|| {
+        anyhow!("{} evidence replay manifest must include dashboard_outputs", bundle.display())
+    })?;
+    if outputs.is_empty() {
+        anyhow::bail!(
+            "{} evidence replay manifest dashboard_outputs must not be empty",
+            bundle.display()
+        );
+    }
+    let mut validated = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for output in outputs {
+        let role = require_non_empty_string_at(bundle, output, &["role"])?;
+        let path_text = require_non_empty_string_at(bundle, output, &["path"])?;
+        let path = PathBuf::from(path_text);
+        ensure_evidence_replay_committed_path(&path, "dashboard output")?;
+        if !seen.insert(path_text.to_string()) {
+            anyhow::bail!("{} duplicates dashboard output path {path_text}", bundle.display());
+        }
+        let expected_sha256 = require_non_empty_string_at(bundle, output, &["sha256"])?;
+        if !is_sha256_hex(expected_sha256) {
+            anyhow::bail!(
+                "{} dashboard output {path_text} sha256 must be a SHA256 hex digest",
+                bundle.display()
+            );
+        }
+        let expected_format = require_non_empty_string_at(bundle, output, &["format"])?;
+        let bytes =
+            std::fs::read(&path).with_context(|| format!("failed to read {}", path.display()))?;
+        let observed_sha256 = sha256_hex(&bytes);
+        if observed_sha256 != expected_sha256 {
+            anyhow::bail!(
+                "{} dashboard output {path_text} sha256 mismatch: expected {expected_sha256}, got {observed_sha256}",
+                bundle.display()
+            );
+        }
+        let mut artifact_kind = serde_json::Value::Null;
+        let mut receipt_check_passed = false;
+        if expected_format == "json" {
+            let parsed = serde_json::from_slice::<serde_json::Value>(&bytes)
+                .with_context(|| format!("failed to parse {}", path.display()))?;
+            let expected_artifact_kind =
+                require_non_empty_string_at(bundle, output, &["artifact_kind"])?;
+            if parsed["artifact_kind"].as_str() != Some(expected_artifact_kind) {
+                anyhow::bail!(
+                    "{} dashboard output {path_text} artifact_kind must be {expected_artifact_kind}, got {:?}",
+                    bundle.display(),
+                    parsed["artifact_kind"].as_str()
+                );
+            }
+            validate_mac_receipt_value(&path, &parsed).with_context(|| {
+                format!("{} failed dashboard output receipt validation", path.display())
+            })?;
+            artifact_kind = serde_json::Value::String(expected_artifact_kind.to_string());
+            receipt_check_passed = true;
+        } else if expected_format != "markdown" {
+            anyhow::bail!(
+                "{} dashboard output {path_text} format must be json or markdown",
+                bundle.display()
+            );
+        }
+        validated.push(serde_json::json!({
+            "role": role,
+            "path": path,
+            "format": expected_format,
+            "artifact_kind": artifact_kind,
+            "sha256": observed_sha256,
+            "receipt_check_passed": receipt_check_passed,
+            "validation_status": "ok",
+        }));
+    }
+    Ok(validated)
+}
+
+fn validate_evidence_replay_expected_regression(
+    bundle: &Path,
+    manifest: &serde_json::Value,
+    receipt_inputs: &[serde_json::Value],
+) -> Result<()> {
+    let regression = &manifest["expected_regression_result"];
+    if regression.is_null() {
+        anyhow::bail!(
+            "{} evidence replay manifest must include expected_regression_result",
+            bundle.display()
+        );
+    }
+    require_non_empty_string_at(bundle, regression, &["command"])?;
+    let expected_status = require_non_empty_string_at(bundle, regression, &["expected_status"])?;
+    if !matches!(expected_status, "pass" | "ready" | "ok") {
+        anyhow::bail!(
+            "{} expected_regression_result.expected_status must be pass, ready, or ok",
+            bundle.display()
+        );
+    }
+    require_bool_at(bundle, regression, &["regression_command_executed_by_dry_run"], false)?;
+    require_bool_at(bundle, regression, &["no_live_model_run"], true)?;
+    let latest = require_non_empty_string_at(bundle, regression, &["latest_receipt"])?;
+    let baseline = require_non_empty_string_at(bundle, regression, &["baseline_receipt"])?;
+    for expected in [latest, baseline] {
+        if !receipt_inputs.iter().any(|input| input["path"].as_str() == Some(expected)) {
+            anyhow::bail!(
+                "{} expected regression receipt {expected} is not listed in receipt_inputs",
+                bundle.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn read_evidence_replay_json(path: &Path) -> Result<(serde_json::Value, String)> {
+    let bytes =
+        std::fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
+    let sha256 = sha256_hex(&bytes);
+    let value = serde_json::from_slice::<serde_json::Value>(&bytes)
+        .with_context(|| format!("failed to parse {}", path.display()))?;
+    Ok((value, sha256))
+}
+
+fn ensure_evidence_replay_committed_path(path: &Path, label: &str) -> Result<()> {
+    if path.is_absolute() {
+        anyhow::bail!(
+            "evidence replay {label} path must be repository-relative: {}",
+            path.display()
+        );
+    }
+    if path.components().any(|component| {
+        matches!(component, std::path::Component::ParentDir | std::path::Component::RootDir)
+    }) {
+        anyhow::bail!(
+            "evidence replay {label} path must stay within the repository: {}",
+            path.display()
+        );
+    }
+    let text = path.to_string_lossy();
+    if !text.starts_with("ci/hardware/apple-m4-mac-mini/") {
+        anyhow::bail!(
+            "evidence replay {label} path must live under {APPLE_M4_REPORT_ROOT}: {}",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+fn print_evidence_replay_summary(receipt: &serde_json::Value, json_out: &Path) {
+    println!(
+        "Apple M4 evidence replay dry-run: {}",
+        receipt["status"].as_str().unwrap_or("unknown")
+    );
+    println!("Bundle: {}", receipt["bundle"]["path"].as_str().unwrap_or("<missing>"));
+    println!("Receipt inputs: {}", receipt["receipt_inputs"].as_array().map_or(0, Vec::len));
+    println!("Dashboard outputs: {}", receipt["dashboard_outputs"].as_array().map_or(0, Vec::len));
+    println!(
+        "Expected regression: {}",
+        receipt["expected_regression_result"]["expected_status"].as_str().unwrap_or("unknown")
+    );
+    println!("Receipt: {}", json_out.display());
+    println!(
+        "Claim boundary: dry-run audit only; no live model run, no model download, no regression execution, no uncommitted local artifact validation."
     );
 }
 
@@ -20786,6 +21273,8 @@ fn validate_mac_receipt_value(
         validate_apple_m4_first_run_setup_summary_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_operator_evidence_summary" {
         validate_apple_m4_operator_evidence_summary_receipt(path, receipt)?
+    } else if artifact_kind == "apple_m4_evidence_replay_dry_run" {
+        validate_apple_m4_evidence_replay_dry_run_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_operator_workload_suite" {
         validate_apple_m4_operator_workload_suite_receipt(path, receipt)?
     } else if artifact_kind == "apple_m4_report_refresh_manifest" {
@@ -22808,6 +23297,176 @@ fn validate_apple_m4_operator_evidence_summary_receipt(
     require_bool_at(path, receipt, &["claim_boundary", "evidence_summary_only"], true)?;
     require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
     require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_chat_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "bitnet_serve_enabled"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "full_metal_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "qk256_apple_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "neural_engine_execution_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "mpsgraph_inference_claimed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "macbook_evidence"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_apple_silicon_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_model_quality_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "broad_performance_claim"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "speedup_claim"], false)?;
+    Ok((Some(0), Some(0)))
+}
+
+fn validate_apple_m4_evidence_replay_dry_run_receipt(
+    path: &Path,
+    receipt: &serde_json::Value,
+) -> Result<(Option<usize>, Option<usize>)> {
+    let schema_version = require_m4_report_ops_schema_version(path, receipt)?;
+    if m4_report_ops_requires_run_identity(schema_version) {
+        bitnet_receipts_core::validate_m4_run_identity_contract_json(receipt)
+            .with_context(|| format!("{} invalid M4 run_identity", path.display()))?;
+    }
+    require_exact_string_at(path, receipt, &["artifact_kind"], "apple_m4_evidence_replay_dry_run")?;
+    require_exact_string_at(path, receipt, &["operator_command"], "mac evidence replay")?;
+    require_exact_string_at(path, receipt, &["work_item"], "M4-EVIDENCE-REPLAY-001")?;
+    require_exact_string_at(path, receipt, &["machine", "id"], "apple-m4-mac-mini")?;
+    require_exact_string_at(
+        path,
+        receipt,
+        &["bundle", "artifact_kind"],
+        "apple_m4_evidence_replay_bundle_manifest",
+    )?;
+    require_non_empty_string_at(path, receipt, &["bundle", "path"])?;
+    let bundle_sha256 = require_non_empty_string_at(path, receipt, &["bundle", "sha256"])?;
+    if !is_sha256_hex(bundle_sha256) {
+        anyhow::bail!(
+            "{} evidence replay bundle.sha256 must be a SHA256 hex digest",
+            path.display()
+        );
+    }
+    require_non_empty_string_at(path, receipt, &["bundle", "bundle_id"])?;
+
+    require_bool_at(path, receipt, &["replay_contract", "dry_run_only"], true)?;
+    require_bool_at(path, receipt, &["replay_contract", "committed_bundle_manifest"], true)?;
+    require_bool_at(path, receipt, &["replay_contract", "committed_receipt_inputs"], true)?;
+    require_bool_at(path, receipt, &["replay_contract", "committed_dashboard_outputs"], true)?;
+    require_bool_at(path, receipt, &["replay_contract", "no_live_model_run"], true)?;
+    require_bool_at(path, receipt, &["replay_contract", "no_model_download"], true)?;
+    require_bool_at(path, receipt, &["replay_contract", "regression_command_executed"], false)?;
+    require_bool_at(path, receipt, &["replay_contract", "model_inference_executed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["replay_contract", "uncommitted_local_artifacts_validated"],
+        false,
+    )?;
+    require_bool_at(
+        path,
+        receipt,
+        &["replay_contract", "dense_slm_and_bitnet_evidence_separated"],
+        true,
+    )?;
+
+    require_non_empty_string_at(path, receipt, &["git_identity", "source_commit"])?;
+    require_non_empty_string_at(path, receipt, &["binary_identity", "version_command"])?;
+    require_non_empty_string_at(path, receipt, &["model_identity", "model_id"])?;
+    require_non_empty_string_at(path, receipt, &["tokenizer_identity", "identity"])?;
+    validate_evidence_replay_commands(path, receipt)?;
+
+    let inputs = receipt["receipt_inputs"].as_array().ok_or_else(|| {
+        anyhow!("{} evidence replay dry-run must include receipt_inputs", path.display())
+    })?;
+    if inputs.is_empty() {
+        anyhow::bail!(
+            "{} evidence replay dry-run receipt_inputs must not be empty",
+            path.display()
+        );
+    }
+    for input in inputs {
+        require_non_empty_string_at(path, input, &["role"])?;
+        require_non_empty_string_at(path, input, &["path"])?;
+        require_non_empty_string_at(path, input, &["artifact_kind"])?;
+        require_non_empty_string_at(path, input, &["evidence_family"])?;
+        let sha256 = require_non_empty_string_at(path, input, &["sha256"])?;
+        if !is_sha256_hex(sha256) {
+            anyhow::bail!(
+                "{} evidence replay receipt input sha256 must be a SHA256 hex digest",
+                path.display()
+            );
+        }
+        require_bool_at(path, input, &["receipt_check_passed"], true)?;
+        require_exact_string_at(path, input, &["validation_status"], "ok")?;
+    }
+
+    let outputs = receipt["dashboard_outputs"].as_array().ok_or_else(|| {
+        anyhow!("{} evidence replay dry-run must include dashboard_outputs", path.display())
+    })?;
+    if outputs.is_empty() {
+        anyhow::bail!(
+            "{} evidence replay dry-run dashboard_outputs must not be empty",
+            path.display()
+        );
+    }
+    for output in outputs {
+        require_non_empty_string_at(path, output, &["role"])?;
+        require_non_empty_string_at(path, output, &["path"])?;
+        let format = require_non_empty_string_at(path, output, &["format"])?;
+        if !matches!(format, "json" | "markdown") {
+            anyhow::bail!(
+                "{} evidence replay dashboard output format must be json or markdown",
+                path.display()
+            );
+        }
+        let sha256 = require_non_empty_string_at(path, output, &["sha256"])?;
+        if !is_sha256_hex(sha256) {
+            anyhow::bail!(
+                "{} evidence replay dashboard output sha256 must be a SHA256 hex digest",
+                path.display()
+            );
+        }
+        require_exact_string_at(path, output, &["validation_status"], "ok")?;
+    }
+
+    require_non_empty_string_at(path, receipt, &["expected_regression_result", "command"])?;
+    require_non_empty_string_at(path, receipt, &["expected_regression_result", "latest_receipt"])?;
+    require_non_empty_string_at(
+        path,
+        receipt,
+        &["expected_regression_result", "baseline_receipt"],
+    )?;
+    let expected_status = require_non_empty_string_at(
+        path,
+        receipt,
+        &["expected_regression_result", "expected_status"],
+    )?;
+    if !matches!(expected_status, "pass" | "ready" | "ok") {
+        anyhow::bail!(
+            "{} evidence replay expected_status must be pass, ready, or ok",
+            path.display()
+        );
+    }
+    require_bool_at(
+        path,
+        receipt,
+        &["expected_regression_result", "regression_command_executed_by_dry_run"],
+        false,
+    )?;
+    require_bool_at(path, receipt, &["expected_regression_result", "no_live_model_run"], true)?;
+
+    require_bool_at(path, receipt, &["claim_boundary", "dry_run_replay_only"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "committed_bundle_manifest"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "committed_receipt_inputs"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "committed_dashboard_outputs"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_live_model_run"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "no_model_download"], true)?;
+    require_bool_at(path, receipt, &["claim_boundary", "regression_command_executed"], false)?;
+    require_bool_at(path, receipt, &["claim_boundary", "model_inference_executed"], false)?;
+    require_bool_at(
+        path,
+        receipt,
+        &["claim_boundary", "uncommitted_local_artifacts_validated"],
+        false,
+    )?;
     require_bool_at(
         path,
         receipt,
