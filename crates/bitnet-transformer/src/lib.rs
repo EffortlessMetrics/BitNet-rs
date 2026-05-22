@@ -2038,28 +2038,36 @@ impl TransformerBlock {
                 )
             });
 
-            let sqr_start = Instant::now();
-            qwen_trace_runtime_event(trace_forward, "block.attention_norm_sqr_start", || {
-                format!(
-                    "\"layer\":{},\"elapsed_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
-                    self.attention.layer_idx,
-                    qwen_trace_elapsed_ms(attention_norm_start),
-                    qwen_trace_dims_json(norm_input.dims()),
-                    qwen_trace_device_kind(norm_input.device())
-                )
-            });
-            let squared = norm_input.sqr()?;
-            qwen_trace_runtime_event(trace_forward, "block.attention_norm_sqr_finish", || {
-                format!(
-                    "\"layer\":{},\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
-                    self.attention.layer_idx,
-                    qwen_trace_elapsed_ms(attention_norm_start),
-                    qwen_trace_elapsed_ms(sqr_start),
-                    qwen_trace_dims_json(squared.dims()),
-                    squared.dtype(),
-                    qwen_trace_device_kind(squared.device())
-                )
-            });
+            let square_start = Instant::now();
+            qwen_trace_runtime_event(
+                trace_forward,
+                "block.attention_norm_square_mul_start",
+                || {
+                    format!(
+                        "\"layer\":{},\"elapsed_ms\":{},\"dims\":[{}],\"device\":\"{}\",\"method\":\"mul_self\"",
+                        self.attention.layer_idx,
+                        qwen_trace_elapsed_ms(attention_norm_start),
+                        qwen_trace_dims_json(norm_input.dims()),
+                        qwen_trace_device_kind(norm_input.device())
+                    )
+                },
+            );
+            let squared = norm_input.mul(&norm_input)?;
+            qwen_trace_runtime_event(
+                trace_forward,
+                "block.attention_norm_square_mul_finish",
+                || {
+                    format!(
+                        "\"layer\":{},\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                        self.attention.layer_idx,
+                        qwen_trace_elapsed_ms(attention_norm_start),
+                        qwen_trace_elapsed_ms(square_start),
+                        qwen_trace_dims_json(squared.dims()),
+                        squared.dtype(),
+                        qwen_trace_device_kind(squared.device())
+                    )
+                },
+            );
 
             let sum_start = Instant::now();
             qwen_trace_runtime_event(trace_forward, "block.attention_norm_sum_start", || {

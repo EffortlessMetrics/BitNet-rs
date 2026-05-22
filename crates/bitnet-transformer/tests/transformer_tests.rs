@@ -267,6 +267,21 @@ fn rmsnorm_output_shape_preserved_3d() {
 // ── TransformerModel forward tests ────────────────────────────────────────────
 
 #[test]
+fn rmsnorm_square_mul_matches_sqr_for_trace_path() {
+    let device = Device::Cpu;
+    let input =
+        Tensor::from_vec(vec![-3.0f32, -0.5, 0.0, 2.0, 4.0, 8.0], &[1, 1, 6], &device).unwrap();
+
+    let by_sqr = input.sqr().unwrap();
+    let by_mul = input.mul(&input).unwrap();
+
+    assert_eq!(by_sqr.dims(), by_mul.dims());
+    let expected: Vec<f32> = by_sqr.flatten_all().unwrap().to_vec1().unwrap();
+    let observed: Vec<f32> = by_mul.flatten_all().unwrap().to_vec1().unwrap();
+    assert_eq!(expected, observed, "x * x must match sqr() for traced RMSNorm math");
+}
+
+#[test]
 fn model_rejects_hidden_not_divisible_by_heads() {
     // hidden=6, heads=4 → 6 % 4 ≠ 0 → construction error
     let device = Device::Cpu;
