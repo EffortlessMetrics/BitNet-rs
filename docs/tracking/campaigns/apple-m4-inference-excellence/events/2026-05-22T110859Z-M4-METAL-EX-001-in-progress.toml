@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T11:08:59Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-METAL-EX-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-METAL-EX-001-phase-choice"
+
+notes = [
+  "Started the phase-choice slice after M4-RELEASE-001 merged and the campaign next item advanced to M4-METAL-EX-001.",
+  "Scope is documentation and tracker state for one future dense SLM phase target: prefill attention-score logits after the completed Q/K/V projection boundary.",
+  "This item does not add kernels, route generation, run live Metal dispatch, enable BitNet chat or serve, prove full apple-m4-metal inference, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, broad performance, or speedup claims.",
+]
