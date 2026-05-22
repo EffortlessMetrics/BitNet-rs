@@ -1,0 +1,13 @@
+timestamp = "2026-05-22T07:49:35Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-COMPAT-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-COMPAT-001-update-compat"
+
+notes = [
+  "Started M4-COMPAT-001 after M4-MODEL-LIFECYCLE-001 merged and the tracker was closed out.",
+  "The compatibility-refresh slice defines model-free refresh obligations for macOS, Rust toolchain, binary build-profile, and supported-model manifest changes; it does not prove unchanged runtime behavior or performance.",
+]

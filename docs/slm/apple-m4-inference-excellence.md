@@ -573,6 +573,27 @@ The text and JSON catalog repeat the evidence, cache, warning, rollback, and
 claim-boundary requirements on every row so operators can evaluate a model
 state without reading tracker internals.
 
+`M4-COMPAT-001` adds the compatibility-refresh contract for changes to macOS,
+the Rust toolchain, binary build profile, or the supported-model manifest. The
+model-free contract is written with:
+
+```bash
+bitnet mac compat-refresh \
+  --json-out target/apple-m4-inference-excellence/compat/compat-refresh.json
+```
+
+The receipt requires follow-up compatibility evidence under
+`ci/hardware/apple-m4-mac-mini/<date>/compat/`: `bitnet mac doctor`,
+`bitnet mac smoke`, and `bitnet mac regression-dashboard`. It also records cache
+repair cases for missing artifacts, SHA mismatches, tokenizer gaps, stale
+symlinks, and low disk headroom, plus rollback guidance for OS, toolchain,
+binary-profile, and model-manifest changes.
+
+The compatibility receipt is not a live model run and does not prove unchanged
+performance. Timing baselines stay advisory after a compatibility trigger until
+matching benchmark identities pass again; quality claims still require matching
+eval identity, and dense SLM evidence remains separate from BitNet evidence.
+
 `M4-REPRO-003` adds runtime prompt-generation identity to the receipt surface.
 Dense SLM and BitNet eval, ask, warm/chat, and serve receipts should carry a
 `prompt_generation_identity` object with template family/source/hash, tokenizer

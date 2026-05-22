@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T08:59:08Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-COMPAT-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-COMPAT-001-update-compat"
+pr = 6188
+head_sha = "2f1dbfa2760d7799fa23ecc46fc52bbdb3e16e15"
+merge_sha = "cae13028451080478b9abf7280ed0e17f7864245"
+
+notes = [
+  "Merged source PR #6188 after GitHub checks completed successfully.",
+  "M4-COMPAT-001 defines the compatibility-refresh receipt contract for macOS, Rust toolchain, binary build-profile, and supported-model manifest changes, including required doctor, smoke, and regression-dashboard follow-up receipts.",
+  "The merged source slice is a compatibility contract and operator UX update only; it does not run live model inference, prove unchanged performance without matching benchmark identities, enable BitNet chat or serve, or make broad quality, performance, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claims.",
+]
