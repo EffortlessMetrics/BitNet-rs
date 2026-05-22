@@ -3064,8 +3064,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CLAIM-LINT-001"
-status = "proposed"
+status = "pr_open"
 branch = "codex/apple-m4-inference-excellence/M4-CLAIM-LINT-001-claim-boundary-check"
+pr = 6190
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

@@ -151,6 +151,7 @@ make the M4 Mac mini easier to operate and harder to overclaim.
 | M4-TREND-001 | merged | Publish seven-day matching-identity trend history and skipped-day reasons. |
 | M4-MODEL-LIFECYCLE-001 | merged | Define supported-model lifecycle states and claim-boundary requirements. |
 | M4-COMPAT-001 | merged | Define compatibility refresh receipts after OS, toolchain, binary, or manifest changes. |
+| M4-CLAIM-LINT-001 | pr_open | #6190 adds static M4 claim-boundary wording checks. |
 | M4-RELEASE-001 | proposed | Publish the M4 inference release go/no-go matrix. |
 | M4-METAL-EX-001 | proposed | Choose one named future Metal phase and document parity/receipt requirements. |
 | M4-METAL-EX-002 | proposed | Implement that named phase only with CPU parity and fallback-free phase receipts. |
