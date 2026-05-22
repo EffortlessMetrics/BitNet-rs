@@ -3064,13 +3064,16 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CLAIM-LINT-001"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-CLAIM-LINT-001-claim-boundary-check"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-COMPAT-001", "M4-REPRO-001"]
+pr = 6190
+head_sha = "80ce088eaf72703f2189155119f3ca8f5d1617c5"
+merge_sha = "8d42d001124ee891be3f6ab3520aed7c6410e1b3"
 acceptance = "Add a static claim-boundary checker for M4 docs, generated tracker status, operator envelope text, and operator-facing command strings that rejects unsupported Apple Silicon, MacBook, Metal, Neural Engine, MPSGraph, QK256, dense-as-BitNet, broad quality/performance, and speedup wording unless explicitly tied to a matching accepted receipt gate."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- claim-lint --scope apple-m4 --check",
@@ -3102,13 +3105,16 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-RELEASE-001"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-RELEASE-001-go-no-go"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-ACCURACY-007", "M4-BENCH-003", "M4-BENCH-007", "M4-BITNET-EX-005", "M4-BITNET-EX-015", "M4-BITNET-REG-001", "M4-CANARY-001", "M4-CLAIM-LINT-001", "M4-COMPAT-001", "M4-CONTEXT-001", "M4-CONTEXT-002", "M4-DENSE-CHAT-001", "M4-DENSE-REF-001", "M4-EVIDENCE-REPLAY-001", "M4-GATE-HYGIENE-001", "M4-MODEL-LIFECYCLE-001", "M4-OBS-001", "M4-OPS-SLO-001", "M4-OPS-UX-003", "M4-RELIABILITY-001", "M4-ROBUSTNESS-001", "M4-ROUTE-MATRIX-001", "M4-SERVE-EX-004", "M4-SETUP-001", "M4-TREND-001", "M4-WORKLOAD-001", "M4-CI-001"]
+pr = 6192
+head_sha = "b7d460af974e646e69f37c1157b4fa0b6e2b44d9"
+merge_sha = "4e65206f68a9ad26a92ff19e683a562cad64d482"
 acceptance = "Publish the M4 inference release go/no-go matrix that states which dense SLM, BitNet, benchmark, stability, service, operator, and claim-boundary gates must pass before updating the public M4 expectation envelope or marking a model family route excellent."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",
@@ -3137,13 +3143,16 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-METAL-EX-001"
-status = "proposed"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-METAL-EX-001-phase-choice"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-EXCELLENCE-004"]
+pr = 6194
+head_sha = "39975086cfc704f4f4a37862d133dfaef06bc27d"
+merge_sha = "ac04c4841df1d19d2dd76d79ba3e25e9e149d486"
 acceptance = "Choose one named future Apple M4 Metal phase from existing proof boundaries, document CPU reference parity requirements, fallback=false receipt fields, phase-local timing, and explicit CPU/NEON remainder before any code route changes."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- campaign check apple-m4-inference-excellence",

@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T09:40:02Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CLAIM-LINT-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-CLAIM-LINT-001-claim-boundary-check"
+
+notes = [
+  "Started the Apple M4 static claim-boundary checker after M4-COMPAT-001 merged and the tracker was closed out.",
+  "The checker is publication hygiene only: it scans M4 docs, the M4 generated tracker status, and operator-facing bitnet mac command strings for unsupported claim wording.",
+  "This work does not run inference, prove broad Apple Silicon or MacBook behavior, enable full Metal/QK256/Neural Engine/MPSGraph support, or authorize dense SLM evidence as BitNet evidence.",
+]

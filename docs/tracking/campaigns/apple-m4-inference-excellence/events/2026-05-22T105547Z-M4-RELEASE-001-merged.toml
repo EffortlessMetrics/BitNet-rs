@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T10:55:47Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-RELEASE-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-RELEASE-001-go-no-go"
+pr = 6192
+head_sha = "b7d460af974e646e69f37c1157b4fa0b6e2b44d9"
+merge_sha = "4e65206f68a9ad26a92ff19e683a562cad64d482"
+
+notes = [
+  "Merged PR #6192 after all named GitHub checks passed.",
+  "M4-RELEASE-001 publishes the release go/no-go matrix for future public M4 expectation-envelope updates.",
+  "The merged source slice is documentation and tracker state only; it does not run live inference, publish fresh quality or timing evidence, enable BitNet chat or serve, prove full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, broad performance, or speedup claims.",
+]

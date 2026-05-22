@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T11:12:52Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-METAL-EX-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-METAL-EX-001-phase-choice"
+pr = 6194
+head_sha = "21644664b2ee0b72557915f85ad1cf8366f7e70c"
+
+notes = [
+  "Opened PR #6194 for the M4 Metal phase-choice tracker slice.",
+  "The PR selects prefill attention-score logits as the next future dense SLM Metal phase target and documents CPU reference parity, fallback-free receipt fields, phase-local timing, and CPU/NEON remainder boundaries.",
+  "The PR is documentation and tracker state only; it does not add kernels, route generation, run live Metal dispatch, enable BitNet chat or serve, prove full apple-m4-metal inference, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, broad performance, or speedup claims.",
+]

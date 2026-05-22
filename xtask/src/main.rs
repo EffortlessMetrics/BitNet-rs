@@ -45,6 +45,7 @@ mod bitnet_reference_plan;
 mod campaign;
 mod check_greedy_argmax;
 mod ci;
+mod claim_lint;
 mod claims;
 mod cpp_setup_auto;
 mod crossval;
@@ -1131,6 +1132,10 @@ enum Cmd {
         matrix: PathBuf,
     },
 
+    /// Check static public claim-boundary wording.
+    #[command(name = "claim-lint")]
+    ClaimLint(claim_lint::ClaimLintArgs),
+
     /// Run Apple M4 operational validation and receipt checks.
     #[command(name = "apple-m4")]
     AppleM4 {
@@ -2101,6 +2106,7 @@ fn real_main() -> Result<()> {
         }
         Cmd::Campaign { command } => campaign::run(command),
         Cmd::CheckModelCoverage { matrix } => model_coverage::run(matrix),
+        Cmd::ClaimLint(args) => claim_lint::run(args),
         Cmd::AppleM4 { command } => apple_m4::run(command),
         Cmd::CiLaneWhitelist { command } => match command {
             CiLaneWhitelistCmd::Check {
