@@ -138,3 +138,7 @@ The shared M4 CI lane and artifact-retention contract is recorded in
 `M4-ROUTE-MATRIX-001` adds the route-state table embedded in
 `bitnet mac status --json` and `bitnet mac evidence --json`. The documented
 operator view is `docs/slm/apple-m4-route-state-matrix.md`.
+
+`M4-WORKLOAD-001` adds the model-free workload-suite contract:
+`bitnet mac workload --suite m4-operator`. The documented operator view is
+`docs/slm/apple-m4-workload-suite.md`.

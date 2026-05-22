@@ -557,6 +557,7 @@ fn mac_help_documents_operator_wrappers() {
         .success()
         .stdout(predicate::str::contains("models"))
         .stdout(predicate::str::contains("status"))
+        .stdout(predicate::str::contains("workload"))
         .stdout(predicate::str::contains("report-refresh"))
         .stdout(predicate::str::contains("regression-dashboard"))
         .stdout(predicate::str::contains("check"))
@@ -1101,6 +1102,53 @@ fn mac_evidence_writes_operator_summary() -> Result<(), Box<dyn std::error::Erro
         .assert()
         .success()
         .stdout(predicate::str::contains("apple_m4_operator_evidence_summary"))
+        .stdout(predicate::str::contains("\"prompt_count\": 0"));
+    Ok(())
+}
+
+#[test]
+fn mac_workload_writes_model_free_operator_suite() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempfile::tempdir()?;
+    let receipt = dir.path().join("workload-summary.json");
+    let receipt_str = receipt.to_string_lossy().into_owned();
+
+    bitnet()
+        .args([
+            "mac",
+            "workload",
+            "--suite",
+            "m4-operator",
+            "--json-out",
+            receipt_str.as_str(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_operator_workload_suite"))
+        .stdout(predicate::str::contains("M4-WORKLOAD-001"));
+
+    let receipt_json: serde_json::Value = serde_json::from_slice(&std::fs::read(&receipt)?)?;
+    assert_eq!(receipt_json["artifact_kind"], "apple_m4_operator_workload_suite");
+    assert_eq!(receipt_json["work_item"], "M4-WORKLOAD-001");
+    assert_eq!(receipt_json["suite"], "m4-operator");
+    assert_eq!(receipt_json["workload_contract"]["model_free"], true);
+    assert_eq!(receipt_json["workload_contract"]["live_model_run"], false);
+    assert_eq!(receipt_json["route_state_matrix"]["work_item"], "M4-ROUTE-MATRIX-001");
+    assert_eq!(receipt_json["case_count"], 36);
+    assert_eq!(receipt_json["executed_case_count"], 0);
+    assert_eq!(receipt_json["route_boundaries"]["bitnet_chat_enabled"], false);
+    assert_eq!(receipt_json["route_boundaries"]["bitnet_serve_enabled"], false);
+    assert!(receipt_json["enabled_route_ids"].as_array().is_some_and(|routes| {
+        routes.iter().any(|route| route == "dense_slm.serve")
+            && routes.iter().any(|route| route == "bitnet.warm_session")
+            && !routes.iter().any(|route| route == "bitnet.chat")
+    }));
+
+    bitnet()
+        .args(["mac", "receipts-check", receipt_str.as_str(), "--json"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("apple_m4_operator_workload_suite"))
         .stdout(predicate::str::contains("\"prompt_count\": 0"));
     Ok(())
 }
