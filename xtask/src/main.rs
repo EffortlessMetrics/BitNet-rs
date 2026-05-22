@@ -63,6 +63,7 @@ mod model_registry;
 mod policy;
 mod prompt_suite;
 mod quality_gates;
+mod repo_boundary;
 mod tokenizers;
 mod trace_diff;
 
@@ -1227,6 +1228,13 @@ enum Cmd {
         command: CiCmd,
     },
 
+    /// Report source/swarm repository-boundary status.
+    #[command(name = "repo-boundary")]
+    RepoBoundary {
+        #[command(subcommand)]
+        command: repo_boundary::RepoBoundaryCmd,
+    },
+
     /// Regenerate public Shields endpoint badge JSON under `badges/`.
     #[command(name = "badges")]
     Badges {
@@ -2199,6 +2207,7 @@ fn real_main() -> Result<()> {
                 ci::estimate::run(history, lanes_toml, json_out, print, window)
             }
         },
+        Cmd::RepoBoundary { command } => repo_boundary::run(command),
     }
 }
 

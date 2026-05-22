@@ -52,6 +52,18 @@ operations, release-workflow guard, self-hosted runner boundary, shared
 surfaces, and promotion requirements. Agents should treat the ledger as the
 compact policy entrypoint before changing repository-boundary behavior.
 
+For a read-only status check, run:
+
+```bash
+cargo run --locked -p xtask --no-default-features -- repo-boundary status
+```
+
+The status report identifies whether the checkout is source, swarm, or unknown;
+whether the `source` remote is configured; whether `source/main` is reachable
+from the checked swarm ref; how many source commits swarm lacks; how many swarm
+commits are not yet in source; and whether release-sensitive workflow files keep
+the source-repo guard.
+
 If swarm and source-repo state disagree before cutover, do not treat the
 swarm-only state as public-release truth. Resolve the difference through an
 explicit sync or promotion PR that names included commits, included PRs, proof
