@@ -53,7 +53,7 @@ Make the Intel Arc A770 a receipt-backed OpenCL-first BitNet acceleration lane. 
 | A770-021 | merged | Add a compact logits top-k frontier to the CPU/A770 answer-parity receipt, separating same-output top-k drift from generated-output drift without changing runtime math or promoting parity. |
 | A770-022 | merged | Record focused multi-step CPU/A770 logits for the generated-output divergent `yes_no_water` case and classify whether the first generated token mismatch has logit context. |
 | A770-023 | merged | Add compact first-mismatch cross-chosen logit-margin evidence for the generated-output divergent `yes_no_water` case. |
-| A770-024 | pr_open | Add a seeded A770 BitNet answer-readiness corpus contract before the next live CPU/A770 quality and parity run. |
+| A770-024 | merged | Add a seeded A770 BitNet answer-readiness corpus contract before the next live CPU/A770 quality and parity run. |
 
 ## Current Claim Boundary
 
