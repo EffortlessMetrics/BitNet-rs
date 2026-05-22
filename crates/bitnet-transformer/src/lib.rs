@@ -2631,7 +2631,39 @@ impl TransformerModel {
     }
 
     pub fn embed(&self, tokens: &[u32]) -> Result<Tensor> {
+        let trace_embed = qwen_trace_events_enabled();
+        let embed_start = Instant::now();
+        qwen_trace_runtime_event(trace_embed, "model.embed_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"token_count\":{},\"hidden_size\":{},\"embed_transposed\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(embed_start),
+                tokens.len(),
+                self.config.model.hidden_size,
+                self.embed_transposed,
+                qwen_trace_device_kind(&self.device)
+            )
+        });
+
+        let token_tensor_start = Instant::now();
+        qwen_trace_runtime_event(trace_embed, "model.embed_token_tensor_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"token_count\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(embed_start),
+                tokens.len(),
+                qwen_trace_device_kind(&self.device)
+            )
+        });
         let token_ids = Tensor::from_vec(tokens.to_vec(), &[1, tokens.len()], &self.device)?;
+        qwen_trace_runtime_event(trace_embed, "model.embed_token_tensor_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(embed_start),
+                qwen_trace_elapsed_ms(token_tensor_start),
+                qwen_trace_dims_json(token_ids.dims()),
+                token_ids.dtype(),
+                qwen_trace_device_kind(token_ids.device())
+            )
+        });
 
         // Get dimensions
         let batch_size = token_ids.dims()[0];
@@ -2639,32 +2671,206 @@ impl TransformerModel {
         let hidden_size = self.config.model.hidden_size;
 
         // Flatten to [B*S] for index_select
+        let flatten_start = Instant::now();
+        qwen_trace_runtime_event(trace_embed, "model.embed_flatten_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(embed_start),
+                qwen_trace_dims_json(token_ids.dims()),
+                qwen_trace_device_kind(token_ids.device())
+            )
+        });
         let flat_ids = token_ids.flatten_all()?;
+        qwen_trace_runtime_event(trace_embed, "model.embed_flatten_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(embed_start),
+                qwen_trace_elapsed_ms(flatten_start),
+                qwen_trace_dims_json(flat_ids.dims()),
+                flat_ids.dtype(),
+                qwen_trace_device_kind(flat_ids.device())
+            )
+        });
 
         if self.embed_transposed {
             // Column-gather path for [hidden, vocab] storage
             // This avoids materializing the full transpose
+            let weight_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_weight_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"column_gather\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_device_kind(&self.device)
+                )
+            });
             let weight = self.embed_tokens.embeddings();
+            qwen_trace_runtime_event(trace_embed, "model.embed_weight_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"column_gather\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(weight_start),
+                    qwen_trace_dims_json(weight.dims()),
+                    weight.dtype(),
+                    qwen_trace_device_kind(weight.device())
+                )
+            });
 
             // index_select on dim=1 gathers columns from [H, V]
             // Result: [H, B*S]
+            let index_select_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_index_select_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"column_gather\",\"dim\":1,\"weight_dims\":[{}],\"id_dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_dims_json(weight.dims()),
+                    qwen_trace_dims_json(flat_ids.dims()),
+                    qwen_trace_device_kind(weight.device())
+                )
+            });
             let cols = weight.index_select(&flat_ids, 1)?;
+            qwen_trace_runtime_event(trace_embed, "model.embed_index_select_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"column_gather\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(index_select_start),
+                    qwen_trace_dims_json(cols.dims()),
+                    cols.dtype(),
+                    qwen_trace_device_kind(cols.device())
+                )
+            });
 
             // Transpose to [B*S, H] (small transpose, only B*S elements)
+            let transpose_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_transpose_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_dims_json(cols.dims()),
+                    qwen_trace_device_kind(cols.device())
+                )
+            });
             let embeddings = cols.t()?;
+            qwen_trace_runtime_event(trace_embed, "model.embed_transpose_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(transpose_start),
+                    qwen_trace_dims_json(embeddings.dims()),
+                    embeddings.dtype(),
+                    qwen_trace_device_kind(embeddings.device())
+                )
+            });
 
             // Reshape to [B, S, H]
-            Ok(embeddings.reshape(&[batch_size, seq_len, hidden_size])?)
+            let reshape_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_reshape_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"target_dims\":[{},{},{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    batch_size,
+                    seq_len,
+                    hidden_size,
+                    qwen_trace_device_kind(embeddings.device())
+                )
+            });
+            let output = embeddings.reshape(&[batch_size, seq_len, hidden_size])?;
+            qwen_trace_runtime_event(trace_embed, "model.embed_reshape_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(reshape_start),
+                    qwen_trace_dims_json(output.dims()),
+                    output.dtype(),
+                    qwen_trace_device_kind(output.device())
+                )
+            });
+            qwen_trace_runtime_event(trace_embed, "model.embed_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"column_gather\",\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_dims_json(output.dims()),
+                    qwen_trace_device_kind(output.device())
+                )
+            });
+            Ok(output)
         } else {
             // Row-gather path for standard [vocab, hidden] storage
+            let weight_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_weight_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"row_gather\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_device_kind(&self.device)
+                )
+            });
             let weight = self.embed_tokens.embeddings();
+            qwen_trace_runtime_event(trace_embed, "model.embed_weight_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"row_gather\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(weight_start),
+                    qwen_trace_dims_json(weight.dims()),
+                    weight.dtype(),
+                    qwen_trace_device_kind(weight.device())
+                )
+            });
 
             // index_select on dim=0 gathers rows from [V, H]
             // Result: [B*S, H]
+            let index_select_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_index_select_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"row_gather\",\"dim\":0,\"weight_dims\":[{}],\"id_dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_dims_json(weight.dims()),
+                    qwen_trace_dims_json(flat_ids.dims()),
+                    qwen_trace_device_kind(weight.device())
+                )
+            });
             let rows = weight.index_select(&flat_ids, 0)?;
+            qwen_trace_runtime_event(trace_embed, "model.embed_index_select_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"path\":\"row_gather\",\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(index_select_start),
+                    qwen_trace_dims_json(rows.dims()),
+                    rows.dtype(),
+                    qwen_trace_device_kind(rows.device())
+                )
+            });
 
             // Reshape to [B, S, H]
-            Ok(rows.reshape(&[batch_size, seq_len, hidden_size])?)
+            let reshape_start = Instant::now();
+            qwen_trace_runtime_event(trace_embed, "model.embed_reshape_start", || {
+                format!(
+                    "\"elapsed_ms\":{},\"target_dims\":[{},{},{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    batch_size,
+                    seq_len,
+                    hidden_size,
+                    qwen_trace_device_kind(rows.device())
+                )
+            });
+            let output = rows.reshape(&[batch_size, seq_len, hidden_size])?;
+            qwen_trace_runtime_event(trace_embed, "model.embed_reshape_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"op_ms\":{},\"dims\":[{}],\"dtype\":\"{:?}\",\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_elapsed_ms(reshape_start),
+                    qwen_trace_dims_json(output.dims()),
+                    output.dtype(),
+                    qwen_trace_device_kind(output.device())
+                )
+            });
+            qwen_trace_runtime_event(trace_embed, "model.embed_finish", || {
+                format!(
+                    "\"elapsed_ms\":{},\"path\":\"row_gather\",\"dims\":[{}],\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(embed_start),
+                    qwen_trace_dims_json(output.dims()),
+                    qwen_trace_device_kind(output.device())
+                )
+            });
+            Ok(output)
         }
     }
 
