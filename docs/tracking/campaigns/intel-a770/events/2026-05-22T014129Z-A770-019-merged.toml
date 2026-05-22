@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T01:41:29Z"
+campaign = "intel-a770"
+item = "A770-019"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex-a770"
+pr = 257
+branch = "codex/intel-a770/A770-019-opencl-runtime-probe-build-fix"
+head_sha = "e50899b56fbad1cd89f4319f96326eb60e5c4876"
+merge_sha = "fef585e5b8278b45ec9a3126b96976b99bb5f7c5"
+summary = "Merged PR #257 for the A770 OpenCL runtime-probe wrapper build fix."
+notes = [
+  "The merged fix restores the OpenCL runtime availability helper against the selected-device runtime probe wrapper type.",
+  "The helper still requires a reported GPU device before treating OpenCL runtime availability as usable.",
+  "No A770 answer quality, reference parity, full inference, residency, speed, trusted-partial, completion, or shared BitNet semantic claim is promoted.",
+]

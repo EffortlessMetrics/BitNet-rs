@@ -828,9 +828,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-019"
-status = "pr_open"
+status = "merged"
 pr = 257
-head_sha = "d755bb03f1cde886c8c501d3db188a5ee39393c3"
+head_sha = "e50899b56fbad1cd89f4319f96326eb60e5c4876"
+merge_sha = "fef585e5b8278b45ec9a3126b96976b99bb5f7c5"
 branch = "codex/intel-a770/A770-019-opencl-runtime-probe-build-fix"
 stackable = false
 review_mode = "codex_premerge"

@@ -48,7 +48,7 @@ Make the Intel Arc A770 a receipt-backed OpenCL-first BitNet acceleration lane. 
 | A770-016 | merged | Bind A770 OpenCL answer-corpus child runs to the committed BitNet model contract and diagnostic QK256 route metadata without promoting live answer quality, residency, speed, or full-inference claims. |
 | A770-017 | merged | Align startup OpenCL runtime detection with the in-process dynamic OpenCL probe so A770 answer-corpus child runs can reach the committed diagnostic route without depending on `clinfo`. |
 | A770-018 | merged | Record the first committed live five-case A770 OpenCL answer-corpus diagnostic receipt for the official BitNet 2B I2_S model, keeping reference parity, broad answer quality, residency, speed, and trusted-partial claims closed. |
-| A770-019 | in_progress | Restore the OpenCL runtime availability build by matching the selected-device runtime probe wrapper type, keeping A770 answer quality, parity, residency, speed, and completion claims closed. |
+| A770-019 | merged | Restore the OpenCL runtime availability build by matching the selected-device runtime probe wrapper type, keeping A770 answer quality, parity, residency, speed, and completion claims closed. |
 
 ## Current Claim Boundary
 
