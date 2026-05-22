@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T09:55:04Z"
+campaign = "intel-a770"
+item = "A770-024"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-024-seeded-answer-readiness-contract"
+summary = "Start the seeded A770 BitNet answer-readiness corpus contract."
+notes = [
+  "A770-023 left CPU/A770 answer parity open after classifying the first generated-output mismatch as opposite argmax with an A770-side near-tie margin.",
+  "This slice adds the broader seeded answer-readiness corpus contract that future CPU AVX2 and Intel A770 OpenCL runs must execute before any quality or readiness promotion.",
+  "No live A770 answer-readiness run, CPU/A770 parity, broad answer quality, strict answer readiness, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]
