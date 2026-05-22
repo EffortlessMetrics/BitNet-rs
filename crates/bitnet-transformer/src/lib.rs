@@ -177,6 +177,108 @@ fn qwen_trace_rope_init_event(
     }
 }
 
+fn qwen_trace_rope_cuda_upload_probe(
+    trace: Option<RopeInitTrace<'_>>,
+    table: &'static str,
+    data: &[f32],
+    rows: usize,
+    cols: usize,
+) -> Result<()> {
+    let Some(trace) = trace else {
+        return Ok(());
+    };
+    if !trace.enabled {
+        return Ok(());
+    }
+    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_upload_probe_start", || {
+        format!(
+            "\"table\":\"{}\",\"rows\":{},\"cols\":{},\"elements\":{},\"bytes\":{}",
+            table,
+            rows,
+            cols,
+            data.len(),
+            std::mem::size_of_val(data)
+        )
+    });
+    qwen_trace_rope_cuda_upload_probe_impl(trace, table, data)
+}
+
+#[cfg(feature = "cuda")]
+fn qwen_trace_rope_cuda_upload_probe_impl(
+    trace: RopeInitTrace<'_>,
+    table: &'static str,
+    data: &[f32],
+) -> Result<()> {
+    let Device::Cuda(cuda) = trace.device else {
+        qwen_trace_rope_init_event(
+            Some(trace),
+            "model_init.rope_cuda_upload_probe_skipped",
+            || {
+                format!(
+                    "\"table\":\"{}\",\"reason\":\"non_cuda_device\",\"elements\":{}",
+                    table,
+                    data.len()
+                )
+            },
+        );
+        return Ok(());
+    };
+
+    let alloc_start = Instant::now();
+    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_alloc_start", || {
+        format!("\"table\":\"{}\",\"elements\":{}", table, data.len())
+    });
+    let mut device_data = unsafe { cuda.alloc::<f32>(data.len())? };
+    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_alloc_finish", || {
+        format!(
+            "\"table\":\"{}\",\"alloc_ms\":{},\"elements\":{}",
+            table,
+            qwen_trace_elapsed_ms(alloc_start),
+            data.len()
+        )
+    });
+
+    let copy_start = Instant::now();
+    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_htod_start", || {
+        format!("\"table\":\"{}\",\"bytes\":{}", table, std::mem::size_of_val(data))
+    });
+    cuda.memcpy_htod(data, &mut device_data)?;
+    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_htod_finish", || {
+        format!(
+            "\"table\":\"{}\",\"htod_ms\":{},\"bytes\":{}",
+            table,
+            qwen_trace_elapsed_ms(copy_start),
+            std::mem::size_of_val(data)
+        )
+    });
+
+    let sync_start = Instant::now();
+    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_sync_start", || {
+        format!("\"table\":\"{}\"", table)
+    });
+    trace.device.synchronize()?;
+    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_sync_finish", || {
+        format!("\"table\":\"{}\",\"sync_ms\":{}", table, qwen_trace_elapsed_ms(sync_start))
+    });
+    Ok(())
+}
+
+#[cfg(not(feature = "cuda"))]
+fn qwen_trace_rope_cuda_upload_probe_impl(
+    trace: RopeInitTrace<'_>,
+    table: &'static str,
+    data: &[f32],
+) -> Result<()> {
+    qwen_trace_rope_init_event(Some(trace), "model_init.rope_cuda_upload_probe_skipped", || {
+        format!(
+            "\"table\":\"{}\",\"reason\":\"cuda_feature_disabled\",\"elements\":{}",
+            table,
+            data.len()
+        )
+    });
+    Ok(())
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct DenseQ8SidecarInstrumentationSnapshot {
     pub selector_dispatch_calls: u64,
@@ -776,6 +878,7 @@ impl RotaryEmbedding {
         qwen_trace_rope_init_event(trace, "model_init.rope_sin_tensor_start", || {
             format!("\"rows\":{},\"cols\":{}", max_seq_len, half_dim)
         });
+        qwen_trace_rope_cuda_upload_probe(trace, "sin", &sin, max_seq_len, half_dim)?;
         let sin = Tensor::from_vec(sin, &[max_seq_len, half_dim], device)?;
         qwen_trace_rope_init_event(trace, "model_init.rope_sin_tensor_finish", || {
             format!(
@@ -789,6 +892,7 @@ impl RotaryEmbedding {
         qwen_trace_rope_init_event(trace, "model_init.rope_cos_tensor_start", || {
             format!("\"rows\":{},\"cols\":{}", max_seq_len, half_dim)
         });
+        qwen_trace_rope_cuda_upload_probe(trace, "cos", &cos, max_seq_len, half_dim)?;
         let cos = Tensor::from_vec(cos, &[max_seq_len, half_dim], device)?;
         qwen_trace_rope_init_event(trace, "model_init.rope_cos_tensor_finish", || {
             format!(
