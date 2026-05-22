@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T02:16:35Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-WORKLOAD-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-operator-suite"
+pr = 6179
+head_sha = "e9331ec1c4c8f9d023253e21922600b0d1b51262"
+
+notes = [
+  "Opened draft PR #6179 for the model-free M4 operator workload suite contract.",
+  "The PR adds `bitnet mac workload --suite m4-operator`, receipt validation, CLI coverage, docs, and tracker updates for six workflows across enabled dense SLM and BitNet routes.",
+  "Local Rust compile/test validation is blocked by host disk pressure; `cargo fmt --package bitnet-cli`, TOML parsing, `git diff --check`, and target cleanup passed before opening.",
+]
