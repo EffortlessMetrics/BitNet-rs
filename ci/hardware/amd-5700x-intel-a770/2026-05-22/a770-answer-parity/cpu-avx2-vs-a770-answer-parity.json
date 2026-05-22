@@ -449,6 +449,123 @@
       "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate"
     ]
   },
+  "logits_topk_frontier": {
+    "case_count": 5,
+    "classification": "logits_topk_frontier_generated_output_divergence",
+    "compared_step_count": 5,
+    "different_chosen_token_count": 0,
+    "generated_output_divergence_count": 1,
+    "left_label": "amd-5700x-cpu-avx2",
+    "logits_topk_mismatch_count": 5,
+    "max_common_token_abs_delta": 0.4711780548095721,
+    "missing_context_count": 0,
+    "right_label": "intel-a770-opencl",
+    "row_limit": 16,
+    "rows": [
+      {
+        "case_id": "capital_france",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 20,
+        "decoded_text_match": true,
+        "first_different_rank": 6,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 60704,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.37689781188964844,
+        "right_chosen_id": 60704,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "math_2_plus_2",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 19,
+        "decoded_text_match": true,
+        "first_different_rank": 2,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 19,
+        "left_only_top_token_ids": [
+          2371
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.4711780548095721,
+        "right_chosen_id": 19,
+        "right_only_top_token_ids": [
+          1271
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "repeat_colors",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 20,
+        "decoded_text_match": true,
+        "first_different_rank": 5,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 1171,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.2744321823120117,
+        "right_chosen_id": 1171,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "say_ok",
+        "classification": "logits_topk_same_chosen_same_output",
+        "common_top_token_count": 18,
+        "decoded_text_match": true,
+        "first_different_rank": 11,
+        "generated_token_ids_match": true,
+        "left_chosen_id": 4012,
+        "left_only_top_token_ids": [
+          3923,
+          10156
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.22585296630859375,
+        "right_chosen_id": 4012,
+        "right_only_top_token_ids": [
+          46,
+          3947
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "yes_no_water",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 19,
+        "decoded_text_match": false,
+        "first_different_rank": 6,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 2822,
+        "left_only_top_token_ids": [
+          29356
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.29613780975341797,
+        "right_chosen_id": 2822,
+        "right_only_top_token_ids": [
+          58841
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      }
+    ],
+    "rows_truncated": false,
+    "same_chosen_token_count": 5,
+    "same_generated_output_count": 4
+  },
   "machine": {
     "cpu": null,
     "machine_id": "amd-5700x-intel-a770",
@@ -666,5 +783,5 @@
     "passed": 0,
     "total": 5
   },
-  "timestamp": "2026-05-22T02:28:35.992110400+00:00"
+  "timestamp": "2026-05-22T03:53:11.183833600+00:00"
 }

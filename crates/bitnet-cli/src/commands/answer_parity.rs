@@ -196,6 +196,8 @@ fn build_answer_parity_receipt(
             )
         })
         .collect::<Vec<_>>();
+    let logits_topk_frontier =
+        build_logits_topk_frontier(&case_ids, &left_cases, &right_cases, left_label, right_label);
 
     let passed = cases.iter().filter(|case| case["passed"] == true).count();
     let failed = cases.len().saturating_sub(passed) + usize::from(!shared_failures.is_empty());
@@ -284,6 +286,7 @@ fn build_answer_parity_receipt(
             "failed": failed,
             "first_divergence": first_divergence,
         },
+        "logits_topk_frontier": logits_topk_frontier,
         "cases": cases,
         "may_claim": may_claim,
         "must_not_claim": must_not_claim,
@@ -1086,6 +1089,260 @@ fn compare_logits_dump(
     }
 }
 
+fn build_logits_topk_frontier(
+    case_ids: &BTreeSet<String>,
+    left_cases: &BTreeMap<String, &Value>,
+    right_cases: &BTreeMap<String, &Value>,
+    left_label: &str,
+    right_label: &str,
+) -> Value {
+    const ROW_LIMIT: usize = 16;
+
+    let mut rows = Vec::new();
+    let mut compared_step_count = 0usize;
+    let mut mismatch_count = 0usize;
+    let mut same_generated_output_count = 0usize;
+    let mut generated_output_divergence_count = 0usize;
+    let mut same_chosen_token_count = 0usize;
+    let mut different_chosen_token_count = 0usize;
+    let mut missing_context_count = 0usize;
+    let mut max_common_token_abs_delta = 0.0f64;
+
+    for id in case_ids {
+        let Some(left_case) = left_cases.get(id).copied() else {
+            missing_context_count += 1;
+            push_limited_row(
+                &mut rows,
+                ROW_LIMIT,
+                json!({
+                    "case_id": id,
+                    "classification": "logits_topk_missing_context",
+                    "reason": "left_case_missing",
+                }),
+            );
+            continue;
+        };
+        let Some(right_case) = right_cases.get(id).copied() else {
+            missing_context_count += 1;
+            push_limited_row(
+                &mut rows,
+                ROW_LIMIT,
+                json!({
+                    "case_id": id,
+                    "classification": "logits_topk_missing_context",
+                    "reason": "right_case_missing",
+                }),
+            );
+            continue;
+        };
+        let Some(left_steps) = left_case["logits_dump"].as_array() else {
+            missing_context_count += 1;
+            push_limited_row(
+                &mut rows,
+                ROW_LIMIT,
+                logits_missing_context_row(id, None, "left_logits_dump_missing"),
+            );
+            continue;
+        };
+        let Some(right_steps) = right_case["logits_dump"].as_array() else {
+            missing_context_count += 1;
+            push_limited_row(
+                &mut rows,
+                ROW_LIMIT,
+                logits_missing_context_row(id, None, "right_logits_dump_missing"),
+            );
+            continue;
+        };
+        if left_steps.is_empty() || right_steps.is_empty() {
+            missing_context_count += 1;
+            let reason = if left_steps.is_empty() {
+                "left_logits_dump_empty"
+            } else {
+                "right_logits_dump_empty"
+            };
+            push_limited_row(&mut rows, ROW_LIMIT, logits_missing_context_row(id, None, reason));
+            continue;
+        }
+
+        for (step, (left_step, right_step)) in left_steps.iter().zip(right_steps).enumerate() {
+            compared_step_count += 1;
+            if left_step == right_step {
+                continue;
+            }
+            mismatch_count += 1;
+            let row =
+                logits_topk_frontier_row(id, step, left_case, right_case, left_step, right_step);
+            if row["generated_token_ids_match"].as_bool().unwrap_or(false)
+                && row["decoded_text_match"].as_bool().unwrap_or(false)
+            {
+                same_generated_output_count += 1;
+            } else {
+                generated_output_divergence_count += 1;
+            }
+            if row["same_chosen_id"].as_bool().unwrap_or(false) {
+                same_chosen_token_count += 1;
+            } else {
+                different_chosen_token_count += 1;
+            }
+            max_common_token_abs_delta = max_common_token_abs_delta
+                .max(row["max_common_token_abs_delta"].as_f64().unwrap_or(0.0));
+            push_limited_row(&mut rows, ROW_LIMIT, row);
+        }
+
+        if left_steps.len() != right_steps.len() {
+            missing_context_count += 1;
+            push_limited_row(
+                &mut rows,
+                ROW_LIMIT,
+                json!({
+                    "case_id": id,
+                    "classification": "logits_topk_missing_context",
+                    "reason": "logits_step_count_mismatch",
+                    "left_step_count": left_steps.len(),
+                    "right_step_count": right_steps.len(),
+                }),
+            );
+        }
+    }
+
+    let classification = if missing_context_count > 0 {
+        "logits_topk_frontier_missing_context"
+    } else if generated_output_divergence_count > 0 {
+        "logits_topk_frontier_generated_output_divergence"
+    } else if different_chosen_token_count > 0 {
+        "logits_topk_frontier_different_chosen_same_output"
+    } else if mismatch_count > 0 {
+        "logits_topk_frontier_same_chosen_same_output"
+    } else {
+        "logits_topk_frontier_clean"
+    };
+
+    json!({
+        "classification": classification,
+        "left_label": left_label,
+        "right_label": right_label,
+        "case_count": case_ids.len(),
+        "compared_step_count": compared_step_count,
+        "logits_topk_mismatch_count": mismatch_count,
+        "same_generated_output_count": same_generated_output_count,
+        "generated_output_divergence_count": generated_output_divergence_count,
+        "same_chosen_token_count": same_chosen_token_count,
+        "different_chosen_token_count": different_chosen_token_count,
+        "missing_context_count": missing_context_count,
+        "max_common_token_abs_delta": max_common_token_abs_delta,
+        "rows_truncated": mismatch_count.saturating_add(missing_context_count) > rows.len(),
+        "row_limit": ROW_LIMIT,
+        "rows": rows,
+    })
+}
+
+fn push_limited_row(rows: &mut Vec<Value>, row_limit: usize, row: Value) {
+    if rows.len() < row_limit {
+        rows.push(row);
+    }
+}
+
+fn logits_missing_context_row(id: &str, step: Option<usize>, reason: &str) -> Value {
+    json!({
+        "case_id": id,
+        "step": step,
+        "classification": "logits_topk_missing_context",
+        "reason": reason,
+    })
+}
+
+fn logits_topk_frontier_row(
+    id: &str,
+    step: usize,
+    left_case: &Value,
+    right_case: &Value,
+    left_step: &Value,
+    right_step: &Value,
+) -> Value {
+    let left_chosen_id = left_step["chosen_id"].as_u64();
+    let right_chosen_id = right_step["chosen_id"].as_u64();
+    let generated_token_ids_match =
+        left_case["token_ids"]["generated"] == right_case["token_ids"]["generated"];
+    let decoded_text_match = left_case["answer"] == right_case["answer"];
+    let same_chosen_id = left_chosen_id == right_chosen_id;
+    let (common_top_token_count, max_common_delta, left_only, right_only) =
+        top_logits_common_delta(&left_step["top_logits"], &right_step["top_logits"]);
+
+    let classification = if !generated_token_ids_match || !decoded_text_match {
+        "logits_topk_generated_output_divergence"
+    } else if same_chosen_id {
+        "logits_topk_same_chosen_same_output"
+    } else {
+        "logits_topk_different_chosen_same_output"
+    };
+
+    json!({
+        "case_id": id,
+        "step": step,
+        "classification": classification,
+        "left_chosen_id": left_chosen_id,
+        "right_chosen_id": right_chosen_id,
+        "same_chosen_id": same_chosen_id,
+        "generated_token_ids_match": generated_token_ids_match,
+        "decoded_text_match": decoded_text_match,
+        "first_different_rank": first_different_topk_rank(&left_step["top_logits"], &right_step["top_logits"]),
+        "left_topk_count": left_step["top_logits"].as_array().map(Vec::len),
+        "right_topk_count": right_step["top_logits"].as_array().map(Vec::len),
+        "common_top_token_count": common_top_token_count,
+        "max_common_token_abs_delta": max_common_delta,
+        "left_only_top_token_ids": left_only,
+        "right_only_top_token_ids": right_only,
+    })
+}
+
+fn top_logits_common_delta(left: &Value, right: &Value) -> (usize, f64, Vec<u64>, Vec<u64>) {
+    let left_logits = top_logits_by_token(left);
+    let right_logits = top_logits_by_token(right);
+    let mut common_count = 0usize;
+    let mut max_delta = 0.0f64;
+    for (token, left_logit) in &left_logits {
+        if let Some(right_logit) = right_logits.get(token) {
+            common_count += 1;
+            max_delta = max_delta.max((left_logit - right_logit).abs());
+        }
+    }
+    let left_only = left_logits
+        .keys()
+        .filter(|token| !right_logits.contains_key(token))
+        .take(3)
+        .copied()
+        .collect();
+    let right_only = right_logits
+        .keys()
+        .filter(|token| !left_logits.contains_key(token))
+        .take(3)
+        .copied()
+        .collect();
+    (common_count, max_delta, left_only, right_only)
+}
+
+fn top_logits_by_token(top_logits: &Value) -> BTreeMap<u64, f64> {
+    top_logits
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| Some((entry["token_id"].as_u64()?, entry["logit"].as_f64()?)))
+        .collect()
+}
+
+fn first_different_topk_rank(left: &Value, right: &Value) -> Value {
+    let left = left.as_array().map(Vec::as_slice).unwrap_or(&[]);
+    let right = right.as_array().map(Vec::as_slice).unwrap_or(&[]);
+    for index in 0..left.len().max(right.len()) {
+        let left_token = left.get(index).and_then(|entry| entry["token_id"].as_u64());
+        let right_token = right.get(index).and_then(|entry| entry["token_id"].as_u64());
+        if left_token != right_token {
+            return json!(index);
+        }
+    }
+    Value::Null
+}
+
 fn case_summary(case: &Value) -> Value {
     json!({
         "status": case["status"],
@@ -1235,6 +1492,29 @@ mod tests {
             "top_logits": [
                 { "token_id": 4, "logit": 10.0 },
                 { "token_id": 5, "logit": 1.0 }
+            ]
+        }])
+    }
+
+    fn logits_same_chosen_drift() -> Value {
+        json!([{
+            "step": 0,
+            "chosen_id": 4,
+            "top_logits": [
+                { "token_id": 4, "logit": 9.75 },
+                { "token_id": 5, "logit": 1.5 },
+                { "token_id": 6, "logit": 0.25 }
+            ]
+        }])
+    }
+
+    fn logits_different_chosen() -> Value {
+        json!([{
+            "step": 0,
+            "chosen_id": 5,
+            "top_logits": [
+                { "token_id": 5, "logit": 10.0 },
+                { "token_id": 4, "logit": 9.0 }
             ]
         }])
     }
@@ -1432,6 +1712,55 @@ mod tests {
             report["kernel"]["right_selected_kernels"],
             json!(["a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate"])
         );
+    }
+
+    #[test]
+    fn generic_parity_summarizes_same_output_logits_topk_frontier() {
+        let scalar = receipt("i2_s-avx2-reference", &[4], "4", logits());
+        let a770 = a770_receipt(&[4], "4", logits_same_chosen_drift());
+
+        let report = build_generic_report(&scalar, &a770);
+
+        assert_eq!(report["summary"]["failed"], 1);
+        assert_eq!(report["summary"]["first_divergence"]["kind"], "logits_topk");
+        assert_eq!(
+            report["logits_topk_frontier"]["classification"],
+            "logits_topk_frontier_same_chosen_same_output"
+        );
+        assert_eq!(report["logits_topk_frontier"]["logits_topk_mismatch_count"], 1);
+        assert_eq!(report["logits_topk_frontier"]["same_generated_output_count"], 1);
+        assert_eq!(report["logits_topk_frontier"]["generated_output_divergence_count"], 0);
+        assert_eq!(report["logits_topk_frontier"]["same_chosen_token_count"], 1);
+        assert_eq!(
+            report["logits_topk_frontier"]["rows"][0]["classification"],
+            "logits_topk_same_chosen_same_output"
+        );
+        assert_eq!(report["logits_topk_frontier"]["rows"][0]["same_chosen_id"], true);
+        assert_eq!(report["logits_topk_frontier"]["rows"][0]["generated_token_ids_match"], true);
+    }
+
+    #[test]
+    fn generic_parity_summarizes_generated_output_logits_topk_frontier() {
+        let scalar = receipt("i2_s-avx2-reference", &[4], "4", logits());
+        let a770 = a770_receipt(&[5], "5", logits_different_chosen());
+
+        let report = build_generic_report(&scalar, &a770);
+
+        assert_eq!(report["summary"]["failed"], 1);
+        assert_eq!(report["summary"]["first_divergence"]["kind"], "generated_token_ids");
+        assert_eq!(
+            report["logits_topk_frontier"]["classification"],
+            "logits_topk_frontier_generated_output_divergence"
+        );
+        assert_eq!(report["logits_topk_frontier"]["logits_topk_mismatch_count"], 1);
+        assert_eq!(report["logits_topk_frontier"]["generated_output_divergence_count"], 1);
+        assert_eq!(report["logits_topk_frontier"]["different_chosen_token_count"], 1);
+        assert_eq!(
+            report["logits_topk_frontier"]["rows"][0]["classification"],
+            "logits_topk_generated_output_divergence"
+        );
+        assert_eq!(report["logits_topk_frontier"]["rows"][0]["same_chosen_id"], false);
+        assert_eq!(report["logits_topk_frontier"]["rows"][0]["generated_token_ids_match"], false);
     }
 
     #[test]

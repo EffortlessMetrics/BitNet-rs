@@ -931,3 +931,55 @@ must_not_claim = [
   "Performance speedup is proven.",
   "A770 trusted partial acceleration is claim-grade.",
 ]
+
+[[work_item]]
+id = "A770-021"
+status = "pr_open"
+pr = 278
+head_sha = "50150848825d61294999b8d65009689f0ef596bf"
+branch = "codex/intel-a770/A770-021-logits-topk-frontier"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-020"]
+acceptance = "Add a compact logits top-k frontier to the CPU/A770 answer-parity receipt so the committed A770-020 divergences are classified as same-output top-k drift versus generated-output drift, without changing runtime math or promoting CPU/A770 answer parity."
+commands = [
+  "rustfmt --edition 2024 --check crates/bitnet-cli/src/commands/answer_parity.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_parity -- --nocapture",
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli -- answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/cpu-avx2-answer-corpus.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/a770-opencl-answer-corpus.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/cpu-avx2-vs-a770-answer-parity.json # expected nonzero while CPU/A770 parity remains divergent",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-parity/**",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+]
+may_claim = [
+  "The answer-parity comparator records a compact logits top-k frontier for the committed CPU/A770 answer-corpus receipt.",
+  "The committed A770-020 receipt now separates same-output top-k drift from generated-output drift.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]

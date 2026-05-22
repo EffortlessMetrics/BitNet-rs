@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T03:53:21Z"
+campaign = "intel-a770"
+item = "A770-021"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-021-logits-topk-frontier"
+summary = "Start compact logits top-k frontier reporting for the CPU/A770 answer-parity receipt."
+notes = [
+  "Scope is the committed A770-020 CPU AVX2 versus A770 OpenCL answer-parity receipt.",
+  "The frontier classifies same-output top-k drift separately from generated-output drift without forwarding full logits arrays.",
+  "No runtime math, CPU/A770 parity, reference parity, A770 answer quality, residency, speed, trusted-partial, or full BitNet inference claim is promoted.",
+]
