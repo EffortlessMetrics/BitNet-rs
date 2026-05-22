@@ -271,6 +271,33 @@ another lane's state.
 Hardware and runtime lanes are non-stackable by default unless the campaign
 manifest explicitly allows the overlap.
 
+## Merge Window Discipline
+
+Most isolated feature, test, refactor, diagnostic, and docs PRs can keep moving
+in parallel after the scoped diff is reviewed and the normalized routed result
+is green.
+
+Short merge windows are required when a PR touches shared surfaces such as:
+
+- generated dashboards;
+- campaign `active.toml` files;
+- root workflows;
+- `Cargo.lock`;
+- root policy files;
+- repository authority docs;
+- promotion or source-sync packets.
+
+When a shared-surface PR is close to merge, avoid merging other non-critical
+shared-surface PRs until that PR has refreshed from current `main`, rerun the
+relevant generator or checker, received the normalized routed result, and
+landed. Release the window immediately after merge so isolated lane work can
+continue.
+
+Source-history repair, source-to-swarm sync, and swarm-to-source promotion are
+exclusive repository-boundary windows. Do not merge other `main` updates during
+those windows unless the update is urgent and explicitly accounted for in the
+sync or promotion packet.
+
 ## Release Handoff
 
 A release handoff starts only after:

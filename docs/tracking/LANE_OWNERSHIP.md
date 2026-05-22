@@ -199,6 +199,29 @@ source changed and include `campaign generate --check` evidence.
 If two PRs collide only on generated dashboards, preserve both campaign-source
 changes and regenerate. Do not overwrite another lane's state.
 
+## Merge Windows
+
+Ordinary isolated PRs should keep flowing. A PR needs a short merge window only
+when it touches shared surfaces that can race with other lanes:
+
+- `docs/tracking/generated/**`;
+- `docs/tracking/campaigns/**/active.toml`;
+- `.github/workflows/**`;
+- `Cargo.lock`;
+- root policy files;
+- repository authority docs;
+- source-sync or promotion packets.
+
+For a shared-surface PR, refresh from current `main`, rerun the relevant
+generator or checker, wait for the normalized routed result, and merge promptly
+when green. Hold other non-critical shared-surface merges only for that window,
+then release the hold.
+
+Source-history repair, source-to-swarm sync, and swarm-to-source promotion
+windows are exclusive. Do not merge unrelated `main` updates during those
+windows unless the update is urgent and is named in the sync or promotion
+packet.
+
 ## Lightweight Leases
 
 When a work item touches shared surfaces or blocks related lane work, record a
