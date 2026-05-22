@@ -43,7 +43,7 @@ use bitnet_models::dense_gguf_norm_fixture::{
 };
 use bitnet_models::formats::gguf::{GgufReader, GgufTensorType};
 use bitnet_models::layer_inspector::extract_layer_index;
-use bitnet_models::{LoadConfig, Model, ModelLoader};
+use bitnet_models::{LoadConfig, Model, ModelLoader, ProgressCallback};
 use bitnet_receipts_core::{
     DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
     DENSE_GGUF_ATTENTION_SCORE_CUDA_PARITY_ARTIFACT_KIND,
@@ -4291,6 +4291,23 @@ impl DenseQwenPhaseTrace {
     }
 }
 
+fn dense_qwen_phase_trace_progress_callback(
+    phase_trace: &DenseQwenPhaseTrace,
+    phase_scope: &'static str,
+) -> ProgressCallback {
+    let trace = phase_trace.clone();
+    std::sync::Arc::new(move |progress, message| {
+        let _ = trace.emit(
+            phase_scope,
+            "model_loader_progress",
+            json!({
+                "progress": progress,
+                "message": message,
+            }),
+        );
+    })
+}
+
 fn run_qwen_one_token_once(
     model_path: &Path,
     device: BitNetDevice,
@@ -4325,8 +4342,11 @@ fn run_qwen_one_token_once(
     )?;
 
     let loader = ModelLoader::new(device);
-    let load_config =
-        LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
+    let load_config = LoadConfig {
+        use_mmap: true,
+        validate_checksums: false,
+        progress_callback: Some(dense_qwen_phase_trace_progress_callback(phase_trace, phase_scope)),
+    };
     let total_start = std::time::Instant::now();
     let load_start = std::time::Instant::now();
     phase_trace.emit(
@@ -14173,6 +14193,32 @@ mod tests {
         assert_eq!(event["phase"], json!("cpu_reference"));
         assert_eq!(event["state"], json!("model_load_start"));
         assert_eq!(event["details"]["model"], json!("test.gguf"));
+        Ok(())
+    }
+
+    #[test]
+    fn qwen_one_token_phase_trace_loader_progress_callback_writes_jsonl_event()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let path = std::env::temp_dir().join(format!(
+            "bitnet-qwen-phase-trace-loader-{}-{}.jsonl",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        let trace = DenseQwenPhaseTrace::new(Some(&path), "test-command");
+        trace.reset()?;
+        let callback = dense_qwen_phase_trace_progress_callback(&trace, "cuda_target");
+
+        callback(0.5, "Loading tensors...");
+
+        let contents = std::fs::read_to_string(&path)?;
+        let line = contents.lines().next().ok_or_else(|| std::io::Error::other("trace line"))?;
+        let event: Value = serde_json::from_str(line)?;
+        std::fs::remove_file(&path).ok();
+
+        assert_eq!(event["phase"], json!("cuda_target"));
+        assert_eq!(event["state"], json!("model_loader_progress"));
+        assert_eq!(event["details"]["progress"], json!(0.5));
+        assert_eq!(event["details"]["message"], json!("Loading tensors..."));
         Ok(())
     }
 
