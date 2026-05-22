@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T08:20:26Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-COMPAT-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-COMPAT-001-update-compat"
+pr = 6188
+head_sha = "714f6a796b9ec414ef0b3a1c9e27a7b7aff8749c"
+
+notes = [
+  "Opened PR #6188 for the M4-COMPAT-001 compatibility-refresh receipt contract.",
+  "The PR defines model-free compatibility obligations, required doctor/smoke/regression-dashboard follow-up receipts, cache repair cases, rollback targets, and claim-boundary validation.",
+  "The contract does not prove unchanged performance, broad Apple Silicon or MacBook behavior, Metal/QK256/Neural Engine/MPSGraph support, BitNet chat or serve readiness, or new model support.",
+]
