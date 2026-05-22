@@ -50,7 +50,7 @@ Make the Intel Arc A770 a receipt-backed OpenCL-first BitNet acceleration lane. 
 | A770-018 | merged | Record the first committed live five-case A770 OpenCL answer-corpus diagnostic receipt for the official BitNet 2B I2_S model, keeping reference parity, broad answer quality, residency, speed, and trusted-partial claims closed. |
 | A770-019 | merged | Restore the OpenCL runtime availability build by matching the selected-device runtime probe wrapper type, keeping A770 answer quality, parity, residency, speed, and completion claims closed. |
 | A770-020 | merged | Record same-box AMD 5700X AVX2 CPU and Intel A770 OpenCL answer-corpus receipts with one-step top-k logits, compare them with the answer-parity tool, and preserve the first CPU/A770 logits divergence without claiming exact parity. |
-| A770-021 | pr_open | Add a compact logits top-k frontier to the CPU/A770 answer-parity receipt, separating same-output top-k drift from generated-output drift without changing runtime math or promoting parity. |
+| A770-021 | merged | Add a compact logits top-k frontier to the CPU/A770 answer-parity receipt, separating same-output top-k drift from generated-output drift without changing runtime math or promoting parity. |
 
 ## Current Claim Boundary
 

@@ -934,9 +934,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-021"
-status = "pr_open"
+status = "merged"
 pr = 278
-head_sha = "50150848825d61294999b8d65009689f0ef596bf"
+head_sha = "88430ab9283d97f9507783ff2179ef66474746eb"
+merge_sha = "91e36faeed8c184771f07ba2adb1ae3976edb380"
 branch = "codex/intel-a770/A770-021-logits-topk-frontier"
 stackable = false
 review_mode = "codex_premerge"
