@@ -485,33 +485,20 @@ fn dense_q8_sidecar_linear_forward(
     let output_values = input_rows.saturating_mul(payload.matrix_rows);
     let mut output = Vec::with_capacity(output_values);
     let matvec_start = Instant::now();
-    for input_row in input_values.chunks_exact(payload.matrix_cols) {
-        for row in 0..payload.matrix_rows {
-            let mut sum = bias_values.as_ref().map_or(0.0, |bias| bias[row]);
-            let row_start = row * payload.matrix_cols;
-            let mut col = 0usize;
-            while col < payload.matrix_cols {
-                let weight_idx = row_start + col;
-                let block_idx = weight_idx / payload.q8_block_size;
-                let block_value_offset = weight_idx % payload.q8_block_size;
-                let block_offset = block_idx * (2 + payload.q8_block_size);
-                let scale_bits = u16::from_le_bytes([
-                    payload.packed_q8_bytes[block_offset],
-                    payload.packed_q8_bytes[block_offset + 1],
-                ]);
-                let scale = fp16_to_f32(scale_bits);
-                let values_in_block = payload.q8_block_size - block_value_offset;
-                let values_in_row = payload.matrix_cols - col;
-                let values_to_process = values_in_block.min(values_in_row);
-                for offset in 0..values_to_process {
-                    let q_idx = block_offset + 2 + block_value_offset + offset;
-                    let q = payload.packed_q8_bytes[q_idx] as i8;
-                    sum += scale * f32::from(q) * input_row[col + offset];
-                }
-                col += values_to_process;
-            }
-            output.push(sum);
-        }
+    if payload.matrix_cols.is_multiple_of(payload.q8_block_size) {
+        dense_q8_sidecar_matvec_block_aligned(
+            &input_values,
+            bias_values.as_deref(),
+            payload,
+            &mut output,
+        );
+    } else {
+        dense_q8_sidecar_matvec_generic(
+            &input_values,
+            bias_values.as_deref(),
+            payload,
+            &mut output,
+        );
     }
     add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.packed_matvec_calls, 1);
     add_counter(&DENSE_Q8_SIDECAR_INSTRUMENTATION.packed_matvec_ns, elapsed_ns_u64(matvec_start));
@@ -531,6 +518,73 @@ fn dense_q8_sidecar_linear_forward(
         elapsed_ns_u64(output_construction_start),
     );
     tensor
+}
+
+fn dense_q8_sidecar_matvec_block_aligned(
+    input_values: &[f32],
+    bias_values: Option<&[f32]>,
+    payload: &DenseLinearPackedQ8Payload,
+    output: &mut Vec<f32>,
+) {
+    let block_stride = 2 + payload.q8_block_size;
+    let blocks_per_row = payload.matrix_cols / payload.q8_block_size;
+    for input_row in input_values.chunks_exact(payload.matrix_cols) {
+        for row in 0..payload.matrix_rows {
+            let mut sum = bias_values.map_or(0.0, |bias| bias[row]);
+            let row_block_start = row * blocks_per_row;
+            for block_in_row in 0..blocks_per_row {
+                let input_start = block_in_row * payload.q8_block_size;
+                let block_offset = (row_block_start + block_in_row) * block_stride;
+                let scale = dense_q8_sidecar_block_scale(&payload.packed_q8_bytes, block_offset);
+                let q_start = block_offset + 2;
+                for offset in 0..payload.q8_block_size {
+                    let q = payload.packed_q8_bytes[q_start + offset] as i8;
+                    sum += scale * f32::from(q) * input_row[input_start + offset];
+                }
+            }
+            output.push(sum);
+        }
+    }
+}
+
+fn dense_q8_sidecar_matvec_generic(
+    input_values: &[f32],
+    bias_values: Option<&[f32]>,
+    payload: &DenseLinearPackedQ8Payload,
+    output: &mut Vec<f32>,
+) {
+    let block_stride = 2 + payload.q8_block_size;
+    for input_row in input_values.chunks_exact(payload.matrix_cols) {
+        for row in 0..payload.matrix_rows {
+            let mut sum = bias_values.map_or(0.0, |bias| bias[row]);
+            let row_start = row * payload.matrix_cols;
+            let mut col = 0usize;
+            while col < payload.matrix_cols {
+                let weight_idx = row_start + col;
+                let block_idx = weight_idx / payload.q8_block_size;
+                let block_value_offset = weight_idx % payload.q8_block_size;
+                let block_offset = block_idx * block_stride;
+                let scale = dense_q8_sidecar_block_scale(&payload.packed_q8_bytes, block_offset);
+                let values_in_block = payload.q8_block_size - block_value_offset;
+                let values_in_row = payload.matrix_cols - col;
+                let values_to_process = values_in_block.min(values_in_row);
+                for offset in 0..values_to_process {
+                    let q_idx = block_offset + 2 + block_value_offset + offset;
+                    let q = payload.packed_q8_bytes[q_idx] as i8;
+                    sum += scale * f32::from(q) * input_row[col + offset];
+                }
+                col += values_to_process;
+            }
+            output.push(sum);
+        }
+    }
+}
+
+fn dense_q8_sidecar_block_scale(packed_q8_bytes: &[u8], block_offset: usize) -> f32 {
+    fp16_to_f32(u16::from_le_bytes([
+        packed_q8_bytes[block_offset],
+        packed_q8_bytes[block_offset + 1],
+    ]))
 }
 
 fn attention_f16_dot_input(tensor: &Tensor) -> Result<Tensor> {

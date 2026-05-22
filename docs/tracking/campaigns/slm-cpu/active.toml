@@ -3053,8 +3053,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "SLM-CPU-078"
-status = "ready"
-branch = "codex/slm-cpu-078-packed-matvec-compute-cleanup"
+status = "pr_open"
+pr = 277
+head_sha = "a5b7b8c4081a0639fd23bdf3cc6d25c26fa67e3a"
+branch = "codex/slm-cpu-078-packed-matvec-aligned-path"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
