@@ -1,0 +1,18 @@
+timestamp = "2026-05-22T14:46:32Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-METAL-EX-002"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-METAL-EX-002-phase-parity"
+pr = 6196
+head_sha = "614847ab5b30e746626431910559ea536c233912"
+merge_sha = "59a7c1ab0a7ec52a792a799b20f7da5d7f6601d4"
+
+notes = [
+  "Merged PR #6196 after all GitHub checks passed.",
+  "The merged slice adds one dense SLM Apple M4 Metal phase: prefill attention-score logits with CPU reference parity, fallback=false receipt evidence, and phase-local timing only.",
+  "The receipt is ci/hardware/apple-m4-mac-mini/2026-05-22/slm-metal-phases/metal-dense-prefill-attention-scores.json.",
+  "The merge does not claim full apple-m4-metal inference, BitNet inference, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, broad performance, or speedup.",
+]
