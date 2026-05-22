@@ -496,6 +496,7 @@ fn answer_corpus_artifact_kind_allowed(kind: Option<&str>) -> bool {
         kind,
         Some(
             "bitnet_cpu_answer_corpus"
+                | "bitnet_a770_opencl_answer_diagnostic_corpus"
                 | "bitnet_cuda_answer_corpus"
                 | "bitnet_cuda_answer_diagnostic_corpus"
                 | "bitnet_apple_m4_local_answer_corpus"
@@ -1251,6 +1252,24 @@ mod tests {
         receipt
     }
 
+    fn a770_receipt(generated: &[u64], answer: &str, logits: Value) -> Value {
+        let mut receipt = receipt(
+            "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+            generated,
+            answer,
+            logits,
+        );
+        receipt["artifact_kind"] = json!("bitnet_a770_opencl_answer_diagnostic_corpus");
+        receipt["backend"] = json!({
+            "requested_backend": "intel-a770-opencl",
+            "selected_backend": "intel-a770-opencl",
+            "runtime_api": "opencl",
+            "fallback_used": false
+        });
+        receipt["cases"][0]["backend"] = receipt["backend"].clone();
+        receipt
+    }
+
     fn build_legacy_report(scalar: &Value, avx2: &Value) -> Value {
         build_answer_parity_receipt(
             Path::new("scalar.json"),
@@ -1389,6 +1408,30 @@ mod tests {
         assert_eq!(report["cases"][0]["passed"], true);
         assert_eq!(report["cases"][0]["right"]["selected_kernel"], "qk256_gemv_cuda");
         assert!(report["cases"][0]["scalar"].is_null());
+    }
+
+    #[test]
+    fn generic_parity_accepts_matching_cpu_and_a770_answer_corpus_receipts() {
+        let scalar = receipt("i2_s-avx2-reference", &[4], "4", logits());
+        let a770 = a770_receipt(&[4], "4", logits());
+
+        let report = build_generic_report(&scalar, &a770);
+
+        assert_eq!(report["artifact_kind"], "bitnet_answer_corpus_parity");
+        assert_eq!(report["summary"]["failed"], 0);
+        assert!(
+            report["shared_contract"]["failed_rules"]
+                .as_array()
+                .is_some_and(|shared| !shared.iter().any(|rule| rule == "artifact_kind_contract"))
+        );
+        assert_eq!(
+            report["backend"]["lanes"]["right"]["backend"]["selected_backend"],
+            "intel-a770-opencl"
+        );
+        assert_eq!(
+            report["kernel"]["right_selected_kernels"],
+            json!(["a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate"])
+        );
     }
 
     #[test]

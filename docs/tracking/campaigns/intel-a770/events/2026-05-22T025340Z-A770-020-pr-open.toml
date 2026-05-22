@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T02:53:40Z"
+campaign = "intel-a770"
+item = "A770-020"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+pr = 265
+branch = "codex/intel-a770/A770-020-cpu-a770-answer-parity"
+head_sha = "a0b0de7a2d0fc941dcce2119f7572574373888bd"
+summary = "Opened PR #265 for same-box CPU AVX2 versus A770 OpenCL answer-parity diagnostics."
+notes = [
+  "The PR records CPU AVX2 and A770 OpenCL answer-corpus receipts with one-step top-k logits for the official BitNet 2B I2_S model.",
+  "The answer-parity receipt has a clean shared contract and records first divergence as capital_france logits_topk.",
+  "No CPU/A770 parity, reference parity, A770 answer quality, residency, speed, trusted-partial, or full BitNet inference claim is promoted.",
+]
