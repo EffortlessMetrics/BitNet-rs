@@ -253,7 +253,8 @@ kind of run:
 The first schema-`1.2.0` model-free operator receipts using the contract are
 `apple_m4_inference_status`, `apple_m4_operator_evidence_summary`,
 `apple_m4_report_refresh_manifest`, and `apple_m4_regression_dashboard`.
-`bitnet mac receipts-check` validates `run_identity` for schema `1.2.0`
+`bitnet mac receipts-check` validates `run_identity` for schema `1.2.0` and
+`1.3.0`
 receipts and for any receipt that includes `run_identity_sha256`.
 
 Older committed M4 receipts remain valid with their existing schemas while
@@ -1426,6 +1427,12 @@ committed evidence identity, max context or profile guidance, timing
 expectation, and memory/disk posture. The map is an operator expectation layer
 only; it does not enable a disabled route or turn bounded receipts into broad
 quality or performance claims.
+
+`M4-ROUTE-MATRIX-001` turns the envelope into a machine-readable route-state
+matrix under `route_state_matrix` in `bitnet mac status --json` and
+`bitnet mac evidence --json`. These receipts use schema `1.3.0`, while older
+operator receipts remain valid without the matrix. The corresponding operator
+table is `docs/slm/apple-m4-route-state-matrix.md`.
 
 ## Release Gates
 

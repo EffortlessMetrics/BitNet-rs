@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T00:55:10Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-ROUTE-MATRIX-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-ROUTE-MATRIX-001-route-states"
+
+notes = [
+  "Started the route-state matrix slice after M4-CI-001 merged and the campaign next item advanced to M4-ROUTE-MATRIX-001.",
+  "Scope is limited to CLI status/evidence route-matrix metadata, docs, and tracker surfaces for dense SLM and BitNet route states.",
+  "This item does not add runtime proof, fetch models by default, enable disabled BitNet chat or serve routes without ready gates, or broaden Metal, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, quality, speedup, or broad performance claims.",
+]
