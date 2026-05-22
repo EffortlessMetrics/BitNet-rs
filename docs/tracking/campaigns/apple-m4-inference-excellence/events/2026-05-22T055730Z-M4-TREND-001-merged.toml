@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T05:57:30Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-TREND-001"
+event = "merged"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
+pr = 6184
+head_sha = "393420a13b9e8f9f788805478374e5b3c084b6cf"
+merge_sha = "8ba3057c1169662f2d0b95b71be12715cc109103"
+
+notes = [
+  "Merged source PR #6184 after required GitHub checks passed or were intentionally skipped.",
+  "M4-TREND-001 now publishes a committed seven-day trend summary for dense SLM and BitNet M4 receipt families, including matching-identity status, skipped-day reasons, threshold outcomes, source manifest SHAs, and operator-envelope impact.",
+  "The merged source slice remains trend/history reporting over committed receipts only; it does not run live model inference, fetch models, replace per-run receipts, prove future performance, enable BitNet chat or serve, or make broad quality, performance, Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, or broad Apple Silicon claims.",
+]
