@@ -2041,6 +2041,57 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-080"
+status = "ready"
+branch = "codex/slm-cpu-080-kaby-performance-dashboard-refresh"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-079", "SLM-CPU-032", "SLM-CPU-035"]
+acceptance = "Refresh the Kaby Lake Qwen3 Q8_0 CPU performance dashboard after the merged prompt-token cache, KV-cache reuse, prefill-attribution, and post-aligned packed-matvec evidence. The dashboard must preserve the Qwen3 Q8_0 behavior oracle, record that the current operator default is evidence-scoped to 4 threads, identify the current allocation and packed-matvec next targets, and keep speedup, sustained-throughput, Q4/Q5 runtime, server, accelerator, Qwen3.5, and BitNet QK256 claims false."
+commands = [
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "The Kaby Lake Qwen3 Q8_0 performance dashboard is refreshed against the latest merged strict receipt evidence.",
+  "The current operator default remains evidence-scoped to the recorded 4-thread operator profile.",
+  "The next Kaby SLM performance targets are allocation/layout work around prompt_prefill.forward or exact-tensor packed Q8_0 matvec compute, both gated by generated-ID and strict-receipt preservation.",
+]
+must_not_claim = [
+  "A new runtime optimization is implemented.",
+  "End-to-end speedup is proven.",
+  "Sustained 8250U throughput is proven.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-059"
 status = "merged"
 pr = 6078
