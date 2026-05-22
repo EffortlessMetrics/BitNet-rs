@@ -153,9 +153,25 @@ fn status(args: StatusArgs) -> Result<()> {
     }
     if source_ref_reachable == Some(false) {
         warnings.push(format!("{} is not an ancestor of {}", args.source_ref, args.swarm_ref));
+    } else if source_ref_reachable.is_none() {
+        warnings.push(format!(
+            "could not verify whether {} is an ancestor of {}",
+            args.source_ref, args.swarm_ref
+        ));
     }
     if source_missing_commits.is_some_and(|count| count > 0) {
         warnings.push(format!("{} has commits missing from {}", args.source_ref, args.swarm_ref));
+    } else if source_missing_commits.is_none() {
+        warnings.push(format!(
+            "could not count commits in {} missing from {}",
+            args.source_ref, args.swarm_ref
+        ));
+    }
+    if swarm_only_commits.is_none() {
+        warnings.push(format!(
+            "could not count commits in {} missing from {}",
+            args.swarm_ref, args.source_ref
+        ));
     }
     if !release_workflow_guard.guarded {
         warnings.push(
@@ -163,20 +179,13 @@ fn status(args: StatusArgs) -> Result<()> {
         );
     }
 
-    let status = if source_ref_reachable == Some(false)
-        || source_missing_commits.is_some_and(|count| count > 0)
-        || !release_workflow_guard.guarded
-    {
-        BoundaryVerdict::Drift
-    } else if !warnings.is_empty()
-        || source_ref_reachable.is_none()
-        || source_missing_commits.is_none()
-        || swarm_only_commits.is_none()
-    {
-        BoundaryVerdict::Warn
-    } else {
-        BoundaryVerdict::Ok
-    };
+    let status = boundary_verdict(
+        source_ref_reachable,
+        source_missing_commits,
+        swarm_only_commits,
+        release_workflow_guard.guarded,
+        !warnings.is_empty(),
+    );
 
     let source_remote_configured = source_remote_url.is_some();
     let report = RepoBoundaryStatus {
@@ -266,6 +275,26 @@ where
         return None;
     }
     String::from_utf8_lossy(&output.stdout).trim().parse().ok()
+}
+
+fn boundary_verdict(
+    source_ref_reachable: Option<bool>,
+    source_missing_commits: Option<u64>,
+    swarm_only_commits: Option<u64>,
+    release_workflows_guarded: bool,
+    has_warnings: bool,
+) -> BoundaryVerdict {
+    let source_history_missing_or_stale = source_ref_reachable != Some(true)
+        || source_missing_commits.map_or(true, |count| count > 0)
+        || swarm_only_commits.is_none();
+
+    if source_history_missing_or_stale || !release_workflows_guarded {
+        BoundaryVerdict::Drift
+    } else if has_warnings {
+        BoundaryVerdict::Warn
+    } else {
+        BoundaryVerdict::Ok
+    }
 }
 
 fn scan_release_workflow_guards(dir: &Path, guard: &str) -> Result<ReleaseWorkflowGuardReport> {
@@ -408,5 +437,34 @@ mod tests {
         ));
         assert!(is_release_sensitive_workflow("release.yml", "name: Release"));
         assert!(is_release_sensitive_workflow("image.yml", "env:\n  PUBLISH_IMAGE: true"));
+    }
+
+    #[test]
+    fn missing_source_history_is_drift() {
+        assert_eq!(boundary_verdict(None, None, None, true, false), BoundaryVerdict::Drift);
+        assert_eq!(
+            boundary_verdict(Some(true), None, Some(0), true, false),
+            BoundaryVerdict::Drift
+        );
+        assert_eq!(
+            boundary_verdict(Some(true), Some(0), None, true, false),
+            BoundaryVerdict::Drift
+        );
+    }
+
+    #[test]
+    fn verified_swarm_only_commits_are_not_drift() {
+        assert_eq!(
+            boundary_verdict(Some(true), Some(0), Some(42), true, false),
+            BoundaryVerdict::Ok
+        );
+    }
+
+    #[test]
+    fn warnings_without_drift_remain_warn() {
+        assert_eq!(
+            boundary_verdict(Some(true), Some(0), Some(42), true, true),
+            BoundaryVerdict::Warn
+        );
     }
 }
