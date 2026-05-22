@@ -705,7 +705,7 @@
 | slm-cpu | SLM-CPU-076 | SLM-CPU-075 | merged |
 | slm-cpu | SLM-CPU-077 | SLM-CPU-076 | merged |
 | slm-cpu | SLM-CPU-078 | SLM-CPU-077 | merged |
-| slm-cpu | SLM-CPU-079 | SLM-CPU-078 | pr_open |
+| slm-cpu | SLM-CPU-079 | SLM-CPU-078 | merged |
 | slm-cpu | SLM-CPU-033 | SLM-CPU-032 | merged |
 | slm-cpu | SLM-CPU-034 | SLM-CPU-033 | merged |
 | slm-cpu | SLM-CPU-035 | SLM-CPU-034 | merged |

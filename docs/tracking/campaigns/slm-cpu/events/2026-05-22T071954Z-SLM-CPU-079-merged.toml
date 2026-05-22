@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T07:19:54Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-079"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 291
+branch = "codex/slm-cpu-079-post-aligned-matvec-artifact"
+head_sha = "5c50cb99c0b8ed920b955571c9c835cf3fbbed89"
+merge_sha = "52bc1c0e9f813b20681dd7aa30f05657630198b2"
+summary = "Merged the post-aligned packed Q8_0 exact-tensor warm-session artifact for SLM-CPU-079."
+notes = [
+  "The merged artifact preserves prompt IDs, generated IDs, decoded text, model SHA, tokenizer source/strictness, selected CPU backend identity, dense hook identity, and fallback_used=false against the SLM-CPU-077 sidecar oracle.",
+  "The companion classification records a bounded packed_matvec_ns counter reduction only.",
+  "The closeout does not claim end-to-end speedup, sustained 8250U throughput, broad answer quality, Q4/Q5 support, server or accelerator execution, Qwen3.5 support, or BitNet QK256 changes.",
+]
