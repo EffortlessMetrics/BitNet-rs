@@ -1,0 +1,12 @@
+timestamp = "2026-05-21T09:05:26Z"
+campaign = "intel-a770"
+item = "A770-013"
+event = "in_progress"
+branch = "codex/intel-a770/A770-013-cli-opencl-route-receipts"
+actor = "codex"
+
+notes = [
+  "Started A770-013 after A770-012 landed the strict selected-device A770 OpenCL QK256 dispatch receipt.",
+  "This slice wires the CLI OpenCL feature into the real BitNet model/QK256 dispatch stack and adds strict A770 OpenCL route receipt fields.",
+  "No BitNet inference, answer quality, activation quantization residency, selected attention residency, resident KV, full residency, performance speedup, trusted-partial acceleration, or completion claim is promoted.",
+]

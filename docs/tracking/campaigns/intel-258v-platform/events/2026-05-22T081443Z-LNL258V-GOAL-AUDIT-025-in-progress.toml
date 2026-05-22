@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-22T08:14:43Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-025"
+previous_status = "ready"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-025-current-main"
+actor = "codex"
+summary = "Refresh the no-inference Lunar Lake goal audit to current swarm main after adjacent CUDA, M4, A770, and audit closeout deltas."
+
+notes = [
+  "Record #292 as adjacent CUDA/Qwen3 RoPE upload probe evidence only, not Lunar Lake route evidence.",
+  "Record #297 as imported M4 lifecycle/model-cache support work only, not Lunar Lake route evidence or a route claim.",
+  "Record #298 and #299 as Lunar Lake audit and tracker closeout state only.",
+  "Record #300 as adjacent A770 first-mismatch logit-margin frontier diagnostics only, not Lunar Lake route evidence.",
+  "Keep LNL258V-POWER-006 blocked until real battery-mode low_power telemetry, energy proxy, measured thermal context, and benchmark-qualified power advantage exist.",
+  "Preserve no inference, model load, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator, acceleration, broad quality, model binary, runtime/sidecar behavior claim, semantic-intake stale claim, or BitNet QK256/I2_S behavior-change claim.",
+]

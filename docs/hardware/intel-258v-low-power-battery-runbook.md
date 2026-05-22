@@ -37,6 +37,25 @@ Get-CimInstance Win32_Battery |
 Stop if `BatteryStatus=2` or if the telemetry receipt below reports
 `ac_power_inferred=true`.
 
+Before unplugging for the physical run, emit the machine-readable plan receipt
+from the current committed blocker evidence:
+
+```powershell
+target/debug/bitnet.exe lunar-lake low-power-plan `
+  --artifact-root ci/hardware/intel-258v/2026-05-08 `
+  --power-profile-evidence lunar-lake-power-profile-evidence.json `
+  --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json `
+  --battery-telemetry-context lunar-lake-low-power-battery-telemetry-blocked.json `
+  --json-out lunar-lake-low-power-battery-plan.json `
+  --created-utc <plan-utc> `
+  --strict
+```
+
+This plan is not battery evidence. Continue only if it records
+`operator_plan_ready=true`; if `can_collect_battery_evidence_now=false`, keep
+following the strict battery telemetry preflight below before collecting route
+samples.
+
 ## Battery Start Receipt
 
 Capture the required before-sample with strict battery enforcement:
@@ -71,11 +90,69 @@ Run the low-power route/profile matrix on battery for these route identities:
 | `dense_slm_openvino_npu_candidate` | `openvino-npu` | candidate for `low_power` |
 
 Each route sample must keep `fallback_used=false`, preserve the route identity,
-and record answer-gate, timing, memory, power, and thermal context. If a route
-falls back or cannot run on battery, keep the failure as blocker evidence.
+and record answer-gate, timing, memory, power, and thermal context. The expected
+sample receipts are:
+
+- `lunar-lake-operator-ask-battery-low-power-cpu.json`
+- `lunar-lake-operator-ask-battery-low-power-gpu.json`
+- `lunar-lake-operator-ask-battery-low-power-npu.json`
+
+If a route falls back or cannot run on battery, keep the failure as blocker
+evidence.
 
 Do not use the already committed AC-only low-power corpus/profile receipts as
 battery evidence. They can remain comparison context only.
+
+Use explicit routes for the battery samples. Do not use `--route auto` for
+`low_power` until the promotion ledger has a promoted low-power route:
+
+```powershell
+target/debug/bitnet.exe lunar-lake ask `
+  --artifact-root ci/hardware/intel-258v/2026-05-08 `
+  --operator-receipt lunar-lake-operator-readiness.json `
+  --promotion-ledger lunar-lake-route-promotion.json `
+  --route-profile-comparison lunar-lake-route-profile-comparison.json `
+  --profile low_power `
+  --route dense_slm_default_cpu `
+  --device cpu `
+  --prompt "What is 2+2? Answer with just the number." `
+  --expect-contains 4 `
+  --max-new-tokens 8 `
+  --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-cpu.json
+
+target/debug/bitnet.exe lunar-lake ask `
+  --artifact-root ci/hardware/intel-258v/2026-05-08 `
+  --operator-receipt lunar-lake-operator-readiness.json `
+  --promotion-ledger lunar-lake-route-promotion.json `
+  --route-profile-comparison lunar-lake-route-profile-comparison.json `
+  --profile low_power `
+  --route dense_slm_openvino_gpu_candidate `
+  --device gpu `
+  --prompt "What is 2+2? Answer with just the number." `
+  --expect-contains 4 `
+  --max-new-tokens 8 `
+  --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-gpu.json
+
+target/debug/bitnet.exe lunar-lake ask `
+  --artifact-root ci/hardware/intel-258v/2026-05-08 `
+  --operator-receipt lunar-lake-operator-readiness.json `
+  --promotion-ledger lunar-lake-route-promotion.json `
+  --route-profile-comparison lunar-lake-route-profile-comparison.json `
+  --profile low_power `
+  --route dense_slm_openvino_npu_candidate `
+  --device openvino-npu `
+  --prompt "What is 2+2? Answer with just the number." `
+  --expect-contains 4 `
+  --max-new-tokens 8 `
+  --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-npu.json
+```
+
+The three receipts are still sample evidence. They do not promote `low_power`
+unless the later power-profile, regression, and operator comparison refreshes
+qualify the same decision. It is valid for these explicit-route receipts to
+record `route_profile_status=candidate_only` and current low_power blockers;
+`--device auto` must remain blocked until the ledger promotes a route for the
+profile.
 
 ## Battery End Receipt
 

@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T18:16:40Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-074"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/slm-cpu-074-packed-q8-sidecar-instrumentation"
+summary = "Started the packed Q8_0 sidecar instrumentation and scratch-elimination gate."
+notes = [
+  "The implementation adds aggregate counters around selector dispatch, input materialization, bias extraction, packed matvec compute, and output tensor construction for the exact layers.0.attention.q_proj.weight sidecar path.",
+  "The default runtime remains eager_f32_candle and packed Q8_0 sidecar execution remains opt-in and exact-tensor scoped.",
+  "No speedup, sustained-throughput, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256 claim is made.",
+]

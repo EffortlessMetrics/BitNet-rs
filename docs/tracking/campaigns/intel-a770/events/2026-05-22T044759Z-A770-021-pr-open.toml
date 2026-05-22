@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T04:47:59Z"
+campaign = "intel-a770"
+item = "A770-021"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+pr = 278
+branch = "codex/intel-a770/A770-021-logits-topk-frontier"
+head_sha = "50150848825d61294999b8d65009689f0ef596bf"
+summary = "Opened PR #278 for compact CPU/A770 logits top-k frontier reporting."
+notes = [
+  "The PR adds a compact logits_topk_frontier section to the answer-parity receipt.",
+  "The committed A770-020 CPU/A770 receipt classifies five top-k mismatches, four same-output rows, one generated-output divergence row, and no missing context.",
+  "No runtime math, CPU/A770 parity, reference parity, A770 answer quality, residency, speed, trusted-partial, or full BitNet inference claim is promoted.",
+]

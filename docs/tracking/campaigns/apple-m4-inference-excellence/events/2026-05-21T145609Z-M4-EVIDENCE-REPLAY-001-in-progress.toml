@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T14:56:09Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EVIDENCE-REPLAY-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
+
+notes = [
+  "Started M4-EVIDENCE-REPLAY-001 after PR #196 merged and campaign next selected replayable evidence bundles.",
+  "Scope is model-free dry-run replay/audit of committed dense SLM and BitNet evidence receipts, dashboard outputs, exact commands, git/binary identity, model/tokenizer identity, and claim boundaries.",
+  "No live inference, model download, uncommitted artifact validation, route enablement, disabled BitNet chat or serve support, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

@@ -1,0 +1,15 @@
+timestamp = "2026-05-22T14:16:34Z"
+campaign = "intel-a770"
+item = "A770-026"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-026-answer-readiness-failure-frontier"
+summary = "Started the A770-025 answer-readiness failure-frontier classification item."
+notes = [
+  "The work classifies the committed A770-025 seeded CPU AVX2 and Intel A770 OpenCL answer-readiness receipts.",
+  "CPU and A770 share the same 12 quality failures, so those failures must not be treated as A770-only backend evidence.",
+  "The CPU/A770 parity receipt remains divergent at top-k logits for all 20 cases and has two generated-output divergences with missing first-mismatch logit context.",
+  "No runtime math, strict answer readiness, broad answer quality, CPU/A770 parity, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

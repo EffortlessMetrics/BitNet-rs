@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T14:32:54Z"
+campaign = "intel-a770"
+item = "A770-026"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+pr = 336
+branch = "codex/intel-a770/A770-026-answer-readiness-failure-frontier"
+head_sha = "a8d7f35cb34e5bf28568a0ebfbbf780886716bf8"
+summary = "Opened PR #336 for the A770-025 answer-readiness failure-frontier report."
+notes = [
+  "The PR classifies the committed A770-025 seeded CPU AVX2 and Intel A770 OpenCL answer-readiness receipts.",
+  "The report separates shared CPU/A770 quality failures from CPU/A770 logits/output parity drift.",
+  "No runtime math, strict answer readiness, broad answer quality, CPU/A770 parity, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

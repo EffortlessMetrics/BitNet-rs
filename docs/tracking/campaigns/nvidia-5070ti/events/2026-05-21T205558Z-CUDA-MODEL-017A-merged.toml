@@ -1,0 +1,25 @@
+timestamp = "2026-05-21T20:55:58Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-017A"
+event = "merged"
+previous_status = "in_progress"
+new_status = "merged"
+actor = "codex"
+pr = 228
+branch = "codex/nvidia-5070ti/CUDA-MODEL-017A-qwen3-capture-tooling"
+head_sha = "a84fc6825c16acbbfeaaa452b8108f9aba66736b"
+merge_sha = "e41917185cda8d524065c6566a174dc5f02c16e0"
+summary = "Merged Qwen3 source-capture tooling required before CUDA-MODEL-017 hardware receipt collection."
+
+artifacts = [
+  "https://github.com/EffortlessMetrics/bitnet-rs-swarm/pull/228",
+  "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs",
+  "crates/bitnet-bench-receipts/src/bin/qwen3_cuda_repeated_comparator_receipt.rs",
+  "docs/reports/CUDA_MODEL_017A_QWEN3_CAPTURE_TOOLING_GAP.md",
+]
+
+notes = [
+  "Current source can emit and validate Qwen3-only short_decode_32 and decode_128_from_warm_context source-capture receipts.",
+  "The aggregate Qwen3 repeated comparator contract now rejects ambiguous source receipt artifact kinds for the warm-context decode profile.",
+  "No Qwen3 hardware repeated comparator receipt, speedup, benchmark-qualified speed, full residency, broad dense GGUF readiness, Qwen2.5 inheritance, BitNet QK256 proof, product ask/chat token-bound change, runtime math, tokenizer, loader, kernel, or server behavior claim was made.",
+]

@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T09:33:57Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-071"
+event = "in_progress"
+previous_status = "none"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-071-post070-real-timing-gate"
+summary = "Add the real i5-8250U Qwen3 Q8_0 before/after timing gate after the SLM-CPU-070 block-local packed Q8_0 prototype."
+notes = [
+  "Behavior equivalence and strict provenance must match before timing is classified.",
+  "The candidate sidecar run is scoped to the exact Qwen3 Q8_0 tensor already used by the SLM-CPU-070 prototype.",
+  "No default packed-Q8 enablement, speedup, sustained-throughput, Q4/Q5, accelerator, Qwen3.5, or BitNet QK256 claim is added.",
+]

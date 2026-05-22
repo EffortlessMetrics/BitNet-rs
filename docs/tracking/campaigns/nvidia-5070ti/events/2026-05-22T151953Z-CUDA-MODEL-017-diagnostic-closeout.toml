@@ -1,0 +1,13 @@
+timestamp = "2026-05-22T15:19:53Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-017"
+event = "closeout"
+pr = 335
+head_sha = "f8aad49b0eff7be2efd92704f9a18486b8d6f250"
+merge_sha = "fb9cd61b51ac9b21efbc15a4b6e6001935f7ccdd"
+actor = "codex"
+notes = [
+  "PR #335 added the CUDA-MODEL-017L diagnostic fused RMSNorm trace bypass and preserved the current Qwen3 strict CUDA frontier in docs/reports/CUDA_MODEL_017L_QWEN3_RMSNORM_FUSED_OP.md.",
+  "The diagnostic run stopped before block.attention_norm_fused_rms_finish on the CUDA target, so CUDA-MODEL-017 still lacks the required repeated same-artifact CPU/CUDA source receipts and aggregate qwen3_cuda_repeated_comparator receipt.",
+  "Do not promote Qwen3 speedup, benchmark-qualified speed, full CUDA residency, broad dense GGUF readiness, Qwen2.5 proof inheritance, BitNet packed I2_S/QK256 proof, server readiness, or hardware support from this diagnostic closeout.",
+]

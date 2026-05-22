@@ -1,0 +1,15 @@
+timestamp = "2026-05-21T11:53:30Z"
+campaign = "intel-a770"
+item = "A770-013"
+event = "merged"
+pr = 176
+head_sha = "3c2ced0bab0512f928e493c4978933320f6264e5"
+merge_sha = "81b536819427b284c72c6f805d9878a315a60807"
+branch = "codex/intel-a770/A770-013-cli-opencl-route-receipts"
+actor = "codex"
+
+notes = [
+  "Merged PR #176, wiring the CLI OpenCL feature into the real BitNet model/QK256 dispatch dependency stack and recording strict A770 OpenCL route receipt fields.",
+  "The receipt fields remain diagnostic-only and keep claim_allowed=false, with no BitNet inference, answer quality, activation quantization residency, selected attention residency, resident KV, full A770 residency, performance speedup, trusted partial acceleration, or completion claim.",
+  "The merge closes A770-013 as a route/receipt scaffold; it does not promote A770 semantic quality, speed, residency, or claim-grade acceleration.",
+]

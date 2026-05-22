@@ -1,0 +1,268 @@
+{
+  "artifact_kind": "bitnet_apple_m4_local_server_completion",
+  "artifact_path": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/receipts/m4srv-1779327762953888000.json",
+  "claim_boundary": {
+    "bitnet_quality_claimed": false,
+    "broad_performance_claim": false,
+    "full_metal_inference_claimed": false,
+    "local_server_completion_endpoint": true,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "openai_compatibility_claimed": false,
+    "production_readiness_claimed": false,
+    "qk256_apple_claimed": false,
+    "streaming_transport": true
+  },
+  "context_envelope": {
+    "allowed": true,
+    "claim_boundary": {
+      "bitnet_chat_enabled": false,
+      "bitnet_serve_enabled": false,
+      "broad_performance_claim": false,
+      "broad_quality_claim": false,
+      "full_metal_inference_claimed": false,
+      "guardrail_only": true,
+      "mpsgraph_inference_claimed": false,
+      "neural_engine_execution_claimed": false,
+      "new_context_quality_claim": false,
+      "qk256_apple_claimed": false,
+      "speedup_claim": false,
+      "unsupported_context_supported": false
+    },
+    "contract_version": "1.0.0",
+    "max_new_tokens": 1,
+    "model_family": "dense-slm",
+    "model_id": "qwen2.5-0.5b-instruct-q8_0",
+    "operator_class": "advisory",
+    "prompt_token_count_exact": true,
+    "prompt_tokens": 41,
+    "reason": "dense local-server requests remain advisory until server conformance refreshes publish request-level SLO evidence",
+    "recorded_envelope": {
+      "evidence_profile": "short_prompt_or_resident",
+      "long_context_proof_item": "M4-CONTEXT-002",
+      "max_prompt_tokens": 4096,
+      "recorded_profiles": [
+        "short_prompt_16_out",
+        "short_prompt_64_out",
+        "long_prompt_16_out",
+        "long_prompt_128_out",
+        "context_1k",
+        "context_4k",
+        "resident_25",
+        "resident_50",
+        "resident_100"
+      ],
+      "source": "docs/slm/apple-m4-operator-envelope-v3.md"
+    },
+    "requested_total_tokens": 42,
+    "route": "mac serve",
+    "status": "recorded_short_context_server_advisory",
+    "work_item": "M4-CONTEXT-001"
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "generation": {
+    "finish_reason": "length",
+    "generated_token_ids": [
+      16
+    ],
+    "generated_tokens": 1,
+    "mode": "greedy",
+    "prompt_token_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      1207,
+      16948,
+      11,
+      3465,
+      553,
+      54364,
+      14817,
+      13,
+      1446,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      3838,
+      374,
+      220,
+      17,
+      10,
+      17,
+      30,
+      21806,
+      448,
+      825,
+      15723,
+      13,
+      151645,
+      198,
+      151644,
+      77091,
+      198
+    ],
+    "prompt_tokens": 41,
+    "text": "1",
+    "token_texts": [
+      "1"
+    ]
+  },
+  "mac_bitnet_claim_boundary": null,
+  "model": {
+    "architecture": "qwen2",
+    "bytes": 675710816,
+    "display_name": "Qwen2.5 0.5B Instruct Q8_0",
+    "id": "qwen2.5-0.5b-instruct-q8_0",
+    "path": "/Users/steven/Library/Caches/bitnet-rs/models/qwen2.5-0.5b-instruct-q8_0/qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quantization": "Q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "sha256_source": "verified_cache_metadata_and_startup_check"
+  },
+  "model_family": "dense-slm",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 1,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": 0,
+      "stream": true,
+      "temperature": 0.0,
+      "threads": null,
+      "top_k": 1,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "d80ef337289561572d1951d7c42b98dfc89a969a84ab022c02466ec168e563ad",
+    "identity_sha256": "7a0dc6c825ff1b2deb3e42e00139da735ea09c6248ec61a9ccae4e6a44190f02",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [
+        "<|im_end|>"
+      ],
+      "manual_stop_token_ids": [],
+      "policy": "server_manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_string_window": null,
+      "stop_token_ids": [
+        151645,
+        151644
+      ]
+    },
+    "stop_criteria_sha256": "de71cc9bc696080e6939a5e4d20cc2e09e6c44d965fb80da25dad5d6762af68a",
+    "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+    "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+    "template": {
+      "family": "qwen2.5",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "qwen2.5",
+    "template_sha256": "772efcb8f053f1eeba1cc758dd6312c8372f39dd226a83fd4415b5154bef34c6",
+    "tokenizer_authority": {
+      "authority": "present",
+      "sha256": null,
+      "source": "gguf_metadata",
+      "strict": true
+    }
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "rendered_sha256": "e2781e4134f76938dbb5a2da85dfdfe6f67e715156ed39bca1ed38a929fd5676",
+    "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer with one digit.<|im_end|>\n<|im_start|>assistant\n",
+    "stop_sequences": [
+      "<|im_end|>",
+      "<|im_start|>"
+    ],
+    "stop_token_ids": [
+      151645,
+      151644
+    ],
+    "template_family": "qwen2.5"
+  },
+  "request": {
+    "max_new_tokens": 1,
+    "model": null,
+    "prompt": "What is 2+2? Answer with one digit.",
+    "repetition_penalty": 1.100000023841858,
+    "seed": 0,
+    "stream": true,
+    "system_prompt": null,
+    "temperature": 0.0,
+    "top_k": 1,
+    "top_p": 1.0
+  },
+  "request_id": "m4srv-1779327762953888000",
+  "requested_backend": "apple-m4-cpu-neon",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "server": {
+    "host": "127.0.0.1",
+    "model_family": "dense-slm",
+    "port": 0,
+    "receipt_dir": "ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/receipts",
+    "started_at": "2026-05-21T01:42:42.951316+00:00",
+    "streaming_default": true
+  },
+  "session_reuse": {
+    "kv_cache_reuse_policy": "recreated_per_request_for_prompt_isolation",
+    "model_loaded_at_startup": true,
+    "request_serialized": true,
+    "reuse_scope": "resident_server",
+    "tokenizer_loaded_at_startup": true
+  },
+  "timestamp": "2026-05-21T01:42:47.797625+00:00",
+  "timing": {
+    "decode_ms": 160.146,
+    "decode_step_ms": {
+      "count": 1,
+      "max_ms": 160.146,
+      "mean_ms": 160.146,
+      "min_ms": 160.146,
+      "p50_ms": 160.146,
+      "p95_ms": 160.146,
+      "total_ms": 160.146
+    },
+    "first_token_ms": 4843,
+    "model_load_ms": 0.0,
+    "prefill_ms": 4599.269,
+    "sample_step_ms": {
+      "count": 1,
+      "max_ms": 1.221,
+      "mean_ms": 1.221,
+      "min_ms": 1.221,
+      "p50_ms": 1.221,
+      "p95_ms": 1.221,
+      "total_ms": 1.221
+    },
+    "sampling_ms": 1.221,
+    "time_to_first_token_ms": 4843,
+    "tokenize_ms": 73.307,
+    "tokenizer_load_ms": 0.0,
+    "total_ms": 4843.692
+  },
+  "tokenizer": {
+    "bos": 151643,
+    "eos": 151645,
+    "pretokenizer_authority": "present",
+    "prompt_template": "qwen2.5",
+    "source": "gguf_metadata",
+    "strict": true,
+    "type": "gguf_metadata"
+  }
+}

@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T04:22:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-069"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 124
+branch = "codex/slm-cpu-069-packed-q8-locality-root-cause"
+head_sha = "77cf8ce3cf96d1fdfdaa74e8f35c626af44a1348"
+merge_sha = "78bc57c50a347c7f1f47b6bbf178b3c9c3c8040c"
+summary = "Merged the packed Q8_0 sidecar locality root-cause artifact."
+notes = [
+  "SLM-CPU-069 localizes the exact-tensor packed Q8_0 timing regression to packed-block decode and matvec locality.",
+  "SLM-CPU-070 remains ready as the next behavior-gated block-local matvec prototype slice.",
+  "The default runtime remains eager F32 Candle and no speedup, default-promotion, Q4/Q5, server, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

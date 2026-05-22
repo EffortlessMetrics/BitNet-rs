@@ -13,11 +13,13 @@ selected_backend = "intel-arc-a770-opencl"
 device_slug = "amd-5700x-intel-a770"
 device_family = "arc_alchemist"
 device_models = ["arc-a770-16gb"]
-kernel_variant = "a770_opencl_qk256_i2s_route_pending_claim_receipts"
+kernel_variant = "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate"
 claim_level = "diagnostic"
 fallback_allowed = false
-proof_receipts = []
-reason = "A770 route is explicit and remains diagnostic because no committed claim-grade strict A770 OpenCL QK256 receipts exist."
+proof_receipts = [
+  "ci/hardware/amd-5700x-intel-a770/2026-05-21/a770-opencl-qk256-strict-dispatch.json",
+]
+reason = "A770 route is explicit and remains diagnostic: the strict selected-device QK256 dispatch receipt is committed, but full BitNet inference, quality, residency, and trusted-partial acceleration remain unproven."
 not_claims = [
   "selected_attention_residency",
   "resident_kv_decode",

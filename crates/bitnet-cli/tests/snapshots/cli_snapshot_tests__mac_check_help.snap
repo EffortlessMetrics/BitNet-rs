@@ -11,7 +11,7 @@ Options:
   -c, --config <PATH>        Configuration file path
       --model-id <MODEL_ID>  Supported model id. Defaults to the validated Apple M4 SLM runtime artifact [default: qwen2.5-0.5b-instruct-q8_0]
       --cache-dir <PATH>     Override model cache root. Defaults to ~/.cache/bitnet-rs/models
-  -d, --device <DEVICE>      Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
+  -d, --device <DEVICE>      Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, intel-a770-opencl, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
       --json                 Emit JSON instead of text
       --log-level <LEVEL>    Log level (trace, debug, info, warn, error)
       --threads <N>          Number of CPU threads

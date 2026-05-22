@@ -1,5 +1,6 @@
 ---
 source: crates/bitnet-cli/tests/cli_snapshot_tests.rs
+assertion_line: 164
 expression: help
 ---
 Serve local M4 health and readiness endpoints plus completions
@@ -55,8 +56,8 @@ Options:
 
           [default: 127.0.0.1]
 
-      --allow-network-bind
-          Allow binding outside loopback. This explicitly exposes local server metadata
+      --allow-non-loopback
+          Allow binding to a non-loopback host such as 0.0.0.0
 
       --port <PORT>
           Port to bind
@@ -74,6 +75,26 @@ Options:
 
           [default: 64]
           [aliases: --max-tokens, --n-predict]
+
+      --max-request-bytes <MAX_REQUEST_BYTES>
+          Maximum raw HTTP request size accepted by the local server
+
+          [default: 1048576]
+
+      --max-concurrent-requests <MAX_CONCURRENT_REQUESTS>
+          Maximum concurrent generation requests accepted by the local server
+
+          [default: 1]
+
+      --max-queued-requests <MAX_QUEUED_REQUESTS>
+          Maximum completion requests allowed to wait for the resident generator
+
+          [default: 1]
+
+      --queue-timeout-ms <QUEUE_TIMEOUT_MS>
+          Milliseconds a queued completion request may wait before a timeout receipt is emitted
+
+          [default: 30000]
 
       --temperature <TEMPERATURE>
           Default completion temperature
@@ -102,6 +123,9 @@ Options:
           Directory where later request receipts will be exported
 
           [default: target/apple-m4-local-server/receipts]
+
+      --trace
+          Emit redacted trace-correlation diagnostics and record trace IDs in server receipts
 
   -h, --help
           Print help (see a summary with '-h')

@@ -1,0 +1,18 @@
+timestamp = "2026-05-21T18:31:43Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-074"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 219
+branch = "codex/slm-cpu-074-packed-q8-sidecar-instrumentation"
+head_sha = "9f8b37c7e2bbd114ac32faa9089e9c3911222af1"
+merge_sha = "91634fb46366674f178fd51dde87af8feeb379cb"
+summary = "Merged PR #219 with packed Q8_0 sidecar instrumentation."
+notes = [
+  "PR #219 adds aggregate diagnostic counters for selector dispatch, input materialization, bias extraction, packed matvec compute, and output tensor construction on the exact layers.0.attention.q_proj.weight sidecar path.",
+  "The default eager_f32_candle path remains preserved; packed Q8_0 execution remains opt-in, payload-gated, and exact-tensor scoped.",
+  "This closeout repairs the PR-open head_sha to the actual merged PR head.",
+  "No speedup, sustained throughput, default packed Q8 enablement, broader tensor selection, Q4/Q5 runtime support, server, GPU/NPU/OpenVINO/UHD 620, Qwen3.5, or BitNet QK256 claim is made.",
+]

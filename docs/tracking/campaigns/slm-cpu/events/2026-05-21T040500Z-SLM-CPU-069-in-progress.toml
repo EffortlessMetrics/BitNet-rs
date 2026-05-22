@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T04:05:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-069"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex"
+branch = "codex/slm-cpu-069-packed-q8-locality-root-cause"
+summary = "Started the packed Q8_0 locality root-cause slice."
+notes = [
+  "The slice consumes the SLM-CPU-068 timing regression artifact rather than promoting the exact-tensor packed Q8_0 hook.",
+  "The default runtime remains eager F32 Candle and packed sidecar execution stays opt-in and exact-tensor scoped.",
+  "The investigation is limited to the committed Qwen3 Q8_0 two-prompt 4-thread i5-8250U evidence.",
+]

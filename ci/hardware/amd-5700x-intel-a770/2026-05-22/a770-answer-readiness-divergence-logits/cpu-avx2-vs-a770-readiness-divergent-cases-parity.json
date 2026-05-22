@@ -1,0 +1,835 @@
+{
+  "artifact_kind": "bitnet_answer_corpus_parity",
+  "backend": {
+    "fallback_used": false,
+    "lanes": {
+      "left": {
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "label": "amd-5700x-cpu-avx2"
+      },
+      "right": {
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "label": "intel-a770-opencl"
+      }
+    },
+    "requested_backend": "mixed",
+    "runtime_api": "mixed",
+    "selected_backend": "mixed"
+  },
+  "cases": [
+    {
+      "failed_rules": [
+        "generated_token_ids",
+        "decoded_text",
+        "logits_step_count",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk"
+      ],
+      "id": "a770_summary_seed770024_keywords_014",
+      "left": {
+        "answer": "Rust enables fast and safe software development by eliminating null pointer exceptions and memory leaks.",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          49,
+          592,
+          20682,
+          5043,
+          323,
+          6220,
+          3241,
+          4500,
+          555,
+          40599,
+          854,
+          7597,
+          20157,
+          323,
+          5044,
+          37796,
+          13,
+          128009
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 18,
+        "prompt_token_ids": [
+          1502,
+          25,
+          8279,
+          5730,
+          553,
+          304,
+          832,
+          2875,
+          11914,
+          323,
+          2997,
+          279,
+          4339,
+          5043,
+          323,
+          6220,
+          25,
+          34889,
+          8779,
+          7411,
+          1977,
+          15062,
+          6067,
+          3241,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "passed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "Rust enables fast and safe software development by preventing common programming errors.",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          49,
+          592,
+          20682,
+          5043,
+          323,
+          6220,
+          3241,
+          4500,
+          555,
+          27252,
+          4279,
+          15840,
+          6103,
+          13,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 15,
+        "prompt_token_ids": [
+          1502,
+          25,
+          8279,
+          5730,
+          553,
+          304,
+          832,
+          2875,
+          11914,
+          323,
+          2997,
+          279,
+          4339,
+          5043,
+          323,
+          6220,
+          25,
+          34889,
+          8779,
+          7411,
+          1977,
+          15062,
+          6067,
+          3241,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [],
+        "quality_passed": true,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "passed"
+      }
+    },
+    {
+      "failed_rules": [
+        "generated_token_ids",
+        "decoded_text",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk",
+        "logits_topk"
+      ],
+      "id": "a770_yes_no_seed770024_water_015",
+      "left": {
+        "answer": "No. N/A",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "cpu",
+          "runtime_api": "cpu",
+          "selected_backend": "cpu-rust"
+        },
+        "generated_token_ids": [
+          2822,
+          13,
+          452,
+          10576
+        ],
+        "label": "amd-5700x-cpu-avx2",
+        "logits_steps": 4,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "gate_starts_with_any",
+          "scoring_exact_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "i2_s-avx2-reference",
+        "status": "quality_failed"
+      },
+      "passed": false,
+      "right": {
+        "answer": "No. .",
+        "backend": {
+          "fallback_used": false,
+          "requested_backend": "intel-a770-opencl",
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl"
+        },
+        "generated_token_ids": [
+          2822,
+          13,
+          662,
+          128009
+        ],
+        "label": "intel-a770-opencl",
+        "logits_steps": 4,
+        "prompt_token_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "quality_failed_rules": [
+          "gate_starts_with_any",
+          "scoring_exact_match"
+        ],
+        "quality_passed": false,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+        "status": "quality_failed"
+      }
+    }
+  ],
+  "claim": "full_decode_answer_parity_diagnostic",
+  "fallback_used": false,
+  "generated_output_frontier": {
+    "case_count": 2,
+    "classification": "generated_output_frontier_first_mismatch_has_logit_context",
+    "decoded_text_mismatch_count": 2,
+    "generated_output_mismatch_count": 2,
+    "left_label": "amd-5700x-cpu-avx2",
+    "mismatch_with_logit_context_count": 2,
+    "missing_context_count": 0,
+    "missing_logit_context_count": 0,
+    "right_label": "intel-a770-opencl",
+    "row_limit": 16,
+    "rows": [
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "generated_output_first_mismatch_has_logit_context",
+        "decoded_text_match": false,
+        "first_different_rank_at_first_mismatch": 0,
+        "first_mismatch_index": 9,
+        "has_logit_context_at_first_mismatch": true,
+        "left_chosen_id_at_first_mismatch": 40599,
+        "left_generated_len": 18,
+        "left_logits_step_count": 18,
+        "left_token_id": 40599,
+        "right_chosen_id_at_first_mismatch": 27252,
+        "right_generated_len": 15,
+        "right_logits_step_count": 15,
+        "right_token_id": 27252,
+        "same_chosen_id_at_first_mismatch": false
+      },
+      {
+        "case_id": "a770_yes_no_seed770024_water_015",
+        "classification": "generated_output_first_mismatch_has_logit_context",
+        "decoded_text_match": false,
+        "first_different_rank_at_first_mismatch": 0,
+        "first_mismatch_index": 2,
+        "has_logit_context_at_first_mismatch": true,
+        "left_chosen_id_at_first_mismatch": 452,
+        "left_generated_len": 4,
+        "left_logits_step_count": 4,
+        "left_token_id": 452,
+        "right_chosen_id_at_first_mismatch": 662,
+        "right_generated_len": 4,
+        "right_logits_step_count": 4,
+        "right_token_id": 662,
+        "same_chosen_id_at_first_mismatch": false
+      }
+    ],
+    "rows_truncated": false
+  },
+  "generated_output_logit_margin_frontier": {
+    "case_count": 2,
+    "classification": "generated_output_logit_margin_frontier_opposite_argmax_right_near_tie",
+    "generated_output_mismatch_count": 2,
+    "left_label": "amd-5700x-cpu-avx2",
+    "margin_available_count": 2,
+    "missing_context_count": 0,
+    "missing_cross_chosen_logit_count": 0,
+    "near_tie_abs_logit_delta_threshold": 0.01,
+    "opposite_argmax_count": 2,
+    "right_label": "intel-a770-opencl",
+    "right_near_tie_count": 1,
+    "row_limit": 16,
+    "rows": [
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "generated_output_logit_margin_first_mismatch_opposite_argmax",
+        "first_mismatch_index": 9,
+        "has_cross_chosen_logits": true,
+        "left_chosen_delta_across_lanes": -0.06170082092284801,
+        "left_chosen_id": 40599,
+        "left_chosen_logit_on_left": 31.632160186767575,
+        "left_chosen_logit_on_right": 31.570459365844727,
+        "left_margin_over_right_chosen_on_left": 0.009021759033199572,
+        "left_topk_count": 20,
+        "near_tie_abs_logit_delta_threshold": 0.01,
+        "opposite_argmax": true,
+        "right_chosen_delta_across_lanes": 0.11604499816894531,
+        "right_chosen_id": 27252,
+        "right_chosen_logit_on_left": 31.623138427734375,
+        "right_chosen_logit_on_right": 31.73918342590332,
+        "right_margin_near_tie": false,
+        "right_margin_over_left_chosen_on_right": 0.16872406005859375,
+        "right_topk_count": 20,
+        "same_chosen_id": false
+      },
+      {
+        "case_id": "a770_yes_no_seed770024_water_015",
+        "classification": "generated_output_logit_margin_first_mismatch_opposite_argmax_right_near_tie",
+        "first_mismatch_index": 2,
+        "has_cross_chosen_logits": true,
+        "left_chosen_delta_across_lanes": -0.5871915817260742,
+        "left_chosen_id": 452,
+        "left_chosen_logit_on_left": -5.939116477966309,
+        "left_chosen_logit_on_right": -6.526308059692383,
+        "left_margin_over_right_chosen_on_left": 0.4544386863708496,
+        "left_topk_count": 20,
+        "near_tie_abs_logit_delta_threshold": 0.01,
+        "opposite_argmax": true,
+        "right_chosen_delta_across_lanes": -0.12849950790405273,
+        "right_chosen_id": 662,
+        "right_chosen_logit_on_left": -6.393555164337158,
+        "right_chosen_logit_on_right": -6.522054672241211,
+        "right_margin_near_tie": true,
+        "right_margin_over_left_chosen_on_right": 0.004253387451171875,
+        "right_topk_count": 20,
+        "same_chosen_id": false
+      }
+    ],
+    "rows_truncated": false
+  },
+  "inputs": {
+    "left_label": "amd-5700x-cpu-avx2",
+    "left_receipt_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-readiness-divergent-cases.json",
+    "right_label": "intel-a770-opencl",
+    "right_receipt_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/a770-opencl-readiness-divergent-cases.json"
+  },
+  "kernel": {
+    "left_label": "amd-5700x-cpu-avx2",
+    "left_selected_kernels": [
+      "i2_s-avx2-reference"
+    ],
+    "right_label": "intel-a770-opencl",
+    "right_selected_kernels": [
+      "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate"
+    ]
+  },
+  "logits_topk_frontier": {
+    "case_count": 2,
+    "classification": "logits_topk_frontier_missing_context",
+    "compared_step_count": 19,
+    "different_chosen_token_count": 8,
+    "generated_output_divergence_count": 19,
+    "left_label": "amd-5700x-cpu-avx2",
+    "logits_topk_mismatch_count": 19,
+    "max_common_token_abs_delta": 16.969619750976562,
+    "missing_context_count": 1,
+    "right_label": "intel-a770-opencl",
+    "row_limit": 16,
+    "rows": [
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 19,
+        "decoded_text_match": false,
+        "first_different_rank": 7,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 49,
+        "left_only_top_token_ids": [
+          34
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 1.0213394165039027,
+        "right_chosen_id": 49,
+        "right_only_top_token_ids": [
+          33
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 0
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 19,
+        "decoded_text_match": false,
+        "first_different_rank": 5,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 592,
+        "left_only_top_token_ids": [
+          4628
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.3857307434082031,
+        "right_chosen_id": 592,
+        "right_only_top_token_ids": [
+          1697
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 1
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 19,
+        "decoded_text_match": false,
+        "first_different_rank": 13,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 20682,
+        "left_only_top_token_ids": [
+          15714
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.1645717620849645,
+        "right_chosen_id": 20682,
+        "right_only_top_token_ids": [
+          24400
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 2
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 20,
+        "decoded_text_match": false,
+        "first_different_rank": 3,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 5043,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.4121112823486328,
+        "right_chosen_id": 5043,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 3
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 19,
+        "decoded_text_match": false,
+        "first_different_rank": 3,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 323,
+        "left_only_top_token_ids": [
+          15062
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.42453956604003906,
+        "right_chosen_id": 323,
+        "right_only_top_token_ids": [
+          65319
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 4
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 20,
+        "decoded_text_match": false,
+        "first_different_rank": 7,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 6220,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.4335651397705078,
+        "right_chosen_id": 6220,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 5
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 20,
+        "decoded_text_match": false,
+        "first_different_rank": 16,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 3241,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.36997795104980824,
+        "right_chosen_id": 3241,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 6
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 19,
+        "decoded_text_match": false,
+        "first_different_rank": 10,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 4500,
+        "left_only_top_token_ids": [
+          8292
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.7151756286621094,
+        "right_chosen_id": 4500,
+        "right_only_top_token_ids": [
+          10105
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 7
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 20,
+        "decoded_text_match": false,
+        "first_different_rank": 2,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 555,
+        "left_only_top_token_ids": [],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.39872074127197443,
+        "right_chosen_id": 555,
+        "right_only_top_token_ids": [],
+        "right_topk_count": 20,
+        "same_chosen_id": true,
+        "step": 8
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 17,
+        "decoded_text_match": false,
+        "first_different_rank": 0,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 40599,
+        "left_only_top_token_ids": [
+          7999,
+          9651,
+          34168
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.6159191131591797,
+        "right_chosen_id": 27252,
+        "right_only_top_token_ids": [
+          17843,
+          23537,
+          33018
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": false,
+        "step": 9
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 13,
+        "decoded_text_match": false,
+        "first_different_rank": 0,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 854,
+        "left_only_top_token_ids": [
+          279,
+          1629,
+          1887
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 4.90815353393555,
+        "right_chosen_id": 4279,
+        "right_only_top_token_ids": [
+          264,
+          3428,
+          4240
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": false,
+        "step": 10
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 2,
+        "decoded_text_match": false,
+        "first_different_rank": 0,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 7597,
+        "left_only_top_token_ids": [
+          12,
+          323,
+          477
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 16.969619750976562,
+        "right_chosen_id": 15840,
+        "right_only_top_token_ids": [
+          1493,
+          1887,
+          2068
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": false,
+        "step": 11
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 5,
+        "decoded_text_match": false,
+        "first_different_rank": 0,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 20157,
+        "left_only_top_token_ids": [
+          323,
+          1280,
+          2680
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 8.965414047241211,
+        "right_chosen_id": 6103,
+        "right_only_top_token_ids": [
+          1493,
+          5435,
+          12912
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": false,
+        "step": 12
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 13,
+        "decoded_text_match": false,
+        "first_different_rank": 0,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 323,
+        "left_only_top_token_ids": [
+          369,
+          439,
+          719
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 8.23935317993164,
+        "right_chosen_id": 13,
+        "right_only_top_token_ids": [
+          1093,
+          1139,
+          1603
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": false,
+        "step": 13
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_generated_output_divergence",
+        "common_top_token_count": 0,
+        "decoded_text_match": false,
+        "first_different_rank": 0,
+        "generated_token_ids_match": false,
+        "left_chosen_id": 5044,
+        "left_only_top_token_ids": [
+          828,
+          1023,
+          4240
+        ],
+        "left_topk_count": 20,
+        "max_common_token_abs_delta": 0.0,
+        "right_chosen_id": 128009,
+        "right_only_top_token_ids": [
+          720,
+          2355,
+          2616
+        ],
+        "right_topk_count": 20,
+        "same_chosen_id": false,
+        "step": 14
+      },
+      {
+        "case_id": "a770_summary_seed770024_keywords_014",
+        "classification": "logits_topk_missing_context",
+        "left_step_count": 18,
+        "reason": "logits_step_count_mismatch",
+        "right_step_count": 15
+      }
+    ],
+    "rows_truncated": true,
+    "same_chosen_token_count": 11,
+    "same_generated_output_count": 0
+  },
+  "machine": {
+    "cpu": null,
+    "machine_id": "amd-5700x-intel-a770",
+    "memory": null,
+    "platform_artifact": null,
+    "power": null
+  },
+  "may_claim": [
+    "Full-decode answer parity can be audited for the compared receipts.",
+    "First divergence evidence can separate backend issues from shared prompt, tokenizer, logits, sampler, or text decoding issues."
+  ],
+  "must_not_claim": [
+    "General chat quality is proven.",
+    "Sustained throughput is proven.",
+    "Server inference is complete.",
+    "A backend is answer-ready when the compared model artifact is not answer-ready."
+  ],
+  "proof_stage": "full_decode_parity_compared",
+  "requested_backend": "mixed",
+  "runtime_api": "mixed",
+  "schema_version": "1.0.0",
+  "selected_backend": "mixed",
+  "shared_contract": {
+    "failed_rules": [],
+    "same_greedy_settings": true,
+    "same_prompt_template": true,
+    "same_real_gguf": true,
+    "same_tokenizer": true
+  },
+  "speedup_claim": false,
+  "summary": {
+    "failed": 2,
+    "first_divergence": {
+      "case_id": "a770_summary_seed770024_keywords_014",
+      "kind": "generated_token_ids",
+      "left": [
+        49,
+        592,
+        20682,
+        5043,
+        323,
+        6220,
+        3241,
+        4500,
+        555,
+        40599,
+        854,
+        7597,
+        20157,
+        323,
+        5044,
+        37796,
+        13,
+        128009
+      ],
+      "left_label": "amd-5700x-cpu-avx2",
+      "right": [
+        49,
+        592,
+        20682,
+        5043,
+        323,
+        6220,
+        3241,
+        4500,
+        555,
+        27252,
+        4279,
+        15840,
+        6103,
+        13,
+        128009
+      ],
+      "right_label": "intel-a770-opencl",
+      "scope": "decode_or_sampler",
+      "step": null
+    },
+    "passed": 0,
+    "total": 2
+  },
+  "timestamp": "2026-05-22T15:13:24.551566400+00:00"
+}

@@ -16,8 +16,12 @@ OpenVINO, UHD 620, Qwen3.5, or BitNet QK256.
 | Logits extraction isolation | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-logits-extraction-reuse-validation.json` | Validates that direct tensor argmax bypasses full logits Vec extraction only where the sampler fast path is exact, while preserving generated IDs/text |
 | Repetition-penalty logits reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-repetition-penalty-logits-reuse-validation.json` | Validates that default repetition-penalty decode steps reuse a host logits scratch buffer instead of allocating fresh logits vectors, while preserving generated IDs/text |
 | Warm-session sampler reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-17/qwen3-kv-temp-reuse-validation.json` | Validates that the temperature-zero warm-session profile reuses one sampler across prompts while preserving generated IDs/text and strict provenance |
+| KV cache session reuse | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-kv-cache-session-reuse.json` | Records one CPU KV cache reused across prompts and cleared per prompt for prompt isolation |
 | Prompt token cache | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prompt-token-cache-validation.json` | Validates that repeated rendered prompts reuse token IDs while preserving generated IDs/text and strict provenance |
+| Prefill allocation attribution | `ci/slm-cpu/intel-i5-8250u/2026-05-18/qwen3-prefill-attribution-validation.json` | Validates that prompt prefill attribution preserves behavior and identifies `prompt_prefill.forward` as the dominant remaining allocation boundary |
 | Packed Q8_0 sidecar runtime proof gate | `ci/slm-cpu/intel-i5-8250u/2026-05-19/qwen3-packed-q8-sidecar-runtime-proof-validation.json` | Records that packed Q8_0 sidecar runtime execution remains blocked because production dispatch still preserves eager F32 and no after-execution receipts exist |
+| Post-bridge packed-Q8 counter classification | `ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-077-post-bridge-counter-classification.json` | Records real i5-8250U sidecar instrumentation counters and identifies `packed_matvec_compute` as the dominant exact-tensor sidecar cost |
+| Post-aligned packed-Q8 matvec classification | `ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-079-post-aligned-matvec-classification.json` | Preserves the Qwen3 behavior oracle while recording a bounded counter-level `packed_matvec_ns` reduction against the SLM-CPU-077 sidecar oracle |
 
 All rows use:
 
@@ -33,6 +37,30 @@ qwen_no_think = true
 temperature = 0.0
 greedy = true
 ```
+
+## Dashboard Refresh State
+
+This refresh is current through SLM-CPU-079. It does not run new inference or
+add a runtime optimization. It re-indexes the merged Kaby Lake Qwen3 Q8_0
+evidence after KV-cache reuse, prompt-token caching, prefill attribution, and
+the post-aligned exact-tensor packed-Q8 matvec artifact.
+
+The current operator default remains evidence-scoped to the recorded 4-thread
+operator profile. The default production runtime remains `eager_f32_candle`.
+The packed-Q8 sidecar path remains opt-in and exact-tensor scoped to
+`layers.0.attention.q_proj.weight` / `blk.0.attn_q.weight`.
+
+The current performance targets are:
+
+1. Allocation/layout work around `prompt_prefill.forward` and `model.forward`,
+   anchored by the SLM-CPU-035 prefill attribution receipt.
+2. Exact-tensor packed-Q8 matvec compute work, anchored by the SLM-CPU-077
+   counter pack and SLM-CPU-079 post-aligned counter classification.
+
+Both targets remain gated by the Qwen3 Q8_0 behavior oracle: model SHA, strict
+GGUF tokenizer authority, prompt IDs, generated IDs, decoded text, selected CPU
+backend/kernel identity, dense hook identity where applicable, and
+`fallback_used=false`.
 
 ## Thread Envelope
 
@@ -101,23 +129,42 @@ stop_policy_precomputed_once = true
 stop_tail_buffer_reused = true
 timing_buffers_reused = true
 allocation_audit_buffers_reused = true
-kv_cache_recreated_per_prompt = true
+kv_cache_recreated_per_prompt = false
+kv_cache_reused_across_prompts = true
+kv_cache_cleared_per_prompt = true
+prompt_token_cache_enabled = true
+prompt_token_cache_policy = rendered_prompt_token_ids_reused_across_repeated_warm_session_prompts
 sampler_recreated_per_prompt = false
 sampler_reused_across_prompts = true
-logits_buffer_reuse_claimed = false
+logits_buffer_reuse_claimed = true
 ```
 
-The next safe optimization slices should start from these known remaining costs:
+The dashboard originally identified KV cache recreation, repeated tokenization,
+and logits scratch allocation as hot-loop risks. Later receipts narrowed those
+without changing the Qwen3 Q8_0 behavior oracle:
 
-1. Reuse or isolate KV-cache buffers without changing prompt independence.
+| Slice | Evidence | Result |
+| --- | --- | --- |
+| `SLM-CPU-031` | `qwen3-kv-cache-session-reuse.json` | One session KV cache is reused across prompts and cleared per prompt; prompt isolation remains explicit. |
+| `SLM-CPU-032` | `qwen3-prompt-token-cache-validation.json` | Repeated rendered prompt IDs are cached; prompt-tokenize allocation bytes drop from `1063162466` to `531586554`; generated outputs and strict provenance match the baseline. |
+| `SLM-CPU-035` | `qwen3-prefill-attribution-validation.json` | `prompt_prefill_breakdown.embed` and `prompt_prefill_breakdown.forward` are present; first-prompt `prompt_prefill.forward` allocation is `554666438` bytes and dominates `prompt_prefill.embed` at `157108` bytes. |
+
+The next safe optimization slices should therefore start from these known
+remaining costs:
+
+1. Reduce `prompt_prefill.forward` / `model.forward` allocation and layout churn
+   using the typed transformer-forward workspace boundaries already introduced
+   after SLM-CPU-035.
 2. Continue reducing `model.logits` tensor allocation and output-head costs.
    SLM-CPU-026 removes fresh full logits Vec allocation from default
    repetition-penalty decode steps by reusing a host scratch buffer, but the
    model still produces logits tensors per token.
-3. Continue keeping sampler and stop policy work out of the per-token hot loop
+3. Continue keeping sampler, stop policy, and tokenizer work out of the hot loop
    where doing so preserves deterministic generated IDs. SLM-CPU-029 reuses one
-   sampler across prompts for the temperature-zero Qwen3 profile only; nonzero
-   temperature modes still recreate samplers to avoid RNG-state coupling.
+   sampler across prompts for the temperature-zero Qwen3 profile only, and
+   SLM-CPU-032 caches repeated rendered prompt token IDs for the bounded warm
+   session. Nonzero temperature modes still recreate samplers to avoid
+   RNG-state coupling.
 4. Improve Q8_0 dense linear locality only with before/after receipts proving
    identical prompt IDs, generated IDs, decoded text, backend identity,
    tokenizer authority, model SHA, and `fallback=false`.
@@ -813,6 +860,141 @@ dense linear role. A runtime replacement still requires before/after warm-sessio
 receipts proving unchanged generated IDs, decoded text, strict tokenizer
 authority, selected CPU backend/kernel, model SHA, and `fallback=false`.
 
+SLM-CPU-067 promotes that boundary to one exact real Qwen3 tensor path:
+`layers.0.attention.q_proj.weight`, sourced from `blk.0.attn_q.weight`. The
+runtime hook remains opt-in and exact-tensor gated. By default, the transformer
+continues to use the eager F32 Candle linear path. Packed sidecar execution is
+selected only when all four environment gates name the same evidence-scoped
+tensor:
+
+```text
+BITNET_DENSE_Q8_PAYLOAD_ENABLE=1
+BITNET_DENSE_Q8_PAYLOAD_TENSOR=blk.0.attn_q.weight
+BITNET_DENSE_Q8_RUNTIME_ENABLE=1
+BITNET_DENSE_Q8_RUNTIME_TENSOR=blk.0.attn_q.weight
+```
+
+The SLM-CPU-067 Kaby artifact bundle records before/after strict warm-session
+receipts for the verified Qwen3 Q8_0 appliance profile:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-067-before-warm-session.json
+ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-067-after-warm-session.json
+ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-067-runtime-hook-equivalence.json
+```
+
+The baseline receipt reports `selected_path = eager_f32_candle`. The opt-in
+receipt reports `selected_path = packed_q8_sidecar`,
+`selected_kernel = dense-q8-sidecar-linear`, and
+`runtime_compute_enabled = true` for only the exact Q projection tensor. The
+equivalence artifact records matching prompt IDs, generated IDs, decoded text,
+model SHA, strict GGUF tokenizer authority, selected CPU backend, and
+`fallback=false` across both receipts.
+
+This is a behavior-preserving exact-tensor runtime hook candidate. It does not
+enable packed Q8_0 runtime compute by default, does not generalize packed Q8_0
+execution to all dense tensors, and does not claim speedup, sustained
+throughput, broad answer quality, Q4/Q5 runtime support, accelerator execution,
+Qwen3.5 support, or BitNet QK256 changes.
+
+SLM-CPU-068 classifies the timing evidence from that exact same artifact pack.
+The result is intentionally conservative: the hook preserved generated IDs and
+decoded text, but the opt-in packed sidecar path regressed on the bounded
+two-prompt 4-thread receipt.
+
+```text
+classification = regressed_on_bounded_two_prompt_artifact
+before_selected_path = eager_f32_candle
+after_selected_path = packed_q8_sidecar
+behavior_equivalence.passed = true
+runtime_promotion_recommended = false
+speedup_claim = false
+
+before.total_session_ms = 118266.381
+after.total_session_ms = 138900.052
+delta.total_session_ms = +20633.671 (+17.446%)
+
+before.warm_prompt_wall_ms = 41085.124
+after.warm_prompt_wall_ms = 57917.182
+delta.warm_prompt_wall_ms = +16832.058 (+40.966%)
+
+before.decode_generated_tok_s = 1.225
+after.decode_generated_tok_s = 0.956
+delta.decode_generated_tok_s = -0.269 (-21.959%)
+```
+
+The timing classification artifact is
+`ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-068-exact-hook-timing-classification.json`.
+The default runtime should remain `eager_f32_candle`. The packed sidecar hook is
+still useful as a correctness-preserving implementation boundary for further
+locality and kernel work, but it is not a promotion candidate in its current
+form.
+
+SLM-CPU-069 localizes the next packed-Q8 sidecar work from that regression
+without changing runtime defaults. The machine-checkable root-cause artifact is
+`ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-069-packed-q8-locality-root-cause.json`.
+It records that the regression is concentrated in prefill/forward timing while
+logits and sampling are stable, and classifies the likely root cause as
+`packed_block_decode_and_matvec_locality`.
+
+The current opt-in sidecar kernel is a scalar reference matvec over the packed
+Q8_0 bytes for only `layers.0.attention.q_proj.weight`. It decodes the fp16
+Q8_0 block scale inside the innermost per-weight loop and does not reuse the
+scale across the 32 codes in each block. The next safe target is therefore a
+block-local matvec prototype that decodes each block scale once per block and
+keeps behavior gated against the eager F32 oracle before any timing
+interpretation.
+
+```text
+root_cause.primary = packed_block_decode_and_matvec_locality
+root_cause.secondary = scratch_allocation
+root_cause.unlikely = selector_overhead, receipt_timing_instrumentation
+next_target = SLM-CPU-070 packed Q8 block-local matvec prototype
+default_runtime_changed = false
+speedup_claim = false
+```
+
+SLM-CPU-070 adds that prototype in the exact-tensor opt-in sidecar helper
+without promoting it to the default runtime. The implementation now walks
+contiguous Q8_0 block spans and decodes each fp16 scale once per block segment
+instead of once per individual weight. The code-level artifact is
+`ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-070-packed-q8-block-local-matvec-prototype.json`.
+
+The prototype remains a behavior-gated implementation slice, not a performance
+claim. The verified Qwen3 GGUF was not present in the development workspace for
+this slice, so the committed evidence is limited to the exact dense-linear
+reference tests. Real i5-8250U before/after receipt equivalence is still
+required before any timing interpretation or promotion decision.
+
+```text
+selected_default_path = eager_f32_candle
+opt_in_candidate_path = packed_q8_sidecar
+exact_tensor = layers.0.attention.q_proj.weight
+scale_decode = once per contiguous Q8 block segment
+code_level_reference_tests = passed
+row_split_q8_block_reference_test = passed
+real_qwen3_generated_id_receipts_regenerated = false
+speedup_claim = false
+```
+
+SLM-CPU-071 is the required real-artifact gate after that prototype. It must
+regenerate the verified Qwen3-0.6B Q8_0 i5-8250U 4-thread warm-session
+before/after receipts with the default eager F32 path and the opt-in exact
+`layers.0.attention.q_proj.weight` packed sidecar candidate. The first gate is
+behavioral: prompt IDs, generated IDs, decoded text, strict GGUF tokenizer
+authority, selected CPU backend/kernel, model SHA, hook identity, and
+`fallback=false` must match before timing is classified as improved, regressed,
+or inconclusive. This gate still does not enable packed Q8_0 by default or claim
+sustained throughput.
+
+SLM-CPU-071 merged the gate definition, not the actual before/after artifact
+pack. No `qwen3-slm-cpu-071-*` warm-session receipts are committed under
+`ci/slm-cpu/intel-i5-8250u/2026-05-21/`. SLM-CPU-072 is therefore the real
+artifact-capture follow-up: it must either commit the before/after receipts and
+classification for the exact Qwen3 Q8_0 appliance profile, or record that the
+verified GGUF was unavailable in the execution environment. It must not treat
+the merged gate definition as timing evidence.
+
 ## Claim Boundary
 
 This dashboard may be used to claim:
@@ -902,3 +1084,294 @@ behavior remains identical.
 This gate does not claim packed Q8_0 execution, speedup, sustained throughput,
 broad answer quality, Q4/Q5 runtime support, server execution, accelerator
 execution, Qwen3.5 support, or BitNet QK256 changes.
+
+## SLM-CPU-074 Packed Q8 Sidecar Instrumentation
+
+SLM-CPU-074 adds aggregate runtime counters for the opt-in exact-tensor
+`layers.0.attention.q_proj.weight` packed Q8_0 sidecar path. The counters are
+available from `bitnet-transformer` through
+`dense_q8_sidecar_instrumentation_snapshot()` and can be reset with
+`reset_dense_q8_sidecar_instrumentation()`.
+
+The instrumentation measures the costs that SLM-CPU-073 identified as the next
+blocking surface:
+
+```text
+selector dispatch calls and elapsed ns
+selector selected / declined / error counts
+input materialization calls, elapsed ns, and value count
+bias extraction calls, elapsed ns, and value count
+packed matvec calls, elapsed ns, input rows, and output values
+output tensor construction calls and elapsed ns
+```
+
+The default production path remains `eager_f32_candle`. Packed Q8_0 sidecar
+execution remains opt-in, payload-gated, and exact-tensor scoped. These counters
+are diagnostic evidence only; they do not claim speedup, sustained 8250U
+throughput, broad answer quality, Q4/Q5 runtime support, server execution,
+accelerator execution, Qwen3.5 support, or BitNet QK256 changes.
+
+## SLM-CPU-075 Instrumentation Artifact Boundary
+
+SLM-CPU-075 records the first post-instrumentation diagnostic artifact:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-075-packed-q8-instrumentation-artifact.json
+```
+
+The artifact consumes the SLM-CPU-074 counter surface and keeps the prior
+SLM-CPU-072 before/after receipts as the behavior oracle. It classifies selector
+dispatch, input materialization, bias extraction, packed matvec compute, and
+output tensor construction as instrumented surfaces, but it does not claim real
+end-to-end counter values because the warm-session receipt path does not yet
+snapshot and serialize the transformer-side aggregate counters around a bounded
+Qwen3 Q8_0 run.
+
+The resulting blocker is narrow: add a warm-session sidecar instrumentation
+receipt bridge before using these counters to drive another packed-Q8 runtime
+promotion or optimization. That bridge must reset the counters before the
+opt-in exact-tensor run, snapshot them afterward, and prove generated IDs,
+decoded text, model SHA, tokenizer source and strictness, selected CPU backend
+identity, dense hook identity, and `fallback_used=false` remain unchanged.
+
+The default path remains `eager_f32_candle`; packed Q8_0 sidecar execution
+remains opt-in and exact-tensor scoped to `layers.0.attention.q_proj.weight`.
+SLM-CPU-075 makes no speedup, sustained-throughput, broad answer-quality,
+Q4/Q5 runtime-support, server, accelerator, Qwen3.5, or BitNet QK256 claim.
+
+## SLM-CPU-076 Warm-Session Instrumentation Bridge
+
+SLM-CPU-076 bridges the packed Q8_0 sidecar instrumentation counters into the
+Qwen3 Q8_0 warm-session aggregate receipt. The warm-session command resets the
+`bitnet-transformer` counters before the prompt loop and snapshots them after
+the bounded run, then records the result under
+`dense_q8_sidecar_instrumentation`.
+
+The receipt bridge serializes:
+
+```text
+selector dispatch / selected / declined / error counters
+input materialization calls, elapsed ns, and value count
+bias materialization calls, elapsed ns, and value count
+packed matvec calls, elapsed ns, input rows, and output values
+output tensor construction calls and elapsed ns
+```
+
+It also records that the sidecar path remains opt-in and exact-tensor scoped to
+`layers.0.attention.q_proj.weight`, while the default runtime remains
+`eager_f32_candle`. The bridge is diagnostic only. It does not enable packed
+Q8_0 sidecar execution by default, broaden the hook beyond the exact tensor,
+or claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime
+support, server execution, accelerator execution, Qwen3.5 support, or BitNet
+QK256 changes.
+
+## SLM-CPU-077 Post-Bridge Counter Artifact
+
+SLM-CPU-077 consumes that bridge with a real i5-8250U Qwen3 Q8_0 warm-session
+sidecar run. The committed artifact pack is:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-077-post-bridge-packed-q8-sidecar-warm-session.json
+ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-077-post-bridge-counter-classification.json
+```
+
+The sidecar run remains opt-in and exact-tensor scoped to
+`layers.0.attention.q_proj.weight`. The companion classification compares the
+new sidecar receipt against the committed SLM-CPU-072 eager F32 oracle because
+a same-turn eager oracle rerun failed on the low-free-space Kaby host before
+receipt write with:
+
+```text
+memory allocation of 167772160 bytes failed
+```
+
+The behavior oracle still passes for the compared receipts:
+
+```text
+prompt_ids_match = true
+generated_ids_match = true
+decoded_text_match = true
+model_sha_match = true
+tokenizer_source_match = true
+tokenizer_strict_match = true
+selected_backend_match = true
+fallback_false_before_after = true
+```
+
+The serialized counter pack names the dominant measured sidecar cost:
+
+```text
+selector_dispatch_calls = 42336
+selector_selected_calls = 216
+selector_declined_calls = 42120
+selector_error_calls = 0
+input_materialization_calls = 216
+bias_materialization_calls = 216
+packed_matvec_calls = 216
+output_tensor_construction_calls = 216
+packed_matvec_ns = 19093586100
+```
+
+The classification is therefore:
+
+```text
+next_target = packed_matvec_compute
+runtime_promotion_recommended = false
+default_runtime_changed = false
+speedup_claim = false
+```
+
+SLM-CPU-077 does not enable packed Q8_0 by default, broaden execution beyond
+the exact tensor, claim speedup, claim sustained throughput, start Q4/Q5
+runtime support, or involve server, accelerator, Qwen3.5, or BitNet QK256 work.
+
+## SLM-CPU-078 Packed Matvec Compute Target
+
+SLM-CPU-078 is the next queued implementation target after the SLM-CPU-077
+counter artifact. It is scoped to reducing or further classifying
+`packed_matvec_compute` for the opt-in exact-tensor packed Q8_0 sidecar path.
+
+Any SLM-CPU-078 runtime change must preserve the Qwen3 Q8_0 appliance oracle
+before making even a bounded improvement claim:
+
+```text
+model SHA unchanged
+strict GGUF tokenizer authority unchanged
+prompt IDs unchanged
+generated IDs unchanged
+decoded text unchanged
+selected CPU backend/kernel identity unchanged
+dense hook identity unchanged
+fallback_used = false
+default runtime = eager_f32_candle
+packed sidecar scope = layers.0.attention.q_proj.weight only
+```
+
+If no safe optimization lands, SLM-CPU-078 should emit a concrete blocker or
+next-target artifact rather than weakening the receipt boundary. It must not
+enable packed Q8_0 by default, broaden packed sidecar execution to all dense
+tensors, claim sustained 8250U throughput, claim broad answer quality, start
+Q4/Q5 runtime support, or touch server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5,
+or BitNet QK256 paths.
+
+## SLM-CPU-079 Post-Aligned Matvec Artifact
+
+SLM-CPU-079 captures the first real i5-8250U Qwen3 Q8_0 warm-session artifact
+after the SLM-CPU-078 aligned packed Q8_0 exact-tensor matvec implementation.
+The committed artifact pack is:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-079-post-aligned-matvec-artifact.json
+ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-079-post-aligned-matvec-classification.json
+```
+
+The run keeps the packed sidecar path opt-in and exact-tensor scoped to
+`layers.0.attention.q_proj.weight` / `blk.0.attn_q.weight`. It records
+`selected_path = packed_q8_sidecar`, `selected_kernel =
+dense-q8-sidecar-linear`, strict GGUF tokenizer authority, `selected_backend =
+cpu-rust`, and `fallback_used = false`.
+
+The behavior oracle passes against the SLM-CPU-077 post-bridge sidecar oracle:
+
+```text
+prompt_ids_match = true
+generated_ids_match = true
+decoded_text_match = true
+model_sha_match = true
+tokenizer_source_match = true
+tokenizer_strict_match = true
+selected_backend_match = true
+fallback_false_before_after = true
+```
+
+The post-aligned counter pack records:
+
+```text
+selector_dispatch_calls = 42336
+selector_selected_calls = 216
+selector_declined_calls = 42120
+selector_error_calls = 0
+input_materialization_calls = 216
+bias_materialization_calls = 216
+packed_matvec_calls = 216
+output_tensor_construction_calls = 216
+packed_matvec_ns = 16289575900
+```
+
+Compared with the SLM-CPU-077 post-bridge counter pack
+(`packed_matvec_ns = 19093586100`), the classification is:
+
+```text
+result = improved_bounded_packed_matvec_counter
+delta_packed_matvec_ns = -2804010200
+packed_matvec_reduction_percent = 14.68561319656971
+runtime_promotion_recommended = false
+default_runtime_changed = false
+speedup_claim = false
+```
+
+This is a bounded counter-level classification only. SLM-CPU-079 does not
+claim end-to-end speedup, sustained 8250U throughput, broad answer quality,
+Q4/Q5 runtime support, server execution, accelerator execution, Qwen3.5
+support, or BitNet QK256 changes.
+
+## Current Next Target
+
+The current performance lane has two valid next-target families. Neither is a
+default-runtime promotion gate by itself.
+
+1. Continue the allocation path from the SLM-CPU-035 prefill attribution and
+   the SLM-CPU-038 typed transformer-forward workspace boundary by removing or
+   narrowly classifying one `prompt_prefill.forward` owned-output allocation.
+2. Continue the packed Q8_0 exact-tensor path from SLM-CPU-079 by reducing the
+   `packed_matvec_compute` counter or by collecting repeated before/after
+   warm-session timing receipts, while keeping `packed_q8_sidecar` opt-in and
+   exact-tensor scoped.
+
+Both paths must use the Qwen3 Q8_0 appliance profile as the behavior oracle.
+Any before/after artifact must preserve:
+
+```text
+model SHA
+strict GGUF tokenizer authority
+prompt IDs
+generated IDs
+decoded text
+selected CPU backend/kernel identity
+fallback_used = false
+```
+
+If a change improves a counter but changes generated IDs, decoded text, model
+identity, tokenizer source, backend/kernel identity, or fallback state, the
+change is a failed performance slice. If it helps only one model or one exact
+tensor, the dashboard must say so.
+
+This dashboard does not claim end-to-end speedup, sustained 8250U throughput,
+broad answer quality, Q4/Q5 runtime support, server execution, GPU/NPU/OpenVINO
+or UHD 620 execution, Qwen3.5 support, or BitNet QK256/I2_S changes.
+
+## SLM-CPU-081 Repeated Timing Gate
+
+SLM-CPU-081 records the next evidence boundary for the exact-tensor packed-Q8
+path after the SLM-CPU-079 counter improvement:
+
+```text
+artifact = ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-081-repeated-packed-q8-timing-gate.json
+classification.result = not_claimed
+minimum_receipts_per_side = 3
+current_baseline_receipts = 1
+current_candidate_receipts = 1
+```
+
+The available evidence still matters: the SLM-CPU-079 candidate preserved the
+Qwen3 Q8_0 behavior oracle and reduced the bounded `packed_matvec_ns` counter
+relative to the SLM-CPU-077 sidecar oracle. That is a counter-level result, not
+repeated end-to-end timing evidence. A future timing classification must compare
+at least three behavior-equivalent baseline receipts and three
+behavior-equivalent candidate receipts for the same host, model SHA, thread
+count, prompt corpus, tokenizer authority, backend identity, dense hook identity,
+and `fallback_used = false` boundary.
+
+The exact-tensor packed-Q8 sidecar remains opt-in, scoped to
+`layers.0.attention.q_proj.weight`, and is not promoted to the default runtime by
+this gate.

@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T07:25:09Z"
+campaign = "intel-a770"
+item = "A770-023"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-023-first-mismatch-logit-margin"
+summary = "Start compact first-mismatch cross-chosen logit-margin reporting for the CPU/A770 yes_no_water generated-output divergence."
+notes = [
+  "A770-022 proved the first generated-token mismatch has dumped logit context at generated index 2.",
+  "This slice keeps the existing CPU AVX2 and Intel A770 OpenCL receipts and adds a compact answer-parity frontier for the CPU and A770 chosen-token logits at the first mismatch.",
+  "The scope is diagnostic-only and does not change runtime math or promote CPU/A770 parity, reference parity, broad A770 answer quality, residency, speed, trusted-partial acceleration, or full BitNet inference.",
+]

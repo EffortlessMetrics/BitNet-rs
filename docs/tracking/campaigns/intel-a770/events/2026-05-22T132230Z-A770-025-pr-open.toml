@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T13:22:30Z"
+campaign = "intel-a770"
+item = "A770-025"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+pr = 329
+branch = "codex/intel-a770/A770-025-live-answer-readiness-run"
+head_sha = "5da5720b015cd11209772ab59c74f8b9d16121bd"
+summary = "Opened PR #329 for the live seeded A770 answer-readiness receipts."
+notes = [
+  "The PR records live CPU AVX2 and Intel A770 OpenCL seeded answer-readiness receipts for the official BitNet 2B I2_S artifact.",
+  "The receipts show incomplete seeded answer-readiness quality and CPU/A770 parity divergence; this is diagnostic evidence, not a promoted readiness or parity claim.",
+  "No broad answer quality, strict answer readiness, CPU/A770 parity, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

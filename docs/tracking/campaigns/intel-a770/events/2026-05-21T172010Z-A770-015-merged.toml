@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T17:20:10Z"
+campaign = "intel-a770"
+item = "A770-015"
+event = "merged"
+previous_status = "in_progress"
+new_status = "merged"
+actor = "codex"
+pr = 211
+branch = "codex/intel-a770/A770-015-answer-corpus-route-contract"
+head_sha = "2f3432808bdee40d885fbb2f9f0a9cb9c5c5a9ae"
+merge_sha = "9937635290165206100644ddfde27065efa75c54"
+summary = "Merged PR #211 with the A770 diagnostic answer-corpus route contract."
+notes = [
+  "The answer-corpus dry-run route can stamp Intel Arc A770 OpenCL as a diagnostic backend lane.",
+  "The A770 answer-corpus aggregate receipt keeps speed, quality, residency, full inference, and trusted-partial acceleration claims closed.",
+  "No live A770 answer-corpus execution, BitNet inference, answer quality, selected attention residency, resident KV, full residency, performance speedup, trusted-partial acceleration, or completion claim is promoted.",
+]

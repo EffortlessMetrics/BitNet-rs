@@ -1,0 +1,14 @@
+schema_version = "1.0"
+campaign = "slm-cpu"
+timestamp = "2026-05-21T02:52:00Z"
+event = "superseded"
+item = "SLM-CPU-066"
+branch = "codex/slm-cpu-066-swarm-runtime-hook-handoff"
+actor = "codex"
+summary = "Superseded the standalone swarm handoff placeholder after SLM-CPU-067 directly merged the exact-tensor runtime hook candidate."
+
+notes = [
+  "SLM-CPU-066 described a handoff back to bitnet-rs-swarm after the BitNet-rs release-surface promotion gate blocked packed Q8_0 runtime promotion.",
+  "SLM-CPU-067 completed the swarm-side exact-tensor runtime hook candidate directly, with before/after strict Qwen3 Q8_0 receipts and behavior equivalence.",
+  "Keeping SLM-CPU-066 ready would make the dashboard point at stale handoff bookkeeping instead of the next timing-classification item.",
+]

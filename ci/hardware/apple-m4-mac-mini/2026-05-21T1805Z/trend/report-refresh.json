@@ -1,0 +1,1371 @@
+{
+  "artifact_kind": "apple_m4_report_refresh_manifest",
+  "claim_boundary": {
+    "bitnet_chat_enabled": false,
+    "bitnet_serve_enabled": false,
+    "broad_apple_silicon_claim": false,
+    "broad_model_quality_claim": false,
+    "broad_performance_claim": false,
+    "dense_slm_and_bitnet_evidence_separated": true,
+    "full_metal_inference_claimed": false,
+    "macbook_evidence": false,
+    "manifest_only": true,
+    "mpsgraph_inference_claimed": false,
+    "neural_engine_execution_claimed": false,
+    "no_live_model_run": true,
+    "no_model_download": true,
+    "qk256_apple_claimed": false,
+    "speedup_claim": false
+  },
+  "fallback_used": false,
+  "families": [
+    {
+      "artifact_kinds": [
+        "apple_m4_slm_eval_summary"
+      ],
+      "claim_boundary": {
+        "bitnet_evidence": false,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": true,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "dates": [
+        "2026-05-16T0240Z",
+        "2026-05-16T1711Z",
+        "2026-05-17T0045Z"
+      ],
+      "description": "Seeded dense SLM quality reports.",
+      "evidence_family": "dense_slm",
+      "expected_artifact_kind": "apple_m4_slm_eval_summary",
+      "fallback_free_count": 9,
+      "generic_pr_ci": {
+        "live_model_run": false,
+        "model_downloads": false,
+        "validate_committed_reports_only": true
+      },
+      "id": "dense_slm_eval_v2",
+      "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+      "model_ids": [
+        "qwen2.5-0.5b-instruct-q4_k_m",
+        "qwen2.5-0.5b-instruct-q8_0",
+        "qwen2.5-1.5b-instruct-q4_k_m"
+      ],
+      "open_targets": {
+        "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+        "report_root_segment": "slm-eval-v2/**/summary.json"
+      },
+      "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+      "operator_status": "comparable",
+      "operator_status_reason": "9 committed report(s) are present for this evidence family; dashboard grouping decides exact matching identity.",
+      "parse_problem_count": 0,
+      "path_segment": "slm-eval-v2",
+      "refresh_command_template": "local/advisory/nightly: regenerate v2 dense eval reports with the seeded corpus, then validate committed summaries.",
+      "refresh_tiers": [
+        "advisory",
+        "nightly",
+        "release"
+      ],
+      "report_count": 9,
+      "reports": [
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "artifact_kind_matches": true,
+          "date": "2026-05-16T0240Z",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "generated_tokens": 942,
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 120,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "artifact_kind_matches": true,
+          "date": "2026-05-16T0240Z",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "generated_tokens": 889,
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "prompt_count": 120,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "artifact_kind_matches": true,
+          "date": "2026-05-16T0240Z",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "generated_tokens": 980,
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T0240Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 120,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "artifact_kind_matches": true,
+          "date": "2026-05-16T1711Z",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "generated_tokens": 4044,
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 500,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "artifact_kind_matches": true,
+          "date": "2026-05-16T1711Z",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "generated_tokens": 4071,
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "prompt_count": 500,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "artifact_kind_matches": true,
+          "date": "2026-05-16T1711Z",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "generated_tokens": 4414,
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T1711Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 500,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "artifact_kind_matches": true,
+          "date": "2026-05-17T0045Z",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "generated_tokens": 4044,
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 500,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "artifact_kind_matches": true,
+          "date": "2026-05-17T0045Z",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "generated_tokens": 4071,
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "prompt_count": 500,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_eval_summary",
+          "artifact_kind_matches": true,
+          "date": "2026-05-17T0045Z",
+          "expected_artifact_kind": "apple_m4_slm_eval_summary",
+          "fallback_used": false,
+          "generated_tokens": 4414,
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0045Z/slm-eval-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 500,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        }
+      ],
+      "skipped_day_reasons": [
+        {
+          "date": "2026-05-15",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-18",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-19",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-20",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-21",
+          "reason": "no committed matching report in rolling window"
+        }
+      ],
+      "strict_cpu_neon_count": 9,
+      "summary_filename": "summary.json",
+      "threshold_outcome": "ready_for_matching_identity_regression",
+      "trend_window": {
+        "active": true,
+        "days": 7,
+        "earliest_date": "2026-05-15",
+        "latest_date": "2026-05-21",
+        "one_off_claim": false,
+        "report_count_before_window": 12,
+        "report_count_outside_window": 3,
+        "requested_since": "7d",
+        "skipped_day_reasons": [
+          {
+            "date": "2026-05-15",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-18",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-19",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-20",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-21",
+            "reason": "no committed matching report in rolling window"
+          }
+        ],
+        "window_report_count": 9
+      },
+      "validation_commands": [
+        "bitnet mac receipts-check <report.json> --json",
+        "bitnet mac regression <current-report.json> --baseline <baseline-report.json>"
+      ]
+    },
+    {
+      "artifact_kinds": [
+        "apple_m4_slm_benchmark_v2"
+      ],
+      "claim_boundary": {
+        "bitnet_evidence": false,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": true,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "dates": [
+        "2026-05-15",
+        "2026-05-15T1845Z"
+      ],
+      "description": "Dense SLM TTFT, throughput, memory, and resident-session benchmark reports.",
+      "evidence_family": "dense_slm",
+      "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+      "fallback_free_count": 6,
+      "generic_pr_ci": {
+        "live_model_run": false,
+        "model_downloads": false,
+        "validate_committed_reports_only": true
+      },
+      "id": "dense_slm_benchmark_v2",
+      "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+      "model_ids": [
+        "qwen2.5-0.5b-instruct-q4_k_m",
+        "qwen2.5-0.5b-instruct-q8_0",
+        "qwen2.5-1.5b-instruct-q4_k_m"
+      ],
+      "open_targets": {
+        "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+        "report_root_segment": "slm-benchmark-v2/**/summary.json"
+      },
+      "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+      "operator_status": "comparable",
+      "operator_status_reason": "6 committed report(s) are present for this evidence family; dashboard grouping decides exact matching identity.",
+      "parse_problem_count": 0,
+      "path_segment": "slm-benchmark-v2",
+      "refresh_command_template": "local/advisory/nightly: regenerate v2 dense benchmark summaries in release mode, then validate committed summaries.",
+      "refresh_tiers": [
+        "advisory",
+        "nightly",
+        "release"
+      ],
+      "report_count": 6,
+      "reports": [
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15",
+          "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+          "fallback_used": false,
+          "generated_tokens": 1615,
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 101,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15",
+          "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+          "fallback_used": false,
+          "generated_tokens": 1522,
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "prompt_count": 101,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15",
+          "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+          "fallback_used": false,
+          "generated_tokens": 1458,
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 101,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15T1845Z",
+          "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+          "fallback_used": false,
+          "generated_tokens": 2543,
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 201,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15T1845Z",
+          "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+          "fallback_used": false,
+          "generated_tokens": 2382,
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "prompt_count": 201,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_slm_benchmark_v2",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15T1845Z",
+          "expected_artifact_kind": "apple_m4_slm_benchmark_v2",
+          "fallback_used": false,
+          "generated_tokens": 2262,
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15T1845Z/slm-benchmark-v2/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 201,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        }
+      ],
+      "skipped_day_reasons": [
+        {
+          "date": "2026-05-16",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-17",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-18",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-19",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-20",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-21",
+          "reason": "no committed matching report in rolling window"
+        }
+      ],
+      "strict_cpu_neon_count": 6,
+      "summary_filename": "summary.json",
+      "threshold_outcome": "ready_for_matching_identity_regression",
+      "trend_window": {
+        "active": true,
+        "days": 7,
+        "earliest_date": "2026-05-15",
+        "latest_date": "2026-05-21",
+        "one_off_claim": false,
+        "report_count_before_window": 6,
+        "report_count_outside_window": 0,
+        "requested_since": "7d",
+        "skipped_day_reasons": [
+          {
+            "date": "2026-05-16",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-17",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-18",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-19",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-20",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-21",
+            "reason": "no committed matching report in rolling window"
+          }
+        ],
+        "window_report_count": 6
+      },
+      "validation_commands": [
+        "bitnet mac receipts-check <report.json> --json",
+        "bitnet mac regression <current-report.json> --baseline <baseline-report.json>"
+      ]
+    },
+    {
+      "artifact_kinds": [
+        "apple_m4_benchmark_variance_v1"
+      ],
+      "claim_boundary": {
+        "bitnet_evidence": false,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": true,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "dates": [
+        "2026-05-19T1125Z"
+      ],
+      "description": "Dense SLM repeat-run benchmark variance reports.",
+      "evidence_family": "dense_slm",
+      "expected_artifact_kind": "apple_m4_benchmark_variance_v1",
+      "fallback_free_count": 3,
+      "generic_pr_ci": {
+        "live_model_run": false,
+        "model_downloads": false,
+        "validate_committed_reports_only": true
+      },
+      "id": "dense_slm_benchmark_variance",
+      "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+      "model_ids": [
+        "qwen2.5-0.5b-instruct-q4_k_m",
+        "qwen2.5-0.5b-instruct-q8_0",
+        "qwen2.5-1.5b-instruct-q4_k_m"
+      ],
+      "open_targets": {
+        "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+        "report_root_segment": "benchmark-variance/**/summary.json"
+      },
+      "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+      "operator_status": "comparable",
+      "operator_status_reason": "3 committed report(s) are present for this evidence family; dashboard grouping decides exact matching identity.",
+      "parse_problem_count": 0,
+      "path_segment": "benchmark-variance",
+      "refresh_command_template": "local/advisory/nightly: regenerate dense benchmark variance summaries, then validate committed summaries and only compare timing when comparison_readiness permits it.",
+      "refresh_tiers": [
+        "advisory",
+        "nightly",
+        "release"
+      ],
+      "report_count": 3,
+      "reports": [
+        {
+          "artifact_kind": "apple_m4_benchmark_variance_v1",
+          "artifact_kind_matches": true,
+          "date": "2026-05-19T1125Z",
+          "expected_artifact_kind": "apple_m4_benchmark_variance_v1",
+          "fallback_used": false,
+          "generated_tokens": 4780,
+          "model_id": "qwen2.5-0.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 402,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_benchmark_variance_v1",
+          "artifact_kind_matches": true,
+          "date": "2026-05-19T1125Z",
+          "expected_artifact_kind": "apple_m4_benchmark_variance_v1",
+          "fallback_used": false,
+          "generated_tokens": 4300,
+          "model_id": "qwen2.5-0.5b-instruct-q8_0",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-0.5b-instruct-q8_0/summary.json",
+          "prompt_count": 402,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "apple_m4_benchmark_variance_v1",
+          "artifact_kind_matches": true,
+          "date": "2026-05-19T1125Z",
+          "expected_artifact_kind": "apple_m4_benchmark_variance_v1",
+          "fallback_used": false,
+          "generated_tokens": 3586,
+          "model_id": "qwen2.5-1.5b-instruct-q4_k_m",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T1125Z/benchmark-variance/qwen2.5-1.5b-instruct-q4_k_m/summary.json",
+          "prompt_count": 402,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        }
+      ],
+      "skipped_day_reasons": [
+        {
+          "date": "2026-05-15",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-16",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-17",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-18",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-20",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-21",
+          "reason": "no committed matching report in rolling window"
+        }
+      ],
+      "strict_cpu_neon_count": 3,
+      "summary_filename": "summary.json",
+      "threshold_outcome": "ready_for_matching_identity_regression",
+      "trend_window": {
+        "active": true,
+        "days": 7,
+        "earliest_date": "2026-05-15",
+        "latest_date": "2026-05-21",
+        "one_off_claim": false,
+        "report_count_before_window": 3,
+        "report_count_outside_window": 0,
+        "requested_since": "7d",
+        "skipped_day_reasons": [
+          {
+            "date": "2026-05-15",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-16",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-17",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-18",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-20",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-21",
+            "reason": "no committed matching report in rolling window"
+          }
+        ],
+        "window_report_count": 3
+      },
+      "validation_commands": [
+        "bitnet mac receipts-check <report.json> --json",
+        "bitnet mac regression <current-report.json> --baseline <baseline-report.json>"
+      ]
+    },
+    {
+      "artifact_kinds": [
+        "bitnet_apple_m4_local_answer_corpus"
+      ],
+      "claim_boundary": {
+        "bitnet_evidence": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": false,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "dates": [
+        "2026-05-15",
+        "2026-05-15T2214Z",
+        "2026-05-17T1417Z"
+      ],
+      "description": "BitNet seeded quality and reference-vs-Rust reports.",
+      "evidence_family": "bitnet",
+      "expected_artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+      "fallback_free_count": 3,
+      "generic_pr_ci": {
+        "live_model_run": false,
+        "model_downloads": false,
+        "validate_committed_reports_only": true
+      },
+      "id": "bitnet_eval",
+      "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json",
+      "model_ids": [
+        "microsoft-bitnet-b1.58-2B-4T-i2s"
+      ],
+      "open_targets": {
+        "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json",
+        "report_root_segment": "bitnet-eval/**/answer-corpus.json"
+      },
+      "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+      "operator_status": "comparable",
+      "operator_status_reason": "3 committed report(s) are present for this evidence family; dashboard grouping decides exact matching identity.",
+      "parse_problem_count": 0,
+      "path_segment": "bitnet-eval",
+      "refresh_command_template": "local/advisory/nightly: regenerate the BitNet answer corpus with the accepted GGUF/tokenizer, then validate the committed corpus receipt.",
+      "refresh_tiers": [
+        "advisory",
+        "nightly",
+        "release"
+      ],
+      "report_count": 3,
+      "reports": [
+        {
+          "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15",
+          "expected_artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+          "fallback_used": false,
+          "generated_tokens": null,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-eval/answer-corpus.json",
+          "prompt_count": 100,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15T2214Z",
+          "expected_artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+          "fallback_used": false,
+          "generated_tokens": null,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-eval/answer-corpus.json",
+          "prompt_count": 100,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+          "artifact_kind_matches": true,
+          "date": "2026-05-17T1417Z",
+          "expected_artifact_kind": "bitnet_apple_m4_local_answer_corpus",
+          "fallback_used": false,
+          "generated_tokens": null,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T1417Z/bitnet-eval/answer-corpus.json",
+          "prompt_count": 100,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        }
+      ],
+      "skipped_day_reasons": [
+        {
+          "date": "2026-05-16",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-18",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-19",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-20",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-21",
+          "reason": "no committed matching report in rolling window"
+        }
+      ],
+      "strict_cpu_neon_count": 3,
+      "summary_filename": "answer-corpus.json",
+      "threshold_outcome": "ready_for_matching_identity_regression",
+      "trend_window": {
+        "active": true,
+        "days": 7,
+        "earliest_date": "2026-05-15",
+        "latest_date": "2026-05-21",
+        "one_off_claim": false,
+        "report_count_before_window": 3,
+        "report_count_outside_window": 0,
+        "requested_since": "7d",
+        "skipped_day_reasons": [
+          {
+            "date": "2026-05-16",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-18",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-19",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-20",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-21",
+            "reason": "no committed matching report in rolling window"
+          }
+        ],
+        "window_report_count": 3
+      },
+      "validation_commands": [
+        "bitnet mac receipts-check <report.json> --json",
+        "bitnet mac regression <current-report.json> --baseline <baseline-report.json>"
+      ]
+    },
+    {
+      "artifact_kinds": [
+        "bitnet_apple_m4_benchmark_v1"
+      ],
+      "claim_boundary": {
+        "bitnet_evidence": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": false,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "dates": [
+        "2026-05-15",
+        "2026-05-15T2214Z",
+        "2026-05-17T0825Z"
+      ],
+      "description": "BitNet one-shot ask and fixed-warm benchmark reports.",
+      "evidence_family": "bitnet",
+      "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+      "fallback_free_count": 3,
+      "generic_pr_ci": {
+        "live_model_run": false,
+        "model_downloads": false,
+        "validate_committed_reports_only": true
+      },
+      "id": "bitnet_benchmark",
+      "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+      "model_ids": [
+        "microsoft-bitnet-b1.58-2B-4T-i2s"
+      ],
+      "open_targets": {
+        "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+        "report_root_segment": "bitnet-benchmark/**/summary.json"
+      },
+      "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+      "operator_status": "comparable",
+      "operator_status_reason": "3 committed report(s) are present for this evidence family; dashboard grouping decides exact matching identity.",
+      "parse_problem_count": 0,
+      "path_segment": "bitnet-benchmark",
+      "refresh_command_template": "local/advisory/nightly: regenerate BitNet one-shot/fixed-warm benchmark summaries, then validate the committed benchmark receipt.",
+      "refresh_tiers": [
+        "advisory",
+        "nightly",
+        "release"
+      ],
+      "report_count": 3,
+      "reports": [
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15",
+          "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "fallback_used": false,
+          "generated_tokens": 8,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-benchmark/summary.json",
+          "prompt_count": 4,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15T2214Z",
+          "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "fallback_used": false,
+          "generated_tokens": 8,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15T2214Z/bitnet-benchmark/summary.json",
+          "prompt_count": 4,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "artifact_kind_matches": true,
+          "date": "2026-05-17T0825Z",
+          "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "fallback_used": false,
+          "generated_tokens": 8,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-17T0825Z/bitnet-benchmark/summary.json",
+          "prompt_count": 4,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        }
+      ],
+      "skipped_day_reasons": [
+        {
+          "date": "2026-05-16",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-18",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-19",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-20",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-21",
+          "reason": "no committed matching report in rolling window"
+        }
+      ],
+      "strict_cpu_neon_count": 3,
+      "summary_filename": "summary.json",
+      "threshold_outcome": "ready_for_matching_identity_regression",
+      "trend_window": {
+        "active": true,
+        "days": 7,
+        "earliest_date": "2026-05-15",
+        "latest_date": "2026-05-21",
+        "one_off_claim": false,
+        "report_count_before_window": 3,
+        "report_count_outside_window": 0,
+        "requested_since": "7d",
+        "skipped_day_reasons": [
+          {
+            "date": "2026-05-16",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-18",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-19",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-20",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-21",
+            "reason": "no committed matching report in rolling window"
+          }
+        ],
+        "window_report_count": 3
+      },
+      "validation_commands": [
+        "bitnet mac receipts-check <report.json> --json",
+        "bitnet mac regression <current-report.json> --baseline <baseline-report.json>"
+      ]
+    },
+    {
+      "artifact_kinds": [
+        "bitnet_apple_m4_benchmark_v1"
+      ],
+      "claim_boundary": {
+        "bitnet_evidence": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": false,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "dates": [
+        "2026-05-19T2245Z"
+      ],
+      "description": "BitNet one-shot ask and fixed-warm repeatability/variance reports.",
+      "evidence_family": "bitnet",
+      "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+      "fallback_free_count": 3,
+      "generic_pr_ci": {
+        "live_model_run": false,
+        "model_downloads": false,
+        "validate_committed_reports_only": true
+      },
+      "id": "bitnet_benchmark_variance",
+      "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json",
+      "model_ids": [
+        "microsoft-bitnet-b1.58-2B-4T-i2s"
+      ],
+      "open_targets": {
+        "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json",
+        "report_root_segment": "bitnet-benchmark-variance/**/summary.json"
+      },
+      "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+      "operator_status": "comparable",
+      "operator_status_reason": "3 committed report(s) are present for this evidence family; dashboard grouping decides exact matching identity.",
+      "parse_problem_count": 0,
+      "path_segment": "bitnet-benchmark-variance",
+      "refresh_command_template": "local/advisory/nightly: regenerate BitNet one-shot/fixed-warm variance summaries, then validate the committed benchmark receipt.",
+      "refresh_tiers": [
+        "advisory",
+        "nightly",
+        "release"
+      ],
+      "report_count": 3,
+      "reports": [
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "artifact_kind_matches": true,
+          "date": "2026-05-19T2245Z",
+          "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "fallback_used": false,
+          "generated_tokens": 8,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-01/summary.json",
+          "prompt_count": 4,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "artifact_kind_matches": true,
+          "date": "2026-05-19T2245Z",
+          "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "fallback_used": false,
+          "generated_tokens": 8,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary-runs/run-02/summary.json",
+          "prompt_count": 4,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "artifact_kind_matches": true,
+          "date": "2026-05-19T2245Z",
+          "expected_artifact_kind": "bitnet_apple_m4_benchmark_v1",
+          "fallback_used": false,
+          "generated_tokens": 16,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-19T2245Z/bitnet-benchmark-variance/summary.json",
+          "prompt_count": 8,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        }
+      ],
+      "skipped_day_reasons": [
+        {
+          "date": "2026-05-15",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-16",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-17",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-18",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-20",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-21",
+          "reason": "no committed matching report in rolling window"
+        }
+      ],
+      "strict_cpu_neon_count": 3,
+      "summary_filename": "summary.json",
+      "threshold_outcome": "ready_for_matching_identity_regression",
+      "trend_window": {
+        "active": true,
+        "days": 7,
+        "earliest_date": "2026-05-15",
+        "latest_date": "2026-05-21",
+        "one_off_claim": false,
+        "report_count_before_window": 3,
+        "report_count_outside_window": 0,
+        "requested_since": "7d",
+        "skipped_day_reasons": [
+          {
+            "date": "2026-05-15",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-16",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-17",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-18",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-20",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-21",
+            "reason": "no committed matching report in rolling window"
+          }
+        ],
+        "window_report_count": 3
+      },
+      "validation_commands": [
+        "bitnet mac receipts-check <report.json> --json",
+        "bitnet mac regression <current-report.json> --baseline <baseline-report.json>"
+      ]
+    },
+    {
+      "artifact_kinds": [
+        "bitnet_apple_m4_warm_session"
+      ],
+      "claim_boundary": {
+        "bitnet_evidence": true,
+        "broad_model_quality_claim": false,
+        "broad_performance_claim": false,
+        "dense_slm_evidence": false,
+        "evidence_families_mixed": false,
+        "generic_pr_ci_live_model_run": false,
+        "speedup_claim": false
+      },
+      "dates": [
+        "2026-05-15",
+        "2026-05-16T0626Z"
+      ],
+      "description": "BitNet variable-prompt warm-session productization receipts.",
+      "evidence_family": "bitnet",
+      "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+      "fallback_free_count": 2,
+      "generic_pr_ci": {
+        "live_model_run": false,
+        "model_downloads": false,
+        "validate_committed_reports_only": true
+      },
+      "id": "bitnet_variable_warm",
+      "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+      "model_ids": [
+        "microsoft-bitnet-b1.58-2B-4T-i2s"
+      ],
+      "open_targets": {
+        "latest_report": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+        "report_root_segment": "bitnet-productization/**/variable-warm-session.json"
+      },
+      "operator_envelope_impact": "review_threshold_outcomes_before_envelope_update",
+      "operator_status": "comparable",
+      "operator_status_reason": "2 committed report(s) are present for this evidence family; dashboard grouping decides exact matching identity.",
+      "parse_problem_count": 0,
+      "path_segment": "bitnet-productization",
+      "refresh_command_template": "local/advisory/nightly: rerun the variable warm-session proof before any BitNet chat or serve gate changes.",
+      "refresh_tiers": [
+        "advisory",
+        "nightly",
+        "release"
+      ],
+      "report_count": 2,
+      "reports": [
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "artifact_kind_matches": true,
+          "date": "2026-05-15",
+          "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+          "fallback_used": false,
+          "generated_tokens": null,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-15/bitnet-productization/variable-warm-session.json",
+          "prompt_count": null,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        },
+        {
+          "artifact_kind": "bitnet_apple_m4_warm_session",
+          "artifact_kind_matches": true,
+          "date": "2026-05-16T0626Z",
+          "expected_artifact_kind": "bitnet_apple_m4_warm_session",
+          "fallback_used": false,
+          "generated_tokens": null,
+          "model_id": "microsoft-bitnet-b1.58-2B-4T-i2s",
+          "parse_status": "ok",
+          "path": "ci/hardware/apple-m4-mac-mini/2026-05-16T0626Z/bitnet-productization/variable-warm-session.json",
+          "prompt_count": null,
+          "runtime_api": "cpu",
+          "selected_backend": "apple-m4-cpu-neon"
+        }
+      ],
+      "skipped_day_reasons": [
+        {
+          "date": "2026-05-17",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-18",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-19",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-20",
+          "reason": "no committed matching report in rolling window"
+        },
+        {
+          "date": "2026-05-21",
+          "reason": "no committed matching report in rolling window"
+        }
+      ],
+      "strict_cpu_neon_count": 2,
+      "summary_filename": "variable-warm-session.json",
+      "threshold_outcome": "ready_for_matching_identity_regression",
+      "trend_window": {
+        "active": true,
+        "days": 7,
+        "earliest_date": "2026-05-15",
+        "latest_date": "2026-05-21",
+        "one_off_claim": false,
+        "report_count_before_window": 2,
+        "report_count_outside_window": 0,
+        "requested_since": "7d",
+        "skipped_day_reasons": [
+          {
+            "date": "2026-05-17",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-18",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-19",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-20",
+            "reason": "no committed matching report in rolling window"
+          },
+          {
+            "date": "2026-05-21",
+            "reason": "no committed matching report in rolling window"
+          }
+        ],
+        "window_report_count": 2
+      },
+      "validation_commands": [
+        "bitnet mac receipts-check <report.json> --json",
+        "bitnet mac regression <current-report.json> --baseline <baseline-report.json>"
+      ]
+    }
+  ],
+  "family_count": 7,
+  "generated_at": "2026-05-21T18:05:35.138557+00:00",
+  "machine": {
+    "id": "apple-m4-mac-mini",
+    "scope": "committed report refresh manifest"
+  },
+  "operator_affordances": {
+    "explain_command": "bitnet mac report-refresh --root ci/hardware/apple-m4-mac-mini --since 7d --json-out target/apple-m4-inference-excellence/M4-TREND-001-report-refresh.json --explain",
+    "open_receipt_hint": "open target/apple-m4-inference-excellence/M4-TREND-001-report-refresh.json",
+    "open_report_root_hint": "open ci/hardware/apple-m4-mac-mini",
+    "open_targets_command": "bitnet mac report-refresh --root ci/hardware/apple-m4-mac-mini --since 7d --json-out target/apple-m4-inference-excellence/M4-TREND-001-report-refresh.json --open-targets"
+  },
+  "operator_command": "mac report-refresh",
+  "receipt_path": "target/apple-m4-inference-excellence/M4-TREND-001-report-refresh.json",
+  "refresh_modes": {
+    "advisory_manifest": true,
+    "generic_pr_ci_live_model_run": false,
+    "generic_pr_ci_model_free": true,
+    "long_resident_soaks": false,
+    "model_downloads": false,
+    "nightly_manifest": true,
+    "release_manifest": true,
+    "rolling_trend_window": true
+  },
+  "report_count": 29,
+  "report_root": "ci/hardware/apple-m4-mac-mini",
+  "requested_backend": "apple-m4-cpu-neon",
+  "run_identity": {
+    "artifact_kind": "apple_m4_report_refresh_manifest",
+    "backend": {
+      "fallback_used": false,
+      "requested_backend": "apple-m4-cpu-neon",
+      "runtime_api": "cpu",
+      "selected_backend": "apple-m4-cpu-neon"
+    },
+    "binary": {
+      "binary_sha256": null,
+      "binary_sha256_status": "not_recorded_build_profile_used",
+      "build_profile": "debug",
+      "crate_version": "0.2.1-dev"
+    },
+    "command": {
+      "class": "mac report-refresh",
+      "live_model_run": false
+    },
+    "contract_version": "m4-run-identity-v1",
+    "evidence_family": "operator",
+    "evidence_identity": {
+      "corpus_id": "not_applicable",
+      "profile_id": "not_applicable",
+      "scope": "report_refresh_manifest",
+      "seed": "not_applicable"
+    },
+    "git": {
+      "commit": "bce0d2932ccbeb83340cf2f5fad5df39eeb2cb0d",
+      "commit_source": "git_rev_parse"
+    },
+    "machine_id": "apple-m4-mac-mini",
+    "model": {
+      "id": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "not_applicable"
+    },
+    "os": {
+      "name": "macos",
+      "version": "26.4.1",
+      "version_source": "sw_vers"
+    },
+    "prompt_template": {
+      "id": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "243ffa2eeced1cbfa18357fe8edf03833381b9a83359bf0930ae5e8e862ab30e"
+    },
+    "soc": "apple-m4",
+    "timing": {
+      "source": "wall_clock_utc"
+    },
+    "tokenizer": {
+      "authority": "not_applicable",
+      "identity_scope": "model_free",
+      "sha256": "not_applicable"
+    }
+  },
+  "run_identity_sha256": "e7568e700d7d3e0ddf058e21edc40dd89e7b26058fb04a329402837830dd04e6",
+  "runtime_api": "cpu",
+  "schema_version": "1.2.0",
+  "selected_backend": "apple-m4-cpu-neon",
+  "status": "ok",
+  "status_explanations": {
+    "comparable": {
+      "meaning": "At least two committed reports share the required identity fields and can be compared by the regression command.",
+      "next_action": "Run the emitted regression command or inspect the latest and baseline receipts.",
+      "why": "Same evidence family, artifact kind, model, tokenizer authority, backend, and fallback=false identity are present for the group."
+    },
+    "failed": {
+      "meaning": "The committed receipt shape violates the M4 evidence contract for this operator view.",
+      "next_action": "Do not use the group for claims; fix or replace the bad receipt and rerun receipts-check.",
+      "why": "Examples include malformed receipts, artifact-kind mismatch, fallback ambiguity, or non-CPU/NEON evidence in a strict M4 group."
+    },
+    "insufficient_history": {
+      "meaning": "The group has fewer than two matching-history reports, so trend or regression interpretation is not available yet.",
+      "next_action": "Collect a second matching report before interpreting drift.",
+      "why": "A latest report exists without a matching baseline under the required identity, or the report family is empty."
+    },
+    "warning": {
+      "meaning": "Evidence exists, but the dashboard cannot treat the group as cleanly comparable without operator review.",
+      "next_action": "Inspect the emitted latest report, repair the receipt or rerun the matching evidence lane.",
+      "why": "The group has missing identity or metric fields, parse issues, or an incomplete report family."
+    }
+  },
+  "trend_window": {
+    "active": true,
+    "committed_reports_only": true,
+    "days": 7,
+    "earliest_date": "2026-05-15",
+    "latest_date": "2026-05-21",
+    "mode": "rolling_days",
+    "model_free": true,
+    "no_live_model_run": true,
+    "requested_since": "7d"
+  },
+  "validation": {
+    "manifest_command": "bitnet mac report-refresh --since 7d --json",
+    "manifest_receipt_check": "bitnet mac receipts-check target/apple-m4-inference-ops/report-refresh-manifest.json --json",
+    "regression_check": "bitnet mac regression <current-report.json> --baseline <baseline-report.json>",
+    "report_receipt_check": "bitnet mac receipts-check <report.json> --json"
+  }
+}

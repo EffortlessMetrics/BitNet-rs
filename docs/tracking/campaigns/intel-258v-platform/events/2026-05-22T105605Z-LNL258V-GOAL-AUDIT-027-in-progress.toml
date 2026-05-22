@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-22T10:56:05Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-027"
+previous_status = "ready"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-027-current-main"
+actor = "codex"
+summary = "Refresh the no-inference Lunar Lake goal audit to current swarm main after adjacent SLM CPU, M4 sync, and audit closeout deltas."
+
+notes = [
+  "Record SLM-CPU-080/#308 as adjacent Kaby SLM CPU performance dashboard state only, not Lunar Lake route evidence.",
+  "Record LNL258V-GOAL-AUDIT-026/#309 and closeout #315 as Lunar Lake audit/tracker state only.",
+  "Record M4-COMPAT-001 source sync #311 as source-sync M4 compatibility state only, not Lunar Lake route evidence.",
+  "Keep LNL258V-POWER-006 blocked until real battery-mode low_power telemetry, energy proxy, measured thermal context, and benchmark-qualified power advantage exist.",
+  "Preserve no inference, model load, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator, acceleration, broad quality, model binary, runtime/sidecar behavior claim, semantic-intake stale claim, or BitNet QK256/I2_S behavior-change claim.",
+]

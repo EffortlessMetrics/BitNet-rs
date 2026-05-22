@@ -1,0 +1,15 @@
+timestamp = "2026-05-21T17:18:32Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-WORKLOAD-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-operator-suite"
+
+notes = [
+  "Started M4-WORKLOAD-001 after campaign next selected the operator workload suite.",
+  "Scope is a model-free `bitnet mac workload --suite m4-operator` manifest covering summarize, extract, classify, JSON, rewrite, and table-QA workflows across dense SLM ask/chat/warm-session/serve routes and enabled BitNet ask/warm-session routes.",
+  "The committed receipt at `ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json` records mechanical checks, route-state boundaries, exact follow-up live commands, zero prompts, and zero generated tokens.",
+  "No live inference, model download, disabled BitNet chat or serve enablement, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

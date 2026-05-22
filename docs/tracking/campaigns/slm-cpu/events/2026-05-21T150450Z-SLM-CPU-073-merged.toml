@@ -1,0 +1,18 @@
+timestamp = "2026-05-21T15:04:50Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-073"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 195
+branch = "codex/slm-cpu-073-packed-q8-regression-root-cause"
+head_sha = "92c464e790f7a7f2297d55c9612d3861898544d3"
+merge_sha = "d429f515514e4680442df0a2dc7d70020ae1a485"
+summary = "Merged PR #195 with the SLM-CPU-073 packed Q8_0 sidecar regression root-cause artifact."
+notes = [
+  "The artifact localizes the remaining opt-in exact-tensor packed Q8_0 sidecar regression to host tensor materialization, scalar matvec, and scratch allocation after SLM-CPU-070.",
+  "eager_f32_candle remains the default runtime; packed Q8_0 sidecar execution remains opt-in and exact-tensor scoped.",
+  "SLM-CPU-074 is queued as the packed Q8_0 sidecar matvec instrumentation and scratch-elimination gate.",
+  "No speedup, sustained-throughput, broad answer-quality, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256 claim is made.",
+]

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "work_item": "A770-012",
+  "artifact_kind": "a770_strict_qk256_dispatch_receipt",
+  "proof_family": "a770_selected_device_qk256_dispatch",
+  "claim_level": "diagnostic",
+  "requested_backend": "intel-arc-a770-opencl",
+  "selected_backend": "intel-arc-a770-opencl",
+  "runtime_api": "opencl",
+  "runtime_device": {
+    "platform_index": 0,
+    "device_index": 0,
+    "platform_name": "Intel(R) OpenCL Graphics",
+    "name": "Intel(R) Arc(TM) A770 Graphics",
+    "vendor": "Intel(R) Corporation",
+    "driver_version": "32.0.101.8801"
+  },
+  "strict_mode": true,
+  "fallback_used": false,
+  "cpu_fallback_allowed": false,
+  "kernel_execution": true,
+  "qk256_dispatch": true,
+  "qk256_decode": false,
+  "bitnet_inference": false,
+  "full_model_decode": false,
+  "activation_quantization_resident": false,
+  "quality_claim": false,
+  "speedup_claim": false,
+  "residency_claim": false,
+  "trusted_partial_claim": false,
+  "coverage": {
+    "bitnet_linear_layers_total": 1,
+    "bitnet_linear_layers_on_a770_opencl": 1,
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "unsupported_ops": [],
+    "execution_claim": "a770_opencl_qk256_contribution"
+  },
+  "runtime_stats": {
+    "host_to_device_bytes": 384,
+    "device_to_host_bytes": 8,
+    "kernel_invocations": 1
+  },
+  "parity": {
+    "reference_backend": "cpu_qk256_reference",
+    "target_backend": "intel-arc-a770-opencl",
+    "exact": true,
+    "max_abs_error": 0
+  },
+  "not_claims": ["BitNet inference works on A770", "A770 answer quality is proven", "Activation quantization is GPU-resident", "Selected attention is resident", "Resident KV is proven", "Attention score residency is proven", "Softmax residency is proven", "Value-mix residency is proven", "Full A770 residency is proven", "A770 performance speedup is proven", "A770 trusted partial acceleration is claim-grade"]
+}

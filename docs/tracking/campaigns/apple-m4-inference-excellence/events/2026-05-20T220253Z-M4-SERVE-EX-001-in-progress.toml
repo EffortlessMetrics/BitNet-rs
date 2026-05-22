@@ -1,0 +1,15 @@
+timestamp = "2026-05-20T22:02:53Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-001-dense-serve-conformance"
+
+notes = [
+  "Started the dense M4 local-server conformance closeout in bitnet-rs-swarm by porting the 2026-05-20T2147Z live serve-smoke receipts for all supported dense SLM model IDs.",
+  "The ported receipt set covers qwen2.5-0.5b-instruct-q8_0, qwen2.5-0.5b-instruct-q4_k_m, and qwen2.5-1.5b-instruct-q4_k_m with health, ready, models, non-streaming completion, streaming completion, and per-request receipt export.",
+  "The evidence remains scoped to apple-m4-cpu-neon dense SLM local server conformance with fallback_used=false; timeout enforcement is deferred to M4-SERVE-EX-002.",
+  "No production hosting, full OpenAI compatibility, BitNet serve, BitNet chat, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

@@ -6,10 +6,8 @@ use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
-use bitnet_common::{BitNetConfig, BitNetError};
+use bitnet_common::{BitNetError, ModelError};
 use bitnet_inference::InferenceEngine;
-use bitnet_models::{Model, ModelLoader};
-use bitnet_tokenizers::TokenizerBuilder;
 
 use crate::memory::MemoryManager;
 use crate::utils::{JsError, to_js_error};
@@ -193,79 +191,30 @@ impl WasmBitNetModel {
     /// Internal async model loading implementation
     async fn load_model_async(
         model_data: Vec<u8>,
-        tokenizer_data: Option<Vec<u8>>,
+        _tokenizer_data: Option<Vec<u8>>,
         config: WasmModelConfig,
         max_memory: Option<usize>,
     ) -> Result<HashMap<String, String>, BitNetError> {
         console::log_1(&format!("Loading model with {} bytes", model_data.len()).into());
 
-        // Check memory constraints
-        if let Some(max_mem) = max_memory {
-            if model_data.len() > max_mem {
-                return Err(BitNetError::Model(
-                    format!(
-                        "Model size ({} bytes) exceeds memory limit ({} bytes)",
-                        model_data.len(),
-                        max_mem
-                    )
-                    .into(),
-                ));
-            }
+        if let Some(max_mem) = max_memory
+            && model_data.len() > max_mem
+        {
+            return Err(BitNetError::Model(ModelError::LoadingFailed {
+                reason: format!(
+                    "Model size ({} bytes) exceeds memory limit ({} bytes)",
+                    model_data.len(),
+                    max_mem
+                ),
+            }));
         }
 
-        // Create temporary file-like interface for model loading
-        let model_path = Self::create_virtual_file(&model_data, &config.format_hint)?;
-
-        // Load model using the standard model loader
-        let device = bitnet_common::Device::Cpu; // WASM only supports CPU
-        let loader = ModelLoader::new(device);
-        let model = loader.load(&model_path)?;
-
-        // Load tokenizer
-        let tokenizer = if let Some(tokenizer_bytes) = tokenizer_data {
-            Self::load_tokenizer_from_bytes(tokenizer_bytes, &config.tokenizer_type)?
-        } else {
-            TokenizerBuilder::from_pretrained(&config.tokenizer_type)?
-        };
-
-        // Create inference engine
-        let _engine = InferenceEngine::new(model, tokenizer, device)?;
-
-        // Collect model information
-        let mut info = HashMap::new();
-        info.insert("status".to_string(), "loaded".to_string());
-        info.insert("memory_usage".to_string(), model_data.len().to_string());
-        info.insert("format".to_string(), config.format_hint);
-        info.insert("tokenizer".to_string(), config.tokenizer_type);
-
-        console::log_1(&"Model loaded successfully".into());
-        Ok(info)
-    }
-
-    /// Create a virtual file path for model loading
-    fn create_virtual_file(data: &[u8], format_hint: &str) -> Result<String, BitNetError> {
-        // In a real implementation, this would create a virtual file system
-        // For now, we'll use a placeholder that the model loader can handle
-        let extension = match format_hint {
-            "gguf" => ".gguf",
-            "safetensors" => ".safetensors",
-            _ => ".bin",
-        };
-
-        // Store data in a way that can be accessed by the model loader
-        // This is a simplified implementation - in practice, you'd need
-        // a more sophisticated virtual file system
-        Ok(format!("virtual://model{}", extension))
-    }
-
-    /// Load tokenizer from bytes
-    fn load_tokenizer_from_bytes(
-        _tokenizer_bytes: Vec<u8>,
-        tokenizer_type: &str,
-    ) -> Result<std::sync::Arc<dyn bitnet_tokenizers::Tokenizer>, BitNetError> {
-        // For now, fall back to pretrained tokenizer
-        // In a full implementation, this would parse the tokenizer bytes
-        TokenizerBuilder::from_pretrained(tokenizer_type)
+        Err(BitNetError::Model(ModelError::LoadingFailed {
+            reason: format!(
+                "WASM inference model loading is not implemented yet for format '{}' and tokenizer '{}'. This path intentionally returns an explicit not-implemented error instead of placeholder success.",
+                config.format_hint, config.tokenizer_type
+            ),
+        }))
     }
 }
 

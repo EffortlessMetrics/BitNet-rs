@@ -379,6 +379,7 @@ pub struct ServerSharedEngineExecutionCoverage {
     pub execution_claim: String,
     pub bitnet_linear_layers_total: u64,
     pub bitnet_linear_layers_on_cuda: u64,
+    pub bitnet_linear_layers_on_a770_opencl: u64,
     pub bitnet_linear_layers_cpu_fallback: u64,
     pub unsupported_ops: Vec<String>,
     pub fallback_used: bool,
@@ -1154,6 +1155,9 @@ fn qk256_dispatch_coverage_delta(
 ) -> bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
     let bitnet_linear_layers_on_cuda =
         after.bitnet_linear_layers_on_cuda.saturating_sub(before.bitnet_linear_layers_on_cuda);
+    let bitnet_linear_layers_on_a770_opencl = after
+        .bitnet_linear_layers_on_a770_opencl
+        .saturating_sub(before.bitnet_linear_layers_on_a770_opencl);
     let bitnet_linear_layers_cpu_fallback = after
         .bitnet_linear_layers_cpu_fallback
         .saturating_sub(before.bitnet_linear_layers_cpu_fallback);
@@ -1169,10 +1173,13 @@ fn qk256_dispatch_coverage_delta(
     bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
         bitnet_linear_layers_total,
         bitnet_linear_layers_on_cuda,
+        bitnet_linear_layers_on_a770_opencl,
         bitnet_linear_layers_cpu_fallback,
         unsupported_ops: unsupported_delta,
         execution_claim: if bitnet_linear_layers_on_cuda > 0 {
             "cuda_inference_contribution"
+        } else if bitnet_linear_layers_on_a770_opencl > 0 {
+            "a770_opencl_qk256_contribution"
         } else {
             after.execution_claim
         },
@@ -1354,6 +1361,7 @@ fn server_receipt_qk256_execution_coverage(
         execution_claim: coverage.execution_claim.to_string(),
         bitnet_linear_layers_total: coverage.bitnet_linear_layers_total,
         bitnet_linear_layers_on_cuda: coverage.bitnet_linear_layers_on_cuda,
+        bitnet_linear_layers_on_a770_opencl: coverage.bitnet_linear_layers_on_a770_opencl,
         bitnet_linear_layers_cpu_fallback: coverage.bitnet_linear_layers_cpu_fallback,
         unsupported_ops: coverage.unsupported_ops.clone(),
         fallback_used: coverage.bitnet_linear_layers_cpu_fallback > 0,
@@ -2844,6 +2852,7 @@ mod tests {
             coverage: bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
                 bitnet_linear_layers_total: 420,
                 bitnet_linear_layers_on_cuda: 420,
+                bitnet_linear_layers_on_a770_opencl: 0,
                 bitnet_linear_layers_cpu_fallback: 0,
                 unsupported_ops: Vec::new(),
                 execution_claim: "cuda_inference_contribution",

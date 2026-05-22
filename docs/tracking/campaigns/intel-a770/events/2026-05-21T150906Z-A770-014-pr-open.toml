@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T15:09:06Z"
+campaign = "intel-a770"
+item = "A770-014"
+event = "pr_open"
+pr = 198
+head_sha = "04420af9b8d28f513b69afd1e5474ae7e575809e"
+branch = "codex/intel-a770/A770-014-model-contract-route-alignment"
+actor = "codex"
+
+notes = [
+  "Opened PR #198 for A770-014 model-contract route alignment.",
+  "The PR lists the Intel Arc A770 OpenCL QK256 route in the official BitNet 2B I2_S model contract as diagnostic route-receipt-only.",
+  "No BitNet inference, answer quality, activation quantization residency, selected attention residency, resident KV, full residency, performance speedup, trusted-partial acceleration, or completion claim is promoted.",
+]

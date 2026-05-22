@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T16:39:55Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-EVIDENCE-REPLAY-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 200
+head_sha = "02981484dae23c7daf26349563916f40cdf5b11f"
+merge_sha = "04ada5d52397a1817bcac0299f1bf5c332a9d603"
+branch = "codex/apple-m4-inference-excellence/M4-EVIDENCE-REPLAY-001-replay-bundles"
+
+notes = [
+  "Closed M4-EVIDENCE-REPLAY-001 after PR #200 merged the model-free evidence replay bundle audit path into main.",
+  "The merged change records `bitnet mac evidence replay --bundle <manifest.json> --dry-run --json`, validates replay bundle and dry-run receipt contracts, and commits a dense SLM plus BitNet replay bundle manifest.",
+  "Closeout records the tracker state transition only; it does not run live inference, download models, validate uncommitted artifacts, enable BitNet chat or serve, or claim full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon support.",
+]

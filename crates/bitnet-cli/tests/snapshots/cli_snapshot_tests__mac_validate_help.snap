@@ -20,7 +20,7 @@ Options:
           Override model cache root. Defaults to ~/.cache/bitnet-rs/models
 
   -d, --device <DEVICE>
-          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, intel-a770-opencl, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
 
       --corpus <PATH>
           Deterministic SLM quality corpus
@@ -39,10 +39,11 @@ Options:
           Batch size for processing
 
       --profile-set <PROFILE_SET>
-          Validation profile set. Use operator for 16/32/64 profiles or performance for release-mode 16/32/64/128 profiles
+          Validation profile set. Use accuracy for M3 comparison metadata, operator for 16/32/64 profiles, or performance for release-mode 16/32/64/128 profiles
 
           Possible values:
           - smoke:       Run the deterministic smoke corpus once
+          - accuracy:    Run the deterministic quality corpus as an M3 accuracy comparison profile
           - operator:    Run bounded 16/32/64 warm-answer timing profiles and write an aggregate summary
           - performance: Run release-mode 16/32/64/128 warm-answer timing profiles
 

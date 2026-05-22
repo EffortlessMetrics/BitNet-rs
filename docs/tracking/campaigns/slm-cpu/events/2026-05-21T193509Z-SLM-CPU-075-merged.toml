@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T19:35:09Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-075"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 225
+branch = "codex/slm-cpu-075-packed-q8-instrumentation-artifact"
+head_sha = "493d1792b2794abca70f4ff387bd32faf1987d52"
+merge_sha = "d3bf2af3f5a8a635ad02fa8e0a7b00662c56b46b"
+summary = "Merged the packed Q8_0 sidecar instrumentation diagnostic artifact."
+notes = [
+  "The artifact consumes the SLM-CPU-074 counter surface and records that end-to-end Qwen3 warm-session receipts do not yet serialize transformer-side instrumentation snapshots.",
+  "The Kaby performance dashboard now points to the SLM-CPU-075 artifact and the next receipt-bridge target.",
+  "No speedup, default packed-Q8 enablement, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256 claim was made.",
+]

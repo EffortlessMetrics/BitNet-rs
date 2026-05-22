@@ -64,6 +64,8 @@ Commands:
           Ask one question using the answer-readiness generation path
   model
           Fetch, verify, list, and prune supported local model artifacts
+  support
+          Collect model status and receipt evidence for support
   cuda
           RTX 5070 Ti CUDA proof-lane utilities
   mac
@@ -114,6 +116,8 @@ Commands:
           Run dense Qwen one-token strict CUDA proof and emit a governed receipt
   dense-gguf-qwen-short-decode-strict-cuda
           Run dense Qwen short-decode strict CUDA proof and emit a governed receipt
+  dense-gguf-qwen-warm-decode-strict-cuda
+          Run Qwen3 warm-context decode strict CUDA proof and emit a governed receipt
   dense-gguf-qwen-warm-session-strict-cuda
           Run dense Qwen warm-session strict CUDA proof and emit a governed receipt
   dense-gguf-norm-fixture
@@ -198,7 +202,7 @@ Options:
           Configuration file path
 
   -d, --device <DEVICE>
-          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
+          Device/backend label (cpu, cuda/gpu, hip/rocm, oneapi, npu/openvino-npu, nvidia-rtx-5070-ti-cuda/wgpu, intel-a770-opencl, metal/mpsgraph, apple-m4-metal, apple-m4-mpsgraph, apple-m4-cpu-neon, apple-m3-air-metal, apple-m3-air-mpsgraph, apple-m3-air-cpu-neon, auto). Apple M4 and M3 Air labels are distinct proof lanes
 
       --log-level <LEVEL>
           Log level (trace, debug, info, warn, error)

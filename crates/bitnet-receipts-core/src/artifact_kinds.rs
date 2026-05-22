@@ -208,6 +208,14 @@ pub const DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
 /// proof claims false.
 pub const DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
     "dense_gguf_qwen_short_decode_strict_cuda_proof";
+/// Artifact kind for the governed Qwen3 warm-context decode strict CUDA proof.
+///
+/// This is a bounded Qwen3-only source-capture proof for the
+/// decode_128_from_warm_context repeated-comparator profile. It records decode
+/// from a prefilling warm context and must not imply ask/chat, speedup, server,
+/// full-residency, broad dense GGUF, or BitNet packed I2_S/QK256 proof claims.
+pub const DENSE_GGUF_QWEN_WARM_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND: &str =
+    "dense_gguf_qwen_warm_decode_strict_cuda_proof";
 /// Artifact kind for the governed dense Qwen warm-session strict CUDA proof.
 ///
 /// This is a bounded multi-turn proof layered after the short-decode proof. It

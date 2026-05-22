@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T02:51:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-068"
+event = "in_progress"
+previous_status = "not_present"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-068-exact-hook-timing-classification"
+summary = "Queued the exact-tensor runtime hook timing classification slice after SLM-CPU-067."
+notes = [
+  "SLM-CPU-068 must classify the committed SLM-CPU-067 before/after two-prompt 4-thread receipt timings without weakening the behavior oracle.",
+  "The slice must preserve eager F32 Candle as the default runtime and keep the packed Q8_0 sidecar hook exact-tensor and opt-in.",
+  "A regression or inconclusive timing result is acceptable; the item must not force a speedup claim from behavior-equivalence evidence alone.",
+]

@@ -1,0 +1,20 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-22T18:25:20Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-032"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-032-current-main"
+pr = 363
+head_sha = "4479be68465b692f3973dd811822b7d8e3cbb4b3"
+actor = "codex"
+summary = "Opened the no-inference Lunar Lake audit refresh PR for current swarm main after audit 031 closeout and post-357 handoff."
+
+notes = [
+  "PR #363 refreshes the audit/checklist source_revision to e7785bcec1b8ca85c2385af00c96dc789c4b11b5.",
+  "The PR records #350/#357 as Lunar Lake audit/tracker state only.",
+  "The PR records #359 as swarm handoff/operator state only.",
+  "The PR records #349/#354, #351, and #353 as adjacent SLM CPU, repo-boundary, or CUDA/Qwen3 state only.",
+  "LNL258V-POWER-006 remains blocked pending physical battery-mode low_power telemetry, energy proxy, measured thermal context, and benchmark-qualified power advantage.",
+  "No inference, route promotion, speedup, power advantage, native accelerator proof, runtime/sidecar behavior claim, semantic-intake stale claim, source-promotion claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change is claimed.",
+]

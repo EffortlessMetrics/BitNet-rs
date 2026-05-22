@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T04:46:33Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-016"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-016-post-a770-011"
+actor = "codex"
+summary = "Started a no-inference audit refresh after A770-011/#115 merged on swarm main."
+
+notes = [
+  "A770-011/#115 routes selected-device inline-scaled QK256 OpenCL candidate dispatch for A770 and carries an explicit non-promoting claim boundary.",
+  "The Lunar Lake refresh records A770-011/#115 as adjacent A770 OpenCL QK256 candidate evidence, not as a shared BitNet semantic rerun trigger.",
+  "POWER-006 remains blocked until real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage exist.",
+]

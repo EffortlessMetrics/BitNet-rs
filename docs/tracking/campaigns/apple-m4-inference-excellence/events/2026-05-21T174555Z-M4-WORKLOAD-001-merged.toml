@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T17:45:55Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-WORKLOAD-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 213
+head_sha = "38316ba48266898c974c197fd8c810379f1a301d"
+merge_sha = "c192699c106e7d3af8026ab6d8fcefaad96dd6a2"
+branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-operator-suite"
+
+notes = [
+  "Closed M4-WORKLOAD-001 after PR #213 merged the model-free M4 operator workload suite into main.",
+  "The merged change records `bitnet mac workload --suite m4-operator`, validates `apple_m4_operator_workload_suite` receipts, and commits the workload manifest at `ci/hardware/apple-m4-mac-mini/2026-05-21T171832Z/workload/summary.json`.",
+  "Closeout records the tracker state transition only; it does not run live inference, download models, enable disabled BitNet chat or serve, or claim full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon support.",
+]

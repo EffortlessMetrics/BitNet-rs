@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T10:44:10Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-071"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 177
+branch = "codex/slm-cpu-071-post070-real-timing-gate"
+merge_sha = "6f37670d3902c65dc69ba58ff70fa97ff4f8938c"
+summary = "Merged PR #177 for the real i5-8250U Qwen3 Q8_0 post-SLM-CPU-070 timing gate."
+notes = [
+  "This tracker sync records the merged support gate; it does not add a new runtime path or performance claim.",
+  "The packed Q8_0 sidecar candidate remains opt-in and exact-tensor scoped.",
+  "No default packed-Q8 enablement, sustained-throughput, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256 claim is made.",
+]

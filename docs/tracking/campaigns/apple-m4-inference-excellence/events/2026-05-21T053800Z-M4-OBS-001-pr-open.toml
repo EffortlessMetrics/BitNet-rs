@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T05:38:00Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OBS-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 151
+head_sha = "6fea6d82d7c7643a040279b957dc094cede8c866"
+branch = "codex/apple-m4-inference-excellence/M4-OBS-001-trace-correlation"
+
+notes = [
+  "Opened PR #151 for M4 observability trace correlation after M4-SERVE-EX-002 closeout merged.",
+  "The PR adds opt-in redacted trace IDs for `bitnet mac ask` and `bitnet mac serve`, linking progress/log diagnostics with per-run and per-request receipts.",
+  "Trace diagnostics record prompt hashes and correlation IDs only; raw prompts, rendered prompts, system prompts, cache paths, model paths, and tokenizer paths remain outside the observability block.",
+  "No model quality, benchmark performance, BitNet chat/serve enablement, production hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

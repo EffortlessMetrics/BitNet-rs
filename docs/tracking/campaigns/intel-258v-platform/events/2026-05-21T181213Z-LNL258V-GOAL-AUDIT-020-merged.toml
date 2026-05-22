@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T18:12:13Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-020"
+previous_status = "in_progress"
+new_status = "merged"
+pr = 216
+head_sha = "84be3ccf4a5da9b312c72972e7a525ac59658efd"
+merge_sha = "78facdeb627dd3df0afecdfdc0109658ac2f468b"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-020-openvino-env-overrides"
+actor = "codex"
+summary = "Merged the no-inference Lunar Lake OpenVINO ask environment override audit refresh."
+
+notes = [
+  "PR #216 refreshed lunar-lake-excellence-audit.json and lunar-lake-goal-artifact-checklist.json after PR #212 documented BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR and BITNET_LUNAR_LAKE_OPENVINO_PYTHON.",
+  "The refresh records #214/#215 as adjacent non-Lunar-Lake tracker closeout state and #207 as adjacent control-plane documentation while keeping LNL258V-POWER-006 blocked on real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage.",
+  "No inference, model load, fallback, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, dense-SLM-as-BitNet-proof, broad quality, model-binary, semantic-intake stale claim, or BitNet QK256/I2_S behavior change is claimed.",
+]

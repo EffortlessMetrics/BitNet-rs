@@ -63,7 +63,13 @@ pub fn build_cli() -> clap::Command {
 /// CLI interface version (SemVer for CLI surface compatibility)
 const INTERFACE_VERSION: &str = "1.0.0";
 const RTX_5070_TI_CUDA: &str = "nvidia-rtx-5070-ti-cuda";
+const INTEL_A770_OPENCL: &str = "intel-a770-opencl";
+const A770_OPENCL_QK256_KERNEL_ID: &str = "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate";
 const BITNET_CPP_ANSWER_TEMPLATE: &str = "bitnetcpp-answer";
+#[cfg(feature = "full-cli")]
+const LUNAR_LAKE_OPENVINO_MODEL_DIR_ENV: &str = "BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR";
+#[cfg(feature = "full-cli")]
+const LUNAR_LAKE_OPENVINO_PYTHON_ENV: &str = "BITNET_LUNAR_LAKE_OPENVINO_PYTHON";
 
 fn bitnet_version() -> &'static str {
     use std::sync::OnceLock;
@@ -191,8 +197,8 @@ use commands::{
     DenseGgufNormFixtureCommand, DenseGgufOneLayerCpuReferenceCommand,
     DenseGgufOneLayerCudaParityCommand, DenseGgufOneLayerPlanCommand,
     DenseGgufQwenOneTokenStrictCudaCommand, DenseGgufQwenShortDecodeStrictCudaCommand,
-    DenseGgufQwenWarmSessionStrictCudaCommand, DenseGgufRopeCudaParityCommand,
-    DenseGgufSamplingPolicyCommand, DenseQwenCudaAskOptions,
+    DenseGgufQwenWarmDecodeStrictCudaCommand, DenseGgufQwenWarmSessionStrictCudaCommand,
+    DenseGgufRopeCudaParityCommand, DenseGgufSamplingPolicyCommand, DenseQwenCudaAskOptions,
     ExternalReferenceInstrumentationCommand, FirstTokenDivergenceCommand, InferenceCommand,
     InspectCommand, LunarLakeAction, LunarLakeCommand, OutputHeadLogitsAuditCommand,
     ReceiptsCommand, ReferenceCompareCommand, ServeCommand, SupportCommand,
@@ -733,6 +739,10 @@ enum Commands {
     #[cfg(feature = "full-cli")]
     /// Run dense Qwen short-decode strict CUDA proof and emit a governed receipt
     DenseGgufQwenShortDecodeStrictCuda(Box<DenseGgufQwenShortDecodeStrictCudaCommand>),
+
+    #[cfg(feature = "full-cli")]
+    /// Run Qwen3 warm-context decode strict CUDA proof and emit a governed receipt
+    DenseGgufQwenWarmDecodeStrictCuda(Box<DenseGgufQwenWarmDecodeStrictCudaCommand>),
 
     #[cfg(feature = "full-cli")]
     /// Run dense Qwen warm-session strict CUDA proof and emit a governed receipt
@@ -1637,6 +1647,8 @@ async fn async_main() -> Result<()> {
         Some(Commands::DenseGgufQwenOneTokenStrictCuda(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufQwenShortDecodeStrictCuda(cmd)) => (*cmd).execute().await,
+        #[cfg(feature = "full-cli")]
+        Some(Commands::DenseGgufQwenWarmDecodeStrictCuda(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
         Some(Commands::DenseGgufQwenWarmSessionStrictCuda(cmd)) => (*cmd).execute().await,
         #[cfg(feature = "full-cli")]
@@ -4177,6 +4189,7 @@ async fn run_simple_generation(
         identity: backend_identity,
         strict_backend,
         strict_cuda_backend_selected,
+        strict_a770_opencl_backend_selected,
         cuda_memory_before_bytes,
     } = simple_generation::backend::prepare_generation_backend(
         requested_backend_label,
@@ -4547,6 +4560,7 @@ async fn run_simple_generation(
             "prompt_token_count": tokens.len(),
             "prefill_prefix_tokens": tokens.len().saturating_sub(1),
             "strict_cuda_backend_selected": strict_cuda_backend_selected,
+            "strict_a770_opencl_backend_selected": strict_a770_opencl_backend_selected,
         }),
     );
     simple_generation_operator_progress(operator_progress, "prompt_prefill_start", || {
@@ -5166,6 +5180,12 @@ async fn run_simple_generation(
             && runtime_api == "cuda"
             && loader_mode == bitnet_models::GgufLoaderMode::RealGguf.as_str()
             && !backend_identity.fallback_used;
+        let strict_a770_opencl_selected_artifact = strict_backend
+            && canonical_bitnet_model
+            && is_a770_opencl_backend_label(selected_backend)
+            && runtime_api == "opencl"
+            && loader_mode == bitnet_models::GgufLoaderMode::RealGguf.as_str()
+            && !backend_identity.fallback_used;
         let strict_cuda_proof_artifact =
             strict_cuda_selected_artifact && generated_tokens.len() == 1;
         let strict_cuda_short_decode_artifact =
@@ -5180,6 +5200,8 @@ async fn run_simple_generation(
         };
         let cuda_runtime_stats =
             strict_cuda_selected_artifact.then(bitnet_qk256_dispatch::qk256_cuda_runtime_stats);
+        let a770_opencl_runtime_stats = strict_a770_opencl_selected_artifact
+            .then(bitnet_qk256_dispatch::qk256_a770_opencl_runtime_stats);
         let weights_uploaded_once = cuda_weight_residency
             .as_ref()
             .map(|residency| residency.weights_uploaded_once)
@@ -5207,6 +5229,18 @@ async fn run_simple_generation(
                     "decode"
                 },
                 coverage_scope: "strict_cuda_ask_or_run",
+            })
+        });
+        let a770_opencl_execution_boundary = strict_a770_opencl_selected_artifact.then(|| {
+            a770_opencl_execution_boundary_receipt(A770OpenClExecutionBoundaryReceiptInput {
+                coverage: &bitnet_linear_coverage,
+                runtime_stats: a770_opencl_runtime_stats.as_ref(),
+                prompt_tokens: prompt_tokens_len,
+                generated_tokens: generated_tokens.len(),
+                kv_cache_device: "cpu",
+                kv_cache_reuse_policy: "per_run_incremental_decode",
+                execution_phase: if generated_tokens.len() > 1 { "short_decode" } else { "decode" },
+                coverage_scope: "strict_a770_opencl_ask_or_run",
             })
         });
         let execution_plan = strict_cuda_selected_artifact.then(|| {
@@ -5255,6 +5289,8 @@ async fn run_simple_generation(
             "strict_bitnet_cuda_proof"
         } else if strict_cuda_short_decode_artifact {
             "strict_bitnet_cuda_short_decode_proof"
+        } else if strict_a770_opencl_selected_artifact {
+            "strict_bitnet_a770_qk256_route_diagnostic"
         } else {
             "inference_result"
         };
@@ -5444,6 +5480,15 @@ async fn run_simple_generation(
                 "device_to_host_bytes": cuda_runtime_stats
                     .as_ref()
                     .map(|stats| stats.device_to_host_bytes),
+                "a770_opencl_host_to_device_bytes": a770_opencl_runtime_stats
+                    .as_ref()
+                    .map(|stats| stats.host_to_device_bytes),
+                "a770_opencl_device_to_host_bytes": a770_opencl_runtime_stats
+                    .as_ref()
+                    .map(|stats| stats.device_to_host_bytes),
+                "a770_opencl_kernel_invocations": a770_opencl_runtime_stats
+                    .as_ref()
+                    .map(|stats| stats.kernel_invocations),
             },
             "throughput": {
                 "tokens_per_second": tok_per_sec,
@@ -5493,6 +5538,7 @@ async fn run_simple_generation(
             "execution_coverage": {
                 "bitnet_linear_layers_total": bitnet_linear_coverage.bitnet_linear_layers_total,
                 "bitnet_linear_layers_on_cuda": bitnet_linear_coverage.bitnet_linear_layers_on_cuda,
+                "bitnet_linear_layers_on_a770_opencl": bitnet_linear_coverage.bitnet_linear_layers_on_a770_opencl,
                 "bitnet_linear_layers_cpu_fallback": bitnet_linear_coverage.bitnet_linear_layers_cpu_fallback,
                 "qk256_f32_scalar_gemv_invocations": qk256_cpu_hot_path.qk256_f32_scalar_gemv_invocations,
                 "qk256_f32_avx2_gemv_invocations": qk256_cpu_hot_path.qk256_f32_avx2_gemv_invocations,
@@ -5669,6 +5715,57 @@ async fn run_simple_generation(
                     serde_json::json!("dense_slm_gguf_cpu_reference"),
                 );
             }
+        }
+        if strict_a770_opencl_selected_artifact && let Some(object) = output.as_object_mut() {
+            object.insert(
+                "claim".to_string(),
+                serde_json::json!("strict_bitnet_a770_qk256_route_diagnostic"),
+            );
+            object.insert("quality_claim".to_string(), serde_json::json!(false));
+            object.insert("speedup_claim".to_string(), serde_json::json!(false));
+            object.insert("trusted_partial_claim".to_string(), serde_json::json!(false));
+            object.insert("residency_claim".to_string(), serde_json::json!(false));
+            if let Some(boundary) = &a770_opencl_execution_boundary {
+                object.insert("a770_opencl_execution_boundary".to_string(), boundary.clone());
+            }
+            object.insert(
+                "kernel_stats".to_string(),
+                qk256_a770_opencl_kernel_stats_receipt(
+                    &bitnet_linear_coverage,
+                    a770_opencl_runtime_stats.as_ref(),
+                ),
+            );
+            object.insert(
+                "kernel".to_string(),
+                serde_json::json!({
+                    "family": "qk256",
+                    "implementation": "a770-opencl-qk256-i8s-scaled-candidate",
+                    "layout": kernel_layout,
+                    "dequantizes_before_compute": true,
+                    "kernel_id": A770_OPENCL_QK256_KERNEL_ID,
+                    "activation_quantization_resident": false,
+                }),
+            );
+            if let Some(stats) = &a770_opencl_runtime_stats {
+                object.insert("a770_opencl".to_string(), a770_opencl_runtime_stats_receipt(stats));
+            }
+            if let Some(strict_provenance) =
+                object.get_mut("strict_provenance").and_then(serde_json::Value::as_object_mut)
+            {
+                strict_provenance.insert(
+                    "requested_kernel".to_string(),
+                    serde_json::json!(A770_OPENCL_QK256_KERNEL_ID),
+                );
+                strict_provenance.insert(
+                    "selected_kernel".to_string(),
+                    serde_json::json!(A770_OPENCL_QK256_KERNEL_ID),
+                );
+                strict_provenance.insert(
+                    "a770_opencl_kernel_invocations".to_string(),
+                    serde_json::json!(bitnet_linear_coverage.bitnet_linear_layers_on_a770_opencl),
+                );
+            }
+            object.insert("not_claims".to_string(), serde_json::json!(critical_not_claims()));
         }
         if strict_cuda_proof_artifact && let Some(object) = output.as_object_mut() {
             object.insert("claim".to_string(), serde_json::json!("strict_bitnet_cuda_inference"));
@@ -7650,6 +7747,9 @@ fn qk256_dispatch_coverage_delta(
         bitnet_linear_layers_on_cuda: after
             .bitnet_linear_layers_on_cuda
             .saturating_sub(before.bitnet_linear_layers_on_cuda),
+        bitnet_linear_layers_on_a770_opencl: after
+            .bitnet_linear_layers_on_a770_opencl
+            .saturating_sub(before.bitnet_linear_layers_on_a770_opencl),
         bitnet_linear_layers_cpu_fallback: cpu_fallback,
         unsupported_ops: unsupported_after
             .difference(&unsupported_before)
@@ -7658,6 +7758,10 @@ fn qk256_dispatch_coverage_delta(
         execution_claim: if after.bitnet_linear_layers_on_cuda > before.bitnet_linear_layers_on_cuda
         {
             "cuda_inference_contribution"
+        } else if after.bitnet_linear_layers_on_a770_opencl
+            > before.bitnet_linear_layers_on_a770_opencl
+        {
+            "a770_opencl_qk256_contribution"
         } else {
             after.execution_claim
         },
@@ -7671,6 +7775,7 @@ fn qk256_dispatch_coverage_receipt(
     serde_json::json!({
         "bitnet_linear_layers_total": coverage.bitnet_linear_layers_total,
         "bitnet_linear_layers_on_cuda": coverage.bitnet_linear_layers_on_cuda,
+        "bitnet_linear_layers_on_a770_opencl": coverage.bitnet_linear_layers_on_a770_opencl,
         "bitnet_linear_layers_cpu_fallback": coverage.bitnet_linear_layers_cpu_fallback,
         "unsupported_ops": coverage.unsupported_ops,
         "execution_claim": coverage.execution_claim,
@@ -7758,6 +7863,212 @@ fn qk256_kernel_stats_receipt(
             .map(serde_json::Value::from)
             .unwrap_or(serde_json::Value::Null),
     }])
+}
+
+fn qk256_a770_opencl_kernel_stats_receipt(
+    coverage: &bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    runtime_stats: Option<&bitnet_qk256_dispatch::Qk256A770OpenClRuntimeStats>,
+) -> serde_json::Value {
+    serde_json::json!([{
+        "kernel_id": A770_OPENCL_QK256_KERNEL_ID,
+        "invocations": coverage.bitnet_linear_layers_on_a770_opencl,
+        "fallback_invocations": coverage.bitnet_linear_layers_cpu_fallback,
+        "host_to_device_bytes": runtime_stats
+            .map(|stats| stats.host_to_device_bytes)
+            .map(serde_json::Value::from)
+            .unwrap_or(serde_json::Value::Null),
+        "device_to_host_bytes": runtime_stats
+            .map(|stats| stats.device_to_host_bytes)
+            .map(serde_json::Value::from)
+            .unwrap_or(serde_json::Value::Null),
+        "kernel_launches": runtime_stats
+            .map(|stats| stats.kernel_invocations)
+            .unwrap_or(coverage.bitnet_linear_layers_on_a770_opencl),
+        "kernel_time_ms": serde_json::Value::Null,
+        "kernel_time_samples": serde_json::Value::Null,
+        "runtime_api": "opencl",
+        "claim_level": "diagnostic",
+        "activation_quantization_resident": false,
+        "speedup_claim": false,
+        "residency_claim": false,
+    }])
+}
+
+fn a770_opencl_runtime_stats_receipt(
+    stats: &bitnet_qk256_dispatch::Qk256A770OpenClRuntimeStats,
+) -> serde_json::Value {
+    serde_json::json!({
+        "runtime_api": "opencl",
+        "kernel_invocations": stats.kernel_invocations,
+        "host_to_device_bytes": stats.host_to_device_bytes,
+        "device_to_host_bytes": stats.device_to_host_bytes,
+        "runtime_device": stats.last_device.as_ref().map(|device| {
+            serde_json::json!({
+                "platform_index": device.platform_index,
+                "device_index": device.device_index,
+                "platform_name": device.platform_name.as_str(),
+                "name": device.runtime_device.as_str(),
+                "vendor": device.vendor.as_str(),
+                "driver_version": device.driver_version.as_str(),
+            })
+        }),
+        "claim_level": "diagnostic",
+        "bitnet_inference_claim": false,
+        "quality_claim": false,
+        "speedup_claim": false,
+        "residency_claim": false,
+    })
+}
+
+struct A770OpenClExecutionBoundaryReceiptInput<'a> {
+    coverage: &'a bitnet_qk256_dispatch::Qk256DispatchCoverageCounters,
+    runtime_stats: Option<&'a bitnet_qk256_dispatch::Qk256A770OpenClRuntimeStats>,
+    prompt_tokens: usize,
+    generated_tokens: usize,
+    kv_cache_device: &'a str,
+    kv_cache_reuse_policy: &'a str,
+    execution_phase: &'a str,
+    coverage_scope: &'a str,
+}
+
+fn a770_opencl_execution_boundary_receipt(
+    input: A770OpenClExecutionBoundaryReceiptInput<'_>,
+) -> serde_json::Value {
+    let coverage = input.coverage;
+    let runtime_stats = input.runtime_stats;
+    let qk256_on_a770 = coverage.bitnet_linear_layers_on_a770_opencl;
+    let qk256_cpu_fallback = coverage.bitnet_linear_layers_cpu_fallback;
+    let transfer_bytes_measured = runtime_stats
+        .is_some_and(|stats| stats.host_to_device_bytes > 0 || stats.device_to_host_bytes > 0);
+    let kernel_invocations =
+        runtime_stats.map(|stats| stats.kernel_invocations).unwrap_or(qk256_on_a770);
+    let runtime_device = runtime_stats.and_then(|stats| stats.last_device.as_ref());
+    let qk256_boundary = if qk256_on_a770 > 0 && qk256_cpu_fallback == 0 {
+        "a770_opencl_qk256_compute_with_cpu_activation_quantization"
+    } else if qk256_on_a770 > 0 {
+        "mixed_a770_opencl_and_cpu_fallback"
+    } else {
+        "not_observed"
+    };
+
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "coverage_scope": input.coverage_scope,
+        "execution_phase": input.execution_phase,
+        "prompt_and_decode": {
+            "prompt_tokens": input.prompt_tokens,
+            "generated_tokens": input.generated_tokens,
+        },
+        "qk256_bitnet_linears": {
+            "kernel_id": A770_OPENCL_QK256_KERNEL_ID,
+            "boundary": qk256_boundary,
+            "bitnet_linear_layers_total": coverage.bitnet_linear_layers_total,
+            "bitnet_linear_layers_on_a770_opencl": qk256_on_a770,
+            "bitnet_linear_layers_cpu_fallback": qk256_cpu_fallback,
+            "unsupported_ops": coverage.unsupported_ops,
+            "fallback_used": qk256_cpu_fallback > 0,
+            "kernel_invocations": kernel_invocations,
+        },
+        "runtime_device": runtime_device.map(|device| {
+            serde_json::json!({
+                "platform_index": device.platform_index,
+                "device_index": device.device_index,
+                "platform_name": device.platform_name.as_str(),
+                "name": device.runtime_device.as_str(),
+                "vendor": device.vendor.as_str(),
+                "driver_version": device.driver_version.as_str(),
+            })
+        }),
+        "kv_cache": {
+            "enabled": true,
+            "device": input.kv_cache_device,
+            "residency": if input.kv_cache_device == "opencl" {
+                "opencl_resident"
+            } else {
+                "cpu_resident"
+            },
+            "reuse_policy": input.kv_cache_reuse_policy,
+            "a770_residency_claimed": false,
+        },
+        "phase_residency": {
+            "activation_quantization": {
+                "residency": "cpu_resident",
+                "a770_residency_claimed": false,
+            },
+            "token_embeddings": {
+                "residency": "cpu_resident_or_not_a770_claimed",
+                "a770_residency_claimed": false,
+            },
+            "rmsnorm": {
+                "residency": "cpu_resident_or_not_a770_claimed",
+                "a770_residency_claimed": false,
+            },
+            "sub_layernorm": {
+                "residency": "cpu_resident_or_not_a770_claimed",
+                "a770_residency_claimed": false,
+            },
+            "rope": {
+                "residency": "cpu_resident_or_not_a770_claimed",
+                "a770_residency_claimed": false,
+            },
+            "attention_scores": {
+                "residency": "cpu_resident_or_not_a770_claimed",
+                "a770_residency_claimed": false,
+            },
+            "attention_softmax": {
+                "residency": "cpu_resident_or_not_a770_claimed",
+                "a770_residency_claimed": false,
+            },
+            "attention_value_mix": {
+                "residency": "cpu_resident_or_not_a770_claimed",
+                "a770_residency_claimed": false,
+            },
+            "relu2_activation": {
+                "residency": "cpu_resident_or_not_a770_claimed",
+                "a770_residency_claimed": false,
+            },
+            "lm_head": {
+                "residency": "cpu_resident_or_not_a770_claimed",
+                "a770_residency_claimed": false,
+            },
+            "sampling": {
+                "residency": "cpu_resident",
+                "a770_residency_claimed": false,
+            },
+        },
+        "host_device_transfer_accounting": {
+            "status": if transfer_bytes_measured {
+                "qk256_measured"
+            } else {
+                "not_measured"
+            },
+            "host_to_device_bytes": runtime_stats
+                .map(|stats| stats.host_to_device_bytes)
+                .map(serde_json::Value::from)
+                .unwrap_or(serde_json::Value::Null),
+            "device_to_host_bytes": runtime_stats
+                .map(|stats| stats.device_to_host_bytes)
+                .map(serde_json::Value::from)
+                .unwrap_or(serde_json::Value::Null),
+            "kernel_time_ms": serde_json::Value::Null,
+            "note": "A770 OpenCL QK256 transfer bytes are measured for the routed QK256 GEMV path only; full transformer residency, transfer timing, quality, and speed remain separate claims.",
+        },
+        "claim_boundary": {
+            "strict_a770_opencl_cli_route_selected": true,
+            "strict_a770_opencl_answer_path_claimed": false,
+            "qk256_a770_opencl_execution_observed": qk256_on_a770 > 0,
+            "activation_quantization_resident": false,
+            "qk256_a770_residency_claimed": false,
+            "selected_attention_resident": false,
+            "resident_kv_claimed": false,
+            "full_transformer_a770_residency_claimed": false,
+            "full_device_residency_claimed": false,
+            "answer_quality_claim": false,
+            "trusted_partial_acceleration_claimed": false,
+            "speedup_claim": false,
+            "claim_allowed": false,
+        },
+    })
 }
 
 struct CudaExecutionResidencyReceiptInput<'a> {
@@ -8318,6 +8629,7 @@ async fn run_slm_warm_session(
     });
     let mut sampler_reused_prompt_count = 0usize;
     let mut sampler_recreated_prompt_count = 0usize;
+    bitnet_transformer::reset_dense_q8_sidecar_instrumentation();
     for (index, prompt_input) in prompt_inputs.iter().enumerate() {
         output.status(format!(
             "warm-session: prompt {}/{} started",
@@ -8894,6 +9206,11 @@ async fn run_slm_warm_session(
         ));
     }
     drop(allocation_audit_guard);
+    let dense_q8_sidecar_instrumentation =
+        slm_warm_session_dense_q8_sidecar_instrumentation_receipt(
+            bitnet_transformer::dense_q8_sidecar_instrumentation_snapshot(),
+            &dense_q8_hook_selection,
+        );
 
     let total_session_ms = elapsed_ms(session_start);
     let speed_summary = speed_accumulator.receipt(
@@ -9053,6 +9370,7 @@ async fn run_slm_warm_session(
             "fallback_reason": backend_identity.fallback_reason.as_deref(),
         },
         "dense_q8_hook_selection": dense_q8_hook_selection,
+        "dense_q8_sidecar_instrumentation": dense_q8_sidecar_instrumentation,
         "cpu": {
             "model": cpu_model.as_str(),
             "arch": std::env::consts::ARCH,
@@ -10140,6 +10458,77 @@ fn slm_warm_session_determinism_receipt(
 }
 
 #[cfg(feature = "full-cli")]
+fn slm_warm_session_dense_q8_sidecar_instrumentation_receipt(
+    snapshot: bitnet_transformer::DenseQ8SidecarInstrumentationSnapshot,
+    dense_q8_hook_selection: &serde_json::Value,
+) -> serde_json::Value {
+    const EXACT_TENSOR: &str = "layers.0.attention.q_proj.weight";
+
+    let classification = if snapshot.selector_selected_calls > 0 {
+        "selected_counter_pack"
+    } else if snapshot.selector_dispatch_calls > 0 {
+        "selector_observed_without_packed_selection"
+    } else {
+        "no_sidecar_dispatch_observed"
+    };
+
+    serde_json::json!({
+        "schema_version": "1.0.0",
+        "artifact_kind": "slm_cpu_dense_q8_sidecar_instrumentation",
+        "tracking_item": "SLM-CPU-076",
+        "instrumentation_available": true,
+        "reset_before_prompt_loop": true,
+        "snapshot_after_prompt_loop": true,
+        "default_runtime": "eager_f32_candle",
+        "default_runtime_changed": false,
+        "packed_q8_sidecar_default_enabled": false,
+        "packed_q8_sidecar_scope": "opt_in_exact_tensor_only",
+        "exact_tensor": EXACT_TENSOR,
+        "dense_q8_hook_selection": dense_q8_hook_selection,
+        "classification": classification,
+        "counters": {
+            "selector_dispatch_calls": snapshot.selector_dispatch_calls,
+            "selector_selected_calls": snapshot.selector_selected_calls,
+            "selector_declined_calls": snapshot.selector_declined_calls,
+            "selector_error_calls": snapshot.selector_error_calls,
+            "selector_dispatch_ns": snapshot.selector_dispatch_ns,
+            "input_materialization_calls": snapshot.input_materialization_calls,
+            "input_materialization_ns": snapshot.input_materialization_ns,
+            "input_values_materialized": snapshot.input_values_materialized,
+            "bias_materialization_calls": snapshot.bias_materialization_calls,
+            "bias_materialization_ns": snapshot.bias_materialization_ns,
+            "bias_values_materialized": snapshot.bias_values_materialized,
+            "packed_matvec_calls": snapshot.packed_matvec_calls,
+            "packed_matvec_ns": snapshot.packed_matvec_ns,
+            "packed_matvec_input_rows": snapshot.packed_matvec_input_rows,
+            "packed_matvec_output_values": snapshot.packed_matvec_output_values,
+            "output_tensor_construction_calls": snapshot.output_tensor_construction_calls,
+            "output_tensor_construction_ns": snapshot.output_tensor_construction_ns,
+        },
+        "behavior_oracle_fields": [
+            "model.sha256",
+            "tokenizer.source",
+            "tokenizer.strict",
+            "selected_backend",
+            "fallback_used",
+            "prompts[].generated_token_ids",
+            "prompts[].text"
+        ],
+        "speedup_claim": false,
+        "claim_boundary": {
+            "no_default_enable": true,
+            "no_broaden_beyond_exact_tensor": true,
+            "no_sustained_throughput_claim": true,
+            "no_broad_answer_quality_claim": true,
+            "no_q4_q5_runtime_support": true,
+            "no_server_or_accelerator_claim": true,
+            "no_qwen35_claim": true,
+            "no_bitnet_qk256_claim": true,
+        },
+    })
+}
+
+#[cfg(feature = "full-cli")]
 fn slm_cpu_warm_session_memory_context_json() -> serde_json::Value {
     let mut system = sysinfo::System::new();
     let pid = match sysinfo::get_current_pid() {
@@ -10506,10 +10895,17 @@ fn resolve_lunar_lake_ask_model_path(
     } else {
         candidates.iter().map(|path| path.display().to_string()).collect::<Vec<_>>().join(", ")
     };
+    let override_hint = match route.runtime_api.as_str() {
+        "openvino_genai" => {
+            format!("; set --model or {LUNAR_LAKE_OPENVINO_MODEL_DIR_ENV}=<OpenVINO IR directory>")
+        }
+        _ => "; set --model".to_string(),
+    };
     anyhow::bail!(
-        "lunar-lake ask requires --model for executable route `{}` because no committed local default model path exists; checked: {}",
+        "lunar-lake ask requires --model for executable route `{}` because no committed local default model path exists; checked: {}{}",
         route.route_id,
-        candidate_list
+        candidate_list,
+        override_hint
     )
 }
 
@@ -10533,8 +10929,22 @@ fn default_lunar_lake_ask_model_path_candidates(
 fn default_lunar_lake_openvino_model_candidates(
     artifact_root: &std::path::Path,
 ) -> Vec<std::path::PathBuf> {
+    default_lunar_lake_openvino_model_candidates_with_override(
+        artifact_root,
+        std::env::var_os(LUNAR_LAKE_OPENVINO_MODEL_DIR_ENV),
+    )
+}
+
+#[cfg(feature = "full-cli")]
+fn default_lunar_lake_openvino_model_candidates_with_override(
+    artifact_root: &std::path::Path,
+    model_dir_override: Option<std::ffi::OsString>,
+) -> Vec<std::path::PathBuf> {
     let manifest_path = artifact_root.join("slm-openvino-ir-qwen25-int4-sym-manifest.json");
     let mut candidates = Vec::new();
+    if let Some(path) = non_empty_env_path(model_dir_override) {
+        candidates.push(path);
+    }
     if let Some(manifest) = read_optional_json(&manifest_path)
         && let Some(path) = json_pointer_string(&manifest, "/export_contract/expected_output_dir")
     {
@@ -10653,8 +11063,9 @@ fn run_openvino_lunar_lake_operator_ask(ctx: OpenVINOOperatorAskContext<'_>) -> 
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!(
-            "OpenVINO operator ask helper failed with status {}.\nstdout:\n{}\nstderr:\n{}",
+            "OpenVINO operator ask helper failed with status {} using Python {}. Set {LUNAR_LAKE_OPENVINO_PYTHON_ENV}=<python.exe with openvino_genai> when the checkout-local .venv is not prepared.\nstdout:\n{}\nstderr:\n{}",
             output.status,
+            python.display(),
             stdout.trim(),
             stderr.trim()
         );
@@ -10675,8 +11086,24 @@ fn openvino_operator_device_for_route(
 
 #[cfg(feature = "full-cli")]
 fn openvino_operator_python() -> std::path::PathBuf {
+    openvino_operator_python_with_override(std::env::var_os(LUNAR_LAKE_OPENVINO_PYTHON_ENV))
+}
+
+#[cfg(feature = "full-cli")]
+fn openvino_operator_python_with_override(
+    python_override: Option<std::ffi::OsString>,
+) -> std::path::PathBuf {
+    if let Some(path) = non_empty_env_path(python_override) {
+        return path;
+    }
     let venv_python = std::path::PathBuf::from(".venv").join("Scripts").join("python.exe");
     if venv_python.exists() { venv_python } else { std::path::PathBuf::from("python") }
+}
+
+#[cfg(feature = "full-cli")]
+fn non_empty_env_path(value: Option<std::ffi::OsString>) -> Option<std::path::PathBuf> {
+    let path = std::path::PathBuf::from(value?);
+    if path.as_os_str().is_empty() { None } else { Some(path) }
 }
 
 #[cfg(feature = "full-cli")]
@@ -11753,11 +12180,11 @@ fn windows_cuda_toolkit_search_roots() -> Vec<std::path::PathBuf> {
     }
     roots.push(std::path::PathBuf::from(r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"));
 
-    dedupe_paths(roots)
+    dedupe_process_paths(roots)
 }
 
 #[cfg(all(feature = "cuda", target_os = "windows"))]
-fn dedupe_paths(paths: Vec<std::path::PathBuf>) -> Vec<std::path::PathBuf> {
+fn dedupe_process_paths(paths: Vec<std::path::PathBuf>) -> Vec<std::path::PathBuf> {
     let mut deduped = Vec::<std::path::PathBuf>::new();
     for path in paths {
         if !deduped.iter().any(|existing| paths_equal_for_process_path(existing, &path)) {
@@ -12426,6 +12853,13 @@ fn profile_machine_context_recorded(
     apple_machine_present || cpu_model_present || !cpu_features.is_empty()
 }
 
+pub(crate) fn is_a770_opencl_backend_label(label: &str) -> bool {
+    let normalized = label.trim().to_ascii_lowercase();
+    normalized == INTEL_A770_OPENCL
+        || matches!(normalized.as_str(), "intel-arc-a770-opencl" | "a770-opencl")
+        || (normalized.contains("a770") && normalized.contains("opencl"))
+}
+
 fn allocation_audit_backend_supported(identity: &RunBackendIdentity) -> bool {
     is_supported_apple_cpu_neon_backend(identity.requested_backend.as_str())
         && identity.selected_backend == identity.requested_backend
@@ -12919,6 +13353,50 @@ mod tests {
 
     #[test]
     #[cfg(feature = "full-cli")]
+    fn slm_warm_session_dense_q8_sidecar_instrumentation_receipt_records_counters() {
+        let snapshot = bitnet_transformer::DenseQ8SidecarInstrumentationSnapshot {
+            selector_dispatch_calls: 2,
+            selector_selected_calls: 1,
+            selector_declined_calls: 1,
+            selector_error_calls: 0,
+            selector_dispatch_ns: 100,
+            input_materialization_calls: 1,
+            input_materialization_ns: 200,
+            input_values_materialized: 1024,
+            bias_materialization_calls: 1,
+            bias_materialization_ns: 30,
+            bias_values_materialized: 1024,
+            packed_matvec_calls: 1,
+            packed_matvec_ns: 300,
+            packed_matvec_input_rows: 1,
+            packed_matvec_output_values: 1024,
+            output_tensor_construction_calls: 1,
+            output_tensor_construction_ns: 40,
+        };
+        let selection = serde_json::json!({
+            "selected_path": "packed_q8_sidecar",
+            "selected_tensor": "layers.0.attention.q_proj.weight",
+        });
+
+        let receipt =
+            slm_warm_session_dense_q8_sidecar_instrumentation_receipt(snapshot, &selection);
+
+        assert_eq!(receipt["tracking_item"], "SLM-CPU-076");
+        assert_eq!(receipt["default_runtime"], "eager_f32_candle");
+        assert_eq!(receipt["default_runtime_changed"], false);
+        assert_eq!(receipt["packed_q8_sidecar_default_enabled"], false);
+        assert_eq!(receipt["exact_tensor"], "layers.0.attention.q_proj.weight");
+        assert_eq!(receipt["classification"], "selected_counter_pack");
+        assert_eq!(receipt["counters"]["selector_dispatch_calls"], 2);
+        assert_eq!(receipt["counters"]["packed_matvec_calls"], 1);
+        assert_eq!(receipt["counters"]["input_values_materialized"], 1024);
+        assert_eq!(receipt["dense_q8_hook_selection"]["selected_path"], "packed_q8_sidecar");
+        assert_eq!(receipt["speedup_claim"], false);
+        assert_eq!(receipt["claim_boundary"]["no_q4_q5_runtime_support"], true);
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
     fn slm_warm_session_disk_context_resolves_missing_receipt_parent() {
         let relative_missing_receipt =
             std::path::Path::new(".").join("__bitnet_missing_warm_session_receipt.json");
@@ -13394,6 +13872,7 @@ mod tests {
         let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
             bitnet_linear_layers_total: 42,
             bitnet_linear_layers_on_cuda: 42,
+            bitnet_linear_layers_on_a770_opencl: 0,
             bitnet_linear_layers_cpu_fallback: 0,
             unsupported_ops: Vec::new(),
             execution_claim: "cuda_inference_contribution",
@@ -13437,6 +13916,7 @@ mod tests {
         let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
             bitnet_linear_layers_total: 2,
             bitnet_linear_layers_on_cuda: 1,
+            bitnet_linear_layers_on_a770_opencl: 0,
             bitnet_linear_layers_cpu_fallback: 1,
             unsupported_ops: vec!["qk256_cpu_fallback".to_string()],
             execution_claim: "cuda_inference_contribution",
@@ -13479,6 +13959,7 @@ mod tests {
         let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
             bitnet_linear_layers_total: 4,
             bitnet_linear_layers_on_cuda: 4,
+            bitnet_linear_layers_on_a770_opencl: 0,
             bitnet_linear_layers_cpu_fallback: 0,
             unsupported_ops: Vec::new(),
             execution_claim: "cuda_inference_contribution",
@@ -13499,6 +13980,114 @@ mod tests {
         assert_eq!(receipt[0]["device_to_host_bytes"], 2048);
         assert_eq!(receipt[0]["kernel_time_ms"], 1.235);
         assert_eq!(receipt[0]["kernel_time_samples"], 4);
+    }
+
+    #[test]
+    fn qk256_a770_opencl_kernel_stats_receipt_records_measured_accounting() {
+        let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+            bitnet_linear_layers_total: 4,
+            bitnet_linear_layers_on_cuda: 0,
+            bitnet_linear_layers_on_a770_opencl: 4,
+            bitnet_linear_layers_cpu_fallback: 0,
+            unsupported_ops: Vec::new(),
+            execution_claim: "a770_opencl_qk256_contribution",
+        };
+        let runtime_stats = bitnet_qk256_dispatch::Qk256A770OpenClRuntimeStats {
+            host_to_device_bytes: 8192,
+            device_to_host_bytes: 1024,
+            kernel_invocations: 4,
+            last_device: None,
+        };
+
+        let receipt = qk256_a770_opencl_kernel_stats_receipt(&coverage, Some(&runtime_stats));
+
+        assert_eq!(receipt[0]["kernel_id"], A770_OPENCL_QK256_KERNEL_ID);
+        assert_eq!(receipt[0]["invocations"], 4);
+        assert_eq!(receipt[0]["fallback_invocations"], 0);
+        assert_eq!(receipt[0]["host_to_device_bytes"], 8192);
+        assert_eq!(receipt[0]["device_to_host_bytes"], 1024);
+        assert_eq!(receipt[0]["kernel_launches"], 4);
+        assert_eq!(receipt[0]["runtime_api"], "opencl");
+        assert_eq!(receipt[0]["claim_level"], "diagnostic");
+        assert_eq!(receipt[0]["activation_quantization_resident"], false);
+        assert_eq!(receipt[0]["speedup_claim"], false);
+        assert_eq!(receipt[0]["residency_claim"], false);
+    }
+
+    #[test]
+    fn a770_opencl_execution_boundary_preserves_non_promoting_claims() {
+        let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
+            bitnet_linear_layers_total: 4,
+            bitnet_linear_layers_on_cuda: 0,
+            bitnet_linear_layers_on_a770_opencl: 4,
+            bitnet_linear_layers_cpu_fallback: 0,
+            unsupported_ops: Vec::new(),
+            execution_claim: "a770_opencl_qk256_contribution",
+        };
+        let runtime_stats = bitnet_qk256_dispatch::Qk256A770OpenClRuntimeStats {
+            host_to_device_bytes: 8192,
+            device_to_host_bytes: 1024,
+            kernel_invocations: 4,
+            last_device: Some(bitnet_qk256_dispatch::A770OpenClRuntimeDevice {
+                platform_index: 0,
+                device_index: 0,
+                platform_name: "Intel(R) OpenCL".to_string(),
+                runtime_device: "Intel(R) Arc(TM) A770 Graphics".to_string(),
+                vendor: "Intel(R) Corporation".to_string(),
+                driver_version: "32.0.101.8801".to_string(),
+            }),
+        };
+
+        let receipt =
+            a770_opencl_execution_boundary_receipt(A770OpenClExecutionBoundaryReceiptInput {
+                coverage: &coverage,
+                runtime_stats: Some(&runtime_stats),
+                prompt_tokens: 8,
+                generated_tokens: 2,
+                kv_cache_device: "cpu",
+                kv_cache_reuse_policy: "per_run_incremental_decode",
+                execution_phase: "short_decode",
+                coverage_scope: "strict_a770_opencl_ask_or_run",
+            });
+
+        assert_eq!(receipt["coverage_scope"], "strict_a770_opencl_ask_or_run");
+        assert_eq!(
+            receipt["qk256_bitnet_linears"]["boundary"],
+            "a770_opencl_qk256_compute_with_cpu_activation_quantization"
+        );
+        assert_eq!(receipt["qk256_bitnet_linears"]["bitnet_linear_layers_on_a770_opencl"], 4);
+        assert_eq!(receipt["qk256_bitnet_linears"]["bitnet_linear_layers_cpu_fallback"], 0);
+        assert_eq!(receipt["runtime_device"]["name"], "Intel(R) Arc(TM) A770 Graphics");
+        assert_eq!(receipt["kv_cache"]["device"], "cpu");
+        assert_eq!(receipt["kv_cache"]["a770_residency_claimed"], false);
+        assert_eq!(
+            receipt["phase_residency"]["activation_quantization"]["residency"],
+            "cpu_resident"
+        );
+        assert_eq!(
+            receipt["phase_residency"]["attention_softmax"]["a770_residency_claimed"],
+            false
+        );
+        assert_eq!(receipt["host_device_transfer_accounting"]["status"], "qk256_measured");
+        assert_eq!(receipt["claim_boundary"]["qk256_a770_opencl_execution_observed"], true);
+        assert_eq!(receipt["claim_boundary"]["activation_quantization_resident"], false);
+        assert_eq!(receipt["claim_boundary"]["qk256_a770_residency_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["selected_attention_resident"], false);
+        assert_eq!(receipt["claim_boundary"]["resident_kv_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["full_transformer_a770_residency_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["answer_quality_claim"], false);
+        assert_eq!(receipt["claim_boundary"]["trusted_partial_acceleration_claimed"], false);
+        assert_eq!(receipt["claim_boundary"]["speedup_claim"], false);
+        assert_eq!(receipt["claim_boundary"]["claim_allowed"], false);
+    }
+
+    #[test]
+    fn a770_opencl_backend_label_accepts_swarm_route_aliases() {
+        assert!(is_a770_opencl_backend_label(INTEL_A770_OPENCL));
+        assert!(is_a770_opencl_backend_label("intel-arc-a770-opencl"));
+        assert!(is_a770_opencl_backend_label("a770-opencl"));
+        assert!(!is_a770_opencl_backend_label("opencl"));
+        assert!(!is_a770_opencl_backend_label(RTX_5070_TI_CUDA));
     }
 
     #[test]
@@ -13531,6 +14120,7 @@ mod tests {
         let coverage = bitnet_qk256_dispatch::Qk256DispatchCoverageCounters {
             bitnet_linear_layers_total: 4,
             bitnet_linear_layers_on_cuda: 4,
+            bitnet_linear_layers_on_a770_opencl: 0,
             bitnet_linear_layers_cpu_fallback: 0,
             unsupported_ops: Vec::new(),
             execution_claim: "cuda_inference_contribution",
@@ -14007,6 +14597,36 @@ mod tests {
 
     #[cfg(feature = "full-cli")]
     #[test]
+    fn lunar_lake_ask_default_openvino_model_path_prefers_env_override() -> Result<()> {
+        let temp_dir = tempfile::tempdir().context("temp dir")?;
+        let artifact_root = temp_dir.path().join("artifacts");
+        std::fs::create_dir_all(&artifact_root).context("artifact root")?;
+        let override_dir = temp_dir.path().join("operator-openvino-model");
+        let manifest_dir = temp_dir.path().join("manifest-openvino-model");
+        std::fs::create_dir_all(&override_dir).context("override model dir")?;
+        std::fs::create_dir_all(&manifest_dir).context("manifest model dir")?;
+        std::fs::write(
+            artifact_root.join("slm-openvino-ir-qwen25-int4-sym-manifest.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "artifact_kind": "intel_258v_dense_slm_openvino_ir_manifest",
+                "export_contract": {"expected_output_dir": manifest_dir}
+            }))
+            .context("manifest json")?,
+        )
+        .context("manifest receipt")?;
+
+        let candidates = default_lunar_lake_openvino_model_candidates_with_override(
+            &artifact_root,
+            Some(override_dir.clone().into_os_string()),
+        );
+
+        assert_eq!(candidates.first(), Some(&override_dir));
+        assert!(candidates.contains(&manifest_dir));
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
     fn lunar_lake_ask_default_model_path_prefers_explicit_model() -> Result<()> {
         let temp_dir = tempfile::tempdir().context("temp dir")?;
         let artifact_root = temp_dir.path().join("artifacts");
@@ -14029,6 +14649,17 @@ mod tests {
             .context("explicit model is accepted")?;
         assert_eq!(resolved, explicit);
         Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_openvino_operator_python_prefers_env_override() {
+        let override_python = std::path::PathBuf::from("C:/tools/openvino/python.exe");
+
+        let resolved =
+            openvino_operator_python_with_override(Some(override_python.clone().into_os_string()));
+
+        assert_eq!(resolved, override_python);
     }
 
     #[cfg(feature = "full-cli")]

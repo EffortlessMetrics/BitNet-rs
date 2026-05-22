@@ -15,6 +15,19 @@ Each campaign has:
 
 Global dashboards are generated from campaign manifests and events. Agents should not solve global dashboard conflicts by deleting hardware lanes.
 
+Lane ownership and shared-surface rules are defined in
+[`LANE_OWNERSHIP.md`](LANE_OWNERSHIP.md). PRs must declare their lane,
+campaign, work item, orchestrator, branch, base main SHA, allowed paths, shared
+surfaces touched, and closeout requirement so parallel orchestrators can avoid
+collisions.
+
+Repository-boundary work is a lane, not an exception to the tracker model.
+Source-sync, swarm-to-source promotion, branch-protection interpretation, and
+machine cutover docs must declare source impact, release/publish/signing
+impact, excluded work, source commit, swarm base commit, merge method, and
+promotion or sync packet status. Generated dashboards remain derived state;
+they do not decide whether swarm-only work is source authority.
+
 Use:
 
 ```bash

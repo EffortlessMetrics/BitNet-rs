@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T17:18:57Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-081"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 349
+branch = "codex/slm-cpu-081-repeated-packed-q8-timing"
+head_sha = "2b996d200112070d9c98d77057759810f4723fc3"
+merge_sha = "149247d66b04b8297f32d8b7d4096b401bd9f73c"
+summary = "Merged PR #349 with the repeated packed-Q8 timing evidence gate."
+notes = [
+  "The merged gate records current SLM-CPU-077/079 evidence as single-run counter evidence and keeps repeated end-to-end timing classified as not_claimed.",
+  "Future timing claims require repeated behavior-equivalent before/after warm-session receipts for the same host, model SHA, prompt corpus, thread count, tokenizer authority, backend identity, dense hook identity, and fallback=false boundary.",
+  "No default packed-Q8 enablement, end-to-end speedup, sustained-throughput, Q4/Q5, server, accelerator, Qwen3.5, or BitNet QK256 claim was made.",
+]

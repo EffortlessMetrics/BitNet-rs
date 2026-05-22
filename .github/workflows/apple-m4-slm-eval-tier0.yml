@@ -11,6 +11,7 @@ on:
       - 'ci/hardware/apple-m4-mac-mini/**/slm-eval-v2/**/summary.json'
       - 'ci/hardware/apple-m4-mac-mini/**/slm-benchmark-v2/**/summary.json'
       - 'crates/bitnet-cli/**'
+      - 'docs/slm/apple-m4-evidence-ci-lanes.md'
       - 'docs/slm/apple-m4-slm-eval-and-proof.md'
       - 'docs/slm/apple-m4-slm-eval-v2.md'
       - 'docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**'
@@ -25,6 +26,7 @@ on:
       - 'ci/hardware/apple-m4-mac-mini/**/slm-eval-v2/**/summary.json'
       - 'ci/hardware/apple-m4-mac-mini/**/slm-benchmark-v2/**/summary.json'
       - 'crates/bitnet-cli/**'
+      - 'docs/slm/apple-m4-evidence-ci-lanes.md'
       - 'docs/slm/apple-m4-slm-eval-and-proof.md'
       - 'docs/slm/apple-m4-slm-eval-v2.md'
       - 'docs/tracking/campaigns/apple-m4-slm-eval-and-proof/**'
@@ -48,7 +50,6 @@ env:
   RUST_BACKTRACE: "1"
   BITNET_SKIP_SLOW_TESTS: "1"
   TIER0_ARTIFACT_ROOT: target/apple-m4-slm-eval-tier0
-  TIER0_RETENTION_DAYS: "7"
 
 jobs:
   tier0:
@@ -152,16 +153,14 @@ jobs:
             echo
             echo "Tier 0 validated parser, scoring, dry-run corpus shape, committed summary receipt schemas, and model-free v2 regression comparison coverage only."
             echo
-            echo "Artifacts under \`$TIER0_ARTIFACT_ROOT\` are retained for $TIER0_RETENTION_DAYS days for PR/debug review."
-            echo
             echo "This workflow does not fetch models, run live M4 inference, run mac validate, publish performance, or claim broad model quality."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload Tier 0 artifacts
+      - name: Upload Tier 0 debug artifacts
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: apple-m4-slm-eval-tier0-${{ github.run_id }}
           path: ${{ env.TIER0_ARTIFACT_ROOT }}
           if-no-files-found: warn
-          retention-days: ${{ env.TIER0_RETENTION_DAYS }}
+          retention-days: 14

@@ -1,0 +1,15 @@
+timestamp = "2026-05-21T04:31:53Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-OBS-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-OBS-001-trace-correlation"
+
+notes = [
+  "Started M4-OBS-001 after M4-SERVE-EX-002 closeout merged and campaign next selected trace correlation.",
+  "Scope is opt-in redacted trace IDs for mac ask and mac serve receipts, linking progress/log diagnostics with per-run and per-request receipts.",
+  "Trace diagnostics record prompt hashes and correlation IDs only; raw prompts, rendered prompts, system prompts, cache paths, model paths, and tokenizer paths remain outside the observability block.",
+  "No model quality, benchmark performance, BitNet chat/serve enablement, production hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

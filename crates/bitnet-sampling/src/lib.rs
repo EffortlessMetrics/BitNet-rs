@@ -185,13 +185,9 @@ impl SamplingStrategy {
     pub fn sample_in_place(&mut self, logits: &mut [f32], context_tokens: &[u32]) -> Result<u32> {
         debug!("Sampling in-place from {} logits", logits.len());
 
-        if logits.is_empty() {
-            return Err(anyhow::anyhow!("Empty logits slice"));
-        }
+        validate_logits(logits)?;
 
-        if self.config.temperature == 0.0
-            && (self.config.repetition_penalty == 1.0 || context_tokens.is_empty())
-        {
+        if self.can_use_strict_greedy_path(context_tokens) {
             return greedy_sample(logits);
         }
 
@@ -199,12 +195,25 @@ impl SamplingStrategy {
         // the flat single-occurrence version in bitnet-logits).
         self.penalize_repeated_tokens(logits, context_tokens);
 
-        // Greedy path: temperature <= 0.0 or non-finite -> greedy_sample (handles empty input
-        // as Err and breaks ties by lowest token ID for llama.cpp compatibility).
-        if self.config.temperature <= 0.0 || !self.config.temperature.is_finite() {
+        if self.should_fallback_to_greedy_after_penalty() {
             return greedy_sample(logits);
         }
 
+        self.apply_stochastic_pipeline(logits);
+
+        self.sample_from_distribution(logits)
+    }
+
+    fn can_use_strict_greedy_path(&self, context_tokens: &[u32]) -> bool {
+        self.config.temperature == 0.0
+            && (self.config.repetition_penalty == 1.0 || context_tokens.is_empty())
+    }
+
+    fn should_fallback_to_greedy_after_penalty(&self) -> bool {
+        self.config.temperature <= 0.0 || !self.config.temperature.is_finite()
+    }
+
+    fn apply_stochastic_pipeline(&self, logits: &mut [f32]) {
         // Stochastic path:
         //  1. temperature scaling (logit domain)
         //  2. top-k filtering (logit domain — NEG_INFINITY for filtered entries)
@@ -225,8 +234,6 @@ impl SamplingStrategy {
 
         // Re-normalize after top-p (top-p zeroes entries without renormalizing).
         let _ = renormalize_in_place(logits);
-
-        self.sample_from_distribution(logits)
     }
 
     /// Count-aware repetition penalty applied in-place.
@@ -327,6 +334,13 @@ impl SamplingStrategy {
     fn logits_buffer_capacity(&self) -> usize {
         self.logits_buffer.capacity()
     }
+}
+
+fn validate_logits(logits: &[f32]) -> Result<()> {
+    if logits.is_empty() {
+        return Err(anyhow::anyhow!("Empty logits slice"));
+    }
+    Ok(())
 }
 
 /// Greedy sampling — always pick the most likely token.
@@ -713,6 +727,30 @@ mod property_tests {
         assert_eq!(actual, expected);
         assert_eq!(actual, 2);
         assert!(in_place_logits[1] < in_place_logits[3]);
+        Ok(())
+    }
+
+    #[test]
+    fn sample_in_place_matches_seeded_stochastic_sample() -> Result<()> {
+        let config = SamplingConfig {
+            temperature: 0.8,
+            top_k: 4,
+            top_p: 0.75,
+            repetition_penalty: 1.15,
+            seed: Some(123),
+        };
+        let logits = [0.2, 1.4, -0.1, 0.9, 0.6, 1.1];
+        let context = [1, 3, 1];
+
+        let mut by_copy = SamplingStrategy::new(config.clone());
+        let expected = by_copy.sample(&logits, &context)?;
+
+        let mut in_place_logits = logits;
+        let mut in_place = SamplingStrategy::new(config);
+        let actual = in_place.sample_in_place(&mut in_place_logits, &context)?;
+
+        assert_eq!(actual, expected);
+        assert!((actual as usize) < logits.len());
         Ok(())
     }
 }

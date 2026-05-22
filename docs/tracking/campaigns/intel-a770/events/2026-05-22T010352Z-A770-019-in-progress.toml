@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T01:03:52Z"
+campaign = "intel-a770"
+item = "A770-019"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-019-opencl-runtime-probe-build-fix"
+summary = "Started the scoped OpenCL runtime-probe build fix after the release build exposed a type mismatch in the A770/OpenCL runtime availability helper."
+notes = [
+  "The fix is limited to the OpenCL runtime probe wrapper type in bitnet-kernels device feature detection.",
+  "The initial CPU-vs-A770 parity rerun is deferred until the OpenCL release build blocker is removed.",
+  "No answer quality, reference parity, full inference, residency, speed, trusted-partial, or completion claim is promoted.",
+]

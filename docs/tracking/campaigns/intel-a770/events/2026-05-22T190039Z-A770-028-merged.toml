@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T19:00:39Z"
+campaign = "intel-a770"
+item = "A770-028"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex-a770"
+pr = 362
+branch = "codex/intel-a770/A770-028-readiness-normalization-scoring"
+head_sha = "07b933e090c44b52f66b185c7cc69b07ecff3731"
+merge_sha = "89378b4e48fe80a454cf1d9569cb23b765bbe419"
+summary = "Marked A770-028 merged after PR #362 landed the readiness normalization scoring receipt."
+notes = [
+  "The merged PR changes exactly seven label-like A770 readiness cases from exact_match to normalized_match.",
+  "Fresh CPU AVX2 and Intel A770 OpenCL receipts both record 15/20 quality passes with 5 answer_content failures.",
+  "CPU/A770 parity remains failed and no readiness, broad quality, parity, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

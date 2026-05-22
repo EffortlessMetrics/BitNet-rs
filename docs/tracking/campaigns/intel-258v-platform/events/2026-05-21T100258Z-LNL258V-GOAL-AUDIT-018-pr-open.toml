@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T10:02:58Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-018"
+pr = 182
+head_sha = "c55d7d5af4cd193a03faa6cbfde20a4694b7bc16"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-018-post-bitnet-intake005"
+actor = "codex"
+summary = "Opened PR #182 for the no-inference Lunar Lake audit refresh after BITNET-INTAKE-005 closeout."
+
+notes = [
+  "The PR updates structured audit/checklist state to name BITNET-INTAKE-005/#159 and closeout #179 as the latest BitNet semantic-intake tracker state.",
+  "POWER-006 remains blocked on real battery-mode low_power telemetry, energy-proxy evidence, measured thermal readings, and benchmark-qualified power advantage.",
+  "No inference, model load, route promotion, speedup, power-advantage, native accelerator, acceleration, broad quality, stale BitNet, or BitNet QK256/I2_S behavior-change claim is made.",
+]

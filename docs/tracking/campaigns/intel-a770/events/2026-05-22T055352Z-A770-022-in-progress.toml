@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T05:53:52Z"
+campaign = "intel-a770"
+item = "A770-022"
+event = "in_progress"
+previous_status = "ready"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-022-multistep-answer-parity"
+summary = "Start focused multi-step CPU/A770 answer parity for the generated-output divergent yes_no_water case."
+notes = [
+  "A770-021 classified the committed five-case CPU/A770 receipt as four same-output top-k drift rows and one generated-output divergence row.",
+  "This slice reruns only yes_no_water with four dumped logit steps on CPU AVX2 and Intel A770 OpenCL, then compares the receipts.",
+  "The scope is diagnostic-only and does not promote CPU/A770 answer parity, reference parity, broad A770 answer quality, residency, speed, trusted-partial acceleration, or full BitNet inference.",
+]

@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T10:51:18Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-SERVE-EX-004"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+branch = "codex/apple-m4-inference-excellence/M4-SERVE-EX-004-queue-backpressure"
+pr = 178
+merge_sha = "119324587a3e9b119a40add402c3041fe1435a08"
+
+notes = [
+  "PR #178 merged the bounded dense M4 local-server queue/backpressure and resident-state evidence.",
+  "The merged evidence records queue admission controls, queue-full and queue-timeout failure receipts, aggregate serve-backpressure receipt validation, and a live M4 CPU/NEON dense smoke receipt bundle.",
+  "Closeout is tracker-only and records the already-merged PR; it does not add runtime evidence or enable routes.",
+  "No BitNet serve/chat, production-hosting, full OpenAI compatibility, full Metal, QK256, Neural Engine, MPSGraph, MacBook, speedup, broad quality, broad performance, or broad Apple Silicon claim is in scope.",
+]

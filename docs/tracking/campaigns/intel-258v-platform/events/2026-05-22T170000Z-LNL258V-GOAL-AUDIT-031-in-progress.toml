@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-22T17:00:00Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-031"
+previous_status = "ready"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-031-current-main"
+actor = "codex"
+summary = "Refresh the no-inference Lunar Lake goal audit to current swarm main after audit 030 closeout, ask model prerequisite docs, and adjacent A770-027 closeout."
+
+notes = [
+  "Record LNL258V-GOAL-AUDIT-030/#345 and closeout #346 as Lunar Lake audit/tracker state only.",
+  "Record PR #347 as Lunar Lake operator documentation only.",
+  "Record A770-027/#344 and closeout #348 as adjacent A770 answer-readiness divergence logit-context diagnostic/tracker state only.",
+  "Keep LNL258V-POWER-006 blocked until real battery-mode low_power telemetry, energy proxy, measured thermal context, and benchmark-qualified power advantage exist.",
+  "Preserve no inference, model load, fallback behavior change, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator, acceleration, broad quality, model binary, runtime/sidecar behavior claim, semantic-intake stale claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior-change claim.",
+]

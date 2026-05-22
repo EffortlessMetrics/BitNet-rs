@@ -1,0 +1,16 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T02:23:30Z"
+event = "merged"
+item = "LNL258V-POWER-010"
+pr = 116
+head_sha = "614014a067cee0f31a068b7f44b4d8d0df5f3382"
+merge_sha = "456b15f78231e78baafd61acc9c622f8b784c5cf"
+branch = "codex/lunar-lake/LNL258V-POWER-010-battery-plan"
+actor = "codex"
+summary = "Merged PR #116 for the no-inference low_power battery-plan command and receipt."
+
+notes = [
+  "PR #116 added `bitnet lunar-lake low-power-plan` and committed `lunar-lake-low-power-battery-plan.json` so the POWER-006 physical battery run has a machine-readable plan before evidence collection.",
+  "The merged plan records the current AC-blocked state, runbook, command sequence, required artifacts, blockers, and claim boundary while preserving POWER-006 as blocked.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, battery-mode evidence claim, measured-temperature claim, native accelerator claim, broad quality claim, Qwen3 Lunar Lake promotion claim, or BitNet QK256/I2_S behavior-change claim was added.",
+]

@@ -1,0 +1,22 @@
+timestamp = "2026-05-21T19:13:31Z"
+campaign = "nvidia-5070ti"
+item = "CUDA-MODEL-017A"
+event = "in_progress"
+actor = "codex"
+from = "ready"
+to = "in_progress"
+branch = "codex/nvidia-5070ti/CUDA-MODEL-017A-qwen3-capture-tooling"
+summary = "Started governed Qwen3 source-capture tooling for the CUDA-MODEL-017 repeated comparator profiles."
+
+artifacts = [
+  "crates/bitnet-cli/src/commands/dense_gguf_linear_parity/mod.rs",
+  "crates/bitnet-receipts-core/src/lib.rs",
+  "crates/bitnet-bench-receipts/src/bin/qwen3_cuda_repeated_comparator_receipt.rs",
+  "docs/reports/CUDA_MODEL_017A_QWEN3_CAPTURE_TOOLING_GAP.md",
+]
+
+notes = [
+  "The tooling adds Qwen3-only short_decode_32 and warm-context decode_128 source-capture receipts.",
+  "Product ask/chat token bounds remain unchanged.",
+  "No hardware receipts, speedup, benchmark-qualified speed, full residency, broad dense GGUF readiness, Qwen2.5 inheritance, or BitNet QK256 proof are claimed.",
+]

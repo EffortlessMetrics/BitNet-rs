@@ -38,26 +38,42 @@ impl StartupContractReport {
     }
 
     fn populate_lines(&mut self) {
-        self.info.push(self.contract.summary());
-        self.info.push(format!("Profile summary: {}", self.profile_summary()));
+        self.info.extend(report_lines::info_lines(self));
+        self.warnings.extend(report_lines::warning_lines(&self.contract));
+    }
+}
 
-        if !self.contract.is_compatible() {
-            self.warnings.push(format!(
+mod report_lines {
+    use super::{ProfileContract, StartupContractReport};
+
+    pub(super) fn info_lines(report: &StartupContractReport) -> [String; 2] {
+        [report.contract.summary(), format!("Profile summary: {}", report.profile_summary())]
+    }
+
+    pub(super) fn warning_lines(contract: &ProfileContract) -> Vec<String> {
+        let mut warnings = Vec::new();
+
+        if !contract.is_compatible() {
+            warnings.push(format!(
                 "Startup contract is non-compliant: missing={:?} forbidden={:?}",
-                self.contract.missing_required(),
-                self.contract.forbidden_active()
+                contract.missing_required(),
+                contract.forbidden_active()
             ));
         }
 
-        if !self.contract.missing_required().is_empty()
-            || !self.contract.forbidden_active().is_empty()
-        {
-            self.warnings.push(format!(
+        if has_profile_violations(contract) {
+            warnings.push(format!(
                 "Profile violations for active build: missing={:?} forbidden={:?}",
-                self.contract.missing_required(),
-                self.contract.forbidden_active()
+                contract.missing_required(),
+                contract.forbidden_active()
             ));
         }
+
+        warnings
+    }
+
+    fn has_profile_violations(contract: &ProfileContract) -> bool {
+        !contract.missing_required().is_empty() || !contract.forbidden_active().is_empty()
     }
 }
 

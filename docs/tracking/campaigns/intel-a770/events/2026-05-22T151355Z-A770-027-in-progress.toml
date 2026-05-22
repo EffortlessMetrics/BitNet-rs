@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T15:13:55Z"
+campaign = "intel-a770"
+item = "A770-027"
+event = "in_progress"
+previous_status = "planned"
+new_status = "in_progress"
+actor = "codex-a770"
+branch = "codex/intel-a770/A770-027-readiness-divergence-logit-context"
+summary = "Started A770-027 to record first-mismatch logit context for the two A770-025 generated-output divergent readiness cases."
+notes = [
+  "The diagnostic consumes the committed A770-025/A770-026 readiness frontier and reruns only the two generated-output divergent case IDs with deeper logit dumps.",
+  "The work is receipt/report/campaign metadata only and does not change runtime math.",
+  "No strict answer readiness, broad answer quality, CPU/A770 parity, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

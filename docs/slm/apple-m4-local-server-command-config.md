@@ -22,8 +22,7 @@ bitnet mac serve \
   --port 8080 \
   --strict \
   --stream \
-  --receipt-dir ~/.local/state/bitnet-rs/receipts/apple-m4-local-server \
-  --trace
+  --receipt-dir ~/.local/state/bitnet-rs/receipts/apple-m4-local-server
 ```
 
 `bitnet mac serve` is the Mac appliance wrapper. It should resolve the supported
@@ -51,40 +50,19 @@ bitnet serve \
 | `model_id` | `qwen2.5-0.5b-instruct-q8_0` | The current M4 dense SLM default. |
 | `device` | `apple-m4-cpu-neon` | The only full dense SLM answer backend claimed by this contract. |
 | `host` | `127.0.0.1` | Loopback by default. Binding to non-loopback must be explicit. |
-| `allow_network_bind` | `false` | Pass `--allow-network-bind` with a non-loopback `--host`; otherwise startup fails before cache lookup or bind. |
+| `allow_non_loopback` | `false` | Required before `--host 0.0.0.0`, LAN IPs, or other wider binds are accepted. |
 | `port` | `8080` | Matches the existing server crate default unless overridden. |
 | `strict` | `true` | Hidden fallback is not allowed. |
 | `stream` | `true` | Token streaming should be the default user experience. |
+| `max_request_bytes` | `1048576` | Raw HTTP request limit before completion parsing. |
+| `max_concurrent_requests` | `1` | One resident generation slot by default; health/ready/models stay cheap. |
+| `max_queued_requests` | `1` | Bounded wait queue for completion requests. |
+| `queue_timeout_ms` | `30000` | Queued completion request timeout before a failure receipt is emitted. |
+| `cors` | disabled | Browser CORS is fail-closed by default; CLI/local HTTP clients remain supported. |
+| `telemetry` | off | No external telemetry or OpenTelemetry export is enabled by `bitnet mac serve`. |
 | `cache_dir` | existing Mac model cache default | Override with `--cache-dir` or config. |
 | `receipt_dir` | local user state receipt directory | Override with `--receipt-dir`. |
 | `receipt_mode` | `per_request` | Aggregate session receipts can be added later. |
-| `trace` | `false` | Override with `--trace` to emit an `m4obs-*` correlation ID in redacted diagnostics and receipts. |
-
-## Safety Defaults
-
-`bitnet mac serve` is a local appliance wrapper first. It binds to
-`127.0.0.1` by default and refuses `0.0.0.0`, LAN IPs, or other non-loopback
-hosts unless the operator passes `--allow-network-bind`. That opt-in is still
-not a production-hosting claim; it only acknowledges that local server metadata
-may be reachable outside the machine.
-
-The health, ready, models, completion-response, and receipt-export surfaces
-publish a `safety` or redaction policy with these defaults:
-
-- telemetry is disabled; there is no metrics upload or external operator
-  metrics endpoint;
-- CORS is disabled by default: no wildcard origin, no credentialed browser
-  access, and no preflight route;
-- completion request bodies are capped at 1 MiB and oversized requests return
-  `413 Payload Too Large` before generation;
-- operator HTTP metadata redacts cache roots, cache paths, metadata paths,
-  symlink targets, model paths, and receipt directories;
-- `GET /receipts/{id}` accepts only a single safe receipt file stem and exports
-  a cache-path-redacted view of the local receipt file.
-
-Local receipt files may still contain prompt text, token IDs, generated text,
-and local artifact paths because they are the evidence artifact for the run.
-Trace output remains redacted for prompt text and cache paths.
 
 The supported non-default dense model can be selected explicitly:
 
@@ -131,53 +109,6 @@ checks one completion and receipt export. The `/models` check records the
 recommended first model ID plus exact fetch/verify commands when disk headroom
 allows a supported model fetch.
 
-For the M4 excellence server refresh, use the dense-only in-process smoke to
-exercise the same local server handlers without enabling BitNet serve:
-
-```bash
-bitnet --device apple-m4-cpu-neon mac serve-smoke \
-  --model-id qwen2.5-0.5b-instruct-q8_0 \
-  --receipt-dir ci/hardware/apple-m4-mac-mini/<date>/slm-serve/qwen2.5-0.5b-instruct-q8_0/receipts \
-  --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-serve/qwen2.5-0.5b-instruct-q8_0/serve-smoke.json
-```
-
-`serve-smoke` verifies health, ready, models, non-streaming completion,
-streaming completion, per-request receipt export, backend/fallback fields, and
-claim boundaries. It remains a local conformance receipt, not production
-hosting, broad OpenAI compatibility, BitNet serve readiness, or Metal evidence.
-
-For the follow-on semantics proof, use the model-free failure-semantics smoke:
-
-```bash
-bitnet --device apple-m4-cpu-neon mac serve-failure-smoke \
-  --json-out ci/hardware/apple-m4-mac-mini/<date>/serve-failure-semantics/summary.json
-```
-
-`serve-failure-smoke` records the bounded `M4-SERVE-EX-002` contract for dense
-SLM and gated BitNet serve routes: partial token streaming, client
-cancellation, timeout stage, invalid request, missing cache, per-request
-receipt export, and no-response failure receipts. The receipt is generic
-PR/CI-safe and does not run or download models; live dense runtime coverage
-comes from `M4-SERVE-EX-001`, while BitNet serve remains tied to the
-`M4-BITNET-EX-007` gate. It does not claim production hosting, full OpenAI
-compatibility, full Metal inference, broad quality, or broad performance.
-
-For the queue and resident-state contract, use the model-free backpressure
-smoke:
-
-```bash
-bitnet --device apple-m4-cpu-neon mac serve-backpressure-smoke \
-  --json-out ci/hardware/apple-m4-mac-mini/<date>/serve-backpressure/summary.json
-```
-
-`serve-backpressure-smoke` records the bounded `M4-SERVE-EX-004` contract for
-dense SLM and gated BitNet serve routes: concurrent local requests, queue depth,
-busy responses, timeout responses, resident model reuse, per-request receipts,
-and failure receipts. The receipt is generic PR/CI-safe and does not run or
-download models; it is a queue/backpressure receipt contract, not production
-hosting, full OpenAI compatibility, full Metal inference, broad quality, or
-broad performance evidence.
-
 ## M4-SERVE-EX-001 Dense Server Refresh
 
 The 2026-05-20 M4 dense server refresh ran the in-process `serve-smoke`
@@ -199,6 +130,105 @@ compatibility, BitNet serve, full Metal inference, QK256, Neural Engine,
 MPSGraph, speedup, broad model quality, broad performance, or broad Apple
 Silicon behavior.
 
+To refresh or rerun the evidence, use the dense-only in-process smoke to
+exercise the same local server handlers without enabling BitNet serve:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac serve-smoke \
+  --model-id qwen2.5-0.5b-instruct-q8_0 \
+  --receipt-dir ci/hardware/apple-m4-mac-mini/<date>/slm-serve/qwen2.5-0.5b-instruct-q8_0/receipts \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/slm-serve/qwen2.5-0.5b-instruct-q8_0/serve-smoke.json
+```
+
+`serve-smoke` verifies health, ready, models, non-streaming completion,
+streaming completion, per-request receipt export, backend/fallback fields, and
+claim boundaries. It remains a local conformance receipt, not production
+hosting, broad OpenAI compatibility, BitNet serve readiness, or Metal evidence.
+
+## M4-SERVE-EX-002 Failure Semantics
+
+The 2026-05-21 M4 server failure-semantics smoke adds an enforced bounded
+failure receipt for the default dense SLM route:
+
+| Model ID | Aggregate receipt | Invalid request | Missing cache | Stream cancel | Timeout | No response | Backend | Fallback |
+|---|---|---:|---:|---:|---:|---:|---|---|
+| `qwen2.5-0.5b-instruct-q8_0` | `ci/hardware/apple-m4-mac-mini/2026-05-21T0142Z/serve-failure-semantics/summary.json` | pass | pass | pass | pass | pass | `apple-m4-cpu-neon` | `false` |
+
+The aggregate receipt validates as
+`bitnet_apple_m4_serve_failure_semantics`. It records health/ready before and
+after failure probes, invalid request handling, bad model ID handling, missing
+cache guidance, partial streaming evidence, stream cancellation, timeout
+boundary enforcement, no-response failure receipts, and per-request receipt
+export. Child failure receipts validate as `bitnet_apple_m4_serve_failure`.
+
+To refresh the bounded dense-only smoke:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac serve-failure-smoke \
+  --max-new-tokens 1 \
+  --receipt-dir ci/hardware/apple-m4-mac-mini/<date>/serve-failure-semantics/receipts \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/serve-failure-semantics/summary.json
+```
+
+This is not a production hosting claim, full OpenAI compatibility claim, BitNet
+serve/chat enablement, Metal evidence, QK256 evidence, Neural Engine evidence,
+MPSGraph evidence, speedup claim, or broad Apple Silicon behavior claim.
+
+## M4-SERVE-EX-003 Local Safety Defaults
+
+`bitnet mac serve` is a local appliance surface, not a hardened network
+service. The default bind remains `127.0.0.1`; wider binding now requires both
+`--host <non-loopback>` and `--allow-non-loopback`. The safety contract emitted
+by health, models, ready, and completion receipts records:
+
+- loopback-only default binding and explicit wider-bind opt-in;
+- no external telemetry, no OpenTelemetry export, and trace correlation only
+  when `--trace` is passed;
+- CORS disabled by default, with `OPTIONS` preflight failing closed;
+- raw HTTP request size capped by `--max-request-bytes`, defaulting to 1 MiB;
+- cache/local path disclosure boundaries for operator endpoints and receipt
+  export;
+- trace redaction rules that keep raw prompts, rendered prompts, system prompts,
+  model paths, tokenizer paths, and cache paths out of trace diagnostics.
+
+This item documents and tests local safety defaults only. It does not claim
+authentication, production hosting, browser compatibility, broader OpenAI
+compatibility, BitNet serve/chat readiness, Metal evidence, QK256 evidence,
+Neural Engine evidence, MPSGraph evidence, speedup, or broad Apple Silicon
+behavior.
+
+## M4-SERVE-EX-004 Queue And Backpressure
+
+`bitnet mac serve` now documents and enforces bounded local admission control
+for completion requests. The default resident generation policy is:
+
+- `max_concurrent_requests = 1`;
+- `max_queued_requests = 1`;
+- `queue_timeout_ms = 30000`.
+
+When the resident generation slot is occupied, one completion request may wait
+for the configured queue timeout. Requests beyond the queue limit receive a
+`429 queue_full` response and a failure receipt. Requests that wait past
+`queue_timeout_ms` receive a `503 queue_timeout` response and a failure
+receipt. Health, ready, models, and receipt-export endpoints do not consume the
+generation slot.
+
+Receipts include a `backpressure` block with the policy, active/queued counts,
+resident-state reuse boundaries, busy/timeout statuses, and claim boundaries.
+The bounded smoke command is:
+
+```bash
+bitnet --device apple-m4-cpu-neon mac serve-backpressure-smoke \
+  --max-new-tokens 2 \
+  --receipt-dir ci/hardware/apple-m4-mac-mini/<date>/serve-backpressure/receipts \
+  --json-out ci/hardware/apple-m4-mac-mini/<date>/serve-backpressure/summary.json
+```
+
+This item is dense-local-server queue evidence only. It does not claim
+production hosting, full OpenAI compatibility, BitNet serve/chat readiness,
+Metal evidence, QK256 evidence, Neural Engine evidence, MPSGraph evidence,
+speedup, broad quality, broad performance, or broad Apple Silicon behavior.
+
 ## Config File Shape
 
 The server should accept an optional config file equivalent to the command-line
@@ -209,6 +239,10 @@ contract:
 host = "127.0.0.1"
 port = 8080
 stream = true
+max_request_bytes = 1048576
+max_concurrent_requests = 1
+max_queued_requests = 1
+queue_timeout_ms = 30000
 
 [model]
 model_id = "qwen2.5-0.5b-instruct-q8_0"
@@ -234,9 +268,7 @@ include_memory = true
 
 CLI flags should override config-file values. Startup must print or record the
 resolved config in the server receipt context without leaking prompt content
-outside request receipts. When `--trace` is enabled, startup diagnostics,
-completion responses, and per-request receipts share a trace ID while prompt
-text, secret values, and cache paths remain redacted from trace output.
+outside request receipts.
 
 ## Startup Checks
 
@@ -271,7 +303,7 @@ Failures must be explicit and operator-actionable:
 | Unsupported model id | Refuse to start and show supported model IDs. |
 | `--device apple-m4-metal` | Refuse full-server mode until full route support is proven. |
 | Hidden fallback would occur | Refuse to start or reject the request with a fallback error. |
-| Non-loopback host | Refuse unless `--allow-network-bind` is passed; warn that this is local-service scope. |
+| Non-loopback host | Allow only when explicitly configured; warn that this is local-service scope. |
 | Receipt directory unwritable | Refuse to start unless `--receipt-mode off` is explicitly supported later. |
 
 ## Endpoint Contract
@@ -304,13 +336,38 @@ including default/supported dense Qwen rows, the BitNet one-shot ask plus fixed
 warm-session row, candidate/rejected rows, cache state, disk-headroom guidance,
 and the receipt-only BitNet proof bridge commands. It does not run generation,
 does not fetch artifacts, and does not expose BitNet as a server completion
-model. Cache-path fields are redacted in the HTTP view.
+model.
 
 `M4-SERVE-002` does not run generation. Readiness reports whether startup
 verified the supported model cache, tokenizer authority, `apple-m4-cpu-neon`
 backend route, no-hidden-fallback policy, disk/cache state, and receipt
-directory. The HTTP readiness view redacts local cache/model/receipt paths.
-Missing or invalid cache still prevents startup.
+directory. Missing or invalid cache still prevents startup.
+
+## Observability Correlation
+
+`M4-OBS-001` adds an opt-in `--trace` flag for `bitnet mac ask` and
+`bitnet mac serve`. The flag emits a redacted operator trace ID on stderr and
+records an `observability` block in supported receipts. The block is for
+correlating progress, logs, per-run receipts, per-request receipts, and failure
+stages only.
+
+The trace block records:
+
+- `work_item = "M4-OBS-001"`;
+- a stable `trace_id` for the command/session;
+- route and stage labels;
+- request ID when the route has a per-request server receipt;
+- prompt SHA256 values, not raw prompt text;
+- redaction policy fields showing that raw prompts, rendered prompts, system
+  prompts, cache paths, model paths, and tokenizer paths are not included in
+  trace diagnostics;
+- claim-boundary fields stating that trace correlation does not prove model
+  quality, performance, or production readiness.
+
+The existing generation receipts still carry their normal model, tokenizer,
+backend, timing, token, and claim-boundary fields. The trace contract only
+constrains the additional diagnostic surface; it must not be used as a quality
+or benchmark claim.
 
 ## Receipt Requirements
 
@@ -326,15 +383,9 @@ Every completed generation request should be able to export a receipt with:
 - time to first token, decode timing, total request timing, and memory;
 - streaming enabled/disabled status;
 - cache verification status;
-- optional `trace_id` plus an `observability` block that links server logs,
-  response metadata, and per-request receipts under the M4-OBS-001 redaction
-  policy;
 - claim-boundary fields stating that dense SLM server success does not prove
   BitNet, QK256, Neural Engine, MPSGraph, full Metal inference, or broad M4
   performance.
-
-HTTP receipt export is a redacted view for operator inspection. The local
-receipt file remains the canonical artifact for full local evidence.
 
 Failed startup and failed request receipts should record the failing gate when a
 receipt directory is available.

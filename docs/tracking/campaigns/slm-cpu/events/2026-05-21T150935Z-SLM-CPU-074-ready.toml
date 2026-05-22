@@ -1,0 +1,14 @@
+timestamp = "2026-05-21T15:09:35Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-074"
+event = "in_progress"
+previous_status = "blocked"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-074-packed-q8-sidecar-instrumentation"
+summary = "Queued SLM-CPU-074 from the SLM-CPU-073 next-target artifact."
+notes = [
+  "The next target is host tensor materialization, scalar packed matvec, output allocation, and selector-dispatch instrumentation or elimination for the exact layers.0.attention.q_proj.weight packed Q8_0 sidecar path.",
+  "The future slice must keep eager_f32_candle as default and packed sidecar execution opt-in/exact-tensor scoped.",
+  "No speedup or broader runtime promotion claim is allowed without separate bounded before/after timing evidence.",
+]

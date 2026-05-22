@@ -21,16 +21,18 @@ pub struct ArchDefaults {
 /// Static registry that maps architecture name strings to [`ArchDefaults`].
 pub struct ArchitectureRegistry;
 
-impl ArchitectureRegistry {
-    /// Look up the default configuration for `architecture`.
-    ///
-    /// The match is **case-insensitive**.  Returns `None` for unrecognised
-    /// architecture strings.
-    pub fn lookup(architecture: &str) -> Option<ArchDefaults> {
+mod srp {
+    use super::{ActivationType, ArchDefaults, NormType};
+
+    pub(super) fn normalize_architecture_name(architecture: &str) -> String {
+        architecture.to_lowercase()
+    }
+
+    pub(super) fn defaults_from_architecture_name(architecture: &str) -> Option<ArchDefaults> {
         use ActivationType::{Gelu, Relu2, Silu};
         use NormType::{LayerNorm, RmsNorm};
 
-        let (norm, act, ctx) = match architecture.to_lowercase().as_str() {
+        let (norm, act, ctx) = match architecture {
             "phi" | "phi-4" => (RmsNorm, Silu, Some(16384)),
             "phi-3" | "phi3" => (RmsNorm, Silu, Some(4096)),
             "phi-2" | "phi2" => (LayerNorm, Gelu, Some(2048)),
@@ -110,6 +112,17 @@ impl ArchitectureRegistry {
         };
 
         Some(ArchDefaults { norm_type: norm, activation_type: act, default_context_length: ctx })
+    }
+}
+
+impl ArchitectureRegistry {
+    /// Look up the default configuration for `architecture`.
+    ///
+    /// The match is **case-insensitive**.  Returns `None` for unrecognised
+    /// architecture strings.
+    pub fn lookup(architecture: &str) -> Option<ArchDefaults> {
+        let normalized = srp::normalize_architecture_name(architecture);
+        srp::defaults_from_architecture_name(normalized.as_str())
     }
 
     /// All recognised architecture name strings (lower-case canonical forms).

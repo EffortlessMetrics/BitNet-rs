@@ -32,16 +32,29 @@
 > answer quality is still under validation, so generated BitNet text should be
 > treated as diagnostic output until a strict proof lane accepts it.
 
-## Development Intake Has Moved
+## Active Development Repository
 
-Active feature, hardware, performance, diagnostic, and refactor work now happens
-in
-[`EffortlessMetrics/bitnet-rs-swarm`](https://github.com/EffortlessMetrics/bitnet-rs-swarm).
-This repository is the release and publish repository for BitNet-rs. Open normal
-development PRs in `bitnet-rs-swarm`; PRs here are limited to release promotion,
-versioning, changelog, packaging, signing, publish, emergency security or
-release-blocking hotfixes, and documentation corrections needed for released
-artifacts.
+This repository is the high-throughput same-repo development and proof
+execution repository for BitNet-rs. Feature, hardware, diagnostic,
+performance, refactor, campaign, and agent-swarm PRs land here first.
+
+[`EffortlessMetrics/BitNet-rs`](https://github.com/EffortlessMetrics/BitNet-rs)
+remains the public source-of-truth until an explicit sync/cutover says
+otherwise.
+
+Public release and publish work is promoted to
+[`EffortlessMetrics/BitNet-rs`](https://github.com/EffortlessMetrics/BitNet-rs)
+through release-promotion PRs. Tags, crates.io publication, signing, release
+notes, and stable release branches belong to `BitNet-rs`, not this swarm
+repository.
+
+Agents and machines should use side-by-side clones for source and swarm work.
+Do not retarget an existing `BitNet-rs` clone to this repository. Start with
+[`AGENTS.md`](AGENTS.md),
+[`docs/development/SWARM_DEVELOPMENT_AUTHORITY.md`](docs/development/SWARM_DEVELOPMENT_AUTHORITY.md),
+[`docs/development/SWARM_HISTORY_REPAIR.md`](docs/development/SWARM_HISTORY_REPAIR.md),
+and [`docs/release/PROMOTE_TO_BITNET_RS.md`](docs/release/PROMOTE_TO_BITNET_RS.md)
+before opening repo-boundary, promotion, or release-adjacent work.
 
 ## What This Repo Is For
 

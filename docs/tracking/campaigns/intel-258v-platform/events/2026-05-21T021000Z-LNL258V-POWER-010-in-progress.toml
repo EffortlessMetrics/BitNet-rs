@@ -1,0 +1,12 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-21T02:10:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-010"
+branch = "codex/lunar-lake/LNL258V-POWER-010-battery-plan"
+actor = "codex"
+summary = "Started a no-inference low_power battery-plan command and receipt for the blocked POWER-006 physical run."
+
+notes = [
+  "The slice packages the current AC blocker, battery runbook, exact required commands, required artifacts, and claim boundaries into a machine-readable plan.",
+  "It does not collect battery-mode evidence, run inference, change route promotion, or claim speedup/power advantage.",
+]

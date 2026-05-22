@@ -43,7 +43,7 @@ use bitnet_models::dense_gguf_norm_fixture::{
 };
 use bitnet_models::formats::gguf::{GgufReader, GgufTensorType};
 use bitnet_models::layer_inspector::extract_layer_index;
-use bitnet_models::{LoadConfig, Model, ModelLoader};
+use bitnet_models::{LoadConfig, Model, ModelLoader, ProgressCallback};
 use bitnet_receipts_core::{
     DENSE_GGUF_ALL_LAYER_EXECUTION_PLAN_ARTIFACT_KIND,
     DENSE_GGUF_ATTENTION_SCORE_CUDA_PARITY_ARTIFACT_KIND,
@@ -64,6 +64,7 @@ use bitnet_receipts_core::{
     DENSE_GGUF_QWEN_CHAT_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_ONE_TOKEN_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_SHORT_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
+    DENSE_GGUF_QWEN_WARM_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_QWEN_WARM_SESSION_STRICT_CUDA_PROOF_ARTIFACT_KIND,
     DENSE_GGUF_ROPE_CUDA_PARITY_ARTIFACT_KIND, DENSE_GGUF_SAMPLING_POLICY_ARTIFACT_KIND,
     DENSE_REGULAR_LLM_CUDA_ARTIFACT_KIND,
@@ -89,12 +90,13 @@ use bitnet_receipts_core::{
     validate_dense_gguf_qwen_chat_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json,
+    validate_dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt_json,
     validate_dense_gguf_qwen_warm_session_strict_cuda_proof_receipt_json,
     validate_dense_gguf_rope_cuda_parity_receipt_json,
     validate_dense_gguf_sampling_policy_receipt_json,
 };
 use candle_core::{DType, Device as CandleDevice, IndexOp};
-use clap::Args;
+use clap::{Args, ValueEnum};
 use memmap2::Mmap;
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
@@ -244,6 +246,28 @@ fn dense_qwen_proof_context_for_model_path(model: &Path) -> DenseQwenProofContex
     DenseQwenProofContext {
         proof_model: &QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL,
         receipts: &QWEN25_05B_INSTRUCT_Q8_0_RECEIPTS,
+    }
+}
+
+fn dense_qwen_receipts_for_proof_model(
+    proof_model: &DenseQwenProofModel,
+) -> &'static DenseQwenProofReceiptBundle {
+    if proof_model.id == QWEN3_06B_INSTRUCT_Q8_0_MODEL_ID {
+        &QWEN3_06B_INSTRUCT_Q8_0_RECEIPTS
+    } else {
+        &QWEN25_05B_INSTRUCT_Q8_0_RECEIPTS
+    }
+}
+
+fn dense_qwen_model_default_receipt_path(
+    path: &Path,
+    qwen25_default: &str,
+    model_default: &str,
+) -> PathBuf {
+    if path == Path::new(qwen25_default) {
+        PathBuf::from(model_default)
+    } else {
+        path.to_path_buf()
     }
 }
 
@@ -843,6 +867,10 @@ pub struct DenseGgufQwenOneTokenStrictCudaCommand {
     /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
     #[arg(long, value_name = "PATH")]
     pub json_out: Option<PathBuf>,
+
+    /// Optional diagnostic JSONL phase trace path for stalled capture attempts.
+    #[arg(long, value_name = "PATH")]
+    pub phase_trace_jsonl: Option<PathBuf>,
 }
 
 impl DenseGgufQwenOneTokenStrictCudaCommand {
@@ -850,9 +878,48 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         if self.top_k == 0 {
             bail!("dense Qwen one-token strict CUDA proof requires --top-k > 0");
         }
+        let phase_trace = DenseQwenPhaseTrace::new(
+            self.phase_trace_jsonl.as_deref(),
+            "dense-gguf-qwen-one-token-strict-cuda",
+        );
+        phase_trace.reset()?;
+        let transformer_trace_path =
+            self.phase_trace_jsonl.as_deref().map(dense_qwen_transformer_trace_path);
+        let _transformer_trace_env = if let Some(path) = transformer_trace_path.as_ref() {
+            reset_qwen_transformer_trace(path)?;
+            Some(ScopedEnvVar::set_os("BITNET_QWEN_TRACE_JSONL", path.as_os_str()))
+        } else {
+            None
+        };
+        phase_trace.emit(
+            "command",
+            "start",
+            json!({
+                "model": self.model.display().to_string(),
+                "device_index": self.device_index,
+                "top_k": self.top_k,
+                "json_out": self.json_out.as_ref().map(|path| path.display().to_string()),
+            }),
+        )?;
+        if let Some(path) = transformer_trace_path.as_ref() {
+            phase_trace.emit(
+                "command",
+                "transformer_trace_config",
+                json!({ "trace_path": path.display().to_string() }),
+            )?;
+        }
 
+        phase_trace.emit("model_map", "start", json!({}))?;
         let data = map_model(&self.model)?;
         let model_sha256 = sha256_bytes(&data);
+        phase_trace.emit(
+            "model_map",
+            "finish",
+            json!({
+                "model_bytes": data.len() as u64,
+                "model_sha256": model_sha256,
+            }),
+        )?;
         let proof_model = dense_qwen_proof_model_for_sha256(&model_sha256).ok_or_else(|| {
             anyhow!(
                 "dense Qwen one-token strict CUDA proof is scoped to verified Qwen2.5 0.5B Q8_0 or Qwen3 0.6B Q8_0 artifacts; got sha256={model_sha256}"
@@ -868,10 +935,19 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             );
         }
 
+        phase_trace.emit("gguf_inspection", "start", json!({ "model_id": proof_model.id }))?;
         let reader = GgufReader::new(&data).with_context(|| {
             format!("failed to parse dense GGUF model {}", self.model.display())
         })?;
         let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+        phase_trace.emit(
+            "gguf_inspection",
+            "finish",
+            json!({
+                "model_family": inspection.model_family,
+                "architecture": inspection.architecture,
+            }),
+        )?;
         if inspection.model_family != "qwen" || inspection.architecture != proof_model.architecture
         {
             bail!(
@@ -883,6 +959,7 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             );
         }
 
+        phase_trace.emit("cuda_probe", "start", json!({ "device_index": self.device_index }))?;
         let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
         if !probe.available {
             bail!("CUDA-DENSE-044 requires CUDA probe success: {:?}", probe.failure_reason);
@@ -891,20 +968,62 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         if !is_rtx5070ti_device_name(device_name) {
             bail!("CUDA-DENSE-044 requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'");
         }
+        phase_trace.emit(
+            "cuda_probe",
+            "finish",
+            json!({
+                "selected_device_name": device_name,
+                "runtime_api": "cuda",
+                "fallback_used": false,
+            }),
+        )?;
 
         let _strict_mode = ScopedEnvVar::set("BITNET_STRICT_MODE", "1");
         let _deterministic = ScopedEnvVar::set("BITNET_DETERMINISTIC", "1");
         let _seed = ScopedEnvVar::set("BITNET_SEED", "42");
         let _strict_cuda_backend = ScopedEnvVar::remove("BITNET_STRICT_CUDA_BACKEND");
 
-        let prerequisites = DenseQwenOneTokenPrerequisites::load(
+        phase_trace.emit("prerequisites", "start", json!({ "model_id": proof_model.id }))?;
+        let receipt_defaults = dense_qwen_receipts_for_proof_model(proof_model);
+        let all_layer_plan = dense_qwen_model_default_receipt_path(
             &self.all_layer_plan,
+            DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+            receipt_defaults.all_layer_plan,
+        );
+        let model_boundary_fixtures = dense_qwen_model_default_receipt_path(
             &self.model_boundary_fixtures,
+            DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT,
+            receipt_defaults.model_boundary_fixtures,
+        );
+        let kv_cache_policy = dense_qwen_model_default_receipt_path(
             &self.kv_cache_policy,
+            DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT,
+            receipt_defaults.kv_cache_policy,
+        );
+        let sampling_policy = dense_qwen_model_default_receipt_path(
             &self.sampling_policy,
+            DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT,
+            receipt_defaults.sampling_policy,
+        );
+        let prerequisites = DenseQwenOneTokenPrerequisites::load(
+            &all_layer_plan,
+            &model_boundary_fixtures,
+            &kv_cache_policy,
+            &sampling_policy,
             proof_model,
         )?;
+        phase_trace.emit(
+            "prerequisites",
+            "finish",
+            json!({
+                "all_layer_plan": all_layer_plan.display().to_string(),
+                "model_boundary_fixtures": model_boundary_fixtures.display().to_string(),
+                "kv_cache_policy": kv_cache_policy.display().to_string(),
+                "sampling_policy": sampling_policy.display().to_string(),
+            }),
+        )?;
 
+        phase_trace.emit("tokenizer", "start", json!({}))?;
         let tokenizer_resolution = bitnet_tokenizers::auto::resolve_tokenizer(
             &self.model,
             None,
@@ -923,6 +1042,15 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         }
         let prompt_token_ids_sha256 = sha256_u32(&prompt_token_ids);
         let rendered_prompt_sha256 = sha256_bytes(rendered_prompt.as_bytes());
+        phase_trace.emit(
+            "tokenizer",
+            "finish",
+            json!({
+                "prompt_token_count": prompt_token_ids.len() as u64,
+                "prompt_token_ids_sha256": prompt_token_ids_sha256,
+                "rendered_prompt_sha256": rendered_prompt_sha256,
+            }),
+        )?;
 
         let cpu = run_qwen_one_token_once(
             &self.model,
@@ -930,6 +1058,8 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             &prompt_token_ids,
             self.top_k,
             false,
+            &phase_trace,
+            "cpu_reference",
         )
         .with_context(|| "failed CPU reference one-token run")?;
         let cuda = run_qwen_one_token_once(
@@ -938,6 +1068,8 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             &prompt_token_ids,
             self.top_k,
             true,
+            &phase_trace,
+            "cuda_target",
         )
         .with_context(|| "failed CUDA target one-token run")?;
 
@@ -972,6 +1104,7 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             .map(|path| path.display().to_string())
             .unwrap_or_else(|| "stdout".to_string());
         let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        phase_trace.emit("receipt", "start", json!({ "artifact_path": artifact_path }))?;
         let receipt = dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(
             &inspection,
             &prerequisites,
@@ -990,6 +1123,7 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
             &decoded_token_text,
         )?;
         validate_dense_gguf_qwen_one_token_strict_cuda_proof_receipt_json(&receipt)?;
+        phase_trace.emit("receipt", "validated", json!({ "artifact_path": artifact_path }))?;
 
         if let Some(path) = &self.json_out {
             if let Some(parent) = path.parent() {
@@ -999,7 +1133,66 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
         } else {
             println!("{}", serde_json::to_string_pretty(&receipt)?);
         }
+        phase_trace.emit("command", "finish", json!({ "artifact_path": artifact_path }))?;
 
+        Ok(())
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+pub enum DenseQwenSourceCaptureProfile {
+    /// Standard governed short-decode source proof, bounded to 5-16 tokens.
+    #[value(name = "short-decode")]
+    ShortDecode,
+    /// Qwen3-only 32-token source proof for CUDA-MODEL-017 repeated comparators.
+    #[value(name = "qwen3-short-decode-32")]
+    Qwen3ShortDecode32,
+    /// Qwen3-only 128-token decode from a prefilling warm context.
+    #[value(name = "qwen3-warm-decode-128")]
+    Qwen3WarmDecode128,
+}
+
+impl DenseQwenSourceCaptureProfile {
+    fn profile_id(self) -> &'static str {
+        match self {
+            Self::ShortDecode => "short_decode",
+            Self::Qwen3ShortDecode32 => "qwen3_short_decode_32",
+            Self::Qwen3WarmDecode128 => "qwen3_warm_decode_128",
+        }
+    }
+
+    fn proof_scope(self) -> &'static str {
+        match self {
+            Self::ShortDecode => "qwen_strict_short_decode_greedy",
+            Self::Qwen3ShortDecode32 => "qwen3_strict_short_decode_32_greedy",
+            Self::Qwen3WarmDecode128 => "qwen3_strict_warm_decode_128_greedy",
+        }
+    }
+
+    fn validate_tokens(self, proof_model: &DenseQwenProofModel, tokens: usize) -> Result<()> {
+        match self {
+            Self::ShortDecode => {
+                if !(5..=16).contains(&tokens) {
+                    bail!(
+                        "standard dense Qwen short-decode strict CUDA proof requires --max-new-tokens 5..=16"
+                    );
+                }
+            }
+            Self::Qwen3ShortDecode32 => {
+                if proof_model.id != "qwen3-0.6b-instruct-q8_0" || tokens != 32 {
+                    bail!(
+                        "qwen3-short-decode-32 capture requires the verified Qwen3 0.6B Q8_0 artifact and --max-new-tokens 32"
+                    );
+                }
+            }
+            Self::Qwen3WarmDecode128 => {
+                if proof_model.id != "qwen3-0.6b-instruct-q8_0" || tokens != 128 {
+                    bail!(
+                        "qwen3-warm-decode-128 capture requires the verified Qwen3 0.6B Q8_0 artifact and --max-new-tokens 128"
+                    );
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -1007,7 +1200,7 @@ impl DenseGgufQwenOneTokenStrictCudaCommand {
 /// Run the governed dense Qwen short-decode strict CUDA proof.
 #[derive(Args, Debug, Clone)]
 pub struct DenseGgufQwenShortDecodeStrictCudaCommand {
-    /// Verified Qwen2.5 0.5B Q8_0 GGUF model path.
+    /// Verified Qwen2.5 0.5B or Qwen3 0.6B Q8_0 GGUF model path.
     #[arg(long)]
     pub model: PathBuf,
 
@@ -1015,9 +1208,13 @@ pub struct DenseGgufQwenShortDecodeStrictCudaCommand {
     #[arg(long, default_value = "What is 2+2?")]
     pub prompt: String,
 
-    /// Number of deterministic greedy tokens to generate. CUDA-DENSE-045 is bounded to 5-16.
+    /// Number of deterministic greedy tokens to generate. Standard source proof is bounded to 5-16.
     #[arg(long, default_value_t = 8)]
     pub max_new_tokens: usize,
+
+    /// Governed source-capture profile. Qwen3 32-token capture is not a product ask/chat bound.
+    #[arg(long, value_enum, default_value_t = DenseQwenSourceCaptureProfile::ShortDecode)]
+    pub capture_profile: DenseQwenSourceCaptureProfile,
 
     /// Top-k logits to record at each decode step.
     #[arg(long, default_value_t = 10)]
@@ -1058,9 +1255,6 @@ pub struct DenseGgufQwenShortDecodeStrictCudaCommand {
 
 impl DenseGgufQwenShortDecodeStrictCudaCommand {
     pub async fn execute(&self) -> Result<()> {
-        if !(5..=16).contains(&self.max_new_tokens) {
-            bail!("dense Qwen short-decode strict CUDA proof requires --max-new-tokens 5..=16");
-        }
         if self.top_k == 0 {
             bail!("dense Qwen short-decode strict CUDA proof requires --top-k > 0");
         }
@@ -1079,6 +1273,10 @@ impl DenseGgufQwenShortDecodeStrictCudaCommand {
                 "dense Qwen short-decode strict CUDA proof is scoped to verified {}; got {model_file}",
                 proof_model.file
             );
+        }
+        self.capture_profile.validate_tokens(proof_model, self.max_new_tokens)?;
+        if self.capture_profile == DenseQwenSourceCaptureProfile::Qwen3WarmDecode128 {
+            bail!("use dense-gguf-qwen-warm-decode-strict-cuda for qwen3-warm-decode-128 capture");
         }
 
         let reader = GgufReader::new(&data).with_context(|| {
@@ -1109,12 +1307,38 @@ impl DenseGgufQwenShortDecodeStrictCudaCommand {
         let _seed = ScopedEnvVar::set("BITNET_SEED", "42");
         let _strict_cuda_backend = ScopedEnvVar::remove("BITNET_STRICT_CUDA_BACKEND");
 
-        let prerequisites = DenseQwenShortDecodePrerequisites::load(
+        let receipt_defaults = dense_qwen_receipts_for_proof_model(proof_model);
+        let all_layer_plan = dense_qwen_model_default_receipt_path(
             &self.all_layer_plan,
+            DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+            receipt_defaults.all_layer_plan,
+        );
+        let model_boundary_fixtures = dense_qwen_model_default_receipt_path(
             &self.model_boundary_fixtures,
+            DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT,
+            receipt_defaults.model_boundary_fixtures,
+        );
+        let kv_cache_policy = dense_qwen_model_default_receipt_path(
             &self.kv_cache_policy,
+            DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT,
+            receipt_defaults.kv_cache_policy,
+        );
+        let sampling_policy = dense_qwen_model_default_receipt_path(
             &self.sampling_policy,
+            DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT,
+            receipt_defaults.sampling_policy,
+        );
+        let one_token_proof = dense_qwen_model_default_receipt_path(
             &self.one_token_proof,
+            DEFAULT_DENSE_QWEN_ONE_TOKEN_PROOF_RECEIPT,
+            receipt_defaults.one_token_proof,
+        );
+        let prerequisites = DenseQwenShortDecodePrerequisites::load(
+            &all_layer_plan,
+            &model_boundary_fixtures,
+            &kv_cache_policy,
+            &sampling_policy,
+            &one_token_proof,
             proof_model,
         )?;
 
@@ -1205,8 +1429,219 @@ impl DenseGgufQwenShortDecodeStrictCudaCommand {
             &cpu,
             &cuda,
             &decoded_text,
+            self.capture_profile,
         )?;
         validate_dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(&receipt)?;
+
+        if let Some(path) = &self.json_out {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path, serde_json::to_string_pretty(&receipt)?)?;
+        } else {
+            println!("{}", serde_json::to_string_pretty(&receipt)?);
+        }
+
+        Ok(())
+    }
+}
+
+/// Run the governed Qwen3 warm-context 128-token decode strict CUDA proof.
+#[derive(Args, Debug, Clone)]
+pub struct DenseGgufQwenWarmDecodeStrictCudaCommand {
+    /// Verified Qwen3 0.6B Q8_0 GGUF model path.
+    #[arg(long)]
+    pub model: PathBuf,
+
+    /// Deterministic raw prompt used to prefill the warm context before 128-token decode.
+    #[arg(long, default_value = "Explain proof-carrying local inference in one paragraph.")]
+    pub prompt: String,
+
+    /// Number of deterministic greedy tokens to generate. CUDA-MODEL-017A requires exactly 128.
+    #[arg(long, default_value_t = 128)]
+    pub max_new_tokens: usize,
+
+    /// Top-k logits to record at each decode step.
+    #[arg(long, default_value_t = 10)]
+    pub top_k: usize,
+
+    /// CUDA device index.
+    #[arg(long, default_value_t = 0)]
+    pub device_index: usize,
+
+    /// Prerequisite all-layer execution-plan receipt.
+    #[arg(long, value_name = "PATH", default_value = DEFAULT_QWEN3_ALL_LAYER_PLAN_RECEIPT)]
+    pub all_layer_plan: PathBuf,
+
+    /// Prerequisite model-boundary fixtures receipt.
+    #[arg(
+        long,
+        value_name = "PATH",
+        default_value = DEFAULT_QWEN3_MODEL_BOUNDARY_FIXTURES_RECEIPT
+    )]
+    pub model_boundary_fixtures: PathBuf,
+
+    /// Prerequisite KV-cache policy receipt.
+    #[arg(long, value_name = "PATH", default_value = DEFAULT_QWEN3_KV_CACHE_POLICY_RECEIPT)]
+    pub kv_cache_policy: PathBuf,
+
+    /// Prerequisite sampling policy receipt.
+    #[arg(long, value_name = "PATH", default_value = DEFAULT_QWEN3_SAMPLING_POLICY_RECEIPT)]
+    pub sampling_policy: PathBuf,
+
+    /// Prerequisite one-token proof receipt.
+    #[arg(long, value_name = "PATH", default_value = DEFAULT_QWEN3_ONE_TOKEN_PROOF_RECEIPT)]
+    pub one_token_proof: PathBuf,
+
+    /// Prerequisite short-decode proof receipt.
+    #[arg(long, value_name = "PATH", default_value = DEFAULT_QWEN3_SHORT_DECODE_PROOF_RECEIPT)]
+    pub short_decode_proof: PathBuf,
+
+    /// Output JSON receipt path. If omitted, writes receipt JSON to stdout.
+    #[arg(long, value_name = "PATH")]
+    pub json_out: Option<PathBuf>,
+}
+
+impl DenseGgufQwenWarmDecodeStrictCudaCommand {
+    pub async fn execute(&self) -> Result<()> {
+        if self.top_k == 0 {
+            bail!("Qwen3 warm-decode strict CUDA proof requires --top-k > 0");
+        }
+
+        let data = map_model(&self.model)?;
+        let model_sha256 = sha256_bytes(&data);
+        let proof_model = dense_qwen_proof_model_for_sha256(&model_sha256).ok_or_else(|| {
+            anyhow!(
+                "Qwen3 warm-decode strict CUDA proof is scoped to the verified Qwen3 0.6B Q8_0 artifact; got sha256={model_sha256}"
+            )
+        })?;
+        DenseQwenSourceCaptureProfile::Qwen3WarmDecode128
+            .validate_tokens(proof_model, self.max_new_tokens)?;
+        let model_file =
+            self.model.file_name().and_then(|value| value.to_str()).unwrap_or_default();
+        if model_file != proof_model.file {
+            bail!(
+                "Qwen3 warm-decode proof is scoped to verified {}; got {model_file}",
+                proof_model.file
+            );
+        }
+
+        let reader = GgufReader::new(&data).with_context(|| {
+            format!("failed to parse dense GGUF model {}", self.model.display())
+        })?;
+        let inspection = inspect_dense_gguf_tensor_descriptors(&reader)?;
+        if inspection.model_family != "qwen" || inspection.architecture != proof_model.architecture
+        {
+            bail!(
+                "Qwen3 warm-decode proof requires qwen/{} descriptor identity; got {}/{}",
+                proof_model.architecture,
+                inspection.model_family,
+                inspection.architecture
+            );
+        }
+
+        let probe = bitnet_device_probe::probe_nvidia_cuda(Some(self.device_index));
+        if !probe.available {
+            bail!(
+                "Qwen3 warm-decode proof requires CUDA probe success: {:?}",
+                probe.failure_reason
+            );
+        }
+        let device_name = probe.selected_device_name.as_deref().unwrap_or("unknown");
+        if !is_rtx5070ti_device_name(device_name) {
+            bail!(
+                "Qwen3 warm-decode proof requires NVIDIA GeForce RTX 5070 Ti; found '{device_name}'"
+            );
+        }
+
+        let _strict_mode = ScopedEnvVar::set("BITNET_STRICT_MODE", "1");
+        let _deterministic = ScopedEnvVar::set("BITNET_DETERMINISTIC", "1");
+        let _seed = ScopedEnvVar::set("BITNET_SEED", "42");
+        let _strict_cuda_backend = ScopedEnvVar::remove("BITNET_STRICT_CUDA_BACKEND");
+
+        let prerequisites = DenseQwenWarmSessionPrerequisites::load(
+            &self.all_layer_plan,
+            &self.model_boundary_fixtures,
+            &self.kv_cache_policy,
+            &self.sampling_policy,
+            &self.one_token_proof,
+            &self.short_decode_proof,
+            proof_model,
+        )?;
+
+        let tokenizer_resolution = bitnet_tokenizers::auto::resolve_tokenizer(
+            &self.model,
+            None,
+            true,
+        )
+        .with_context(|| {
+            format!("failed to resolve authoritative tokenizer for {}", self.model.display())
+        })?;
+        let tokenizer = tokenizer_resolution.tokenizer;
+        let rendered_prompt = self.prompt.clone();
+        let prompt_token_ids = tokenizer
+            .encode(&rendered_prompt, true, false)
+            .with_context(|| "failed to tokenize deterministic Qwen3 warm-decode prompt")?;
+        if prompt_token_ids.is_empty() {
+            bail!("deterministic Qwen3 warm-decode prompt tokenized to zero tokens");
+        }
+        let prompt_token_ids_sha256 = sha256_u32(&prompt_token_ids);
+        let rendered_prompt_sha256 = sha256_bytes(rendered_prompt.as_bytes());
+
+        let cpu = run_qwen_short_decode(
+            &self.model,
+            BitNetDevice::Cpu,
+            &prompt_token_ids,
+            self.max_new_tokens,
+            self.top_k,
+            false,
+        )
+        .with_context(|| "failed CPU reference warm-decode run")?;
+        let cuda = run_qwen_short_decode(
+            &self.model,
+            BitNetDevice::Cuda(self.device_index),
+            &prompt_token_ids,
+            self.max_new_tokens,
+            self.top_k,
+            true,
+        )
+        .with_context(|| "failed CUDA target warm-decode run")?;
+
+        if let Some(index) =
+            first_divergence_index(&cpu.generated_token_ids, &cuda.generated_token_ids)
+        {
+            bail!(
+                "Qwen3 warm-decode selected token mismatch at step {index}: cpu={} cuda={}",
+                cpu.generated_token_ids[index],
+                cuda.generated_token_ids[index]
+            );
+        }
+
+        let decoded_text = decode_generated_tokens(tokenizer.as_ref(), &cuda.generated_token_ids);
+        let artifact_path = self
+            .json_out
+            .as_ref()
+            .map(|path| path.display().to_string())
+            .unwrap_or_else(|| "stdout".to_string());
+        let timestamp_utc = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
+        let receipt = dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt_json(
+            &inspection,
+            &prerequisites,
+            proof_model,
+            &probe,
+            &self.model,
+            &model_sha256,
+            &artifact_path,
+            &timestamp_utc,
+            &rendered_prompt,
+            prompt_token_ids.len(),
+            &prompt_token_ids_sha256,
+            &rendered_prompt_sha256,
+            &cpu,
+            &cuda,
+            &decoded_text,
+        )?;
+        validate_dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt_json(&receipt)?;
 
         if let Some(path) = &self.json_out {
             if let Some(parent) = path.parent() {
@@ -1539,6 +1974,7 @@ pub async fn run_dense_qwen_cuda_ask(
         model: options.model.clone(),
         prompt: options.question.clone(),
         max_new_tokens: options.max_new_tokens,
+        capture_profile: DenseQwenSourceCaptureProfile::ShortDecode,
         top_k: options.top_k,
         device_index: options.device_index,
         all_layer_plan: PathBuf::from(proof_receipts.all_layer_plan),
@@ -3706,6 +4142,15 @@ impl ScopedEnvVar {
         Self { key, previous }
     }
 
+    fn set_os(key: &'static str, value: &std::ffi::OsStr) -> Self {
+        let previous = std::env::var_os(key);
+        // SAFETY: See `ScopedEnvVar::set`.
+        unsafe {
+            std::env::set_var(key, value);
+        }
+        Self { key, previous }
+    }
+
     fn remove(key: &'static str) -> Self {
         let previous = std::env::var_os(key);
         // SAFETY: See `ScopedEnvVar::set`.
@@ -3727,6 +4172,25 @@ impl Drop for ScopedEnvVar {
             }
         }
     }
+}
+
+fn dense_qwen_transformer_trace_path(phase_trace_path: &Path) -> PathBuf {
+    let mut path = phase_trace_path.to_path_buf();
+    path.set_extension("transformer.jsonl");
+    path
+}
+
+fn reset_qwen_transformer_trace(path: &Path) -> Result<()> {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent).with_context(|| {
+            format!("failed to create transformer trace directory {}", parent.display())
+        })?;
+    }
+    std::fs::File::create(path)
+        .with_context(|| format!("failed to reset transformer trace {}", path.display()))?;
+    Ok(())
 }
 
 fn read_and_validate_receipt_for_qwen_model(
@@ -3809,44 +4273,203 @@ fn dense_qwen_proof_kv_cache_config(
     Ok(scoped)
 }
 
+#[derive(Clone, Debug)]
+struct DenseQwenPhaseTrace {
+    path: Option<PathBuf>,
+    command: &'static str,
+    started_at: std::time::Instant,
+}
+
+impl DenseQwenPhaseTrace {
+    fn new(path: Option<&Path>, command: &'static str) -> Self {
+        Self { path: path.map(Path::to_path_buf), command, started_at: std::time::Instant::now() }
+    }
+
+    fn reset(&self) -> Result<()> {
+        let Some(path) = &self.path else {
+            return Ok(());
+        };
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(parent).with_context(|| {
+                format!("failed to create phase trace directory {}", parent.display())
+            })?;
+        }
+        std::fs::File::create(path)
+            .with_context(|| format!("failed to reset phase trace {}", path.display()))?;
+        Ok(())
+    }
+
+    fn emit(&self, phase: &str, state: &str, details: Value) -> Result<()> {
+        let Some(path) = &self.path else {
+            return Ok(());
+        };
+        let event = json!({
+            "schema": 1,
+            "timestamp_utc": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+            "elapsed_ms": elapsed_ms_f64(self.started_at),
+            "command": self.command,
+            "phase": phase,
+            "state": state,
+            "details": details,
+        });
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(parent).with_context(|| {
+                format!("failed to create phase trace directory {}", parent.display())
+            })?;
+        }
+        use std::io::Write as _;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .with_context(|| format!("failed to open phase trace {}", path.display()))?;
+        writeln!(file, "{}", serde_json::to_string(&event)?)
+            .with_context(|| format!("failed to write phase trace {}", path.display()))?;
+        eprintln!("qwen_one_token_phase={phase}:{state}");
+        Ok(())
+    }
+}
+
+fn dense_qwen_phase_trace_progress_callback(
+    phase_trace: &DenseQwenPhaseTrace,
+    phase_scope: &'static str,
+) -> ProgressCallback {
+    let trace = phase_trace.clone();
+    std::sync::Arc::new(move |progress, message| {
+        let _ = trace.emit(
+            phase_scope,
+            "model_loader_progress",
+            json!({
+                "progress": progress,
+                "message": message,
+            }),
+        );
+    })
+}
+
 fn run_qwen_one_token_once(
     model_path: &Path,
     device: BitNetDevice,
     prompt_token_ids: &[u32],
     top_k: usize,
     require_cuda: bool,
+    phase_trace: &DenseQwenPhaseTrace,
+    phase_scope: &'static str,
 ) -> Result<DenseQwenOneTokenRun> {
+    phase_trace.emit(
+        phase_scope,
+        "start",
+        json!({
+            "device": if require_cuda { "cuda" } else { "cpu" },
+            "prompt_token_count": prompt_token_ids.len() as u64,
+            "top_k": top_k,
+        }),
+    )?;
+    phase_trace.emit(
+        phase_scope,
+        "candle_device_start",
+        json!({ "requested_cuda": require_cuda }),
+    )?;
     let candle_device = device.to_candle()?;
     if require_cuda && !matches!(candle_device, CandleDevice::Cuda(_)) {
         bail!("CUDA one-token proof requested CUDA device but Candle did not return CUDA");
     }
+    phase_trace.emit(
+        phase_scope,
+        "candle_device_finish",
+        json!({ "is_cuda": matches!(candle_device, CandleDevice::Cuda(_)) }),
+    )?;
 
     let loader = ModelLoader::new(device);
-    let load_config =
-        LoadConfig { use_mmap: true, validate_checksums: false, progress_callback: None };
+    let load_config = LoadConfig {
+        use_mmap: true,
+        validate_checksums: false,
+        progress_callback: Some(dense_qwen_phase_trace_progress_callback(phase_trace, phase_scope)),
+    };
     let total_start = std::time::Instant::now();
     let load_start = std::time::Instant::now();
+    phase_trace.emit(
+        phase_scope,
+        "model_load_start",
+        json!({ "model": model_path.display().to_string() }),
+    )?;
     let model = loader
         .load_with_config(model_path, &load_config)
         .with_context(|| format!("failed to load model {}", model_path.display()))?;
     let model_load_ms = elapsed_ms_f64(load_start);
+    phase_trace.emit(
+        phase_scope,
+        "model_load_finish",
+        json!({ "model_load_ms": model_load_ms }),
+    )?;
+    phase_trace.emit(
+        phase_scope,
+        "kv_cache_start",
+        json!({ "required_seq_len": prompt_token_ids.len() as u64 }),
+    )?;
     let mut cache =
         dense_qwen_proof_kv_cache(model.as_ref(), &candle_device, prompt_token_ids.len())?;
+    phase_trace.emit(phase_scope, "kv_cache_finish", json!({}))?;
 
     let mut prefill_ms = 0.0;
     if prompt_token_ids.len() > 1 {
         let prefill_start = std::time::Instant::now();
-        for token in &prompt_token_ids[..prompt_token_ids.len() - 1] {
+        phase_trace.emit(
+            phase_scope,
+            "prefill_start",
+            json!({ "prefill_tokens": (prompt_token_ids.len() - 1) as u64 }),
+        )?;
+        for (prefill_index, token) in
+            prompt_token_ids[..prompt_token_ids.len() - 1].iter().enumerate()
+        {
+            let embed_start = std::time::Instant::now();
+            phase_trace.emit(
+                phase_scope,
+                "prefill_embed_start",
+                json!({ "prefill_index": prefill_index as u64 }),
+            )?;
             let embedding = model.embed(&[*token])?;
+            phase_trace.emit(
+                phase_scope,
+                "prefill_embed_finish",
+                json!({
+                    "prefill_index": prefill_index as u64,
+                    "embed_ms": elapsed_ms_f64(embed_start),
+                    "embedding_is_cuda": concrete_tensor_is_cuda(&embedding),
+                }),
+            )?;
             if require_cuda && !concrete_tensor_is_cuda(&embedding) {
                 bail!("CUDA proof embedding tensor was not CUDA-resident during prefill");
             }
+            let forward_start = std::time::Instant::now();
+            phase_trace.emit(
+                phase_scope,
+                "prefill_forward_start",
+                json!({ "prefill_index": prefill_index as u64 }),
+            )?;
+            let trace_step = prefill_index.to_string();
+            let _trace_step =
+                ScopedEnvVar::set_os("BITNET_QWEN_TRACE_STEP", std::ffi::OsStr::new(&trace_step));
             let hidden = model.forward(&embedding, &mut cache as &mut dyn std::any::Any)?;
+            phase_trace.emit(
+                phase_scope,
+                "prefill_forward_finish",
+                json!({
+                    "prefill_index": prefill_index as u64,
+                    "forward_ms": elapsed_ms_f64(forward_start),
+                    "hidden_is_cuda": concrete_tensor_is_cuda(&hidden),
+                }),
+            )?;
             if require_cuda && !concrete_tensor_is_cuda(&hidden) {
                 bail!("CUDA proof hidden tensor was not CUDA-resident during prefill");
             }
         }
         prefill_ms = elapsed_ms_f64(prefill_start);
+        phase_trace.emit(phase_scope, "prefill_finish", json!({ "prefill_ms": prefill_ms }))?;
     }
 
     let decode_start = std::time::Instant::now();
@@ -3855,40 +4478,70 @@ fn run_qwen_one_token_once(
         .copied()
         .ok_or_else(|| anyhow!("one-token proof requires non-empty prompt tokens"))?;
     let embed_start = std::time::Instant::now();
+    phase_trace.emit(phase_scope, "decode_embed_start", json!({ "last_token": last_token }))?;
     let embedding = model.embed(&[last_token])?;
     let embed_ms = elapsed_ms_f64(embed_start);
+    phase_trace.emit(phase_scope, "decode_embed_finish", json!({ "embed_ms": embed_ms }))?;
     if require_cuda && !concrete_tensor_is_cuda(&embedding) {
         bail!("CUDA proof decode embedding tensor was not CUDA-resident");
     }
 
     let forward_start = std::time::Instant::now();
+    phase_trace.emit(phase_scope, "decode_forward_start", json!({}))?;
+    let decode_trace_step = (prompt_token_ids.len() - 1).to_string();
+    let _decode_trace_step =
+        ScopedEnvVar::set_os("BITNET_QWEN_TRACE_STEP", std::ffi::OsStr::new(&decode_trace_step));
     let hidden = model.forward(&embedding, &mut cache as &mut dyn std::any::Any)?;
     let forward_ms = elapsed_ms_f64(forward_start);
+    phase_trace.emit(phase_scope, "decode_forward_finish", json!({ "forward_ms": forward_ms }))?;
     if require_cuda && !concrete_tensor_is_cuda(&hidden) {
         bail!("CUDA proof decode hidden tensor was not CUDA-resident");
     }
 
+    phase_trace.emit(phase_scope, "last_hidden_start", json!({}))?;
     let last_hidden = extract_last_token_hidden_local(&hidden)?;
+    phase_trace.emit(phase_scope, "last_hidden_finish", json!({}))?;
     if require_cuda && !concrete_tensor_is_cuda(&last_hidden) {
         bail!("CUDA proof last-hidden tensor was not CUDA-resident");
     }
 
     let logits_start = std::time::Instant::now();
+    phase_trace.emit(phase_scope, "logits_start", json!({}))?;
     let logits = model.logits(&last_hidden)?;
     let logits_ms = elapsed_ms_f64(logits_start);
+    phase_trace.emit(phase_scope, "logits_finish", json!({ "logits_ms": logits_ms }))?;
     let logits_device_is_cuda = concrete_tensor_is_cuda(&logits);
     if require_cuda && !logits_device_is_cuda {
         bail!("CUDA proof logits tensor was not CUDA-resident before download");
     }
     let logits_download_start = std::time::Instant::now();
+    phase_trace.emit(phase_scope, "logits_download_start", json!({}))?;
     let logits_vec = extract_logits_2d_local(&logits)?;
     let logits_download_ms = elapsed_ms_f64(logits_download_start);
+    phase_trace.emit(
+        phase_scope,
+        "logits_download_finish",
+        json!({
+            "logits_download_ms": logits_download_ms,
+            "logits_len": logits_vec.len() as u64,
+        }),
+    )?;
     let top_k_entries = dense_qwen_top_k(&logits_vec, top_k);
     let Some(selected) = top_k_entries.first().map(|entry| entry.token_id) else {
         bail!("one-token proof could not select a greedy token from logits");
     };
     let top_k_rank_sha256 = dense_qwen_top_k_rank_sha256(&top_k_entries)?;
     let logits_sha256 = sha256_f32(&logits_vec);
+    phase_trace.emit(
+        phase_scope,
+        "finish",
+        json!({
+            "selected_token_id": selected,
+            "total_ms": elapsed_ms_f64(total_start),
+            "decode_ms": elapsed_ms_f64(decode_start),
+            "logits_device_is_cuda": logits_device_is_cuda,
+        }),
+    )?;
 
     Ok(DenseQwenOneTokenRun {
         selected_token_id: selected,
@@ -11351,6 +12004,7 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
     cpu: &DenseQwenShortDecodeRun,
     cuda: &DenseQwenShortDecodeRun,
     decoded_text: &str,
+    capture_profile: DenseQwenSourceCaptureProfile,
 ) -> Result<Value> {
     if inspection.model_family != "qwen" || inspection.architecture != proof_model.architecture {
         bail!(
@@ -11364,9 +12018,7 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
         bail!("dense Qwen short-decode receipt requires verified {} model SHA", proof_model.id);
     }
     let generated_count = cuda.generated_token_ids.len();
-    if !(5..=16).contains(&generated_count) {
-        bail!("dense Qwen short-decode receipt requires 5-16 generated tokens");
-    }
+    capture_profile.validate_tokens(proof_model, generated_count)?;
     if cpu.generated_token_ids != cuda.generated_token_ids {
         bail!("dense Qwen short-decode receipt requires matching generated token IDs");
     }
@@ -11585,7 +12237,8 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
         },
         "short_decode_proof": {
             "schema": 1,
-            "proof_scope": "qwen_strict_short_decode_greedy",
+            "proof_scope": capture_profile.proof_scope(),
+            "profile_id": capture_profile.profile_id(),
             "model_family": "qwen",
             "requested_new_tokens": generated_count_u64,
             "generated_tokens_count": generated_count_u64,
@@ -11750,6 +12403,146 @@ fn dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
         ],
         "error": null
     }))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn dense_gguf_qwen_warm_decode_strict_cuda_proof_receipt_json(
+    inspection: &DenseGgufDescriptorInspection,
+    prerequisites: &DenseQwenWarmSessionPrerequisites,
+    proof_model: &DenseQwenProofModel,
+    probe: &bitnet_device_probe::NvidiaCudaProbe,
+    model_path: &Path,
+    model_sha256: &str,
+    artifact_path: &str,
+    timestamp_utc: &str,
+    rendered_prompt: &str,
+    prompt_token_count: usize,
+    prompt_token_ids_sha256: &str,
+    rendered_prompt_sha256: &str,
+    cpu: &DenseQwenShortDecodeRun,
+    cuda: &DenseQwenShortDecodeRun,
+    decoded_text: &str,
+) -> Result<Value> {
+    let mut receipt = dense_gguf_qwen_short_decode_strict_cuda_proof_receipt_json(
+        inspection,
+        &prerequisites.short_decode,
+        proof_model,
+        probe,
+        model_path,
+        model_sha256,
+        artifact_path,
+        timestamp_utc,
+        rendered_prompt,
+        prompt_token_count,
+        prompt_token_ids_sha256,
+        rendered_prompt_sha256,
+        cpu,
+        cuda,
+        decoded_text,
+        DenseQwenSourceCaptureProfile::Qwen3WarmDecode128,
+    )?;
+
+    receipt["artifact_kind"] = json!(DENSE_GGUF_QWEN_WARM_DECODE_STRICT_CUDA_PROOF_ARTIFACT_KIND);
+    receipt["claim"] = json!("dense_gguf_qwen_warm_decode_strict_cuda_proof_recorded");
+    receipt["execution_path"]["kernel_family"] = json!("dense_qwen_warm_decode_strict_cuda");
+    receipt["execution_path"]["quantization_family"] =
+        json!("dense_gguf_q8_0_f16_qwen_warm_decode_contract");
+    receipt["execution_plan"]["quantization"] =
+        json!("dense_gguf_q8_0_f16_qwen_warm_decode_contract");
+
+    let warm_decode_proof = receipt
+        .as_object_mut()
+        .and_then(|object| object.remove("short_decode_proof"))
+        .ok_or_else(|| anyhow!("warm-decode receipt source is missing short_decode_proof"))?;
+    receipt["warm_decode_proof"] = warm_decode_proof;
+    receipt["warm_decode_proof"]["proof_scope"] =
+        json!(DenseQwenSourceCaptureProfile::Qwen3WarmDecode128.proof_scope());
+    receipt["warm_decode_proof"]["profile_id"] =
+        json!(DenseQwenSourceCaptureProfile::Qwen3WarmDecode128.profile_id());
+    receipt["warm_decode_proof"]["warm_context_reused"] = json!(true);
+    receipt["warm_decode_proof"]["decode_started_from_prefilled_context"] = json!(true);
+    receipt["warm_decode_proof"]["warm_context_prompt_token_count"] =
+        json!(prompt_token_count as u64);
+    receipt["warm_decode_proof"]["qwen_warm_decode_cuda_claimed"] = json!(true);
+    receipt["warm_decode_proof"]["qwen_chat_cuda_claimed"] = json!(false);
+    receipt["warm_decode_proof"]["server_ready_claimed"] = json!(false);
+    receipt["warm_decode_proof"]["speedup_claim"] = json!(false);
+    receipt["warm_decode_proof"]["full_cuda_residency_claimed"] = json!(false);
+
+    receipt["quality_gate"] = json!({
+        "schema": 1,
+        "gate": "qwen_warm_decode_cuda_parity",
+        "passed": true,
+        "warm_context_decode_claimed": true,
+        "ask_claimed": false,
+        "chat_claimed": false,
+        "server_ready_claimed": false
+    });
+    receipt["warm_context_proof"] = json!({
+        "schema": 1,
+        "proof_scope": "qwen3_decode_128_from_warm_context",
+        "profile_id": "decode_128_from_warm_context",
+        "warm_context_reused": true,
+        "decode_started_from_prefilled_context": true,
+        "warm_context_prompt_token_count": prompt_token_count as u64,
+        "prompt_token_ids_sha256": prompt_token_ids_sha256,
+        "rendered_prompt_sha256": rendered_prompt_sha256,
+        "requested_new_tokens": 128_u64,
+        "generated_tokens_count": 128_u64,
+        "model_loaded_once": true,
+        "cuda_context_initialized_once": true,
+        "weights_uploaded_once": true,
+        "per_request_model_load": false,
+        "fallback_used": false,
+        "speedup_claim": false,
+        "server_ready_claimed": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["session_lifecycle"] = json!({
+        "schema": 1,
+        "proof_scope": "qwen3_warm_decode_strict_cuda",
+        "model_loaded_once": true,
+        "tokenizer_loaded_once": true,
+        "cuda_context_initialized_once": true,
+        "cuda_context_once": true,
+        "weights_uploaded_once": true,
+        "per_request_model_load": false,
+        "per_token_weight_upload": false,
+        "workspace_reused": true,
+        "runtime_buffers_reused": true,
+        "warm_context_reused": true,
+        "decode_started_from_prefilled_context": true,
+        "fallback_used": false,
+        "scoped_warm_context_residency_claimed": true,
+        "persistent_session_residency_claimed": false,
+        "full_cuda_residency_claimed": false
+    });
+    receipt["tensor_residency"]["scope"] = json!("qwen_warm_decode_strict_cuda");
+    receipt["tensor_residency"]["model_loaded_once"] = json!(true);
+    receipt["tensor_residency"]["tokenizer_loaded_once"] = json!(true);
+    receipt["tensor_residency"]["cuda_context_initialized_once"] = json!(true);
+    receipt["tensor_residency"]["cuda_context_once"] = json!(true);
+    receipt["tensor_residency"]["per_request_model_load"] = json!(false);
+    receipt["tensor_residency"]["workspace_reused"] = json!(true);
+    receipt["tensor_residency"]["warm_context_reused"] = json!(true);
+    receipt["tensor_residency"]["scoped_warm_context_residency_claimed"] = json!(true);
+    receipt["timing"]["warm_context_prefill_ms"] = receipt["timing"]["prefill_ms"].clone();
+    receipt["timing"]["warm_context_prompt_tokens"] = json!(prompt_token_count as u64);
+    receipt["parity"]["kernel_id"] = json!("dense_qwen_warm_decode_cuda_runtime");
+    receipt["parity"]["fixture_id"] = json!(format!("{}-warm-decode-128-greedy", proof_model.id));
+
+    receipt["claim_boundary"]["qwen_warm_decode_cuda_claimed"] = json!(true);
+    receipt["claim_boundary"]["qwen_chat_cuda_claimed"] = json!(false);
+    receipt["claim_boundary"]["server_ready_claimed"] = json!(false);
+    receipt["claim_boundary"]["speedup_claim"] = json!(false);
+    receipt["claim_boundary"]["persistent_session_residency_claimed"] = json!(false);
+    receipt["claim_boundary"]["full_cuda_residency_claimed"] = json!(false);
+    receipt["notes"] = json!([
+        "CUDA-MODEL-017A records Qwen3 decode_128_from_warm_context source-capture tooling only.",
+        "This receipt proves a Qwen3-only 128-token CUDA decode from a prefilling warm context and does not claim ask/chat token expansion, speedup, server readiness, broad dense GGUF readiness, full CUDA residency, Qwen2.5 inheritance, or BitNet packed I2_S/QK256 proof."
+    ]);
+
+    Ok(receipt)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -13401,6 +14194,145 @@ mod tests {
         assert_eq!(context.receipts.warm_session_proof, DEFAULT_QWEN3_WARM_SESSION_PROOF_RECEIPT);
         assert_eq!(dense_qwen_ask_work_item(context.proof_model), "CUDA-MODEL-010");
         assert_eq!(dense_qwen_chat_work_item(context.proof_model), "CUDA-MODEL-011");
+    }
+
+    #[test]
+    fn qwen3_capture_defaults_resolve_to_qwen3_prerequisite_receipts() {
+        let receipts = dense_qwen_receipts_for_proof_model(&QWEN3_06B_INSTRUCT_Q8_0_PROOF_MODEL);
+        let resolved = dense_qwen_model_default_receipt_path(
+            Path::new(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT),
+            DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+            receipts.all_layer_plan,
+        );
+
+        assert_eq!(resolved, PathBuf::from(DEFAULT_QWEN3_ALL_LAYER_PLAN_RECEIPT));
+        assert_eq!(
+            dense_qwen_model_default_receipt_path(
+                Path::new(DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT),
+                DEFAULT_DENSE_QWEN_MODEL_BOUNDARY_FIXTURES_RECEIPT,
+                receipts.model_boundary_fixtures,
+            ),
+            PathBuf::from(DEFAULT_QWEN3_MODEL_BOUNDARY_FIXTURES_RECEIPT)
+        );
+        assert_eq!(
+            dense_qwen_model_default_receipt_path(
+                Path::new(DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT),
+                DEFAULT_DENSE_QWEN_KV_CACHE_POLICY_RECEIPT,
+                receipts.kv_cache_policy,
+            ),
+            PathBuf::from(DEFAULT_QWEN3_KV_CACHE_POLICY_RECEIPT)
+        );
+        assert_eq!(
+            dense_qwen_model_default_receipt_path(
+                Path::new(DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT),
+                DEFAULT_DENSE_QWEN_SAMPLING_POLICY_RECEIPT,
+                receipts.sampling_policy,
+            ),
+            PathBuf::from(DEFAULT_QWEN3_SAMPLING_POLICY_RECEIPT)
+        );
+
+        let explicit = dense_qwen_model_default_receipt_path(
+            Path::new("target/custom-qwen3-prereq.json"),
+            DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+            receipts.all_layer_plan,
+        );
+
+        assert_eq!(explicit, PathBuf::from("target/custom-qwen3-prereq.json"));
+    }
+
+    #[test]
+    fn qwen25_capture_defaults_stay_on_qwen25_prerequisite_receipts() {
+        let receipts = dense_qwen_receipts_for_proof_model(&QWEN25_05B_INSTRUCT_Q8_0_PROOF_MODEL);
+        let resolved = dense_qwen_model_default_receipt_path(
+            Path::new(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT),
+            DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT,
+            receipts.all_layer_plan,
+        );
+
+        assert_eq!(resolved, PathBuf::from(DEFAULT_DENSE_QWEN_ALL_LAYER_PLAN_RECEIPT));
+    }
+
+    #[test]
+    fn qwen_one_token_phase_trace_writes_jsonl_events() -> Result<(), Box<dyn std::error::Error>> {
+        let path = std::env::temp_dir().join(format!(
+            "bitnet-qwen-phase-trace-{}-{}.jsonl",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        let trace = DenseQwenPhaseTrace::new(Some(&path), "test-command");
+        trace.reset()?;
+
+        trace.emit("cpu_reference", "model_load_start", json!({ "model": "test.gguf" }))?;
+
+        let contents = std::fs::read_to_string(&path)?;
+        let line = contents.lines().next().ok_or_else(|| std::io::Error::other("trace line"))?;
+        let event: Value = serde_json::from_str(line)?;
+        std::fs::remove_file(&path).ok();
+
+        assert_eq!(event["schema"], json!(1));
+        assert_eq!(event["command"], json!("test-command"));
+        assert_eq!(event["phase"], json!("cpu_reference"));
+        assert_eq!(event["state"], json!("model_load_start"));
+        assert_eq!(event["details"]["model"], json!("test.gguf"));
+        Ok(())
+    }
+
+    #[test]
+    fn qwen_one_token_phase_trace_loader_progress_callback_writes_jsonl_event()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let path = std::env::temp_dir().join(format!(
+            "bitnet-qwen-phase-trace-loader-{}-{}.jsonl",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        let trace = DenseQwenPhaseTrace::new(Some(&path), "test-command");
+        trace.reset()?;
+        let callback = dense_qwen_phase_trace_progress_callback(&trace, "cuda_target");
+
+        callback(0.5, "Loading tensors...");
+
+        let contents = std::fs::read_to_string(&path)?;
+        let line = contents.lines().next().ok_or_else(|| std::io::Error::other("trace line"))?;
+        let event: Value = serde_json::from_str(line)?;
+        std::fs::remove_file(&path).ok();
+
+        assert_eq!(event["phase"], json!("cuda_target"));
+        assert_eq!(event["state"], json!("model_loader_progress"));
+        assert_eq!(event["details"]["progress"], json!(0.5));
+        assert_eq!(event["details"]["message"], json!("Loading tensors..."));
+        Ok(())
+    }
+
+    #[test]
+    fn qwen_one_token_transformer_trace_path_is_derived_from_phase_trace() {
+        let path = Path::new("target/cuda-model-017/qwen3-one-token-phase-trace.jsonl");
+
+        assert_eq!(
+            dense_qwen_transformer_trace_path(path),
+            PathBuf::from("target/cuda-model-017/qwen3-one-token-phase-trace.transformer.jsonl")
+        );
+    }
+
+    #[test]
+    fn qwen_one_token_phase_trace_reset_discards_stale_events()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let path = std::env::temp_dir().join(format!(
+            "bitnet-qwen-phase-trace-reset-{}-{}.jsonl",
+            std::process::id(),
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        ));
+        std::fs::write(&path, "{\"stale\":true}\n")?;
+        let trace = DenseQwenPhaseTrace::new(Some(&path), "test-command");
+
+        trace.reset()?;
+        trace.emit("command", "start", json!({}))?;
+
+        let contents = std::fs::read_to_string(&path)?;
+        std::fs::remove_file(&path).ok();
+
+        assert!(!contents.contains("stale"));
+        assert_eq!(contents.lines().count(), 1);
+        Ok(())
     }
 
     #[test]

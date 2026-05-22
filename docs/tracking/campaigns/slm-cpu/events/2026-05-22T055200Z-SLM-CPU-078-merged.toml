@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T05:52:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-078"
+event = "merged"
+previous_status = "pr_open"
+new_status = "merged"
+actor = "codex"
+pr = 277
+branch = "codex/slm-cpu-078-packed-matvec-aligned-path"
+head_sha = "a5b7b8c4081a0639fd23bdf3cc6d25c26fa67e3a"
+merge_sha = "3b39511e9e1a1d42ffad31de95c7faf248a47130"
+summary = "Merged the guarded aligned packed Q8_0 matvec implementation for the exact-tensor sidecar path."
+notes = [
+  "The merged slice keeps eager_f32_candle as the default runtime and keeps packed Q8_0 sidecar execution opt-in and exact-tensor scoped.",
+  "The slice does not include a real i5-8250U before/after artifact and does not claim speedup or sustained throughput.",
+  "SLM-CPU-079 is the follow-up artifact gate for post-merge behavior and counter classification.",
+]

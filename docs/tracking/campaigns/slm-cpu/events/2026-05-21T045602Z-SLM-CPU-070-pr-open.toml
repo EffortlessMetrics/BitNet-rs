@@ -1,0 +1,16 @@
+timestamp = "2026-05-21T04:56:02Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-070"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex"
+pr = 129
+branch = "codex/slm-cpu-070-packed-q8-block-local-matvec"
+head_sha = "ef3fa7a658315fb84ce25a0ab0a0c88cd31dd6ea"
+summary = "Opened the packed Q8_0 block-local matvec prototype PR."
+notes = [
+  "The PR keeps eager_f32_candle as the default runtime and leaves packed sidecar execution opt-in and exact-tensor scoped.",
+  "The PR adds a multi-block dense-linear reference test and a code-level prototype artifact.",
+  "No real Qwen3 generated-ID receipt equivalence, timing improvement, speedup, Q4/Q5, server, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

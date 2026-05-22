@@ -1,0 +1,17 @@
+timestamp = "2026-05-21T13:50:18Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-073"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+actor = "codex"
+pr = 195
+branch = "codex/slm-cpu-073-packed-q8-regression-root-cause"
+head_sha = "3086f26dff1fd613d47ffc9d73bcd83644b8c1d1"
+summary = "Opened PR #195 with the SLM-CPU-073 packed Q8_0 sidecar regression root-cause artifact."
+notes = [
+  "The artifact consumes SLM-CPU-068, SLM-CPU-069, SLM-CPU-070, and SLM-CPU-072 evidence for the exact Qwen3 Q8_0 layers.0.attention.q_proj.weight sidecar hook.",
+  "Behavior equivalence remains preserved on the SLM-CPU-072 six-prompt artifact: prompt IDs, generated IDs, decoded text, strict tokenizer authority, selected CPU backend identity, hook identity, model SHA, and fallback=false match.",
+  "The remaining timing blocker is classified as packed sidecar scalar matvec plus host tensor materialization and scratch allocation after the SLM-CPU-070 block-local scale-decode improvement.",
+  "The packed Q8_0 path remains opt-in and exact-tensor scoped; no default enablement, speedup, sustained-throughput, Q4/Q5, accelerator, Qwen3.5, server, or BitNet QK256 claim is made.",
+]

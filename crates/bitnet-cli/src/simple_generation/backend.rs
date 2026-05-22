@@ -5,6 +5,7 @@ pub(crate) struct GenerationBackendSetup {
     pub(crate) identity: crate::RunBackendIdentity,
     pub(crate) strict_backend: bool,
     pub(crate) strict_cuda_backend_selected: bool,
+    pub(crate) strict_a770_opencl_backend_selected: bool,
     pub(crate) cuda_memory_before_bytes: Option<u64>,
 }
 
@@ -43,6 +44,10 @@ pub(crate) fn prepare_generation_backend(
         && identity.selected_backend.as_str() == "nvidia-rtx-5070-ti-cuda"
         && identity.runtime_api.as_str() == "cuda"
         && !identity.fallback_used;
+    let strict_a770_opencl_backend_selected = strict_backend
+        && crate::is_a770_opencl_backend_label(identity.selected_backend.as_str())
+        && identity.runtime_api.as_str() == "opencl"
+        && !identity.fallback_used;
 
     if strict_cuda_backend_selected {
         crate::answer_corpus_child_phase(
@@ -76,12 +81,14 @@ pub(crate) fn prepare_generation_backend(
         identity.selected_backend.as_str(),
         identity.runtime_api.as_str(),
         strict_cuda_backend_selected,
+        strict_a770_opencl_backend_selected,
     );
 
     Ok(GenerationBackendSetup {
         identity,
         strict_backend,
         strict_cuda_backend_selected,
+        strict_a770_opencl_backend_selected,
         cuda_memory_before_bytes,
     })
 }
