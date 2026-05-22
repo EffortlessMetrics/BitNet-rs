@@ -2857,8 +2857,8 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-WORKLOAD-001"
-status = "proposed"
-branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-operator-suite"
+status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-WORKLOAD-001-source-promotion"
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"

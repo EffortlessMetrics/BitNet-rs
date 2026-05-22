@@ -1434,6 +1434,18 @@ matrix under `route_state_matrix` in `bitnet mac status --json` and
 operator receipts remain valid without the matrix. The corresponding operator
 table is `docs/slm/apple-m4-route-state-matrix.md`.
 
+`M4-WORKLOAD-001` begins from that matrix with a model-free operator workload
+suite contract:
+
+```bash
+bitnet mac workload --suite m4-operator --json-out target/apple-m4-inference-excellence/workload/summary.json
+```
+
+The receipt is `apple_m4_operator_workload_suite`; it enumerates summarize,
+extract, classify, JSON/schema, rewrite, and table-QA cases across enabled dense
+SLM and BitNet routes. It is a generic-PR-safe contract only, not live workload
+proof. See `docs/slm/apple-m4-workload-suite.md`.
+
 ## Release Gates
 
 Before the public M4 expectation envelope changes, a go/no-go matrix should say
