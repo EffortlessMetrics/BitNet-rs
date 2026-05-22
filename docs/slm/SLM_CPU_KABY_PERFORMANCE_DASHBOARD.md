@@ -1117,3 +1117,92 @@ Q8_0 sidecar execution by default, broaden the hook beyond the exact tensor,
 or claim speedup, sustained throughput, broad answer quality, Q4/Q5 runtime
 support, server execution, accelerator execution, Qwen3.5 support, or BitNet
 QK256 changes.
+
+## SLM-CPU-077 Post-Bridge Counter Artifact
+
+SLM-CPU-077 consumes that bridge with a real i5-8250U Qwen3 Q8_0 warm-session
+sidecar run. The committed artifact pack is:
+
+```text
+ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-077-post-bridge-packed-q8-sidecar-warm-session.json
+ci/slm-cpu/intel-i5-8250u/2026-05-22/qwen3-slm-cpu-077-post-bridge-counter-classification.json
+```
+
+The sidecar run remains opt-in and exact-tensor scoped to
+`layers.0.attention.q_proj.weight`. The companion classification compares the
+new sidecar receipt against the committed SLM-CPU-072 eager F32 oracle because
+a same-turn eager oracle rerun failed on the low-free-space Kaby host before
+receipt write with:
+
+```text
+memory allocation of 167772160 bytes failed
+```
+
+The behavior oracle still passes for the compared receipts:
+
+```text
+prompt_ids_match = true
+generated_ids_match = true
+decoded_text_match = true
+model_sha_match = true
+tokenizer_source_match = true
+tokenizer_strict_match = true
+selected_backend_match = true
+fallback_false_before_after = true
+```
+
+The serialized counter pack names the dominant measured sidecar cost:
+
+```text
+selector_dispatch_calls = 42336
+selector_selected_calls = 216
+selector_declined_calls = 42120
+selector_error_calls = 0
+input_materialization_calls = 216
+bias_materialization_calls = 216
+packed_matvec_calls = 216
+output_tensor_construction_calls = 216
+packed_matvec_ns = 19093586100
+```
+
+The classification is therefore:
+
+```text
+next_target = packed_matvec_compute
+runtime_promotion_recommended = false
+default_runtime_changed = false
+speedup_claim = false
+```
+
+SLM-CPU-077 does not enable packed Q8_0 by default, broaden execution beyond
+the exact tensor, claim speedup, claim sustained throughput, start Q4/Q5
+runtime support, or involve server, accelerator, Qwen3.5, or BitNet QK256 work.
+
+## SLM-CPU-078 Packed Matvec Compute Target
+
+SLM-CPU-078 is the next queued implementation target after the SLM-CPU-077
+counter artifact. It is scoped to reducing or further classifying
+`packed_matvec_compute` for the opt-in exact-tensor packed Q8_0 sidecar path.
+
+Any SLM-CPU-078 runtime change must preserve the Qwen3 Q8_0 appliance oracle
+before making even a bounded improvement claim:
+
+```text
+model SHA unchanged
+strict GGUF tokenizer authority unchanged
+prompt IDs unchanged
+generated IDs unchanged
+decoded text unchanged
+selected CPU backend/kernel identity unchanged
+dense hook identity unchanged
+fallback_used = false
+default runtime = eager_f32_candle
+packed sidecar scope = layers.0.attention.q_proj.weight only
+```
+
+If no safe optimization lands, SLM-CPU-078 should emit a concrete blocker or
+next-target artifact rather than weakening the receipt boundary. It must not
+enable packed Q8_0 by default, broaden packed sidecar execution to all dense
+tensors, claim sustained 8250U throughput, claim broad answer quality, start
+Q4/Q5 runtime support, or touch server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5,
+or BitNet QK256 paths.

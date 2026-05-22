@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T04:20:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-078"
+event = "in_progress"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-078-packed-matvec-compute-cleanup"
+summary = "Queue the packed Q8_0 exact-tensor matvec compute cleanup target after SLM-CPU-077."
+notes = [
+  "SLM-CPU-077 serialized real i5-8250U Qwen3 Q8_0 sidecar instrumentation counters for the opt-in layers.0.attention.q_proj.weight path.",
+  "The counter classification names packed_matvec_compute as the dominant measured exact-tensor sidecar cost.",
+  "SLM-CPU-078 must keep eager_f32_candle as the default runtime and preserve prompt IDs, generated IDs, decoded text, model SHA, strict GGUF tokenizer authority, selected CPU backend/kernel identity, dense hook identity, and fallback=false before any bounded improvement claim.",
+  "No packed Q8_0 default enablement, broad tensor enablement, sustained throughput, broad answer quality, Q4/Q5 runtime support, accelerator, server, Qwen3.5, or BitNet QK256 claim is made.",
+]
