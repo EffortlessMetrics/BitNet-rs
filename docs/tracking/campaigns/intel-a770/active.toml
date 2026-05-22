@@ -932,7 +932,6 @@ must_not_claim = [
   "A770 trusted partial acceleration is claim-grade.",
 ]
 
-
 [[work_item]]
 id = "A770-021"
 status = "merged"
@@ -1185,6 +1184,56 @@ may_claim = [
   "The seeded A770 BitNet answer-readiness corpus ran live on AMD 5700X AVX2 CPU and Intel A770 OpenCL against the official BitNet 2B I2_S artifact.",
   "Both live receipts used fallback_used=false and recorded the current seeded readiness quality result.",
   "The CPU/A770 answer-readiness parity comparator records the current logits/output divergence frontier.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]
+
+[[work_item]]
+id = "A770-026"
+status = "pr_open"
+pr = 336
+branch = "codex/intel-a770/A770-026-answer-readiness-failure-frontier"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-025"]
+acceptance = "Classify the committed A770-025 seeded answer-readiness failures and CPU/A770 parity frontier so shared prompt/model/scoring quality failures stay separate from OpenCL logits/output drift, without changing runtime math or promoting readiness, parity, residency, speed, trusted-partial acceleration, or full BitNet inference."
+commands = [
+  "pwsh -NoProfile -Command \"Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-answer-readiness.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/a770-opencl-answer-readiness.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness/cpu-avx2-vs-a770-answer-readiness-parity.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/reports/A770_026_ANSWER_READINESS_FAILURE_FRONTIER.md",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+]
+may_claim = [
+  "The committed A770-025 seeded answer-readiness receipts have a compact failure-frontier classification.",
+  "The 12 quality failures are shared by CPU AVX2 and Intel A770 OpenCL and therefore are not A770-only evidence.",
+  "The CPU/A770 parity frontier remains divergent at top-k logits for all 20 cases, with 18 matching generated outputs and 2 generated-output divergences.",
 ]
 must_not_claim = [
   "CPU/A770 answer parity is proven.",
