@@ -232,7 +232,7 @@ runs into generic PR CI:
 | Generic PR | Every PR | Campaign checks, receipt schema checks, generated tracking status, docs diff hygiene | no |
 | Advisory local | After `main` sync, model cache changes, receipt schema changes, or M4 CLI changes | `bitnet mac status`, `bitnet mac report-refresh`, `bitnet mac regression-dashboard`, `bitnet mac receipts-check` | no by default |
 | Scheduled M4 | Nightly or weekly on the M4 Mac mini | Dense SLM eval/benchmark, BitNet eval/benchmark, BitNet variable warm, report-refresh, regression-dashboard | yes |
-| Release gate | Before publishing a new M4 expectation envelope | Full supported dense matrix, accepted BitNet artifact/tokenizer eval and benchmark, warm-session receipts, dashboard refresh, operator docs | yes |
+| Release gate | Before publishing a new M4 expectation envelope | Full supported dense matrix, accepted BitNet artifact/tokenizer eval and benchmark, warm-session receipts, dashboard refresh, operator docs, and `docs/slm/apple-m4-release-go-no-go.md` | yes |
 
 The model-free refresh sequence is:
 

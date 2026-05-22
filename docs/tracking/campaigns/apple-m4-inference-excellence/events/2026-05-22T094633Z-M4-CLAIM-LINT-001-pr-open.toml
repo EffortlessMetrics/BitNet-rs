@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T09:46:33Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-CLAIM-LINT-001"
+event = "pr_open"
+actor = "codex"
+previous_status = "in_progress"
+new_status = "pr_open"
+branch = "codex/apple-m4-inference-excellence/M4-CLAIM-LINT-001-claim-boundary-check"
+pr = 6190
+head_sha = "dccd20a0cef45310486a28ff4f84a87b309fa362"
+
+notes = [
+  "Opened draft PR #6190 for the Apple M4 static claim-boundary checker.",
+  "The PR adds the xtask claim-lint command for M4 publication surfaces and updates bitnet mac operator wording to avoid stale MacBook artifact-sweep phrasing.",
+  "Local Rust execution is blocked by disk pressure; the PR relies on CI for the full cargo run/cargo test validation path.",
+]

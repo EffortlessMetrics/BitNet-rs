@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T10:35:14Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-RELEASE-001"
+event = "in_progress"
+actor = "codex"
+previous_status = "proposed"
+new_status = "in_progress"
+branch = "codex/apple-m4-inference-excellence/M4-RELEASE-001-go-no-go"
+
+notes = [
+  "Started the release go/no-go matrix after M4-CLAIM-LINT-001 merged and the campaign next item advanced to M4-RELEASE-001.",
+  "Scope is documentation and tracker state for release-envelope decision inputs across dense SLM, BitNet, benchmark, stability, service, operator, CI, and claim-boundary gates.",
+  "This item does not run live inference, publish fresh quality or timing evidence, enable BitNet chat or serve, prove full Metal, QK256, Neural Engine, MPSGraph, MacBook, broad Apple Silicon, broad quality, broad performance, or speedup claims.",
+]
