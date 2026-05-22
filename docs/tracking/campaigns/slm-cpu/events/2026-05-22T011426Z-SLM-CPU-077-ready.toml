@@ -1,0 +1,14 @@
+timestamp = "2026-05-22T01:14:26Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-077"
+event = "in_progress"
+new_status = "ready"
+actor = "codex"
+branch = "codex/slm-cpu-077-post-bridge-counter-artifact"
+summary = "Queue the real post-bridge packed Q8_0 sidecar counter artifact gate."
+notes = [
+  "SLM-CPU-076 merged the warm-session receipt bridge for packed Q8_0 sidecar instrumentation counters.",
+  "SLM-CPU-077 should capture or ingest the first real i5-8250U Qwen3 Q8_0 warm-session receipt that serializes those counters for the exact opt-in layers.0.attention.q_proj.weight sidecar path.",
+  "The artifact must preserve the Qwen3 Q8_0 appliance behavior oracle: prompt IDs, generated IDs, decoded text, model SHA, strict GGUF tokenizer authority, selected CPU backend identity, dense hook identity, and fallback=false.",
+  "No packed Q8_0 default enablement, speedup, sustained throughput, Q4/Q5 runtime support, accelerator, server, Qwen3.5, or BitNet QK256 claim is made.",
+]

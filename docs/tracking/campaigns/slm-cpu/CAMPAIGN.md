@@ -117,8 +117,11 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-064 | merged | #6138 accepted the first audited Kaby SLM package returned from bitnet-rs-swarm as release-surface evidence only; runtime promotion remains separate. |
 | SLM-CPU-071 | merged | #177 defined the required real i5-8250U post-SLM-CPU-070 before/after timing gate; it did not commit the actual Qwen3 artifact pack. |
 | SLM-CPU-072 | merged | #192 captured the real Qwen3 Q8_0 4-thread before/after warm-session receipts for the SLM-CPU-071 timing gate, proved behavior equivalence, and classified the opt-in packed sidecar path as regressed on the bounded artifact. |
-| SLM-CPU-073 | ready | Root-cause the SLM-CPU-072 real six-prompt packed-Q8 timing regression before any runtime promotion or broader optimization claim. |
-| SLM-CPU-065 | ready | Open the first release-surface runtime-promotion gate for the accepted single-tensor packed Q8_0 sidecar candidate, preserving the strict Qwen3 Q8_0 oracle and keeping runtime promotion disabled by default unless before/after receipts prove identical behavior. |
+| SLM-CPU-073 | merged | #195 localized the SLM-CPU-072 packed Q8_0 sidecar timing regression to host tensor materialization, scalar matvec, and scratch allocation after the block-local scale-decode prototype. |
+| SLM-CPU-074 | merged | #219 added exact-tensor packed Q8_0 sidecar instrumentation for selector dispatch, input materialization, bias extraction, packed matvec compute, and output tensor construction while keeping eager F32 Candle as the default runtime. |
+| SLM-CPU-075 | merged | #225 consumed the instrumentation surface in a bounded diagnostic artifact and identified the missing warm-session receipt bridge as the next blocker before counter-driven optimization. |
+| SLM-CPU-076 | merged | #229 bridged packed Q8_0 sidecar instrumentation counters into Qwen3 Q8_0 warm-session aggregate receipts without enabling packed Q8_0 by default or claiming speedup. |
+| SLM-CPU-077 | ready | Capture or ingest the first real i5-8250U Qwen3 Q8_0 post-bridge warm-session receipt with serialized exact-tensor packed Q8_0 sidecar counters, behavior-equivalence proof, and next-target classification. |
 
 ## Review Policy
 

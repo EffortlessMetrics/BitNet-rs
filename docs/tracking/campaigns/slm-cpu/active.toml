@@ -2997,6 +2997,58 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "SLM-CPU-077"
+status = "ready"
+branch = "codex/slm-cpu-077-post-bridge-counter-artifact"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["SLM-CPU-076"]
+acceptance = "Capture or ingest the first real i5-8250U Qwen3 Q8_0 warm-session receipt after the SLM-CPU-076 packed Q8_0 sidecar instrumentation bridge, using the exact opt-in `layers.0.attention.q_proj.weight` sidecar path. The artifact must serialize `dense_q8_sidecar_instrumentation` counters for selector dispatch, input materialization, bias materialization, packed matvec compute, and output tensor construction, prove prompt IDs, generated IDs, decoded text, model SHA, tokenizer source/strictness, selected CPU backend identity, dense hook identity, and fallback_used=false remain unchanged against the eager_f32_candle oracle, and classify the next evidence-scoped optimization target or record a concrete verified-GGUF/hardware blocker. It must not enable packed Q8_0 by default, broaden beyond the exact tensor, start Q4/Q5 runtime support, claim speedup, sustained throughput, or broad answer quality, or touch server, GPU, NPU, OpenVINO, UHD 620, Qwen3.5, or BitNet QK256 paths."
+commands = [
+  "cargo run --locked -p bitnet-cli --no-default-features --features cpu,full-cli -- --device cpu slm-warm-session --model models\\slm\\Qwen3-0.6B-Q8_0.gguf --corpus ci\\quality\\slm-warm-session-corpus.yaml --corpus-repeat-runs 1 --max-new-tokens 8 --temperature 0.0 --greedy --deterministic --threads 4 --strict-loader --strict-tokenizer --prompt-template qwen --require-determinism --json-out ci\\slm-cpu\\intel-i5-8250u\\2026-05-21\\qwen3-slm-cpu-077-post-bridge-counter-artifact.json",
+  "python -m json.tool ci/slm-cpu/intel-i5-8250u/2026-05-21/qwen3-slm-cpu-077-post-bridge-counter-artifact.json",
+  "cargo run -p xtask --no-default-features -- campaign generate",
+  "cargo run -p xtask --no-default-features -- campaign doctor",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/slm-cpu/**",
+  "docs/slm/**",
+  "docs/tracking/campaigns/slm-cpu/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-cli/**",
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-kernels/src/gpu/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-npu/**",
+  "Q4/Q5 runtime implementation",
+  "server inference",
+  "GPU, NPU, OpenVINO, or UHD 620 execution",
+  "Qwen3.5 or hybrid architecture support",
+  "BitNet QK256/I2_S kernels",
+]
+may_claim = [
+  "SLM-CPU-077 is the real post-bridge counter artifact gate after SLM-CPU-076.",
+  "A valid artifact may classify the next exact-tensor packed Q8_0 sidecar optimization target from serialized warm-session instrumentation counters.",
+]
+must_not_claim = [
+  "Packed Q8_0 runtime compute is enabled by default.",
+  "Packed Q8_0 sidecar execution is generally enabled for all dense tensors.",
+  "A speedup or sustained 8250U throughput claim is proven.",
+  "Generated IDs, decoded text, model SHA, tokenizer authority, selected CPU backend/kernel identity, dense hook identity, or fallback=false provenance changed.",
+  "Broad answer quality is proven.",
+  "Q4_K_M or Q4_K_S runtime support exists.",
+  "Server, GPU, NPU, OpenVINO, or UHD 620 execution is involved.",
+  "Qwen3.5 or hybrid architecture support is in scope.",
+  "BitNet QK256/I2_S kernels are modified.",
+]
+
+[[work_item]]
 id = "SLM-CPU-033"
 status = "merged"
 pr = 5603
