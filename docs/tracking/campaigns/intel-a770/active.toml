@@ -1249,3 +1249,57 @@ must_not_claim = [
   "Performance speedup is proven.",
   "A770 trusted partial acceleration is claim-grade.",
 ]
+
+[[work_item]]
+id = "A770-027"
+status = "pr_open"
+pr = 344
+head_sha = "ccb5bf1b62173c0f2c2096544aa8c550f900f259"
+branch = "codex/intel-a770/A770-027-readiness-divergence-logit-context"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["A770-026"]
+acceptance = "Record focused multi-step CPU AVX2 and Intel A770 OpenCL logits for the two A770-025 generated-output divergent readiness cases, classify the first-mismatch logit-margin frontier, and keep CPU/A770 parity, strict answer readiness, broad answer quality, residency, speed, trusted-partial acceleration, and full BitNet inference claims closed."
+commands = [
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device cpu --cpu-kernel avx2 --threads 8 --case-id a770_summary_seed770024_keywords_014 --case-id a770_yes_no_seed770024_water_015 --dump-logit-steps 24 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-readiness-divergent-cases.json --per-prompt-timeout-seconds 300",
+  "target/release/bitnet.exe answer-corpus --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf --tokenizer E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json --device intel-a770-opencl --case-id a770_summary_seed770024_keywords_014 --case-id a770_yes_no_seed770024_water_015 --dump-logit-steps 24 --logits-topk 20 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/a770-opencl-readiness-divergent-cases.json --per-prompt-timeout-seconds 300",
+  "target/release/bitnet.exe answer-parity --left ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-readiness-divergent-cases.json --right ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/a770-opencl-readiness-divergent-cases.json --left-label amd-5700x-cpu-avx2 --right-label intel-a770-opencl --machine amd-5700x-intel-a770 --json-out ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-vs-a770-readiness-divergent-cases-parity.json # expected nonzero while the focused generated-output divergences remain",
+  "pwsh -NoProfile -Command \"Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-readiness-divergent-cases.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/a770-opencl-readiness-divergent-cases.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/cpu-avx2-vs-a770-readiness-divergent-cases-parity.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-a770",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits/**",
+  "docs/reports/A770_027_READINESS_DIVERGENCE_LOGIT_CONTEXT.md",
+  "docs/tracking/campaigns/intel-a770/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/bitnet-transformer/**",
+  "crates/bitnet-server/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-cli/src/commands/answer_corpus.rs",
+  "crates/bitnet-cli/src/commands/answer_parity.rs",
+]
+may_claim = [
+  "The two A770-025 generated-output divergent readiness cases now have focused CPU AVX2 and Intel A770 OpenCL receipts with first-mismatch logit context.",
+  "The focused parity receipt classifies both first mismatches as opposite argmax, with one A770-side near-tie margin.",
+]
+must_not_claim = [
+  "CPU/A770 answer parity is proven.",
+  "Reference parity is proven.",
+  "Strict A770 answer readiness is proven.",
+  "Broad A770 answer quality is proven.",
+  "BitNet inference is fully proven on A770.",
+  "Official BitNet QK256 production semantics are fully proven.",
+  "Activation quantization is GPU-resident.",
+  "Selected attention is resident.",
+  "Resident KV is proven.",
+  "Full A770 residency is proven.",
+  "Performance speedup is proven.",
+  "A770 trusted partial acceleration is claim-grade.",
+]

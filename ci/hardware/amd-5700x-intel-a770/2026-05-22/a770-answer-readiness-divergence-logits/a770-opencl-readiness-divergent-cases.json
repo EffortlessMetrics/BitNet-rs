@@ -1,0 +1,2907 @@
+{
+  "artifact_kind": "bitnet_a770_opencl_answer_diagnostic_corpus",
+  "backend": {
+    "fallback_used": false,
+    "requested_backend": "intel-a770-opencl",
+    "runtime_api": "opencl",
+    "selected_backend": "intel-a770-opencl"
+  },
+  "backend_lane": "bitnet_a770_opencl",
+  "cases": [
+    {
+      "answer": "Rust enables fast and safe software development by preventing common programming errors.",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "intel-a770-opencl",
+        "runtime_api": "opencl",
+        "selected_backend": "intel-a770-opencl"
+      },
+      "category": "constrained_summary",
+      "execution_coverage": {
+        "bitnet_linear_layers_cpu_fallback": 0,
+        "bitnet_linear_layers_on_a770_opencl": 9030,
+        "bitnet_linear_layers_on_cuda": 0,
+        "bitnet_linear_layers_total": 9030,
+        "execution_claim": "a770_opencl_qk256_contribution",
+        "input_rows_materialized_count": 9030,
+        "output_rows_allocated_count": 9030,
+        "qk256_execution_path": "not_observed",
+        "qk256_f32_avx2_gemv_invocations": 0,
+        "qk256_f32_scalar_gemv_invocations": 0,
+        "qk256_flat_bytes_extracted_count": 9030,
+        "qk256_i8s_scaled_avx2_invocations": 0,
+        "qk256_i8s_scaled_scalar_invocations": 0,
+        "requested_kernel": null,
+        "selected_kernel": null,
+        "unsupported_ops": []
+      },
+      "execution_plan": null,
+      "id": "a770_summary_seed770024_keywords_014",
+      "kernel": {
+        "family": "qk256",
+        "hot_path_kernel": null,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate"
+      },
+      "latency": {
+        "cmd_to_first_ms": 27695,
+        "decode_first_ms": 27695,
+        "total_ms": 42203
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 49,
+          "logits_vector_length": 128256,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 30.145524978637695,
+              "token_id": 49
+            },
+            {
+              "logit": 24.139930725097656,
+              "token_id": 61769
+            },
+            {
+              "logit": 24.086193084716797,
+              "token_id": 16834
+            },
+            {
+              "logit": 21.37278175354004,
+              "token_id": 2409
+            },
+            {
+              "logit": 21.211441040039062,
+              "token_id": 21076
+            },
+            {
+              "logit": 21.090932846069336,
+              "token_id": 14939
+            },
+            {
+              "logit": 20.970149993896484,
+              "token_id": 791
+            },
+            {
+              "logit": 20.683738708496097,
+              "token_id": 1
+            },
+            {
+              "logit": 20.38485336303711,
+              "token_id": 644
+            },
+            {
+              "logit": 20.30268096923828,
+              "token_id": 1383
+            },
+            {
+              "logit": 18.853899002075195,
+              "token_id": 40413
+            },
+            {
+              "logit": 18.65409469604492,
+              "token_id": 33274
+            },
+            {
+              "logit": 18.46180725097656,
+              "token_id": 19805
+            },
+            {
+              "logit": 18.42572784423828,
+              "token_id": 8142
+            },
+            {
+              "logit": 18.053773880004883,
+              "token_id": 31233
+            },
+            {
+              "logit": 17.76041603088379,
+              "token_id": 46819
+            },
+            {
+              "logit": 17.50542449951172,
+              "token_id": 10464
+            },
+            {
+              "logit": 17.471391677856445,
+              "token_id": 11303
+            },
+            {
+              "logit": 17.1658935546875,
+              "token_id": 24798
+            },
+            {
+              "logit": 17.118188858032227,
+              "token_id": 33
+            }
+          ]
+        },
+        {
+          "chosen_id": 592,
+          "logits_vector_length": 128256,
+          "step": 1,
+          "top_logits": [
+            {
+              "logit": 36.927207946777344,
+              "token_id": 592
+            },
+            {
+              "logit": 21.951141357421875,
+              "token_id": 47425
+            },
+            {
+              "logit": 20.82496452331543,
+              "token_id": 38587
+            },
+            {
+              "logit": 20.26399803161621,
+              "token_id": 8721
+            },
+            {
+              "logit": 19.75564765930176,
+              "token_id": 44221
+            },
+            {
+              "logit": 18.08101463317871,
+              "token_id": 45335
+            },
+            {
+              "logit": 17.75340461730957,
+              "token_id": 34889
+            },
+            {
+              "logit": 17.716745376586914,
+              "token_id": 28244
+            },
+            {
+              "logit": 16.595382690429688,
+              "token_id": 952
+            },
+            {
+              "logit": 15.656926155090332,
+              "token_id": 88
+            },
+            {
+              "logit": 15.417360305786133,
+              "token_id": 664
+            },
+            {
+              "logit": 15.40870761871338,
+              "token_id": 3864
+            },
+            {
+              "logit": 14.948050498962402,
+              "token_id": 93934
+            },
+            {
+              "logit": 14.768136978149414,
+              "token_id": 23941
+            },
+            {
+              "logit": 14.573127746582031,
+              "token_id": 3876
+            },
+            {
+              "logit": 14.391767501831056,
+              "token_id": 2642
+            },
+            {
+              "logit": 14.003477096557615,
+              "token_id": 2957
+            },
+            {
+              "logit": 13.946367263793944,
+              "token_id": 2504
+            },
+            {
+              "logit": 13.861571311950684,
+              "token_id": 1697
+            },
+            {
+              "logit": 13.816522598266602,
+              "token_id": 13900
+            }
+          ]
+        },
+        {
+          "chosen_id": 20682,
+          "logits_vector_length": 128256,
+          "step": 2,
+          "top_logits": [
+            {
+              "logit": 23.787944793701172,
+              "token_id": 20682
+            },
+            {
+              "logit": 23.301347732543945,
+              "token_id": 26420
+            },
+            {
+              "logit": 23.075420379638672,
+              "token_id": 5825
+            },
+            {
+              "logit": 22.994834899902344,
+              "token_id": 6276
+            },
+            {
+              "logit": 22.24813461303711,
+              "token_id": 6209
+            },
+            {
+              "logit": 21.69859313964844,
+              "token_id": 8779
+            },
+            {
+              "logit": 21.257816314697266,
+              "token_id": 596
+            },
+            {
+              "logit": 19.571727752685547,
+              "token_id": 15840
+            },
+            {
+              "logit": 19.33745574951172,
+              "token_id": 39990
+            },
+            {
+              "logit": 19.077835083007812,
+              "token_id": 28421
+            },
+            {
+              "logit": 19.000078201293945,
+              "token_id": 22890
+            },
+            {
+              "logit": 18.959447860717773,
+              "token_id": 11
+            },
+            {
+              "logit": 18.51372337341309,
+              "token_id": 4500
+            },
+            {
+              "logit": 18.407527923583984,
+              "token_id": 66159
+            },
+            {
+              "logit": 18.34477996826172,
+              "token_id": 374
+            },
+            {
+              "logit": 18.288488388061523,
+              "token_id": 57924
+            },
+            {
+              "logit": 18.206281661987305,
+              "token_id": 83691
+            },
+            {
+              "logit": 17.703975677490234,
+              "token_id": 45777
+            },
+            {
+              "logit": 17.60348892211914,
+              "token_id": 52797
+            },
+            {
+              "logit": 17.21535873413086,
+              "token_id": 24400
+            }
+          ]
+        },
+        {
+          "chosen_id": 5043,
+          "logits_vector_length": 128256,
+          "step": 3,
+          "top_logits": [
+            {
+              "logit": 24.717079162597656,
+              "token_id": 5043
+            },
+            {
+              "logit": 22.92911720275879,
+              "token_id": 7411
+            },
+            {
+              "logit": 20.4482364654541,
+              "token_id": 11295
+            },
+            {
+              "logit": 20.157482147216797,
+              "token_id": 3241
+            },
+            {
+              "logit": 19.81020736694336,
+              "token_id": 13707
+            },
+            {
+              "logit": 19.18268585205078,
+              "token_id": 10819
+            },
+            {
+              "logit": 18.956228256225582,
+              "token_id": 11297
+            },
+            {
+              "logit": 18.446495056152344,
+              "token_id": 6220
+            },
+            {
+              "logit": 17.96828842163086,
+              "token_id": 1579
+            },
+            {
+              "logit": 17.475215911865234,
+              "token_id": 279
+            },
+            {
+              "logit": 17.468652725219727,
+              "token_id": 55946
+            },
+            {
+              "logit": 17.390949249267578,
+              "token_id": 9966
+            },
+            {
+              "logit": 16.991899490356445,
+              "token_id": 6067
+            },
+            {
+              "logit": 16.92059326171875,
+              "token_id": 4062
+            },
+            {
+              "logit": 16.92046356201172,
+              "token_id": 15062
+            },
+            {
+              "logit": 16.62994384765625,
+              "token_id": 15840
+            },
+            {
+              "logit": 16.614933013916016,
+              "token_id": 30462
+            },
+            {
+              "logit": 16.03917694091797,
+              "token_id": 7224
+            },
+            {
+              "logit": 15.728839874267578,
+              "token_id": 6288
+            },
+            {
+              "logit": 15.48812198638916,
+              "token_id": 7620
+            }
+          ]
+        },
+        {
+          "chosen_id": 323,
+          "logits_vector_length": 128256,
+          "step": 4,
+          "top_logits": [
+            {
+              "logit": 22.86422348022461,
+              "token_id": 323
+            },
+            {
+              "logit": 18.392181396484375,
+              "token_id": 4500
+            },
+            {
+              "logit": 16.472686767578125,
+              "token_id": 3686
+            },
+            {
+              "logit": 16.420867919921875,
+              "token_id": 3241
+            },
+            {
+              "logit": 16.25936508178711,
+              "token_id": 11
+            },
+            {
+              "logit": 16.044401168823242,
+              "token_id": 1418
+            },
+            {
+              "logit": 15.841663360595703,
+              "token_id": 1887
+            },
+            {
+              "logit": 13.999232292175291,
+              "token_id": 6067
+            },
+            {
+              "logit": 13.33576774597168,
+              "token_id": 11572
+            },
+            {
+              "logit": 13.131502151489258,
+              "token_id": 719
+            },
+            {
+              "logit": 12.894880294799805,
+              "token_id": 5788
+            },
+            {
+              "logit": 12.794322967529297,
+              "token_id": 5178
+            },
+            {
+              "logit": 12.176665306091309,
+              "token_id": 2085
+            },
+            {
+              "logit": 12.032121658325195,
+              "token_id": 22890
+            },
+            {
+              "logit": 11.814483642578123,
+              "token_id": 56219
+            },
+            {
+              "logit": 11.40879249572754,
+              "token_id": 4857
+            },
+            {
+              "logit": 11.271806716918944,
+              "token_id": 555
+            },
+            {
+              "logit": 11.114325523376465,
+              "token_id": 15840
+            },
+            {
+              "logit": 11.088342666625977,
+              "token_id": 1977
+            },
+            {
+              "logit": 10.931127548217772,
+              "token_id": 65319
+            }
+          ]
+        },
+        {
+          "chosen_id": 6220,
+          "logits_vector_length": 128256,
+          "step": 5,
+          "top_logits": [
+            {
+              "logit": 26.249492645263672,
+              "token_id": 6220
+            },
+            {
+              "logit": 19.752832412719727,
+              "token_id": 9966
+            },
+            {
+              "logit": 15.542219161987305,
+              "token_id": 62844
+            },
+            {
+              "logit": 14.939425468444824,
+              "token_id": 15062
+            },
+            {
+              "logit": 14.661983489990234,
+              "token_id": 56219
+            },
+            {
+              "logit": 14.140189170837402,
+              "token_id": 30549
+            },
+            {
+              "logit": 13.888401985168455,
+              "token_id": 19193
+            },
+            {
+              "logit": 13.623480796813965,
+              "token_id": 7296
+            },
+            {
+              "logit": 13.515928268432615,
+              "token_id": 23088
+            },
+            {
+              "logit": 13.481389999389648,
+              "token_id": 11297
+            },
+            {
+              "logit": 12.611213684082031,
+              "token_id": 20451
+            },
+            {
+              "logit": 12.215100288391112,
+              "token_id": 22514
+            },
+            {
+              "logit": 11.55548095703125,
+              "token_id": 5653
+            },
+            {
+              "logit": 11.542158126831056,
+              "token_id": 7701
+            },
+            {
+              "logit": 11.492581367492676,
+              "token_id": 16233
+            },
+            {
+              "logit": 11.344245910644531,
+              "token_id": 66969
+            },
+            {
+              "logit": 11.105705261230469,
+              "token_id": 21676
+            },
+            {
+              "logit": 10.914631843566896,
+              "token_id": 3241
+            },
+            {
+              "logit": 10.910243034362791,
+              "token_id": 10121
+            },
+            {
+              "logit": 10.838622093200684,
+              "token_id": 19883
+            }
+          ]
+        },
+        {
+          "chosen_id": 3241,
+          "logits_vector_length": 128256,
+          "step": 6,
+          "top_logits": [
+            {
+              "logit": 28.88596534729004,
+              "token_id": 3241
+            },
+            {
+              "logit": 28.57752227783203,
+              "token_id": 4500
+            },
+            {
+              "logit": 27.2496280670166,
+              "token_id": 1887
+            },
+            {
+              "logit": 25.445825576782227,
+              "token_id": 6067
+            },
+            {
+              "logit": 23.48369026184082,
+              "token_id": 15840
+            },
+            {
+              "logit": 22.76689910888672,
+              "token_id": 35135
+            },
+            {
+              "logit": 22.51915168762207,
+              "token_id": 1579
+            },
+            {
+              "logit": 21.98929786682129,
+              "token_id": 11572
+            },
+            {
+              "logit": 21.207189559936523,
+              "token_id": 5178
+            },
+            {
+              "logit": 21.010629653930664,
+              "token_id": 15638
+            },
+            {
+              "logit": 20.861318588256836,
+              "token_id": 2082
+            },
+            {
+              "logit": 20.798585891723633,
+              "token_id": 11058
+            },
+            {
+              "logit": 19.864328384399418,
+              "token_id": 29772
+            },
+            {
+              "logit": 19.77923011779785,
+              "token_id": 356
+            },
+            {
+              "logit": 19.71204376220703,
+              "token_id": 3428
+            },
+            {
+              "logit": 19.40220069885254,
+              "token_id": 79110
+            },
+            {
+              "logit": 19.34417724609375,
+              "token_id": 5788
+            },
+            {
+              "logit": 19.32372283935547,
+              "token_id": 22890
+            },
+            {
+              "logit": 19.14048767089844,
+              "token_id": 2068
+            },
+            {
+              "logit": 18.93095016479492,
+              "token_id": 4857
+            }
+          ]
+        },
+        {
+          "chosen_id": 4500,
+          "logits_vector_length": 128256,
+          "step": 7,
+          "top_logits": [
+            {
+              "logit": 32.177757263183594,
+              "token_id": 4500
+            },
+            {
+              "logit": 23.012563705444336,
+              "token_id": 8246
+            },
+            {
+              "logit": 22.679418563842773,
+              "token_id": 555
+            },
+            {
+              "logit": 21.38785171508789,
+              "token_id": 4857
+            },
+            {
+              "logit": 20.61143493652344,
+              "token_id": 15009
+            },
+            {
+              "logit": 20.350446701049805,
+              "token_id": 9886
+            },
+            {
+              "logit": 19.507902145385746,
+              "token_id": 1977
+            },
+            {
+              "logit": 19.46323013305664,
+              "token_id": 22890
+            },
+            {
+              "logit": 18.35168838500977,
+              "token_id": 6067
+            },
+            {
+              "logit": 18.318862915039062,
+              "token_id": 5788
+            },
+            {
+              "logit": 17.832489013671875,
+              "token_id": 9889
+            },
+            {
+              "logit": 17.734378814697266,
+              "token_id": 1555
+            },
+            {
+              "logit": 17.67498016357422,
+              "token_id": 26006
+            },
+            {
+              "logit": 17.10834312438965,
+              "token_id": 2955
+            },
+            {
+              "logit": 16.81490135192871,
+              "token_id": 11572
+            },
+            {
+              "logit": 16.63760757446289,
+              "token_id": 1887
+            },
+            {
+              "logit": 16.513349533081055,
+              "token_id": 15840
+            },
+            {
+              "logit": 16.46446990966797,
+              "token_id": 11
+            },
+            {
+              "logit": 16.36130142211914,
+              "token_id": 10105
+            },
+            {
+              "logit": 16.159961700439453,
+              "token_id": 5178
+            }
+          ]
+        },
+        {
+          "chosen_id": 555,
+          "logits_vector_length": 128256,
+          "step": 8,
+          "top_logits": [
+            {
+              "logit": 24.53910446166992,
+              "token_id": 555
+            },
+            {
+              "logit": 21.125303268432617,
+              "token_id": 449
+            },
+            {
+              "logit": 21.04169273376465,
+              "token_id": 369
+            },
+            {
+              "logit": 20.965362548828125,
+              "token_id": 13
+            },
+            {
+              "logit": 20.399633407592773,
+              "token_id": 1555
+            },
+            {
+              "logit": 19.46554183959961,
+              "token_id": 11
+            },
+            {
+              "logit": 16.536609649658203,
+              "token_id": 311
+            },
+            {
+              "logit": 15.974493980407717,
+              "token_id": 4245
+            },
+            {
+              "logit": 15.178861618041992,
+              "token_id": 2085
+            },
+            {
+              "logit": 13.648911476135254,
+              "token_id": 304
+            },
+            {
+              "logit": 13.400243759155272,
+              "token_id": 323
+            },
+            {
+              "logit": 13.252352714538574,
+              "token_id": 7411
+            },
+            {
+              "logit": 13.121618270874023,
+              "token_id": 1606
+            },
+            {
+              "logit": 12.87415885925293,
+              "token_id": 4028
+            },
+            {
+              "logit": 12.478343963623049,
+              "token_id": 439
+            },
+            {
+              "logit": 11.984315872192385,
+              "token_id": 12659
+            },
+            {
+              "logit": 11.868488311767578,
+              "token_id": 389
+            },
+            {
+              "logit": 11.424336433410645,
+              "token_id": 382
+            },
+            {
+              "logit": 11.31779670715332,
+              "token_id": 11618
+            },
+            {
+              "logit": 11.04940128326416,
+              "token_id": 520
+            }
+          ]
+        },
+        {
+          "chosen_id": 27252,
+          "logits_vector_length": 128256,
+          "step": 9,
+          "top_logits": [
+            {
+              "logit": 31.73918342590332,
+              "token_id": 27252
+            },
+            {
+              "logit": 31.570459365844727,
+              "token_id": 40599
+            },
+            {
+              "logit": 31.37356758117676,
+              "token_id": 8405
+            },
+            {
+              "logit": 30.473800659179688,
+              "token_id": 21760
+            },
+            {
+              "logit": 29.69614028930664,
+              "token_id": 82003
+            },
+            {
+              "logit": 28.490333557128903,
+              "token_id": 31526
+            },
+            {
+              "logit": 28.172761917114254,
+              "token_id": 23391
+            },
+            {
+              "logit": 27.72416114807129,
+              "token_id": 62908
+            },
+            {
+              "logit": 27.13058090209961,
+              "token_id": 10209
+            },
+            {
+              "logit": 27.099647521972656,
+              "token_id": 24944
+            },
+            {
+              "logit": 27.08976173400879,
+              "token_id": 22923
+            },
+            {
+              "logit": 26.94211769104004,
+              "token_id": 28118
+            },
+            {
+              "logit": 26.8594970703125,
+              "token_id": 5113
+            },
+            {
+              "logit": 26.804611206054688,
+              "token_id": 45777
+            },
+            {
+              "logit": 26.129993438720703,
+              "token_id": 1701
+            },
+            {
+              "logit": 25.747987747192383,
+              "token_id": 77391
+            },
+            {
+              "logit": 25.66011619567871,
+              "token_id": 17843
+            },
+            {
+              "logit": 25.626728057861328,
+              "token_id": 33018
+            },
+            {
+              "logit": 25.369325637817383,
+              "token_id": 23537
+            },
+            {
+              "logit": 25.358379364013672,
+              "token_id": 15803
+            }
+          ]
+        },
+        {
+          "chosen_id": 4279,
+          "logits_vector_length": 128256,
+          "step": 10,
+          "top_logits": [
+            {
+              "logit": 29.004863739013672,
+              "token_id": 4279
+            },
+            {
+              "logit": 25.84873962402344,
+              "token_id": 854
+            },
+            {
+              "logit": 24.309345245361328,
+              "token_id": 1690
+            },
+            {
+              "logit": 24.293231964111328,
+              "token_id": 15964
+            },
+            {
+              "logit": 24.24980926513672,
+              "token_id": 23367
+            },
+            {
+              "logit": 23.82230567932129,
+              "token_id": 5044
+            },
+            {
+              "logit": 23.27872085571289,
+              "token_id": 1455
+            },
+            {
+              "logit": 22.133464813232425,
+              "token_id": 3738
+            },
+            {
+              "logit": 21.868104934692383,
+              "token_id": 828
+            },
+            {
+              "logit": 21.493322372436523,
+              "token_id": 4915
+            },
+            {
+              "logit": 21.131223678588867,
+              "token_id": 6103
+            },
+            {
+              "logit": 21.00960350036621,
+              "token_id": 3428
+            },
+            {
+              "logit": 20.86291122436523,
+              "token_id": 4240
+            },
+            {
+              "logit": 20.726144790649418,
+              "token_id": 5732
+            },
+            {
+              "logit": 20.38962173461914,
+              "token_id": 52227
+            },
+            {
+              "logit": 20.224031448364254,
+              "token_id": 37237
+            },
+            {
+              "logit": 20.215444564819336,
+              "token_id": 264
+            },
+            {
+              "logit": 19.958650588989254,
+              "token_id": 20451
+            },
+            {
+              "logit": 19.934385299682617,
+              "token_id": 27545
+            },
+            {
+              "logit": 19.88507080078125,
+              "token_id": 5178
+            }
+          ]
+        },
+        {
+          "chosen_id": 15840,
+          "logits_vector_length": 128256,
+          "step": 11,
+          "top_logits": [
+            {
+              "logit": 29.223377227783203,
+              "token_id": 15840
+            },
+            {
+              "logit": 28.153779983520508,
+              "token_id": 6103
+            },
+            {
+              "logit": 25.569072723388672,
+              "token_id": 23367
+            },
+            {
+              "logit": 25.32630920410156,
+              "token_id": 82075
+            },
+            {
+              "logit": 24.63413429260254,
+              "token_id": 52227
+            },
+            {
+              "logit": 24.34685516357422,
+              "token_id": 79110
+            },
+            {
+              "logit": 23.349294662475582,
+              "token_id": 21294
+            },
+            {
+              "logit": 23.146289825439453,
+              "token_id": 4819
+            },
+            {
+              "logit": 22.070528030395508,
+              "token_id": 41859
+            },
+            {
+              "logit": 21.885150909423828,
+              "token_id": 1887
+            },
+            {
+              "logit": 21.703380584716797,
+              "token_id": 42655
+            },
+            {
+              "logit": 21.32059860229492,
+              "token_id": 1493
+            },
+            {
+              "logit": 20.880611419677734,
+              "token_id": 15964
+            },
+            {
+              "logit": 20.866588592529297,
+              "token_id": 5435
+            },
+            {
+              "logit": 20.534404754638672,
+              "token_id": 5044
+            },
+            {
+              "logit": 20.434005737304688,
+              "token_id": 11058
+            },
+            {
+              "logit": 20.33583641052246,
+              "token_id": 4595
+            },
+            {
+              "logit": 20.22471046447754,
+              "token_id": 4221
+            },
+            {
+              "logit": 19.681318283081055,
+              "token_id": 4868
+            },
+            {
+              "logit": 19.565643310546875,
+              "token_id": 2068
+            }
+          ]
+        },
+        {
+          "chosen_id": 6103,
+          "logits_vector_length": 128256,
+          "step": 12,
+          "top_logits": [
+            {
+              "logit": 29.214710235595703,
+              "token_id": 6103
+            },
+            {
+              "logit": 24.726167678833008,
+              "token_id": 82075
+            },
+            {
+              "logit": 24.63164710998535,
+              "token_id": 21294
+            },
+            {
+              "logit": 23.093948364257812,
+              "token_id": 4819
+            },
+            {
+              "logit": 22.145326614379883,
+              "token_id": 41859
+            },
+            {
+              "logit": 20.10356712341309,
+              "token_id": 5435
+            },
+            {
+              "logit": 19.48686790466309,
+              "token_id": 57790
+            },
+            {
+              "logit": 18.690853118896484,
+              "token_id": 42655
+            },
+            {
+              "logit": 17.834936141967773,
+              "token_id": 52227
+            },
+            {
+              "logit": 17.048580169677734,
+              "token_id": 52642
+            },
+            {
+              "logit": 16.72426414489746,
+              "token_id": 23367
+            },
+            {
+              "logit": 16.516090393066406,
+              "token_id": 37064
+            },
+            {
+              "logit": 15.82802677154541,
+              "token_id": 72946
+            },
+            {
+              "logit": 15.792976379394531,
+              "token_id": 14228
+            },
+            {
+              "logit": 15.357443809509276,
+              "token_id": 28950
+            },
+            {
+              "logit": 15.19601345062256,
+              "token_id": 40444
+            },
+            {
+              "logit": 15.151373863220217,
+              "token_id": 1493
+            },
+            {
+              "logit": 14.790529251098633,
+              "token_id": 12912
+            },
+            {
+              "logit": 14.223094940185549,
+              "token_id": 17918
+            },
+            {
+              "logit": 14.124707221984863,
+              "token_id": 77825
+            }
+          ]
+        },
+        {
+          "chosen_id": 13,
+          "logits_vector_length": 128256,
+          "step": 13,
+          "top_logits": [
+            {
+              "logit": 21.423126220703125,
+              "token_id": 13
+            },
+            {
+              "logit": 19.26839256286621,
+              "token_id": 323
+            },
+            {
+              "logit": 16.833765029907227,
+              "token_id": 1555
+            },
+            {
+              "logit": 16.239227294921875,
+              "token_id": 520
+            },
+            {
+              "logit": 14.482648849487305,
+              "token_id": 449
+            },
+            {
+              "logit": 14.049808502197266,
+              "token_id": 304
+            },
+            {
+              "logit": 13.7531099319458,
+              "token_id": 2085
+            },
+            {
+              "logit": 13.404165267944336,
+              "token_id": 3967
+            },
+            {
+              "logit": 13.24048137664795,
+              "token_id": 505
+            },
+            {
+              "logit": 13.200225830078123,
+              "token_id": 11
+            },
+            {
+              "logit": 12.132585525512695,
+              "token_id": 1603
+            },
+            {
+              "logit": 11.43122386932373,
+              "token_id": 6089
+            },
+            {
+              "logit": 11.422861099243164,
+              "token_id": 1093
+            },
+            {
+              "logit": 10.697101593017578,
+              "token_id": 13750
+            },
+            {
+              "logit": 10.620532035827637,
+              "token_id": 11622
+            },
+            {
+              "logit": 10.328704833984377,
+              "token_id": 30820
+            },
+            {
+              "logit": 10.124048233032228,
+              "token_id": 49188
+            },
+            {
+              "logit": 10.114041328430176,
+              "token_id": 1701
+            },
+            {
+              "logit": 9.933271408081056,
+              "token_id": 1139
+            },
+            {
+              "logit": 9.658502578735352,
+              "token_id": 1418
+            }
+          ]
+        },
+        {
+          "chosen_id": 128009,
+          "logits_vector_length": 128256,
+          "step": 14,
+          "top_logits": [
+            {
+              "logit": 14.135621070861816,
+              "token_id": 128009
+            },
+            {
+              "logit": 2.4005026817321777,
+              "token_id": 11410
+            },
+            {
+              "logit": 0.1202995777130127,
+              "token_id": 9506
+            },
+            {
+              "logit": -0.2170350551605225,
+              "token_id": 4815
+            },
+            {
+              "logit": -1.0849995613098145,
+              "token_id": 43337
+            },
+            {
+              "logit": -1.2782506942749023,
+              "token_id": 27505
+            },
+            {
+              "logit": -1.319490671157837,
+              "token_id": 2794
+            },
+            {
+              "logit": -1.3625454902648926,
+              "token_id": 3623
+            },
+            {
+              "logit": -1.688312530517578,
+              "token_id": 720
+            },
+            {
+              "logit": -1.8032431602478027,
+              "token_id": 2355
+            },
+            {
+              "logit": -2.1088478565216064,
+              "token_id": 9468
+            },
+            {
+              "logit": -2.12792444229126,
+              "token_id": 4702
+            },
+            {
+              "logit": -2.2868402004241943,
+              "token_id": 8219
+            },
+            {
+              "logit": -2.296462297439575,
+              "token_id": 2616
+            },
+            {
+              "logit": -2.321925640106201,
+              "token_id": 13257
+            },
+            {
+              "logit": -2.329512119293213,
+              "token_id": 2634
+            },
+            {
+              "logit": -2.443160057067871,
+              "token_id": 9384
+            },
+            {
+              "logit": -2.5052340030670166,
+              "token_id": 29598
+            },
+            {
+              "logit": -2.509672164916992,
+              "token_id": 3402
+            },
+            {
+              "logit": -2.564236640930176,
+              "token_id": 96169
+            }
+          ]
+        }
+      ],
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 128256,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": 128256,
+        "observed_logits_vector_length": 128256,
+        "observed_logits_vector_length_source": "run_receipt_logits_dump"
+      },
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S/QK256",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 29
+      },
+      "profile": "ask_short",
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "qwen_no_think": false,
+        "rendered_sha256": "f934854b920f70500dc6f0d5e9396ed272e5fddd2e90232d0d7b32e32b61aa34",
+        "rendered_text": "User: Summarize in one short sentence and include the words fast and safe: Rust helps teams build reliable systems software.<|eot_id|>Assistant: ",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_generation_identity": {
+        "generation_parameters": {
+          "deterministic": true,
+          "fixed_token_count": false,
+          "greedy": true,
+          "max_new_tokens": 24,
+          "qwen_no_think": false,
+          "repetition_penalty": 1.100000023841858,
+          "seed": null,
+          "stream": null,
+          "temperature": 0.0,
+          "threads": 1,
+          "top_k": 0,
+          "top_p": 1.0
+        },
+        "generation_params_sha256": "f58d2b52ee18607de4c21776b05058b4d733dec4a5b875edf32b13eb6c517979",
+        "identity_sha256": "6f39e550673c4506d4f82b7590126effce975474cf30b229f9c79b54392a6c81",
+        "schema_version": "1.0.0",
+        "stop_criteria": {
+          "manual_stop_sequences": [],
+          "manual_stop_token_ids": [],
+          "policy": "manual_plus_template_defaults",
+          "stop_sequences": [
+            "<|eot_id|>",
+            "<|end_of_text|>"
+          ],
+          "stop_string_window": 10,
+          "stop_token_ids": [
+            128009,
+            128001
+          ]
+        },
+        "stop_criteria_sha256": "e1342df3623e7e44cd79854888c249063c066138b7fa463d8b371e8bb3b4ef7e",
+        "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+        "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+        "template": {
+          "family": "bitnetcpp-answer",
+          "source": "bitnet-prompt-templates-core"
+        },
+        "template_family": "bitnetcpp-answer",
+        "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+        "tokenizer_authority": {
+          "authority": "llama-bpe",
+          "sha256": null,
+          "source": "explicit",
+          "strict": true
+        }
+      },
+      "prompt_prefill": {
+        "decode_start_position": 29,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 29,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "proof_summary": {
+        "backend_claimable": false,
+        "backend_fallback_reason": null,
+        "backend_fallback_used": false,
+        "claim_level": "diagnostic_cli_run",
+        "execution_backend": "intel-a770-opencl",
+        "execution_backend_matched": true,
+        "fallback_used": false,
+        "kernel_route": {
+          "claimable": false,
+          "diagnostic_only": true,
+          "route_declared": true,
+          "route_id": "a770.bitnet.i2s.qk256"
+        },
+        "loader_fallback_used": false,
+        "model_contract": "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml",
+        "model_contract_declared": true,
+        "not_claims": [
+          "selected_attention_residency",
+          "resident_kv_decode",
+          "attention_scores_residency",
+          "softmax_residency",
+          "attention_value_mix_residency",
+          "full_support_op_residency",
+          "full_device_residency",
+          "completion"
+        ],
+        "requested_backend": "intel-a770-opencl",
+        "requested_device": "intel-a770-opencl",
+        "route_declared": true,
+        "selected_backend": "intel-a770-opencl",
+        "strict_backend": true,
+        "tokenizer_fallback_used": false
+      },
+      "qk256_hot_path": {
+        "audited_tensor_materialization_count": 27090,
+        "counter_source": "bitnet_qk256_dispatch::qk256_cpu_hot_path_counters",
+        "input_rows_materialized_count": 9030,
+        "math_changed": false,
+        "no_scale_f32_gemv_invocations": 0,
+        "output_rows_allocated_count": 9030,
+        "qk256_execution_path": "not_observed",
+        "qk256_f32_avx2_gemv_invocations": 0,
+        "qk256_f32_scalar_gemv_invocations": 0,
+        "qk256_flat_bytes_extracted_count": 9030,
+        "qk256_i8s_scaled_avx2_invocations": 0,
+        "qk256_i8s_scaled_scalar_invocations": 0,
+        "requested_kernel": null,
+        "scaled_i2s_i8s_gemv_invocations": 0,
+        "selected_kernel": null,
+        "speedup_claim": false
+      },
+      "quality": {
+        "distinct_generated_tokens": 15,
+        "failed_rules": [],
+        "failure_categories": {
+          "extraction": false,
+          "factual_table": false,
+          "formatting": false,
+          "normalization": false,
+          "refusal": false,
+          "schema": false,
+          "timeout": false
+        },
+        "failure_category_labels": [],
+        "failure_taxonomy": [],
+        "gate_kind": "contains_any",
+        "generated_tokens": 15,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": true,
+        "printable_utf8": true,
+        "scoring": {
+          "details": {
+            "kind": "required_keywords",
+            "required_keywords_missing": []
+          },
+          "failed_rules": [],
+          "failure_categories": {
+            "extraction": false,
+            "factual_table": false,
+            "formatting": false,
+            "normalization": false,
+            "refusal": false,
+            "schema": false,
+            "timeout": false
+          },
+          "failure_category_labels": [],
+          "failure_taxonomy": [],
+          "kind": "required_keywords",
+          "normalized_answer": "Rust enables fast and safe software development by preventing common programming errors.",
+          "passed": true
+        }
+      },
+      "question": "Summarize in one short sentence and include the words fast and safe: Rust helps teams build reliable systems software.",
+      "reference_comparison": {
+        "comparison": {
+          "comparable_fields": [],
+          "generated_token_ids_match": null,
+          "mismatched_fields": [],
+          "missing_fields": [
+            "reference.text",
+            "reference.generated_token_ids"
+          ],
+          "status": "reference_not_supplied",
+          "text_match": null
+        },
+        "enabled": false,
+        "reference": {
+          "generated_token_ids": null,
+          "receipt": null,
+          "runner": null,
+          "source": null,
+          "text": null
+        },
+        "rust": {
+          "fallback_used": false,
+          "generated_token_ids": [
+            49,
+            592,
+            20682,
+            5043,
+            323,
+            6220,
+            3241,
+            4500,
+            555,
+            27252,
+            4279,
+            15840,
+            6103,
+            13,
+            128009
+          ],
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl",
+          "status": "available",
+          "text": "Rust enables fast and safe software development by preventing common programming errors."
+        },
+        "schema": "bitnet_reference_vs_rust_v1"
+      },
+      "run_receipt_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits\\a770-opencl-readiness-divergent-cases-runs\\a770_summary_seed770024_keywords_014.json",
+      "seed_material": "seed=770024 family=summary index=14 required=fast,safe",
+      "status": "passed",
+      "task_family": "constrained_summary",
+      "throughput": {
+        "decoded_tokens": 15,
+        "tokens_per_second": 0.35542496978887755
+      },
+      "timing": {
+        "a770_opencl_device_to_host_bytes": 117565440,
+        "a770_opencl_host_to_device_bytes": 22432212480,
+        "a770_opencl_kernel_invocations": 9030,
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 0.965,
+        "decode_total_ms": 15450.999,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 943.185,
+        "first_token_ms": 27695,
+        "host_to_device_bytes": null,
+        "model_load_ms": 3279.035,
+        "prefill_ms": 26751.555,
+        "sampling_ms_per_token": 0.222,
+        "tokenize_ms": 1.216,
+        "tokenizer_load_ms": 530.418
+      },
+      "token_ids": {
+        "generated": [
+          49,
+          592,
+          20682,
+          5043,
+          323,
+          6220,
+          3241,
+          4500,
+          555,
+          27252,
+          4279,
+          15840,
+          6103,
+          13,
+          128009
+        ],
+        "prompt": [
+          1502,
+          25,
+          8279,
+          5730,
+          553,
+          304,
+          832,
+          2875,
+          11914,
+          323,
+          2997,
+          279,
+          4339,
+          5043,
+          323,
+          6220,
+          25,
+          34889,
+          8779,
+          7411,
+          1977,
+          15062,
+          6067,
+          3241,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 15,
+        "generated_ids": [
+          49,
+          592,
+          20682,
+          5043,
+          323,
+          6220,
+          3241,
+          4500,
+          555,
+          27252,
+          4279,
+          15840,
+          6103,
+          13,
+          128009
+        ],
+        "ids": [
+          49,
+          592,
+          20682,
+          5043,
+          323,
+          6220,
+          3241,
+          4500,
+          555,
+          27252,
+          4279,
+          15840,
+          6103,
+          13,
+          128009
+        ],
+        "prompt": 29,
+        "prompt_ids": [
+          1502,
+          25,
+          8279,
+          5730,
+          553,
+          304,
+          832,
+          2875,
+          11914,
+          323,
+          2997,
+          279,
+          4339,
+          5043,
+          323,
+          6220,
+          25,
+          34889,
+          8779,
+          7411,
+          1977,
+          15062,
+          6067,
+          3241,
+          13,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "total": 44
+      }
+    },
+    {
+      "answer": "No. .",
+      "backend": {
+        "fallback_used": false,
+        "requested_backend": "intel-a770-opencl",
+        "runtime_api": "opencl",
+        "selected_backend": "intel-a770-opencl"
+      },
+      "category": "yes_no",
+      "execution_coverage": {
+        "bitnet_linear_layers_cpu_fallback": 0,
+        "bitnet_linear_layers_on_a770_opencl": 3780,
+        "bitnet_linear_layers_on_cuda": 0,
+        "bitnet_linear_layers_total": 3780,
+        "execution_claim": "a770_opencl_qk256_contribution",
+        "input_rows_materialized_count": 3780,
+        "output_rows_allocated_count": 3780,
+        "qk256_execution_path": "not_observed",
+        "qk256_f32_avx2_gemv_invocations": 0,
+        "qk256_f32_scalar_gemv_invocations": 0,
+        "qk256_flat_bytes_extracted_count": 3780,
+        "qk256_i8s_scaled_avx2_invocations": 0,
+        "qk256_i8s_scaled_scalar_invocations": 0,
+        "requested_kernel": null,
+        "selected_kernel": null,
+        "unsupported_ops": []
+      },
+      "execution_plan": null,
+      "id": "a770_yes_no_seed770024_water_015",
+      "kernel": {
+        "family": "qk256",
+        "hot_path_kernel": null,
+        "selected_kernel": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate"
+      },
+      "latency": {
+        "cmd_to_first_ms": 14142,
+        "decode_first_ms": 14142,
+        "total_ms": 17099
+      },
+      "loader": {
+        "mode": "real_gguf"
+      },
+      "logits_dump": [
+        {
+          "chosen_id": 2822,
+          "logits_vector_length": 128256,
+          "step": 0,
+          "top_logits": [
+            {
+              "logit": 23.606277465820312,
+              "token_id": 2822
+            },
+            {
+              "logit": 22.65699005126953,
+              "token_id": 9642
+            },
+            {
+              "logit": 12.949773788452148,
+              "token_id": 29353
+            },
+            {
+              "logit": 11.782390594482422,
+              "token_id": 39522
+            },
+            {
+              "logit": 11.720221519470217,
+              "token_id": 16533
+            },
+            {
+              "logit": 11.613931655883787,
+              "token_id": 1271
+            },
+            {
+              "logit": 11.527531623840332,
+              "token_id": 644
+            },
+            {
+              "logit": 11.337294578552246,
+              "token_id": 791
+            },
+            {
+              "logit": 11.305109977722168,
+              "token_id": 14331
+            },
+            {
+              "logit": 11.00652313232422,
+              "token_id": 2170
+            },
+            {
+              "logit": 10.775480270385742,
+              "token_id": 2028
+            },
+            {
+              "logit": 10.646050453186035,
+              "token_id": 9173
+            },
+            {
+              "logit": 10.493133544921877,
+              "token_id": 32
+            },
+            {
+              "logit": 10.341747283935549,
+              "token_id": 7996
+            },
+            {
+              "logit": 10.313590049743652,
+              "token_id": 2181
+            },
+            {
+              "logit": 10.31333351135254,
+              "token_id": 2520
+            },
+            {
+              "logit": 10.28122901916504,
+              "token_id": 9906
+            },
+            {
+              "logit": 10.132516860961914,
+              "token_id": 4139
+            },
+            {
+              "logit": 10.04177474975586,
+              "token_id": 58841
+            },
+            {
+              "logit": 9.977849006652832,
+              "token_id": 2746
+            }
+          ]
+        },
+        {
+          "chosen_id": 13,
+          "logits_vector_length": 128256,
+          "step": 1,
+          "top_logits": [
+            {
+              "logit": 9.78407382965088,
+              "token_id": 13
+            },
+            {
+              "logit": 3.956331491470337,
+              "token_id": 11
+            },
+            {
+              "logit": 2.870201587677002,
+              "token_id": 382
+            },
+            {
+              "logit": 2.780499219894409,
+              "token_id": 128009
+            },
+            {
+              "logit": -2.2013707160949707,
+              "token_id": 0
+            },
+            {
+              "logit": -2.5543224811553955,
+              "token_id": 627
+            },
+            {
+              "logit": -2.7579827308654785,
+              "token_id": 25
+            },
+            {
+              "logit": -2.802609443664551,
+              "token_id": 374
+            },
+            {
+              "logit": -3.2037997245788574,
+              "token_id": 323
+            },
+            {
+              "logit": -3.3835577964782715,
+              "token_id": 320
+            },
+            {
+              "logit": -3.5829434394836426,
+              "token_id": 375
+            },
+            {
+              "logit": -3.626187801361084,
+              "token_id": 26
+            },
+            {
+              "logit": -4.759326934814453,
+              "token_id": 271
+            },
+            {
+              "logit": -4.982823371887207,
+              "token_id": 482
+            },
+            {
+              "logit": -5.283562660217285,
+              "token_id": 2791
+            },
+            {
+              "logit": -5.546002388000488,
+              "token_id": 1131
+            },
+            {
+              "logit": -5.607554912567139,
+              "token_id": 18304
+            },
+            {
+              "logit": -5.6149091720581055,
+              "token_id": 369
+            },
+            {
+              "logit": -5.638690948486328,
+              "token_id": 477
+            },
+            {
+              "logit": -5.940192222595215,
+              "token_id": 14
+            }
+          ]
+        },
+        {
+          "chosen_id": 662,
+          "logits_vector_length": 128256,
+          "step": 2,
+          "top_logits": [
+            {
+              "logit": -6.522054672241211,
+              "token_id": 662
+            },
+            {
+              "logit": -6.526308059692383,
+              "token_id": 452
+            },
+            {
+              "logit": -6.705524444580078,
+              "token_id": 1442
+            },
+            {
+              "logit": -6.936132907867432,
+              "token_id": 362
+            },
+            {
+              "logit": -6.939015865325928,
+              "token_id": 4815
+            },
+            {
+              "logit": -7.139691352844238,
+              "token_id": 2360
+            },
+            {
+              "logit": -7.200318813323975,
+              "token_id": 68377
+            },
+            {
+              "logit": -7.612552165985107,
+              "token_id": 128009
+            },
+            {
+              "logit": -7.924983501434326,
+              "token_id": 720
+            },
+            {
+              "logit": -7.9258270263671875,
+              "token_id": 1102
+            },
+            {
+              "logit": -7.980529308319092,
+              "token_id": 468
+            },
+            {
+              "logit": -8.059968948364258,
+              "token_id": 21350
+            },
+            {
+              "logit": -8.197440147399902,
+              "token_id": 2355
+            },
+            {
+              "logit": -8.226699829101562,
+              "token_id": 220
+            },
+            {
+              "logit": -8.244147300720215,
+              "token_id": 1115
+            },
+            {
+              "logit": -8.244625091552734,
+              "token_id": 3234
+            },
+            {
+              "logit": -8.284547805786133,
+              "token_id": 358
+            },
+            {
+              "logit": -8.30840015411377,
+              "token_id": 7566
+            },
+            {
+              "logit": -8.311686515808105,
+              "token_id": 12838
+            },
+            {
+              "logit": -8.400175094604492,
+              "token_id": 72684
+            }
+          ]
+        },
+        {
+          "chosen_id": 128009,
+          "logits_vector_length": 128256,
+          "step": 3,
+          "top_logits": [
+            {
+              "logit": 10.710901260375977,
+              "token_id": 128009
+            },
+            {
+              "logit": 6.138230323791504,
+              "token_id": 10164
+            },
+            {
+              "logit": 5.041479587554932,
+              "token_id": 4815
+            },
+            {
+              "logit": 4.811020374298096,
+              "token_id": 662
+            },
+            {
+              "logit": 1.683248519897461,
+              "token_id": 45956
+            },
+            {
+              "logit": 1.4840247631072998,
+              "token_id": 362
+            },
+            {
+              "logit": 1.3569611310958862,
+              "token_id": 6104
+            },
+            {
+              "logit": 1.191221833229065,
+              "token_id": 6905
+            },
+            {
+              "logit": 1.0939675569534302,
+              "token_id": 2360
+            },
+            {
+              "logit": 0.6338287591934204,
+              "token_id": 320
+            },
+            {
+              "logit": 0.6337096691131592,
+              "token_id": 2209
+            },
+            {
+              "logit": 0.5471723079681396,
+              "token_id": 47978
+            },
+            {
+              "logit": 0.47069311141967773,
+              "token_id": 3090
+            },
+            {
+              "logit": 0.42517685890197754,
+              "token_id": 13284
+            },
+            {
+              "logit": 0.3260221481323242,
+              "token_id": 3053
+            },
+            {
+              "logit": 0.18472594022750857,
+              "token_id": 220
+            },
+            {
+              "logit": 0.09235477447509766,
+              "token_id": 1144
+            },
+            {
+              "logit": 0.0062067508697509766,
+              "token_id": 468
+            },
+            {
+              "logit": -0.18354058265686035,
+              "token_id": 881
+            },
+            {
+              "logit": -0.22935938835144043,
+              "token_id": 21160
+            }
+          ]
+        }
+      ],
+      "logits_index_boundary": {
+        "expected_logits_vector_length": 128256,
+        "expected_logits_vector_length_source": "tokenizer_vocab_size",
+        "first_step_logits_vector_length": 128256,
+        "observed_logits_vector_length": 128256,
+        "observed_logits_vector_length_source": "run_receipt_logits_dump"
+      },
+      "model": {
+        "architecture": "bitnet_b1_58",
+        "family": "bitnet",
+        "file": "ggml-model-i2_s.gguf",
+        "output_head_tensor": "tied_token_embeddings",
+        "quant_format": "I2_S/QK256",
+        "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+        "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+        "tie_word_embeddings": true,
+        "vocab_size": 128256
+      },
+      "position": {
+        "next_decode_position": 15
+      },
+      "profile": "ask_short",
+      "prompt": {
+        "add_bos": false,
+        "add_special": true,
+        "qwen_no_think": false,
+        "rendered_sha256": "e74eb9e61dbcce7b89aad616cf7c63c5754b8573d667e635af1b0686df991775",
+        "rendered_text": "User: Answer yes or no: is water wet?<|eot_id|>Assistant: ",
+        "template_family": "bitnetcpp-answer"
+      },
+      "prompt_generation_identity": {
+        "generation_parameters": {
+          "deterministic": true,
+          "fixed_token_count": false,
+          "greedy": true,
+          "max_new_tokens": 4,
+          "qwen_no_think": false,
+          "repetition_penalty": 1.100000023841858,
+          "seed": null,
+          "stream": null,
+          "temperature": 0.0,
+          "threads": 1,
+          "top_k": 0,
+          "top_p": 1.0
+        },
+        "generation_params_sha256": "00b261527dacd7ea460d8dcba87057f37a91c328d7b64eedd4c73641e805c8d5",
+        "identity_sha256": "8ccb3ad8cf3e3af19b5da2cf69b50a21b78cf01cd3b287de76a1497d2fbfeb3c",
+        "schema_version": "1.0.0",
+        "stop_criteria": {
+          "manual_stop_sequences": [],
+          "manual_stop_token_ids": [],
+          "policy": "manual_plus_template_defaults",
+          "stop_sequences": [
+            "<|eot_id|>",
+            "<|end_of_text|>"
+          ],
+          "stop_string_window": 10,
+          "stop_token_ids": [
+            128009,
+            128001
+          ]
+        },
+        "stop_criteria_sha256": "e1342df3623e7e44cd79854888c249063c066138b7fa463d8b371e8bb3b4ef7e",
+        "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+        "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+        "template": {
+          "family": "bitnetcpp-answer",
+          "source": "bitnet-prompt-templates-core"
+        },
+        "template_family": "bitnetcpp-answer",
+        "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+        "tokenizer_authority": {
+          "authority": "llama-bpe",
+          "sha256": null,
+          "source": "explicit",
+          "strict": true
+        }
+      },
+      "prompt_prefill": {
+        "decode_start_position": 15,
+        "executed": true,
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "prompt_token_count": 15,
+        "source": "run_receipt_profile"
+      },
+      "prompt_template": "bitnetcpp-answer",
+      "proof_summary": {
+        "backend_claimable": false,
+        "backend_fallback_reason": null,
+        "backend_fallback_used": false,
+        "claim_level": "diagnostic_cli_run",
+        "execution_backend": "intel-a770-opencl",
+        "execution_backend_matched": true,
+        "fallback_used": false,
+        "kernel_route": {
+          "claimable": false,
+          "diagnostic_only": true,
+          "route_declared": true,
+          "route_id": "a770.bitnet.i2s.qk256"
+        },
+        "loader_fallback_used": false,
+        "model_contract": "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml",
+        "model_contract_declared": true,
+        "not_claims": [
+          "selected_attention_residency",
+          "resident_kv_decode",
+          "attention_scores_residency",
+          "softmax_residency",
+          "attention_value_mix_residency",
+          "full_support_op_residency",
+          "full_device_residency",
+          "completion"
+        ],
+        "requested_backend": "intel-a770-opencl",
+        "requested_device": "intel-a770-opencl",
+        "route_declared": true,
+        "selected_backend": "intel-a770-opencl",
+        "strict_backend": true,
+        "tokenizer_fallback_used": false
+      },
+      "qk256_hot_path": {
+        "audited_tensor_materialization_count": 11340,
+        "counter_source": "bitnet_qk256_dispatch::qk256_cpu_hot_path_counters",
+        "input_rows_materialized_count": 3780,
+        "math_changed": false,
+        "no_scale_f32_gemv_invocations": 0,
+        "output_rows_allocated_count": 3780,
+        "qk256_execution_path": "not_observed",
+        "qk256_f32_avx2_gemv_invocations": 0,
+        "qk256_f32_scalar_gemv_invocations": 0,
+        "qk256_flat_bytes_extracted_count": 3780,
+        "qk256_i8s_scaled_avx2_invocations": 0,
+        "qk256_i8s_scaled_scalar_invocations": 0,
+        "requested_kernel": null,
+        "scaled_i2s_i8s_gemv_invocations": 0,
+        "selected_kernel": null,
+        "speedup_claim": false
+      },
+      "quality": {
+        "distinct_generated_tokens": 4,
+        "failed_rules": [
+          "gate_starts_with_any",
+          "scoring_exact_match"
+        ],
+        "failure_categories": {
+          "extraction": false,
+          "factual_table": false,
+          "formatting": false,
+          "normalization": false,
+          "refusal": false,
+          "schema": false,
+          "timeout": false
+        },
+        "failure_category_labels": [],
+        "failure_taxonomy": [
+          "answer_content"
+        ],
+        "gate_kind": "starts_with_any",
+        "generated_tokens": 4,
+        "min_distinct_generated_tokens": 1,
+        "min_generated_tokens": 1,
+        "mostly_text": true,
+        "no_raw_special_tokens": true,
+        "no_replacement_chars": true,
+        "non_empty_answer": true,
+        "passed": false,
+        "printable_utf8": true,
+        "scoring": {
+          "details": {
+            "expected": "yes",
+            "kind": "exact_match",
+            "observed": "No. ."
+          },
+          "failed_rules": [
+            "exact_match"
+          ],
+          "failure_categories": {
+            "extraction": false,
+            "factual_table": false,
+            "formatting": false,
+            "normalization": false,
+            "refusal": false,
+            "schema": false,
+            "timeout": false
+          },
+          "failure_category_labels": [],
+          "failure_taxonomy": [
+            "answer_content"
+          ],
+          "kind": "exact_match",
+          "normalized_answer": "No. .",
+          "passed": false
+        }
+      },
+      "question": "Answer yes or no: is water wet?",
+      "reference_comparison": {
+        "comparison": {
+          "comparable_fields": [],
+          "generated_token_ids_match": null,
+          "mismatched_fields": [],
+          "missing_fields": [
+            "reference.text",
+            "reference.generated_token_ids"
+          ],
+          "status": "reference_not_supplied",
+          "text_match": null
+        },
+        "enabled": false,
+        "reference": {
+          "generated_token_ids": null,
+          "receipt": null,
+          "runner": null,
+          "source": null,
+          "text": null
+        },
+        "rust": {
+          "fallback_used": false,
+          "generated_token_ids": [
+            2822,
+            13,
+            662,
+            128009
+          ],
+          "runtime_api": "opencl",
+          "selected_backend": "intel-a770-opencl",
+          "status": "available",
+          "text": "No. ."
+        },
+        "schema": "bitnet_reference_vs_rust_v1"
+      },
+      "run_receipt_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits\\a770-opencl-readiness-divergent-cases-runs\\a770_yes_no_seed770024_water_015.json",
+      "seed_material": "seed=770024 family=yes_no index=15 question=water_wet",
+      "status": "quality_failed",
+      "task_family": "yes_no",
+      "throughput": {
+        "decoded_tokens": 4,
+        "tokens_per_second": 0.23393180887771217
+      },
+      "timing": {
+        "a770_opencl_device_to_host_bytes": 49213440,
+        "a770_opencl_host_to_device_bytes": 9390228480,
+        "a770_opencl_kernel_invocations": 3780,
+        "cuda_kernel_time_ms": null,
+        "decode_steady_state_tok_s": 1.015,
+        "decode_total_ms": 3965.144,
+        "device_to_host_bytes": null,
+        "first_token_decode_ms": 1008.992,
+        "first_token_ms": 14142,
+        "host_to_device_bytes": null,
+        "model_load_ms": 3502.061,
+        "prefill_ms": 13132.658,
+        "sampling_ms_per_token": 0.188,
+        "tokenize_ms": 0.991,
+        "tokenizer_load_ms": 543.623
+      },
+      "token_ids": {
+        "generated": [
+          2822,
+          13,
+          662,
+          128009
+        ],
+        "prompt": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ]
+      },
+      "tokenizer": {
+        "model_family": "llama3",
+        "pretokenizer_authority": "llama-bpe",
+        "source": "explicit",
+        "strict": true
+      },
+      "tokens": {
+        "generated": 4,
+        "generated_ids": [
+          2822,
+          13,
+          662,
+          128009
+        ],
+        "ids": [
+          2822,
+          13,
+          662,
+          128009
+        ],
+        "prompt": 15,
+        "prompt_ids": [
+          1502,
+          25,
+          22559,
+          10035,
+          477,
+          912,
+          25,
+          374,
+          3090,
+          14739,
+          30,
+          128009,
+          72803,
+          25,
+          220
+        ],
+        "total": 19
+      }
+    }
+  ],
+  "claim_boundary": {
+    "a770_opencl_answer_corpus": true,
+    "a770_opencl_route_diagnostic": true,
+    "a770_speedup_claimed": false,
+    "answer_ready_artifact_available": true,
+    "backend_quality_gate_passed": false,
+    "bounded_slm_answer_smoke_passed": false,
+    "broad_performance_claimed": false,
+    "coherent_answer_claimed": false,
+    "coherent_output_observed": false,
+    "cuda_answer_corpus": false,
+    "dense_slm_clean_provenance": false,
+    "diagnostic_only_until_answer_ready_artifact": true,
+    "full_a770_residency_claimed": false,
+    "full_metal_inference_claimed": false,
+    "local_answer_path": false,
+    "neural_engine_claimed": false,
+    "qk256_apple_claimed": false,
+    "slm_answer_path": false,
+    "strict_a770_answer_claimed": false,
+    "strict_cuda_answer_claimed": false,
+    "trusted_partial_acceleration_claimed": false
+  },
+  "corpus": {
+    "case_count": 20,
+    "contract": {
+      "contract_version": "a770-answer-readiness-corpus-v1",
+      "corpus_id": "a770-bitnet-answer-readiness-corpus",
+      "corpus_version": "1.0.0",
+      "expected_output_provenance": "Closed-form deterministic fixture answers derived from the prompt data in this YAML; live CPU/A770 receipts are comparison evidence, not expected-output authority.",
+      "normalization_rules": "answer_corpus_normalize_scoring_text_v1",
+      "receipt_contract": "answer_corpus_aggregate_receipt_v1",
+      "scorer_self_tests": [
+        "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_corpus -- --nocapture",
+        "cargo run --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli -- answer-corpus --dry-run --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model <official BitNet 2B I2_S GGUF> --device cpu --json-out target/a770-answer-readiness-corpus-dry-run.json"
+      ],
+      "scoring_schema": "answer_corpus_mechanical_scoring_v1",
+      "seed_generation_rules": "Static deterministic fixtures derived from seed=770024; every case records seed_material with family, operation, and fixture inputs. Prompt, expected-output, scoring, or family-count changes require a corpus_version bump."
+    },
+    "description": "Seeded deterministic BitNet answer-readiness corpus for Intel Arc A770 CPU/OpenCL quality and parity gates.",
+    "id": "a770-bitnet-answer-readiness-corpus",
+    "metadata": {
+      "campaign": "intel-a770",
+      "case_count_target": 20,
+      "claim_boundary": {
+        "broad_quality_claim": false,
+        "cpu_a770_parity_claim": false,
+        "residency_claim": false,
+        "runtime_proof": false,
+        "speedup_claim": false,
+        "strict_a770_answer_readiness_claim": false
+      },
+      "expected_answer_authority": null,
+      "generator_policy": "deterministic-static-fixture-a770-bitnet-v1",
+      "prompt_template": "bitnetcpp-answer",
+      "reference_comparison_plan": null,
+      "scoring_status": "deterministic_fixture_scoring",
+      "seed": 770024,
+      "work_item": "A770-024"
+    },
+    "name": "a770-bitnet-answer-readiness-corpus",
+    "path": "ci/quality/a770-bitnet-answer-readiness-corpus.yaml",
+    "selected_case_count": 2,
+    "selected_case_ids": [
+      "a770_summary_seed770024_keywords_014",
+      "a770_yes_no_seed770024_water_015"
+    ]
+  },
+  "execution_plan": null,
+  "fallback_used": false,
+  "generation": {
+    "default_max_new_tokens": 32,
+    "deterministic": true,
+    "logits_dump_steps": 24,
+    "logits_topk": 20,
+    "mode": "greedy",
+    "per_prompt_timeout_seconds": 300,
+    "requested_cpu_kernel": null,
+    "strict_loader": true,
+    "temperature": 0.0
+  },
+  "model": {
+    "answer_ready": {
+      "evidence": "docs/reports/MODEL_ARTIFACT_007_MICROSOFT_BITNETCPP_EXTERNAL_PRETOKENIZER.md",
+      "gate": "MODEL-ARTIFACT-007",
+      "manifest": "ci/model-artifacts/artifact-manifest.toml",
+      "state": "answer_ready"
+    },
+    "answer_ready_artifact_available": true,
+    "architecture": "bitnet_b1_58",
+    "bytes": 1187801280,
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "id": null,
+    "loader_mode": "real_gguf",
+    "path": "E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "quant_format": "I2_S/QK256",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "revision": "a1f2f1c765812aa8af3f6eda4a313707064bba15",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tokenizer": "externally_supplied_llama_bpe",
+    "tokenizer_authority": "external_tokenizer_json",
+    "tokenizer_path": "E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json"
+  },
+  "model_architecture": "bitnet_b1_58",
+  "model_family": "bitnet",
+  "profile_summary": {
+    "ask_short": {
+      "failed": 1,
+      "failure_categories": {},
+      "failure_taxonomy": {
+        "answer_content": 1
+      },
+      "not_run": 0,
+      "other_statuses": {},
+      "passed": 1,
+      "scoring": {
+        "enabled": true,
+        "failed": 1,
+        "kinds": [
+          "exact_match",
+          "required_keywords"
+        ],
+        "not_run": 0,
+        "passed": 1,
+        "total": 2
+      },
+      "timeout": 0,
+      "total": 2
+    }
+  },
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 24,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "f58d2b52ee18607de4c21776b05058b4d733dec4a5b875edf32b13eb6c517979",
+    "identity_sha256": "6f39e550673c4506d4f82b7590126effce975474cf30b229f9c79b54392a6c81",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        128009,
+        128001
+      ]
+    },
+    "stop_criteria_sha256": "e1342df3623e7e44cd79854888c249063c066138b7fa463d8b371e8bb3b4ef7e",
+    "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+    "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+    "template": {
+      "family": "bitnetcpp-answer",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "bitnetcpp-answer",
+    "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+    "tokenizer_authority": {
+      "authority": "llama-bpe",
+      "sha256": null,
+      "source": "explicit",
+      "strict": true
+    }
+  },
+  "prompt_template": "bitnetcpp-answer",
+  "prompt_template_policy": {
+    "family": "bitnetcpp-answer",
+    "identity_sha256": "6f39e550673c4506d4f82b7590126effce975474cf30b229f9c79b54392a6c81"
+  },
+  "proof_route_contract": {
+    "claimable": false,
+    "diagnostic_only": true,
+    "enabled": true,
+    "kernel_route": {
+      "claimable": false,
+      "diagnostic_only": true,
+      "route_declared_in_child_runs": true,
+      "route_id": "a770.bitnet.i2s.qk256"
+    },
+    "model_contract": "docs/model-contracts/bitnet-b1.58-2b-4t-i2s.yaml",
+    "not_claims": [
+      "answer_quality",
+      "full_bitnet_inference",
+      "trusted_partial_acceleration",
+      "full_a770_residency",
+      "speedup"
+    ]
+  },
+  "quality_summary": {
+    "failed": 1,
+    "failure_categories": {},
+    "not_run": 0,
+    "passed": 1,
+    "timeout": 0,
+    "total": 2
+  },
+  "quantization": "I2_S/QK256",
+  "receipt_quality": {
+    "case_receipt_checker": "answer_receipt_failed_rules",
+    "checked": true,
+    "checked_rules": [
+      "generated_text_recorded",
+      "prompt_token_count_recorded",
+      "generated_token_count_recorded",
+      "total_token_count_recorded",
+      "prompt_token_ids_recorded",
+      "generated_token_ids_recorded",
+      "prompt_token_count_matches_ids",
+      "generated_token_count_matches_ids",
+      "total_token_count_matches",
+      "model_repo_recorded",
+      "model_file_recorded",
+      "model_sha256_recorded",
+      "model_family_recorded",
+      "model_architecture_recorded",
+      "tokenizer_source_recorded",
+      "tokenizer_strict",
+      "tokenizer_pretokenizer_authority_recorded",
+      "requested_backend",
+      "selected_backend",
+      "runtime_api",
+      "fallback_false",
+      "speedup_claim_false",
+      "loader_real_gguf",
+      "selected_kernel_recorded",
+      "selected_kernel_production",
+      "timing_model_load_ms_recorded",
+      "timing_tokenizer_load_ms_recorded",
+      "timing_tokenize_ms_recorded",
+      "timing_prefill_ms_recorded",
+      "timing_first_token_ms_recorded",
+      "timing_decode_total_ms_recorded",
+      "latency_total_ms_recorded",
+      "qk256_hot_path_recorded",
+      "qk256_hot_path_invocations_positive",
+      "qk256_hot_path_materialization_audited",
+      "a770_model_contract_declared",
+      "a770_model_contract_path",
+      "a770_kernel_route_declared",
+      "a770_kernel_route_id",
+      "a770_kernel_route_diagnostic_only",
+      "a770_kernel_route_claimable_false",
+      "a770_backend_claimable_false"
+    ],
+    "required_case_fields": [
+      "text",
+      "tokens.prompt",
+      "tokens.generated",
+      "tokens.total",
+      "tokens.prompt_ids",
+      "tokens.generated_ids",
+      "model.repo",
+      "model.file",
+      "model.sha256",
+      "model.family",
+      "model.architecture",
+      "tokenizer.source",
+      "tokenizer.strict",
+      "tokenizer.pretokenizer_authority",
+      "requested_backend",
+      "selected_backend",
+      "runtime_api",
+      "fallback_used",
+      "loader.mode",
+      "kernel.kernel_id",
+      "timing.model_load_ms",
+      "timing.tokenizer_load_ms",
+      "timing.tokenize_ms",
+      "timing.prefill_ms",
+      "timing.first_token_ms",
+      "timing.decode_total_ms",
+      "latency.total_ms"
+    ]
+  },
+  "reference_comparison": {
+    "claim_boundary": {
+      "broad_apple_silicon_claimed": false,
+      "chat_enabled": false,
+      "dense_slm_evidence_used": false,
+      "full_metal_inference_claimed": false,
+      "mpsgraph_claimed": false,
+      "neural_engine_claimed": false,
+      "performance_claimed": false,
+      "qk256_apple_claimed": false,
+      "runtime_accuracy_claimed": false,
+      "serve_enabled": false
+    },
+    "enabled": true,
+    "reference_comparison_plan": null,
+    "reference_runner_required": true,
+    "rust_runner": {
+      "fallback_used": false,
+      "prompt_template": "bitnetcpp-answer",
+      "runtime_api": "opencl",
+      "selected_backend": "intel-a770-opencl",
+      "tokenizer_authority": {
+        "ggml_pre": "llama-bpe",
+        "repo": "microsoft/bitnet-b1.58-2B-4T",
+        "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+        "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+        "source": "external_tokenizer_json"
+      }
+    },
+    "schema": "bitnet_reference_vs_rust_v1",
+    "summary": {
+      "comparable_cases": 0,
+      "generated_token_id_matches": 0,
+      "matched": 0,
+      "mismatched": 0,
+      "mismatched_fields": {},
+      "not_run": 0,
+      "partially_compared": 0,
+      "reference_not_supplied": 2,
+      "reference_supplied": 0,
+      "status_counts": {
+        "reference_not_supplied": 2
+      },
+      "text_matches": 0,
+      "total": 2
+    }
+  },
+  "requested_backend": "intel-a770-opencl",
+  "runtime_api": "opencl",
+  "schema_version": "1.0.0",
+  "scoring_contract": {
+    "contract_version": "a770-answer-readiness-corpus-v1",
+    "expected_answer_authority": null,
+    "expected_output_provenance": "Closed-form deterministic fixture answers derived from the prompt data in this YAML; live CPU/A770 receipts are comparison evidence, not expected-output authority.",
+    "normalization_rules": "answer_corpus_normalize_scoring_text_v1",
+    "receipt_contract": "answer_corpus_aggregate_receipt_v1",
+    "reference_comparison_plan": null,
+    "scorer_self_tests": [
+      "cargo test --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli answer_corpus -- --nocapture",
+      "cargo run --locked -p bitnet-cli --no-default-features --features cpu,opencl,full-cli -- answer-corpus --dry-run --corpus ci/quality/a770-bitnet-answer-readiness-corpus.yaml --model <official BitNet 2B I2_S GGUF> --device cpu --json-out target/a770-answer-readiness-corpus-dry-run.json"
+    ],
+    "scoring_schema": "answer_corpus_mechanical_scoring_v1",
+    "supported_failure_categories": [
+      "formatting",
+      "factual_table",
+      "extraction",
+      "refusal",
+      "timeout",
+      "schema",
+      "normalization"
+    ],
+    "supported_scoring_kinds": [
+      "exact_match",
+      "normalized_match",
+      "contains_expected",
+      "json_schema",
+      "numeric_tolerance",
+      "required_keywords",
+      "forbidden_tokens",
+      "required_forbidden_tokens"
+    ]
+  },
+  "scoring_summary": {
+    "enabled": true,
+    "failed": 1,
+    "failure_categories": {},
+    "failure_taxonomy": {
+      "answer_content": 1
+    },
+    "kinds": [
+      "exact_match",
+      "required_keywords"
+    ],
+    "not_run": 0,
+    "passed": 1,
+    "total": 2
+  },
+  "selected_backend": "intel-a770-opencl",
+  "selected_kernel_or_runtime": "a770_opencl_qk256_i2s_i8s_scaled_dispatch_candidate",
+  "speedup_claim": false,
+  "task_family_summary": {
+    "constrained_summary": {
+      "failed": 0,
+      "failure_categories": {},
+      "failure_taxonomy": {},
+      "not_run": 0,
+      "other_statuses": {},
+      "passed": 1,
+      "scoring": {
+        "enabled": true,
+        "failed": 0,
+        "kinds": [
+          "required_keywords"
+        ],
+        "not_run": 0,
+        "passed": 1,
+        "total": 1
+      },
+      "timeout": 0,
+      "total": 1
+    },
+    "yes_no": {
+      "failed": 1,
+      "failure_categories": {},
+      "failure_taxonomy": {
+        "answer_content": 1
+      },
+      "not_run": 0,
+      "other_statuses": {},
+      "passed": 0,
+      "scoring": {
+        "enabled": true,
+        "failed": 1,
+        "kinds": [
+          "exact_match"
+        ],
+        "not_run": 0,
+        "passed": 0,
+        "total": 1
+      },
+      "timeout": 0,
+      "total": 1
+    }
+  },
+  "timestamp": "2026-05-22T15:13:15.419674800+00:00",
+  "tokenizer": {
+    "authority": {
+      "ggml_pre": "llama-bpe",
+      "repo": "microsoft/bitnet-b1.58-2B-4T",
+      "revision": "04c3b9ad9361b824064a1f25ea60a8be9599b127",
+      "sha256": "e134af98b985517b4f068e3755ae90d4e9cd2d45d328325dc503f1c6b2d06cc7",
+      "source": "external_tokenizer_json"
+    },
+    "path": "E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/tokenizer.json",
+    "source": "externally_supplied_llama_bpe",
+    "strict": true
+  },
+  "tokenizer_source": "explicit"
+}

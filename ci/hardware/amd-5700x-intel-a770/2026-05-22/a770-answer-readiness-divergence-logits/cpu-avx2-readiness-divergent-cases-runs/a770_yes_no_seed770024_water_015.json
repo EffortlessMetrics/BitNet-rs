@@ -1,0 +1,947 @@
+{
+  "artifact_kind": "strict_bitnet_cpu_reference",
+  "artifact_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits\\cpu-avx2-readiness-divergent-cases-runs\\a770_yes_no_seed770024_water_015.json",
+  "bitnet": {
+    "activation_quantization": "A8",
+    "execution_phase": "decode",
+    "fallback_layout": null,
+    "kernel_family": "i2_s",
+    "kernel_format": "i2_s",
+    "layout_source": "gguf_packed_i2_s_reference",
+    "per_token_weight_upload": false,
+    "quantization": "W1.58A8",
+    "weight_quantization": "W1.58",
+    "weights_uploaded_once": false
+  },
+  "counts": {
+    "n_kv": 24,
+    "n_tensors": 332,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "x86_64",
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "model": "unknown-windows-cpu",
+    "threads": 1
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 4,
+    "phase": "decode",
+    "prompt_tokens": 15,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "bitnet_linear_layers_on_a770_opencl": 0,
+    "bitnet_linear_layers_on_cuda": 0,
+    "bitnet_linear_layers_total": 3780,
+    "execution_claim": "cpu_reference",
+    "input_rows_materialized_count": 3780,
+    "output_rows_allocated_count": 3780,
+    "qk256_execution_path": "scaled_i2s_i8s",
+    "qk256_f32_avx2_gemv_invocations": 0,
+    "qk256_f32_scalar_gemv_invocations": 0,
+    "qk256_flat_bytes_extracted_count": 3780,
+    "qk256_i8s_scaled_avx2_invocations": 0,
+    "qk256_i8s_scaled_scalar_invocations": 3780,
+    "requested_kernel": "avx2",
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": true,
+    "explicit_bos_requested": false,
+    "greedy": true,
+    "max_new_tokens": 4,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
+    "seed": 0,
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": false,
+    "family": "i2_s",
+    "hot_path_kernel_id": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "implementation": "avx2",
+    "kernel_id": "i2_s-avx2-reference",
+    "layout": "gguf_packed_i2_s"
+  },
+  "latency": {
+    "cmd_to_first_ms": 27676,
+    "decode_first_ms": 27676,
+    "total_ms": 33303
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "explicit"
+  },
+  "logits_dump": [
+    {
+      "chosen_id": 2822,
+      "logits_vector_length": 128256,
+      "step": 0,
+      "top_logits": [
+        {
+          "logit": 23.477493286132812,
+          "token_id": 2822
+        },
+        {
+          "logit": 22.39447021484375,
+          "token_id": 9642
+        },
+        {
+          "logit": 12.760448455810547,
+          "token_id": 29353
+        },
+        {
+          "logit": 11.707757949829102,
+          "token_id": 39522
+        },
+        {
+          "logit": 11.62424373626709,
+          "token_id": 16533
+        },
+        {
+          "logit": 11.362100601196289,
+          "token_id": 1271
+        },
+        {
+          "logit": 11.26573371887207,
+          "token_id": 14331
+        },
+        {
+          "logit": 11.231393814086914,
+          "token_id": 644
+        },
+        {
+          "logit": 11.109832763671875,
+          "token_id": 791
+        },
+        {
+          "logit": 10.78582763671875,
+          "token_id": 2170
+        },
+        {
+          "logit": 10.737415313720703,
+          "token_id": 2028
+        },
+        {
+          "logit": 10.57101821899414,
+          "token_id": 9173
+        },
+        {
+          "logit": 10.479734420776367,
+          "token_id": 7996
+        },
+        {
+          "logit": 10.374336242675781,
+          "token_id": 32
+        },
+        {
+          "logit": 10.172395706176758,
+          "token_id": 2181
+        },
+        {
+          "logit": 10.149179458618164,
+          "token_id": 2520
+        },
+        {
+          "logit": 10.102949142456055,
+          "token_id": 9906
+        },
+        {
+          "logit": 9.925522804260254,
+          "token_id": 2746
+        },
+        {
+          "logit": 9.874866485595703,
+          "token_id": 4139
+        },
+        {
+          "logit": 9.807500839233398,
+          "token_id": 29356
+        }
+      ]
+    },
+    {
+      "chosen_id": 13,
+      "logits_vector_length": 128256,
+      "step": 1,
+      "top_logits": [
+        {
+          "logit": 9.731237411499023,
+          "token_id": 13
+        },
+        {
+          "logit": 3.9810492992401123,
+          "token_id": 11
+        },
+        {
+          "logit": 3.034846305847168,
+          "token_id": 382
+        },
+        {
+          "logit": 2.799867868423462,
+          "token_id": 128009
+        },
+        {
+          "logit": -2.295490026473999,
+          "token_id": 0
+        },
+        {
+          "logit": -2.596841812133789,
+          "token_id": 374
+        },
+        {
+          "logit": -2.648283004760742,
+          "token_id": 627
+        },
+        {
+          "logit": -2.6770131587982178,
+          "token_id": 25
+        },
+        {
+          "logit": -3.108798027038574,
+          "token_id": 320
+        },
+        {
+          "logit": -3.298105001449585,
+          "token_id": 323
+        },
+        {
+          "logit": -3.4875802993774414,
+          "token_id": 375
+        },
+        {
+          "logit": -3.6568212509155273,
+          "token_id": 26
+        },
+        {
+          "logit": -4.581563949584961,
+          "token_id": 271
+        },
+        {
+          "logit": -4.896926403045654,
+          "token_id": 482
+        },
+        {
+          "logit": -4.977843284606934,
+          "token_id": 2791
+        },
+        {
+          "logit": -5.418234348297119,
+          "token_id": 1131
+        },
+        {
+          "logit": -5.444705963134766,
+          "token_id": 18304
+        },
+        {
+          "logit": -5.6075520515441895,
+          "token_id": 369
+        },
+        {
+          "logit": -5.611172199249268,
+          "token_id": 477
+        },
+        {
+          "logit": -5.631444931030273,
+          "token_id": 14
+        }
+      ]
+    },
+    {
+      "chosen_id": 452,
+      "logits_vector_length": 128256,
+      "step": 2,
+      "top_logits": [
+        {
+          "logit": -5.939116477966309,
+          "token_id": 452
+        },
+        {
+          "logit": -6.1050543785095215,
+          "token_id": 1442
+        },
+        {
+          "logit": -6.393555164337158,
+          "token_id": 662
+        },
+        {
+          "logit": -6.5196099281311035,
+          "token_id": 4815
+        },
+        {
+          "logit": -6.583634376525879,
+          "token_id": 2360
+        },
+        {
+          "logit": -6.5963969230651855,
+          "token_id": 362
+        },
+        {
+          "logit": -7.2482476234436035,
+          "token_id": 68377
+        },
+        {
+          "logit": -7.448424816131592,
+          "token_id": 128009
+        },
+        {
+          "logit": -7.485668182373047,
+          "token_id": 468
+        },
+        {
+          "logit": -7.5879411697387695,
+          "token_id": 1102
+        },
+        {
+          "logit": -7.592298984527588,
+          "token_id": 720
+        },
+        {
+          "logit": -7.764633655548096,
+          "token_id": 7566
+        },
+        {
+          "logit": -7.771506309509277,
+          "token_id": 1115
+        },
+        {
+          "logit": -7.782672882080078,
+          "token_id": 3234
+        },
+        {
+          "logit": -7.803407192230225,
+          "token_id": 21350
+        },
+        {
+          "logit": -7.818295955657959,
+          "token_id": 12838
+        },
+        {
+          "logit": -7.939572811126709,
+          "token_id": 2355
+        },
+        {
+          "logit": -7.967519760131836,
+          "token_id": 356
+        },
+        {
+          "logit": -7.9940595626831055,
+          "token_id": 578
+        },
+        {
+          "logit": -7.995985984802246,
+          "token_id": 3053
+        }
+      ]
+    },
+    {
+      "chosen_id": 10576,
+      "logits_vector_length": 128256,
+      "step": 3,
+      "top_logits": [
+        {
+          "logit": 12.681239128112793,
+          "token_id": 10576
+        },
+        {
+          "logit": 8.199538230895996,
+          "token_id": 3030
+        },
+        {
+          "logit": 7.729217529296875,
+          "token_id": 454
+        },
+        {
+          "logit": 7.592329502105713,
+          "token_id": 60086
+        },
+        {
+          "logit": 6.67431640625,
+          "token_id": 74753
+        },
+        {
+          "logit": 6.297271728515625,
+          "token_id": 1656
+        },
+        {
+          "logit": 6.149526596069336,
+          "token_id": 25
+        },
+        {
+          "logit": 5.885916709899902,
+          "token_id": 98833
+        },
+        {
+          "logit": 5.324676990509033,
+          "token_id": 17
+        },
+        {
+          "logit": 5.230013847351074,
+          "token_id": 17773
+        },
+        {
+          "logit": 5.202503204345703,
+          "token_id": 22935
+        },
+        {
+          "logit": 4.686095237731934,
+          "token_id": 6895
+        },
+        {
+          "logit": 4.681635856628418,
+          "token_id": 8046
+        },
+        {
+          "logit": 4.46135950088501,
+          "token_id": 271
+        },
+        {
+          "logit": 4.422632217407227,
+          "token_id": 12
+        },
+        {
+          "logit": 4.418445587158203,
+          "token_id": 51660
+        },
+        {
+          "logit": 4.258195877075195,
+          "token_id": 1334
+        },
+        {
+          "logit": 4.0251007080078125,
+          "token_id": 2439
+        },
+        {
+          "logit": 3.9781296253204346,
+          "token_id": 25282
+        },
+        {
+          "logit": 3.955531120300293,
+          "token_id": 13
+        }
+      ]
+    }
+  ],
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 128256,
+    "expected_logits_vector_length_source": "tokenizer_vocab_size",
+    "first_step_logits_vector_length": 128256,
+    "observed_logits_vector_length": 128256,
+    "observed_logits_vector_length_source": "run_receipt_logits_dump"
+  },
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "tied_token_embeddings",
+    "path": "E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tie_word_embeddings": true,
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "not_claims": [
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion"
+  ],
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "cpu",
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 4,
+        "max_ms": 0.009,
+        "mean_ms": 0.008,
+        "min_ms": 0.006,
+        "p50_ms": 0.008,
+        "p95_ms": 0.009,
+        "total_ms": 0.032
+      },
+      "first_token_decode_ms": 1892.673,
+      "forward_ms": {
+        "count": 4,
+        "max_ms": 1869.941,
+        "mean_ms": 1824.272,
+        "min_ms": 1760.703,
+        "p50_ms": 1831.278,
+        "p95_ms": 1869.941,
+        "total_ms": 7297.086
+      },
+      "generated_tokens": 4,
+      "logits_ms": {
+        "count": 4,
+        "max_ms": 45.75,
+        "mean_ms": 42.173,
+        "min_ms": 39.117,
+        "p50_ms": 40.229,
+        "p95_ms": 45.75,
+        "total_ms": 168.691
+      },
+      "per_token_ms": {
+        "count": 4,
+        "max_ms": 1929.871,
+        "mean_ms": 1879.76,
+        "min_ms": 1812.192,
+        "p50_ms": 1884.304,
+        "p95_ms": 1929.871,
+        "total_ms": 7519.04
+      },
+      "sample_ms": {
+        "count": 4,
+        "max_ms": 0.436,
+        "mean_ms": 0.291,
+        "min_ms": 0.183,
+        "p50_ms": 0.235,
+        "p95_ms": 0.436,
+        "total_ms": 1.162
+      },
+      "steady_per_token_ms": {
+        "count": 3,
+        "max_ms": 1929.871,
+        "mean_ms": 1875.455,
+        "min_ms": 1812.192,
+        "p50_ms": 1884.304,
+        "p95_ms": 1929.871,
+        "total_ms": 5626.366
+      },
+      "steady_state_tok_s": 0.533,
+      "steady_state_tokens": 3,
+      "token_decode_ms": {
+        "count": 4,
+        "max_ms": 0.033,
+        "mean_ms": 0.013,
+        "min_ms": 0.005,
+        "p50_ms": 0.006,
+        "p95_ms": 0.033,
+        "total_ms": 0.05
+      },
+      "warmup_tokens": 1
+    },
+    "id": "default",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 3406.911,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 25783.323,
+      "per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "tokens": 14
+    },
+    "prompt_tokenize_ms": 0.84,
+    "requested": false,
+    "tokenizer_load_ms": 484.043
+  },
+  "prompt": "Answer yes or no: is water wet?",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 4,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "00b261527dacd7ea460d8dcba87057f37a91c328d7b64eedd4c73641e805c8d5",
+    "identity_sha256": "8ccb3ad8cf3e3af19b5da2cf69b50a21b78cf01cd3b287de76a1497d2fbfeb3c",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        128009,
+        128001
+      ]
+    },
+    "stop_criteria_sha256": "e1342df3623e7e44cd79854888c249063c066138b7fa463d8b371e8bb3b4ef7e",
+    "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+    "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+    "template": {
+      "family": "bitnetcpp-answer",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "bitnetcpp-answer",
+    "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+    "tokenizer_authority": {
+      "authority": "llama-bpe",
+      "sha256": null,
+      "source": "explicit",
+      "strict": true
+    }
+  },
+  "prompt_identity": {
+    "bos_policy": false,
+    "parse_special": true,
+    "prompt_token_count": 15,
+    "prompt_token_ids_sha256": "b22fb8d0fde38336ef1053eba17a9f190b4446fea6ae06d401295b602499be42",
+    "rendered_prompt_sha256": "e74eb9e61dbcce7b89aad616cf7c63c5754b8573d667e635af1b0686df991775",
+    "template": "bitnetcpp-answer"
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "rendered_sha256": "e74eb9e61dbcce7b89aad616cf7c63c5754b8573d667e635af1b0686df991775",
+    "rendered_text": "User: Answer yes or no: is water wet?<|eot_id|>Assistant: ",
+    "stop_sequences": [
+      "<|eot_id|>",
+      "<|end_of_text|>"
+    ],
+    "stop_token_ids": [
+      128009,
+      128001
+    ],
+    "template_family": "bitnetcpp-answer"
+  },
+  "proof_summary": {
+    "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
+    "claim_level": "diagnostic_cli_run",
+    "execution_backend": "cpu-rust",
+    "execution_backend_matched": false,
+    "fallback_used": false,
+    "kernel_route": {
+      "claimable": false,
+      "diagnostic_only": true,
+      "route_declared": false,
+      "route_id": null
+    },
+    "loader_fallback_used": false,
+    "model_contract": null,
+    "model_contract_declared": false,
+    "not_claims": [
+      "selected_attention_residency",
+      "resident_kv_decode",
+      "attention_scores_residency",
+      "softmax_residency",
+      "attention_value_mix_residency",
+      "full_support_op_residency",
+      "full_device_residency",
+      "completion"
+    ],
+    "requested_backend": "cpu",
+    "requested_device": "cpu",
+    "route_declared": false,
+    "selected_backend": "cpu-rust",
+    "strict_backend": true,
+    "tokenizer_fallback_used": false
+  },
+  "qk256_hot_path": {
+    "audited_tensor_materialization_count": 11340,
+    "counter_source": "bitnet_qk256_dispatch::qk256_cpu_hot_path_counters",
+    "input_rows_materialized_count": 3780,
+    "math_changed": false,
+    "no_scale_f32_gemv_invocations": 0,
+    "output_rows_allocated_count": 3780,
+    "qk256_execution_path": "scaled_i2s_i8s",
+    "qk256_f32_avx2_gemv_invocations": 0,
+    "qk256_f32_scalar_gemv_invocations": 0,
+    "qk256_flat_bytes_extracted_count": 3780,
+    "qk256_i8s_scaled_avx2_invocations": 0,
+    "qk256_i8s_scaled_scalar_invocations": 3780,
+    "requested_kernel": "avx2",
+    "scaled_i2s_i8s_gemv_invocations": 3780,
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "speedup_claim": false
+  },
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "cpu-rust",
+  "strict_provenance": {
+    "cpu_features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "cpu_model": "unknown-windows-cpu",
+    "decode_tokens": 4,
+    "decode_tps": 0.1201092994625109,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "bitnet",
+    "phase": "decode",
+    "prompt_tokens": 15,
+    "quant_format": "I2_S",
+    "requested_backend": "cpu",
+    "requested_kernel": "avx2",
+    "selected_backend": "cpu-rust",
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "thread_count": 1,
+    "tokenizer_source": "explicit",
+    "tokenizer_strict": true
+  },
+  "text": "No. N/A",
+  "throughput": {
+    "decoded_tokens": 4,
+    "tokens_per_second": 0.1201092994625109
+  },
+  "timestamp": "2026-05-22T15:11:55.531017900+00:00",
+  "timing": {
+    "a770_opencl_device_to_host_bytes": null,
+    "a770_opencl_host_to_device_bytes": null,
+    "a770_opencl_kernel_invocations": null,
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 0.533,
+    "decode_total_ms": 7519.04,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 1892.673,
+    "first_token_ms": 27676,
+    "host_to_device_bytes": null,
+    "model_load_ms": 3406.911,
+    "prefill_ms": 25783.323,
+    "sampling_ms_per_token": 0.291,
+    "tokenize_ms": 0.84,
+    "tokenizer_load_ms": 484.043
+  },
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "model_family": "llama3",
+    "origin": "external",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "tokens": {
+    "generated": 4,
+    "generated_ids": [
+      2822,
+      13,
+      452,
+      10576
+    ],
+    "ids": [
+      2822,
+      13,
+      452,
+      10576
+    ],
+    "prompt": 15,
+    "prompt_ids": [
+      1502,
+      25,
+      22559,
+      10035,
+      477,
+      912,
+      25,
+      374,
+      3090,
+      14739,
+      30,
+      128009,
+      72803,
+      25,
+      220
+    ],
+    "total": 19
+  }
+}

@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T15:35:24Z"
+campaign = "intel-a770"
+item = "A770-027"
+event = "pr_open"
+previous_status = "in_progress"
+new_status = "pr_open"
+actor = "codex-a770"
+pr = 344
+branch = "codex/intel-a770/A770-027-readiness-divergence-logit-context"
+head_sha = "621520b3b1df2345e2292fa79885343664b9cd80"
+summary = "Opened PR #344 for the A770-027 readiness divergence logit-context diagnostic."
+notes = [
+  "The PR records focused CPU AVX2 and Intel A770 OpenCL receipts for the two A770-025 generated-output divergent readiness cases.",
+  "The focused parity receipt now has first-mismatch logit context for both rows and classifies them as opposite argmax, with one A770-side near tie.",
+  "No runtime math, strict answer readiness, broad answer quality, CPU/A770 parity, residency, speed, trusted-partial acceleration, or full BitNet inference claim is promoted.",
+]

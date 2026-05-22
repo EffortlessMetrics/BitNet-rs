@@ -1,0 +1,2207 @@
+{
+  "artifact_kind": "strict_bitnet_cpu_reference",
+  "artifact_path": "ci/hardware/amd-5700x-intel-a770/2026-05-22/a770-answer-readiness-divergence-logits\\cpu-avx2-readiness-divergent-cases-runs\\a770_summary_seed770024_keywords_014.json",
+  "bitnet": {
+    "activation_quantization": "A8",
+    "execution_phase": "decode",
+    "fallback_layout": null,
+    "kernel_family": "i2_s",
+    "kernel_format": "i2_s",
+    "layout_source": "gguf_packed_i2_s_reference",
+    "per_token_weight_upload": false,
+    "quantization": "W1.58A8",
+    "weight_quantization": "W1.58",
+    "weights_uploaded_once": false
+  },
+  "counts": {
+    "n_kv": 24,
+    "n_tensors": 332,
+    "unmapped": 0
+  },
+  "cpu": {
+    "arch": "x86_64",
+    "features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "model": "unknown-windows-cpu",
+    "threads": 1
+  },
+  "execution": {
+    "batch_size": 1,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "generated_tokens": 18,
+    "phase": "decode",
+    "prompt_tokens": 29,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust",
+    "thread_count": 1
+  },
+  "execution_coverage": {
+    "bitnet_linear_layers_cpu_fallback": 0,
+    "bitnet_linear_layers_on_a770_opencl": 0,
+    "bitnet_linear_layers_on_cuda": 0,
+    "bitnet_linear_layers_total": 9660,
+    "execution_claim": "cpu_reference",
+    "input_rows_materialized_count": 9660,
+    "output_rows_allocated_count": 9660,
+    "qk256_execution_path": "scaled_i2s_i8s",
+    "qk256_f32_avx2_gemv_invocations": 0,
+    "qk256_f32_scalar_gemv_invocations": 0,
+    "qk256_flat_bytes_extracted_count": 9660,
+    "qk256_i8s_scaled_avx2_invocations": 0,
+    "qk256_i8s_scaled_scalar_invocations": 9660,
+    "requested_kernel": "avx2",
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "gen_policy": {
+    "bos": false,
+    "deterministic": true,
+    "explicit_bos_requested": false,
+    "greedy": true,
+    "max_new_tokens": 24,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "repetition_penalty": 1.100000023841858,
+    "seed": 0,
+    "temperature": 0.0,
+    "top_k": 0,
+    "top_p": 1.0
+  },
+  "kernel": {
+    "dequantizes_before_compute": false,
+    "family": "i2_s",
+    "hot_path_kernel_id": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "implementation": "avx2",
+    "kernel_id": "i2_s-avx2-reference",
+    "layout": "gguf_packed_i2_s"
+  },
+  "latency": {
+    "cmd_to_first_ms": 53857,
+    "decode_first_ms": 53857,
+    "total_ms": 86007
+  },
+  "loader": {
+    "minimal_fallback_allowed": false,
+    "minimal_fallback_disabled": true,
+    "minimal_loader_fallback_used": false,
+    "mock_tensors_used": false,
+    "mode": "real_gguf",
+    "tokenizer_source": "explicit"
+  },
+  "logits_dump": [
+    {
+      "chosen_id": 49,
+      "logits_vector_length": 128256,
+      "step": 0,
+      "top_logits": [
+        {
+          "logit": 29.21445083618164,
+          "token_id": 49
+        },
+        {
+          "logit": 23.71729278564453,
+          "token_id": 61769
+        },
+        {
+          "logit": 23.375967025756836,
+          "token_id": 16834
+        },
+        {
+          "logit": 21.049942016601562,
+          "token_id": 2409
+        },
+        {
+          "logit": 20.841773986816406,
+          "token_id": 21076
+        },
+        {
+          "logit": 20.789461135864258,
+          "token_id": 14939
+        },
+        {
+          "logit": 20.526445388793945,
+          "token_id": 791
+        },
+        {
+          "logit": 19.9368896484375,
+          "token_id": 1383
+        },
+        {
+          "logit": 19.921295166015625,
+          "token_id": 1
+        },
+        {
+          "logit": 19.703845977783203,
+          "token_id": 644
+        },
+        {
+          "logit": 18.39006233215332,
+          "token_id": 40413
+        },
+        {
+          "logit": 18.044452667236328,
+          "token_id": 19805
+        },
+        {
+          "logit": 17.804664611816406,
+          "token_id": 8142
+        },
+        {
+          "logit": 17.632755279541016,
+          "token_id": 33274
+        },
+        {
+          "logit": 17.471881866455078,
+          "token_id": 31233
+        },
+        {
+          "logit": 17.402862548828125,
+          "token_id": 46819
+        },
+        {
+          "logit": 16.964759826660156,
+          "token_id": 10464
+        },
+        {
+          "logit": 16.84278106689453,
+          "token_id": 11303
+        },
+        {
+          "logit": 16.74152946472168,
+          "token_id": 24798
+        },
+        {
+          "logit": 16.62550926208496,
+          "token_id": 34
+        }
+      ]
+    },
+    {
+      "chosen_id": 592,
+      "logits_vector_length": 128256,
+      "step": 1,
+      "top_logits": [
+        {
+          "logit": 36.6927604675293,
+          "token_id": 592
+        },
+        {
+          "logit": 21.818370819091797,
+          "token_id": 47425
+        },
+        {
+          "logit": 20.830995559692383,
+          "token_id": 38587
+        },
+        {
+          "logit": 20.628856658935547,
+          "token_id": 8721
+        },
+        {
+          "logit": 19.593820571899414,
+          "token_id": 44221
+        },
+        {
+          "logit": 17.914657592773438,
+          "token_id": 34889
+        },
+        {
+          "logit": 17.84081268310547,
+          "token_id": 28244
+        },
+        {
+          "logit": 17.695283889770508,
+          "token_id": 45335
+        },
+        {
+          "logit": 16.55499267578125,
+          "token_id": 952
+        },
+        {
+          "logit": 15.572158813476562,
+          "token_id": 3864
+        },
+        {
+          "logit": 15.549362182617188,
+          "token_id": 88
+        },
+        {
+          "logit": 15.346521377563477,
+          "token_id": 664
+        },
+        {
+          "logit": 14.860213279724121,
+          "token_id": 23941
+        },
+        {
+          "logit": 14.776510238647461,
+          "token_id": 93934
+        },
+        {
+          "logit": 14.445379257202148,
+          "token_id": 3876
+        },
+        {
+          "logit": 14.36829948425293,
+          "token_id": 2642
+        },
+        {
+          "logit": 14.007953643798828,
+          "token_id": 2957
+        },
+        {
+          "logit": 13.981292724609375,
+          "token_id": 2504
+        },
+        {
+          "logit": 13.722991943359375,
+          "token_id": 13900
+        },
+        {
+          "logit": 13.601444244384766,
+          "token_id": 4628
+        }
+      ]
+    },
+    {
+      "chosen_id": 20682,
+      "logits_vector_length": 128256,
+      "step": 2,
+      "top_logits": [
+        {
+          "logit": 23.80624008178711,
+          "token_id": 20682
+        },
+        {
+          "logit": 23.178401947021484,
+          "token_id": 26420
+        },
+        {
+          "logit": 23.023571014404297,
+          "token_id": 5825
+        },
+        {
+          "logit": 22.904254913330078,
+          "token_id": 6276
+        },
+        {
+          "logit": 22.3037166595459,
+          "token_id": 6209
+        },
+        {
+          "logit": 21.725976943969727,
+          "token_id": 8779
+        },
+        {
+          "logit": 21.301185607910156,
+          "token_id": 596
+        },
+        {
+          "logit": 19.407155990600586,
+          "token_id": 15840
+        },
+        {
+          "logit": 19.235300064086914,
+          "token_id": 39990
+        },
+        {
+          "logit": 19.180036544799805,
+          "token_id": 28421
+        },
+        {
+          "logit": 19.082534790039062,
+          "token_id": 22890
+        },
+        {
+          "logit": 18.963258743286133,
+          "token_id": 11
+        },
+        {
+          "logit": 18.65005874633789,
+          "token_id": 4500
+        },
+        {
+          "logit": 18.481718063354492,
+          "token_id": 374
+        },
+        {
+          "logit": 18.3309268951416,
+          "token_id": 66159
+        },
+        {
+          "logit": 18.317399978637695,
+          "token_id": 57924
+        },
+        {
+          "logit": 18.161846160888672,
+          "token_id": 83691
+        },
+        {
+          "logit": 17.68805503845215,
+          "token_id": 45777
+        },
+        {
+          "logit": 17.526718139648438,
+          "token_id": 52797
+        },
+        {
+          "logit": 17.258758544921875,
+          "token_id": 15714
+        }
+      ]
+    },
+    {
+      "chosen_id": 5043,
+      "logits_vector_length": 128256,
+      "step": 3,
+      "top_logits": [
+        {
+          "logit": 24.495723724365234,
+          "token_id": 5043
+        },
+        {
+          "logit": 22.801136016845703,
+          "token_id": 7411
+        },
+        {
+          "logit": 20.455549240112305,
+          "token_id": 11295
+        },
+        {
+          "logit": 19.7856388092041,
+          "token_id": 13707
+        },
+        {
+          "logit": 19.745370864868164,
+          "token_id": 3241
+        },
+        {
+          "logit": 19.13081169128418,
+          "token_id": 10819
+        },
+        {
+          "logit": 18.777013778686523,
+          "token_id": 11297
+        },
+        {
+          "logit": 18.26431655883789,
+          "token_id": 6220
+        },
+        {
+          "logit": 17.964523315429688,
+          "token_id": 1579
+        },
+        {
+          "logit": 17.490989685058594,
+          "token_id": 55946
+        },
+        {
+          "logit": 17.12101173400879,
+          "token_id": 9966
+        },
+        {
+          "logit": 17.089088439941406,
+          "token_id": 279
+        },
+        {
+          "logit": 16.980287551879883,
+          "token_id": 4062
+        },
+        {
+          "logit": 16.928829193115234,
+          "token_id": 6067
+        },
+        {
+          "logit": 16.630943298339844,
+          "token_id": 15062
+        },
+        {
+          "logit": 16.63064956665039,
+          "token_id": 15840
+        },
+        {
+          "logit": 16.494386672973633,
+          "token_id": 30462
+        },
+        {
+          "logit": 16.009836196899414,
+          "token_id": 7224
+        },
+        {
+          "logit": 15.644472122192383,
+          "token_id": 6288
+        },
+        {
+          "logit": 15.463041305541992,
+          "token_id": 7620
+        }
+      ]
+    },
+    {
+      "chosen_id": 323,
+      "logits_vector_length": 128256,
+      "step": 4,
+      "top_logits": [
+        {
+          "logit": 22.533329010009766,
+          "token_id": 323
+        },
+        {
+          "logit": 17.967641830444336,
+          "token_id": 4500
+        },
+        {
+          "logit": 16.34102439880371,
+          "token_id": 3686
+        },
+        {
+          "logit": 16.20562171936035,
+          "token_id": 11
+        },
+        {
+          "logit": 16.021484375,
+          "token_id": 3241
+        },
+        {
+          "logit": 15.881123542785645,
+          "token_id": 1418
+        },
+        {
+          "logit": 15.66012191772461,
+          "token_id": 1887
+        },
+        {
+          "logit": 14.165164947509766,
+          "token_id": 6067
+        },
+        {
+          "logit": 13.18231201171875,
+          "token_id": 11572
+        },
+        {
+          "logit": 13.009040832519531,
+          "token_id": 719
+        },
+        {
+          "logit": 12.89189338684082,
+          "token_id": 5788
+        },
+        {
+          "logit": 12.792669296264648,
+          "token_id": 5178
+        },
+        {
+          "logit": 12.125397682189941,
+          "token_id": 2085
+        },
+        {
+          "logit": 11.854610443115234,
+          "token_id": 22890
+        },
+        {
+          "logit": 11.62862491607666,
+          "token_id": 56219
+        },
+        {
+          "logit": 11.288019180297852,
+          "token_id": 4857
+        },
+        {
+          "logit": 11.213396072387695,
+          "token_id": 555
+        },
+        {
+          "logit": 10.9749174118042,
+          "token_id": 1977
+        },
+        {
+          "logit": 10.920511245727539,
+          "token_id": 15840
+        },
+        {
+          "logit": 10.839990615844727,
+          "token_id": 15062
+        }
+      ]
+    },
+    {
+      "chosen_id": 6220,
+      "logits_vector_length": 128256,
+      "step": 5,
+      "top_logits": [
+        {
+          "logit": 25.815927505493164,
+          "token_id": 6220
+        },
+        {
+          "logit": 19.433801651000977,
+          "token_id": 9966
+        },
+        {
+          "logit": 15.195172309875488,
+          "token_id": 62844
+        },
+        {
+          "logit": 14.573927879333496,
+          "token_id": 15062
+        },
+        {
+          "logit": 14.480138778686523,
+          "token_id": 56219
+        },
+        {
+          "logit": 13.920711517333984,
+          "token_id": 30549
+        },
+        {
+          "logit": 13.602980613708496,
+          "token_id": 19193
+        },
+        {
+          "logit": 13.385639190673828,
+          "token_id": 11297
+        },
+        {
+          "logit": 13.371796607971191,
+          "token_id": 23088
+        },
+        {
+          "logit": 13.344266891479492,
+          "token_id": 7296
+        },
+        {
+          "logit": 12.490541458129883,
+          "token_id": 20451
+        },
+        {
+          "logit": 12.006636619567871,
+          "token_id": 22514
+        },
+        {
+          "logit": 11.275079727172852,
+          "token_id": 5653
+        },
+        {
+          "logit": 11.229296684265137,
+          "token_id": 7701
+        },
+        {
+          "logit": 11.19663143157959,
+          "token_id": 16233
+        },
+        {
+          "logit": 11.129629135131836,
+          "token_id": 66969
+        },
+        {
+          "logit": 11.031682014465332,
+          "token_id": 21676
+        },
+        {
+          "logit": 10.75883960723877,
+          "token_id": 19883
+        },
+        {
+          "logit": 10.724250793457031,
+          "token_id": 3241
+        },
+        {
+          "logit": 10.61966323852539,
+          "token_id": 10121
+        }
+      ]
+    },
+    {
+      "chosen_id": 3241,
+      "logits_vector_length": 128256,
+      "step": 6,
+      "top_logits": [
+        {
+          "logit": 28.515987396240234,
+          "token_id": 3241
+        },
+        {
+          "logit": 28.274860382080078,
+          "token_id": 4500
+        },
+        {
+          "logit": 26.937700271606445,
+          "token_id": 1887
+        },
+        {
+          "logit": 25.557147979736328,
+          "token_id": 6067
+        },
+        {
+          "logit": 23.424280166625977,
+          "token_id": 15840
+        },
+        {
+          "logit": 22.797576904296875,
+          "token_id": 35135
+        },
+        {
+          "logit": 22.399272918701172,
+          "token_id": 1579
+        },
+        {
+          "logit": 21.983856201171875,
+          "token_id": 11572
+        },
+        {
+          "logit": 21.279226303100586,
+          "token_id": 5178
+        },
+        {
+          "logit": 21.006868362426758,
+          "token_id": 15638
+        },
+        {
+          "logit": 20.555036544799805,
+          "token_id": 2082
+        },
+        {
+          "logit": 20.485376358032227,
+          "token_id": 11058
+        },
+        {
+          "logit": 19.89297866821289,
+          "token_id": 29772
+        },
+        {
+          "logit": 19.750032424926758,
+          "token_id": 356
+        },
+        {
+          "logit": 19.577789306640625,
+          "token_id": 3428
+        },
+        {
+          "logit": 19.527164459228516,
+          "token_id": 79110
+        },
+        {
+          "logit": 19.280973434448242,
+          "token_id": 22890
+        },
+        {
+          "logit": 19.153644561767578,
+          "token_id": 5788
+        },
+        {
+          "logit": 19.011362075805664,
+          "token_id": 2068
+        },
+        {
+          "logit": 18.990707397460938,
+          "token_id": 4857
+        }
+      ]
+    },
+    {
+      "chosen_id": 4500,
+      "logits_vector_length": 128256,
+      "step": 7,
+      "top_logits": [
+        {
+          "logit": 32.046966552734375,
+          "token_id": 4500
+        },
+        {
+          "logit": 23.081037521362305,
+          "token_id": 8246
+        },
+        {
+          "logit": 22.928926467895508,
+          "token_id": 555
+        },
+        {
+          "logit": 21.5303897857666,
+          "token_id": 4857
+        },
+        {
+          "logit": 20.889402389526367,
+          "token_id": 15009
+        },
+        {
+          "logit": 20.623214721679688,
+          "token_id": 9886
+        },
+        {
+          "logit": 19.58078956604004,
+          "token_id": 1977
+        },
+        {
+          "logit": 19.464624404907227,
+          "token_id": 22890
+        },
+        {
+          "logit": 18.817562103271484,
+          "token_id": 6067
+        },
+        {
+          "logit": 18.473285675048828,
+          "token_id": 5788
+        },
+        {
+          "logit": 17.96453857421875,
+          "token_id": 1555
+        },
+        {
+          "logit": 17.87456512451172,
+          "token_id": 9889
+        },
+        {
+          "logit": 17.71194076538086,
+          "token_id": 26006
+        },
+        {
+          "logit": 17.441747665405273,
+          "token_id": 2955
+        },
+        {
+          "logit": 17.352783203125,
+          "token_id": 1887
+        },
+        {
+          "logit": 17.178876876831055,
+          "token_id": 11572
+        },
+        {
+          "logit": 17.1502628326416,
+          "token_id": 15840
+        },
+        {
+          "logit": 16.77867889404297,
+          "token_id": 11
+        },
+        {
+          "logit": 16.73320770263672,
+          "token_id": 5178
+        },
+        {
+          "logit": 16.58780288696289,
+          "token_id": 8292
+        }
+      ]
+    },
+    {
+      "chosen_id": 555,
+      "logits_vector_length": 128256,
+      "step": 8,
+      "top_logits": [
+        {
+          "logit": 24.326513290405273,
+          "token_id": 555
+        },
+        {
+          "logit": 21.163469314575195,
+          "token_id": 449
+        },
+        {
+          "logit": 20.9374942779541,
+          "token_id": 13
+        },
+        {
+          "logit": 20.719682693481445,
+          "token_id": 369
+        },
+        {
+          "logit": 20.256582260131836,
+          "token_id": 1555
+        },
+        {
+          "logit": 19.23823356628418,
+          "token_id": 11
+        },
+        {
+          "logit": 16.201873779296875,
+          "token_id": 311
+        },
+        {
+          "logit": 16.09425926208496,
+          "token_id": 4245
+        },
+        {
+          "logit": 15.176423072814941,
+          "token_id": 2085
+        },
+        {
+          "logit": 13.995013236999512,
+          "token_id": 304
+        },
+        {
+          "logit": 13.651073455810547,
+          "token_id": 7411
+        },
+        {
+          "logit": 13.60726547241211,
+          "token_id": 323
+        },
+        {
+          "logit": 13.304458618164062,
+          "token_id": 1606
+        },
+        {
+          "logit": 13.23685073852539,
+          "token_id": 4028
+        },
+        {
+          "logit": 12.594568252563477,
+          "token_id": 439
+        },
+        {
+          "logit": 11.776143074035645,
+          "token_id": 389
+        },
+        {
+          "logit": 11.716082572937012,
+          "token_id": 12659
+        },
+        {
+          "logit": 11.596431732177734,
+          "token_id": 382
+        },
+        {
+          "logit": 11.326468467712402,
+          "token_id": 11618
+        },
+        {
+          "logit": 11.309820175170898,
+          "token_id": 520
+        }
+      ]
+    },
+    {
+      "chosen_id": 40599,
+      "logits_vector_length": 128256,
+      "step": 9,
+      "top_logits": [
+        {
+          "logit": 31.632160186767578,
+          "token_id": 40599
+        },
+        {
+          "logit": 31.623138427734375,
+          "token_id": 27252
+        },
+        {
+          "logit": 31.173545837402344,
+          "token_id": 8405
+        },
+        {
+          "logit": 29.857881546020508,
+          "token_id": 21760
+        },
+        {
+          "logit": 29.19180679321289,
+          "token_id": 82003
+        },
+        {
+          "logit": 28.38091278076172,
+          "token_id": 31526
+        },
+        {
+          "logit": 28.25934600830078,
+          "token_id": 23391
+        },
+        {
+          "logit": 27.86993980407715,
+          "token_id": 62908
+        },
+        {
+          "logit": 27.419902801513672,
+          "token_id": 10209
+        },
+        {
+          "logit": 26.992765426635742,
+          "token_id": 5113
+        },
+        {
+          "logit": 26.901931762695312,
+          "token_id": 24944
+        },
+        {
+          "logit": 26.847280502319336,
+          "token_id": 28118
+        },
+        {
+          "logit": 26.48019027709961,
+          "token_id": 22923
+        },
+        {
+          "logit": 26.466644287109375,
+          "token_id": 1701
+        },
+        {
+          "logit": 26.391263961791992,
+          "token_id": 45777
+        },
+        {
+          "logit": 25.792133331298828,
+          "token_id": 9651
+        },
+        {
+          "logit": 25.68589973449707,
+          "token_id": 77391
+        },
+        {
+          "logit": 25.684734344482422,
+          "token_id": 15803
+        },
+        {
+          "logit": 25.486366271972656,
+          "token_id": 34168
+        },
+        {
+          "logit": 25.471607208251953,
+          "token_id": 7999
+        }
+      ]
+    },
+    {
+      "chosen_id": 854,
+      "logits_vector_length": 128256,
+      "step": 10,
+      "top_logits": [
+        {
+          "logit": 27.074159622192383,
+          "token_id": 854
+        },
+        {
+          "logit": 25.984865188598633,
+          "token_id": 15964
+        },
+        {
+          "logit": 25.6142578125,
+          "token_id": 4279
+        },
+        {
+          "logit": 24.866804122924805,
+          "token_id": 20451
+        },
+        {
+          "logit": 22.77075958251953,
+          "token_id": 5044
+        },
+        {
+          "logit": 22.109634399414062,
+          "token_id": 5178
+        },
+        {
+          "logit": 21.913923263549805,
+          "token_id": 1690
+        },
+        {
+          "logit": 21.81345558166504,
+          "token_id": 23367
+        },
+        {
+          "logit": 20.899696350097656,
+          "token_id": 52227
+        },
+        {
+          "logit": 20.546098709106445,
+          "token_id": 26225
+        },
+        {
+          "logit": 20.11930274963379,
+          "token_id": 828
+        },
+        {
+          "logit": 20.05261993408203,
+          "token_id": 5732
+        },
+        {
+          "logit": 19.88238525390625,
+          "token_id": 1629
+        },
+        {
+          "logit": 19.860822677612305,
+          "token_id": 1455
+        },
+        {
+          "logit": 19.78806495666504,
+          "token_id": 1887
+        },
+        {
+          "logit": 19.751663208007812,
+          "token_id": 15840
+        },
+        {
+          "logit": 19.68519401550293,
+          "token_id": 3738
+        },
+        {
+          "logit": 19.682849884033203,
+          "token_id": 6485
+        },
+        {
+          "logit": 19.043155670166016,
+          "token_id": 279
+        },
+        {
+          "logit": 18.940885543823242,
+          "token_id": 7296
+        }
+      ]
+    },
+    {
+      "chosen_id": 7597,
+      "logits_vector_length": 128256,
+      "step": 11,
+      "top_logits": [
+        {
+          "logit": 20.670103073120117,
+          "token_id": 7597
+        },
+        {
+          "logit": 19.336759567260742,
+          "token_id": 28554
+        },
+        {
+          "logit": 18.387357711791992,
+          "token_id": 323
+        },
+        {
+          "logit": 16.994525909423828,
+          "token_id": 58789
+        },
+        {
+          "logit": 16.13587760925293,
+          "token_id": 12621
+        },
+        {
+          "logit": 14.879687309265137,
+          "token_id": 15407
+        },
+        {
+          "logit": 14.483302116394043,
+          "token_id": 7296
+        },
+        {
+          "logit": 14.334683418273926,
+          "token_id": 26344
+        },
+        {
+          "logit": 14.042692184448242,
+          "token_id": 477
+        },
+        {
+          "logit": 12.457624435424805,
+          "token_id": 2819
+        },
+        {
+          "logit": 12.420456886291504,
+          "token_id": 7677
+        },
+        {
+          "logit": 12.36866569519043,
+          "token_id": 5044
+        },
+        {
+          "logit": 12.021682739257812,
+          "token_id": 12
+        },
+        {
+          "logit": 11.963183403015137,
+          "token_id": 56219
+        },
+        {
+          "logit": 11.880755424499512,
+          "token_id": 16983
+        },
+        {
+          "logit": 11.6842041015625,
+          "token_id": 5905
+        },
+        {
+          "logit": 11.184160232543945,
+          "token_id": 6103
+        },
+        {
+          "logit": 10.970088958740234,
+          "token_id": 14597
+        },
+        {
+          "logit": 10.90499210357666,
+          "token_id": 8640
+        },
+        {
+          "logit": 10.732292175292969,
+          "token_id": 1773
+        }
+      ]
+    },
+    {
+      "chosen_id": 20157,
+      "logits_vector_length": 128256,
+      "step": 12,
+      "top_logits": [
+        {
+          "logit": 23.596895217895508,
+          "token_id": 20157
+        },
+        {
+          "logit": 22.81432342529297,
+          "token_id": 26344
+        },
+        {
+          "logit": 22.56269073486328,
+          "token_id": 6103
+        },
+        {
+          "logit": 18.84871482849121,
+          "token_id": 323
+        },
+        {
+          "logit": 16.369787216186523,
+          "token_id": 15407
+        },
+        {
+          "logit": 15.520316123962402,
+          "token_id": 12621
+        },
+        {
+          "logit": 15.425355911254883,
+          "token_id": 7677
+        },
+        {
+          "logit": 15.134529113769531,
+          "token_id": 2680
+        },
+        {
+          "logit": 14.895444869995117,
+          "token_id": 19530
+        },
+        {
+          "logit": 14.736654281616211,
+          "token_id": 52642
+        },
+        {
+          "logit": 14.729822158813477,
+          "token_id": 42655
+        },
+        {
+          "logit": 14.729390144348145,
+          "token_id": 37237
+        },
+        {
+          "logit": 14.128534317016602,
+          "token_id": 4819
+        },
+        {
+          "logit": 13.841291427612305,
+          "token_id": 35884
+        },
+        {
+          "logit": 13.828409194946289,
+          "token_id": 7296
+        },
+        {
+          "logit": 13.70305347442627,
+          "token_id": 23367
+        },
+        {
+          "logit": 13.678444862365723,
+          "token_id": 2819
+        },
+        {
+          "logit": 13.291884422302246,
+          "token_id": 78748
+        },
+        {
+          "logit": 12.938602447509766,
+          "token_id": 14597
+        },
+        {
+          "logit": 12.927825927734375,
+          "token_id": 1280
+        }
+      ]
+    },
+    {
+      "chosen_id": 323,
+      "logits_vector_length": 128256,
+      "step": 13,
+      "top_logits": [
+        {
+          "logit": 17.802425384521484,
+          "token_id": 323
+        },
+        {
+          "logit": 15.647989273071289,
+          "token_id": 13
+        },
+        {
+          "logit": 12.440072059631348,
+          "token_id": 1555
+        },
+        {
+          "logit": 11.015352249145508,
+          "token_id": 449
+        },
+        {
+          "logit": 10.930557250976562,
+          "token_id": 304
+        },
+        {
+          "logit": 10.414552688598633,
+          "token_id": 11
+        },
+        {
+          "logit": 9.170784950256348,
+          "token_id": 11622
+        },
+        {
+          "logit": 8.545642852783203,
+          "token_id": 2085
+        },
+        {
+          "logit": 7.999874114990234,
+          "token_id": 520
+        },
+        {
+          "logit": 7.919928550720215,
+          "token_id": 49188
+        },
+        {
+          "logit": 6.890053749084473,
+          "token_id": 369
+        },
+        {
+          "logit": 6.46893835067749,
+          "token_id": 1418
+        },
+        {
+          "logit": 6.316967010498047,
+          "token_id": 31155
+        },
+        {
+          "logit": 5.885595321655273,
+          "token_id": 719
+        },
+        {
+          "logit": 5.805316925048828,
+          "token_id": 505
+        },
+        {
+          "logit": 5.791019439697266,
+          "token_id": 439
+        },
+        {
+          "logit": 5.558988094329834,
+          "token_id": 4669
+        },
+        {
+          "logit": 5.33863639831543,
+          "token_id": 1701
+        },
+        {
+          "logit": 5.232355117797852,
+          "token_id": 9651
+        },
+        {
+          "logit": 5.180730819702148,
+          "token_id": 6724
+        }
+      ]
+    },
+    {
+      "chosen_id": 5044,
+      "logits_vector_length": 128256,
+      "step": 14,
+      "top_logits": [
+        {
+          "logit": 30.169937133789062,
+          "token_id": 5044
+        },
+        {
+          "logit": 26.134355545043945,
+          "token_id": 15964
+        },
+        {
+          "logit": 25.708681106567383,
+          "token_id": 1023
+        },
+        {
+          "logit": 25.285228729248047,
+          "token_id": 23391
+        },
+        {
+          "logit": 24.970792770385742,
+          "token_id": 4279
+        },
+        {
+          "logit": 24.509098052978516,
+          "token_id": 22923
+        },
+        {
+          "logit": 24.456960678100586,
+          "token_id": 8405
+        },
+        {
+          "logit": 24.351560592651367,
+          "token_id": 23537
+        },
+        {
+          "logit": 24.12997055053711,
+          "token_id": 828
+        },
+        {
+          "logit": 23.610511779785156,
+          "token_id": 20451
+        },
+        {
+          "logit": 23.580974578857422,
+          "token_id": 14597
+        },
+        {
+          "logit": 23.547636032104492,
+          "token_id": 62908
+        },
+        {
+          "logit": 23.529827117919922,
+          "token_id": 15637
+        },
+        {
+          "logit": 23.31925392150879,
+          "token_id": 4240
+        },
+        {
+          "logit": 23.318645477294922,
+          "token_id": 27252
+        },
+        {
+          "logit": 23.144529342651367,
+          "token_id": 15803
+        },
+        {
+          "logit": 23.022247314453125,
+          "token_id": 11630
+        },
+        {
+          "logit": 23.021442413330078,
+          "token_id": 28462
+        },
+        {
+          "logit": 22.904800415039062,
+          "token_id": 5178
+        },
+        {
+          "logit": 22.66862678527832,
+          "token_id": 18189
+        }
+      ]
+    },
+    {
+      "chosen_id": 37796,
+      "logits_vector_length": 128256,
+      "step": 15,
+      "top_logits": [
+        {
+          "logit": 24.523685455322266,
+          "token_id": 37796
+        },
+        {
+          "logit": 22.950965881347656,
+          "token_id": 7296
+        },
+        {
+          "logit": 22.748300552368164,
+          "token_id": 6373
+        },
+        {
+          "logit": 21.45716094970703,
+          "token_id": 6103
+        },
+        {
+          "logit": 20.61525535583496,
+          "token_id": 14228
+        },
+        {
+          "logit": 19.96717071533203,
+          "token_id": 21948
+        },
+        {
+          "logit": 18.977602005004883,
+          "token_id": 23367
+        },
+        {
+          "logit": 18.133363723754883,
+          "token_id": 4819
+        },
+        {
+          "logit": 17.397014617919922,
+          "token_id": 24691
+        },
+        {
+          "logit": 17.37887954711914,
+          "token_id": 20451
+        },
+        {
+          "logit": 17.20532989501953,
+          "token_id": 15964
+        },
+        {
+          "logit": 16.998422622680664,
+          "token_id": 10648
+        },
+        {
+          "logit": 16.847126007080078,
+          "token_id": 24237
+        },
+        {
+          "logit": 16.62342643737793,
+          "token_id": 7363
+        },
+        {
+          "logit": 16.6076717376709,
+          "token_id": 927
+        },
+        {
+          "logit": 16.509801864624023,
+          "token_id": 2680
+        },
+        {
+          "logit": 16.352523803710938,
+          "token_id": 62851
+        },
+        {
+          "logit": 16.248573303222656,
+          "token_id": 22106
+        },
+        {
+          "logit": 16.08389663696289,
+          "token_id": 1867
+        },
+        {
+          "logit": 16.001220703125,
+          "token_id": 312
+        }
+      ]
+    },
+    {
+      "chosen_id": 13,
+      "logits_vector_length": 128256,
+      "step": 16,
+      "top_logits": [
+        {
+          "logit": 20.88410758972168,
+          "token_id": 13
+        },
+        {
+          "logit": 16.82512664794922,
+          "token_id": 1555
+        },
+        {
+          "logit": 15.911884307861328,
+          "token_id": 304
+        },
+        {
+          "logit": 14.633810997009277,
+          "token_id": 11
+        },
+        {
+          "logit": 14.292098999023438,
+          "token_id": 449
+        },
+        {
+          "logit": 13.278700828552246,
+          "token_id": 11622
+        },
+        {
+          "logit": 12.537978172302246,
+          "token_id": 2085
+        },
+        {
+          "logit": 11.44306468963623,
+          "token_id": 520
+        },
+        {
+          "logit": 10.875214576721191,
+          "token_id": 505
+        },
+        {
+          "logit": 10.568511962890625,
+          "token_id": 17037
+        },
+        {
+          "logit": 10.24145793914795,
+          "token_id": 369
+        },
+        {
+          "logit": 10.173670768737793,
+          "token_id": 31155
+        },
+        {
+          "logit": 10.142278671264648,
+          "token_id": 1418
+        },
+        {
+          "logit": 9.9403715133667,
+          "token_id": 9651
+        },
+        {
+          "logit": 9.925230979919434,
+          "token_id": 6724
+        },
+        {
+          "logit": 9.743504524230957,
+          "token_id": 25291
+        },
+        {
+          "logit": 9.694250106811523,
+          "token_id": 1701
+        },
+        {
+          "logit": 9.664350509643555,
+          "token_id": 4669
+        },
+        {
+          "logit": 9.534014701843262,
+          "token_id": 382
+        },
+        {
+          "logit": 9.46682357788086,
+          "token_id": 11383
+        }
+      ]
+    },
+    {
+      "chosen_id": 128009,
+      "logits_vector_length": 128256,
+      "step": 17,
+      "top_logits": [
+        {
+          "logit": 15.545539855957031,
+          "token_id": 128009
+        },
+        {
+          "logit": 4.372112274169922,
+          "token_id": 11410
+        },
+        {
+          "logit": 1.6138216257095337,
+          "token_id": 4815
+        },
+        {
+          "logit": 1.392198085784912,
+          "token_id": 9506
+        },
+        {
+          "logit": 1.0073432922363281,
+          "token_id": 43337
+        },
+        {
+          "logit": 0.7315754890441895,
+          "token_id": 3623
+        },
+        {
+          "logit": 0.6650553941726685,
+          "token_id": 2355
+        },
+        {
+          "logit": 0.37149786949157715,
+          "token_id": 720
+        },
+        {
+          "logit": 0.13432836532592773,
+          "token_id": 2794
+        },
+        {
+          "logit": 0.10880076885223389,
+          "token_id": 578
+        },
+        {
+          "logit": 0.037810325622558594,
+          "token_id": 9468
+        },
+        {
+          "logit": 0.03319811820983887,
+          "token_id": 34889
+        },
+        {
+          "logit": -0.13977587223052979,
+          "token_id": 4452
+        },
+        {
+          "logit": -0.28530359268188477,
+          "token_id": 8219
+        },
+        {
+          "logit": -0.3579156994819641,
+          "token_id": 3402
+        },
+        {
+          "logit": -0.36562108993530273,
+          "token_id": 13257
+        },
+        {
+          "logit": -0.39790916442871094,
+          "token_id": 27505
+        },
+        {
+          "logit": -0.46675920486450195,
+          "token_id": 353
+        },
+        {
+          "logit": -0.5504370927810669,
+          "token_id": 1115
+        },
+        {
+          "logit": -0.6502842903137207,
+          "token_id": 2616
+        }
+      ]
+    }
+  ],
+  "logits_index_boundary": {
+    "expected_logits_vector_length": 128256,
+    "expected_logits_vector_length_source": "tokenizer_vocab_size",
+    "first_step_logits_vector_length": 128256,
+    "observed_logits_vector_length": 128256,
+    "observed_logits_vector_length_source": "run_receipt_logits_dump"
+  },
+  "model": {
+    "architecture": "bitnet_b1_58",
+    "context_length": 4096,
+    "fallback_loader_used": false,
+    "family": "bitnet",
+    "file": "ggml-model-i2_s.gguf",
+    "format": "gguf",
+    "loader_mode": "real_gguf",
+    "output_head_tensor": "tied_token_embeddings",
+    "path": "E:/Code/Rust/BitNet-rs/models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+    "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+    "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+    "tie_word_embeddings": true,
+    "tokenizer": "llama3",
+    "vocab_size": 128256
+  },
+  "not_claims": [
+    "selected_attention_residency",
+    "resident_kv_decode",
+    "attention_scores_residency",
+    "softmax_residency",
+    "attention_value_mix_residency",
+    "full_support_op_residency",
+    "full_device_residency",
+    "completion"
+  ],
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "cpu",
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 18,
+        "max_ms": 0.009,
+        "mean_ms": 0.008,
+        "min_ms": 0.006,
+        "p50_ms": 0.008,
+        "p95_ms": 0.009,
+        "total_ms": 0.14
+      },
+      "first_token_decode_ms": 1942.876,
+      "forward_ms": {
+        "count": 18,
+        "max_ms": 2043.868,
+        "mean_ms": 1837.244,
+        "min_ms": 1630.246,
+        "p50_ms": 1844.73,
+        "p95_ms": 2043.868,
+        "total_ms": 33070.396
+      },
+      "generated_tokens": 18,
+      "logits_ms": {
+        "count": 18,
+        "max_ms": 47.25,
+        "mean_ms": 43.269,
+        "min_ms": 38.577,
+        "p50_ms": 42.963,
+        "p95_ms": 47.25,
+        "total_ms": 778.848
+      },
+      "per_token_ms": {
+        "count": 18,
+        "max_ms": 2100.546,
+        "mean_ms": 1893.981,
+        "min_ms": 1687.293,
+        "p50_ms": 1900.394,
+        "p95_ms": 2100.546,
+        "total_ms": 34091.656
+      },
+      "sample_ms": {
+        "count": 18,
+        "max_ms": 0.457,
+        "mean_ms": 0.303,
+        "min_ms": 0.202,
+        "p50_ms": 0.243,
+        "p95_ms": 0.457,
+        "total_ms": 5.462
+      },
+      "steady_per_token_ms": {
+        "count": 17,
+        "max_ms": 2100.546,
+        "mean_ms": 1891.105,
+        "min_ms": 1687.293,
+        "p50_ms": 1900.394,
+        "p95_ms": 2100.546,
+        "total_ms": 32148.779
+      },
+      "steady_state_tok_s": 0.529,
+      "steady_state_tokens": 17,
+      "token_decode_ms": {
+        "count": 18,
+        "max_ms": 0.034,
+        "mean_ms": 0.007,
+        "min_ms": 0.003,
+        "p50_ms": 0.006,
+        "p95_ms": 0.034,
+        "total_ms": 0.135
+      },
+      "warmup_tokens": 1
+    },
+    "id": "default",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 3386.688,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 51914.28,
+      "per_token_ms": {
+        "count": 0,
+        "max_ms": null,
+        "mean_ms": null,
+        "min_ms": null,
+        "p50_ms": null,
+        "p95_ms": null,
+        "total_ms": 0.0
+      },
+      "tokens": 28
+    },
+    "prompt_tokenize_ms": 1.085,
+    "requested": false,
+    "tokenizer_load_ms": 548.728
+  },
+  "prompt": "Summarize in one short sentence and include the words fast and safe: Rust helps teams build reliable systems software.",
+  "prompt_generation_identity": {
+    "generation_parameters": {
+      "deterministic": true,
+      "fixed_token_count": false,
+      "greedy": true,
+      "max_new_tokens": 24,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": null,
+      "stream": null,
+      "temperature": 0.0,
+      "threads": 1,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "generation_params_sha256": "f58d2b52ee18607de4c21776b05058b4d733dec4a5b875edf32b13eb6c517979",
+    "identity_sha256": "6f39e550673c4506d4f82b7590126effce975474cf30b229f9c79b54392a6c81",
+    "schema_version": "1.0.0",
+    "stop_criteria": {
+      "manual_stop_sequences": [],
+      "manual_stop_token_ids": [],
+      "policy": "manual_plus_template_defaults",
+      "stop_sequences": [
+        "<|eot_id|>",
+        "<|end_of_text|>"
+      ],
+      "stop_string_window": 10,
+      "stop_token_ids": [
+        128009,
+        128001
+      ]
+    },
+    "stop_criteria_sha256": "e1342df3623e7e44cd79854888c249063c066138b7fa463d8b371e8bb3b4ef7e",
+    "stop_sequences_sha256": "0fddbf5dfadd83b22a3329965966d2bb6cfa0f4f5bb5c5cc9251e4d83a41f540",
+    "stop_token_ids_sha256": "2dcdd3b32fba7444290fbb1bbf22866793fafa16f1db727880d17da1ff99b63e",
+    "template": {
+      "family": "bitnetcpp-answer",
+      "source": "bitnet-prompt-templates-core"
+    },
+    "template_family": "bitnetcpp-answer",
+    "template_sha256": "fe14a87657ed0ebbafae92dc67131eb87dcfac6a9bd0c08d96e20cd88defd6c7",
+    "tokenizer_authority": {
+      "authority": "llama-bpe",
+      "sha256": null,
+      "source": "explicit",
+      "strict": true
+    }
+  },
+  "prompt_identity": {
+    "bos_policy": false,
+    "parse_special": true,
+    "prompt_token_count": 29,
+    "prompt_token_ids_sha256": "be3a7c8bb69be77e7f92f286733f366d5f01d2df3c601945e1d2fb5345dc487b",
+    "rendered_prompt_sha256": "f934854b920f70500dc6f0d5e9396ed272e5fddd2e90232d0d7b32e32b61aa34",
+    "template": "bitnetcpp-answer"
+  },
+  "prompt_render": {
+    "add_bos": false,
+    "parse_special": true,
+    "qwen_no_think": false,
+    "rendered_sha256": "f934854b920f70500dc6f0d5e9396ed272e5fddd2e90232d0d7b32e32b61aa34",
+    "rendered_text": "User: Summarize in one short sentence and include the words fast and safe: Rust helps teams build reliable systems software.<|eot_id|>Assistant: ",
+    "stop_sequences": [
+      "<|eot_id|>",
+      "<|end_of_text|>"
+    ],
+    "stop_token_ids": [
+      128009,
+      128001
+    ],
+    "template_family": "bitnetcpp-answer"
+  },
+  "proof_summary": {
+    "backend_claimable": false,
+    "backend_fallback_reason": null,
+    "backend_fallback_used": false,
+    "claim_level": "diagnostic_cli_run",
+    "execution_backend": "cpu-rust",
+    "execution_backend_matched": false,
+    "fallback_used": false,
+    "kernel_route": {
+      "claimable": false,
+      "diagnostic_only": true,
+      "route_declared": false,
+      "route_id": null
+    },
+    "loader_fallback_used": false,
+    "model_contract": null,
+    "model_contract_declared": false,
+    "not_claims": [
+      "selected_attention_residency",
+      "resident_kv_decode",
+      "attention_scores_residency",
+      "softmax_residency",
+      "attention_value_mix_residency",
+      "full_support_op_residency",
+      "full_device_residency",
+      "completion"
+    ],
+    "requested_backend": "cpu",
+    "requested_device": "cpu",
+    "route_declared": false,
+    "selected_backend": "cpu-rust",
+    "strict_backend": true,
+    "tokenizer_fallback_used": false
+  },
+  "qk256_hot_path": {
+    "audited_tensor_materialization_count": 28980,
+    "counter_source": "bitnet_qk256_dispatch::qk256_cpu_hot_path_counters",
+    "input_rows_materialized_count": 9660,
+    "math_changed": false,
+    "no_scale_f32_gemv_invocations": 0,
+    "output_rows_allocated_count": 9660,
+    "qk256_execution_path": "scaled_i2s_i8s",
+    "qk256_f32_avx2_gemv_invocations": 0,
+    "qk256_f32_scalar_gemv_invocations": 0,
+    "qk256_flat_bytes_extracted_count": 9660,
+    "qk256_i8s_scaled_avx2_invocations": 0,
+    "qk256_i8s_scaled_scalar_invocations": 9660,
+    "requested_kernel": "avx2",
+    "scaled_i2s_i8s_gemv_invocations": 9660,
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "speedup_claim": false
+  },
+  "requested_backend": "cpu",
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "cpu-rust",
+  "strict_provenance": {
+    "cpu_features": [
+      "avx2",
+      "avx",
+      "fma",
+      "sse4.2",
+      "sse2"
+    ],
+    "cpu_model": "unknown-windows-cpu",
+    "decode_tokens": 18,
+    "decode_tps": 0.2092852907321497,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "loader_mode": "real_gguf",
+    "model_family": "bitnet",
+    "phase": "decode",
+    "prompt_tokens": 29,
+    "quant_format": "I2_S",
+    "requested_backend": "cpu",
+    "requested_kernel": "avx2",
+    "selected_backend": "cpu-rust",
+    "selected_kernel": "qk256-i2s-i8s-scaled-scalar-gemv",
+    "thread_count": 1,
+    "tokenizer_source": "explicit",
+    "tokenizer_strict": true
+  },
+  "text": "Rust enables fast and safe software development by eliminating null pointer exceptions and memory leaks.",
+  "throughput": {
+    "decoded_tokens": 18,
+    "tokens_per_second": 0.2092852907321497
+  },
+  "timestamp": "2026-05-22T15:11:16.570938300+00:00",
+  "timing": {
+    "a770_opencl_device_to_host_bytes": null,
+    "a770_opencl_host_to_device_bytes": null,
+    "a770_opencl_kernel_invocations": null,
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 0.529,
+    "decode_total_ms": 34091.656,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 1942.876,
+    "first_token_ms": 53857,
+    "host_to_device_bytes": null,
+    "model_load_ms": 3386.688,
+    "prefill_ms": 51914.28,
+    "sampling_ms_per_token": 0.303,
+    "tokenize_ms": 1.085,
+    "tokenizer_load_ms": 548.728
+  },
+  "tokenizer": {
+    "bos": 1,
+    "eos": 2,
+    "model_family": "llama3",
+    "origin": "external",
+    "pretokenizer_authority": "llama-bpe",
+    "source": "explicit",
+    "strict": true,
+    "type": "llama3"
+  },
+  "tokens": {
+    "generated": 18,
+    "generated_ids": [
+      49,
+      592,
+      20682,
+      5043,
+      323,
+      6220,
+      3241,
+      4500,
+      555,
+      40599,
+      854,
+      7597,
+      20157,
+      323,
+      5044,
+      37796,
+      13,
+      128009
+    ],
+    "ids": [
+      49,
+      592,
+      20682,
+      5043,
+      323,
+      6220,
+      3241,
+      4500,
+      555,
+      40599,
+      854,
+      7597,
+      20157,
+      323,
+      5044,
+      37796,
+      13,
+      128009
+    ],
+    "prompt": 29,
+    "prompt_ids": [
+      1502,
+      25,
+      8279,
+      5730,
+      553,
+      304,
+      832,
+      2875,
+      11914,
+      323,
+      2997,
+      279,
+      4339,
+      5043,
+      323,
+      6220,
+      25,
+      34889,
+      8779,
+      7411,
+      1977,
+      15062,
+      6067,
+      3241,
+      13,
+      128009,
+      72803,
+      25,
+      220
+    ],
+    "total": 47
+  }
+}
