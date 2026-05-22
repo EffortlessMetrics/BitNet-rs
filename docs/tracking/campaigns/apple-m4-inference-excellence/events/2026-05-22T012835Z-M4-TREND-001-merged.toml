@@ -1,0 +1,17 @@
+timestamp = "2026-05-22T01:28:35Z"
+campaign = "apple-m4-inference-excellence"
+item = "M4-TREND-001"
+event = "merged"
+actor = "codex"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 217
+head_sha = "4b26ee6fe52ceb1b2e5ce35b4142537aa1baa6ef"
+merge_sha = "6f9e6411726cbd26f8f4eac2bc4c760e64cb15e9"
+branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
+
+notes = [
+  "Closed M4-TREND-001 after PR #217 merged the seven-day M4 trend receipts into main.",
+  "The merged change adds matching-identity trend report-refresh and regression-dashboard receipts for dense SLM and BitNet evidence families.",
+  "Closeout records the tracker state transition only; it does not run live inference, replace per-run receipts, or claim future performance.",
+]

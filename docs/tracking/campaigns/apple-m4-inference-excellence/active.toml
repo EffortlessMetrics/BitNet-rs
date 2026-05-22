@@ -2937,9 +2937,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-TREND-001"
-status = "pr_open"
+status = "merged"
 pr = 217
-head_sha = "f392716a84d00bb749328cdaf82997aef7ba26d9"
+head_sha = "4b26ee6fe52ceb1b2e5ce35b4142537aa1baa6ef"
+merge_sha = "6f9e6411726cbd26f8f4eac2bc4c760e64cb15e9"
 branch = "codex/apple-m4-inference-excellence/M4-TREND-001-seven-day-history"
 stackable = false
 review_mode = "codex_premerge"
