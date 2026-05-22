@@ -1252,9 +1252,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "A770-027"
-status = "pr_open"
+status = "merged"
 pr = 344
-head_sha = "ccb5bf1b62173c0f2c2096544aa8c550f900f259"
+head_sha = "272d15b2e4c709a3997df9eed3e3f88678b0662d"
+merge_sha = "4ba74839e45b3006e37775720c63fd66864fa2f3"
 branch = "codex/intel-a770/A770-027-readiness-divergence-logit-context"
 stackable = false
 review_mode = "codex_premerge"
