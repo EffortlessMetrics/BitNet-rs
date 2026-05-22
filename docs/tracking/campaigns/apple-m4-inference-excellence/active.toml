@@ -3064,14 +3064,16 @@ must_not_claim = [
 
 [[work_item]]
 id = "M4-CLAIM-LINT-001"
-status = "pr_open"
+status = "merged"
 branch = "codex/apple-m4-inference-excellence/M4-CLAIM-LINT-001-claim-boundary-check"
-pr = 6190
 stackable = false
 review_mode = "codex_premerge"
 merge_policy = "automerge_when_green"
 human_gate = "on_blocker_only"
 blocked_by = ["M4-COMPAT-001", "M4-REPRO-001"]
+pr = 6190
+head_sha = "80ce088eaf72703f2189155119f3ca8f5d1617c5"
+merge_sha = "8d42d001124ee891be3f6ab3520aed7c6410e1b3"
 acceptance = "Add a static claim-boundary checker for M4 docs, generated tracker status, operator envelope text, and operator-facing command strings that rejects unsupported Apple Silicon, MacBook, Metal, Neural Engine, MPSGraph, QK256, dense-as-BitNet, broad quality/performance, and speedup wording unless explicitly tied to a matching accepted receipt gate."
 commands = [
   "cargo run --locked -p xtask --no-default-features -- claim-lint --scope apple-m4 --check",
