@@ -54,6 +54,129 @@ fn qwen_trace_model_init_event(enabled: bool, stage: &str, fields_json: impl FnO
     }
 }
 
+fn qwen_trace_dims_json(dims: &[usize]) -> String {
+    dims.iter().map(|dim| dim.to_string()).collect::<Vec<_>>().join(",")
+}
+
+struct LinearInitTrace<'a> {
+    enabled: bool,
+    init_start: Instant,
+    layer_idx: usize,
+    device: &'a Device,
+    scope: &'static str,
+    name: &'static str,
+}
+
+#[derive(Clone, Copy)]
+struct RopeInitTrace<'a> {
+    enabled: bool,
+    init_start: Instant,
+    layer_idx: usize,
+    device: &'a Device,
+}
+
+fn qwen_trace_linear_init_event(
+    trace: &LinearInitTrace<'_>,
+    stage: &str,
+    fields_json: impl FnOnce() -> String,
+) {
+    qwen_trace_model_init_event(trace.enabled, stage, || {
+        format!(
+            "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"scope\":\"{}\",\"linear\":\"{}\",{}",
+            qwen_trace_elapsed_ms(trace.init_start),
+            trace.layer_idx,
+            qwen_trace_device_kind(trace.device),
+            trace.scope,
+            trace.name,
+            fields_json()
+        )
+    });
+}
+
+fn linear_with_optional_bias_traced(
+    in_dim: usize,
+    out_dim: usize,
+    vb: VarBuilder,
+    trace: LinearInitTrace<'_>,
+) -> Result<Linear> {
+    qwen_trace_linear_init_event(&trace, "model_init.linear_start", || {
+        format!("\"in_dim\":{},\"out_dim\":{}", in_dim, out_dim)
+    });
+
+    let weight_start = Instant::now();
+    qwen_trace_linear_init_event(&trace, "model_init.linear_weight_start", || {
+        format!("\"in_dim\":{},\"out_dim\":{}", in_dim, out_dim)
+    });
+    let weight = match vb.get((out_dim, in_dim), "weight") {
+        Ok(weight) => {
+            qwen_trace_linear_init_event(&trace, "model_init.linear_weight_finish", || {
+                format!(
+                    "\"weight_ms\":{},\"dtype\":\"{:?}\",\"dims\":[{}]",
+                    qwen_trace_elapsed_ms(weight_start),
+                    weight.dtype(),
+                    qwen_trace_dims_json(weight.dims())
+                )
+            });
+            weight
+        }
+        Err(err) => {
+            qwen_trace_linear_init_event(&trace, "model_init.linear_weight_error", || {
+                format!("\"weight_ms\":{}", qwen_trace_elapsed_ms(weight_start))
+            });
+            return Err(BitNetError::from(err));
+        }
+    };
+
+    let bias_start = Instant::now();
+    qwen_trace_linear_init_event(&trace, "model_init.linear_bias_start", || {
+        format!("\"out_dim\":{}", out_dim)
+    });
+    let bias = match vb.get(out_dim, "bias") {
+        Ok(bias) => {
+            qwen_trace_linear_init_event(&trace, "model_init.linear_bias_finish", || {
+                format!(
+                    "\"bias_ms\":{},\"present\":true,\"dtype\":\"{:?}\",\"dims\":[{}]",
+                    qwen_trace_elapsed_ms(bias_start),
+                    bias.dtype(),
+                    qwen_trace_dims_json(bias.dims())
+                )
+            });
+            Some(bias)
+        }
+        Err(_) => {
+            tracing::debug!("Bias tensor missing for linear layer; using no-bias path [{out_dim}]");
+            qwen_trace_linear_init_event(&trace, "model_init.linear_bias_finish", || {
+                format!("\"bias_ms\":{},\"present\":false", qwen_trace_elapsed_ms(bias_start))
+            });
+            None
+        }
+    };
+
+    qwen_trace_linear_init_event(&trace, "model_init.linear_finish", || {
+        format!("\"in_dim\":{},\"out_dim\":{}", in_dim, out_dim)
+    });
+
+    Ok(Linear::new(weight, bias))
+}
+
+fn qwen_trace_rope_init_event(
+    trace: Option<RopeInitTrace<'_>>,
+    stage: &str,
+    fields_json: impl FnOnce() -> String,
+) {
+    if let Some(trace) = trace {
+        qwen_trace_model_init_event(trace.enabled, stage, || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",{}",
+                qwen_trace_elapsed_ms(trace.init_start),
+                trace.layer_idx,
+                qwen_trace_device_kind(trace.device),
+                fields_json()
+            )
+        });
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct DenseQ8SidecarInstrumentationSnapshot {
     pub selector_dispatch_calls: u64,
@@ -608,13 +731,73 @@ impl RotaryEmbedding {
         rope_theta: Option<f32>,
         device: &Device,
     ) -> Result<Self> {
+        Self::new_impl(dim, max_seq_len, rope_theta, device, None)
+    }
+
+    fn new_traced(
+        dim: usize,
+        max_seq_len: usize,
+        rope_theta: Option<f32>,
+        device: &Device,
+        trace: RopeInitTrace<'_>,
+    ) -> Result<Self> {
+        Self::new_impl(dim, max_seq_len, rope_theta, device, Some(trace))
+    }
+
+    fn new_impl(
+        dim: usize,
+        max_seq_len: usize,
+        rope_theta: Option<f32>,
+        device: &Device,
+        trace: Option<RopeInitTrace<'_>>,
+    ) -> Result<Self> {
         let theta = resolve_rope_base(rope_theta);
+        qwen_trace_rope_init_event(trace, "model_init.rope_start", || {
+            format!("\"dim\":{},\"max_seq_len\":{},\"theta\":{}", dim, max_seq_len, theta)
+        });
+        let tables_start = Instant::now();
+        qwen_trace_rope_init_event(trace, "model_init.rope_tables_start", || {
+            format!("\"dim\":{},\"max_seq_len\":{}", dim, max_seq_len)
+        });
         let tables = build_rope_tables(dim, max_seq_len, theta)
             .map_err(|err| BitNetError::Validation(format!("invalid RoPE configuration: {err}")))?;
         let bitnet_rope::RopeTables { half_dim, sin, cos } = tables;
+        qwen_trace_rope_init_event(trace, "model_init.rope_tables_finish", || {
+            format!(
+                "\"tables_ms\":{},\"half_dim\":{},\"sin_len\":{},\"cos_len\":{}",
+                qwen_trace_elapsed_ms(tables_start),
+                half_dim,
+                sin.len(),
+                cos.len()
+            )
+        });
 
+        let sin_start = Instant::now();
+        qwen_trace_rope_init_event(trace, "model_init.rope_sin_tensor_start", || {
+            format!("\"rows\":{},\"cols\":{}", max_seq_len, half_dim)
+        });
         let sin = Tensor::from_vec(sin, &[max_seq_len, half_dim], device)?;
+        qwen_trace_rope_init_event(trace, "model_init.rope_sin_tensor_finish", || {
+            format!(
+                "\"tensor_ms\":{},\"dtype\":\"{:?}\",\"dims\":[{}]",
+                qwen_trace_elapsed_ms(sin_start),
+                sin.dtype(),
+                qwen_trace_dims_json(sin.dims())
+            )
+        });
+        let cos_start = Instant::now();
+        qwen_trace_rope_init_event(trace, "model_init.rope_cos_tensor_start", || {
+            format!("\"rows\":{},\"cols\":{}", max_seq_len, half_dim)
+        });
         let cos = Tensor::from_vec(cos, &[max_seq_len, half_dim], device)?;
+        qwen_trace_rope_init_event(trace, "model_init.rope_cos_tensor_finish", || {
+            format!(
+                "\"tensor_ms\":{},\"dtype\":\"{:?}\",\"dims\":[{}]",
+                qwen_trace_elapsed_ms(cos_start),
+                cos.dtype(),
+                qwen_trace_dims_json(cos.dims())
+            )
+        });
 
         // Log ROPE initialization parameters
         tracing::info!(
@@ -623,6 +806,9 @@ impl RotaryEmbedding {
             dim,
             max_seq_len
         );
+        qwen_trace_rope_init_event(trace, "model_init.rope_finish", || {
+            format!("\"dim\":{},\"max_seq_len\":{},\"half_dim\":{}", dim, max_seq_len, half_dim)
+        });
 
         Ok(Self { sin, cos })
     }
@@ -699,6 +885,9 @@ pub struct MultiHeadAttention {
 
 impl MultiHeadAttention {
     pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
+        let init_start = Instant::now();
+        let trace_model_init = qwen_trace_events_enabled();
+        let device = vb.device().clone();
         let hidden_size = config.model.hidden_size;
         let n_heads = config.model.num_heads;
         let head_dim = config.model.attention_head_dim.unwrap_or_else(|| hidden_size / n_heads);
@@ -720,6 +909,21 @@ impl MultiHeadAttention {
         let group_size = n_heads / n_kv_heads;
         let q_out = n_heads * head_dim;
         let kv_out = n_kv_heads * head_dim;
+
+        qwen_trace_model_init_event(trace_model_init, "model_init.attention_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"hidden_size\":{},\"n_heads\":{},\"n_kv_heads\":{},\"head_dim\":{},\"q_out\":{},\"kv_out\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
+                hidden_size,
+                n_heads,
+                n_kv_heads,
+                head_dim,
+                q_out,
+                kv_out
+            )
+        });
 
         tracing::info!(
             "layer{}: MultiHeadAttention dims: hidden={}, n_heads={}, n_kv_heads={}, head_dim={}, q_out={}, kv_out={}, group_size={}",
@@ -746,10 +950,70 @@ impl MultiHeadAttention {
             q_out
         );
 
-        let q_proj = linear_with_optional_bias(hidden_size, q_out, vb.pp("q_proj"))?;
-        let k_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("k_proj"))?;
-        let v_proj = linear_with_optional_bias(hidden_size, kv_out, vb.pp("v_proj"))?;
-        let o_proj = linear_with_optional_bias(q_out, hidden_size, vb.pp("o_proj"))?;
+        let q_proj = linear_with_optional_bias_traced(
+            hidden_size,
+            q_out,
+            vb.pp("q_proj"),
+            LinearInitTrace {
+                enabled: trace_model_init,
+                init_start,
+                layer_idx,
+                device: &device,
+                scope: "attention",
+                name: "q_proj",
+            },
+        )?;
+        let k_proj = linear_with_optional_bias_traced(
+            hidden_size,
+            kv_out,
+            vb.pp("k_proj"),
+            LinearInitTrace {
+                enabled: trace_model_init,
+                init_start,
+                layer_idx,
+                device: &device,
+                scope: "attention",
+                name: "k_proj",
+            },
+        )?;
+        let v_proj = linear_with_optional_bias_traced(
+            hidden_size,
+            kv_out,
+            vb.pp("v_proj"),
+            LinearInitTrace {
+                enabled: trace_model_init,
+                init_start,
+                layer_idx,
+                device: &device,
+                scope: "attention",
+                name: "v_proj",
+            },
+        )?;
+        let o_proj = linear_with_optional_bias_traced(
+            q_out,
+            hidden_size,
+            vb.pp("o_proj"),
+            LinearInitTrace {
+                enabled: trace_model_init,
+                init_start,
+                layer_idx,
+                device: &device,
+                scope: "attention",
+                name: "o_proj",
+            },
+        )?;
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.attention_linears_finish",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(init_start),
+                    layer_idx,
+                    qwen_trace_device_kind(&device)
+                )
+            },
+        );
         let q_norm = optional_layer_norm_with_optional_bias(
             config.model.norm_type,
             head_dim,
@@ -768,14 +1032,54 @@ impl MultiHeadAttention {
             eps_from_config(config),
             vb.pp("sub_layernorm"),
         )?;
+        qwen_trace_model_init_event(trace_model_init, "model_init.attention_norms_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"q_norm_present\":{},\"k_norm_present\":{},\"sub_layernorm_present\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
+                q_norm.is_some(),
+                k_norm.is_some(),
+                sub_layernorm.is_some()
+            )
+        });
 
-        let rope = RotaryEmbedding::new(
+        qwen_trace_model_init_event(trace_model_init, "model_init.attention_rope_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"head_dim\":{},\"max_seq_len\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
+                head_dim,
+                config.model.max_position_embeddings
+            )
+        });
+        let rope = RotaryEmbedding::new_traced(
             head_dim,
             config.model.max_position_embeddings,
             config.model.rope_theta,
             vb.device(),
+            RopeInitTrace { enabled: trace_model_init, init_start, layer_idx, device: &device },
         )
         .ok();
+        qwen_trace_model_init_event(trace_model_init, "model_init.attention_rope_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"rope_present\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
+                rope.is_some()
+            )
+        });
+        qwen_trace_model_init_event(trace_model_init, "model_init.attention_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"rope_present\":{}",
+                qwen_trace_elapsed_ms(init_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
+                rope.is_some()
+            )
+        });
 
         Ok(Self {
             n_heads,
@@ -1329,28 +1633,129 @@ impl TransformerForwardWorkspace {
 
 impl TransformerBlock {
     pub fn new(config: &BitNetConfig, vb: VarBuilder, layer_idx: usize) -> Result<Self> {
+        let block_start = Instant::now();
+        let trace_model_init = qwen_trace_events_enabled();
+        let device = vb.device().clone();
         let hidden_size = config.model.hidden_size;
         // PATCH 1: Use RMSNorm epsilon from config header for ALL norms (per-layer + final)
         let eps = eps_from_config(config);
 
         tracing::debug!("TransformerBlock using RMSNorm eps={} (from header)", eps);
 
-        Ok(Self {
-            attention: MultiHeadAttention::new(config, vb.pp("attention"), layer_idx)?,
-            feed_forward: FeedForward::new(config, vb.pp("feed_forward"), layer_idx)?,
-            attention_norm: norm_with_optional_bias(
-                config.model.norm_type,
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\",\"hidden_size\":{},\"eps\":{}",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device),
                 hidden_size,
-                eps,
-                vb.pp("attention_norm"),
-            )?,
-            ffn_norm: norm_with_optional_bias(
-                config.model.norm_type,
-                hidden_size,
-                eps,
-                vb.pp("post_attention_layernorm"),
-            )?,
-        })
+                eps
+            )
+        });
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_attention_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device)
+            )
+        });
+        let attention = MultiHeadAttention::new(config, vb.pp("attention"), layer_idx)?;
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_attention_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device)
+            )
+        });
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.block_feed_forward_start",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(block_start),
+                    layer_idx,
+                    qwen_trace_device_kind(&device)
+                )
+            },
+        );
+        let feed_forward = FeedForward::new(config, vb.pp("feed_forward"), layer_idx)?;
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.block_feed_forward_finish",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(block_start),
+                    layer_idx,
+                    qwen_trace_device_kind(&device)
+                )
+            },
+        );
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.block_attention_norm_start",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(block_start),
+                    layer_idx,
+                    qwen_trace_device_kind(&device)
+                )
+            },
+        );
+        let attention_norm = norm_with_optional_bias(
+            config.model.norm_type,
+            hidden_size,
+            eps,
+            vb.pp("attention_norm"),
+        )?;
+        qwen_trace_model_init_event(
+            trace_model_init,
+            "model_init.block_attention_norm_finish",
+            || {
+                format!(
+                    "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                    qwen_trace_elapsed_ms(block_start),
+                    layer_idx,
+                    qwen_trace_device_kind(&device)
+                )
+            },
+        );
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_ffn_norm_start", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device)
+            )
+        });
+        let ffn_norm = norm_with_optional_bias(
+            config.model.norm_type,
+            hidden_size,
+            eps,
+            vb.pp("post_attention_layernorm"),
+        )?;
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_ffn_norm_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device)
+            )
+        });
+        qwen_trace_model_init_event(trace_model_init, "model_init.block_finish", || {
+            format!(
+                "\"elapsed_ms\":{},\"layer\":{},\"device\":\"{}\"",
+                qwen_trace_elapsed_ms(block_start),
+                layer_idx,
+                qwen_trace_device_kind(&device)
+            )
+        });
+
+        Ok(Self { attention, feed_forward, attention_norm, ffn_norm })
     }
 
     pub fn forward(
