@@ -1,0 +1,16 @@
+timestamp = "2026-05-22T18:38:00Z"
+campaign = "slm-cpu"
+item = "SLM-CPU-082"
+event = "pr_open"
+previous_status = "ready"
+new_status = "pr_open"
+actor = "codex"
+pr = 361
+branch = "codex/slm-cpu-082-repeated-packed-q8-receipts"
+head_sha = "f2d672744dd2b68ad5d28ee90f848ab9fda650f5"
+summary = "Opened PR #361 for the repeated packed-Q8 warm-session receipt capture item."
+notes = [
+  "The PR queues the next evidence item and generated tracker state only.",
+  "The required repeated receipts are not captured by this PR.",
+  "No runtime optimization, default packed-Q8 enablement, end-to-end speedup, sustained-throughput, Q4/Q5, server, accelerator, Qwen3.5, or BitNet QK256 claim is made.",
+]

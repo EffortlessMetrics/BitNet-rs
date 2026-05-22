@@ -121,7 +121,12 @@ Make the Intel i5-8250U a strict CPU proof host for small dense transformer GGUF
 | SLM-CPU-074 | merged | #219 added exact-tensor packed Q8_0 sidecar instrumentation for selector dispatch, input materialization, bias extraction, packed matvec compute, and output tensor construction while keeping eager F32 Candle as the default runtime. |
 | SLM-CPU-075 | merged | #225 consumed the instrumentation surface in a bounded diagnostic artifact and identified the missing warm-session receipt bridge as the next blocker before counter-driven optimization. |
 | SLM-CPU-076 | merged | #229 bridged packed Q8_0 sidecar instrumentation counters into Qwen3 Q8_0 warm-session aggregate receipts without enabling packed Q8_0 by default or claiming speedup. |
-| SLM-CPU-077 | ready | Capture or ingest the first real i5-8250U Qwen3 Q8_0 post-bridge warm-session receipt with serialized exact-tensor packed Q8_0 sidecar counters, behavior-equivalence proof, and next-target classification. |
+| SLM-CPU-077 | merged | #264 captured the first real i5-8250U Qwen3 Q8_0 post-bridge warm-session receipt with serialized exact-tensor packed Q8_0 sidecar counters, behavior-equivalence proof, and next-target classification. |
+| SLM-CPU-078 | merged | #277 reduced the exact-tensor packed Q8_0 matvec path behind the opt-in sidecar boundary while keeping eager F32 Candle as the default runtime. |
+| SLM-CPU-079 | merged | #291 captured the post-aligned packed-matvec artifact and classified the bounded packed-matvec counter improvement without claiming end-to-end speedup. |
+| SLM-CPU-080 | merged | #332 refreshed the Kaby Lake Qwen3 Q8_0 performance dashboard and kept the current operator default evidence-scoped to 4 threads. |
+| SLM-CPU-081 | merged | #349 defined the repeated packed-Q8 timing gate and recorded that one baseline and one candidate receipt are not enough for an end-to-end speedup claim. |
+| SLM-CPU-082 | pr_open | #361 queues at least three baseline and three candidate i5-8250U Qwen3 Q8_0 warm-session receipts for the exact-tensor packed_q8_sidecar path, preserving generated IDs and strict provenance before classifying timing as improved, regressed, inconclusive, or not_claimed. |
 
 ## Review Policy
 
