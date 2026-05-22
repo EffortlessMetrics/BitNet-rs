@@ -28538,13 +28538,13 @@ fn validate_metal_phase_receipt(
 
     if requested_backend != APPLE_M4_METAL {
         anyhow::bail!(
-            "{} Metal phase requested_backend must be {APPLE_M4_METAL}, got {requested_backend:?}",
+            "{} phase-scoped Metal receipt requested_backend must be {APPLE_M4_METAL}, got {requested_backend:?}",
             path.display()
         );
     }
     if selected_backend != APPLE_M4_METAL {
         anyhow::bail!(
-            "{} Metal phase selected_backend must be {APPLE_M4_METAL}, got {selected_backend:?}",
+            "{} phase-scoped Metal receipt selected_backend must be {APPLE_M4_METAL}, got {selected_backend:?}",
             path.display()
         );
     }
