@@ -3,7 +3,7 @@
   "artifact_kind": "lunar_lake_openvino_operator_ask",
   "campaign": "intel-258v-platform",
   "item": "LNL258V-ASK-004",
-  "created_utc": "2026-05-18T19:45:22Z",
+  "created_utc": "2026-05-26T11:39:09Z",
   "machine_id": "intel-258v",
   "proof_stage": "operator_candidate_route_executed",
   "requested_backend": "openvino-npu",
@@ -23,11 +23,15 @@
   "route_id": "dense_slm_openvino_npu_candidate",
   "route": {
     "route_id": "dense_slm_openvino_npu_candidate",
-    "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.",
+    "route_reason": "OpenVINO NPU dense Qwen route is profile-scoped: warm_resident may be selected only when the route ledger promotes the resident-session path from fallback-free quality and timing evidence; cold one-off and low_power profiles remain blocked until separately qualified, with INT4 symmetric greedy constraints and no dynamic decode, beam, parallel sampling, packed QK256, native NPU, or acceleration claim.",
     "acceleration_claim": false,
     "answer_gate_evidence": "lunar-lake-openvino-operator-ask-npu-math-brief.json",
     "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json"
   },
+  "known_gaps": [
+    "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+    "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+  ],
   "inputs": {
     "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
     "artifact_root": "ci/hardware/intel-258v/2026-05-08",
@@ -172,7 +176,7 @@
     "generated_token_ids_available_from_pipeline": true,
     "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
     "generated_token_count": 9,
-    "first_streamed_text_chunk_ms": 644.2006999859586,
+    "first_streamed_text_chunk_ms": 367.02439992222935,
     "first_streamed_text_chunk": "2",
     "streamed_chunks_count": 8,
     "streamed_text": "2 + 2 equals 4."
@@ -184,37 +188,50 @@
     "failed_rules": []
   },
   "timing": {
-    "pipeline_construct_wall_ms": 29129.048800008604,
-    "generation_wall_ms": 913.3272999897599,
+    "pipeline_construct_wall_ms": 29055.796200060286,
+    "generation_wall_ms": 524.6368999360129,
+    "generation_total_ms": 524.6368999360129,
+    "decode_total_ms": 524.6368999360129,
+    "prefill_ms": null,
+    "time_to_first_token_ms": 235.67901611328125,
+    "first_token_ms": 235.67901611328125,
+    "total_ms": 29580.4330999963,
+    "cold_total_ms": 29580.4330999963,
+    "first_token_timing_source": "openvino_perf_metrics.time_to_first_token.mean_ms",
+    "decode_timing_source": "generation_wall_ms",
+    "known_gaps": [
+      "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+      "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+    ],
     "openvino_perf_metrics": {
-      "load_time_ms": 29105.0,
+      "load_time_ms": 29024.0,
       "tokenization": {
         "mean_ms": -1.0,
         "std_ms": -1.0
       },
       "generate": {
-        "mean_ms": 894.625,
+        "mean_ms": 504.9049987792969,
         "std_ms": 0.0
       },
       "inference": {
-        "mean_ms": 889.833984375,
+        "mean_ms": 502.35101318359375,
         "std_ms": 0.0
       },
       "time_to_first_token": {
-        "mean_ms": 334.3456726074219,
+        "mean_ms": 235.67901611328125,
         "std_ms": 0.0
       },
       "time_per_output_token": {
-        "mean_ms": 69.94927215576172,
-        "std_ms": 54.59255599975586
+        "mean_ms": 33.606475830078125,
+        "std_ms": 17.745742797851562
       },
       "inter_token_latency": {
-        "mean_ms": 98.87044525146484,
-        "std_ms": 97.62153625488281
+        "mean_ms": 55.816776275634766,
+        "std_ms": 65.64060974121094
       },
       "throughput": {
-        "mean_ms": 14.296074867248535,
-        "std_ms": 11.157503128051758
+        "mean_ms": 29.75617027282715,
+        "std_ms": 15.712605476379395
       },
       "detokenization": {
         "mean_ms": -1.0,
@@ -247,6 +264,7 @@
     "answer_gate_passed": true,
     "fallback_used": false,
     "openvino_perf_metrics_recorded": true,
+    "standard_timing_aliases_recorded": true,
     "generated_token_ids_available_from_pipeline": true,
     "acceleration_claim": false
   },
