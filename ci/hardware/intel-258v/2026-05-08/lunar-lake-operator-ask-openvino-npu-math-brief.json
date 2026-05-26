@@ -37,11 +37,15 @@
     "fallback_used": false,
     "openvino_candidate_route_executed": true
   },
-  "created_utc": "2026-05-18T19:45:23Z",
+  "created_utc": "2026-05-26T11:39:11Z",
   "dense_slm": null,
   "execution_coverage": null,
   "fallback_reason": null,
   "fallback_used": false,
+  "known_gaps": [
+    "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+    "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+  ],
   "machine_id": "intel-258v",
   "model": {
     "architecture": "qwen2",
@@ -186,7 +190,7 @@
     "fallback_policy": "strict_no_fallback",
     "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
     "route_id": "dense_slm_openvino_npu_candidate",
-    "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.",
+    "route_reason": "OpenVINO NPU dense Qwen route is profile-scoped: warm_resident may be selected only when the route ledger promotes the resident-session path from fallback-free quality and timing evidence; cold one-off and low_power profiles remain blocked until separately qualified, with INT4 symmetric greedy constraints and no dynamic decode, beam, parallel sampling, packed QK256, native NPU, or acceleration claim.",
     "runtime_api": "openvino_genai",
     "selected_backend": "openvino-npu",
     "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
@@ -196,13 +200,11 @@
   "route_id": "dense_slm_openvino_npu_candidate",
   "route_profile_blockers": [
     "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-    "benchmark_qualified_speedup_or_power_advantage",
-    "candidate route requires benchmark-qualified profile evidence",
     "route not promoted for profile ask_short"
   ],
   "route_profile_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
   "route_profile_status": "promoted_route_ready",
-  "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.",
+  "route_reason": "OpenVINO NPU dense Qwen route is profile-scoped: warm_resident may be selected only when the route ledger promotes the resident-session path from fallback-free quality and timing evidence; cold one-off and low_power profiles remain blocked until separately qualified, with INT4 symmetric greedy constraints and no dynamic decode, beam, parallel sampling, packed QK256, native NPU, or acceleration claim.",
   "route_selection": {
     "candidate_routes": [],
     "profile_id": "ask_short",
@@ -212,13 +214,11 @@
     "requested_route": "dense_slm_openvino_npu_candidate",
     "route_profile_blockers": [
       "NPU cold start is openvino_pipeline_load_or_device_compile_dominated",
-      "benchmark_qualified_speedup_or_power_advantage",
-      "candidate route requires benchmark-qualified profile evidence",
       "route not promoted for profile ask_short"
     ],
     "route_profile_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
     "route_profile_status": "promoted_route_ready",
-    "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made.",
+    "route_reason": "OpenVINO NPU dense Qwen route is profile-scoped: warm_resident may be selected only when the route ledger promotes the resident-session path from fallback-free quality and timing evidence; cold one-off and low_power profiles remain blocked until separately qualified, with INT4 symmetric greedy constraints and no dynamic decode, beam, parallel sampling, packed QK256, native NPU, or acceleration claim.",
     "runtime_api": "openvino_genai",
     "selected_backend": "openvino-npu",
     "selected_route": "dense_slm_openvino_npu_candidate",
@@ -263,7 +263,7 @@
         "Full BitNet inference works on Arc or NPU."
       ]
     },
-    "created_utc": "2026-05-18T19:45:22Z",
+    "created_utc": "2026-05-26T11:39:09Z",
     "environment": {
       "openvino": {
         "available_devices": [
@@ -287,6 +287,10 @@
       "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json"
     },
     "item": "LNL258V-ASK-004",
+    "known_gaps": [
+      "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+      "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+    ],
     "machine_id": "intel-258v",
     "model": {
       "files": {
@@ -359,7 +363,7 @@
     "model_family": "qwen",
     "output": {
       "first_streamed_text_chunk": "2",
-      "first_streamed_text_chunk_ms": 644.2006999859586,
+      "first_streamed_text_chunk_ms": 367.02439992222935,
       "generated_text": "2 + 2 equals 4.",
       "generated_token_count": 9,
       "generated_token_ids": [
@@ -444,7 +448,7 @@
       "answer_gate_evidence": "lunar-lake-openvino-operator-ask-npu-math-brief.json",
       "phase_evidence": "slm-openvino-cpu-gpu-npu-phase-runner.json",
       "route_id": "dense_slm_openvino_npu_candidate",
-      "route_reason": "Candidate route because Intel NPU OpenVINO GenAI bounded answer gates and phase metrics exist with fallback_used=false under INT4 symmetric constraints; no dynamic decode, beam, parallel sampling, packed QK256, or acceleration claim is made."
+      "route_reason": "OpenVINO NPU dense Qwen route is profile-scoped: warm_resident may be selected only when the route ledger promotes the resident-session path from fallback-free quality and timing evidence; cold one-off and low_power profiles remain blocked until separately qualified, with INT4 symmetric greedy constraints and no dynamic decode, beam, parallel sampling, packed QK256, native NPU, or acceleration claim."
     },
     "route_id": "dense_slm_openvino_npu_candidate",
     "runtime_api": "openvino_genai",
@@ -453,37 +457,47 @@
     "selected_backend": "openvino-npu",
     "selected_kernel_or_runtime": "openvino-genai-llmpipeline-npu",
     "timing": {
-      "generation_wall_ms": 913.32729998976,
+      "cold_total_ms": 29580.4330999963,
+      "decode_timing_source": "generation_wall_ms",
+      "decode_total_ms": 524.6368999360129,
+      "first_token_ms": 235.67901611328125,
+      "first_token_timing_source": "openvino_perf_metrics.time_to_first_token.mean_ms",
+      "generation_total_ms": 524.6368999360129,
+      "generation_wall_ms": 524.6368999360129,
+      "known_gaps": [
+        "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+        "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+      ],
       "openvino_perf_metrics": {
         "detokenization": {
           "mean_ms": -1.0,
           "std_ms": -1.0
         },
         "generate": {
-          "mean_ms": 894.625,
+          "mean_ms": 504.9049987792969,
           "std_ms": 0.0
         },
         "inference": {
-          "mean_ms": 889.833984375,
+          "mean_ms": 502.35101318359375,
           "std_ms": 0.0
         },
         "inter_token_latency": {
-          "mean_ms": 98.87044525146484,
-          "std_ms": 97.6215362548828
+          "mean_ms": 55.816776275634766,
+          "std_ms": 65.64060974121094
         },
-        "load_time_ms": 29105.0,
+        "load_time_ms": 29024.0,
         "num_generated_tokens": 9,
         "num_input_tokens": 39,
         "throughput": {
-          "mean_ms": 14.296074867248535,
-          "std_ms": 11.157503128051758
+          "mean_ms": 29.75617027282715,
+          "std_ms": 15.712605476379396
         },
         "time_per_output_token": {
-          "mean_ms": 69.94927215576172,
-          "std_ms": 54.59255599975586
+          "mean_ms": 33.606475830078125,
+          "std_ms": 17.745742797851562
         },
         "time_to_first_token": {
-          "mean_ms": 334.3456726074219,
+          "mean_ms": 235.67901611328125,
           "std_ms": 0.0
         },
         "tokenization": {
@@ -491,7 +505,10 @@
           "std_ms": -1.0
         }
       },
-      "pipeline_construct_wall_ms": 29129.048800008604
+      "pipeline_construct_wall_ms": 29055.79620006029,
+      "prefill_ms": null,
+      "time_to_first_token_ms": 235.67901611328125,
+      "total_ms": 29580.4330999963
     },
     "tokenizer_source": "hf_tokenizer_export",
     "verification": {
@@ -503,43 +520,54 @@
       "llmpipeline_constructed": true,
       "openvino_perf_metrics_recorded": true,
       "operator_ready": true,
-      "operator_route_validated": true
+      "operator_route_validated": true,
+      "standard_timing_aliases_recorded": true
     }
   },
-  "source_run_receipt": "ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-openvino-npu-math-brief-source-run.json",
+  "source_run_receipt": "ci/hardware/intel-258v/2026-05-08\\lunar-lake-operator-ask-openvino-npu-math-brief-source-run.json",
   "speedup_claim": false,
   "timing": {
-    "generation_wall_ms": 913.32729998976,
+    "cold_total_ms": 29580.4330999963,
+    "decode_timing_source": "generation_wall_ms",
+    "decode_total_ms": 524.6368999360129,
+    "first_token_ms": 235.67901611328125,
+    "first_token_timing_source": "openvino_perf_metrics.time_to_first_token.mean_ms",
+    "generation_total_ms": 524.6368999360129,
+    "generation_wall_ms": 524.6368999360129,
+    "known_gaps": [
+      "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+      "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+    ],
     "openvino_perf_metrics": {
       "detokenization": {
         "mean_ms": -1.0,
         "std_ms": -1.0
       },
       "generate": {
-        "mean_ms": 894.625,
+        "mean_ms": 504.9049987792969,
         "std_ms": 0.0
       },
       "inference": {
-        "mean_ms": 889.833984375,
+        "mean_ms": 502.35101318359375,
         "std_ms": 0.0
       },
       "inter_token_latency": {
-        "mean_ms": 98.87044525146484,
-        "std_ms": 97.6215362548828
+        "mean_ms": 55.816776275634766,
+        "std_ms": 65.64060974121094
       },
-      "load_time_ms": 29105.0,
+      "load_time_ms": 29024.0,
       "num_generated_tokens": 9,
       "num_input_tokens": 39,
       "throughput": {
-        "mean_ms": 14.296074867248535,
-        "std_ms": 11.157503128051758
+        "mean_ms": 29.75617027282715,
+        "std_ms": 15.712605476379396
       },
       "time_per_output_token": {
-        "mean_ms": 69.94927215576172,
-        "std_ms": 54.59255599975586
+        "mean_ms": 33.606475830078125,
+        "std_ms": 17.745742797851562
       },
       "time_to_first_token": {
-        "mean_ms": 334.3456726074219,
+        "mean_ms": 235.67901611328125,
         "std_ms": 0.0
       },
       "tokenization": {
@@ -547,7 +575,10 @@
         "std_ms": -1.0
       }
     },
-    "pipeline_construct_wall_ms": 29129.048800008604
+    "pipeline_construct_wall_ms": 29055.79620006029,
+    "prefill_ms": null,
+    "time_to_first_token_ms": 235.67901611328125,
+    "total_ms": 29580.4330999963
   },
   "tokenizer_source": "hf_tokenizer_export",
   "tokens": {
