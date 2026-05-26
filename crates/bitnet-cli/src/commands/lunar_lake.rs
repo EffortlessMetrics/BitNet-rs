@@ -11435,7 +11435,15 @@ fn route_not_selected_reasons(
     if route.status != "promoted" {
         reasons.push(format!("route status is `{}`", route.status));
     }
-    if !route.promoted_for.iter().any(|profile| profile == profile_id) {
+    let profile_superseded_by_accelerator = route.blocked_for.iter().any(|blocker| {
+        matches!(
+            profile_superseding_accelerator(blocker),
+            Some((_, blocker_profile)) if blocker_profile == profile_id
+        )
+    });
+    if !route.promoted_for.iter().any(|profile| profile == profile_id)
+        && !profile_superseded_by_accelerator
+    {
         reasons.push(format!("route is not promoted for profile `{profile_id}`"));
     }
     if route.fallback_used != Some(false) {
@@ -11473,6 +11481,15 @@ fn describe_route_missing_evidence(item: &str) -> String {
 }
 
 fn describe_route_blocker(blocker: &str, profile_id: &str) -> String {
+    if let Some((accelerator, promoted_profile)) = profile_superseding_accelerator(blocker) {
+        let evidence = match accelerator {
+            "OpenVINO GPU" => "benchmark-qualified route evidence",
+            _ => "route evidence",
+        };
+        return format!(
+            "{accelerator} is promoted for profile `{promoted_profile}` by {evidence}; this route is not auto-selected for `{profile_id}`"
+        );
+    }
     match blocker {
         "auto_default" => format!(
             "route blocker for profile `{profile_id}`: {blocker} (auto routing only selects routes explicitly promoted for this profile)"
@@ -11482,6 +11499,16 @@ fn describe_route_blocker(blocker: &str, profile_id: &str) -> String {
         ),
         _ => format!("route blocker for profile `{profile_id}`: {blocker}"),
     }
+}
+
+fn profile_superseding_accelerator(blocker: &str) -> Option<(&'static str, &str)> {
+    if let Some(profile) = blocker.strip_prefix("openvino_gpu_promoted_for_") {
+        return Some(("OpenVINO GPU", profile));
+    }
+    if let Some(profile) = blocker.strip_prefix("openvino_npu_promoted_for_") {
+        return Some(("OpenVINO NPU", profile));
+    }
+    None
 }
 
 fn route_blocker_applies_to_profile(blocker: &str, profile_id: &str) -> bool {
@@ -16154,6 +16181,78 @@ mod tests {
         assert_eq!(profile_scoped_route_status(&ask_short, &route, true), "promoted");
         assert_eq!(profile_scoped_route_status(&ask_short, &route, false), "blocked");
         assert_eq!(profile_scoped_route_status(&regression_tiny, &route, false), "candidate");
+    }
+
+    #[test]
+    fn route_not_selected_reasons_explain_profile_superseded_accelerator() {
+        let ledger = LunarLakeRoutePromotionLedger {
+            schema_version: "1.0.0".to_string(),
+            artifact_kind: "lunar_lake_route_promotion_ledger".to_string(),
+            proof_stage: "test".to_string(),
+            created_utc: "2026-05-19T04:30:00Z".to_string(),
+            machine_id: "intel-258v".to_string(),
+            artifact_root: "ci/hardware/intel-258v/2026-05-08".to_string(),
+            operator_receipt: "lunar-lake-operator-readiness.json".to_string(),
+            comparison_receipt: "lunar-lake-operator-comparison.json".to_string(),
+            promotion_ready: true,
+            default_route_id: DEFAULT_ASK_ROUTE.to_string(),
+            auto_route_policy: AutoRoutePolicy {
+                policy_stage: "test".to_string(),
+                default_route: DEFAULT_ASK_ROUTE.to_string(),
+                hidden_fallback_allowed: false,
+                cpu_default_until_profile_promoted: true,
+                candidate_routes_require_profile_promotion: true,
+                route_reason_required: true,
+                notes: vec![],
+            },
+            workload_profiles: vec![],
+            routes: vec![RoutePromotion {
+                route_id: DEFAULT_ASK_ROUTE.to_string(),
+                status: "promoted".to_string(),
+                promoted_for: vec!["regression_tiny".to_string(), "structured".to_string()],
+                blocked_for: vec!["openvino_gpu_promoted_for_ask_normal".to_string()],
+                required_evidence: vec![],
+                present_evidence: vec![],
+                missing_evidence: vec![],
+                selected_backend: "cpu-rust".to_string(),
+                runtime_api: "cpu".to_string(),
+                fallback_policy: "strict_no_fallback".to_string(),
+                answer_gate_evidence: None,
+                phase_evidence: None,
+                fallback_used: Some(false),
+                answer_gate_passed: Some(true),
+                phase_timing_present: Some(true),
+                speedup_claim: false,
+                acceleration_claim: false,
+                last_evidence_utc: "2026-05-19T04:30:00Z".to_string(),
+                reason: "CPU baseline superseded for ask_normal".to_string(),
+            }],
+            gaps: vec![],
+            claim_boundary: ClaimBoundary {
+                cpu_is_truth_path: true,
+                dense_slm_default_is_cpu_until_speedup_qualified: true,
+                openvino_gpu_npu_are_candidates_not_speedup_claims: true,
+                arc_bitnet_full_inference_claimed: false,
+                npu_bitnet_full_inference_claimed: false,
+                qk256_accelerator_decode_claimed: false,
+                hidden_fallback_allowed: false,
+            },
+        };
+
+        let reasons = route_not_selected_reasons(&ledger, DEFAULT_ASK_ROUTE, "ask_normal");
+
+        assert_eq!(reasons.len(), 1, "{reasons:?}");
+        assert!(
+            reasons[0].contains("OpenVINO GPU is promoted for profile `ask_normal`"),
+            "{reasons:?}"
+        );
+        assert!(reasons[0].contains("benchmark-qualified route evidence"), "{reasons:?}");
+        assert!(
+            !reasons
+                .iter()
+                .any(|reason| reason == "route is not promoted for profile `ask_normal`"),
+            "{reasons:?}"
+        );
     }
 
     #[test]

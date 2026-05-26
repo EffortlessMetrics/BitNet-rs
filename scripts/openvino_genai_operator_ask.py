@@ -157,6 +157,16 @@ def perf_metrics(result: Any) -> dict[str, Any]:
     }
 
 
+def metric_mean_ms(metrics: dict[str, Any], key: str) -> float | None:
+    value = metrics.get(key)
+    if not isinstance(value, dict):
+        return None
+    mean = value.get("mean_ms")
+    if not isinstance(mean, (int, float)) or mean < 0:
+        return None
+    return float(mean)
+
+
 def normalize_answer(text: str) -> str:
     return text.replace("<|im_end|>", "").replace("<|endoftext|>", "").strip()
 
@@ -242,6 +252,22 @@ def main() -> int:
     if first_chunk_at[0] is not None:
         first_chunk_ms = (first_chunk_at[0] - generation_start) * 1000.0
 
+    openvino_metrics = perf_metrics(result)
+    openvino_ttft_ms = metric_mean_ms(openvino_metrics, "time_to_first_token")
+    time_to_first_token_ms = openvino_ttft_ms if openvino_ttft_ms is not None else first_chunk_ms
+    first_token_timing_source = (
+        "openvino_perf_metrics.time_to_first_token.mean_ms"
+        if openvino_ttft_ms is not None
+        else "output.first_streamed_text_chunk_ms"
+        if first_chunk_ms is not None
+        else "unavailable"
+    )
+    cold_total_ms = pipeline_construct_wall_ms + generation_wall_ms
+    timing_known_gaps = [
+        "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+        "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum.",
+    ]
+
     created_utc = args.created_utc or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     receipt = {
         "schema_version": "1.0.0",
@@ -273,6 +299,7 @@ def main() -> int:
             "answer_gate_evidence": route.get("answer_gate_evidence"),
             "phase_evidence": route.get("phase_evidence"),
         },
+        "known_gaps": timing_known_gaps,
         "inputs": {
             "operator_receipt": operator_path.as_posix(),
             "artifact_root": args.artifact_root.as_posix(),
@@ -328,7 +355,17 @@ def main() -> int:
         "timing": {
             "pipeline_construct_wall_ms": pipeline_construct_wall_ms,
             "generation_wall_ms": generation_wall_ms,
-            "openvino_perf_metrics": perf_metrics(result),
+            "generation_total_ms": generation_wall_ms,
+            "decode_total_ms": generation_wall_ms,
+            "prefill_ms": None,
+            "time_to_first_token_ms": time_to_first_token_ms,
+            "first_token_ms": time_to_first_token_ms,
+            "total_ms": cold_total_ms,
+            "cold_total_ms": cold_total_ms,
+            "first_token_timing_source": first_token_timing_source,
+            "decode_timing_source": "generation_wall_ms",
+            "known_gaps": timing_known_gaps,
+            "openvino_perf_metrics": openvino_metrics,
         },
         "environment": {
             "python": platform.python_version(),
@@ -349,6 +386,7 @@ def main() -> int:
             "answer_gate_passed": gate["passed"],
             "fallback_used": False,
             "openvino_perf_metrics_recorded": True,
+            "standard_timing_aliases_recorded": True,
             "generated_token_ids_available_from_pipeline": True,
             "acceleration_claim": False,
         },
