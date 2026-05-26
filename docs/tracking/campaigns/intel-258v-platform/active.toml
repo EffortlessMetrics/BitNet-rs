@@ -11981,7 +11981,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-GOAL-AUDIT-034"
-status = "in_progress"
+status = "pr_open"
+pr = 6220
+head_sha = "4b2cacac6e4b054b94353598f2ea6ac90ded1977"
 branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-034-post-ask-receipts"
 stackable = false
 review_mode = "codex_premerge"

@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-26T12:07:32Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-034"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6220
+head_sha = "4b2cacac6e4b054b94353598f2ea6ac90ded1977"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-034-post-ask-receipts"
+actor = "codex"
+summary = "Opened the post-ask-receipt no-inference Lunar Lake audit refresh PR."
+
+notes = [
+  "PR #6220 refreshes the no-inference audit/checklist to current BitNet-rs main after #6216, #6217, #6218, and #6219.",
+  "The PR records those prior changes as ask receipt timing, OpenVINO ask receipt refresh, and path-normalization hygiene only.",
+  "LNL258V-POWER-006 remains blocked until real battery-mode low_power telemetry, energy proxy, measured thermal context, and benchmark-qualified power advantage exist.",
+]
