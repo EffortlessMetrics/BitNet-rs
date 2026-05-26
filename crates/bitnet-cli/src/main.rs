@@ -11342,6 +11342,7 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         ctx.source_run_receipt,
         &["tokens.prompt", "prompt_policy.prompt_token_count"],
     );
+    let source_known_gaps = ctx.source_run_receipt["known_gaps"].clone();
     let openvino_candidate_executed = ctx.route.runtime_api == "openvino_genai";
     let proof_stage = if openvino_candidate_executed {
         "operator_candidate_route_executed_through_lunar_lake_ask"
@@ -11409,6 +11410,11 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "bitnet_qk256_i2s_claim": false,
         "arc_or_npu_execution_claim": false,
         "openvino_candidate_route_executed": openvino_candidate_executed,
+        "known_gaps": if source_known_gaps.is_null() {
+            serde_json::json!([])
+        } else {
+            source_known_gaps
+        },
         "route": {
             "route_id": ctx.route.route_id,
             "workload": ctx.route.workload,
@@ -14873,6 +14879,10 @@ mod tests {
             "quantization": "INT4_SYM",
             "prompt_template": "qwen2.5",
             "tokenizer_source": "hf_tokenizer_export",
+            "known_gaps": [
+                "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+                "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+            ],
             "model": {
                 "local_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym"
             },
@@ -14893,7 +14903,26 @@ mod tests {
                 "passed": true,
                 "failed_rules": []
             },
-            "timing": {"generation_wall_ms": 301.0}
+            "timing": {
+                "pipeline_construct_wall_ms": 2200.0,
+                "generation_wall_ms": 301.0,
+                "generation_total_ms": 301.0,
+                "decode_total_ms": 301.0,
+                "prefill_ms": null,
+                "time_to_first_token_ms": 123.0,
+                "first_token_ms": 123.0,
+                "total_ms": 2501.0,
+                "cold_total_ms": 2501.0,
+                "first_token_timing_source": "openvino_perf_metrics.time_to_first_token.mean_ms",
+                "decode_timing_source": "generation_wall_ms",
+                "known_gaps": [
+                    "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+                    "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+                ],
+                "openvino_perf_metrics": {
+                    "time_to_first_token": {"mean_ms": 123.0, "std_ms": 0.0}
+                }
+            }
         });
         validate_lunar_lake_ask_source_receipt(&source, &route)?;
         let answer = lunar_lake_source_answer_text(&source);
@@ -14933,6 +14962,10 @@ mod tests {
         assert_eq!(receipt["tokenizer_source"], "hf_tokenizer_export");
         assert_eq!(receipt["prompt"]["token_ids"], serde_json::json!([1, 2, 3]));
         assert_eq!(receipt["tokens"]["generated_count"], 9);
+        assert_eq!(receipt["timing"]["time_to_first_token_ms"], 123.0);
+        assert_eq!(receipt["timing"]["decode_total_ms"], 301.0);
+        assert!(receipt["timing"]["known_gaps"].as_array().is_some_and(|items| !items.is_empty()));
+        assert!(receipt["known_gaps"].as_array().is_some_and(|items| !items.is_empty()));
         assert_eq!(receipt["answer"]["normalized_text"], "2 + 2 equals 4.");
         Ok(())
     }
