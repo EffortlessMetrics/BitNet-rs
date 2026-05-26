@@ -494,7 +494,7 @@
     "acceleration_claim": false,
     "bitnet_qk256_i2s_claim": false,
     "generated_token_ids_available": true,
-    "source_run_receipt": "ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-auto-gpu-ask-short-math-brief-source-run.json",
+    "source_run_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-short-math-brief-source-run.json",
     "regression_ready": true,
     "gaps": []
   },
@@ -519,7 +519,7 @@
     "acceleration_claim": false,
     "bitnet_qk256_i2s_claim": false,
     "generated_token_ids_available": true,
-    "source_run_receipt": "ci/hardware/intel-258v/2026-05-08\\lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief-source-run.json",
+    "source_run_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief-source-run.json",
     "regression_ready": true,
     "gaps": []
   },
@@ -544,7 +544,7 @@
     "acceleration_claim": false,
     "bitnet_qk256_i2s_claim": false,
     "generated_token_ids_available": true,
-    "source_run_receipt": "ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-auto-npu-warm-resident-math-brief-source-run.json",
+    "source_run_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-npu-warm-resident-math-brief-source-run.json",
     "regression_ready": true,
     "gaps": []
   },

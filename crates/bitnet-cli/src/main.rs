@@ -11019,6 +11019,11 @@ fn source_run_receipt_path(receipt_path: &std::path::Path) -> std::path::PathBuf
 }
 
 #[cfg(feature = "full-cli")]
+fn lunar_lake_receipt_path_string(path: &std::path::Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
+}
+
+#[cfg(feature = "full-cli")]
 struct OpenVINOOperatorAskContext<'a> {
     artifact_root: &'a std::path::Path,
     operator_receipt_path: &'a std::path::Path,
@@ -11193,11 +11198,11 @@ fn build_lunar_lake_operator_ask_blocked_receipt(
     let promotion_ledger = ctx
         .route_selection
         .and_then(|selection| selection.promotion_ledger.clone())
-        .unwrap_or_else(|| ctx.promotion_ledger.display().to_string());
+        .unwrap_or_else(|| lunar_lake_receipt_path_string(ctx.promotion_ledger));
     let route_profile_comparison = ctx
         .route_selection
         .and_then(|selection| selection.route_profile_comparison.clone())
-        .unwrap_or_else(|| ctx.route_profile_comparison.display().to_string());
+        .unwrap_or_else(|| lunar_lake_receipt_path_string(ctx.route_profile_comparison));
     let operator_runbook = ctx
         .route_selection
         .and_then(|selection| selection.operator_runbook.clone())
@@ -11217,10 +11222,10 @@ fn build_lunar_lake_operator_ask_blocked_receipt(
         "proof_stage": "operator_route_selection_blocked_no_inference",
         "created_utc": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         "machine_id": "intel-258v",
-        "artifact_root": ctx.artifact_root.display().to_string(),
-        "operator_receipt": ctx.operator_receipt.display().to_string(),
-        "promotion_ledger": ctx.promotion_ledger.display().to_string(),
-        "route_profile_comparison": ctx.route_profile_comparison.display().to_string(),
+        "artifact_root": lunar_lake_receipt_path_string(ctx.artifact_root),
+        "operator_receipt": lunar_lake_receipt_path_string(ctx.operator_receipt),
+        "promotion_ledger": lunar_lake_receipt_path_string(ctx.promotion_ledger),
+        "route_profile_comparison": lunar_lake_receipt_path_string(ctx.route_profile_comparison),
         "requested_device": ctx.requested_device,
         "requested_route": ctx.requested_route,
         "profile_id": ctx.profile_id,
@@ -11356,9 +11361,9 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "proof_stage": proof_stage,
         "created_utc": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
         "machine_id": "intel-258v",
-        "artifact_root": ctx.artifact_root.display().to_string(),
-        "operator_receipt": ctx.operator_receipt_path.display().to_string(),
-        "source_run_receipt": ctx.source_run_path.display().to_string(),
+        "artifact_root": lunar_lake_receipt_path_string(ctx.artifact_root),
+        "operator_receipt": lunar_lake_receipt_path_string(ctx.operator_receipt_path),
+        "source_run_receipt": lunar_lake_receipt_path_string(ctx.source_run_path),
         "requested_device": ctx.route_selection.requested_device,
         "requested_route": ctx.route_selection.requested_route,
         "profile_id": ctx.route_selection.profile_id,
@@ -14758,6 +14763,7 @@ mod tests {
             "runtime_api": "cpu",
             "fallback_used": false,
             "fallback_reason": null,
+            "backend_lane": "dense_slm_cpu",
             "kernel": {"kernel_id": "dense-qwen-cpu-reference"},
             "model": {
                 "path": "models/qwen2.5.gguf",
@@ -14770,6 +14776,7 @@ mod tests {
                 "loader_mode": "real_gguf",
                 "fallback_loader_used": false
             },
+            "prompt_template": "qwen2.5",
             "prompt_render": "<|im_start|>user\n2+2?<|im_end|>\n<|im_start|>assistant\n",
             "tokens": {
                 "prompt_ids": [1, 2, 3],
@@ -14785,9 +14792,13 @@ mod tests {
         });
         let gate = evaluate_lunar_lake_answer_gate("4", Some("4"));
         let receipt = build_lunar_lake_operator_ask_receipt(LunarLakeAskReceiptContext {
-            artifact_root: std::path::Path::new("ci/hardware/intel-258v/2026-05-08"),
-            operator_receipt_path: std::path::Path::new("lunar-lake-operator-readiness.json"),
-            source_run_path: std::path::Path::new("lunar-lake-operator-ask-source-run.json"),
+            artifact_root: std::path::Path::new("ci\\hardware\\intel-258v\\2026-05-08"),
+            operator_receipt_path: std::path::Path::new(
+                "ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-readiness.json",
+            ),
+            source_run_path: std::path::Path::new(
+                "ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-source-run.json",
+            ),
             route: &route,
             route_selection: &route_selection,
             question: "2+2?",
@@ -14798,6 +14809,15 @@ mod tests {
             source_run_receipt: &source,
         });
 
+        assert_eq!(receipt["artifact_root"], "ci/hardware/intel-258v/2026-05-08");
+        assert_eq!(
+            receipt["operator_receipt"],
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json"
+        );
+        assert_eq!(
+            receipt["source_run_receipt"],
+            "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-source-run.json"
+        );
         assert_eq!(receipt["requested_backend"], "cpu");
         assert_eq!(receipt["selected_backend"], "cpu-rust");
         assert_eq!(receipt["runtime_api"], "cpu");
