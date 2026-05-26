@@ -10835,6 +10835,12 @@ pub fn load_operator_ask_route(
         .iter()
         .find(|route| route.route_id == route_id)
         .with_context(|| format!("operator route `{route_id}` not found"))?;
+    if route.workload == "bitnet_strict" {
+        bail!(
+            "Lunar Lake ask keeps route `{}` as a BitNet CPU reference-only route; use `bitnet lunar-lake validate`, `regress`, or `compare` for bitnet_strict_reference evidence until executable BitNet ask support is separately implemented",
+            route.route_id
+        );
+    }
     if !matches!(
         route.workload.as_str(),
         "ask" | "dense_slm_acceleration_candidate" | "dense_slm_static_graph_candidate"
@@ -21363,6 +21369,31 @@ mod tests {
         assert_eq!(route.runtime_api, "openvino_genai");
         assert_eq!(route.selected_kernel_or_runtime, "openvino-genai-llmpipeline-gpu");
         assert!(!route.acceleration_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn ask_route_rejects_bitnet_reference_with_boundary_message() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_minimal_receipts(temp.path(), false)?;
+        let operator = build_operator_readiness_receipt_with_created_utc(
+            temp.path(),
+            "2026-05-13T15:36:09Z".to_string(),
+        )?;
+        fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
+
+        let err = load_operator_ask_route(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            "bitnet_reference_cpu",
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("BitNet CPU reference-only route"), "got: {err}");
+        assert!(err.contains("validate"), "got: {err}");
+        assert!(err.contains("regress"), "got: {err}");
+        assert!(err.contains("compare"), "got: {err}");
         Ok(())
     }
 
