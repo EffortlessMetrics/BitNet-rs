@@ -14221,9 +14221,6 @@ fn evaluate_profile_route(
     if route.status == "candidate" {
         blockers.push("candidate route requires benchmark-qualified profile evidence".to_string());
     }
-    if lunar_lake_ask_runtime_requires_cpu(route_id) {
-        blockers.push("lunar-lake ask runtime does not execute OpenVINO routes yet".to_string());
-    }
     if timing.known_gaps.iter().any(|gap| timing_gap_is_missing_profile_field(gap)) {
         blockers.push("timing coverage has missing profile fields".to_string());
     }
@@ -14339,11 +14336,6 @@ fn profile_regression_bundle_evidence_satisfied(
     })
 }
 
-fn lunar_lake_ask_runtime_requires_cpu(route_id: &str) -> bool {
-    let _ = route_id;
-    false
-}
-
 fn promotion_blocker_summary(
     profiles: &[WorkloadProfileEvaluation],
 ) -> Vec<PromotionBlockerSummary> {
@@ -14389,9 +14381,6 @@ fn promotion_blocker_next_action(blocker: &str) -> String {
             .to_string()
     } else if blocker.contains("NPU cache or resident") || blocker.contains("resident") {
         "run NPU cache/resident warm-route proof and keep cold one-off routing blocked until classified"
-            .to_string()
-    } else if blocker.contains("lunar-lake ask runtime") {
-        "add an OpenVINO execution path to bitnet lunar-lake ask before promoting this route"
             .to_string()
     } else if blocker.contains("NPU cold start") {
         "keep cold one-off NPU routing blocked; use resident/cache evidence only for warm-route evaluation"
@@ -14531,7 +14520,6 @@ fn route_has_benchmark_qualified_latency_advantage(
 fn blocker_allows_latency_advantage_qualification(blocker: &str, profile_id: &str) -> bool {
     blocker == "benchmark_qualified_speedup_or_power_advantage"
         || blocker == "candidate route requires benchmark-qualified profile evidence"
-        || blocker == "lunar-lake ask runtime does not execute OpenVINO routes yet"
         || blocker == format!("route not promoted for profile {profile_id}")
 }
 
@@ -17395,9 +17383,10 @@ mod tests {
             &"timing evidence is not profile-specific for profile ask_normal".to_string()
         ));
         assert!(
-            !gpu_ask_normal.blockers.contains(
-                &"lunar-lake ask runtime does not execute OpenVINO routes yet".to_string()
-            )
+            !gpu_ask_normal
+                .blockers
+                .iter()
+                .any(|blocker| blocker.contains("lunar-lake ask runtime"))
         );
         let structured = profiles
             .profiles
